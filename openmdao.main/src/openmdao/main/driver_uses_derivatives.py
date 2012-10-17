@@ -6,20 +6,19 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot
 from openmdao.main.interfaces import IDifferentiator
 from openmdao.main.driver import Driver
 
 class DriverUsesDerivatives(Driver): 
     """This class provides an implementation of the derivatives delegates."""
 
+    differentiator = Slot(IDifferentiator, iotype='in',
+                          desc = "Slot for a differentiator")
+    
     def __init__(self, *args, **kwargs):
         
         super(DriverUsesDerivatives, self).__init__(*args, **kwargs)
-        
-        self.add("differentiator", 
-                   Slot(IDifferentiator, iotype='in',
-                        desc = "Slot for a differentiator"))
         
         # These flags tell whether to check for missing derivatives during
         # check_config. Default as stated.
@@ -31,7 +30,8 @@ class DriverUsesDerivatives(Driver):
         """When a new differentiator is slotted, give it a handle to the
         parent."""
         
-        self.differentiator._parent = self
+        if self.differentiator is not None:
+            self.differentiator._parent = self
         
     def _list_driver_connections(self):
         """Return a list of inputs and a list of outputs that are referenced by

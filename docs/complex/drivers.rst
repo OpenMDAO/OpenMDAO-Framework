@@ -12,19 +12,20 @@ The EPA fuel economy tests are a bit more tricky, though they also require an in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in Python as *drivers.* The
-SimAcceleration driver simulates the acceleration test, and the ``SimEconomy`` driver
+SimAcceleration driver simulates the acceleration test, and the SimEconomy driver
 simulates the EPA fuel economy test.
 
-Recall that in the :ref:`Optimization Tutorial <optimization_tutorial>`, a Driver
-called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the algorithms
-that perform these tests have been implemented as OpenMDAO drivers that can be found
-in ``driving_sim.py``. These drivers contain OpenMDAO variables where you can specify
-the connections to the vehicle component that we developed in the previous section.
-Specifically, to drive the Vehicle assembly, the simulation driver needs to
-be able to set the velocity, throttle, and gear positions. Likewise, it also needs to
-be able to read variables from the vehicle component. For the acceleration test, the
-vehicle's instantaneous acceleration is needed, and for the economy test, both the 
-acceleration and fuel burn are needed.
+Recall that in the :ref:`Optimization Tutorial <optimization_tutorial>`, a
+Driver called `CONMINdriver` was used to optimize the Paraboloid problem.
+Similarly, the algorithms that perform these tests have been implemented as
+OpenMDAO drivers that can be found in ``driving_sim.py``. These drivers use
+the parameter interface to specify the variables that will be driven by the
+simulation drivers. Specifically, to drive the Vehicle assembly, the
+simulation driver needs to be able to set the velocity, throttle, and gear
+positions. Likewise, it also needs to be able to read variables from the
+vehicle component and does so with the objectives interface. For the
+acceleration test, the vehicle's instantaneous acceleration is needed, and
+for the economy test, both the acceleration and fuel burn are needed.
 
 You may want to examine the SimAcceleration and the SimEconomy drivers that are
 found in ``driving_sim.py``. This tutorial does not cover how to create an OpenMDAO
@@ -52,7 +53,7 @@ Variable           Description                                  Units
                    driving profile
 =================  ===========================================  ========
 
-These variables can be accessed like any other component output, and can be connected to the 
+These variables can be accessed like any other component output and can be connected to the 
 input of another OpenMDAO component if needed.
 
 Let's set up a model that runs all three of these simulations to calculate
@@ -86,11 +87,16 @@ top level assembly would look like this:
                 self.driver.workflow.add('vehicle')
             
                 # Acceleration Sim setup
-                self.driver.velocity_str = 'vehicle.velocity'
-                self.driver.throttle_str = 'vehicle.throttle'
-                self.driver.gear_str = 'vehicle.current_gear'
-                self.driver.acceleration_str = 'vehicle.acceleration'
-                self.driver.overspeed_str = 'vehicle.overspeed'
+                self.sim_acc.add_parameter('vehicle.velocity', name='velocity',
+                                           low=0.0, high=150.0)
+                self.sim_acc.add_parameter('vehicle.throttle', name='throttle',
+                                           low=0.01, high=1.0)
+                self.sim_acc.add_parameter('vehicle.current_gear', name='gear',
+                                           low=0, high=5)
+                                           
+                self.sim_acc.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed', name='overspeed')
+        
                 
         if __name__ == "__main__": 
         
@@ -101,8 +107,13 @@ top level assembly would look like this:
 
 Here, we add a SimAcceleration instance as our top level driver, and then we add our Vehicle
 instance to the driver's workflow. We also specify the locations of the vehicle variables we need
-to manipulate and read. These are stored in ``Str`` variables, and are just strings that
-contain the location of the variables we need in the model hierarchy.
+to manipulate and read using the ``add_parameter`` and ``add_objective`` methods. Here, we
+introduce the optional argument `name`, which allows you to specify a unique name for the
+parameter. The SimAcceleration driver looks for a parameter with the name *gear* whenever it
+needs to set the gear. This is required so that the driver knows which of the parameters is
+the gear position. The objectives are also given a name so that SimAcceleration knows which
+variable is the acceleration and which is the overspeed indicator. This driver supports
+multiple objectives, so we add them sequentially using ``add_objective``.
 
 This is a very simple problem, and hence the workflows and iteration hierarchy are also very
 simple. In OpenMDAO, you can build models with arbitrary levels of complexity. To
@@ -197,32 +208,41 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                 self.sim_EPA_highway.workflow.add('vehicle')
             
                 # Acceleration Sim setup
-                self.sim_acc.velocity_str = 'vehicle.velocity'
-                self.sim_acc.throttle_str = 'vehicle.throttle'
-                self.sim_acc.gear_str = 'vehicle.current_gear'
-                self.sim_acc.acceleration_str = 'vehicle.acceleration'
-                self.sim_acc.overspeed_str = 'vehicle.overspeed'
-                
+                self.sim_acc.add_parameter('vehicle.velocity', name='velocity',
+                                           low=0.0, high=150.0)
+                self.sim_acc.add_parameter('vehicle.throttle', name='throttle',
+                                           low=0.01, high=1.0)
+                self.sim_acc.add_parameter('vehicle.current_gear', name='gear',
+                                           low=0, high=5)
+                self.sim_acc.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed', name='overspeed')
+        
                 # EPA City MPG Sim Setup
-                self.sim_EPA_city.velocity_str = 'vehicle.velocity'
-                self.sim_EPA_city.throttle_str = 'vehicle.throttle'
-                self.sim_EPA_city.gear_str = 'vehicle.current_gear'
-                self.sim_EPA_city.acceleration_str = 'vehicle.acceleration'
-                self.sim_EPA_city.fuel_burn_str = 'vehicle.fuel_burn'
-                self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
-                self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
+                self.sim_EPA_city.add_parameter('vehicle.velocity', name='velocity',
+                                                low=0.0, high=150.0)
+                self.sim_EPA_city.add_parameter('vehicle.throttle', name='throttle',
+                                                low=0.01, high=1.0)
+                self.sim_EPA_city.add_parameter('vehicle.current_gear', name='gear',
+                                                low=0, high=5)
+                self.sim_EPA_city.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_EPA_city.add_objective('vehicle.fuel_burn', name='fuel_burn')
+                self.sim_EPA_city.add_objective('vehicle.overspeed', name='overspeed')
+                self.sim_EPA_city.add_objective('vehicle.underspeed', name='underspeed')
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                
+        
                 # EPA Highway MPG Sim Setup
-                self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
-                self.sim_EPA_highway.throttle_str = 'vehicle.throttle'
-                self.sim_EPA_highway.gear_str = 'vehicle.current_gear'
-                self.sim_EPA_highway.acceleration_str = 'vehicle.acceleration'
-                self.sim_EPA_highway.fuel_burn_str = 'vehicle.fuel_burn'
-                self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
-                self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
-                self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                        
+                self.sim_EPA_highway.add_parameter('vehicle.velocity', name='velocity',
+                                                   low=0.0, high=150)
+                self.sim_EPA_highway.add_parameter('vehicle.throttle', name='throttle',
+                                                   low=0.01, high=1.0)
+                self.sim_EPA_highway.add_parameter('vehicle.current_gear', name='gear',
+                                                   low=0, high=5)
+                self.sim_EPA_highway.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_EPA_highway.add_objective('vehicle.fuel_burn', name='fuel_burn')
+                self.sim_EPA_highway.add_objective('vehicle.overspeed', name='overspeed')
+                self.sim_EPA_highway.add_objective('vehicle.underspeed', name='underspeed')
+                self.sim_EPA_highway.profilename = 'EPA-highway.csv'
+                                
         if __name__ == "__main__": 
         
             my_sim = VehicleSim2()

@@ -29,16 +29,16 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
+from openmdao.lib.datatypes.api import Array, Float, Int
 from openmdao.main.api import Case, ExprEvaluator
-from openmdao.main.datatypes.array import Array
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
-from openmdao.lib.datatypes.api import Float, Int
-from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
+from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
+                                     IHasObjective, implements, IOptimizer
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
@@ -159,11 +159,9 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if not driver.differentiator:
             return obj, dobj, ddobj, g, dg
         
-        driver.calc_derivatives(first=True)
         driver.ffd_order = 1
         driver.differentiator.calc_gradient()
         
-        driver.calc_derivatives(second=True)
         driver.ffd_order = 2
         driver.differentiator.calc_hessian(reuse_first=True)
         
@@ -278,7 +276,7 @@ class NEWSUMTdriver(DriverUsesDerivatives):
             
     """
 
-    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective, IOptimizer)
     
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
                     termination.')

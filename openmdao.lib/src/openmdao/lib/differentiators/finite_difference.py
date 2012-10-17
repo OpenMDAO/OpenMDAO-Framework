@@ -9,8 +9,8 @@ from itertools import product
 
 from openmdao.main.numpy_fallback import array
 
-from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Enum, Float
+from openmdao.main.api import Container
 from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.container import find_name
 
@@ -36,7 +36,7 @@ def diff_2nd_xy(fpp, fpm, fmp, fmm, eps1, eps2):
     return (fpp - fpm - fmp + fmm)/(4.0*eps1*eps2)
 
 
-class FiniteDifference(HasTraits):
+class FiniteDifference(Container):
     """ Differentiates a driver's workflow using the Finite Difference with
     Analytical Derivatives (FDAD) method. A variety of difference types are
     available for both first and second order."""
@@ -51,6 +51,8 @@ class FiniteDifference(HasTraits):
                              'difference step size.')
     
     def __init__(self):
+        
+        super(FiniteDifference, self).__init__()
         
         # This gets set in the callback
         _parent = None
@@ -140,6 +142,11 @@ class FiniteDifference(HasTraits):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow."""
         
+        # Each component runs its calc_derivatives method.
+        # We used to do this in the driver instead, but we've moved it in
+        # here to make the interface more uniform.
+        self._parent.calc_derivatives(first=True)
+        
         self.setup()
 
         # Create our 2D dictionary the first time we execute.
@@ -228,6 +235,11 @@ class FiniteDifference(HasTraits):
             driver needs gradient and hessian information at the same point,
             and calls calc_gradient before calc_hessian.
         """
+        
+        # Each component runs its calc_derivatives method.
+        # We used to do this in the driver instead, but we've moved it in
+        # here to make the interface more uniform.
+        self._parent.calc_derivatives(second=True)
         
         self.setup()
         

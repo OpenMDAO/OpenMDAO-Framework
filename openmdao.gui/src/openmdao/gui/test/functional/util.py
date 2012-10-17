@@ -18,13 +18,16 @@ import zipfile
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
-from pyvirtualdisplay import Display
 from selenium import webdriver
+if sys.platform != 'win32':
+    from pyvirtualdisplay import Display
+
+from optparse import OptionParser
 
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
-from pageobjects.util import abort
+from pageobjects.util import SafeDriver, abort
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -38,10 +41,11 @@ def check_for_chrome():
     """ Determine if Chrome is available. """
     if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
         return True
-    for exe in ('chromium-browser', 'google-chrome', 'chrome'):
+    for exe in ('google-chrome', 'chrome', 'chromium-browser'):
         if find_executable(exe):
             return True
     return False
+
 
 def setup_chrome():
     """ Initialize the Chrome browser. """
@@ -50,28 +54,34 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
+#        version = '19.0.1068.0'
+#        version = '21.0.1180.4'
+        version = '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
+#            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
             flavor = 'linux32'
-        filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        filename = '%s_%s_%s.zip' % (exe, flavor, version)
         orig_dir = os.getcwd()
         os.chdir(os.path.dirname(sys.executable))
         try:
             logging.critical('Downloading %s to %s', filename, os.getcwd())
-            src = urllib2.urlopen(prefix+filename)
+            src = urllib2.urlopen(prefix + filename)
             with open(filename, 'wb') as dst:
                 dst.write(src.read())
             src.close()
             zip = zipfile.ZipFile(filename)
+            if sys.platform == 'win32':
+                exe += '.exe'
             zip.extract(exe)
             zip.close()
             if sys.platform != 'win32':
-                os.chmod(exe, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+                os.chmod(exe, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
             path = os.path.join(os.getcwd(), exe)
             os.remove(filename)
         finally:
@@ -90,6 +100,7 @@ def check_for_firefox():
         if find_executable(exe):
             return True
     return False
+
 
 def setup_firefox():
     """ Initialize the Firefox browser. """
@@ -141,7 +152,7 @@ def setup_server(virtual_display=True):
         try:
             sock = socket.create_connection(('localhost', port))
         except socket.error as exc:
-            if 'Connection refused' not in str(exc):
+            if 'refused' not in str(exc):
                 raise RuntimeError('connect failed: %r' % exc)
         else:
             sock.close()
@@ -151,7 +162,7 @@ def setup_server(virtual_display=True):
 
     # If running headless, setup the virtual display.
     if virtual_display:
-        _display = Display()
+        _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
 
@@ -178,7 +189,10 @@ def teardown_server():
     # Clean up.
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
+        try:
+            shutil.rmtree(server_dir)
+        except Exception as exc:
+            print '%s cleanup failed: %s' % (server_dir, exc)
 
 
 def generate(modname):
@@ -221,7 +235,7 @@ def generate(modname):
     for name in available_browsers:
         try:
             # Open browser and verify we can get page title.
-            browser = _browsers_to_test[name][1]()
+            browser = SafeDriver(_browsers_to_test[name][1]())
             browser.title
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
@@ -230,21 +244,28 @@ def generate(modname):
             continue
 
         abort(False)
+        cleanup = True
+        runner = None
         for test in tests:
+            if runner is not None and runner.failed:
+                cleanup = False
+            runner = _Runner(test)
             logging.critical('')
             if abort():
                 msg = '%s tests aborting' % name
                 logging.critical(msg)
-                yield _Runner(test), SkipTest(msg)
+                yield runner, SkipTest(msg)
             else:
                 logging.critical('Run %s using %s', test.__name__, name)
-                yield _Runner(test), browser
+                yield runner, browser
+        if runner is not None and runner.failed:
+            cleanup = False
 
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
             browser.quit()
-            if name == 'Chrome' and os.path.exists('chromedriver.log'):
+            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
                 os.remove('chromedriver.log')
 
 
@@ -260,38 +281,152 @@ class _Runner(object):
             self.description = test.__doc__.strip()
         else:
             self.description = '%s (%s)' % (test.__name__, test.__module__)
+        self.failed = False
 
     def __call__(self, browser):
         if isinstance(browser, Exception):
-            raise browser
-        self.test(browser)
+            raise browser  # Likely a hung webdriver.
+        try:
+            self.test(browser)
+        except Exception as exc:
+            saved_exc = sys.exc_info()
+            self.failed = True
+            package, dot, module = self.test.__module__.rpartition('.')
+            testname = '%s.%s' % (module, self.test.__name__)
+            logging.exception(testname)
+            # Don't try screenshot if webdriver is hung.
+            if not isinstance(exc, SkipTest):
+                filename = os.path.join(os.getcwd(), '%s.png' % testname)
+                print 'Attempting to take screenshot...'
+                try:
+                    browser.save_screenshot(filename)
+                except Exception as err:
+                    msg = 'Screenshot failed: %s' % err
+                    print msg
+                    logging.critical(msg)
+                else:
+                    msg = 'Screenshot in %s' % filename
+                    print msg
+                    logging.critical(msg)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            raise saved_exc[0], saved_exc[1], saved_exc[2]
+
+
+def startup(browser):
+    """ Create a project and enter workspace. """
+    print 'running %s...' % inspect.stack()[1][3]
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+    return projects_page, project_info_page, project_dict, workspace_page
+
+
+def closeout(projects_page, project_info_page, project_dict, workspace_page):
+    """ Clean up after a test. """
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print '%s complete.' % inspect.stack()[1][3]
 
 
 def begin(browser):
     """
-    Otherwise, load the projects page and return its page object.
+    Load the projects page and return its page object.
     """
     projects_page = ProjectsListPage(browser, TEST_CONFIG['port'])
     projects_page.go_to()
-    eq( 'Projects', projects_page.page_title )
+    eq('Projects', projects_page.page_title)
     return projects_page
 
 
-def new_project(new_project_page):
+def new_project(new_project_page, verify=False):
     """
     Creates a randomly-named new project.
     Returns ``(info_page, info_dict)``
     """
     assert new_project_page.page_title.startswith('Project: New Project')
 
-    data = dict(name=new_project_page.get_random_project_name(),
-                description='Just a project generated by a test script',
-                version='12345678')
+    if verify:
+        data = dict(name=new_project_page.get_random_project_name(),
+                    description='Just a project generated by a test script',
+                    version='12345678')
 
-    project_info_page = \
-        new_project_page.create_project(data['name'], data['description'],
-                                        data['version'])
-    eq( 'Project: '+data['name'], project_info_page.page_title )
+        project_info_page = \
+            new_project_page.create_project(data['name'], data['description'],
+                                            data['version'])
+
+        eq('Project: ' + data['name'], project_info_page.page_title)
+    else:
+        # Slightly quicker since we typically don't care about the
+        # description and version fields.
+        data = dict(name=new_project_page.get_random_project_name())
+        project_info_page = new_project_page.create_project(data['name'])
 
     return (project_info_page, data)
+
+
+def parse_test_args(args=None):
+    """ parse test options from command line args
+    """
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = OptionParser()
+    parser.add_option("--nonose", action="store_true", dest='nonose',
+                      help="if present, run outside of nose")
+    parser.add_option("--test", action="store", type="string", dest='test',
+                      help="specify a specific test to run", default=None)
+    parser.add_option("--noclose", action="store_true", dest='noclose',
+                      help="if present, don't close run outside of nose")
+    parser.add_option("-v", action="store_true", dest='verbose',
+                      help="show progress while running under nose")
+
+    (options, args) = parser.parse_args(args)
+
+    if len(args) > 0:
+        print 'unrecognized args: %s' % args
+        parser.print_help()
+        sys.exit(-1)
+
+    return options
+
+
+def main(args=None):
+    """ run tests for module
+    """
+    options = parse_test_args(args)
+
+    if options.nonose or options.test:
+        # Run tests outside of nose.
+        module = sys.modules['__main__']
+        functions = inspect.getmembers(module, inspect.isfunction)
+        if options.test:
+            func = module.__dict__.get('_test_' + options.test)
+            if func is None:
+                print 'No test named _test_%s' % options.test
+                print 'Known tests are:', [name[6:] for name, func in functions
+                                                if name.startswith('_test_')]
+                sys.exit(1)
+            tests = [func]
+        else:
+            # Run all tests.
+            tests = [func for name, func in functions
+                        if name.startswith('_test_')]
+
+        setup_server(virtual_display=False)
+        browser = SafeDriver(setup_chrome())
+        try:
+            for test in tests:
+                test(browser)
+        finally:
+            if not options.noclose:
+                browser.quit()
+                teardown_server()
+    else:
+        # Run under nose.
+        import nose
+        sys.argv.append('--cover-package=openmdao.')
+        sys.argv.append('--cover-erase')
+        sys.exit(nose.runmodule())
 

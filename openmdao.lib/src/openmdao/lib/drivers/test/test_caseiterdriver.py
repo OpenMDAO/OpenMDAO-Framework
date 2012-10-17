@@ -58,12 +58,16 @@ class DrivenComponent(Component):
 
     rosen_suzuki = Float(0., iotype='out')
     sum_y = Float(0., iotype='out')
+    extra = Float(1.5, iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
 
     def execute(self):
         """ Compute results from input vector. """
+        
+        self.extra = 2.5
+        
         if self.sleep:
             time.sleep(self.sleep)
         self.rosen_suzuki = rosen_suzuki(self.x)
@@ -119,6 +123,7 @@ class Verifier(Component):
             assert case.msg is None
             assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
             assert case['driven.sum_y'] == sum(case['driven.y'])
+            assert case['driven.extra'] == 2.5
 
 
 class TracedComponent(Component):
@@ -189,6 +194,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.sequential = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
         self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
         self.model.run()
         
@@ -202,6 +208,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.sequential = True
 
         try:
@@ -263,6 +270,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
 
         if retry:
@@ -296,6 +304,8 @@ class TestCase(unittest.TestCase):
                                  rosen_suzuki(case['driven.x']))
                 self.assertEqual(case['driven.sum_y'],
                                  sum(case['driven.y']))
+                self.assertEqual(case['driven.extra'],
+                                 2.5)
 
     def test_save_load(self):
         logging.debug('')
@@ -303,6 +313,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.recorders = [results]
 
         # Set local dir in case we're running in a different directory.
@@ -328,6 +339,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
 
         self.model.run()
 
@@ -353,6 +365,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
 
         self.model.run()
@@ -371,6 +384,7 @@ class TestCase(unittest.TestCase):
 
         # Check resoponse to no iterator set.
         self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.driver.printvars = ['driven.extra']
         try:
             self.model.run()
         except ValueError as exc:
@@ -412,6 +426,7 @@ class TestCase(unittest.TestCase):
 
         top.driver.workflow.add(('generator', 'cid', 'verifier'))
         top.cid.workflow.add('driven')
+        top.cid.printvars = ['driven.extra']
 
         top.connect('generator.cases', 'cid.iterator')
         top.connect('cid.evaluated', 'verifier.cases')
@@ -428,6 +443,7 @@ class TestCase(unittest.TestCase):
         rerun_seq = (1, 3, 5, 7, 9)
         self.model.driver.filter = SequenceCaseFilter(rerun_seq)
         rerun = ListCaseRecorder()
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.recorders[0] = rerun
         self.model.run()
 

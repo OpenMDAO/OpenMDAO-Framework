@@ -32,10 +32,14 @@ This returns a response that looks something like this:
     ===================
 
        adpac_wrapper -- Component wrapper for ADPAC (Advanced Ducted Propfan Analysis Code)
+       excel_wrapper -- OpenMDAO Excel Wrapper (MS Windows only)
        flops_wrapper -- Component wrapper for FLOPS
          ipoptdriver -- Driver wrapper for the IPOPT optimization code
+          montecarlo -- DOEgenerator for Monte Carlo Simulation
+          nas_access -- Resource Allocator for NAS
       nastranwrapper -- Component wrapper for MSC Nastran
           neural_net -- A neural net surrogate model generator based on the FFnet library
+      ommodelwrapper -- OpenModelica Model Wrapper
     overflow_wrapper -- Component wrapper for OVERFLOW (OVERset grid FLOW solver)
           pdcyl_comp -- Component wrapper for PDCYL
         pyopt_driver -- Driver wrapper for the open-source optimization package pyOpt
@@ -115,16 +119,15 @@ that are drivers, do the following:
 
     plugin list -g driver
 
-The possible group names are : 'caserecorder', 'caseiterator', 
-'optproblem', 'driver', 'surrogatemodel', 'doegenerator', 
-'component', 'architecture', 'container', 'differentiator', 'variable'.
+The possible group names are: ``caserecorder, caseiterator, optproblem, driver, surrogatemodel,
+doegenerator, component, architecture, container, differentiator, variable``.
 
 
 Installing Plugins
 ------------------
 
-To install one of the plugins listed above, simply type, from any
-directory, but within an activated OpenMDAO environment :
+To install one of the plugins listed above, simply type, from any directory but within an
+activated OpenMDAO environment:
 
 ::
 
@@ -168,7 +171,7 @@ Viewing Plugin Documentation
 ----------------------------
 
 Viewing the documentation for a plugin is easy. For example, 
-if you installed the pyopt_driver using
+if you installed the ``pyopt_driver`` using
 
 ::
 
@@ -184,7 +187,7 @@ you can then view the documentation for it using
 The last part of that, after the final dot, is the class name and
 should be used in the ``plugin docs`` command. 
 
-For an internal plugin like py_opt, it is listed as 
+For an internal plugin like ``py_opt``, it is listed as 
 
 ::
 
@@ -196,8 +199,8 @@ That should be used in the ``plugin docs`` command.
 Importing Plugin Modules
 ------------------------
 
-Again using the example of pyopt_driver, you 
-can import the module using:
+Again, using the example of ``pyopt_driver``, you can import the module
+using:
 
 ::
 

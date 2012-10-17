@@ -1,14 +1,17 @@
 
+from openmdao.main.datatypes.array import Array
+from openmdao.main.datatypes.any import Any
+from openmdao.main.datatypes.bool import Bool
+from openmdao.main.datatypes.complex import Complex
+from openmdao.main.datatypes.dict import Dict
 from openmdao.main.datatypes.enum import Enum
 from openmdao.main.datatypes.float import Float
 from openmdao.main.datatypes.file import File
 from openmdao.main.datatypes.int import Int
+from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
-from openmdao.main.datatypes.array import Array
-
+from openmdao.main.datatypes.str import Str
 
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later
-from enthought.traits.api import Bool, List, Str, \
-     Complex, CBool, Dict, ListStr, Any, on_trait_change,\
-     Python, Event, Dict
+from enthought.traits.api import Python, Event, on_trait_change

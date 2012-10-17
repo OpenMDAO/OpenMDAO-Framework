@@ -8,6 +8,8 @@ import cStringIO
 import threading
 import re
 
+from zope.interface import implementedBy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 import networkx as nx
@@ -17,11 +19,14 @@ from networkx.algorithms.components import strongly_connected_components
 from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
-from openmdao.main.container import find_trait_and_value
+from openmdao.main.container import find_trait_and_value, _copydict
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.slot import Slot
-from openmdao.main.driver import Driver
+from openmdao.main.datatypes.api import Slot
+from openmdao.main.driver import Driver, Run_Once
+from openmdao.main.hasparameters import HasParameters, ParameterGroup
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -82,18 +87,6 @@ class PassthroughProperty(Variable):
             self._vals[obj] = {}
         self._vals[obj][name] = self._trait.validate(obj, name, value)
 
-class Run_Once(Driver):
-    """An assembly starts with a bare driver that just executes the workflow
-    a single time. The only difference between this and the Driver base class
-    is that record_case is called at the conclusion of the workflow execution.
-    """
-
-    def execute(self):
-        ''' Call parent, then record cases.'''
-        
-        super(Run_Once, self).execute()
-        self.record_case()
-        
         
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
@@ -387,15 +380,23 @@ class Assembly (Component):
         of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
+
+        # Save existing driver references.
+        refs = {}
+        if has_interface(tobj, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not tobj and is_instance(obj, Driver):
+                    refs[obj] = obj.get_references(target_name)
+
         if has_interface(newobj, IComponent): # remove any existing connections to replacement object
             self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
             try:
                 newobj.mimic(tobj) # this should copy inputs, delegates and set name
-            except Exception as err:
-                self.raise_exception("Couldn't replace '%s' of type %s with type %s: %s" %
-                                     (target_name, type(tobj).__name__, type(newobj).__name__, str(err)), 
-                                     TypeError)
+            except Exception:
+                self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
+                                       % (target_name, type(tobj).__name__,
+                                          type(newobj).__name__))
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
         target_rgx = re.compile(r'(\W?)%s.' % target_name)
@@ -414,17 +415,24 @@ class Assembly (Component):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
     
+        # Restore driver references.
+        if refs:
+            for obj in self.__dict__.values():
+                if obj is not newobj and is_instance(obj, Driver):
+                    obj.restore_references(refs[obj], target_name)
+
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
         self.disconnect(name)
-        self._depgraph.remove(name)
         self._exprmapper.remove(name)
         if has_interface(cont, IComponent):
+            self._depgraph.remove(name)
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
+                    obj.remove_references(name)
                     
         return super(Assembly, self).remove(name)
 
@@ -486,7 +494,13 @@ class Assembly (Component):
         else: 
             newtrait = PassthroughTrait(validation_trait=trait, **metadata)
         self.add_trait(newname, newtrait)
-        setattr(self, newname, self.get(pathname))
+        
+        # Copy trait value according to 'copy' attribute in the trait
+        val = self.get(pathname)
+        ttype = trait.trait_type
+        if ttype.copy:
+            val = _copydict[ttype.copy](val)  
+        setattr(self, newname, val)
 
         if iotype == 'in':
             self.connect(newname, pathname)
@@ -574,6 +588,8 @@ class Assembly (Component):
         """
         to_remove = []
         if varpath2 is None:
+            if self.parent and '.' not in varpath: # boundary var. make sure it's disconnected in parent
+                self.parent.disconnect('.'.join([self.name, varpath]))
             graph = self._exprmapper._exprgraph
             to_remove = set()
             for expr in self._exprmapper.find_referring_exprs(varpath):
@@ -650,7 +666,16 @@ class Assembly (Component):
         invalids = []
         
         if compname is not None:
-            exprs = ['.'.join([compname, n]) for n in exprs]
+            pred = self._exprmapper._exprgraph.pred
+            if exprs:
+                ex = ['.'.join([compname, n]) for n in exprs]
+                exprs = []
+                for e in ex:
+                    exprs.extend([expr for expr in self._exprmapper.find_referring_exprs(e)
+                                  if expr in pred])
+            else:
+                exprs = [expr for expr in self._exprmapper.find_referring_exprs(compname)
+                             if expr in pred]
         for expr in exprs:
             srctxt = self._exprmapper.get_source(expr)
             if srctxt:
@@ -701,7 +726,11 @@ class Assembly (Component):
                 for i,val in enumerate(vals):
                     ret[posdict[varnames[i]]] = val
             else:
-                vals = getattr(self, compname).get_valid(varnames)
+                comp = getattr(self, compname)
+                if isinstance(comp, Component):
+                    vals = comp.get_valid(varnames)
+                else:
+                    vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]
                 for i,val in enumerate(vals):
                     full = '.'.join([compname,varnames[i]])
                     ret[posdict[full]] = val
@@ -824,7 +853,92 @@ class Assembly (Component):
                     driver_outputs[j] = names[1]
         
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
-    
+
+    def get_dataflow(self):
+        ''' get a dictionary of components and the connections between them
+            that make up the data flow for the assembly
+            also includes parameter, constraint, and objective flows
+        '''
+        components = []
+        connections = []
+        parameters = []
+        constraints = []
+        objectives = []
+        if is_instance(self, Assembly):
+            # list of components (name & type) in the assembly
+            g = self._depgraph._graph
+            names = [name for name in nx.algorithms.dag.topological_sort(g)
+                                   if not name.startswith('@')]
+
+            # Bubble-up drivers ahead of their parameter targets.
+            sorted_names = []
+            for name in names:
+                comp = self.get(name)
+                if is_instance(comp, Driver) and hasattr(comp, '_delegates_'):
+                    driver_index = len(sorted_names)
+                    for dname, dclass in comp._delegates_.items():
+                        inst = getattr(comp, dname)
+                        if isinstance(inst, HasParameters):
+                            refs = inst.get_referenced_compnames()
+                            for ref in refs:
+                                try:
+                                    target_index = sorted_names.index(ref)
+                                except ValueError:
+                                    pass
+                                else:
+                                    driver_index = min(driver_index, target_index)
+                    sorted_names.insert(driver_index, name)
+                else:
+                    sorted_names.append(name)
+
+            # Process names in new order.
+            for name in sorted_names:
+                    comp = self.get(name)
+                    if is_instance(comp, Component):
+                        inames = [cls.__name__ 
+                                  for cls in list(implementedBy(comp.__class__))]
+                        components.append({'name': comp.name,
+                                           'pathname': comp.get_pathname(),
+                                           'type': type(comp).__name__,
+                                           'valid': comp.is_valid(),
+                                           'interfaces': inames,
+                                           'python_id': id(comp)
+                                          })
+
+                    if is_instance(comp, Driver):
+                        if hasattr(comp, '_delegates_'):
+                            for name, dclass in comp._delegates_.items():
+                                inst = getattr(comp, name)
+                                if isinstance(inst, HasParameters):
+                                    for name, param in inst.get_parameters().items():
+                                        if isinstance(param, ParameterGroup):
+                                            for n,p in zip(name,tuple(param.targets)):
+                                                parameters.append([comp.name+'.'+n, p])
+                                        else:
+                                            parameters.append([comp.name+'.'+name,
+                                                               param.target])
+                                elif isinstance(inst, (HasConstraints,
+                                                       HasEqConstraints,
+                                                       HasIneqConstraints)):
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        constraints.append([path,
+                                                            comp.name+'.'+rest])
+                                elif isinstance(inst, (HasObjective,
+                                                       HasObjectives)):
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        objectives.append([path,
+                                                           comp.name+'.'+name])
+
+            # list of connections (convert tuples to lists)
+            conntuples = self.list_connections(show_passthrough=True)
+            for connection in conntuples:
+                connections.append(list(connection))
+
+        return {'components': components, 'connections': connections,
+                'parameters': parameters, 'constraints': constraints,
+                'objectives': objectives}
 
 
 def dump_iteration_tree(obj):
@@ -853,5 +967,3 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-
-

@@ -1,120 +1,166 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.Model=function() {
+openmdao.Model=function(listeners_ready) {
 
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     var self = this,
-        outstream_topic = 'outstream',
+        modified = false,
         outstream_opened = false,
-        outstream_socket = null,
         pubstream_opened = false,
-        pubstream_socket = null,
-        subscribers = {};
+        sockets = {},
+        subscribers = {},
+        windows = [];
+        
+    this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
     */
-    function open_websocket(url,socket,handler) {
-        // make ajax call to get outstream websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  url,
-            success: function(addr) {
-                socket = openmdao.Util.openWebSocket(addr,handler);
-            },
-            error: function(jqXHR, textStatus, err) {
-                debug.error('Error getting websocket url',jqXHR,textStatus,err);
-            }
+    function open_websocket(url,handler) {
+        // make ajax call (to url) to get the address of the websocket
+       return jQuery.ajax({ type: 'GET', url:  url })
+               .fail(function(jqXHR, textStatus, err) {
+                   debug.error('Error getting websocket url',jqXHR,textStatus,err);
+               })
+               .pipe(function(addr) {
+                   return openmdao.Util.openWebSocket(addr,handler);
+               })
+               .done(function(sock) {
+                   sockets[url] = sock;
+               });
+    }
+
+    /** close all websockets */
+    function close_websockets(reason) {
+        jQuery.each(sockets,function(idx,socket) {
+            socket.close(1000,reason);
         });
-    };
+    }
 
-    /** initialize the outstream websocket */
-    function open_outstream_socket(topic) {
-        open_websocket('outstream', this.outstream_socket,
-            function(data) {
-                var callbacks = subscribers[topic];
-                if (callbacks) {
-                    for (i = 0; i < callbacks.length; i++) {
-                        if (typeof callbacks[i] === 'function') {
-                            callbacks[i](data);
-                        }
-                        else {
-                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                        };
-                    };
-                };
+    /** handle an output message, which is just passed on to all subscribers */
+    function handleOutMessage(message) {
+        var callbacks = subscribers.outstream;
+        if (callbacks) {
+            for (i = 0; i < callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
+                }
+                else {
+                    debug.error('Model: invalid callback for topic:',
+                                topic,callbacks[i]);
+                }
             }
-        );
-    };
+        }
+        else {
+            debug.info("no callbacks for out message!");
+        }
+    }
 
-    /** initialize the publisher websocket */
-    function open_pubstream_socket() {
-        open_websocket('pubstream', this.pubstream_socket,
-            function(message) {
+    /** handle a published message, which has a topic
+        the message is passed only to subscribers of that topic
+    */
+    function handlePubMessage(message) {
+        if (typeof message === 'string' || message instanceof String) {
+            try {
                 message = jQuery.parseJSON(message);
-                var callbacks = subscribers[message[0]];
-                if (callbacks) {
-                    for (i = 0; i < callbacks.length; i++) {
-                        if (typeof callbacks[i] === 'function') {
-                            callbacks[i](message);
-                        }
-                        else {
-                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                        };
-                    };
-                };
             }
-        );
-    };
+            catch(err) {
+                debug.error('Model.handlePubMessage Error:',err,message);
+            }
+        }
+        var topic = message[0],
+            callbacks;
+        if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
+            callbacks = subscribers[message[0]].slice();  // Need a copy.
+            for (i = 0; i < callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
+                }
+                else {
+                    debug.error('Model: invalid callback for topic:',
+                                topic,callbacks[i]);
+                }
+            }
+        }
+        else {
+            debug.warn('Model.handlePubMessage() no subscribers for', topic);
+        }
+    }
+
+    this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
+                                open_websocket('pubstream', handlePubMessage));
+                                
+    if (! listeners_ready) { // to keep js_unit_test from failing
+        listeners_ready = jQuery.Deferred();
+        listeners_ready.resolve();
+    }
+    
+    // this makes project loading wait until after the listeners have
+    // been registered.
+    listeners_ready.done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load' })
+        .done(function() {
+             self.model_ready.resolve();
+        })
+        .fail(function() {
+             self.model_ready.reject();
+        });
+    });
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
-    /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
+    /** add a subscriber (i.e. a function to be called)
+        for messages with the given topic
+    */
     this.addListener = function(topic, callback) {
-        if (topic in subscribers) {
+        if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
         else {
-            subscribers[topic] = [ callback ]
-            if (topic === outstream_topic && !outstream_opened) {
-                outstream_opened = true;
-                open_outstream_socket(outstream_topic);
-            }
-            else if (!pubstream_opened) {
-                pubstream_opened = true;
-                open_pubstream_socket();
-            };
-        };
+            subscribers[topic] = [ callback ];
+        }
+        // tell server there's a new subscriber to the topic
+        if (topic !== 'outstream' && topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'publish',
+                data: {'topic': topic, 'publish': true}
+            });
+        }
     };
-    
-    /** notify all generic listeners that something may have changed  */
-    this.updateListeners = function() {        
-        //debug.info('updateListeners',subscribers)
-        var callbacks = subscribers[''];
-        //debug.info('updateListeners',callbacks)
-        if (callbacks) {
-            for (i = 0; i < callbacks.length; i++) {
-                if (typeof callbacks[i] === 'function') {
-                    callbacks[i]();
-                }
-                else {
-                    debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                }
-            };
-        };
+
+    /** remove a subscriber (i.e. a function to be called)
+        for messages with the given topic
+    */
+    this.removeListener = function(topic, callback) {
+        if (subscribers.hasOwnProperty(topic)) {
+            var listeners = subscribers[topic];
+            while (listeners.indexOf(callback) !== -1) {
+              listeners.splice(listeners.indexOf(callback), 1);
+            }
+            // tell server there's one less subscriber to the topic
+            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                jQuery.ajax({
+                    type: 'GET',
+                    url:  'publish',
+                    data: {'topic': topic, 'publish': false}
+                });
+            }
+        }
     };
 
     /** get the list of object types that are available for creation */
     this.getTypes = function(callback, errorHandler) {
-        if (typeof callback != 'function')
+        if (typeof callback !== 'function') {
             return;
+        }
 
         jQuery.ajax({
             type: 'GET',
@@ -122,37 +168,65 @@ openmdao.Model=function() {
             dataType: 'json',
             success: callback,
             error: errorHandler
-        })
-    }
+        });
+    };
 
     /** get a new (empty) model */
     this.newModel = function() {
         jQuery.ajax({
             type: 'POST',
-            url:  'model',
-            success: self.updateListeners
-        })
-    }
+            url:  'model'
+        });
+    };
 
-    /** save the current project */
-    this.saveProject = function(callback,errorHandler) {
-        jQuery.ajax({
+    /** I split this function out from commit so I could call it directly
+       from js_unit_test */
+    this.commit_with_comment = function(comment) {
+        defrd = jQuery.ajax({
             type: 'POST',
             url:  'project',
-            success: callback,
-            error: errorHandler,
+            data: { 'comment': comment },
             complete: function(jqXHR, textStatus) {
-                          if (typeof openmdao_test_mode != 'undefined') {
-                              openmdao.Util.notify('Save complete: ' +textStatus);
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Commit complete: ' +textStatus);
                           }
                       }
-        })
-    }
+        });
+        modified = false;
+        return defrd.promise()
+    };
+    
+    /** commit the current project to the repository (after supplying a comment)*/
+    this.commit = function(callback, errorHandler) {
+        openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
+    };
+
+    /** revert back to the most recent commit of the project */
+    this.revert = function(callback, errorHandler) {
+        openmdao.Util.confirm("Remove all uncommitted changes?",
+            function() {
+                jQuery.ajax({
+                    type: 'POST',
+                    url:  'project_revert',
+                    success: callback,
+                    error: errorHandler,
+                    complete: function(jqXHR, textStatus) {
+                                  if (typeof openmdao_test_mode !== 'undefined') {
+                                      openmdao.Util.notify('Revert complete: ' +textStatus);
+                                  }
+                                  self.reload()
+                              }
+                });
+                modified = false;
+        });
+    };
+
 
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
         else {
             jQuery.ajax({
                 type: 'GET',
@@ -160,32 +234,34 @@ openmdao.Model=function() {
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
-            })
+            });
         }
-    }
+    };
 
     /** get the structure (data flow)) of an assembly */
     this.getDataflow = function(pathname,callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
         else {
             if (!pathname) {
                 pathname = '';
-            };
+            }
             jQuery.ajax({
                 type: 'GET',
                 url:  'dataflow/'+pathname,
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
-            })
+            });
         }
-    }
+    };
 
-    /** get  hierarchical list of components*/
+    /** get  hierarchical list of components */
     this.getComponents = function(callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
         else {
             jQuery.ajax({
                 type: 'GET',
@@ -194,14 +270,15 @@ openmdao.Model=function() {
                 data: {},
                 success: callback,
                 error: errorHandler
-            })
+            });
         }
-    }
+    };
 
-    /** get  attributes of a component*/
+    /** get  attributes of a component */
     this.getComponent = function(name,callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
         else {
             jQuery.ajax({
                 type: 'GET',
@@ -210,25 +287,68 @@ openmdao.Model=function() {
                 data: {},
                 success: callback,
                 error: errorHandler
-            })
+            });
         }
-    }
+    };
+
+    /** get  attributes of any slotable object */
+    this.getObject = function(name,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'object/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
+
+    /** get value for pathname */
+    this.getValue = function(pathname,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'value/'+pathname,
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
 
     /** get connections between two components in an assembly */
     this.getConnections = function(pathname,src_name,dst_name,callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
         else {
+            // src and dst names are optional
+            // (no src or dst means the src or dst is the assembly itself)
+            var args = {};
+            if (src_name) {
+                args.src_name = src_name;
+            }
+            if (dst_name) {
+                args.dst_name = dst_name;
+            }
             jQuery.ajax({
                 type: 'GET',
                 url:  'connections/'+pathname,
                 dataType: 'json',
-                data: { 'src_name': src_name, 'dst_name': dst_name },
+                data: args,
                 success: callback,
                 error: errorHandler
-            })
+            });
         }
-    }
+    };
 
     /** set connections between two components in an assembly */
     this.setConnections = function(pathname,src_name,dst_name,connections,callback,errorHandler) {
@@ -236,43 +356,59 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'connections/'+pathname,
             dataType: 'json',
-            data: { 'src_name': src_name, 'dst_name': dst_name, 'connections': connections },
+            data: { 'src_name': src_name, 'dst_name': dst_name,
+                    'connections': connections },
             success: callback,
             error: errorHandler
-        })
-    }
+        });
+        modified = true;
+    };
 
     /** add an object of the specified type & name to the specified parent */
-    this.addComponent = function(typepath,name,parent,callback) {
+    this.addComponent = function(typepath,name,parent,callback,errorHandler) {
         if (!parent) {
             parent = '';
-        };
+        }
 
-        if (/driver/.test(typepath)&&(openmdao.Util['$'+name])){openmdao.Util['$'+name]();return;};
+        if (/driver/.test(typepath) && (openmdao.Util['$'+name])) {
+            openmdao.Util['$'+name]();
+            return;
+        }
 
         jQuery.ajax({
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'parent': parent },
-            success: function(text) {
-                        if (typeof callback == 'function') {
-                            callback(text);
-                        };
-                        self.updateListeners();
-            }
+            success: callback,
+            error: errorHandler
         });
-    }
+        modified = true;
+    };
+
+    /** replace pathname with an object of the specified type */
+    this.replaceComponent = function(pathname, typepath, callback, errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'replace/'+pathname,
+            data: {'type': typepath},
+            success: callback,
+            error: errorHandler
+        });
+        modified = true;
+    };
 
     /** remove the component with the given pathname */
     this.removeComponent = function(pathname) {
         var parent = openmdao.Util.getPath(pathname);
         if (parent.length > 0 ) {
-            self.issueCommand(parent+'.remove("'+openmdao.Util.getName(pathname)+'")');
+            cmd = parent+'.remove("'+openmdao.Util.getName(pathname)+'")';
         }
         else {
-            self.issueCommand('del('+openmdao.Util.getName(pathname)+')');
+            cmd = 'del('+openmdao.Util.getName(pathname)+')';
         }
-    }
+        self.issueCommand(cmd);
+        modified = true;
+    };
 
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
@@ -280,34 +416,43 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'command',
             data: { 'command': cmd },
-            success: function(txt) { 
-                        if (typeof callback == 'function') {
-                            callback(txt)
-                        };
-                        self.updateListeners();
-                     },
+            success: callback,
             error: errorHandler,
-            complete: completeHandler,
-        })
-    }
+            complete: completeHandler
+        });
+        modified = true;
+    };
+
+    /** issue the specified command against the model */
+    this.setVariableValue = function(lhs, rhs, type, callback, errorHandler, completeHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'variable',
+            data: { 'lhs': lhs,
+                    'rhs': rhs,
+                    'type': type
+                  },
+            success: callback,
+            error: errorHandler,
+            complete: completeHandler
+        });
+        modified = true;
+    };
 
     /** get any queued output from the model */
     this.getOutput = function(callback, errorHandler) {
         jQuery.ajax({
             url: 'output',
-            success: function(text) { 
-                        if (typeof callback == 'function') {
-                            callback(text)
-                        };
-                     },
+            success: callback,
             error: errorHandler
-        })
-    }
+        });
+    };
 
     /** get a recursize file listing of the model working directory (as JSON) */
     this.getFiles = function(callback, errorHandler) {
-        if (typeof callback != 'function')
-            return
+        if (typeof callback !== 'function') {
+            return;
+        }
 
         jQuery.ajax({
             type: 'GET',
@@ -316,13 +461,14 @@ openmdao.Model=function() {
             data: {},
             success: callback,
             error: errorHandler
-        })
-    }
+        });
+    };
 
     /** get the contents of the specified file */
     this.getFile = function(filepath, callback, errorHandler) {
-        if (typeof callback != 'function')
+        if (typeof callback !== 'function') {
             return;
+        }
 
         jQuery.ajax({
             type: 'GET',
@@ -330,148 +476,190 @@ openmdao.Model=function() {
             dataType: 'text',
             success: callback,
             error: errorHandler
-        })
-    }
+        });
+    };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, errorHandler) {
+    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
-            data: { 'contents': contents},
-            success: self.updateListeners,
-            error: errorHandler
-        })
-    }
+            data: { 'contents': contents, 'force': force },
+            success: callback,
+            error: errorHandler,
+            statusCode: {
+                409: handler409
+             }
+        });
+        modified = true;
+    };
 
-    /** create a new folder in the model working directory with the specified path */
-    this.createFolder = function(folderpath, errorHandler) {
+    /** create new folder with  specified path in the model working directory */
+    this.createFolder = function(folderpath, callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
             data: { 'isFolder': true},
-            success: self.updateListeners,
+            success: callback,
             error: errorHandler
-        })
-    }
+        });
+        modified = true;
+    };
 
     /** create a new file in the model working directory with the specified path  */
-    this.newFile = function(folderpath) {
-        openmdao.Util.promptForValue('Specify a name for the new file',function(name) {
-            if (folderpath)
-                name = folderpath+'/'+name
-            var contents = ''
-            if (/.py$/.test(name))
-                contents = '"""\n   '+name+'\n"""\n\n'
-            if (/.json$/.test(name))
-                contents = '[]'                
-            self.setFile(name,contents)
-        })
-    }
+    this.newFile = function(name, folderpath, callback) {
+            if (folderpath) {
+                name = folderpath+'/'+name;
+            }
+            var contents = '';
+            if (/.py$/.test(name)) {
+                contents = '"""\n   '+name+'\n"""\n\n';
+            }
+            if (/.json$/.test(name)) {
+                contents = '[]';
+            }
+            self.setFile(name, contents, undefined, callback);
+            modified = true;
+    };
 
     /** prompt for name & create a new folder */
-    this.newFolder = function(folderpath) {
-        openmdao.Util.promptForValue('Specify a name for the new folder',function(name) {
+    this.newFolder = function(name, folderpath) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }
             self.createFolder(name);
-        })
-    }
+            modified = true;
+    };
 
-    /** upload a file to the model working directory */
-    this.uploadFile = function() {
-        // TODO: make this an AJAX call so we can updateListeners afterwards
-        openmdao.Util.popupWindow('upload','Add File',150,400);
-    }
-
-    /** delete the file in the model working directory with the specified path */
-    this.removeFile = function(filepath) {
+    /** delete file with specified path from the model working directory */
+    this.removeFile = function(filepath, callback) {
         jQuery.ajax({
             type: 'DELETE',
             url:  'file'+filepath.replace(/\\/g,'/'),
             data: { 'file': filepath },
-            success: self.updateListeners,
+            success: callback,
             error: function(jqXHR, textStatus, errorThrown) {
                         // not sure why this always returns a false error
-                       debug.warn("model.removeFile",jqXHR,textStatus,errorThrown);
-                       self.updateListeners();
+                       debug.warn("model.removeFile",
+                                  jqXHR,textStatus,errorThrown);
                    }
-            })
-    }
-
-    /** import the contents of the specified file into the model */
-    this.importFile = function(filepath, callback, errorHandler) {
-        // change path to package notation and import
-        var path = filepath.replace(/\.py$/g,'').
-                            replace(/\\/g,'.').
-                            replace(/\//g,'.');
-        cmd = 'from '+path+' import *'
-        self.issueCommand(cmd, callback, errorHandler,
-                          function(jqXHR, textStatus) {
-                              if (typeof openmdao_test_mode != 'undefined') {
-                                  openmdao.Util.notify("'"+cmd+"' complete: "
-                                                       +textStatus);
-                              }
-                          });
-    }
+            });
+            modified = true;
+    };
 
     /** execute the model */
     this.runModel = function() {
+        self.runComponent('');
+    }
+
+    /** execute a component */
+    this.runComponent = function(pathname) {
         // make the call
         jQuery.ajax({
             type: 'POST',
             url:  'exec',
-            data: { },
+            data: { 'pathname': pathname },
             success: function(data, textStatus, jqXHR) {
-                         self.issueCommand('print "'+data.replace('\n','\\n')+'"',
-                                           null, null,
-                                           function(jqXHR, textStatus) {
-                                               if (typeof openmdao_test_mode != 'undefined') {
-                                                   openmdao.Util.notify('Run complete: '
-                                                                        +textStatus);
-                                               }
-                                           });
-                     },
+                         if (typeof openmdao_test_mode !== 'undefined') {
+                             openmdao.Util.notify('Run complete: '+textStatus);
+                         }
+                      },
             error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
-                       debug.error(jqXHR,textStatus,errorThrown)
-                   },
-        })
-    }
+                       debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
+                       debug.error(jqXHR,textStatus,errorThrown);
+                   }
+        });
+        modified = true;
+    };
 
     /** execute the specified file */
-    this.execFile = function(filepath) {
+    this.execFile = function(filepath, callback) {
         // convert to relative path with forward slashes
-        var path = filepath.replace(/\\/g,'/')
-        if (path[0] == '/')
-            path = path.substring(1,path.length)
-
+        var path = filepath.replace(/\\/g,'/');
+        if (path[0] === '/') {
+            path = path.substring(1,path.length);
+        }
         // make the call
         jQuery.ajax({
             type: 'POST',
             url:  'exec',
             data: { 'filename': path },
-            success: self.updateListeners,
-        })
-    }
+            success: callback
+        });
+        modified = true;
+    };
 
     /** reload the model */
     this.reload = function() {
+        modified = false;
         openmdao.Util.closeWebSockets('reload');
+        self.closeWindows();
         window.location.replace('/workspace/project');
-    }
+    };
 
-    /** exit the model */
-    this.close = function() {
-        openmdao.Util.closeWebSockets('close');
-        window.location.replace('/workspace/close');
-    }
+    /** close the model */
+   this.close = function() {
+   /** since we've switched over to using a vcs to manage the project files, we don't
+    ** really need to save when the user leaves because they won't lose anything.
+    
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, close without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('close');
+                   self.closeWindows();
+                   window.location.replace('/workspace/close');
+               });
+       }
+       else {
+    */
+           openmdao.Util.closeWebSockets('close');
+           self.closeWindows();
+           window.location.replace('/workspace/close');
+    //   }
+   };
 
-    /** exit the model */
-    this.exit = function() {
-        openmdao.Util.closeWebSockets('exit');
-        window.location.replace('/exit');
-    }
+   /** exit the gui */
+   this.exit = function() {
+      /** see comment in close() function
+      
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, exit without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('exit');
+                   self.closeWindows();
+                   window.location.replace('/exit');
+               });
+       }
+       else { */
+           openmdao.Util.closeWebSockets('exit');
+           self.closeWindows();
+           window.location.replace('/exit');
+      // }
+   };
 
-}
+    /** add window to window list. */
+    this.addWindow = function(win) {
+        if (! windows) {
+            windows = [];
+        }
+        windows.push(win);
+    };
+
+    /** close all windows on the window list */
+    this.closeWindows = function() {
+        if ( windows ) {
+            for (i = 0; i < windows.length; i++) {
+                windows[i].close();
+            }
+        }
+    };
+
+    /** return if the model has changed since last save */
+    this.getModified = function(){
+        return modified;
+    };
+
+};
+

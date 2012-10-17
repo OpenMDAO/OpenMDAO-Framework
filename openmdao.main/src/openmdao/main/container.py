@@ -4,13 +4,9 @@ The Container class.
 
 import datetime
 import copy
-import traceback
-import re
 import pprint
 import socket
 import sys
-import inspect
-import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -28,26 +24,29 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
-                                 push_exception_handler, TraitType, CTrait, List
-from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
+from enthought.traits.api import HasTraits, Missing, Python, \
+                                 push_exception_handler, TraitType, CTrait
+from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none, not_event
+from enthought.traits.trait_base import not_none
 
 from multiprocessing import connection
 
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
-from openmdao.main.datatypes.slot import Slot
-from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
-from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
+from openmdao.main.datatypes.api import List, Slot
+from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
+                                     is_instance, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
+                                     IContainer
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.index import process_index_entry, get_indexed_value, INDEX, ATTR, CALL, SLICE
+from openmdao.main.index import process_index_entry, get_indexed_value, \
+                                INDEX, ATTR, SLICE
 
-from openmdao.util.log import Logger, logger, LOG_DEBUG
+from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 
@@ -68,7 +67,7 @@ def get_closest_proxy(start_scope, pathname):
     obj = start_scope
     names = pathname.split('.')
     i = -1
-    for i,name in enumerate(names[:-1]):
+    for i, name in enumerate(names[:-1]):
         if isinstance(obj, Container):
             obj = getattr(obj, name)
         else:
@@ -84,7 +83,7 @@ def build_container_hierarchy(dct):
     contents of dct.
     """
     top = Container()
-    for key,val in dct.items():
+    for key, val in dct.items():
         if isinstance(val, dict): # it's a dict, so this is a Container
             top.add(key, build_container_hierarchy(val))
         else:
@@ -107,7 +106,7 @@ class _ContainerDepends(object):
         
     def check_connect(self, srcpath, destpath):
         dpdot = destpath+'.'
-        for dst,src in self._srcs.items():
+        for dst, src in self._srcs.items():
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
                 raise RuntimeError("'%s' is already connected to source '%s'" %
                                    (dst, src))
@@ -208,7 +207,7 @@ class Container(SafeHasTraits):
         
     def _branch_moved(self):
         self._call_cpath_updated = True
-        for n,cont in self.items():
+        for n, cont in self.items():
             if is_instance(cont, Container):
                 cont._branch_moved()
  
@@ -271,7 +270,9 @@ class Container(SafeHasTraits):
         
         # check for self connections
         if not destpath.startswith('parent.'):
-            cname2, _, destvar = destpath.partition('.')
+            vpath = destpath.split('[', 1)[0]
+            cname2, _, destvar = vpath.partition('.')
+            destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
                 self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
                                      (srcpath, destpath), RuntimeError)
@@ -396,15 +397,25 @@ class Container(SafeHasTraits):
         id_self = id( self )
         if id_self in memo:
             return memo[ id_self ]
+        
+        # Make sure HasTraits is performing all deepcopies. We need this
+        # in order for our sub-components and objects to get deep-copied.
+        memo['traits_copy_mode'] = "deep"
+        
         result = super(Container, self).__deepcopy__(memo)
         result._cached_traits_ = None
+        
+        # Instance traits are not created properly by deepcopy, so we need
+        # to manually recreate them. Note, self._added_traits is the most
+        # accurate listing of them. Self._instance_traits includes some
+        # extra stuff.
         olditraits = self._instance_traits()
-        newtraits = result._instance_traits()
-        newtraits.update(result.traits())
         for name, trait in olditraits.items():
-            if trait.type is not 'event' and name not in newtraits:
+            if trait.type is not 'event' and name in self._added_traits:
+                
                 result.add_trait(name, _clone_trait(trait))
-                setattr(result, name, getattr(self, name))
+                result.__dict__[name] = self.__dict__[name]
+
         return result
 
     def __getstate__(self):
@@ -601,9 +612,7 @@ class Container(SafeHasTraits):
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
-            self.raise_exception("'"+str(type(obj))+
-                    "' object is not an instance of Container.",
-                    TypeError)
+            setattr(self, name, obj)
         return obj
 
     def _check_recursion(self, obj):
@@ -746,8 +755,7 @@ class Container(SafeHasTraits):
                     if is_instance(obj, Container) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
-                    elif trait.iotype is not None and id(trait) not in visited:
-                        visited.add(id(trait))
+                    elif trait.iotype is not None:
                         yield (name, obj)
 
     def items(self, recurse=False, **metadata):
@@ -764,7 +772,55 @@ class Container(SafeHasTraits):
     
     def list_vars(self):
         """Return a list of Variables in this Container."""
-        return [k for k,v in self.items(iotype=not_none)]
+        return [k for k, v in self.items(iotype=not_none)]
+    
+    def get_attributes(self, io_only=True):
+        """ We use Container as a base class for objects that have traits
+        that need to be edited, but have no iotype. This method returns a
+        dictionary of information that the GUI can use to build the editors.
+        
+        The default behavior is to take all traits and put them on the inputs
+        pane. For different behavior, overload this method.
+        
+        io_only: Bool
+            Passed in, but not used in the base class."""
+        
+        attrs = {}
+        attrs['type'] = type(self).__name__
+
+        variables = []
+        slots = []
+        #for name in self.list_vars() + self._added_traits.keys():
+        for name in set(self.list_vars()).union( \
+            set(self._added_traits.keys()) ):
+            
+            attr = {}
+            
+            var = self.get(name)
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                        
+            # Container variables are not connectable
+            attr['connected'] = ''
+                    
+            variables.append(attr)
+            
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    slots.append(slot_attr)
+            
+        attrs["Inputs"] = variables
+        return attrs
+
     
     # Can't use items() since it returns a generator (won't pickle).
     @rbac(('owner', 'user'))
@@ -910,7 +966,15 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            obj = getattr(self, path, Missing)
+            # TODO: fix this...
+            if '[' in path:
+                path,idx = path.replace(']','').split('[')
+                if path and idx.isdigit():
+                    obj = getattr(self, path, Missing)[int(idx)]
+                else:
+                    return self._get_failed(path, index)
+            else:
+                obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
             return get_indexed_value(obj, '', index)
@@ -974,7 +1038,7 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                src = ExprEvaluator(src,scope=self).scope_transform(self, obj, parent=self)
+                src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
             obj.set(restofpath, value, index, src=src, force=force)
         else:
             try:
@@ -1043,7 +1107,7 @@ class Container(SafeHasTraits):
             elif idx[0] == ATTR:
                 setattr(obj, idx[1], value)
             elif idx[0] == SLICE:
-                obj.__setitem__(slice(idx[1][0],idx[1][1],idx[1][2]), value)
+                obj.__setitem__(slice(idx[1][0], idx[1][1], idx[1][2]), value)
         else:
             obj[idx] = value
                 
@@ -1413,7 +1477,6 @@ class Container(SafeHasTraits):
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 
-
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
 CLASSES_TO_PROXY.append(FileRef)
@@ -1470,7 +1533,7 @@ def find_name(parent, obj):
     
     Return '' if not found.
     """
-    for name,val in parent.__dict__.items():
+    for name, val in parent.__dict__.items():
         if val is obj:
             return name
     return ''
@@ -1574,3 +1637,4 @@ def create_io_traits(cont, obj_info, iotype='in'):
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  RuntimeError)
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))
+

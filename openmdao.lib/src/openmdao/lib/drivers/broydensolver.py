@@ -28,7 +28,8 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
-from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, implements
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
+                                     ISolver, implements
 
     
 @stub_if_missing_deps('numpy')
@@ -62,7 +63,7 @@ class BroydenSolver(Driver):
     their own words, of "mediocre quality," so they were not implemented.
     """ 
 
-    implements(IHasParameters, IHasEqConstraints)
+    implements(IHasParameters, IHasEqConstraints, ISolver)
     
     # pylint: disable-msg=E1101
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],

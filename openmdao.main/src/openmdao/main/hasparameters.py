@@ -129,7 +129,7 @@ class Parameter(object):
 
     def __repr__(self): 
         return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
-               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start,self.name)
+               self.get_config()
     
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
@@ -190,7 +190,11 @@ class Parameter(object):
                          scaler=self.scaler, adder=self.adder, start=self.start, 
                          fd_step=self.fd_step, scope=self._expreval.scope, name=self.name)
 
-    
+    def get_config(self):
+        return (self.target, self.low, self.high, self.fd_step, 
+                self.scaler, self.adder, self.start, self.name)
+
+        
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
     set to the same value.
@@ -201,7 +205,6 @@ class ParameterGroup(object):
             # prevent multiply nested ParameterGroups
             if not isinstance(param, Parameter):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
-            
             
         self._params = params[:]
         self.low = max([x.low for x in self._params])
@@ -284,11 +287,14 @@ class ParameterGroup(object):
         """Return a set of Variable names referenced in our target strings."""
         result = set()
         for param in self._params:
-            result.update(param.get_referenced_varpaths(copy=False))
+            result.update(param.get_referenced_varpaths())
         return result
 
     def copy(self):
         return ParameterGroup([p.copy() for p in self._params])
+    
+    def get_config(self):
+        return [p.get_config() for p in self._params]
 
     
 class HasParameters(object): 
@@ -432,6 +438,8 @@ class HasParameters(object):
             if start is not None: 
                 self._parameters[key].set(start,self._get_scope(scope))
         
+        self._parent._invalidate()
+
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         try:
@@ -440,6 +448,44 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
+        self._parent._invalidate()
+
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        # Just returning everything for now.
+        return self._parameters.copy()
+
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for pname, param in self._parameters.items():
+            if name in param.get_referenced_compnames():
+                self.remove_parameter(pname)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, ordereddict.OrderedDict):
+            self._parameters = refs
+        else:
+            raise TypeError('refs should be ordereddict.OrderedDict, got %r'
+                            % refs)
+
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter and
@@ -453,6 +499,7 @@ class HasParameters(object):
     def clear_parameters(self):
         """Removes all parameters."""
         self._parameters = ordereddict.OrderedDict()
+        self._parent._invalidate()
         
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
@@ -463,6 +510,32 @@ class HasParameters(object):
         for key,param in self._parameters.iteritems():
             if param.start is not None: 
                 param.set(param.start, self._get_scope())
+        self._parent._invalidate()
+
+    def set_parameter_by_name(self, name, value, case=None, scope=None): 
+        """Sets a single parameter by its name attribute.
+        
+        name: str
+            Name of the parameter. This is either the name alias given when
+            the parameter was added, or the variable path of the parameter's
+            target if no name was given.
+            
+        value: object (typically a float)
+            Value of the parameter to be set.
+            
+        case: Case (optional)
+            If supplied, the values will be associated with their corresponding
+            targets and added as inputs to the Case instead of being set directly
+            into the model.
+        """
+
+        param = self._parameters[name]
+        if case is None:
+            param.set(value, self._get_scope(scope))
+        else:
+            for target in param.targets:
+                case.add_input(target, value)
+            return case
 
     def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 
@@ -517,7 +590,7 @@ class HasParameters(object):
         """
         result = set()
         for param in self._parameters.values():
-            result.update(param.get_referenced_varpaths(copy=False))
+            result.update(param.get_referenced_varpaths())
         return result
     
     def _get_scope(self, scope=None):

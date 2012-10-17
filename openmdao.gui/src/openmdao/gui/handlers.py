@@ -1,8 +1,12 @@
-from tornado.web import RequestHandler
+from tornado.web import RequestHandler, StaticFileHandler
 from openmdao.gui.session import TornadoSession
+import threading
+import os, sys
+import pprint
 
 from openmdao.main.rbac import Credentials
-
+from openmdao.main.plugin import find_docs_url
+from openmdao.util.fileutil import get_ancestor_dir
 
 class ReqHandler(RequestHandler):
     ''' override the get_current_user() method in your request handlers to
@@ -76,3 +80,46 @@ class ExitHandler(ReqHandler):
     def get(self):
         self.application.exit()
         self.render('closewindow.html')
+
+class PluginDocsHandler(StaticFileHandler):
+    ''' retrieve docs for a plugin '''
+    _plugin_map = {}
+    _plugin_lock = threading.Lock()
+    
+    def _cname_valid(self, name):
+        # TODO: use regex to check form of cname (must be dotted module path)
+        return True
+    
+    def initialize(self, route):
+        rpath = self.request.path[len(route):].strip('/')
+        parts = rpath.split('/',1)
+        self.cname = parts[0] + os.sep
+        self.added = ''
+        if len(parts) == 1:
+            with self._plugin_lock:
+                if self._cname_valid(parts[0]) and parts[0] not in self._plugin_map:
+                    url = find_docs_url(parts[0], build_if_needed=False)
+                    if self.cname.startswith('openmdao.'):
+                        root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
+                                            '_build', 'html')
+                        if url.startswith('file://'):
+                            url = url[7:]
+                            self.added = os.path.dirname(url)[len(root)+1:]
+                    else:
+                        root = os.path.dirname(url)
+                    default = os.path.basename(url)
+                    self._plugin_map[parts[0]] = (root, default, self.added)
+
+        root, default, self.added = self._plugin_map[parts[0]]
+        
+        super(PluginDocsHandler, self).initialize(root, default)
+    
+    def get(self, path, include_body=True):
+        if path+os.sep == self.cname:
+            self.redirect(os.path.join('/docs','plugins',self.cname, self.default_filename))
+        elif path.startswith(self.cname):
+            super(PluginDocsHandler, self).get(os.path.join(self.added, path[len(self.cname):]), 
+                                               include_body)
+        else:
+            super(PluginDocsHandler, self).get(path, include_body)
+    

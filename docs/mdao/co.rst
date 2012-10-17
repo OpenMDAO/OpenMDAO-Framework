@@ -42,11 +42,11 @@ workflow with just the discipline component. This can be seen in the next figure
 
 First, we define the global target variables, create the component instances, 
 and set up this iteration hierarchy. Pay special attention to how we define the
-variables. Notice that the ``iotype`` metadata is not set at all. Normally 
+variables. Notice that the `iotype` metadata is not set at all. Normally 
 you would set ``iotype="in"`` or ``iotype="out"`` when you create a variable. In this 
 case, the variables are neither inputs nor outputs to the assembly. Instead, they are
 meant only to be internal variables, varied by the top level driver and used 
-in the lower level optimization objectives. Hence, no `iotype` is set. 
+in the lower level optimization objectives. Hence, no iotype is set. 
         
 .. testcode:: CO_parts
 
@@ -120,7 +120,7 @@ Here we are able to build a complicated expression for the sum of the squares
 of all of the residuals and use it as our constraint. This is another
 example of a constraint that could be better served as an equality constraint, 
 but there is some research which indicates the performance of CO can be 
-improved by switching to an inequality constraint with a small, but non zero
+improved by switching to an inequality constraint with a small, but non-zero
 tolerance. We created two constraints, one for each discipline.
 
 Finally, we set up our local optimization loops.

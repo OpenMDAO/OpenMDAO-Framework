@@ -10,18 +10,21 @@ from openmdao.gui.filemanager import FileManager
 class FileManagerTestCase(unittest.TestCase):
 
     def setUp(self):
-        pass
+        tempdir = tempfile.mkdtemp()
+        self.tempdir = os.path.realpath(tempdir)  # osx
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
     def test_filemanager(self):
-        ''' exercise filemanager functions
-        '''
+        # exercise filemanager functions
+        
+        orig_dir = os.getcwd()
+        
+        tempdir = self.tempdir
+        
         # constructor
-        tempdir = tempfile.mkdtemp()
-        tempdir = os.path.realpath(tempdir)  # osx
         filemanager = FileManager('test', tempdir)
-
-        # getcwd
-        self.assertEquals(filemanager.getcwd(), tempdir)
 
         # ensure_dir
         dname = 'subdirectory'
@@ -57,11 +60,7 @@ class FileManagerTestCase(unittest.TestCase):
         self.assertEqual(files[s_dname][s_sname], len(hello))
 
         # delete_file
-        try:
-            filemanager.delete_file(dname)
-        except OSError as (errno, errmsg):
-            self.assertTrue(errmsg.lower().find('not empty') > 0)
-        self.assertTrue(os.path.exists(os.path.join(tempdir, dname)))
+        filemanager.delete_file(dname)
 
         filemanager.delete_file(sname)
         self.assertTrue(not os.path.exists(os.path.join(tempdir, sname)))
@@ -71,29 +70,31 @@ class FileManagerTestCase(unittest.TestCase):
 
         # cleanup
         filemanager.cleanup()
-        self.assertTrue(not os.path.exists(tempdir))
+        self.assertEqual(os.getcwd(), filemanager.orig_dir)
 
     def test_add_file(self):
-        ''' exercise filemanager add_file function
-        '''
+        # exercise filemanager add_file function
+        
         # create a zip file
         tempdir = tempfile.mkdtemp()
         tempdir = os.path.realpath(tempdir)  # osx
         temptxt = os.path.join(tempdir, 'temp.txt')
-        with open(temptxt, 'w') as f:
-            f.write('this is just a test')
-        tempzip = os.path.join(tempdir, 'temp.zip')
-        zf = zipfile.ZipFile(tempzip, mode='w')
         try:
-            zf.write(temptxt, arcname='testfile.txt')
+            with open(temptxt, 'w') as f:
+                f.write('this is just a test')
+            tempzip = os.path.join(tempdir, 'temp.zip')
+            zf = zipfile.ZipFile(tempzip, mode='w')
+            try:
+                zf.write(temptxt, arcname='testfile.txt')
+            finally:
+                zf.close()
+            with open(tempzip, 'rb') as f:
+                contents = f.read()
         finally:
-            zf.close()
-        with open(tempzip, 'rb') as f:
-            contents = f.read()
-        shutil.rmtree(tempdir)
+            shutil.rmtree(tempdir)
 
         # add_file
-        filemanager = FileManager('test')
+        filemanager = FileManager('test', self.tempdir)
         filemanager.add_file('unzip me', contents)
         files = filemanager.get_files()
         self.assertEqual(len(files), 1)
@@ -103,9 +104,6 @@ class FileManagerTestCase(unittest.TestCase):
 
         # cleanup
         filemanager.cleanup()
-
-    def tearDown(self):
-        pass
 
 
 if __name__ == "__main__":

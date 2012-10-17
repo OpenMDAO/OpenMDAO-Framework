@@ -3,12 +3,15 @@ Element descriptors and underlying object types which are intended to be used
 with BasePageObject.
 """
 
+import logging
 import time
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
-                                       ElementNotVisibleException
-from basepageobject import TMO
+                                       ElementNotVisibleException, \
+                                       StaleElementReferenceException
+from basepageobject import TMO, rgba
+from grid import Grid
 
 
 class _BaseElement(object):
@@ -25,27 +28,68 @@ class _BaseElement(object):
     def __init__(self, page, locator):
         self._browser = page.browser
         self._locator = locator
+        self._root = page.root
 
     @property
     def element(self):
         """ The element on the page. """
-        return WebDriverWait(self._browser, TMO).until(
-                   lambda browser: browser.find_element(*self._locator))
+        if self._root is None:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: browser.find_element(*self._locator))
+        else:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: self._root.find_element(*self._locator))
+    @property
+    def color(self):
+        """ Return RGBA values for ``color`` property. """
+        return rgba(self.value_of_css_property('color'))
 
+    @property
+    def background_color(self):
+        """ Return RGBA values for ``background-color`` property. """
+        return rgba(self.value_of_css_property('background-color'))
+
+    @property
     def is_present(self):
-        """ Return True if the element can be found. """
+        """ True if the element can be found. """
+        self._browser.implicitly_wait(1)
         try:
-            found = self.element
-            return True
-        except NoSuchElementException:
+            if self._root is None:
+                self._browser.find_element(*self._locator)
+            else:
+                self._root.find_element(*self._locator)
+        except (NoSuchElementException,
+                StaleElementReferenceException):
             return False
+        finally:
+            self._browser.implicitly_wait(TMO)
+        return True
 
+    @property
     def is_visible(self):
-        """ Return True if the element is displayed. """
+        """ True if the element is visible. """
         try:
             return self.element.is_displayed()
-        except (NoSuchElementException, ElementNotVisibleException):
+        except (NoSuchElementException,
+                ElementNotVisibleException,
+                StaleElementReferenceException):
             return False
+
+    def find_element_by_xpath(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_element_by_xpath(xpath)
+
+    def find_elements_by_xpath(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_xpath(xpath)
+
+    def find_elements_by_css_selector(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_css_selector(xpath)
+
+    def value_of_css_property(self, name):
+        """ Return value for the the CSS property `name`. """
+        return self.element.value_of_css_property(name)
 
 
 class _ButtonElement(_BaseElement):
@@ -58,6 +102,11 @@ class _ButtonElement(_BaseElement):
     def value(self):
         """ The element's ``value`` attribute. """
         return self.element.get_attribute('value')
+
+    @property
+    def text(self):
+        """ The element's text. """
+        return self.element.text
 
     def click(self):
         """ 'Click' on the button. """
@@ -83,8 +132,20 @@ class _CheckboxElement(_BaseElement):
     def value(self, new_value):
         element = self.element
         if bool(new_value) != element.is_selected():
-            time.sleep(0.1)  # Just some pacing.
+            time.sleep(1)  # Just some pacing.
             element.click()  # Toggle it.
+
+
+class _GridElement(_BaseElement):
+    """ A SlickGrid. """
+
+    def __init__(self, page, locator):
+        super(_GridElement, self).__init__(page, locator)
+
+    @property
+    def value(self):
+        """ The element's ``value`` attribute is a :class:`Grid`. """
+        return Grid(self._browser, self.element)
 
 
 class _InputElement(_BaseElement):
@@ -108,7 +169,31 @@ class _InputElement(_BaseElement):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(new_value)
+        for retry in range(3):
+            try:
+                element.send_keys(new_value)
+                return
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('InputElement.send_keys:'
+                                    ' StaleElementReferenceException')
+                    element = self.element
+                else:
+                    raise
+
+    def set_values(self, *values):
+        """ FIXME: doesn't work, see Selenium issue #2239
+            http://code.google.com/p/selenium/issues/detail?id=2239
+        """
+        element = self.element
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_enabled())
+        if element.get_attribute('value'):
+            element.clear()
+        time.sleep(0.1)  # Just some pacing.
+        element.send_keys(*values)
 
 
 class _TextElement(_BaseElement):
@@ -121,6 +206,16 @@ class _TextElement(_BaseElement):
     def value(self):
         """ The element's text. """
         return self.element.text
+
+
+class _GenericElement(_BaseElement):
+
+    def __init__(self, page, locator):
+        super(_GenericElement, self).__init__(page, locator)
+
+    @property
+    def value(self):
+        return self.element
 
 
 class BaseElement(object):
@@ -171,6 +266,11 @@ class CheckboxElement(BaseElement):
     def __init__(self, locator):
         super(CheckboxElement, self).__init__(_CheckboxElement, locator)
 
+class GridElement(BaseElement):
+    """ The `value` of this is a :class:`Grid`. """
+    def __init__(self, locator):
+        super(GridElement, self).__init__(_GridElement, locator)
+
 class InputElement(BaseElement):
     """ A text input field. """
     def __init__(self, locator):
@@ -180,4 +280,9 @@ class TextElement(BaseElement):
     """ Just some text on the page. """
     def __init__(self, locator):
         super(TextElement, self).__init__(_TextElement, locator)
+
+class GenericElement(BaseElement):
+    """A Generic Element for objects not of the above types"""
+    def __init__(self, locator):
+        super(GenericElement, self).__init__(_GenericElement, locator)
 

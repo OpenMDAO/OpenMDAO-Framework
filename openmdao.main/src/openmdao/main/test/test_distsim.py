@@ -324,7 +324,8 @@ class TestCase(unittest.TestCase):
 
             server, server_cfg = start_server(port=port,
                                               allowed_users=allowed_users,
-                                              allowed_types=allowed_types)
+                                              allowed_types=allowed_types,
+                                              log_prefix=server_dir)
             self.servers.append(server)
             cfg = read_server_config(server_cfg)
             self.address = cfg['address']
@@ -706,6 +707,7 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')

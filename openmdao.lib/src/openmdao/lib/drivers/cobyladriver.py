@@ -26,7 +26,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
-                                     IHasObjective, implements
+                                     IHasObjective, implements, IOptimizer
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
     
@@ -42,7 +42,7 @@ class COBYLAdriver(Driver):
     (positive = violated)
     """
     
-    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective, IOptimizer)
     
     # pylint: disable-msg=E1101
     rhobeg = Float(1.0, iotype='in', 

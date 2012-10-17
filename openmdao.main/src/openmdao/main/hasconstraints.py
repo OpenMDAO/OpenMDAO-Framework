@@ -126,10 +126,49 @@ class _HasConstraintsBase(object):
         except KeyError:
             msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
-            
+        self._parent._invalidate()
+
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        # Just returning everything for now.
+        return self._constraints.copy()
+
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for cname, constraint in self._constraints.items():
+            if name in constraint.lhs.get_referenced_compnames() or \
+               name in constraint.rhs.get_referenced_compnames():
+                self.remove_constraint(cname)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, ordereddict.OrderedDict):
+            self._constraints = refs
+        else:
+            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
+                            % refs)
+
     def clear_constraints(self):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
+        self._parent._invalidate()
         
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
@@ -241,6 +280,8 @@ class HasEqConstraints(_HasConstraintsBase):
         else:
             msg = "Inequality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
+            
+        self._parent._invalidate()
 
     def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None, scope=None):
         """Adds an equality constraint as two strings, a left-hand side and
@@ -266,6 +307,9 @@ class HasEqConstraints(_HasConstraintsBase):
         else:
             self._constraints[name] = constraint
             
+        self._parent._invalidate()
+            
+            
     def add_existing_constraint(self, cnst, name=None):
         """Adds an existing Constraint object to the driver.
         
@@ -281,6 +325,8 @@ class HasEqConstraints(_HasConstraintsBase):
         else:
             self._parent.raise_exception("Inequality constraint '%s' is not supported on this driver" %
                                          str(cnst), ValueError)
+            
+        self._parent._invalidate()
 
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -360,6 +406,9 @@ class HasIneqConstraints(_HasConstraintsBase):
             self._constraints[ident] = constraint
         else:
             self._constraints[name] = constraint
+            
+        self._parent._invalidate()
+            
         
     def add_existing_constraint(self, cnst, name=None):
         """Adds an existing Constraint object to the driver.
@@ -376,6 +425,8 @@ class HasIneqConstraints(_HasConstraintsBase):
         else:
             self._parent.raise_exception("Equality constraint '%s' is not supported on this driver" % 
                                          str(cnst), ValueError)
+
+        self._parent._invalidate()
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -444,6 +495,8 @@ class HasConstraints(object):
         else:
             self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name, scope)
             
+        self._parent._invalidate()
+            
     def add_existing_constraint(self, cnst, name=None):
         """Adds an existing Constraint object to the driver.
         
@@ -459,6 +512,8 @@ class HasConstraints(object):
         else:
             self._ineq.add_existing_constraint(cnst, name)
 
+        self._parent._invalidate()
+
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
         ident = _remove_spaces(expr_string)
@@ -466,11 +521,50 @@ class HasConstraints(object):
             self._eq.remove_constraint(expr_string)
         else:
             self._ineq.remove_constraint(expr_string)
+            
+        self._parent._invalidate()
         
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        return (self._eq.get_references(name), self._ineq.get_references(name))
+
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        self._eq.remove_references(name)
+        self._ineq.remove_references(name)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: dict
+            References returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, tuple) and len(refs) == 2:
+            self._eq.restore_references(refs[0], name)
+            self._ineq.restore_references(refs[1], name)
+        else:
+            raise TypeError('refs should be tuple of ordereddict.OrderedDict, got %r' 
+                            % refs)
+
     def clear_constraints(self):
         """Removes all constraints."""
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
+        
+        self._parent._invalidate()
         
     def copy_constraints(self):
         dct = self._eq.copy_constraints()

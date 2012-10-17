@@ -4,15 +4,17 @@
 import sys
 import os
 import os.path
+from os.path import isfile, isdir, exists, join, getsize, split
 import webbrowser
 import json
-from xml.etree.ElementTree import Element, SubElement, tostring
 
+from distutils.spawn import find_executable
+from openmdao.util.fileutil import find_files
 
 def ensure_dir(d):
     ''' create directory if it doesn't exist
     '''
-    if not os.path.isdir(d):
+    if not isdir(d):
         os.makedirs(d)
 
 
@@ -28,7 +30,7 @@ def print_dict(dict):
     '''
     for item in dict.items():
         key, value = item
-        print str(key)+' = '+str(value)
+        print str(key) + ' = ' + str(value)
 
 
 def print_json(data):
@@ -45,8 +47,8 @@ def makenode(doc, path):
     node = doc.createElement('dir')
     node.setAttribute('name', path)
     for f in os.listdir(path):
-        fullname = os.path.join(path, f)
-        if os.path.isdir(fullname):
+        fullname = join(path, f)
+        if isdir(fullname):
             elem = makenode(doc, fullname)
         else:
             elem = doc.createElement('file')
@@ -55,81 +57,74 @@ def makenode(doc, path):
     return node
 
 
-def filedict(path, key='pathname', root=''):
-    ''' create a nested dictionary for a file structure
-        the key may be one of:
-            'filename'    the name of the file
-            'pathname'    the full pathname of the file (default)
+def filedict(path):
+    ''' create a nested dictionary for a file structure with 
+    names relative to the starting directory.
     '''
-    dict = {}
-    for filename in os.listdir(path):
-        pathname = os.path.join(path, filename)
-        k = locals()[key]
-        l = len(root)
-        if key=='pathname' and l > 0:
-            k = k[l:]
-        if os.path.isdir(pathname):
-            dict[k] = filedict(pathname, key, root)
+    rootlen = len(path)
+    dirs = { path: {} }
+    for filename in find_files(path, showdirs=True):
+        dirname, basename = split(filename)
+        if isdir(filename):
+            dirs[filename] = {}
+            dirs[dirname][filename[rootlen:]] = dirs[filename]
         else:
-            dict[k] = os.path.getsize(pathname)
-    return dict
+            try:
+                dirs[dirname][filename[rootlen:]] = getsize(filename)
+            except OSError as err:
+                # during a mercurial commit we got an error during
+                # getsize() of a lock file that was no longer there,
+                # so check file existence here and only raise an exception
+                # if the file still exists.
+                if exists(filename):
+                    raise
+    return dirs[path]
+
+
+def unique_shortnames(names):
+    """Return a dict containing full name vs. short name where short name
+    is still unique within the given list.  Each entry in the initial list
+    of dotted names is assumed to be unique.
+    """
+    looking = set(names)
+    dct = dict([(n, n.split('.')) for n in names])
+    level = 1
+    while looking:
+        shorts = dict([(n, '.'.join(dct[n][len(dct[n]) - level:len(dct[n])])) for n in looking])
+        shortcounts = dict([(s, 0) for n, s in shorts.items()])
+        for n, shrt in shorts.items():
+            shortcounts[shrt] += 1
+        for n, shrt in shorts.items():
+            if shortcounts[shrt] == 1:
+                looking.remove(n)
+                dct[n] = shorts[n]
+        level += 1
+    return dct
 
 
 def packagedict(types):
-    ''' create a nested list for a package structure
+    ''' create a nested dict for a package structure
     '''
-    dict={}
-    for t in types:
-        parent = dict
-        nodes = t[0].split('.')
-        name = nodes[len(nodes)-1]
-        for node in nodes:
-            if node==name:
-                parent[node] = {'path': t[0], 'version': t[1]}
-            else:
-                if not node in parent:
-                    parent[node] = {}
-            parent = parent[node]
-    return dict
+    dct = {}
+    namedict = unique_shortnames([t[0] for t in types])
+
+    for typ, meta in types:
+        m = meta.copy()
+        m['modpath'] = typ
+        dct[namedict[typ]] = m
+
+    return dct
 
 
-def packageXML(types):
-    ''' create an XML representation of a package structure
+def get_executable_path(executable_names):
+    '''Look for an executable given a list of the possible names
     '''
-    xml = '<?xml version=\"1.0\"?>\n'
-    xml = xml + '<response>\n'
-    typeTree = Element("Types")
-    # get the installed types
-    for t in types:
-        path = t[0].split('.')
-        last = path[len(path)-1]
-        parent = typeTree
-        for node in path:
-            if not node==last:
-                # it's a package name, see if we have it already
-                existingElem = None
-                packages = parent.findall('Package')
-                for p in packages:
-                    if p.get("name") == node:
-                        existingElem = p
-                # set the parent to this package
-                if existingElem is None:
-                    pkgElem = SubElement(parent, "Package")
-                    pkgElem.set("name", node)
-                    parent = pkgElem
-                else:
-                    parent = existingElem
-            else:
-                # it's the class name, add it under current package
-                typeElem = SubElement(parent, "Type")
-                typeElem.set("name", node)
-                typeElem.set("path", t[0])
-    # get the "working" types
-    pkgElem = SubElement(typeTree, "Package")
-    pkgElem.set("name", "working")
-    xml = xml + tostring(typeTree)
-    xml = xml + '</response>\n'
-    return xml
+    path = None
+    for name in executable_names:
+        path = find_executable(name)
+        if path:
+            break
+    return path
 
 
 def launch_browser(port, preferred_browser=None):
@@ -137,8 +132,8 @@ def launch_browser(port, preferred_browser=None):
         try to use preferred browser if specified, fall back to default
         (chrome will launch in "app mode")
     '''
-    url = 'http://localhost:'+str(port)
-    print 'Opening URL in browser: '+url+' (pid='+str(os.getpid())+')'
+    url = 'http://localhost:' + str(port)
+    print 'Opening URL in browser: ' + url + ' (pid=' + str(os.getpid()) + ')'
 
     # webbrowser doesn't know about chrome, so try to find it
     if preferred_browser and preferred_browser.lower() == 'chrome':
@@ -146,27 +141,27 @@ def launch_browser(port, preferred_browser=None):
             # Windows7
             USERPROFILE = os.getenv("USERPROFILE")
             if USERPROFILE:
-                CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
+                CHROMEPATH = USERPROFILE + '\AppData\Local\Google\Chrome\Application\chrome.exe'
                 if os.path.isfile(CHROMEPATH):
-                    preferred_browser = CHROMEPATH.replace('\\', '\\\\')+' --app=%s'
+                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s &'
         elif sys.platform == 'darwin':
             # Mac OSX
             CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
             if os.path.isfile(CHROMEPATH):
                 CHROMEPATH = CHROMEPATH.replace('Google Chrome', 'Google\ Chrome')
-                preferred_browser = 'open -a '+CHROMEPATH+' %s'
+                preferred_browser = 'open -a ' + CHROMEPATH + ' %s'
         elif sys.platform == 'linux2':
             # Linux
-            CHROMEPATH = '/usr/bin/chromium-browser'
-            if os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH+' --app=%s &'
+            CHROMEPATH = get_executable_path(["google-chrome", "chrome", "chromium-browser"])
+            if CHROMEPATH and os.path.isfile(CHROMEPATH):
+                preferred_browser = CHROMEPATH + ' --app=%s &'
 
     # try to get preferred browser, fall back to default
     if preferred_browser:
         try:
             browser = webbrowser.get(preferred_browser)
         except:
-            print "Couldn't get preferred browser ("+preferred_browser+"), using default..."
+            print "Couldn't get preferred browser (" + preferred_browser + "), using default..."
             browser = webbrowser.get()
     else:
         browser = webbrowser.get()
@@ -176,4 +171,4 @@ def launch_browser(port, preferred_browser=None):
         browser.open(url, 1, True)
         print "Opened in", browser.name
     else:
-        print "Couldn't launch browser: "+str(browser)
+        print "Couldn't launch browser: " + str(browser)

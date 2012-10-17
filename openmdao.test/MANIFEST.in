@@ -1,2 +1,4 @@
 recursive-include src/openmdao/test/plugins *.egg
+recursive-include src/openmdao/test/test *.py
+include src/openmdao/test/release_tests.cfg
 

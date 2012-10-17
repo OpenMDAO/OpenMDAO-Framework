@@ -302,6 +302,17 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
+class ISolver(IDriver):
+    """An interface for drivers that are solvers. 
+    """
+    
+    pass
+
+class IOptimizer(IDriver):
+    """An interface for drivers that are optimizers. 
+    """
+    
+    pass
 
 class IAssembly(IComponent):
     """An interface for objects that contain a driver and its workflow components."""
@@ -314,29 +325,22 @@ class IFactory (Interface):
 
     def create (typ):
         """Create an object of the specified type and return it, or a proxy
-        to it if it resides in another process."""
+        to it if it resides in another process. Should return None if this
+        factory is unable to create the specified type.
+        """
 
+    def get_available_types(self, groups=None):
+        """Return a list tuples of the form (typename, meta_dict) for all
+        available types based on the given list of entry point groups. If
+        groups is None, all types matching any openmdao entry point group will
+        be returned.
+        """
 
-#class IGeomQueryObject (Interface):
-    #"""A Component representing an object having physical dimensions and
-    #shape that can be queried for geometric information like surfaces, curves,
-    #etc.
-    
-    #The exact API is still to be determined, but will probably be based 
-    #largely on the querying portion of the CAPRI API.
-    
-    #"""
-
-    #modelID = Attribute("Identifies an assembly or a part.")
-
-
-
-#class IGeomModifier (Interface):
-    #"""An interface to a geometry kernel that allows new geometry to be
-    #created and modified.
-    
-    #The API is still to be determined.
-    #"""
+    def cleanup(self):
+        """This function is optional, but if present it will be called by
+        the FactoryManager prior to the factory being removed from the
+        list of active factories.
+        """
     
 class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular
@@ -690,13 +694,24 @@ class IHasObjective(IHasObjectives):
     def eval_objective():
         """Returns the value of the evaluated objective."""
 
-
 class IVariable(Interface):
     def validate(obj, name, value):
         """ Validates that the specified value is valid and can be assigned
         to the data value corresponding to this Variable.
         """
 
+class IRepository(Interface):
+    """An Interface to a version control system repository."""
+    
+    def commit():
+        """Commit any uncommitted changes to the repo."""
+        
+    def revert():
+        """Revert to a previous commit.  Default is to revert to 
+        the most recent commit, discarding any uncommitted changes.
+        """
+        
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
@@ -705,4 +720,3 @@ def obj_has_interface(obj, *ifaces):
             return True
     return False
     
-

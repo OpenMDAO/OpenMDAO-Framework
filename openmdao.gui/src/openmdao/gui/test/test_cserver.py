@@ -2,22 +2,38 @@ import unittest
 import os.path
 import shutil
 import json
+import time
+import tempfile
 
 from openmdao.gui.consoleserver import ConsoleServer
-
+from openmdao.main.publisher import Publisher
+from openmdao.main.project import project_from_archive
 
 class ConsoleServerTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.tdir = tempfile.mkdtemp()
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
+        Publisher.silent = True # keep quiet about Publisher not being set up
 
+    def tearDown(self):
+        self.cserver.cleanup()
+        try:
+            shutil.rmtree(self.tdir)
+        except:
+            pass
+        
     def test_simple(self):
         ''' load and inspect the simple example project
         '''
 
+        projfile = os.path.join(self.path, 'simple_1.proj')
+        
+        project_from_archive(projfile, dest_dir=self.tdir)
+        
         # LOAD PROJECT
-        self.cserver.load_project(os.path.join(self.path, 'simple_1.proj'))
+        self.cserver.load_project(os.path.join(self.tdir, 'simple_1'))
 
         # CHECK FILES
         files = self.cserver.get_files()
@@ -27,23 +43,28 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('/optimization_unconstrained.py'.replace('/', os.sep) in files)
         self.assertTrue('/_project_state'.replace('/', os.sep) in files)
 
-        # IMPORT PARABOLOID
-        self.cserver.default('from paraboloid import Paraboloid')
+        time.sleep(3.0)
+        types = self.cserver.get_types()
+        self.assertTrue('Paraboloid' in types)
 
-        working_types = self.cserver.get_workingtypes()
-        self.assertTrue('Paraboloid' in working_types)
+        type_info = types['Paraboloid']
+        self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
-        type_info = working_types['Paraboloid']
-        self.assertEqual(type_info['path'], 'Paraboloid')
-        self.assertEqual(type_info['version'], 'n/a')
-
+        components = json.loads(self.cserver.get_components())
+        
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
 
+        oldnum = len(components)
         components = json.loads(self.cserver.get_components())
-        self.assertEqual(len(components), 1)
+        self.assertEqual(len(components) - oldnum, 1)
 
-        assembly = components[0]
+        for comp in components:
+            if comp['pathname'] == 'prob':
+                assembly = comp
+                break
+        else:
+            self.fail("prob was not found in component list")
         self.assertEqual(assembly['pathname'], 'prob')
         self.assertEqual(assembly['type'], 'Assembly')
         self.assertEqual(assembly['interfaces'],
@@ -61,9 +82,14 @@ class ConsoleServerTestCase(unittest.TestCase):
            'openmdao.lib.drivers.conmindriver.CONMINdriver', 'prob')
 
         components = json.loads(self.cserver.get_components())
-        self.assertEqual(len(components), 1)
+        self.assertEqual(len(components) - oldnum, 1)
 
-        assembly = components[0]
+        for comp in components:
+            if comp['pathname'] == 'prob':
+                assembly = comp
+                break
+        else:
+            self.fail("prob was not found in component list")
         self.assertEqual(assembly['pathname'], 'prob')
         self.assertEqual(len(assembly['children']), 1)
 
@@ -72,7 +98,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(child['type'], 'CONMINdriver')
         self.assertEqual(child['interfaces'],
             ['IHasParameters', 'IHasIneqConstraints', 'IHasObjective',
-             'IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
+             'IOptimizer', 'IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
 
         # CHECK DRIVER ATTRIBUTES
         attributes = json.loads(self.cserver.get_attributes('prob.driver'))
@@ -81,7 +107,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Outputs' in attributes)
         self.assertTrue('Objectives' in attributes)
         self.assertTrue('Parameters' in attributes)
-        self.assertTrue('IneqConstraints' in attributes)
+        self.assertTrue('Constraints' in attributes)
         self.assertTrue('Slots' in attributes)
         self.assertTrue('Workflow' in attributes)
 
@@ -91,9 +117,13 @@ class ConsoleServerTestCase(unittest.TestCase):
                         'openmdao.lib.drivers.conmindriver.CONMINdriver')
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
-        # CREATE PARABOLOID
-        self.cserver.add_component('p', 'Paraboloid','prob')
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), False)
 
+        # CREATE PARABOLOID
+        self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
+
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), True)
+        
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
 
@@ -101,23 +131,25 @@ class ConsoleServerTestCase(unittest.TestCase):
         inputs = attributes['Inputs']
         self.assertEqual(len(inputs), 4)
         found_x = found_y = False
-        for input in inputs:
-            self.assertTrue('desc'  in input)
-            self.assertTrue('high'  in input)
-            self.assertTrue('low'   in input)
-            self.assertTrue('name'  in input)
-            self.assertTrue('type'  in input)
-            self.assertTrue('units' in input)
-            self.assertTrue('valid' in input)
-            self.assertTrue('value' in input)
-            if input['name'] == 'x':
+        for item in inputs:
+            self.assertTrue('desc'  in item)
+            self.assertTrue('name'  in item)
+            self.assertTrue('type'  in item)
+            # KTM - commented this out, because none of these have units, low
+            # or high attributes.
+            #self.assertTrue('units' in item)
+            #self.assertTrue('high'  in item)
+            #self.assertTrue('low'   in item)
+            self.assertTrue('valid' in item)
+            self.assertTrue('value' in item)
+            if item['name'] == 'x':
                 found_x = True
-                self.assertEqual(input['type'], 'float')
-                self.assertEqual(input['desc'], 'The variable x')
-            if input['name'] == 'y':
+                self.assertEqual(item['type'], 'float')
+                self.assertEqual(item['desc'], 'The variable x')
+            if item['name'] == 'y':
                 found_y = True
-                self.assertEqual(input['type'], 'float')
-                self.assertEqual(input['desc'], 'The variable y')
+                self.assertEqual(item['type'], 'float')
+                self.assertEqual(item['desc'], 'The variable y')
         self.assertTrue(found_x)
         self.assertTrue(found_y)
 
@@ -127,11 +159,13 @@ class ConsoleServerTestCase(unittest.TestCase):
         found_f_xy = False
         for output in outputs:
             self.assertTrue('desc'  in output)
-            self.assertTrue('high'  in output)
-            self.assertTrue('low'   in output)
             self.assertTrue('name'  in output)
             self.assertTrue('type'  in output)
-            self.assertTrue('units' in output)
+            # KTM - commented this out, because none of these have units, low
+            # or high attributes.
+            #self.assertTrue('units' in output)
+            #self.assertTrue('high'  in output)
+            #self.assertTrue('low'   in output)
             self.assertTrue('valid' in output)
             self.assertTrue('value' in output)
             if output['name'] == 'f_xy':
@@ -143,7 +177,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         # DATAFLOW
         dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(dataflow), 2)
+        self.assertEqual(len(dataflow), 5)
 
         self.assertTrue('components' in dataflow)
         components = dataflow['components']
@@ -168,9 +202,21 @@ class ConsoleServerTestCase(unittest.TestCase):
         connections = dataflow['connections']
         self.assertEqual(len(connections), 0)
 
+        self.assertTrue('parameters' in dataflow)
+        parameters = dataflow['parameters']
+        self.assertEqual(len(parameters), 0)
+
+        self.assertTrue('constraints' in dataflow)
+        constraints = dataflow['constraints']
+        self.assertEqual(len(constraints), 0)
+
+        self.assertTrue('objectives' in dataflow)
+        objectives = dataflow['objectives']
+        self.assertEqual(len(objectives), 0)
+
         # WORKFLOW
-        self.cserver.default('prob.driver.workflow.add("p")')
-        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))
+        self.cserver.onecmd('prob.driver.workflow.add("p")')
+        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))[0]
         self.assertTrue('pathname' in driver_flow)
         self.assertTrue('type'     in driver_flow)
         self.assertTrue('workflow' in driver_flow)
@@ -184,17 +230,17 @@ class ConsoleServerTestCase(unittest.TestCase):
             can save the project without any errors
         '''
         proj_file = os.path.join(self.path, 'simple_1.proj')
-        proj_copy = os.path.join(self.path, 'simple_2.proj')
+        proj_copy = os.path.join(self.tdir, 'simple_2.proj')
         shutil.copyfile(proj_file, proj_copy)
-
-        self.cserver.load_project(proj_copy)
+        project_from_archive(proj_copy)
+        
+        self.cserver.load_project(os.path.join(self.tdir, 'simple_2'))
         self.cserver.execfile('optimization_constrained.py')
-        self.cserver.save_project()
+        self.cserver.commit_project()
 
-        os.remove(proj_copy)
-
-    def tearDown(self):
         self.cserver.cleanup()
+        os.remove(proj_copy)
+        
 
 
 if __name__ == "__main__":

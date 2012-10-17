@@ -15,15 +15,22 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Python (2.6.x or 2.7.x)
 
-  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python builds, such as Enthought,Active State python or python(x,y) are not officially supported at this time, though some may work with OpenMDAO.  
- 
-  - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only lead to problems.
+  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python
+    builds, such as Enthought, ActiveState Python or Python(x,y) are not officially supported at this time,
+    though some may work with OpenMDAO.  
 
-- NumPy (version 1.3 or higher) 
+  - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the
+    incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
+    will only lead to problems.
+
+- NumPy (version 1.6 or higher) 
 
 - SciPy  
 
 - Matplotlib
+
+- For the GUI: Chrome Web Browser (verson 20 or higher). Note: Things should work in recent versions of Firefox, but 
+  we're not currently testing with that browser. Things **will not** work properly in Internet Explorer. 
 
 
 **Platform-Specific Requirements**
@@ -79,6 +86,29 @@ use it, you must have compilers (C and Fortran) on your system.
 - gfortran -- It's sometimes hard to figure out which version of gfortran to install on your Mac. See
               this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
               of what's available.
+
+
+
+- On **Lion (OS X 10.7):**
+
+ - Python 2.7.x (OS X Lion has 2.7.1 as its native version) - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ 
+ - Install this `version of SciPy <http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ 
+ - Make sure that Xcode version 4.3.2 or higher is installed, via the Mac App Store. When you install Xcode, it does not by default install the compilers you
+   need.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+   .. figure:: OSX_Lion_Screenshot.png
+      :align: center
+      :alt: Screenshot of XCode's Downloads screen showing options
+   
+      XCode's *Downloads* Screen
+   
+ - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_
+ 
+ - `gcc 4.2 <http://web.mit.edu/mfloyd/www/computing/mac/gfortran/>`_
+
+
               
 - On **Snow Leopard:**
 
@@ -101,35 +131,14 @@ use it, you must have compilers (C and Fortran) on your system.
    **Miscellaneous Downloads.**
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
  
- If you have g77 installed on Leopard, you may get build errors like: 
- ``ld: library not found for -lcc_dynamic``. This indicates that g77, which won't
- work, is being used instead of `gfortran`. At the moment, the recommended fix
- is to change the name of g77 to something else, for example, ``_g77`` so that
- it won't be found by ``numpy.distutils``.
+ If you have g77 installed on Leopard, you may get build errors like:  ``ld: library not found for
+ -lcc_dynamic``. This indicates that g77, which won't work, is being used instead of `gfortran`. At the
+ moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
+ that it won't be found by ``numpy.distutils``.
 
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
 
-.. __: http://openmdao.org/downloads
-
-- On **Lion (OS X 10.7):**
-
- - Python 2.7.x (OS X Lion has 2.7.1 as its native version) - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
- 
- - Install this `version of SciPy <http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1-py2.7-python.org-macosx10.6.dmg/download>`_
- 
- - Make sure that Xcode version 4.3.2 or higher is installed, via the Mac App Store. When you install Xcode, it does not by default install the compilers you
-   need.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
-
-   .. figure:: OSX_Lion_Screenshot.png
-      :align: center
-      :alt: Screenshot of XCode's Downloads screen showing options
-   
-      XCode's *Downloads* Screen
-   
- - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_
- 
- - `gcc 4.2 <http://web.mit.edu/mfloyd/www/computing/mac/gfortran/>`_
-
+.. __: http://openmdao.org/downloads-2/
 
 
 

@@ -1,16 +1,12 @@
-*.egg
 *.log
 *.egg-info
 *_log.txt
 *.tar.gz
 *.tar
-.coverage
 build
 dist
 parts
 eggs
-develop-eggs
-~*
 licenses_table.txt
 wingproj.wpr
 .installed.cfg

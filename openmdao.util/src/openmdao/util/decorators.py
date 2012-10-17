@@ -36,6 +36,7 @@ def forwarder(cls, fnc, delegatename):
     return types.MethodType(f, None, cls)
 
 
+# not a decorator
 def replace_funct(fnc, body):
     """Returns a function with a new body that replaces the given function. The
     signature of the original function is preserved in the new function.
@@ -45,8 +46,7 @@ def replace_funct(fnc, body):
     sig = formatargspec(*spec)
     return FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
                                 doc=fnc.__doc__)
-        
-    
+
 def stub_if_missing_deps(*deps):
     """A class decorator that will try to import the specified modules and in
     the event of failure will stub out the class, raising a RuntimeError that
@@ -163,17 +163,3 @@ def add_delegate(*delegates):
             cls.__init__ = init_wrapper(cls, listofdels)
         return cls
     return _add_delegate
-
-
-#def on_condition(cond, dec, *args, **kwargs):
-    #"""This is actually a decorator of decorators.  It will cause the wrapped decorator
-    #to be applied only if the supplied value is True at declaration time.
-    #"""
-    #def _wrap_on_condition(fnc):
-        #if cond:
-            #return dec(*args, **kwargs)(fnc)
-        #else:
-            #return fnc
-    #return _wrap_on_condition
-
-

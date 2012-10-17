@@ -122,6 +122,14 @@ def build_and_test(fname=None, workdir='.', keep=False,
     print "build return code =", retcode
     if retcode != 0:
         sys.exit(retcode)
+        
+    if build_type == 'release':
+        for arg in testargs:
+            if not arg.startswith('-'):
+                break
+        else:
+            if '--small' not in testargs and '--all' not in testargs:
+                testargs.append('--all') # otherwise release test runs small set by default
     
     print '\ntesting  (testargs=%s) ...' % testargs
 
@@ -179,11 +187,11 @@ def install_dev_env(url, branch=None):
     tree.
     
     url: str
-        URL of tarfile or git repo containing an OpenMDAO source tree.  May be
+        URL of tarfile or Git repo containing an OpenMDAO source tree.  May be
         a local file path or an actual URL.
 
     branch: str
-        For git repos, branch name must be supplied.
+        For Git repos, branch name must be supplied.
     """
     startdir = os.getcwd()
     
@@ -232,7 +240,7 @@ def install_dev_env(url, branch=None):
     
     gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    retcode = _run_gofile(startdir, gopath, args=['--gui'])
+    retcode = _run_gofile(startdir, gopath)
             
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir

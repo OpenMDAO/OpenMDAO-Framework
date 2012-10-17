@@ -35,6 +35,8 @@ class HasObjectives(object):
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr, scope=scope)
+            
+        self._parent._invalidate()
 
     def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver. 
@@ -74,6 +76,8 @@ class HasObjectives(object):
         else:
             self._objectives[name] = expreval
             
+        self._parent._invalidate()
+            
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
         the expression are ignored.
@@ -85,6 +89,44 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
+        self._parent._invalidate()
+
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        # Just returning everything for now.
+        return self._objectives.copy()
+
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for oname, obj in self._objectives.items():
+            if name in obj.get_referenced_compnames():
+                self.remove_objective(oname)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, ordereddict.OrderedDict):
+            self._objectives = refs
+        else:
+            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
+                            % refs)
+
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
         return self._objectives
@@ -92,6 +134,7 @@ class HasObjectives(object):
     def clear_objectives(self):
         """Removes all objectives."""
         self._objectives = ordereddict.OrderedDict()
+        self._parent._invalidate()
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""

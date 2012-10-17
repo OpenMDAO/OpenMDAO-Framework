@@ -10,10 +10,12 @@ import shutil
 import warnings
 import itertools
 import string
+import threading
+from hashlib import md5
 
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
-from os.path import normpath, dirname, exists, isfile, abspath
+from os.path import normpath, dirname, basename, exists, isfile, abspath
 
 class DirContext(object):
     """Supports using the 'with' statement in place of try-finally for
@@ -105,7 +107,7 @@ def _file_dir_gen(dname):
         for name in dirlist:
             yield join(path, name)
 
-def find_files(start, match=None, exclude=None, nodirs=True):
+def find_files(start, match=None, exclude=None, showdirs=False):
     """Return filenames (using a generator).
     
     start: str or list of str
@@ -119,14 +121,16 @@ def find_files(start, match=None, exclude=None, nodirs=True):
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
         
-    nodirs: bool
-        If False, return names of files and directories.
+    showdirs: bool
+        If True, return names of files AND directories.
         
     Walks all subdirectories below each specified starting directory.
     """
     startdirs = [start] if isinstance(start, basestring) else start
+    if len(startdirs) == 0:
+        return iter([])
     
-    gen = _file_gen if nodirs else _file_dir_gen
+    gen = _file_dir_gen if showdirs else _file_gen
     if match is None:
         matcher = bool
     elif isinstance(match, basestring):
@@ -179,17 +183,21 @@ def get_module_path(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
     """
-    pnames = [os.path.splitext(os.path.basename(fpath))[0]]
+    if basename(fpath).startswith('__init__.'):
+        pnames = []
+    else:
+        pnames = [os.path.splitext(basename(fpath))[0]]
     path = os.path.dirname(os.path.abspath(fpath))
     while os.path.isfile(os.path.join(path, '__init__.py')):
             path, pname = os.path.split(path)
             pnames.append(pname)
     return '.'.join(pnames[::-1])
 
-def find_module(name, path=None):
-    """Return the pathname of the file corresponding to the given module
-    name, or None if it can't be found.  If path is set, search in path
-    for the file; otherwise search in sys.path.
+def find_module(name, path=None, py=True):
+    """Return the pathname of the python file corresponding to the
+    given module name, or None if it can't be found. If path is set, search in
+    path for the file; otherwise search in sys.path. If py is True, the
+    file must be an uncompiled python (.py) file.
     """
     if path is None:
         path = sys.path
@@ -198,6 +206,10 @@ def find_module(name, path=None):
     endings = [os.path.join(*nameparts)]
     endings.append(os.path.join(endings[0], '__init__.py'))
     endings[0] += '.py'
+    if not py:
+        endings.append(endings[0]+'c')
+        endings.append(endings[0]+'o')
+        endings.append(endings[0]+'d')
     
     for entry in path:
         for ending in endings:
@@ -282,3 +294,21 @@ def clean_filename(name):
     
     valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c if c in valid_chars else '_' for c in name)
+
+
+def is_dev_build():
+    return basename(get_ancestor_dir(sys.executable, 2)) == 'devenv'
+
+def file_md5(fpath):
+    """Return the MD5 digest for the given file"""
+    try:
+        f = open(fpath,'rb')
+        m = md5()
+        while True:
+            s = f.read(4096)
+            if not s:
+                break
+            m.update(s)
+        return m.hexdigest()
+    finally:
+        f.close()

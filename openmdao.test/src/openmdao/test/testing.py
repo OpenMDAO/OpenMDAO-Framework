@@ -8,6 +8,62 @@ from pkg_resources import working_set, to_filename
 
 from openmdao.main.resource import ResourceAllocationManager
 
+import atexit
+
+
+# Code based on Python 2.7 atexit.py
+def _run_exitfuncs():
+    """
+    Run any registered exit functions.
+    _exithandlers is traversed in reverse order so functions are executed
+    last in, first out.
+    """
+    pid = os.getpid()
+    print >>sys.__stderr__, '\n[%s] run_exitfuncs %s' \
+          % (pid, len(atexit._exithandlers))
+    sys.__stderr__.flush()
+    exc_info = None
+    while atexit._exithandlers:
+        func, targs, kargs = atexit._exithandlers.pop()
+        print >>sys.__stderr__, '[%s]    %s %s %s' \
+              % (pid, func, targs, kargs)
+        print >>sys.__stderr__, '[%s]    %s %s' \
+              % (pid, func.func_code.co_filename, func.func_code.co_firstlineno)
+        sys.__stderr__.flush()
+        try:
+            func(*targs, **kargs)
+        except SystemExit:
+            print >>sys.__stderr__, '[%s]    SystemExit' % pid
+            sys.__stderr__.flush()
+            exc_info = sys.exc_info()
+        except:
+            print >>sys.__stderr__, '[%s]    exception' % pid
+            sys.__stderr__.flush()
+            import traceback
+            print >>sys.__stderr__, '[%s] Error in atexit._run_exitfuncs: %s' \
+                  % (pid, traceback.format_exc())
+            exc_info = sys.exc_info()
+        print >>sys.__stderr__, '[%s]    handler done, nleft %s' \
+              % (pid, len(atexit._exithandlers))
+        sys.__stderr__.flush()
+
+    print >>sys.__stderr__, '[%s] run_exitfuncs done, exc_info %s' \
+          % (pid, exc_info)
+    sys.__stderr__.flush()
+    if exc_info is not None:
+        raise exc_info[0], exc_info[1], exc_info[2]
+
+def _trace_atexit():
+    """
+    This code can be used to display atexit handlers as they are executed during
+    Python shutdown.
+    """
+    print >>sys.__stderr__, '\n[%s] _trace_atexit' % os.getpid()
+    sys.__stderr__.flush()
+    atexit._run_exitfuncs = _run_exitfuncs
+    sys.exitfunc = _run_exitfuncs
+
+
 def _get_openmdao_packages():
     # pkg_resources uses a 'safe' name for dists, which replaces all 'illegal' chars with '-'
     # '_' is an illegal char used in one of our packages
@@ -80,6 +136,9 @@ def run_openmdao_suite_deprecated():
         print "Please use 'openmdao test' instead"
         print '***'
         
+def is_dev_install():
+    return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
+
 def run_openmdao_suite(argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
@@ -104,17 +163,23 @@ def run_openmdao_suite(argv=None):
             covpkg = True
         if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
-    else:  # no non '-' args, so assume they want to run the whole test suite
-        args.append('--all')
+    else:  # no non '-' args, so assume they want to run the default test suite
+        if not is_dev_install() or '--small' in args: # in a release install, default is the set of tests specified in release_tests.cfg
+            if '--small' in args:
+                args.remove('--small')
+            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
+        else: # in a dev install, default is all tests
+            args.append('--all') 
         
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
     
-    # Clobber cached eggsaver data in case Python environment has changed.
+    # Clobber cached data in case Python environment has changed.
     base = os.path.expanduser(os.path.join('~', '.openmdao'))
-    path = os.path.join(base, 'eggsaver.dat')
-    if os.path.exists(path):
-        os.remove(path)
+    for name in ('eggsaver.dat', 'fileanalyzer.dat'):
+        path = os.path.join(base, name)
+        if os.path.exists(path):
+            os.remove(path)
 
     # Avoid having any user-defined resources causing problems during testing.
     ResourceAllocationManager.configure('')
@@ -167,6 +232,7 @@ def run_openmdao_suite(argv=None):
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
     
+#    _trace_atexit()
     nose.run_exit(argv=args)
 
 if __name__ == '__main__':

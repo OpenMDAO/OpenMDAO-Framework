@@ -2,12 +2,10 @@ import weakref
 
 import ordereddict
 
-from enthought.traits.api import Dict
-
 from openmdao.main.interfaces import Interface
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.assembly import Assembly
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Dict, Slot
 from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IArchitecture, implements, IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives
 
@@ -194,6 +192,15 @@ class ArchitectureAssembly(Assembly):
             if not self.architecture.configured:
                 self.architecture.configure()
                 self.architecture.configured = True
+
+    def _invalidate(self):
+        """ Method for delegates to declare that this is in an invalid
+        state so that isvalid() returns false. Presently, this is called when
+        a constraint/objective/parameter is set, removed, or cleared.
+        """
+        self._invalidated = True
+        self._set_exec_state('INVALID')
+        
      
     def get_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 

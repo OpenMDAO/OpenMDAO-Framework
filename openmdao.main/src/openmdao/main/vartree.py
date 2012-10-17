@@ -1,16 +1,18 @@
-
+""" VariableTree class definition
+"""
 import copy
 
-from enthought.traits.api import Str
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
 from openmdao.main.container import Container
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot, Str
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
 class VariableTree(Container):
+    """A container of variables with an input or output sense."""
     
     _iotype = Str('')
     
@@ -19,7 +21,7 @@ class VariableTree(Container):
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
         # register callbacks for our class traits
-        for name,trait in self.class_traits().items():
+        for name, trait in self.class_traits().items():
             if not name.startswith('_'):
                 self.on_trait_change(self._trait_modified, name)
 
@@ -40,7 +42,7 @@ class VariableTree(Container):
     
     @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):
-        if metaname=='iotype':
+        if metaname == 'iotype':
             return self._iotype
         elif metaname is None:
             meta = super(VariableTree, self).get_metadata(traitpath, metaname)
@@ -59,8 +61,9 @@ class VariableTree(Container):
                 self.add_trait(name, Slot(VariableTree, iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
         elif not isinstance(obj, Variable):
-            self.raise_exception("a VariableTree may only contain Variables or other VariableTrees",
-                                 TypeError)
+            msg = "a VariableTree may only contain Variables or other " + \
+                  "VariableTrees"
+            self.raise_exception(msg, TypeError)
         return super(VariableTree, self).add(name, obj)
         
     def add_trait(self, name, trait):
@@ -81,13 +84,18 @@ class VariableTree(Container):
         """Return a list of Variables in this VariableTree."""
         return [k for k in self.__dict__.keys() if not k.startswith('_')]
 
+    @rbac(('owner', 'user'))
+    def invalidate_deps(self, varnames=None, force=False):
+        return None
+        
     def _iotype_modified(self, obj, name, old, new):
-        for k,v in self.__dict__.items():
+        for k, v in self.__dict__.items():
             if isinstance(v, VariableTree) and v is not self.parent:
                 v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
-        if name == 'trait_added':  # handle weird traits side-effect from hasattr call
+         # handle weird traits side-effect from hasattr call
+        if name == 'trait_added': 
             return
         if isinstance(new, VariableTree):
             obj = getattr(self, name)
@@ -140,18 +148,86 @@ class VariableTree(Container):
                         continue
                     obj = getattr(self, name)
                     yield (name, obj)
-                    if recurse and is_instance(obj, VariableTree) and id(obj) not in visited:
-                        for chname, child in obj._items(visited, recurse, **metadata):
+                    if recurse and is_instance(obj, VariableTree) and \
+                       id(obj) not in visited:
+                        for chname, child in obj._items(visited, recurse,
+                                                        **metadata):
                             yield ('.'.join([name, chname]), child)
 
+    def get_attributes(self, io_only=True):
+        """ get attributes for this variable tree. Variables may also include
+        slots. Used by the GUI.
+        
+        io_only: Bool
+            Set to true if we only want to populate the input and output
+            fields of the attributes dictionary."""
+            
+        attrs = {}
+        attrs['type'] = type(self).__name__
+
+        # Connection information found in parent comp's parent assy 
+        if not self.parent or not self.parent._parent or \
+           isinstance(self.parent, VariableTree):
+            connected = []
+        else:
+            graph = self.parent._parent._depgraph
+            if self._iotype == 'in':
+                connected = graph.get_connected_inputs()
+            else:
+                connected = graph.get_connected_outputs()
+            
+        variables = []
+        slots = []
+        for name in self.list_vars():
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                            
+            attr['connected'] = ''
+            if name in connected:
+                connections = self.parent._depgraph.connections_to(name)
+                    
+                if self._iotype == 'in':
+                    # there can be only one connection to an input
+                    attr['connected'] = str([src for src, dst in \
+                                            connections]).replace('@xin.', '')
+                else:
+                    attr['connected'] = str([dst for src, dst in \
+                                            connections]).replace('@xout.', '')
+                        
+            variables.append(attr)
+            
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    slots.append(slot_attr)
+            
+            
+        if self._iotype == 'in':
+            panel = 'Inputs'
+        else:
+            panel = 'Outputs'
+            
+        attrs[panel] = variables
+        attrs['Slots'] = slots
+        return attrs
+            
 
 # register a flattener for Cases
 from openmdao.main.case import flatteners, flatten_obj
 
 def _flatten_vartree(name, vt):
     ret = []
-    for n,v in vt._items(set()):
-        ret.extend([('.'.join([name,k]),v) for k,v in flatten_obj(n,v)])
+    for n, v in vt._items(set()):
+        ret.extend([('.'.join([name, k]), v) for k, v in flatten_obj(n, v)])
     return ret
 
 flatteners[VariableTree] = _flatten_vartree
