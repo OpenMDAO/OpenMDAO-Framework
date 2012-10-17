@@ -46,11 +46,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]);
         var comp_path = parts.slice(assembly_idx + 1).join(".");
         var cmd = pathname +".create_passthrough('"+comp_path+"')";
-        //console.log(cmd);
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }
     
-    this.check_passthrough_input = function(comp_path, input, connected_to, top_inputs)    {
+    this.check_passthrough_input = function(comp_path, input, connected_to, implicit_con, top_inputs)    {
         var ctl = 0;
         if (connected_to) {
             ctl = connected_to.length; 
@@ -61,7 +60,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                 }
             }
-        if (top_inputs.contains(pathname + "."+ input.name)) {checked = ""; disabled = "disabled = 'disabled'";}
+        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con) {
+            checked = ""; disabled = "disabled = 'disabled'";}
         else {checked = ""; disabled = "";}
         return [checked, disabled]
     }
@@ -120,9 +120,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                 var comp_path = comp.pathname;
                 model.getComponent(comp.pathname, function (comp_data, e) {
                     jQuery.each(comp_data.Inputs, function(idx,input) {
+                        implicit_con = eval(input.implicit.replace("parent",pathname));
                         connected_to = eval(input.connected.replace("parent",pathname));
         
-                        cd_array = self.check_passthrough_input(comp_path, input, connected_to, top_inputs);
+                        cd_array = self.check_passthrough_input(comp_path, input, connected_to, implicit_con, top_inputs);
                         checked = cd_array[0];
                         disabled = cd_array[1];
 

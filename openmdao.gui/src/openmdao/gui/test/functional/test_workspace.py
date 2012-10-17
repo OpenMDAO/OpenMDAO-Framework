@@ -14,11 +14,14 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
     from pageobjects.basepageobject import TMO
     from pageobjects.util import NotifierPage
     from pageobjects.workspace import WorkspacePage
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -42,6 +45,53 @@ def _test_console(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
+
+def _test_console_history(browser):
+    # Check up and down arrow navigation through the command history
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    command_elem = browser.find_element(By.ID, "command")
+
+    # Fill up the command history
+    workspace_page.do_command("import sys")
+    workspace_page.do_command("import os")
+    workspace_page.do_command("import time")
+    
+    # Try out the up and down arrows
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import os")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import sys")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import sys")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import os")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import os")
+
+    workspace_page.do_command("import traceback")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import traceback")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import time")
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 def _test_palette_update(browser):
     # Import some files and add components from them.
@@ -220,6 +270,30 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
     for line in contents.split('\n'):
         if 'run' in line:
+            raise AssertionError(line)
+
+    # Check if command errors are recorded (they shouldn't be).
+    workspace_page.do_command('print xyzzy', ack=False)
+    # We expect 2 notifiers: command complete and error.
+    # These will likely overlap in a manner that 'Ok' is found but
+    # later is hidden by the second notifier.
+    try:  # We expect 2 notifiers: command complete and error.
+        msg = NotifierPage.wait(workspace_page, base_id='command')
+    except WebDriverException as exc:
+        if 'Element is not clickable' in str(exc):
+            err = NotifierPage.wait(workspace_page)
+            msg = NotifierPage.wait(workspace_page, base_id='command')
+    else:
+        err = NotifierPage.wait(workspace_page)
+    if err != "NameError: name 'xyzzy' is not defined":
+        raise AssertionError('Unexpected message: %r' % err)
+
+    editor = workspace_page.edit_file('_macros/default')
+    contents = editor.get_code()
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    for line in contents.split('\n'):
+        if 'xyzzy' in line:
             raise AssertionError(line)
 
     # Clean up.
