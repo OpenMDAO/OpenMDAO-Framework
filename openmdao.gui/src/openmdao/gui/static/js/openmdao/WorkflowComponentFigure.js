@@ -19,7 +19,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
             + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
             + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
             + '</svg>',
-        fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px" />')
+        fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px;float:left;padding:5px" />')
             .append(svg),
         rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill': 'white'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
@@ -117,13 +117,13 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
     /** get width */
     this.getWidth = function(x, y) {
 //        debug.info('WorkflowComponentFigure.getWidth()',name,fig,fig.width());
-        return fig.width();
+        return fig.outerWidth();
     };
 
     /** get height */
     this.getHeight = function(x, y) {
 //        debug.info('WorkflowComponentFigure.getHeight()',name,fig,fig.height());
-        return fig.height();
+        return fig.outerHeight();
     };
 
     /** set position relative to parent div */
@@ -142,7 +142,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
     this.setType = function(new_type) {
         type = new_type;
         valid = new_valid;
-    }
+    };
 
     /** set valid flag */
     this.setValid = function(new_valid) {
@@ -153,7 +153,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
         else {
             setState('INVALID');
         }
-    }
+    };
 
 };
 

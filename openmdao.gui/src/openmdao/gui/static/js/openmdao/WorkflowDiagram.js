@@ -4,32 +4,70 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.WorkflowDiagram=function(elm, model, json){
     var self = this,
         pathname = json.pathname,
+        name = openmdao.Util.getName(pathname),
         id = 'WorkflowDiagram-'+pathname.replace(/\./g,'-'),
-        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'" style="position:absolute" />'),
-        driver = new openmdao.WorkflowComponentFigure(diagram, model,
-                                json.pathname, json.type, json.valid),
+        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'" style="position:absolute" />')
+            .appendTo(elm),
+        driver = new openmdao.WorkflowComponentFigure(diagram,model,json.pathname,json.type,json.valid),
         flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
-        flow_fig = jQuery('<div class="WorkflowFigure" style="'+flow_css+'" />'),
+        flow_fig = jQuery('<div class="WorkflowFigure" style="'+flow_css+'" />')
+            .appendTo(diagram),
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+            .appendTo(diagram),
         comp_figs = {},
         defaultBackgroundColor = '#FFFFFF',
         highlightBackgroundColor = '#FAFAC8',
         dropHighlightBackgroundColor = '#CFD6FE',
-        horizontal = true,
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-            .appendTo(diagram);
+        horizontal = true;
 
-    // add diagram to parent element, add driver & flow figs to diagram
-    elm.append(diagram);
-    diagram.append(driver);
-    diagram.append(flow_fig);
+    // if name is 'driver', then prepend parent assembly name
+    if (name === 'driver') {
+        name = openmdao.Util.getName(openmdao.Util.getPath(pathname))+'.driver';
+    }
 
     // position flow fig to overlap bottom right corner of driver fig
     flow_fig.css({ 'position': 'absolute',
-                   'left': driver.getWidth()  - 10 + 'px',
-                   'top':  driver.getHeight() - 10 + 'px' });
+                   'left': driver.getWidth()  - 15 + 'px',
+                   'top':  driver.getHeight() - 15 + 'px' });
+
+    /** arrange component figures horizontally or vertically */
+    function layout(horiz) {
+        var i = 0,
+            flow_height = 0,
+            comp_height = 0,
+            flow_width = 0,
+            comp_width = 0;
+
+        horizontal = horiz;
+
+        jQuery.each(comp_figs, function(path, comp_fig) {
+            if (comp_figs.hasOwnProperty(path)) {
+                comp_width = comp_fig.getWidth();
+                comp_height = comp_fig.getHeight();
+                if (horizontal) {
+                    flow_width = flow_width + comp_width;
+                    flow_height = flow_height > comp_height ? flow_height : comp_height;
+                }
+                else {
+                    flow_height = flow_height + comp_height;
+                    flow_width = flow_width > comp_width ? flow_width : comp_width;
+                }
+            }
+        });
+
+        flow_fig.css({ 'width': flow_width, 'height': flow_height });
+        diagram.css({ 'width': flow_width + driver.getWidth(), 'height': flow_height + driver.getHeight() });
+
+        if (horizontal) {
+            flow_fig.find('.WorkflowComponentFigure').css({ 'clear': 'none' });
+        }
+        else {
+            flow_fig.find('.WorkflowComponentFigure').css({ 'clear': 'both' });
+        }
+    }
 
     // set up flow_fig as a drop target for components to add to workflow
-//    flow_fig.data('name',name);
+    flow_fig.data('name',name);
     flow_fig.data('pathname',pathname);
 
     flow_fig.highlightAsDropTarget = function() {
@@ -110,10 +148,9 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     });
 
     // create context menu
-    contextMenu.append(jQuery('<li><b>'+self.name+'</b></li>'));
+    contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
     contextMenu.append(jQuery('<li>Flip Workflow</li>').click(function(e) {
-        horizontal = !horizontal;
-        redraw();
+        layout(!horizontal);
     }));
     contextMenu.append(jQuery('<li>Clear Workflow</li>').click(function(e) {
         var cmd = pathname + '.workflow.clear();';
@@ -121,34 +158,12 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     }));
     ContextMenu.set(contextMenu.attr('id'), diagram.attr('id'));
 
-    /** redraw flow fig */
-//    function redraw() {
-//        var i = 0,
-//            x = flow_fig.position().left + 10,
-//            y = flow_fig.position().top  + 10;
-//        debug.info('WorkflowDiagram.redraw() comp_figs:',comp_figs,'x:',x,'y:',y);
-//        if (comp_figs.size > 0) {
-//            for (i=0; i<comp_figs.size; i++) {
-//                debug.info('WorkflowDiagram.redraw() i:',i,'comp_fig:',comp_figs[i]);
-//                comp_figs[i].setPosition(x,y);
-//                if (horizontal) {
-//                    x = x + comp_figs[i].getWidth() + 10;
-//                }
-//                else {
-//                    y = y + comp_figs[i].getHeight() + 10;
-//                }
-//            }
-//            debug.info('WorkflowDiagram.redraw() i:',i,'comp_fig:',comp_figs[i]);
-//            flow_fig.css({'width':  x = x + comp_figs[i].getWidth()  + 10,
-//                          'height': y = y + comp_figs[i].getHeight() + 10 });
-//        }
-//    }
-
     /** update workflow figure from JSON workflow data */
     function updateWorkflow(json) {
-        var comp_fig;
+        flow_fig.html('');
 
         jQuery.each(json, function(idx, comp) {
+            var comp_fig;
             if (comp_figs.hasOwnProperty(comp.pathname)) {
                 comp_fig = comp_figs[comp.pathname];
                 if (comp.workflow) {
@@ -167,14 +182,11 @@ openmdao.WorkflowDiagram=function(elm, model, json){
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_fig, model,
                                 comp.pathname, comp.type, comp.valid);
+                comp_figs[comp.pathname] = comp_fig;
             }
         });
-        
-        debug.info('flowfig width:',flow_fig.css('width'),'flow_fig height:',flow_fig.css('height'));
-        debug.info('width',  (driver.getWidth()  + flow_fig.width()));
-        debug.info('height', (driver.getHeight() + flow_fig.height()));
-        diagram.css({ 'width':  (driver.getWidth()  + flow_fig.width()),
-                      'height': (driver.getHeight() + flow_fig.height()) });
+
+        layout(horizontal);
     }
 
     // populate flow fig with component figures
@@ -183,11 +195,6 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-
-    /** provide access to context menu (for use after diagram is in the DOM */
-    this.getContextMenu = function() {
-        return contextMenu;
-    };
 
     /** get width */
     this.getWidth = function(x, y) {

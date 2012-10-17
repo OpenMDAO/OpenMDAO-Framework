@@ -16,8 +16,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                       'border: 0px',
         workflow = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
             .appendTo(elm),
-        comp_figs = {},
-        flow_figs = {},
         roots = [];  // Tracks order for consistent redraw.
 
     this.pathname = pathname;
@@ -47,15 +45,12 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
             json = [json];
         }
         workflow.html('');
-        comp_figs = {};
-        flow_figs = {};
 
         var offset = 20,
             drawnFlows = [];
 
         function draw(flow, offset) {
-           debug.info('WorkflowPane.draw() offset =',offset);
-           diagram = new openmdao.WorkflowDiagram(elm, model, flow);
+           diagram = new openmdao.WorkflowDiagram(workflow, model, flow);
            diagram.setPosition(offset, 50);
            drawnFlows.push(flow.pathname);
            return offset + diagram.getWidth();
