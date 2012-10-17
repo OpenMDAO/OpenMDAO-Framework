@@ -21,7 +21,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
             + '</svg>',
         fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px;float:left;padding:5px" />')
             .append(svg),
-        rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill': 'white'},
+        rectCSS = {'stroke-width':4, 'stroke':'#0b93d5', 'fill':'#999999'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
             .appendTo(fig);
 
@@ -57,8 +57,9 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
         model.issueCommand(cmd);
     }));
     contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
+        var parent = fig.closest('.WorkflowFigure');
         if (parent) {
-            var cmd = parent.pathname+".workflow.remove('";
+            var cmd = parent.data('pathname')+".workflow.remove('";
             if (/.driver$/.test(name)) {
                 cmd = cmd + name.replace(/.driver/g,'') + "')";
             }
@@ -68,11 +69,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
             model.issueCommand(cmd);
         }
     }));
-
-    /** provide access to fig's context menu (for use after fig is in the DOM */
-    fig.getContextMenu = function() {
-        return contextMenu;
-    };
+    ContextMenu.set(contextMenu.attr('id'), fig.attr('id'));
 
     /** open object editor on double click */
     fig.dblclick(function(e) {

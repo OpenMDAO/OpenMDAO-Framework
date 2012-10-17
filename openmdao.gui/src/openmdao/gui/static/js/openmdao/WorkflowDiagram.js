@@ -5,8 +5,8 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     var self = this,
         pathname = json.pathname,
         name = openmdao.Util.getName(pathname),
-        id = 'WorkflowDiagram-'+pathname.replace(/\./g,'-'),
-        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'" style="position:absolute" />')
+        id = elm.attr('id')+'-WorkflowDiagram-'+pathname.replace(/\./g,'-'),
+        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'"style="float:left" />')
             .appendTo(elm),
         driver = new openmdao.WorkflowComponentFigure(diagram,model,json.pathname,json.type,json.valid),
         flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
@@ -46,11 +46,11 @@ openmdao.WorkflowDiagram=function(elm, model, json){
                 comp_height = comp_fig.getHeight();
                 if (horizontal) {
                     flow_width = flow_width + comp_width;
-                    flow_height = flow_height > comp_height ? flow_height : comp_height;
+                    flow_height = comp_height > flow_height ? comp_height : flow_height;
                 }
                 else {
                     flow_height = flow_height + comp_height;
-                    flow_width = flow_width > comp_width ? flow_width : comp_width;
+                    flow_width = comp_width > flow_width ? comp_width : flow_width;
                 }
             }
         });
@@ -59,10 +59,10 @@ openmdao.WorkflowDiagram=function(elm, model, json){
         diagram.css({ 'width': flow_width + driver.getWidth(), 'height': flow_height + driver.getHeight() });
 
         if (horizontal) {
-            flow_fig.find('.WorkflowComponentFigure').css({ 'clear': 'none' });
+            flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram').css({ 'clear': 'none' });
         }
         else {
-            flow_fig.find('.WorkflowComponentFigure').css({ 'clear': 'both' });
+            flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram').css({ 'clear': 'both' });
         }
     }
 
@@ -179,6 +179,16 @@ openmdao.WorkflowDiagram=function(elm, model, json){
                     comp_fig.setValid(comp.valid);
                 }
             }
+            else if (comp.hasOwnProperty('workflow')) {
+                // comp is a driver with it's own workflow
+                comp_fig = new openmdao.WorkflowDiagram(flow_fig, model, comp);
+                comp_figs[comp.pathname] = comp_fig;
+            }
+            else if (comp.hasOwnProperty('driver')) {
+                // comp is an assembly with a driver that has it's own workflow
+                comp_fig = new openmdao.WorkflowDiagram(flow_fig, model, comp.driver);
+                comp_figs[comp.pathname] = comp_fig;
+            }
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_fig, model,
                                 comp.pathname, comp.type, comp.valid);
@@ -216,7 +226,6 @@ openmdao.WorkflowDiagram=function(elm, model, json){
 
     /** set position relative to parent div */
     this.setPosition = function(x, y) {
-        debug.info('WorkflowDiagram.setPosition()',name,diagram,x,y);
         diagram.css({ 'position': 'absolute', 'left': x+'px', 'top': y+'px' });
     };
 

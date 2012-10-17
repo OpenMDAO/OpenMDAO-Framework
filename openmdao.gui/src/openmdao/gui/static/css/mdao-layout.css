@@ -186,11 +186,12 @@ nav2 ul ul a {
 .context-menu {
   visibility: hidden; /* No, you cannot use display:none; */
   position: absolute;
+  z-index: 9999 !important;
 }
 
 /* draggables */
 .ui-draggable-dragging {
-  z-index: 9999;
+  z-index: 9999 !important;
 }
 
 
