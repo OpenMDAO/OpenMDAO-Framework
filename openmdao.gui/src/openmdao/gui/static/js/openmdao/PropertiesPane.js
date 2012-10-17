@@ -7,13 +7,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
-            {id:"name",  name:"Name",  field:"name",  width:80 },
+            {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
             {id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor},
             //{id:"valid", name:"Valid", field:"valid", width:60},
         ],
         options = {
             asyncEditorLoading: false,
             multiSelect: false,
+            enableAddRow: true,
             autoHeight: true,
             enableTextSelectionOnCells: true
         },
@@ -28,7 +29,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     if (meta) {
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
-            {id:"id",      name:"id",        field:"id",      width:60 },
             {id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
@@ -41,9 +41,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     elm.append(propsDiv);
     dataView = new Slick.Data.DataView({ inlineFilters: true });
-    /*dataView.beginUpdate();
-    #dataView.setFilter(this.filter);
-    dataView.endUpdate();*/
     props = new Slick.Grid(propsDiv, dataView, columns, options);
 
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
@@ -75,7 +72,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         var cell = props.getCellFromEvent(e);
         if (cell.cell==0) {
             var item = dataView.getItem(cell.row);
-            if (item) {
+            if (item.hasOwnProperty("vt")) {
                 if (!_collapsed[item.id]) {
                     _collapsed[item.id] = true;
                 } else {
@@ -86,10 +83,23 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
             e.stopImmediatePropagation();
         }
-        props.updateRowCount();
-        props.render();
     });
 
+    props.onCellChange.subscribe(function (e, args) {
+      dataView.updateItem(args.item.id, args.item);
+    });
+  
+    // wire up model events to drive the grid
+    dataView.onRowCountChanged.subscribe(function (e, args) {
+      props.updateRowCount();
+      props.render();
+    });
+    
+    dataView.onRowsChanged.subscribe(function (e, args) {
+      props.invalidateRows(args.rows);
+      props.render();
+    });    
+    
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
@@ -134,7 +144,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 return 0; //default return value (no sorting)
             });
-            console.log(properties);
 
             jQuery.each(properties, function(index, value) {
                 if (value.hasOwnProperty("connected")) {

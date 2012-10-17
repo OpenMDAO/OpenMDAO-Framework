@@ -194,6 +194,13 @@ class VariableTree(Container):
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
             
+            # Let the GUI know that this var is the top element of a
+            # variable tree
+            if slot_attr is not None:
+                vartable = self.get(name)
+                if isinstance(vartable, VariableTree):
+                    attr['vt'] = 'vt'
+                    
             # Support for expand/collapse
             attr['indent'] = indent
             attr['id'] = '%s_%s' % (parent, name)
@@ -222,6 +229,17 @@ class VariableTree(Container):
                     
                     slots.append(slot_attr)
             
+            # For variables trees only: recursively add the inputs and outputs
+            # into this variable list
+            if 'vt' in attr:
+                
+                vt_attrs = vartable.get_attributes(io_only, indent=indent+1,
+                                                   parent=attr['id'])
+                
+                if self._iotype == 'in':
+                    variables += vt_attrs['Inputs']
+                else:
+                    variables += vt_attrs['Outputs']
             
         if self._iotype == 'in':
             panel = 'Inputs'

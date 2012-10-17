@@ -1612,6 +1612,13 @@ class Component(Container):
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
 
+            # Let the GUI know that this var is the top element of a
+            # variable tree
+            if slot_attr is not None:
+                vartable = self.get(name)
+                if isinstance(vartable, VariableTree):
+                    io_attr['vt'] = 'vt'
+
             if name in self.list_inputs():
                 inputs.append(io_attr)
             else:
@@ -1625,16 +1632,15 @@ class Component(Container):
                     
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
-            if slot_attr is not None:
-                vartable = self.get(name)
-                if isinstance(vartable, VariableTree):
-                    vt_attrs = vartable.get_attributes(io_only, indent=1,
-                                                       parent=name)
-                    
-                    if name in self.list_inputs():
-                        inputs += vt_attrs['Inputs']
-                    else:
-                        outputs += vt_attrs['Outputs']
+            if 'vt' in io_attr:
+                
+                vt_attrs = vartable.get_attributes(io_only, indent=1,
+                                                   parent=name)
+                
+                if name in self.list_inputs():
+                    inputs += vt_attrs['Inputs']
+                else:
+                    outputs += vt_attrs['Outputs']
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
