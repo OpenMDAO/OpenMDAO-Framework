@@ -679,7 +679,7 @@ class FileParser(object):
         Setting the delimiter to 'columns' elicits some special behavior
         from this method. Normally, the extraction process wraps around
         at the end of a line and continues grabbing each field at the start of
-        a newline. When the delimiter is set to columns, the paramters
+        a newline. When the delimiter is set to columns, the parameters
         (rowstart, fieldstart, rowend, fieldend) demark a box, and all
         values in that box are retrieved. Note that standard whitespace
         is the secondary delimiter in this case.
