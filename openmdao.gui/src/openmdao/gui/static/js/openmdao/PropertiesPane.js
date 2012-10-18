@@ -110,7 +110,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
-    filter = function myFilter(item) {
+    this.filter = function myFilter(item) {
         var idx, parent;
         if (item.parent != null) {
             idx = dataView.getIdxById(item.parent);
@@ -185,7 +185,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             //props.setData(properties);
             dataView.beginUpdate();
             dataView.setItems(properties);
-            dataView.setFilter(filter);
+            dataView.setFilter(this.filter);
             dataView.endUpdate();
 
         }
