@@ -75,6 +75,18 @@ class _BaseElement(object):
                 StaleElementReferenceException):
             return False
 
+    def find_element_by_xpath(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_element_by_xpath(xpath)
+
+    def find_elements_by_xpath(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_xpath(xpath)
+
+    def find_elements_by_css_selector(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_css_selector(xpath)
+
     def value_of_css_property(self, name):
         """ Return value for the the CSS property `name`. """
         return self.element.value_of_css_property(name)
@@ -90,6 +102,11 @@ class _ButtonElement(_BaseElement):
     def value(self):
         """ The element's ``value`` attribute. """
         return self.element.get_attribute('value')
+
+    @property
+    def text(self):
+        """ The element's text. """
+        return self.element.text
 
     def click(self):
         """ 'Click' on the button. """
@@ -190,14 +207,16 @@ class _TextElement(_BaseElement):
         """ The element's text. """
         return self.element.text
 
+
 class _GenericElement(_BaseElement):
 
     def __init__(self, page, locator):
-        super(_GenericElement, self).__init__(page,locator)
+        super(_GenericElement, self).__init__(page, locator)
 
     @property
     def value(self):
         return self.element
+
 
 class BaseElement(object):
     """
@@ -264,6 +283,6 @@ class TextElement(BaseElement):
 
 class GenericElement(BaseElement):
     """A Generic Element for objects not of the above types"""
-    def __init__(self,locator):
+    def __init__(self, locator):
         super(GenericElement, self).__init__(_GenericElement, locator)
 

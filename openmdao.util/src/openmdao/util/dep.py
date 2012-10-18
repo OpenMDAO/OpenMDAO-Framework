@@ -13,6 +13,7 @@ from token import NAME, OP
 import ast
 import time
 import __builtin__
+import cPickle
 
 import networkx as nx
 
@@ -315,11 +316,19 @@ class PythonSourceTreeAnalyser(object):
             if isinstance(cinfo, ClassInfo):
                 return cinfo
 
-    def analyze_file(self, pyfile):
+    def analyze_file(self, pyfile, use_cache=False):
         # don't analyze the file again if we've already done it and it hasn't changed
+        # If `use_cache` is True then lookup/record in global cache.
+        mtime = os.path.getmtime(pyfile)
         if pyfile in self.fileinfo:
-            if os.path.getmtime(pyfile) <= self.fileinfo[pyfile][1]:
+            if mtime <= self.fileinfo[pyfile][1]:
                 return self.fileinfo[pyfile][0]
+
+        if use_cache:
+            info = _FileInfoCache.lookup(pyfile)
+            if info is not None and mtime <= info[1]:
+                self.fileinfo[pyfile] = info
+                return info[0]
 
         logger.info("analyzing %s" % pyfile)
         
@@ -329,8 +338,15 @@ class PythonSourceTreeAnalyser(object):
         
         self.files_count += 1
         
+        if use_cache:
+            _FileInfoCache.record(pyfile, (myvisitor,
+                                           os.path.getmtime(myvisitor.fname)))
+
         return myvisitor
         
+    def flush_cache(self):
+        _FileInfoCache.save()
+
     def remove_file(self, fname):
         fvisitor = self.fileinfo[fname][0]
         del self.fileinfo[fname]
@@ -366,6 +382,64 @@ class PythonSourceTreeAnalyser(object):
                 ifaces.update(self.get_interfaces(base))
         return ifaces
 
+
+class _FileInfoCache(object):
+    """ Retains file analysis information. """
+
+    _cache = None
+    _dirty = False
+
+    @staticmethod
+    def lookup(path):
+        """ Return analysis info for `path`. """
+        if _FileInfoCache._cache is None:
+            _FileInfoCache._load()
+        return _FileInfoCache._cache.get(path)
+
+    @staticmethod
+    def record(path, info):
+        """ Record analysis info for `path`. """
+        _FileInfoCache._cache[path] = info
+        _FileInfoCache._dirty = True
+
+    @staticmethod
+    def save():
+        """ Save analysis info to file. """
+        if _FileInfoCache._dirty:
+            out = _FileInfoCache._open('wb')
+            cPickle.dump(_FileInfoCache._cache, out, cPickle.HIGHEST_PROTOCOL)
+            out.close()
+            _FileInfoCache._dirty = False
+
+    @staticmethod
+    def _load():
+        """ Load analysis info from file. """
+        _FileInfoCache._cache = {}
+        try:
+            inp = _FileInfoCache._open('rb')
+        except Exception:
+            return
+
+        # Full test with coverage removes cache at start, so we won't get here.
+        try:  #pragma no cover
+            _FileInfoCache._cache = cPickle.load(inp)
+        except Exception:  #pragma no cover
+            return
+        finally:  #pragma no cover
+            inp.close()
+
+    @staticmethod
+    def _open(mode):
+        """ Return opened file for '~/.openmdao/fileanalyzer.dat'. """
+        filename = \
+            os.path.expanduser(os.path.join('~', '.openmdao', 'fileanalyzer.dat'))
+        dirname = os.path.dirname(filename)
+        # Full test with coverage leaves directory intact.
+        if not os.path.exists(dirname):  #pragma no cover
+            os.mkdir(dirname)
+        return open(filename, mode)
+
+
 def main():
     from argparse import ArgumentParser
     parser = ArgumentParser()
@@ -375,10 +449,13 @@ def main():
                         help="show base classes (only works if --classes is active)")
     parser.add_argument("-i","--interfaces", action="store_true", dest="showifaces",
                         help="show interfaces of classes (only works if --classes is active)")
+    parser.add_argument("-u", "--use-cache", action='store_true', dest='use_cache',
+                        help="use analysis cache")
     parser.add_argument('files', metavar='fname', type=str, nargs='+',
                         help='a file or directory to be scanned')
     
     options = parser.parse_args()
+    print options.use_cache
     
     stime = time.time()
     psta = PythonSourceTreeAnalyser()
@@ -386,11 +463,14 @@ def main():
         f = os.path.abspath(os.path.expanduser(f))
         if os.path.isdir(f):
             for pyfile in find_files(f, "*.py", exclude=lambda n: 'test' in n.split(os.sep)):
-                psta.analyze_file(pyfile)
+                psta.analyze_file(pyfile, use_cache=options.use_cache)
         else:
-            psta.analyze_file(f)
+            psta.analyze_file(f, use_cache=options.use_cache)
     psta.dump(sys.stdout, options)
     sys.stdout.write("elapsed time: %s seconds\n\n" % (time.time() - stime))
+
+    if options.use_cache:
+        _FileInfoCache.save()
 
 
 if __name__ == '__main__':

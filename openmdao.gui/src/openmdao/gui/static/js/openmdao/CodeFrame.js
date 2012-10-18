@@ -180,33 +180,31 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
-    
     function failedSave(jqXHR, textStatus, errorThrown) {
-        debug.info("file save failed: "+textStatus);
-        debug.info(jqXHR);
-        debug.info(errorThrown);
-        if (jqXHR.status != 409) {
-            openmdao.Util.notify(jqXHR.responseXML, 'File Error', 'file-error');
+        debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
+        // 409 gets special handling.
+        // 400 is (normally) related to msg reported via publisher.
+        if (jqXHR.status != 409 && jqXHR.status != 400) {
+            var msg = jqXHR.responseXML || textStatus;
+            openmdao.Util.notify(msg, 'Save Failed');
         }
     }
 
     function handle409(jqXHR, textStatus, errorThrown) {
         var win = jQuery('<div>You have modified a class that may already have instances in the model. '+
-                         'If you save the file, you must save and reload the project.</div>');
+                         'If you save the file, you must reload the project.</div>');
         jQuery(win).dialog({
             'modal': true,
-            'title': 'Save and Reload Project',
+            'title': 'Save File and Reload Project',
             'buttons': [
                 {
-                  text: 'Save and Reload',
+                  text: 'Save File and Reload Project',
                   id: overwriteID,
                   click: function() {
                            jQuery(this).dialog('close');
                            model.setFile(filepath,editor.getSession().getValue(), 1,
                                          function(data, textStatus, jqXHR) {
-                                            model.saveProject(function(data, textStatus, jqXHR) {
-                                                model.reload()
-                                            })
+                                             model.reload()
                                          },
                                          failedSave);
                          }
@@ -370,8 +368,6 @@ openmdao.CodeFrame = function(id,model) {
                 },
                 // failure
                 function(jqXHR, textStatus, errorThrown) {
-                    debug.info(textStatus);
-                    debug.info(errorThrown);
                     alert("Error editing file: "+jqXHR.statusText);
                 }
             );

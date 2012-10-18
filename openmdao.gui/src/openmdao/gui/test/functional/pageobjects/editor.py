@@ -204,11 +204,13 @@ class EditorPage(BasePageObject):
         time.sleep(1)
         return code_input_element
         
-    def save_document(self, overwrite=False, check=True):
+    def save_document(self, overwrite=False, check=True, cancel=False):
         #use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
             self('editor_overwrite_button').click()
+        elif cancel:
+            self('editor_cancel_button').click()
         if check:
             NotifierPage.wait(self)
 

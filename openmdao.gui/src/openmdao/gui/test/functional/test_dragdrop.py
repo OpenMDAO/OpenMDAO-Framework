@@ -13,14 +13,12 @@ from nose.tools import with_setup
 if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
 
     from selenium.common.exceptions import StaleElementReferenceException
 
     from util import main, setup_server, teardown_server, generate, \
-                     begin, new_project
+                     startup, closeout
 
-    from pageobjects.basepageobject import TMO
     from pageobjects.component import NameInstanceDialog
     from pageobjects.dataflow import DataflowFigure
     from pageobjects.dialog import NotifyDialog
@@ -33,23 +31,20 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
 
 def _test_drop_on_driver(browser):
-    print "running _test_drop_on_driver..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # replace the 'top' assembly driver with a CONMINdriver
-    replace_driver(browser, workspace_page, 'top', 'CONMINdriver')
+    replace_driver(workspace_page, 'top', 'CONMINdriver')
 
     # Check to see that the content area for the driver is now CONMINdriver
     driver_element = workspace_page.get_dataflow_figure('driver')
-    eq(driver_element('content_area').element.find_element_by_xpath('center/i').text,
+    eq(driver_element('content_area').find_element_by_xpath('center/i').text,
         'CONMINdriver', "Dropping CONMINdriver onto existing driver did not replace it")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_on_driver complete."
 
 
 def _test_workspace_dragdrop(browser):
-    print "running _test_workspace_dragdrop..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
@@ -59,17 +54,17 @@ def _test_workspace_dragdrop(browser):
     names = []
     for div in getDropableElements(top):
         chain = drag_element_to(browser, assembly, div, False)
-        check_highlighting(top('content_area').element, browser, True,
+        check_highlighting(top('content_area').element, True,
                            "Top's content_area")
         release(chain)
 
         #deal with the modal dialog
-        name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
+        name = NameInstanceDialog(workspace_page).create_and_dismiss()
         names.append(name)
 
     ensure_names_in_workspace(workspace_page, names,
         "Dragging 'assembly' to 'top' in one of the drop areas did not "
-        "produce a new element on page\n")
+        "produce a new element on page")
 
     # now test to see if all the new elements are children of 'top'
 
@@ -83,64 +78,56 @@ def _test_workspace_dragdrop(browser):
     # see if they match up! (keeping in mind that there are more elements
     # we have pathnames for than we put there)
     for path in guess_pathnames:
-        eq(path in pathnames, True, "An element did not drop into 'top' when " \
-            "dragged onto one of its drop areas.\nIt was created somewhere else")
+        eq(path in pathnames, True, "An element did not drop into 'top' when "
+           "dragged onto one of its drop areas.\nIt was created somewhere else")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_workspace_dragdrop complete."
 
 
 def _test_drop_on_grid(browser):
-    print "running _test_drop_on_grid..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #other tests also need to put an assembly on the grid, so put in seperate method
-    put_assembly_on_grid(browser, workspace_page)
+    put_assembly_on_grid(workspace_page)
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_on_grid complete."
 
 
 def _test_drop_on_existing_assembly(browser):
-    print "running _test_drop_on_existing_assembly..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     assembly = workspace_page.find_library_button('Assembly')
 
-    outer_name = put_assembly_on_grid(browser, workspace_page)
+    outer_name = put_assembly_on_grid(workspace_page)
     outer_figure = workspace_page.get_dataflow_figure(outer_name)
-    outer_path = get_pathname(browser,
-        outer_figure('header').element.find_element_by_xpath(".."))
+    outer_path = outer_figure.pathname
 
     eq(outer_path, outer_name, "Assembly did not produce an instance on the grid")
 
     div = getDropableElements(outer_figure)[0]
     chain = drag_element_to(browser, assembly, div, False)
-    check_highlighting(outer_figure('content_area').element, browser, True,
-        "Assembly's content_area")
+    check_highlighting(outer_figure('content_area').element, True,
+                       "Assembly's content_area")
     release(chain)
 
-    middle_name = (NameInstanceDialog(browser, outer_figure.port).create_and_dismiss())
+    middle_name = NameInstanceDialog(workspace_page).create_and_dismiss()
     middle_figure = workspace_page.get_dataflow_figure(middle_name)
-    middle_path = get_pathname(browser,
-        middle_figure('header').element.find_element_by_xpath(".."))
+    middle_path = middle_figure.pathname
 
     eq(middle_path, outer_path + '.' + middle_name,
         "Assembly did not produce an instance inside outer Assembly")
 
     div = getDropableElements(middle_figure)[0]
     chain = drag_element_to(browser, assembly, div, True)
-    check_highlighting(middle_figure('content_area').element, browser, True,
+    check_highlighting(middle_figure('content_area').element, True,
                        "Assembly's content_area")
     release(chain)
 
-    inner_name = (NameInstanceDialog(browser,
-        middle_figure.port).create_and_dismiss())
+    inner_name = NameInstanceDialog(workspace_page).create_and_dismiss()
     #expand the middle div so that the inner one shows up in the workspace.
     middle_figure('top_right').element.click()
     inner_figure = workspace_page.get_dataflow_figure(inner_name)
-    inner_path = get_pathname(browser,
-        inner_figure('header').element.find_element_by_xpath(".."))
+    inner_path = inner_figure.pathname
 
     eq(inner_path, middle_path + '.' + inner_name,
         "Assembly did not produce an instance inside of the middle Assembly")
@@ -149,40 +136,36 @@ def _test_drop_on_existing_assembly(browser):
         "Dragging Assembly onto Assembly did not create a new instance on page")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_on_existing_assembly complete."
 
 
 def _test_drop_on_component_editor(browser):
-    print "running _test_drop_on_component_editor..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
-    top = workspace_page.get_dataflow_figure('top')
-    top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
-
+    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
     #in order to get the elements in the editor workflow, we must
     #distinguish them from the elements in the main workflow
-    editor_top = get_dataflow_fig_in_assembly_editor(browser, top.port, workspace_page, 'top')
+    editor_top = get_dataflow_fig_in_assembly_editor(workspace_page, 'top')
     # sort through these to find the correct 'top'
     names = []
     for div in getDropableElements(editor_top)[:-1]:
         chain = drag_element_to(browser, assembly, div, False)
-        check_highlighting(editor_top('content_area').element, browser, True,
+        check_highlighting(editor_top('content_area').element, True,
                            "Top in component editor's content_area")
         release(chain)
 
         #deal with the modal dialog
-        name = (NameInstanceDialog(browser, editor_top.port).create_and_dismiss())
+        name = NameInstanceDialog(workspace_page).create_and_dismiss()
         names.append(name)
 
     ensure_names_in_workspace(workspace_page, names,
-        "Dragging 'assembly' to 'top' (in component editor) in one of the " \
-        "drop areas did not produce a new element on page\n")
+        "Dragging 'assembly' to 'top' (in component editor) in one of the "
+        "drop areas did not produce a new element on page")
 
     #now test to see if all the new elements are children of 'top'
 
@@ -197,49 +180,44 @@ def _test_drop_on_component_editor(browser):
     # we have pathnames for than we put there)
     for path in guess_pathnames:
         eq(path in pathnames, True,
-            "An element did not drop into 'top' (in component editor) when " \
-            "dragged onto one of its drop areas.\nIt was created somewhere else")
+           "An element did not drop into 'top' (in component editor) when "
+           "dragged onto one of its drop areas.\nIt was created somewhere else")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_on_component_editor complete."
 
 
 def _test_drop_on_component_editor_grid(browser):
-    print "running _test_drop_on_component_editor_grid..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
-    top = workspace_page.get_dataflow_figure('top')
-    top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
 
+    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
-    editor_top = get_dataflow_fig_in_assembly_editor(browser, top.port, workspace_page, 'top')
+    editor_top = get_dataflow_fig_in_assembly_editor(workspace_page, 'top')
 
     # sort through these to find the correct 'top'
 
     chain = ActionChains(browser)
     chain.click_and_hold(assembly)
-    chain.move_to_element(editor_top('header').element.find_element_by_xpath("..")).perform()
+    chain.move_to_element(editor_top('header').find_element_by_xpath("..")).perform()
     chain.move_by_offset(200, 1).perform()
     release(chain)
 
-     # don't bother checking to see if it appeared,
-     # the UI box will appear and screw the test if it did
+    # don't bother checking to see if it appeared,
+    # the UI box will appear and screw the test if it did
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_on_component_editor_grid complete."
 
 
 def _test_slots(browser):
-    print "running _test_slots..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     top = workspace_page.get_dataflow_figure('top')
 
-    editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(browser, workspace_page)
+    editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(workspace_page)
 
     workspace_page.set_library_filter('ExecComp')
     execcomp = workspace_page.find_library_button('ExecComp')
@@ -264,13 +242,9 @@ def _test_slots(browser):
 
     ##################################################
     # Second part of test: Drag and drop ExecComp from the Library onto the
-    # model (IComponent) slot of a MetaModel. This should be successful even
-    # though a dialog will popup with this notification message:
-    #   RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
+    # model (IComponent) slot of a MetaModel. 
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
-
-    NotifyDialog(browser, top.port).close()
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -304,20 +278,18 @@ def _test_slots(browser):
         slot_drop(browser, ele[0].element, comp, ele[3], 'Component')
     #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
 
-        editor, metamodel, caseiter, caserec, comp = slot_reset(browser, workspace_page, editor, metamodel, True)
+        editor, metamodel, caseiter, caserec, comp = slot_reset(workspace_page, editor, metamodel, True)
     """
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_slots complete."
 
 
 def _test_list_slot(browser):
-    print "running _test_list_slot..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # replace the 'top' assembly driver with a DOEdriver
     # (this additionally verifies that an issue with DOEdriver slots is fixed)
-    replace_driver(browser, workspace_page, 'top', 'DOEdriver')
+    replace_driver(workspace_page, 'top', 'DOEdriver')
 
     # open the object editor dialog for the driver
     driver = workspace_page.get_dataflow_figure('driver', 'top')
@@ -444,22 +416,17 @@ def _test_list_slot(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_list_slot complete."
 
 
 def _test_simple_component_to_workflow(browser):
-    print "running _test_simple_component_to_workflow..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Get file paths
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
+                                                 'paraboloid.py')
 
     # add first file from workspace
     workspace_page.add_file(file1_path)
-
-    # view library
-    workspace_page.show_library()
 
     # Drag element into top dataflow figure
     top = workspace_page.get_dataflow_figure('top')
@@ -467,7 +434,7 @@ def _test_simple_component_to_workflow(browser):
     chain = drag_element_to(browser, paraboloid, top('content_area').element, False)
     release(chain)
     #deal with the modal dialog
-    name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
+    name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     # View the Workflow Pane.
     workspace_page('workflow_tab').click()
@@ -480,17 +447,11 @@ def _test_simple_component_to_workflow(browser):
 
     # Drop the paraboloid component from the component tree onto the workflow for top
     workspace_page.expand_object('top')
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ("top." + name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(lambda browser:
-        browser.find_element_by_xpath(xpath))
-
+    paraboloid_component = workspace_page.find_object_button('top.' + name)
     top = workspace_page.get_workflow_figure('top')
-
-    chain = drag_element_to(browser, paraboloid_component, top('figure_itself').element, False)
-    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
+    chain = drag_element_to(browser, paraboloid_component, top.root, False)
+    check_highlighting(top.root, True, "Top's workflow")
     release(chain)
-
-    time.sleep(1.5)  # Just so we can see it.
 
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
@@ -502,22 +463,17 @@ def _test_simple_component_to_workflow(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_simple_component_to_workflow complete."
 
 
 def _test_library_to_workflow(browser):
-    print "running _test_library_to_workflow..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Get file paths
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
+                                                 'paraboloid.py')
 
     # add first file from workspace
     workspace_page.add_file(file1_path)
-
-    # view library
-    workspace_page.show_library()
 
     # View the Workflow Pane.
     workspace_page('workflow_tab').click()
@@ -531,14 +487,14 @@ def _test_library_to_workflow(browser):
     # Drop the paraboloid component from the library onto the workflow for top
     top = workspace_page.get_workflow_figure('top')
     paraboloid = workspace_page.find_library_button('Paraboloid')
-    chain = drag_element_to(browser, paraboloid, top('figure_itself').element, True)
+    chain = drag_element_to(browser, paraboloid, top.root, True)
     chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2])/3, 1).perform()
-    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
+    check_highlighting(top.root, True, "Top's workflow")
     release(chain)
     #deal with the modal dialog
-    name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
+    name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
-    time.sleep(1.5)  # Just so we can see it.
+    time.sleep(0.5)  # Just so we can see it.
 
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
@@ -550,32 +506,29 @@ def _test_library_to_workflow(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_library_to_workflow complete."
 
 
 def _test_component_to_complex_workflow(browser):
-    print "running _test_component_to_complex_workflow..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Add paraboloid and vehicle_threesim files
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
+                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                            'vehicle_threesim.py')
+                                                 'vehicle_threesim.py')
     workspace_page.add_file(file1_path)
     workspace_page.add_file(file2_path)
 
     # add VehicleSim2 to the globals
-    workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
-    vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
+    vehicle_name = put_element_on_grid(workspace_page, "VehicleSim2")
 
     # Drag paraboloid element into vehicle dataflow figure
     vehicle = workspace_page.get_dataflow_figure(vehicle_name)
     paraboloid = workspace_page.find_library_button('Paraboloid')
     chain = drag_element_to(browser, paraboloid, vehicle('content_area').element, False)
     release(chain)
-    paraboloid_name = (NameInstanceDialog(browser, vehicle.port).create_and_dismiss())
+    paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     # View the Workflow Pane.
     workspace_page('workflow_tab').click()
@@ -591,16 +544,13 @@ def _test_component_to_complex_workflow(browser):
     #     workflow for VehicleSim2
     ########################################
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
+    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
     vehicle_workflow_figure = workspace_page.get_workflow_figure(vehicle_name)
     chain = drag_element_to(browser, paraboloid_component,
-                        vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element,
-                       browser, True, "Three Sim Vehicle workflow")
+                            vehicle_workflow_figure.root, False)
+    check_highlighting(vehicle_workflow_figure.root, True,
+                       "Three Sim Vehicle workflow")
     release(chain)
-    time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 17)
     # Check to see that the new div inside the workflow is there
@@ -613,17 +563,13 @@ def _test_component_to_complex_workflow(browser):
     #     workflow for sim_acc under VehicleSim2
     ########################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
+    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
     sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc")  # returns a pageobject
 
     chain = drag_element_to(browser, paraboloid_component,
-                        sim_acc_workflow_figure('figure_itself').element, False)
-    check_highlighting(sim_acc_workflow_figure('figure_itself').element,
-                       browser, True, "sim_acc workflow")
+                            sim_acc_workflow_figure.root, False)
+    check_highlighting(sim_acc_workflow_figure.root, True, "sim_acc workflow")
     release(chain)
-    time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
     # Check to see that the new div inside the workflow is there
@@ -642,27 +588,20 @@ def _test_component_to_complex_workflow(browser):
     # This should NOT work since the paraboloid is not at the right level
     ########################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
-    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")  # returns a pageobject
-
+    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
+    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")
     chain = drag_element_to(browser, paraboloid_component,
-                        vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element,
-                       browser, False, "vehicle workflow")
+                            vehicle_workflow_figure.root, False)
+    check_highlighting(vehicle_workflow_figure.root, False, "vehicle workflow")
     release(chain)
-    time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is no new workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_component_to_complex_workflow complete."
 
 
 def _test_drop_onto_layered_div(browser):
-    print "running _test_drop_onto_layered_div..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Add paraboloid and vehicle_threesim files
@@ -674,9 +613,8 @@ def _test_drop_onto_layered_div(browser):
     workspace_page.add_file(file2_path)
 
     # add VehicleSim2 to the globals
-    workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
-    vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
+    vehicle_name = put_element_on_grid(workspace_page, "VehicleSim2")
 
     # add Paraboloid to VehicleSim dataflow assembly
     vehicle = workspace_page.get_dataflow_figure(vehicle_name)
@@ -684,10 +622,11 @@ def _test_drop_onto_layered_div(browser):
     chain = drag_element_to(browser, paraboloid,
                             vehicle('content_area').element, False)
     release(chain)
-    paraboloid_name = (NameInstanceDialog(browser, vehicle.port).create_and_dismiss())
+    paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
-    sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
+    sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
+                                                             vehicle_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
     driver_editor.move(-100, 0)
     driver_editor.show_workflow()
@@ -700,17 +639,13 @@ def _test_drop_onto_layered_div(browser):
     # Drag paraboloid component into sim_EPA_city workflow figure
     # should add to the list of workflow component figures
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
-
+    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
     vehicle_workflow_figure = workspace_page.get_workflow_figure("sim_EPA_city")
     chain = drag_element_to(browser, paraboloid_component,
-                        vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element,
-                       browser, True, "Three Sim Vehicle workflow")
+                            vehicle_workflow_figure.root, False)
+    check_highlighting(vehicle_workflow_figure.root, True,
+                       "Three Sim Vehicle workflow")
     release(chain)
-    time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
     eq(len(driver_editor.get_workflow_component_figures()), 6)
     eq(len(workspace_page.get_workflow_component_figures()), 24)
@@ -723,17 +658,13 @@ def _test_drop_onto_layered_div(browser):
     #     sim_EPA_city workflow figure
     # should NOT add to the list of workflow component figures
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
-
+    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
     vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")
     chain = drag_element_to(browser, paraboloid_component,
-                        vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element,
-                       browser, False, "Three Sim Vehicle workflow")
+                            vehicle_workflow_figure.root, False)
+    check_highlighting(vehicle_workflow_figure.root, False,
+                       "Three Sim Vehicle workflow")
     release(chain)
-    time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
     eq(len(driver_editor.get_workflow_component_figures()), 6)
     eq(len(workspace_page.get_workflow_component_figures()), 24)
@@ -744,39 +675,18 @@ def _test_drop_onto_layered_div(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_drop_onto_layered_div complete."
-
-
-def startup(browser):
-    '''Create a project and enter workspace'''
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
-
-    #open library
-    workspace_page.show_library()
-
-    return projects_page, project_info_page, project_dict, workspace_page
-
-
-def closeout(projects_page, project_info_page, project_dict, workspace_page):
-    '''Clean up after a test'''
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
 
 
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
     chain = drag_element_to(browser, element, slot, True)
-    chain.move_by_offset(25,0).perform()
+    chain.move_by_offset(25, 0).perform()
     time.sleep(1.0)  # give it a second to update the figure
-    check_highlighting(slot, browser, should_highlight=should_drop,
-                       message=message)
+    check_highlighting(slot, should_highlight=should_drop, message=message)
     release(chain)
 
 
-def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=False):
+def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
     '''every successfull drop permanently fills the slot. because of this,
     we need to make a new metamodel (with empty slots) every successfull drop'''
 
@@ -787,34 +697,36 @@ def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=
         metamodel.remove()
 
     #drop 'metamodel' onto the grid
-    meta_name = put_element_on_grid(browser, workspace_page, "MetaModel")
+    meta_name = put_element_on_grid(workspace_page, "MetaModel")
     #find it on the page
     metamodel = workspace_page.get_dataflow_figure(meta_name)
-    metamodel.pathname = get_pathname(browser, metamodel('header').element.find_element_by_xpath(".."))
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
     editor.move(-100, 0)
     editor.show_slots()
 
-    #resize_editor(browser, workspace_page, editor)
+    #resize_editor(workspace_page, editor)
 
     #find the slots (this is both the drop target and highlight area)
-    slot_id = 'SlotFigure-%s-%s'
-    caseiter = browser.find_element(By.ID, slot_id % (meta_name, 'warm_start_data'))
-    caserec  = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
-    model    = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
+    browser = workspace_page.browser
+    slot_id = 'SlotFigure-'+meta_name+'-%s'
+    caseiter = browser.find_element(By.ID, slot_id % 'warm_start_data')
+    caserec  = browser.find_element(By.ID, slot_id % 'recorder')
+    model    = browser.find_element(By.ID, slot_id % 'model')
 
     return editor, metamodel, caseiter, caserec, model, meta_name
 
 
-def resize_editor(browser, workspace_page, editor):
+def resize_editor(workspace_page, editor):
     '''ensure that the editor is not covering the library (or else we cannot drag things from it!)'''
-    page_width = workspace_page.browser.get_window_size()['width']
-    lib_width = workspace_page('library_tab').element.find_element_by_xpath('..').size['width']
-    lib_position = workspace_page('library_tab').element.find_element_by_xpath('..').location['x']
-    dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
-    dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+    browser = workspace_page.browser
+
+    page_width = browser.get_window_size()['width']
+    lib_width = workspace_page('library_tab').find_element_by_xpath('..').size['width']
+    lib_position = workspace_page('library_tab').find_element_by_xpath('..').location['x']
+    dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
+    dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
 
     # how much overlap do we have?
     overlap = lib_position - (dialog_position + dialog_width)
@@ -825,7 +737,7 @@ def resize_editor(browser, workspace_page, editor):
             # not enough, need to rezize the editor
 
             # look for the resize handle
-            sibblings = editor('dialog_title').element.find_elements_by_xpath('../../div')
+            sibblings = editor('dialog_title').find_elements_by_xpath('../../div')
             handle = None
             for sib in sibblings:
                 if "ui-resizable-se" in sib.get_attribute('class'):
@@ -839,8 +751,8 @@ def resize_editor(browser, workspace_page, editor):
             chain.release(None).perform()
 
             # recalculate the overlap
-            dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
-            dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+            dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
+            dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
             overlap = lib_position - (dialog_position + dialog_width)
 
         # We are good, move out!
@@ -851,8 +763,8 @@ def resize_editor(browser, workspace_page, editor):
         chain.release(None).perform()
 
         # recalculate the overlap
-        dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
-        dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+        dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
+        dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
         overlap = lib_position - (dialog_position + dialog_width)
 
         if overlap < 0:
@@ -871,24 +783,25 @@ def get_slot_target(labels, element_str):
     return None
 
 
-def get_dataflow_fig_in_assembly_editor(browser, port, workspace_page, name):
+def get_dataflow_fig_in_assembly_editor(workspace_page, name):
     '''Find the named dataflow fig in the assembly editor'''
     allFigs = workspace_page.get_dataflow_figures()
     for fig in allFigs:
         location = fig.find_element_by_xpath("..").get_attribute('id')
         if location == "top-dataflow":
-            return DataflowFigure(browser, port, fig)
+            return DataflowFigure(workspace_page.browser, workspace_page.port, fig)
 
     return None
 
 
-def put_assembly_on_grid(browser, workspace_page):
+def put_assembly_on_grid(workspace_page):
     '''Drop an Assembly on a grid'''
-    return put_element_on_grid(browser, workspace_page, 'Assembly')
+    return put_element_on_grid(workspace_page, 'Assembly')
 
 
-def put_element_on_grid(browser, workspace_page, element_str):
+def put_element_on_grid(workspace_page, element_str):
     '''find and get the 'assembly', and the div for the grid object'''
+    browser = workspace_page.browser
 
     for retry in range(3):
         try:
@@ -906,11 +819,11 @@ def put_element_on_grid(browser, workspace_page, element_str):
             break
 
     grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
-    check_highlighting(grid, browser, True, "Grid")
+    check_highlighting(grid, True, "Grid")
     release(chain)
 
     # deal with the modal dialog
-    name = (NameInstanceDialog(browser, workspace_page.get_dataflow_figure('top').port).create_and_dismiss())
+    name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     # make sure it is on the grid
     ensure_names_in_workspace(workspace_page, [name],
@@ -943,7 +856,7 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 
     # now we will assert that the elements that we added appear on the page
     for name in names:
-        eq(name in allnames, True, message)
+        eq(name in allnames, True, '%s: %s' % (message, name))
 
 
 def drag_element_to(browser, element, drag_to, centerx):
@@ -955,7 +868,7 @@ def drag_element_to(browser, element, drag_to, centerx):
     if centerx:
         chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
     else:
-        chain.move_by_offset(2,1).perform()
+        chain.move_by_offset(2, 1).perform()
     return chain
 
 
@@ -964,7 +877,7 @@ def release(chain):
     chain.release(on_element=None).perform()
 
 
-def check_highlighting(element, browser, should_highlight=True, message='Element'):
+def check_highlighting(element, should_highlight=True, message='Element'):
     '''check to see that the background-color of the element is rgb(207, 214, 254)'''
     if 'SlotFigure' in element.get_attribute('class'):
         # a slot figure is a div containing a ul element (the context menu) and
@@ -997,15 +910,16 @@ def getDropableElements(dataflow_figure):
     return [dataflow_figure(area).element for area in arr]
 
 
-def replace_driver(browser, workspace_page, assembly_name, driver_type):
+def replace_driver(workspace_page, assembly_name, driver_type):
     #find and get the 'comnindriver', 'top', and 'driver' objects
     newdriver = workspace_page.find_library_button(driver_type)
     assembly = workspace_page.get_dataflow_figure(assembly_name)
     driver_element = workspace_page.get_dataflow_figure('driver')
 
     div = getDropableElements(driver_element)[0]
-    chain = drag_element_to(browser, newdriver, div, True)
-    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
+    chain = drag_element_to(workspace_page.browser, newdriver, div, True)
+    check_highlighting(driver_element('content_area').element, True,
+                       "Driver's content_area")
     release(chain)
 
     # brings up a confirm dialog for replacing the existing driver.

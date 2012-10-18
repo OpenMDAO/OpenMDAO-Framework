@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %} OpenMDAO: {{ current_user }} {% end %}
+{% block title %} OpenMDAO: {{ project }} - {{ current_user }} {% end %}
 
 {% block head %}
     <script src="/static/js/openmdao/main.js" type="text/javascript"></script>
@@ -41,11 +41,11 @@
     <div id="rightcol" class="ui-layout-east">
         <div id="rightcol_tabs">
             <ul>
-                <li id="properties_tab"><a href="#properties_pane">Properties</a></li>
                 <li id="library_tab"><a href="#library_pane">Library</a></li>
+                <li id="properties_tab"><a href="#properties_pane">Properties</a></li>
             </ul>
-            <div id="properties_pane"></div>
             <div id="library_pane"></div>
+            <div id="properties_pane"></div>
         </div>
     </div>
 
