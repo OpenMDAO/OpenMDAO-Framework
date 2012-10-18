@@ -322,21 +322,21 @@ class FileHandler(ReqHandler):
         else:
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py'):
+            if filename.endswith('.py') or cserver.is_macro(filename):
                 if not contents.endswith('\n'):
                     text = contents + '\n' # to make ast.parse happy
                 else:
                     text = contents
                 try:
-                    ast.parse(text, filename=filename, mode='exec')
+                    ast.parse(text, filename=filename, mode='exec') # parse it looking for syntax errors
                 except Exception as err:
                     cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
-                    ret = cserver.file_has_instances(filename)
+                    ret = cserver.file_forces_reload(filename)
                     if ret:
-                        self.send_error(409)  # user will be prompted to overwrite classes
+                        self.send_error(409)  # user will be prompted to overwrite file and reload project
                         return
             self.write(str(cserver.write_file(filename, contents)))
 

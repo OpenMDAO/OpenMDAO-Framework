@@ -57,7 +57,7 @@ openmdao.Model=function(listeners_ready) {
             }
         }
         else {
-            debug.info("no callbacks for out message!");
+            debug.info("no callbacks for out message:",message);
         }
     }
 
@@ -92,8 +92,8 @@ openmdao.Model=function(listeners_ready) {
         }
     }
 
-    this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
-                                open_websocket('pubstream', handlePubMessage));
+    var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
+                               open_websocket('pubstream', handlePubMessage));
                                 
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();
@@ -101,8 +101,8 @@ openmdao.Model=function(listeners_ready) {
     }
     
     // this makes project loading wait until after the listeners have
-    // been registered.
-    listeners_ready.done(function() {
+    // been registered and the websockets opened
+    jQuery.when(ws_ready, listeners_ready).done(function() {
         jQuery.ajax({ type: 'GET', url: 'project_load' })
         .done(function() {
              self.model_ready.resolve();
