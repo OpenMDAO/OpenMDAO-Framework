@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.Model=function() {
+openmdao.Model=function(listeners_ready) {
 
     /***********************************************************************
      *  private
@@ -14,6 +14,8 @@ openmdao.Model=function() {
         sockets = {},
         subscribers = {},
         windows = [];
+        
+    this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
@@ -21,16 +23,16 @@ openmdao.Model=function() {
     */
     function open_websocket(url,handler) {
         // make ajax call (to url) to get the address of the websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  url,
-            success: function(addr, textStatus, jqXHR) {
-                sockets[url] = openmdao.Util.openWebSocket(addr,handler);
-            },
-            error: function(jqXHR, textStatus, err) {
-                debug.error('Error getting websocket url',jqXHR,textStatus,err);
-            }
-        });
+       return jQuery.ajax({ type: 'GET', url:  url })
+               .fail(function(jqXHR, textStatus, err) {
+                   debug.error('Error getting websocket url',jqXHR,textStatus,err);
+               })
+               .pipe(function(addr) {
+                   return openmdao.Util.openWebSocket(addr,handler);
+               })
+               .done(function(sock) {
+                   sockets[url] = sock;
+               });
     }
 
     /** close all websockets */
@@ -42,8 +44,6 @@ openmdao.Model=function() {
 
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
-        //debug.info("handling out message:");
-        //debug.info(message);
         var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -56,17 +56,15 @@ openmdao.Model=function() {
                 }
             }
         }
-        //else {
-        //    debug.info("no callbacks for out message!");
-        //}
+        else {
+            debug.info("no callbacks for out message!");
+        }
     }
 
     /** handle a published message, which has a topic
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        //debug.info("pub message:");
-        //debug.info(message)
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -76,8 +74,7 @@ openmdao.Model=function() {
             }
         }
         var topic = message[0],
-            callbacks = [];
-        //debug.info('Model.handlePubMessage()',topic,message);
+            callbacks;
         if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
             callbacks = subscribers[message[0]].slice();  // Need a copy.
             for (i = 0; i < callbacks.length; i++) {
@@ -95,6 +92,26 @@ openmdao.Model=function() {
         }
     }
 
+    this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
+                                open_websocket('pubstream', handlePubMessage));
+                                
+    if (! listeners_ready) { // to keep js_unit_test from failing
+        listeners_ready = jQuery.Deferred();
+        listeners_ready.resolve();
+    }
+    
+    // this makes project loading wait until after the listeners have
+    // been registered.
+    listeners_ready.done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load' })
+        .done(function() {
+             self.model_ready.resolve();
+        })
+        .fail(function() {
+             self.model_ready.reject();
+        });
+    });
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -109,25 +126,13 @@ openmdao.Model=function() {
         else {
             subscribers[topic] = [ callback ];
         }
-        if (topic === 'outstream' && !outstream_opened) {
-            // if outstream socket is not opened yet, open it
-            outstream_opened = true;
-            open_websocket('outstream', handleOutMessage);
-        }
-        else {
-            // if pubstream socket is not opened yet, open it
-            if (!pubstream_opened) {
-                pubstream_opened = true;
-                open_websocket('pubstream', handlePubMessage);
-            }
-            // tell server there's a new subscriber to the topic
-            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                jQuery.ajax({
-                    type: 'GET',
-                    url:  'publish',
-                    data: {'topic': topic, 'publish': true}
-                });
-            }
+        // tell server there's a new subscriber to the topic
+        if (topic !== 'outstream' && topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'publish',
+                data: {'topic': topic, 'publish': true}
+            });
         }
     };
 
@@ -174,21 +179,49 @@ openmdao.Model=function() {
         });
     };
 
-    /** save the current project */
-    this.saveProject = function(callback, errorHandler) {
-        jQuery.ajax({
+    /** I split this function out from commit so I could call it directly
+       from js_unit_test */
+    this.commit_with_comment = function(comment) {
+        defrd = jQuery.ajax({
             type: 'POST',
             url:  'project',
-            success: callback,
-            error: errorHandler,
+            data: { 'comment': comment },
             complete: function(jqXHR, textStatus) {
                           if (typeof openmdao_test_mode !== 'undefined') {
-                              openmdao.Util.notify('Save complete: ' +textStatus);
+                              openmdao.Util.notify('Commit complete: ' +textStatus);
                           }
                       }
         });
         modified = false;
+        return defrd.promise()
     };
+    
+    /** commit the current project to the repository (after supplying a comment)*/
+    this.commit = function(callback, errorHandler) {
+        openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
+    };
+
+    /** revert back to the most recent commit of the project */
+    this.revert = function(errorHandler) {
+        openmdao.Util.confirm("Remove all uncommitted changes?",
+            function() {
+                jQuery.ajax({
+                    type: 'POST',
+                    url:  'project_revert',
+                    success: function(data, textStatus, jqXHR) {
+                        self.reload()
+                    },
+                    error: errorHandler,
+                    complete: function(jqXHR, textStatus) {
+                                  if (typeof openmdao_test_mode !== 'undefined') {
+                                      openmdao.Util.notify('Revert complete: ' +textStatus);
+                                  }
+                              }
+                });
+                modified = false;
+        });
+    };
+
 
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
@@ -391,6 +424,22 @@ openmdao.Model=function() {
         modified = true;
     };
 
+    /** issue the specified command against the model */
+    this.setVariableValue = function(lhs, rhs, type, callback, errorHandler, completeHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'variable',
+            data: { 'lhs': lhs,
+                    'rhs': rhs,
+                    'type': type
+                  },
+            success: callback,
+            error: errorHandler,
+            complete: completeHandler
+        });
+        modified = true;
+    };
+
     /** get any queued output from the model */
     this.getOutput = function(callback, errorHandler) {
         jQuery.ajax({
@@ -499,33 +548,25 @@ openmdao.Model=function() {
             modified = true;
     };
 
-    /** import the contents of the specified file into the model */
-    /*
-    this.importFile = function(filepath, callback, errorHandler) {
-        // change path to package notation and import
-        var path = filepath.replace(/\.py$/g,'').
-                            replace(/\\/g,'.').
-                            replace(/\//g,'.');
-        cmd = 'from '+path+' import *';
-        self.issueCommand(cmd, callback, errorHandler, null);
-        modified = true;
-    };
-    */
-
     /** execute the model */
     this.runModel = function() {
+        self.runComponent('');
+    }
+
+    /** execute a component */
+    this.runComponent = function(pathname) {
         // make the call
         jQuery.ajax({
             type: 'POST',
             url:  'exec',
-            data: { },
+            data: { 'pathname': pathname },
             success: function(data, textStatus, jqXHR) {
                          if (typeof openmdao_test_mode !== 'undefined') {
                              openmdao.Util.notify('Run complete: '+textStatus);
                          }
                       },
             error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText);
+                       debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });
@@ -559,6 +600,9 @@ openmdao.Model=function() {
 
     /** close the model */
    this.close = function() {
+   /** since we've switched over to using a vcs to manage the project files, we don't
+    ** really need to save when the user leaves because they won't lose anything.
+    
        if (modified) {
            openmdao.Util.confirm("Model has changed, close without saving?",
                function() {
@@ -569,14 +613,17 @@ openmdao.Model=function() {
                });
        }
        else {
+    */
            openmdao.Util.closeWebSockets('close');
            self.closeWindows();
            window.location.replace('/workspace/close');
-       }
+    //   }
    };
 
    /** exit the gui */
    this.exit = function() {
+      /** see comment in close() function
+      
        if (modified) {
            openmdao.Util.confirm("Model has changed, exit without saving?",
                function() {
@@ -586,11 +633,11 @@ openmdao.Model=function() {
                    window.location.replace('/exit');
                });
        }
-       else {
+       else { */
            openmdao.Util.closeWebSockets('exit');
            self.closeWindows();
            window.location.replace('/exit');
-       }
+      // }
    };
 
     /** add window to window list. */

@@ -24,12 +24,12 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
-from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
+from openmdao.util.dep import find_files, plugin_groups
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
 from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
-
+from openmdao.main.project import PROJ_DIR_EXT
 
 class PyWatcher(FileSystemEventHandler):
     """
@@ -218,7 +218,7 @@ class ProjDirFactory(Factory):
             changed_set = set()
             deleted_set = set()
             
-            modeldir = watchdir+'.prj'
+            modeldir = watchdir+PROJ_DIR_EXT
             if modeldir not in sys.path:
                 sys.path = [modeldir]+sys.path
                 logger.info("added %s to sys.path" % modeldir)
@@ -297,9 +297,9 @@ class ProjDirFactory(Factory):
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        self._file_error(msg)
+                        self._error(msg)
                     else:
-                        self._file_error(str(err))
+                        self._error(str(err))
                     return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
@@ -311,9 +311,9 @@ class ProjDirFactory(Factory):
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        self._file_error(msg)
+                        self._error(msg)
                     else:
-                        self._file_error(str(err))
+                        self._error(str(err))
                     self._remove_fileinfo(fpath)
                     return
                 for cname in added_set:
@@ -327,9 +327,10 @@ class ProjDirFactory(Factory):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                finfo = self._files[fpath]
-                deleted_set.update(finfo.classes.keys())
-                self._remove_fileinfo(fpath)
+                finfo = self._files.get(fpath)
+                if finfo:
+                    deleted_set.update(finfo.classes.keys())
+                    self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
         types = get_available_types()
@@ -346,14 +347,9 @@ class ProjDirFactory(Factory):
 
     def _error(self, msg):
         logger.error(msg)
+        print msg
         publish('console_errors', msg)
-        print msg
-        
-    def _file_error(self, msg):
-        logger.error(msg)
-        publish('file_errors', msg)
-        print msg
-        
+
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
         when there is some error during the import of the file.

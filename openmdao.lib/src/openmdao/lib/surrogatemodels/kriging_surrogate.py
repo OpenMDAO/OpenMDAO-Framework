@@ -17,12 +17,17 @@ import zope.interface
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.util.decorators import stub_if_missing_deps
+from openmdao.main.api import Container
+from openmdao.main.datatypes.api import Float
 
 @stub_if_missing_deps('numpy', 'scipy')
-class KrigingSurrogate(object): 
+class KrigingSurrogate(Container): 
+    
     implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
+        super(KrigingSurrogate, self).__init__()
+        
         self.m = None #number of independent
         self.n = None #number of training points
         self.thetas = None

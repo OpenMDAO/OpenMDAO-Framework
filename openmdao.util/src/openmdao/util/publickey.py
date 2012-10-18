@@ -326,8 +326,25 @@ def make_private(path):
                                       win32security.DACL_SECURITY_INFORMATION,
                                       sd)
     else:
-        mode = 0700 if os.path.isdir(path) else 0600
-        os.chmod(path, mode)  # Read/Write/Execute
+        # Normal chmod() works on test machines with ACLs enabled, but a user
+        # in the field reported a situation where it didn't. This code tries
+        # using libacl if it can. Doesn't seem to cause any problems, not
+        # verifed that it helps though.
+        try:
+            # From pylibacl, which requires 'libacl1-dev'.
+            import posix1e
+        except ImportError:
+            mode = 0700 if os.path.isdir(path) else 0600
+            os.chmod(path, mode)  # Read/Write/Execute
+        else:
+            if os.path.isdir(path):
+                acl = posix1e.ACL(text='u::rwx,g::-,o::-')
+            else:
+                acl = posix1e.ACL(text='u::rw,g::-,o::-')
+            acl.applyto(path)
+
+    if not is_private(path):
+        raise RuntimeError("Can't make %r private" % path)
 
 
 def encode_public_key(key):

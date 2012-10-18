@@ -1,17 +1,22 @@
 """ Metamodel provides basic Meta Modeling capability."""
 
+from copy import deepcopy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
-from openmdao.lib.datatypes.api import Slot, List, Str, Event, Dict, Bool
+from openmdao.lib.datatypes.api import Slot, List, Str, Float, Int, Event, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
-     ICaseIterator
+     ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
+from openmdao.util.log import logger
+from openmdao.main.datatypes.uncertaindist import UncertainDistVar
+from openmdao.util.typegroups import int_types, real_types
 
 _missing = object()
-
+__surrogate_prefix__ = 'sur_'
 
 class MetaModel(Component):
 
@@ -30,28 +35,17 @@ class MetaModel(Component):
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
                               "previous training data is cleared and replaced "
-                              "with data from this CaseIterator")
+                              "with data from this CaseIterator.")
 
-    surrogate = Dict(key_trait=Str,
-                     value_trait=Slot(ISurrogate),
-                     allow_none=True,
-                     desc='Dictionary that provides a mapping between variables and '
-                          'surrogate models for each output. The "default" '
-                          'key must be given. It is the default surrogate model for all '
-                          'outputs. Any specific surrogate models can be '
-                          'specifed by a key with the desired variable name.'
-                    )
-    surrogate_args = Dict(key_trait=Str,
-                          allow_none=True,
-                          desc='Dictionary that provides mapping between variables and '
-                          'arguments that should be passed to the surrogate model. Keys should '
-                          'match those in the surrogate dictionary. Values can be a list of ordered '
-                          'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.')
-
+    default_surrogate = Slot(ISurrogate, allow_none=True,
+                             desc="This surrogate will be used for all "
+                             "outputs that don't have a specific surrogate assigned "
+                             "to them in their sur_<name> slot.")
+    
     report_errors = Bool(True, iotype="in",
                          desc="If True, metamodel will report errors reported from the component. "
-                         "If False, metamodel will swallow the errors but log that they happened and exclude the case"
-                         "from the training set")
+                         "If False, metamodel will swallow the errors but log that they happened and "
+                         "exclude the case from the training set.")
 
     recorder = Slot(ICaseRecorder,
                     desc='Records training cases')
@@ -63,22 +57,25 @@ class MetaModel(Component):
 
     def __init__(self, *args, **kwargs):
         super(MetaModel, self).__init__(*args, **kwargs)
-        self._current_model_traitnames = set()
-        self._surrogate_info = {}
-        self._surrogate_input_names = []
+        self._surrogate_input_names = None
+        self._surrogate_output_names = None
+        self._surrogate_overrides = set() # keeps track of which sur_<name> slots are full
+        self._training_data = {}
         self._training_input_history = []
         self._const_inputs = {}  # dict of constant training inputs indices and their values
         self._train = False
         self._new_train_data = False
         self._failed_training_msgs = []
-
+        self._default_surrogate_copies = {} # need to maintain separate copy of default surrogate for each sur_* that doesn't
+                                            # have a surrogate defined
+        
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
         # the __init__ function.  If they need to create traits dynamically
         # during initialization they'll have to provide the value of
         # _mm_class_traitnames
         self._mm_class_traitnames = set(self.traits(iotype=not_none).keys())
-
+        
     def _train_next_fired(self):
         self._train = True
         self._new_train_data = True
@@ -88,10 +85,9 @@ class MetaModel(Component):
         self._const_inputs = {}
         self._failed_training_msgs = []
 
-        # remove output history from surrogate_info
-        for name, tup in self._surrogate_info.items():
-            surrogate, output_history = tup
-            self._surrogate_info[name] = (surrogate, [])
+        # remove output history from training_data
+        for name in self._training_data:
+            self._training_data[name] = []
 
     def _warm_start_data_changed(self, oldval, newval):
         self.reset_training_data = True
@@ -101,19 +97,22 @@ class MetaModel(Component):
             if self.recorder:
                 self.recorder.record(case)
             inputs = []
-            for inp_name in self._surrogate_input_names:
+            for inp_name in self.surrogate_input_names():
                 var_name = '.'.join([self.name, inp_name])
-                inp_val = case[var_name]
-                if inp_val is not None:
-                    inputs.append(inp_val)
+                try:
+                    inp_val = case[var_name]
+                except KeyError:
+                    pass
+                    #self.raise_exception('The variable "%s" was not '
+                                         #'found as an input in one of the cases provided '
+                                         #'for warm_start_data.' % var_name, ValueError)
                 else:
-                    self.raise_exception('The variable "%s" was not '
-                                         'found as an input in one of the cases provided '
-                                         'for warm_start_data.' % var_name, ValueError)
+                    if inp_val is not None:
+                        inputs.append(inp_val)
             #print "inputs", inputs
             self._training_input_history.append(inputs)
 
-            for output_name in self.list_outputs_from_model():
+            for output_name in self.surrogate_output_names():
                 #grab value from case data
                 var_name = '.'.join([self.name, output_name])
                 try:
@@ -123,7 +122,7 @@ class MetaModel(Component):
                                          'in one of the cases provided for '
                                          'warm_start_data' % var_name, ValueError)
                 else:  # save to training output history
-                    self._surrogate_info[output_name][1].append(val)
+                    self._training_data[output_name].append(val)
 
         self._new_train_data = True
 
@@ -152,18 +151,24 @@ class MetaModel(Component):
                 self.update_outputs_from_model()
                 case_outputs = []
 
-                for name, tup in self._surrogate_info.items():
-                    surrogate, output_history = tup
+                for name, output_history in self._training_data.items():
                     case_outputs.append(('.'.join([self.name, name]),
                                          output_history[-1]))
                 # save the case, making sure to add out name to the local input name since
                 # this Case is scoped to our parent Assembly
-                case_inputs = [('.'.join([self.name, name]), val) for name, val in zip(self._surrogate_input_names, inputs)]
+                case_inputs = [('.'.join([self.name, name]), val) for name, val in zip(self.surrogate_input_names(), 
+                                                                                       inputs)]
                 if self.recorder:
                     self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
 
             self._train = False
         else:
+            if self.default_surrogate is None and not self._surrogate_overrides: # NO surrogates defined. just run model and get outputs
+                inputs = self.update_model_inputs()
+                self.model.run()
+                self.update_outputs_from_model()
+                return
+                
             #print '%s predicting' % self.get_pathname()
             if self._new_train_data:
                 if len(self._training_input_history) < 2:
@@ -193,14 +198,15 @@ class MetaModel(Component):
                                                        if i not in self._const_inputs])
                 else:
                     training_input_history = self._training_input_history
-                for name, tup in self._surrogate_info.items():
-                    surrogate, output_history = tup
-                    surrogate.train(training_input_history, output_history)
+                for name, output_history in self._training_data.items():
+                    surrogate = self._get_surrogate(name)
+                    if surrogate is not None:
+                        surrogate.train(training_input_history, output_history)
 
                 self._new_train_data = False
 
             inputs = []
-            for i, name in enumerate(self._surrogate_input_names):
+            for i, name in enumerate(self.surrogate_input_names()):
                 val = getattr(self, name)
                 cval = self._const_inputs.get(i, _missing)
                 if cval is _missing:
@@ -210,10 +216,13 @@ class MetaModel(Component):
                     self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
                                          (name, cval, val), ValueError)
 
-            for name, tup in self._surrogate_info.items():
-                surrogate = tup[0]
-                # copy output to boudary
-                setattr(self, name, surrogate.predict(inputs))
+            for name in self._training_data:
+                surrogate = self._get_surrogate(name)
+                # copy output to boundary
+                if surrogate is None:
+                    setattr(self, name, getattr(self.model, name)) # no surrogate. use outputs from model
+                else:
+                    setattr(self, name, surrogate.predict(inputs))
 
     def _post_run(self):
         self._train = False
@@ -232,9 +241,6 @@ class MetaModel(Component):
         return [0 for n in compnames]
 
     def _model_changed(self, oldmodel, newmodel):
-        self.update_model(oldmodel, newmodel)
-
-    def update_model(self, oldmodel, newmodel):
         """called whenever the model variable is set or when includes/excludes change."""
         # TODO: check for pre-connected traits on the new model
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
@@ -243,121 +249,226 @@ class MetaModel(Component):
         if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
-        if not self.surrogate:
-            self.raise_exception("surrogate must be set before the model or any includes/excludes of variables", RuntimeError)
 
         new_model_traitnames = set()
-        self._surrogate_input_names = []
-        self._training_input_history = []
-        self._surrogate_info = {}
-        self._failed_training_msgs = []
+        self.reset_training_data = True
 
-        # remove traits promoted from the old model
-        for name in self._current_model_traitnames:
-            if self.parent:
-                self.parent.disconnect('.'.join([self.name, name]))
-            self.remove_trait(name)
-
+        self._update_surrogate_list()
+        
+        if self.default_surrogate is None:
+            no_sur = []
+            for name in self.surrogate_output_names():
+                if getattr(self, __surrogate_prefix__+name, None) is None:
+                    no_sur.append(name)
+            if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
+                self.raise_exception("No default surrogate model is defined and the following outputs do not have a surrogate model: %s. Either specify default_surrogate, or specify a surrogate model for all outputs." %
+                                     no_sur, RuntimeError)
+        
         if newmodel:
-            # query for inputs
-            traitdict = newmodel._alltraits(iotype='in')
-            for name, trait in traitdict.items():
-                if self._eligible(name):
-                    self._surrogate_input_names.append(name)
-                if name not in self._mm_class_traitnames:
-                    self.add_trait(name, _clone_trait(trait))
-                    new_model_traitnames.add(name)
-                    setattr(self, name, getattr(newmodel, name))
-
-            # now outputs
-            traitdict = newmodel._alltraits(iotype='out')
-            for name, trait in traitdict.items():
-                if self._eligible(name):
-                    try:
-                        surrogate = self.surrogate[name]
-                        args = self.surrogate_args.get(name, [])
-                    except KeyError:
-                        try:
-                            surrogate = self.surrogate['default']
-                            args = self.surrogate_args.get('default', [])
-                        except KeyError:
-                            self.raise_exception("No default surrogate model was"
-                            " specified. Either specify a default, or specify a "
-                            "surrogate model for all outputs", ValueError)
-
-                    if isinstance(args, dict):
-                        kwargs = args
-                        args = []
-                    elif isinstance(args, tuple):
-                        args = args[0]
-                        kwargs = args[1]
-                    else:
-                        kwargs = {}
-
-                    trait_type = surrogate.get_uncertain_value(1.0).__class__
-                    self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
-
-                    self._surrogate_info[name] = (surrogate.__class__(*args, **kwargs), [])  # (surrogate,output_history)
-                    new_model_traitnames.add(name)
-                    setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel, name)))
-
             newmodel.parent = self
             newmodel.name = 'model'
 
-        self._current_model_traitnames = new_model_traitnames
-
+    def _add_var_for_surrogate(self, surrogate, varname):
+        """Different surrogates have different types of output values, so create
+        the appropriate type of output Variable based on the return value
+        of get_uncertain_value on the surrogate.
+        """
+        val = surrogate.get_uncertain_value(getattr(self.model, varname))
+        if has_interface(val, IUncertainVariable):
+            ttype = UncertainDistVar
+        elif isinstance(val, real_types):
+            ttype = Float
+        elif isinstance(val, int_types):
+            ttype = Int
+        else:
+            self.raise_exception("value type of '%s' is not a supported surrogate return value" %
+                                 val.__class__.__name__)
+        self.add(varname, ttype(default_value=val, iotype='out', 
+                                desc=self.model.trait(varname).desc,
+                                units=self.model.trait(varname).units))
+        setattr(self, varname, val)
+        
+    def _surrogate_updated(self, obj, name, old, new):
+        """Called when a surrogate Slot (sur_*) is updated."""
+        if new is None:
+            if self.default_surrogate:
+                self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+            if name in self._surrogate_overrides:
+                self._surrogate_overrides.remove(name)
+        else:
+            self._surrogate_overrides.add(name)
+            varname = name[len(__surrogate_prefix__):]
+            self._add_var_for_surrogate(getattr(self, name), varname)
+            if old is None and name in self._default_surrogate_copies:
+                del self._default_surrogate_copies[name]
+    
     def update_inputs(self, compname, varnames):
         if compname != 'model':
             self.raise_exception("cannot update inputs for child named '%s'" % compname)
         self.model.set_valid(varnames, True)
 
     def update_model_inputs(self):
-        """Copy the values of the MetaModel's inputs into the inputs of the model.
-        Returns the values of the inputs.
+        """Copy the values of the MetaModel's inputs into the inputs of the
+        model. Returns the values of the inputs.
         """
         input_values = []
-        for name in self._surrogate_input_names:
+        for name in self.surrogate_input_names():
             inp = getattr(self, name)
             input_values.append(inp)
             setattr(self.model, name, inp)
         return input_values
 
+    def _get_surrogate(self, name):
+        """Return the designated surrogate for the given output."""
+        surrogate = getattr(self, __surrogate_prefix__+name, None)
+        if surrogate is None and self.default_surrogate is not None:
+            surrogate = self._default_surrogate_copies.get(__surrogate_prefix__+name)
+        return surrogate
+    
     def update_outputs_from_model(self):
         """Copy output values from the model into the MetaModel's outputs, and
         if training, save the output associated with surrogate.
         """
-        for name in self.list_outputs_from_model():
+        for name in self.surrogate_output_names():
             out = getattr(self.model, name)
-            setattr(self, name, self._surrogate_info[name][0].get_uncertain_value(out))
+            surrogate = self._get_surrogate(name)
+            if surrogate is None:
+                setattr(self, name, out)
+            else:
+                setattr(self, name, surrogate.get_uncertain_value(out))
             if self._train:
-                self._surrogate_info[name][1].append(out)  # save to training output history
+                self._training_data[name].append(out)  # save to training output history
 
-    def list_inputs_to_model(self):
+    def _add_input(self, name):
+        """Adds the specified input variable."""
+        self.add_trait(name, _clone_trait(self.model.trait(name)))
+        setattr(self, name, getattr(self.model, name))
+    
+    def _add_output(self, name):
+        """Adds the specified output variable and its associated surrogate Slot."""
+        sur_name = __surrogate_prefix__+name
+        
+        self.add_trait(sur_name, Slot(ISurrogate, allow_none=True))
+        self.on_trait_change(self._surrogate_updated, sur_name)
+
+        if self.default_surrogate is not None:
+            surrogate = deepcopy(self.default_surrogate)
+            self._default_surrogate_copies[sur_name] = surrogate
+            self._add_var_for_surrogate(surrogate, name)
+        else:
+            self.add_trait(name, _clone_trait(self.model.trait(name)))
+
+        self._training_data[name] = [] 
+    
+    def _remove_input(self, name):
+        """Removes the specified input variable."""
+        if self.parent:
+            self.parent.disconnect('.'.join([self.name, name]))
+        self.remove_trait(name)
+    
+    def _remove_output(self, name):
+        """Removes the specified output variable and its associated surrogate."""
+        if self.parent:
+            self.parent.disconnect('.'.join([self.name, name]))
+        self.remove_trait(name)
+        self.remove_trait(__surrogate_prefix__+name)
+        if name in self._training_data:
+            del self._training_data[name]
+    
+    def surrogate_input_names(self):
         """Return the list of names of public inputs that correspond
         to model inputs.
         """
+        if self._surrogate_input_names is None:
+            if self.model:
+                self._surrogate_input_names = [n for n in self.model._alltraits(iotype='in').keys()
+                                               if self._eligible(n) and 
+                                                  n not in self._mm_class_traitnames]
+            else:
+                return []
         return self._surrogate_input_names
 
-    def list_outputs_from_model(self):
+    def surrogate_output_names(self):
         """Return the list of names of public outputs that correspond
         to model outputs.
         """
-        return list(set(self.list_outputs()) - self._mm_class_traitnames)
+        if self._surrogate_output_names is None:
+            if self.model:
+                self._surrogate_output_names = [n for n in self.model._alltraits(iotype='out').keys() 
+                                               if self._eligible(n) and 
+                                                  n not in self._mm_class_traitnames]
+            else:
+                return []
+        return self._surrogate_output_names
 
+    def _update_surrogate_list(self):
+        old_in = set()
+        if self._surrogate_input_names is not None:
+            old_in.update(self._surrogate_input_names)
+        old_out = set()
+        if self._surrogate_output_names is not None:
+            old_out.update(self._surrogate_output_names)
+            
+        self._surrogate_input_names = None
+        self._surrogate_output_names = None
+        
+        new_in = set(self.surrogate_input_names())
+        new_out = set(self.surrogate_output_names())
+        
+        added_outs = new_out - old_out
+        added_ins = new_in - old_in
+        
+        removed_outs = old_out - new_out
+        removed_ins = old_in - new_in
+        
+        if added_outs or added_ins or removed_ins:
+            self.reset_training_data = True
+
+        for name in removed_ins:
+            self._remove_input(name)
+        for name in added_ins:
+            self._add_input(name)
+            
+        for name in removed_outs:
+            self._remove_output(name)
+        for name in added_outs:
+            self._add_output(name)
+            
+        
     def _includes_changed(self, old, new):
         if self.excludes and new is not None:
             self.__dict__['includes'] = old
             self.raise_exception("includes and excludes are mutually exclusive",
                                  RuntimeError)
-        self.update_model(self.model, self.model)
+        self._update_surrogate_list()
 
     def _excludes_changed(self, old, new):
         if self.includes and new is not None:
             self.__dict__['excludes'] = old
             self.raise_exception("includes and excludes are mutually exclusive",
                                  RuntimeError)
-        self.update_model(self.model, self.model)
+        self._update_surrogate_list()
 
+    def _default_surrogate_changed(self, old_obj, new_obj):
+        if old_obj:
+            old_obj.on_trait_change(self._def_surrogate_trait_modified, 
+                                    remove=True)
+        if new_obj:
+            new_obj.on_trait_change(self._def_surrogate_trait_modified)
+            
+        for name in self.surrogate_output_names():
+            surname = __surrogate_prefix__+name
+            if surname not in self._surrogate_overrides:
+                surrogate = deepcopy(self.default_surrogate)
+                self._default_surrogate_copies[surname] = surrogate
+                self._add_var_for_surrogate(surrogate, name)
+                
+    def _def_surrogate_trait_modified(self, surrogate, name, old, new):
+        # a trait inside of the default_surrogate was changed, so we need to
+        # replace all of the default copies
+        for name in self._default_surrogate_copies:
+            self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+    
     def _eligible(self, name):
         """Return True if the named trait is not excluded from the public interface based
         on the includes and excludes lists.

@@ -33,18 +33,11 @@ class FileManager(object):
         and optionally publishes an update when the collection is modified
     '''
 
-    def __init__(self, name, path=None, publish_updates=False):
+    def __init__(self, name, path, publish_updates=False):
         self.name = name
 
         self.orig_dir = os.getcwd()
-        if path:
-            self.root_dir = path
-        else:
-            self.root_dir = tempfile.mkdtemp(self.name)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-        os.mkdir(self.root_dir)
-        os.chdir(self.root_dir)
+        self.root_dir = path
 
         self.publish_updates = publish_updates
         self.publisher = None
@@ -72,11 +65,6 @@ class FileManager(object):
         if self.publisher:
             self.publisher.publish(self.name, self.get_files())
 
-    def getcwd(self):
-        ''' return the current working directory
-        '''
-        return os.getcwd()
-
     def cleanup(self):
         ''' Stop observer and cleanup the file directory.
         '''
@@ -85,22 +73,20 @@ class FileManager(object):
             self.observer.stop()
             self.observer.join()
         os.chdir(self.orig_dir)
-        if os.path.exists(self.root_dir):
-            try:
-                shutil.rmtree(self.root_dir)
-            except Exception, err:
-                print 'Filemanager: Error cleaning up file directory', err
 
-    def get_files(self):
+    def get_files(self, root=None):
         ''' get a nested dictionary of files in the working directory
         '''
-        cwd = os.getcwd()
-        return filedict(cwd, root=cwd)
+        if root is None:
+            cwd = self.root_dir
+        else:
+            cwd = root
+        return filedict(cwd)
 
     def _get_abs_path(self, name):
         '''return the absolute pathname of the given file/dir
         '''
-        return os.path.join(os.getcwd(), str(name).lstrip('/'))
+        return os.path.join(self.root_dir, str(name).lstrip('/'))
 
     def get_file(self, filename):
         ''' get contents of file in working directory
@@ -152,9 +138,10 @@ class FileManager(object):
             if it's a zip file, unzip it
         '''
         self.write_file(filename, contents)
-        if zipfile.is_zipfile(filename):
-            userdir = os.getcwd()
-            zfile = zipfile.ZipFile(filename, "r")
+        fpath = self._get_abs_path(filename)
+        if zipfile.is_zipfile(fpath):
+            userdir = self.root_dir
+            zfile = zipfile.ZipFile(fpath, "r")
             zfile.printdir()
             for fname in zfile.namelist():
                 if fname.endswith('/'):
@@ -170,7 +157,7 @@ class FileManager(object):
                     fout.write(data)
                     fout.close()
             zfile.close()
-            os.remove(filename)
+            os.remove(fpath)
 
     def delete_file(self, filename):
         ''' delete file in working directory

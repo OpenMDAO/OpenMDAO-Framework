@@ -1,8 +1,6 @@
 import logging
-import threading
 import time
 
-from nose import SkipTest
 from nose.tools import eq_ as eq
 
 from selenium.webdriver import ActionChains
@@ -14,14 +12,16 @@ from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from connections import ConnectionsPage
-from dataflow import DataflowFigure, find_dataflow_figures, \
-                     find_dataflow_figure, find_dataflow_component_names
+from dataflow import find_dataflow_figure, find_dataflow_figures, \
+                     find_dataflow_component_names
 from editor import EditorPage
-from elements import ButtonElement, GenericElement, GridElement, InputElement, \
-                     TextElement
-from workflow import WorkflowFigure, find_workflow_figure, \
-                     find_workflow_figures, find_workflow_component_figures
-from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
+from elements import ButtonElement, GridElement, InputElement, TextElement
+from logviewer import LogViewer
+from workflow import find_workflow_figure, find_workflow_figures, \
+                     find_workflow_component_figures
+from util import ValuePrompt, NotifierPage, ConfirmationPage
+
+from openmdao.util.log import logger
 
 
 class WorkspacePage(BasePageObject):
@@ -30,27 +30,28 @@ class WorkspacePage(BasePageObject):
 
     # Top.
     project_menu      = ButtonElement((By.ID, 'project-menu'))
-    save_button       = ButtonElement((By.ID, 'project-save'))
+    commit_button     = ButtonElement((By.ID, 'project-commit'))
+    revert_button     = ButtonElement((By.ID, 'project-revert'))
     run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
     exit_button       = ButtonElement((By.ID, 'project-exit'))
 
     view_menu         = ButtonElement((By.ID, 'view-menu'))
-    cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
+    objects_button    = ButtonElement((By.ID, 'view-components'))
     console_button    = ButtonElement((By.ID, 'view-console'))
+    dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
     files_button      = ButtonElement((By.ID, 'view-files'))
     library_button    = ButtonElement((By.ID, 'view-library'))
-    objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
     workflow_button   = ButtonElement((By.ID, 'view-workflow'))
-    dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
     refresh_button    = ButtonElement((By.ID, 'view-refresh'))
 
     tools_menu        = ButtonElement((By.ID, 'tools-menu'))
     editor_button     = ButtonElement((By.ID, 'tools-editor'))
     plotter_button    = ButtonElement((By.ID, 'tools-plotter'))
-    addons_button     = ButtonElement((By.ID, 'tools-addons'))
+    drawing_button    = ButtonElement((By.ID, 'tools-drawing'))
+    log_button        = ButtonElement((By.ID, 'tools-log'))
 
     help_menu         = ButtonElement((By.ID, 'help-menu'))
     doc_button        = ButtonElement((By.ID, 'help-doc'))
@@ -105,6 +106,7 @@ class WorkspacePage(BasePageObject):
 
     library_tab    = ButtonElement((By.ID, 'library_tab'))
     library_search = InputElement((By.ID, 'objtt-select'))
+    library_clear  = ButtonElement((By.ID, 'objtt-clear'))
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
@@ -119,16 +121,44 @@ class WorkspacePage(BasePageObject):
         self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
-        WebDriverWait(self.browser, 2*TMO).until(
+        WebDriverWait(self.browser, TMO).until(
             lambda browser: len(self.get_dataflow_figures()) > 0)
-        # Now wait for WebSockets.
-# FIXME: absolute delay before polling sockets.
-        time.sleep(2)
+
+        # Now wait for all WebSockets open.
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
-        NotifierPage.wait(self)
+        expected = 'WebSockets open'
+        try:
+            msg = NotifierPage.wait(self)
+        except TimeoutException:  # Typically no exception text is provided.
+            raise TimeoutException('Timed-out waiting for web sockets')
+        while msg != expected:
+            # During 'automatic' reloads we can see 'WebSockets closed'
+            logging.warning('Acknowledged %r while waiting for %r',
+                            msg, expected)
+            time.sleep(1)
+            try:
+                msg = NotifierPage.wait(self)
+            except TimeoutException:
+                raise TimeoutException('Timed-out waiting for web sockets')
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
+        for retry in range(5):
+            try:
+                element = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element(By.XPATH, path))
+            except TimeoutException as err:
+                logging.warning(str(err))
+            else:
+                break
+        else:
+            raise err
+        if delay:
+            time.sleep(delay)
+        return element
+
+    def find_object_button(self, name, delay=0):
+        path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
                 element = WebDriverWait(self.browser, TMO).until(
@@ -149,33 +179,26 @@ class WorkspacePage(BasePageObject):
         self('run_button').click()
         NotifierPage.wait(self, timeout)
 
-    def do_command(self, cmd, timeout=TMO):
+    def do_command(self, cmd, timeout=TMO, ack=True):
         """ Execute a command. """
         self.command = cmd
         self('submit').click()
-        NotifierPage.wait(self, timeout)
+        if ack:
+            NotifierPage.wait(self, timeout, base_id='command')
 
-    def close_workspace(self, timeout=TMO):
+    def close_workspace(self, commit=False):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
-        self.save_project()
+        if commit:
+            self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self, timeout)
+        NotifierPage.wait(self)
         self('project_menu').click()
-
-        # Sometimes chromedriver hangs here, so we click in separate thread.
-        # It's a known issue on the chromedriver site.
-        closer = threading.Thread(target=self._closer)
-        closer.daemon = True
-        closer.start()
-        closer.join(60)
-        if closer.is_alive():
-            abort(True)
-            raise SkipTest("Can't close workspace, driver hung :-(")
+        self('close_button').click()
 
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
     
-    def attempt_to_close_workspace(self, expectDialog, confirm, timeout=TMO):
+    def attempt_to_close_workspace(self, expectDialog, confirm):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self('project_menu').click()
         self('close_button').click()
@@ -185,7 +208,7 @@ class WorkspacePage(BasePageObject):
             dialog = ConfirmationPage(self)
             if confirm:  #close without saving
                 self.browser.execute_script('openmdao.Util.closeWebSockets();')
-                NotifierPage.wait(self, timeout)
+                NotifierPage.wait(self)
                 dialog.click_ok()
                 from project import ProjectsListPage
                 return ProjectsListPage.verify(self.browser, self.port)
@@ -194,11 +217,6 @@ class WorkspacePage(BasePageObject):
         else:      #no unsaved changes 
             from project import ProjectsListPage
             return ProjectsListPage.verify(self.browser, self.port)
-      
-
-    def _closer(self):
-        """ Clicks the close button. """
-        self('close_button').click()
 
     def open_editor(self):
         """ Open code editor.  Returns :class:`EditorPage`. """
@@ -235,6 +253,7 @@ class WorkspacePage(BasePageObject):
         self('add_button').click()
 
         self.file_chooser = file_path
+        time.sleep(0.5)
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -249,12 +268,16 @@ class WorkspacePage(BasePageObject):
         page.set_value(filename)
         NotifierPage.wait(self)  # Wait for creation to complete.
 
+    def find_file(self, filename, tmo=TMO):
+        """ Return elemnt corresponding to `filename`. """
+        xpath = "//a[(@path='/%s')]" % filename
+        return WebDriverWait(self.browser, tmo).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
         self('files_tab').click()
-        xpath = "//a[(@path='/%s')]" % filename
-        element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath(xpath))
+        element = self.find_file(filename)
         chain = ActionChains(self.browser)
         if dclick:  # This has had issues...
             for i in range(10):
@@ -262,8 +285,7 @@ class WorkspacePage(BasePageObject):
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
                     logging.warning('edit_file: StaleElementReferenceException')
-                    element = WebDriverWait(self.browser, 1).until(
-                        lambda browser: browser.find_element_by_xpath(xpath))
+                    element = self.find_file(filename, 1)
                     chain = ActionChains(self.browser)
                 else:
                     break
@@ -273,10 +295,32 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
-    def save_project(self):
-        """ Save current project. """
+    def expand_folder(self, filename):
+        """ Expands `filename`. """
+        self('files_tab').click()
+        xpath = "//div[@id='ftree_pane']//a[(@path='/%s')]/../ins" % filename
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(1)  # Wait for cute animation.
+
+    def toggle_files(self, filename):
+        """ Toggle files display, using context menu of `filename`. """
+        self('files_tab').click()
+        time.sleep(0.5)
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        time.sleep(0.5)
+        self('file_toggle').click()
+        time.sleep(0.5)
+
+    def commit_project(self, comment='no comment'):
+        """ Commit current project. """
         self('project_menu').click()
-        self('save_button').click()
+        self('commit_button').click()
+        page = ValuePrompt(self.browser, self.port)
+        page.set_value(comment)
         NotifierPage.wait(self)
 
     def reload_project(self):
@@ -353,9 +397,23 @@ class WorkspacePage(BasePageObject):
 
     def show_properties(self):
         """ Display properties. """
-        self('properties_tab').click()
+        # This has had some odd failures where the tab is highlighted as if
+        # hovering over it, yet the Library tab is still the selected one.
+        for retry in range(5):
+            try:
+                self('properties_tab').click()
+                WebDriverWait(self.browser, 1).until(
+                    lambda browser: self('props_header').is_visible)
+            except TimeoutException:
+                if retry:
+                    logging.warning('TimeoutException in show_properties')
+            else:
+                break
+        else:
+            raise RuntimeError('Too many TimeoutExceptions')
 
     def show_library(self):
+        """ Display library. """
         # For some reason the first try never works, so the wait is set
         # low and we expect to retry at least once.
         for retry in range(5):
@@ -372,6 +430,7 @@ class WorkspacePage(BasePageObject):
             raise RuntimeError('Too many TimeoutExceptions')
 
     def set_library_filter(self, filter):
+        """ Set the search filter text. """
         for retry in range(10):  # This has had issues...
             try:
                 self.library_search = filter + '\n'
@@ -380,7 +439,27 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
-        time.sleep(0.5)  # Wait for dropdown to go away.
+        time.sleep(0.5)  # Wait for display update.
+
+    def clear_library_filter(self):
+        """ Clear the search filter via the 'X' button. """
+        self('library_clear').click()
+        time.sleep(0.5)  # Wait for display update.
+
+    def get_object_types(self):
+        """ Return displayed object types. """
+        xpath = "//table[(@id='objtypetable')]//td"
+        return [element.text for element
+                              in self.browser.find_elements(By.XPATH, xpath)]
+
+    def get_library_searches(self):
+        """ Return stored library search terms. """
+        self.library_search = 'searches'
+        menu = self.browser.find_element(By.CLASS_NAME, 'ui-autocomplete')
+        items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
+        searches = [item.text for item in items]
+        self.clear_library_filter()
+        return searches
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
@@ -389,12 +468,10 @@ class WorkspacePage(BasePageObject):
             lambda browser: browser.find_element_by_xpath(xpath))
         WebDriverWait(self.browser, TMO).until(
             lambda browser: library_item.is_displayed())
-# FIXME: absolute delay to wait for 'slide' to complete.
-        time.sleep(1)
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
-                                     check=True, offset=None):
+                                     check=True, offset=None, prefix=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
@@ -422,10 +499,12 @@ class WorkspacePage(BasePageObject):
         finally:
             self.browser.implicitly_wait(TMO)
 
+        retval = None
         if check:  # Check that it's been added.
-            WebDriverWait(self.browser, TMO).until(
-                lambda browser: self.get_dataflow_figure(instance_name) is not None)
-                #lambda browser: instance_name in self.get_dataflow_component_names())
+            retval = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: self.get_dataflow_figure(instance_name,
+                                                                 prefix))
+        return retval
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
@@ -471,6 +550,28 @@ class WorkspacePage(BasePageObject):
         else:
             dialog.click_cancel()
 
+    def add_object_to_workflow(self, obj_path, target_name):
+        """ Add `obj_path` object to `target_name` in workflow. """
+        for retry in range(3):
+            try:
+                obj = self.find_object_button(obj_path)
+                target = self.get_workflow_figure(target_name)
+                chain = ActionChains(self.browser)
+                chain.move_to_element(obj)
+                chain.click_and_hold(obj)
+                chain.move_to_element(target.root)
+                chain.move_by_offset(2, 1)
+                chain.release(None)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('add_object_to_workflow:'
+                                    ' StaleElementReferenceException')
+                else:
+                    raise
+            else:
+                break
+
     def get_workflow_figures(self):
         """ Return workflow figure elements. """
         return find_workflow_figures(self)
@@ -482,6 +583,12 @@ class WorkspacePage(BasePageObject):
     def get_workflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`WorkflowFigure` for `name`. """
         return find_workflow_figure(self, name, prefix, retries)
+
+    def show_log(self):
+        """ Open log viewer.  Returns :class:`LogViewer`. """
+        self('tools_menu').click()
+        self('log_button').click()
+        return LogViewer.verify(self.browser, self.port)
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')

@@ -8,6 +8,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
+            {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -23,6 +24,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        button = '<div class="ui-icon-trash"></div>';
+        return button;
+    }
     elm.append(parmsDiv);
 
     var table = jQuery('<table width="100%">'),
@@ -45,10 +50,37 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    parms.onClick.subscribe(function (e) {
+        var cell = parms.getCellFromEvent(e);
+        if (cell.cell==0) {
+            var delname = parms.getData()[cell.row].name
+            if (delname.split(",").length>1) {
+                cmd = pathname+'.remove_parameter('+delname+');';
+            }
+            else {
+                cmd = pathname+'.remove_parameter("'+delname+'");';
+            }
+            model.issueCommand(cmd);
+        }
+    });   
+    
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
-        cmd = pathname+".add_parameter('"+target+"'";
+    
+        // Supports parameter groups
+        var targets = target.split(",");
+        if (targets.length>1) {
+            cmd = pathname+".add_parameter((";
+            for(var i = 0; i < targets.length; i++) {
+                cmd = cmd + "'" + jQuery.trim(targets[i]) + "',";
+            }
+            cmd = cmd + ")";
+        }
+        else {
+            cmd = pathname+".add_parameter('"+target+"'";
+        }
+        
         if (low) {
             cmd = cmd + ",low="+low;
         }
@@ -65,6 +97,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
+        console.log(cmd)
         model.issueCommand(cmd);
     }
 
@@ -105,6 +138,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         jQuery(this).dialog('close');
                         callback(target.val(),low.val(),high.val(),
                                  scaler.val(),adder.val(),name.val());
+                        // remove from DOM
+                        win.remove();
                     }
                 },
                 {
@@ -112,6 +147,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     id: 'parameter-cancel',
                     click: function() {
                         jQuery(this).dialog('close');
+                        // remove from DOM
+                        win.remove();
                     }
                 }
             ]
@@ -126,6 +163,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
 
     addButton.click(function() { promptForParameter(addParameter); });
     clrButton.click(function() { clearParameters(); });
+    
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -139,5 +177,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         }
         parms.updateRowCount();
         parms.render();
+        
     };
 };

@@ -97,7 +97,7 @@ class ProblemFormulationTest(unittest.TestCase):
             
             
         self.assertEqual(ordereddict.OrderedDict(zip([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],[c1,c2,c3])),
-                         self.asm.get_coupling_vars())
+                         self.asm.list_coupling_vars())
         
         self.assertEqual({'D1':[c1],'D4':[c2],'D6':[c3]},
                          self.asm.get_coupling_indeps_by_comp())
@@ -108,7 +108,7 @@ class ProblemFormulationTest(unittest.TestCase):
         
         self.asm.remove_coupling_var(('D1.a','D2.a'))
         self.assertEqual(ordereddict.OrderedDict(zip([("D4.a","D5.a"),("D6.a","D5.b")],[c2,c3])),
-                         self.asm.get_coupling_vars())
+                         self.asm.list_coupling_vars())
         try: 
             self.asm.remove_coupling_var(('D1.a','D2.a'))
         except Exception as err: 
@@ -130,7 +130,7 @@ class ProblemFormulationTest(unittest.TestCase):
             
         self.asm.add_coupling_var(("D1.a","D2.a"))
         self.asm.clear_coupling_vars()
-        self.assertEqual([],self.asm.get_coupling_vars())
+        self.assertEqual([],self.asm.list_coupling_vars())
         
     def test_double_set_arch(self):
         self.asm.architecture = DummyArchitecture()
@@ -141,7 +141,8 @@ class ProblemFormulationTest(unittest.TestCase):
         try:
             self.asm.architecture = DummyArchitecture()
         except RuntimeError as err:
-            self.assertEqual(str(err), ": This Assembly was already configured with another architecture.")
+            self.assertEqual(str(err), 
+               ": This Assembly was already configured with an architecture. To change architectures you must create a new ArchitectureAssembly.")
         else:
             self.fail("Exception expected")
         self.assertEqual(arch, self.asm.architecture)

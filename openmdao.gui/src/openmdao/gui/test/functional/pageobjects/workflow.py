@@ -1,3 +1,4 @@
+import logging
 import time
 
 from selenium.webdriver.common.by import By
@@ -5,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import GenericElement, TextElement
+from elements import TextElement
 
 
 class WorkflowFigure(BasePageObject):
@@ -14,7 +15,6 @@ class WorkflowFigure(BasePageObject):
     # parts of the WorkflowFigure div. Nothing here yet. Not sure
     #   if needed
     title_bar = TextElement((By.CLASS_NAME, 'WorkflowFigureTitleBar'))
-    figure_itself = GenericElement((By.XPATH, '.'))
 
     # Context menu. Not needed yet but will need later
 

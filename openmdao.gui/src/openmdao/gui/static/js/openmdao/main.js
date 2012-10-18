@@ -5,7 +5,8 @@
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
-    openmdao.model = new openmdao.Model();
+    var listeners_ready = jQuery.Deferred();
+    openmdao.model = new openmdao.Model(listeners_ready);
     openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
     // register value editors for supported OpenMDAO data types
@@ -50,6 +51,7 @@ jQuery(function() {
     // add gui functionality to designated DOM nodes
     (function() {
         var model = openmdao.model;
+        new openmdao.ConsoleFrame("console",  model);
 
         var data = new openmdao.DataflowFrame("dataflow_pane",model,''),
             work = new openmdao.WorkflowFrame("workflow_pane",model,''),
@@ -81,17 +83,20 @@ jQuery(function() {
         new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
-        new openmdao.ConsoleFrame("console",  model);
+        
+        listeners_ready.resolve();
     }());
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
-
-
-    jQuery(window).bind('beforeunload', function(e) {
-        if (openmdao.model.getModified()){
-            return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
-        }
-    });
+    
+    //jQuery(window).bind('beforeunload', function(e) {
+    //    // Don't check when testing -- it can cause a cascade of errors.
+    //    if (openmdao.model.getModified() &&
+    //        (typeof openmdao_test_mode === 'undefined')) {
+    //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
+    //    }
+    //});
 });
+
 

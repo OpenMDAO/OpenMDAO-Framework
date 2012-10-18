@@ -4,6 +4,7 @@ Pages related to project management.
 
 import random
 import string
+import sys
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -42,11 +43,13 @@ class NewProjectPage(ProjectPage):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-    def create_project(self, project_name, description, version):
+    def create_project(self, project_name, description=None, version=None):
         """ Create a project, returns :class:`ProjectInfoPage`. """
         self.project_name = project_name
-        self.description = description
-        self.version = version
+        if description is not None:
+            self.description = description
+        if version is not None:
+            self.version = version
         self.submit()
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)
@@ -62,7 +65,7 @@ class ProjectInfoPage(ProjectPage):
                                    '/html/body/div/div[2]/form[2]/input[2]'))
     load_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[3]/input[2]'))
-    save_button = ButtonElement((By.XPATH,
+    commit_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[4]/input[2]'))
     back_button = ButtonElement((By.LINK_TEXT, 'Back to Projects'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
@@ -114,7 +117,7 @@ class ProjectsListPage(BasePageObject):
 
     search_input = InputElement((By.XPATH, "//div[@id='project_table_filter']/label/input"))
     new_button = ButtonElement((By.LINK_TEXT, 'Start new project'))
-    add_button = ButtonElement((By.LINK_TEXT, 'Add existing project'))
+    add_button = ButtonElement((By.LINK_TEXT, 'Import a project'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
 
     def new_project(self):
@@ -161,18 +164,20 @@ class ProjectsListPage(BasePageObject):
         return ProjectInfoPage.verify(self.browser, self.port, title)
 
     # TODO: Leaving this in for now for future testing of deleting projects via the GUI
-    def delete_all_test_projects(self):
+    def delete_all_test_projects(self, verbose=False):
         """ Removes all projects with 'test project' in the name.
             Not perfect, will timeout when it runs out of projects"""
 
-        element = WebDriverWait(self.browser, TMO).until(
-                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
+        elements = self.browser.find_elements_by_partial_link_text('testing project')
+        for i in range(len(elements)):
+            element = WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element_by_partial_link_text('testing project'))
 
-        while (element):
             project_name = element.text
             element = element.find_element_by_xpath('../../td[6]/form/input')
             element.click()
             title = ProjectInfoPage.project_title(project_name)
             ProjectInfoPage.verify(self.browser, self.port, title).delete_project()
-            element = WebDriverWait(self.browser, TMO).until(
-                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
+            if verbose:
+                print >>sys.stderr, 'Deleted', project_name
+
