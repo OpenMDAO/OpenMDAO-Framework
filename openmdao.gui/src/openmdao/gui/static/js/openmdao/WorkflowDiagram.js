@@ -6,7 +6,7 @@ openmdao.WorkflowDiagram=function(elm, model, json){
         pathname = json.pathname,
         name = openmdao.Util.getName(pathname),
         id = elm.attr('id')+'-WorkflowDiagram-'+pathname.replace(/\./g,'-'),
-        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'"style="float:left" />')
+        diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'"style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
         driver = new openmdao.WorkflowComponentFigure(diagram,model,json.pathname,json.type,json.valid),
         flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
@@ -27,8 +27,8 @@ openmdao.WorkflowDiagram=function(elm, model, json){
 
     // position flow fig to overlap bottom right corner of driver fig
     flow_fig.css({ 'position': 'absolute',
-                   'left': driver.getWidth()  - 15 + 'px',
-                   'top':  driver.getHeight() - 15 + 'px' });
+                   'left': driver.getWidth()  - 15,
+                   'top':  driver.getHeight() - 15 });
 
     /** arrange component figures horizontally or vertically */
     function layout(horiz) {
@@ -36,7 +36,8 @@ openmdao.WorkflowDiagram=function(elm, model, json){
             flow_height = 0,
             comp_height = 0,
             flow_width = 0,
-            comp_width = 0;
+            comp_width = 0,
+            children;
 
         horizontal = horiz;
 
@@ -56,13 +57,15 @@ openmdao.WorkflowDiagram=function(elm, model, json){
         });
 
         flow_fig.css({ 'width': flow_width, 'height': flow_height });
-        diagram.css({ 'width': flow_width + driver.getWidth(), 'height': flow_height + driver.getHeight() });
+        diagram.css({ 'width':  flow_width  + driver.getWidth(),
+                      'height': flow_height + driver.getHeight() });
 
+        children = flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram');
         if (horizontal) {
-            flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram').css({ 'clear': 'none' });
+            children.css({ 'clear': 'none' });
         }
         else {
-            flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram').css({ 'clear': 'both' });
+            children.css({ 'clear': 'both' });
         }
     }
 

@@ -21,7 +21,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
             + '</svg>',
         fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px;float:left;padding:5px" />')
             .append(svg),
-        rectCSS = {'stroke-width':4, 'stroke':'#0b93d5', 'fill':'#999999'},
+        rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill':'#999999'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
             .appendTo(fig);
 
@@ -39,9 +39,10 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
     }
 
     // set name, id, tooltip and width
+    fig.attr('id',id);
+    fig.find('svg').attr('id',id+'-svg');
     fig.find('#name').text(name);
     fig.find('#klass').text(type);
-    fig.attr('id',id);
 
     // create context menu
     contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
@@ -69,7 +70,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
             model.issueCommand(cmd);
         }
     }));
-    ContextMenu.set(contextMenu.attr('id'), fig.attr('id'));
+    ContextMenu.set(contextMenu.attr('id'), id+'-svg');
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
