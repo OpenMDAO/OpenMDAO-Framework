@@ -4,9 +4,8 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.CouplingVarsPane = function(elm,model,pathname,name,editable) {
     var couplingVars,
         couplingVarsDiv = jQuery("<div id='"+name+"_CouplingVars' >"),
-        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
-        addButton = jQuery("<div "+buttonSpec +">Add Coupling Variables</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Coupling Variables</div>"),
+        addButton = jQuery("<button>Add Coupling Variables</button>").button(),
+        clrButton = jQuery("<button>Clear Coupling Variables</button>").button(),
         columns = [
             {id:"independent", name:"Independent",  field:"independent",  width:180},
             {id:"dependent",   name:"Dependent",    field:"dependent", width:180}
