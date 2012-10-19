@@ -733,9 +733,6 @@ class ConsoleServer(cmd.Cmd):
             self._log_subscribers = 0
 
     def is_macro(self, filename):
-        logging.getLogger().error("filename = %s" % filename.lstrip('/'))
-        logging.getLogger().error("macroname = %s" % os.path.join(os.path.basename(self.proj.macrodir), 
-                                                                  self.proj.macro))
         return filename.lstrip('/') == os.path.join(os.path.basename(self.proj.macrodir), 
                                                     self.proj.macro)
 
