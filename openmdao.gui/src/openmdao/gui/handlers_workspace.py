@@ -421,8 +421,11 @@ class ProjectRevertHandler(ReqHandler):
     def post(self):
         commit_id = self.get_argument('commit_id', default=None)
         cserver = self.get_server()
-        cserver.revert_project(commit_id)
-        self.write('Reverted.')
+        ret = cserver.revert_project(commit_id)
+        if isinstance(ret, Exception):
+            self.send_error(500)
+        else:
+            self.write('Reverted.')
             
             
 class ProjectHandler(ReqHandler):

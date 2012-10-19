@@ -134,7 +134,7 @@ class HasCouplingVars(object):
             del self._couples[indep_dep]
             return c
 
-    def get_coupling_vars(self): 
+    def list_coupling_vars(self): 
         """Returns an OrderDict of CouplingVar instances keys to the names of (indep,dep) in the assembly."""
         return self._couples
     
@@ -172,8 +172,9 @@ class ArchitectureAssembly(Assembly):
                 self.architecture = old  # put the old value back
             finally:
                 self._trait_change_notify(True)
-            self.raise_exception("This Assembly was already configured with another "
-                                 "architecture.", RuntimeError)
+            self.raise_exception("This Assembly was already configured with an "
+                                 "architecture. To change architectures you must "
+                                 "create a new ArchitectureAssembly.", RuntimeError)
     
     def initialize(self): 
         """Sets all des_vars and coupling_vars to the start values, if specified.""" 
@@ -278,7 +279,7 @@ class ArchitectureAssembly(Assembly):
         parameter objects, keyed to the component they are part of.""" 
         
         result = {}
-        for indep_dep,couple in self.get_coupling_vars().iteritems(): 
+        for indep_dep,couple in self.list_coupling_vars().iteritems(): 
             comp = couple.indep.get_referenced_compnames().pop()
             try: 
                 result[comp].append(couple)
@@ -292,7 +293,7 @@ class ArchitectureAssembly(Assembly):
         keyed to the component they are part of.""" 
         
         result = {}
-        for indep_dep,couple in self.get_coupling_vars().iteritems(): 
+        for indep_dep,couple in self.list_coupling_vars().iteritems(): 
             comp = couple.dep.get_referenced_compnames().pop()
             try: 
                 result[comp].append(couple)
@@ -345,7 +346,7 @@ class OptProblem(ArchitectureAssembly):
                 pass
             
         try: 
-            for k,v in self.get_coupling_vars().iteritems():
+            for k,v in self.list_coupling_vars().iteritems():
                 sol = self.solution[k]
                 error[k] = (v.indep.evaluate()-sol, v.dep.evaluate()-sol)
         except KeyError: 
