@@ -49,6 +49,8 @@ class VarComponent(Component):
     listenumvar3 = List(Enum('a',('a','b','c')), iotype='in')
     listenumvar4 = List(Enum(True,(True, False)), iotype='in')
     
+    varcontainer = Slot(VarContainer, iotype='input')
+    
     def __init__(self, directory=''):
         
         super(VarComponent, self).__init__(directory)
@@ -197,6 +199,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.singleint[3], 5)
         self.assertEqual(my_comp.stringarray[2], 'xyz')
         self.assertEqual(type(my_comp.singleint[2]), numpy_int32)
+        
+        # Test out reading a single card by name
+        self.assertEqual(sb.find_card('OPTION', 'floatvar'), -3.14)
         
     def test_read2(self):
         # Put variables in container, using rules_dict
@@ -479,8 +484,8 @@ class TestCase(unittest.TestCase):
         except RuntimeError, err:
             self.assertEqual(str(err),
                              "Error generating input file. Don't" + \
-                             "know how to handle data in variable" + \
-                             "unsupported in group Test.")
+                             " know how to handle data in variable" + \
+                             " unsupported in group Test.")
         else:
             self.fail('RuntimeError expected')        
 

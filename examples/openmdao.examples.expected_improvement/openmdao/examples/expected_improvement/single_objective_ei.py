@@ -43,7 +43,7 @@ class Analysis(Assembly):
         
         #Components
         self.add("branin_meta_model",MetaModel())
-        self.branin_meta_model.surrogate = {'default':KrigingSurrogate()}
+        self.branin_meta_model.default_surrogate = KrigingSurrogate()
         self.branin_meta_model.model = BraninComponent()
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
         self.branin_meta_model.force_execute = True

@@ -48,7 +48,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 cmd = 'del '+pathname+'['+ idx+']';
             }
             else {
-                cmd = pathname+' =  None';
+                cmd = openmdao.Util.getPath(pathname)+".remove('"+openmdao.Util.getName(pathname)+"')";
             }
             model.issueCommand(cmd);
         }

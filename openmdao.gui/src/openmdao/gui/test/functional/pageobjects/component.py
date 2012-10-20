@@ -63,9 +63,9 @@ class DriverPage(ComponentPage):
     objectives  = GridElement((By.ID, 'Objectives_objectives'))
     constraints = GridElement((By.ID, 'Constraints_constraints'))
 
-    add_parameter  = ButtonElement((By.XPATH, "//div[text()='Add Parameter']"))
-    add_objective  = ButtonElement((By.XPATH, "//div[text()='Add Objective']"))
-    add_constraint = ButtonElement((By.XPATH, "//div[text()='Add Constraint']"))
+    add_parameter  = ButtonElement((By.XPATH, "//span[text()='Add Parameter']"))
+    add_objective  = ButtonElement((By.XPATH, "//span[text()='Add Objective']"))
+    add_constraint = ButtonElement((By.XPATH, "//span[text()='Add Constraint']"))
 
     def get_parameters(self):
         """ Return parameters grid. """
@@ -186,4 +186,3 @@ class NameInstanceDialog(ValuePrompt):
         self.click_ok()
 
         return name
-

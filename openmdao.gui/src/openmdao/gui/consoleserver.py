@@ -122,7 +122,7 @@ class ConsoleServer(cmd.Cmd):
         publish(topic, msg)
 
     def _error(self, err, exc_info):
-        ''' print error message and save stack trace in case it's requested
+        ''' publish error message and save stack trace in case it's requested
         '''
         self._partial_cmd = None
         self.exc_info = exc_info
@@ -131,13 +131,13 @@ class ConsoleServer(cmd.Cmd):
         self._print_error(msg)
 
     def _print_error(self, msg):
-        ''' print & publish error message
+        ''' publish error message
         '''
-        print msg
         try:
             publish('console_errors', msg)
         except:
             logger.error('publishing of message failed')
+        
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -560,8 +560,13 @@ class ConsoleServer(cmd.Cmd):
                 print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
             except Exception, err:
                 self._error(err, sys.exc_info())
+                return err # give the caller an indication that something went wrong so he can
+                           # give the proper error response to the http call if desired. Raising
+                           # an exception here doesn't work
         else:
-            self._print_error('No Project to revert')
+            msg = 'No Project to revert'
+            self._print_error(msg)
+            return Exception(msg)
 
     @modifies_model
     def add_component(self, name, classname, parentname):
@@ -727,14 +732,21 @@ class ConsoleServer(cmd.Cmd):
                 self._log_handler = None
             self._log_subscribers = 0
 
-    def file_has_instances(self, filename):
-        """Returns True if the given file (assumed to be a file in the project)
-        has classes that have been instantiated in the current process. Note that
-        this doesn't keep track of removes/deletions, so if an instance was created
-        earlier and then deleted, it will still be reported.
+    def is_macro(self, filename):
+        return filename.lstrip('/') == os.path.join(os.path.basename(self.proj.macrodir), 
+                                                    self.proj.macro)
+
+    def file_forces_reload(self, filename):
+        """Returns True if the given file (assumed to be a file in the
+        project) has classes that have been instantiated in the current
+        process or if the file is a macro file. Note that this doesn't keep
+        track of removes/deletions, so if an instance was created earlier and
+        then deleted, it will still be reported.
         """
         pdf = self.projdirfactory
         if pdf:
+            if self.is_macro(filename):
+                return True
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf._files.get(filename)

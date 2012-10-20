@@ -28,7 +28,7 @@ class CO(Architecture):
         constraints = self.parent.list_constraints()
         constraints_by_comp = self.parent.get_constraints_by_comp()        
         
-        coupling = self.parent.get_coupling_vars()
+        coupling = self.parent.list_coupling_vars()
         coupl_indeps_by_comp = self.parent.get_coupling_indeps_by_comp()
         coupl_deps_by_comp = self.parent.get_coupling_deps_by_comp()
         
