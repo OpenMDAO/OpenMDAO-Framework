@@ -4,9 +4,8 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
         parmsDiv = jQuery("<div id='"+name+"_parms'>"),
-        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
-        addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
+        addButton = jQuery("<button>Add Parameter</button>").button(),
+        clrButton = jQuery("<button>Clear Parameters</button>").button(),
         columns = [
             {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
