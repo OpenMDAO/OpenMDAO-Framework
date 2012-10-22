@@ -452,12 +452,20 @@ description =
         fpath = os.path.join(self.macrodir, macro_name)
         self._recorded_cmds = []
         with open(fpath, 'r') as f:
-            lines = f.readlines()
+            content = f.read()
+            
+        # fix missing newline at end of file to avoid issues later when
+        # we append to it
+        if not content.endswith('\n'): 
+            with open(fpath, 'a') as f:
+                f.write('\n')
+
+        lines = content.split('\n')
             
         errors = []
         for i, line in enumerate(lines):
             try:
-                self.command(line.rstrip('\n'), save=False)
+                self.command(line, save=False)
             except Exception as err:
                 msg = str(err)
                 logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
