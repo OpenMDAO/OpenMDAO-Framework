@@ -39,6 +39,7 @@ openmdao.DragAndDropManager=function() {
 
     // add a valid drop target with the given id
     this.draggableOver = function(droppable) {
+        debug.info('draggableOver:',droppable.attr('id'));
         droppables[droppable.attr('id')] = droppable;
         openmdao.drag_and_drop_manager.updateHighlighting();
     };

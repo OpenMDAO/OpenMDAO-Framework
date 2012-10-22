@@ -9,11 +9,14 @@ openmdao.WorkflowDiagram=function(elm, model, json){
         diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'"style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
         driver = new openmdao.WorkflowComponentFigure(diagram,model,json.pathname,json.type,json.valid),
-        flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
-        flow_fig = jQuery('<div class="WorkflowFigure" style="'+flow_css+'" />')
+        flow_css = 'border-style:solid;border-color:yellow;border-width:thin;',
+        flow_div = jQuery('<div class="WorkflowFigure" id="'+id+'-flow" style="'+flow_css+'" />')
             .appendTo(diagram),
+        box_css = 'background-color:white;border-style:solid;border-color:black;border-width:thin;position:absolute;left:0px;',
+        box_div = jQuery('<div class="WorkflowBox" id="'+id+'-box" style="'+box_css+'" />')
+            .appendTo(flow_div),
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-            .appendTo(diagram),
+            .appendTo(box_div),
         comp_figs = {},
         defaultBackgroundColor = '#FFFFFF',
         highlightBackgroundColor = '#FAFAC8',
@@ -26,17 +29,19 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     }
 
     // position flow fig to overlap bottom right corner of driver fig
-    flow_fig.css({ 'position': 'absolute',
+    flow_div.css({ 'position': 'absolute',
                    'left': driver.getWidth()  - 15,
                    'top':  driver.getHeight() - 15 });
 
     /** arrange component figures horizontally or vertically */
     function layout(horiz) {
         var i = 0,
-            flow_height = 0,
             comp_height = 0,
-            flow_width = 0,
             comp_width = 0,
+            flow_height = 0,
+            flow_width = 0,
+            box_height = 0,
+            box_width = 0,
             children;
 
         horizontal = horiz;
@@ -48,40 +53,73 @@ openmdao.WorkflowDiagram=function(elm, model, json){
                 if (horizontal) {
                     flow_width = flow_width + comp_width;
                     flow_height = comp_height > flow_height ? comp_height : flow_height;
+                    if (comp_fig instanceof openmdao.WorkflowDiagram) {
+                        comp_height = comp_fig.getDriver().getHeight();
+                    }
+                    box_height =  comp_height > box_height ? comp_height : box_height;
                 }
                 else {
                     flow_height = flow_height + comp_height;
                     flow_width = comp_width > flow_width ? comp_width : flow_width;
+                    if (comp_fig instanceof openmdao.WorkflowDiagram) {
+                        comp_width = comp_fig.getDriver().getWidth();
+                    }
+                    box_width =  comp_width > box_width ? comp_width : box_width;
                 }
             }
         });
 
-        flow_fig.css({ 'width': flow_width, 'height': flow_height });
+        flow_div.css({ 'width': flow_width, 'height': flow_height });
         diagram.css({ 'width':  flow_width  + driver.getWidth(),
                       'height': flow_height + driver.getHeight() });
 
-        children = flow_fig.children('.WorkflowComponentFigure .WorkflowDiagram');
+        children = flow_div.children('.WorkflowComponentFigure, .WorkflowDiagram');
+        debug.info('children:',children);
+        debug.info('flow_zIndex:',flow_div.css("z-index"));
+        flow_zIndex = parseInt(flow_div.css("z-index"), 10);
+        debug.info('flow_zIndex:',flow_zIndex);
         if (horizontal) {
-            children.css({ 'clear': 'none' });
+            children.css({ 'clear': 'none', 'z-index': flow_zIndex + 2 });
         }
         else {
-            children.css({ 'clear': 'both' });
+            children.css({ 'clear': 'both', 'z-index': flow_zIndex + 2 });
+        }
+
+        if (children.length > 0) {
+            var last_child = children.last();
+            debug.info('child_zIndex:',last_child.css("z-index"));
+            child_zIndex = parseInt(flow_div.css("z-index"), 10);
+            debug.info('child_zIndex:',child_zIndex);
+            debug.info('last_child:',last_child);
+            if (last_child instanceof openmdao.WorkflowDiagram) {
+                last_child = last_child.getDriver();
+                debug.info('last_child:',last_child);
+            }
+            var last_position = last_child.position();
+            debug.info('last_position:',last_position);
+            if (horizontal) {
+                box_width = last_position.left + last_child.width() + 10;
+            }
+            else {
+                box_height = last_position.top + last_child.height() + 10;
+            }
+            box_div.css({ 'width': box_width, 'height': box_height, 'zIndex': flow_zIndex + 1 });
         }
     }
 
-    // set up flow_fig as a drop target for components to add to workflow
-    flow_fig.data('name',name);
-    flow_fig.data('pathname',pathname);
+    // set up flow_div as a drop target for components to add to workflow
+    box_div.data('name',name);
+    box_div.data('pathname',pathname);
 
-    flow_fig.highlightAsDropTarget = function() {
+    box_div.highlightAsDropTarget = function() {
         diagram.find('rect').css({ 'fill': dropHighlightBackgroundColor });
     };
 
-    flow_fig.unhighlightAsDropTarget = function() {
+    box_div.unhighlightAsDropTarget = function() {
         diagram.find('rect').css({ 'fill': defaultBackgroundColor });
     };
 
-    flow_fig.droppable ({
+    box_div.droppable ({
         accept: '.component, .IComponent',
             out: function(ev,ui) {
                 openmdao.drag_and_drop_manager.draggableOut(diagram);
@@ -159,11 +197,11 @@ openmdao.WorkflowDiagram=function(elm, model, json){
         var cmd = pathname + '.workflow.clear();';
         model.issueCommand(cmd);
     }));
-    ContextMenu.set(contextMenu.attr('id'), diagram.attr('id'));
+    ContextMenu.set(contextMenu.attr('id'), box_div.attr('id'));
 
     /** update workflow figure from JSON workflow data */
     function updateWorkflow(json) {
-        flow_fig.html('');
+        flow_div.remove('.WorkflowComponentFigure .WorkflowDiagram');
 
         jQuery.each(json, function(idx, comp) {
             var comp_fig;
@@ -184,16 +222,16 @@ openmdao.WorkflowDiagram=function(elm, model, json){
             }
             else if (comp.hasOwnProperty('workflow')) {
                 // comp is a driver with it's own workflow
-                comp_fig = new openmdao.WorkflowDiagram(flow_fig, model, comp);
+                comp_fig = new openmdao.WorkflowDiagram(box_div, model, comp);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // comp is an assembly with a driver that has it's own workflow
-                comp_fig = new openmdao.WorkflowDiagram(flow_fig, model, comp.driver);
+                comp_fig = new openmdao.WorkflowDiagram(box_div, model, comp.driver);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(flow_fig, model,
+                comp_fig = new openmdao.WorkflowComponentFigure(box_div, model,
                                 comp.pathname, comp.type, comp.valid);
                 comp_figs[comp.pathname] = comp_fig;
             }
@@ -210,20 +248,22 @@ openmdao.WorkflowDiagram=function(elm, model, json){
      ***********************************************************************/
 
     /** get width */
-    this.getWidth = function(x, y) {
-//        debug.info('WorkflowDiagram.getWidth()',name,diagram,diagram.width());
+    this.getWidth = function() {
         return diagram.width();
     };
 
     /** get height */
-    this.getHeight = function(x, y) {
-//        debug.info('WorkflowDiagram.getHeight()',name,diagram,diagram.height());
+    this.getHeight = function() {
         return diagram.height();
+    };
+
+    /** get width */
+    this.getDriver = function() {
+        return driver;
     };
 
     /** set position relative to parent div */
     this.getPosition = function() {
-//        debug.info('WorkflowDiagram.getPosition()',name,diagram,diagram.position().left,diagram.position().top);
         return diagram.position();
     };
 
