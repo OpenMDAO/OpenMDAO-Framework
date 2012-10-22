@@ -181,13 +181,35 @@ def _test_palette_update(browser):
 
 
 def _test_menu(browser):
-    # Just click on various main menu buttons.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Check enable/disable of commit/revert.
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
+
+    workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), '')
+    eq(workspace_page('revert_button').get_attribute('class'), '')
+    workspace_page('project_menu').click()
+
+    workspace_page.commit_project()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
 
     # Project-Run.
     workspace_page.run()
-    expected = 'Executing...\nExecution complete.'
-    eq(workspace_page.history, expected)
+    expected = ['Executing...', 'Execution complete.']
+    eq(workspace_page.history.split('\n')[-2:], expected)
     top_figure = workspace_page.get_dataflow_figure('top')
     eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
