@@ -40,7 +40,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
-    dataView = new Slick.Data.DataView({ inlineFilters: true });
+    dataView = new Slick.Data.DataView({ inlineFilters: false });
     props = new Slick.Grid(propsDiv, dataView, columns, options);
 
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
