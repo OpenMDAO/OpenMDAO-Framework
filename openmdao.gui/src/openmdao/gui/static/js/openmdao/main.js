@@ -10,10 +10,10 @@ jQuery(function() {
     openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
     // register value editors for supported OpenMDAO data types
-    openmdao.ValueEditor.registerEditor("str", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("str", Slick.Editors.Text);
     openmdao.ValueEditor.registerEditor("bool", BoolEditor);
-    openmdao.ValueEditor.registerEditor("float", TextCellEditor);
-    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor);
+    openmdao.ValueEditor.registerEditor("float", Slick.Editors.Text);
+    openmdao.ValueEditor.registerEditor("int", Slick.Editors.Integer);
     openmdao.ValueEditor.registerEditor("enum", EnumEditor);
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);

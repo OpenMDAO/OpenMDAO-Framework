@@ -36,14 +36,13 @@ def _test_value_editors(browser):
     component_editor = paraboloid.editor_page()
     inputs = component_editor('inputs')
     
-    dict_path = 'div[4]/div/div[1]/div[3]'
-    str_path = 'div[4]/div/div[2]/div[3]'
-    enum_path = 'div[4]/div/div[3]/div[3]'
-    bool_path = 'div[4]/div/div[4]/div[3]'
-    array1d_path = 'div[4]/div/div[5]/div[3]'
-    float_path = 'div[4]/div/div[6]/div[3]'
-    array2d_path = 'div[4]/div/div[7]/div[3]'
-
+    dict_path = 'div[5]/div/div[1]/div[3]'
+    str_path = 'div[5]/div/div[2]/div[3]'
+    enum_path = 'div[5]/div/div[3]/div[3]'
+    bool_path = 'div[5]/div/div[4]/div[3]'
+    array1d_path = 'div[5]/div/div[5]/div[3]'
+    float_path = 'div[5]/div/div[6]/div[3]'
+    array2d_path = 'div[5]/div/div[7]/div[3]'
 
     #edit dictionary - remove 'e', add 'phi', round down 'pi'
     inputs.find_element_by_xpath(dict_path).click()
@@ -69,27 +68,27 @@ def _test_value_editors(browser):
     
     # string editor - set to "abcd"
     inputs.find_element_by_xpath(str_path).click()
-    cell_path = 'div[4]/div/div[2]/div[3]'
+    cell_path = 'div[5]/div/div[2]/div[3]'
     inputs.find_element_by_xpath(cell_path).click()
-    cell_input_path = 'div[4]/div/div[2]/div[3]/input'
+    cell_input_path = 'div[5]/div/div[2]/div[3]/input'
     cell_input = inputs.find_element_by_xpath(cell_input_path)
     cell_input.clear()
     cell_input.send_keys("abcd")
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    inputs.find_element_by_xpath('div[5]/div/div[3]/div[4]').click()
     time.sleep(1)
         
     #enum editor - set to 3
     inputs.find_element_by_xpath(enum_path).click()
-    selector_path = 'div[4]/div/div[3]/div[3]/select/option[4]'
+    selector_path = 'div[5]/div/div[3]/div[3]/select/option[4]'
     inputs.find_element_by_xpath(selector_path).click()
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    inputs.find_element_by_xpath('div[5]/div/div[3]/div[4]').click()
     time.sleep(0.5)
     
     #bool editor - set to true
     inputs.find_element_by_xpath(bool_path).click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    inputs.find_element_by_xpath('div[5]/div/div[3]/div[4]').click()
     time.sleep(0.5)
     
     #array 1d editor - add element, set to 4
@@ -106,13 +105,13 @@ def _test_value_editors(browser):
     
     # float editor - set to 2.71
     inputs.find_element_by_xpath(float_path).click()
-    cell_path = 'div[4]/div/div[6]/div[3]'
+    cell_path = 'div[5]/div/div[6]/div[3]'
     inputs.find_element_by_xpath(cell_path).click()
-    cell_input_path = 'div[4]/div/div[6]/div[3]/input'
+    cell_input_path = 'div[5]/div/div[6]/div[3]/input'
     cell_input = inputs.find_element_by_xpath(cell_input_path)
     cell_input.clear()
     cell_input.send_keys("2.71")
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    inputs.find_element_by_xpath('div[5]/div/div[3]/div[4]').click()
     time.sleep(0.5)
         
     # array 2d editor - set to [[1, 4],[9, 16]]
