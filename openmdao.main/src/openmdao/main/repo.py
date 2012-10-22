@@ -103,7 +103,10 @@ class GitRepo(RepositoryBase):
     def init_repo(self):
         if not os.path.isfile('.gitignore'):
             self.create_ignore_file()
-        return _run_command('git init')
+        ret = _run_command('git init')
+        if ret == 0:
+            return self.commit("initial commit")
+        return ret
     
     @in_dir
     def commit(self, comment):
@@ -139,7 +142,10 @@ class BzrRepo(RepositoryBase):
     def init_repo(self):
         if not os.path.isfile('.bzrignore'):
             self.create_ignore_file()
-        return _run_command('bzr init')
+        ret = _run_command('bzr init')
+        if ret == 0:
+            return self.commit("initial commit")
+        return ret
     
     @in_dir
     def commit(self, comment):
@@ -176,14 +182,21 @@ class HgRepo(RepositoryBase):
     def init_repo(self):
         if not os.path.isfile('.hgignore'):
             self.create_ignore_file()
-        return _run_command('hg init')
+        ret = _run_command('hg init')
+        if ret == 0:
+            return self.commit("initial commit")
+        return ret
 
     @in_dir
     def commit(self, comment=''):
         _run_command('hg add')
         if not comment:
             comment = 'no comment'
-        return _run_command('hg commit -m "%s"' % comment)
+        try:
+            return _run_command('hg commit -m "%s"' % comment)
+        except RuntimeError as err:
+            if 'no username supplied' in str(err):
+                return _run_command('hg commit -u unknown@unknown.com -m "%s"' % comment)
     
     @in_dir
     def revert(self, commit_id=None):
