@@ -50,7 +50,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
             drawnFlows = [];
 
         function draw(flow, offset) {
-           diagram = new openmdao.WorkflowDiagram(workflow, model, flow);
+           diagram = new openmdao.WorkflowFigure(workflow, model, flow);
 //           diagram.setPosition(offset, 50);
            drawnFlows.push(flow.pathname);
            return offset + diagram.getWidth();

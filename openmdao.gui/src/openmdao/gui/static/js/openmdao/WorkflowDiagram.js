@@ -5,15 +5,15 @@ openmdao.WorkflowDiagram=function(elm, model, json){
     var self = this,
         pathname = json.pathname,
         name = openmdao.Util.getName(pathname),
-        id = elm.attr('id')+'-WorkflowDiagram-'+pathname.replace(/\./g,'-'),
+        id = elm.attr('id')+'-'+pathname.replace(/\./g,'-')+'_WorkflowDiagram',
         diagram = jQuery('<div class="WorkflowDiagram" id="'+id+'"style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
         driver = new openmdao.WorkflowComponentFigure(diagram,model,json.pathname,json.type,json.valid),
         flow_css = 'border-style:solid;border-color:yellow;border-width:thin;',
-        flow_div = jQuery('<div class="WorkflowFigure" id="'+id+'-flow" style="'+flow_css+'" />')
+        flow_div = jQuery('<div class="WorkflowFigure" id="'+id+'_flow" style="'+flow_css+'" />')
             .appendTo(diagram),
         box_css = 'background-color:white;border-style:solid;border-color:black;border-width:thin;position:absolute;left:0px;',
-        box_div = jQuery('<div class="WorkflowBox" id="'+id+'-box" style="'+box_css+'" />')
+        box_div = jQuery('<div class="WorkflowBox" id="'+id+'_box" style="'+box_css+'" />')
             .appendTo(flow_div),
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
             .appendTo(box_div),
@@ -222,16 +222,16 @@ openmdao.WorkflowDiagram=function(elm, model, json){
             }
             else if (comp.hasOwnProperty('workflow')) {
                 // comp is a driver with it's own workflow
-                comp_fig = new openmdao.WorkflowDiagram(box_div, model, comp);
+                comp_fig = new openmdao.WorkflowDiagram(flow_div, model, comp);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // comp is an assembly with a driver that has it's own workflow
-                comp_fig = new openmdao.WorkflowDiagram(box_div, model, comp.driver);
+                comp_fig = new openmdao.WorkflowDiagram(flow_div, model, comp.driver);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(box_div, model,
+                comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
                                 comp.pathname, comp.type, comp.valid);
                 comp_figs[comp.pathname] = comp_fig;
             }

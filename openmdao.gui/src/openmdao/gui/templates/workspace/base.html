@@ -46,7 +46,7 @@
 
     <!-- jstree pre 1.0 fixed -->
     <script type="text/javascript" src="/static/js/jquery.jstree.js"               ></script>
-    <script>jQuery.jstree._themes = "/static/css/jstree-themes/";</script>
+    <script>jQuery.jstree._themes = "/static/css/jstree-themes/";                   </script>
 
     <!-- flot -->
     <script type="text/javascript" src="/static/js/jquery.flot.js"                 ></script>
@@ -55,13 +55,10 @@
     <script type="text/javascript" src="/static/js/ContextMenu.js"                 ></script>
 
     <!--  use ace for the text editor  -->
-    
-    <script type="text/javascript" src="/static/ace-min/ace.js"  charset="utf-8"></script>
+    <script type="text/javascript" src="/static/ace-min/ace.js" charset="utf-8"    ></script>
 
-    <!-- used by DragAndDropManager -->
-    <script type="text/javascript" src="/static/js/jshashtable-2.1_src.js"               ></script>
     <!--  closable tabs  -->
-    <script type="text/javascript" src="/static/js/ui.tabs.closable.min.js"  ></script>  
+    <script type="text/javascript" src="/static/js/ui.tabs.closable.min.js"        ></script>
 
     <!-- openmdao specific imports (to be rolled into single file at some point)-->
 
@@ -96,6 +93,7 @@
 
     <script type="text/javascript" src="/static/js/openmdao/DataflowFigure.js"           ></script>
     <script type="text/javascript" src="/static/js/openmdao/WorkflowDiagram.js"          ></script>
+    <script type="text/javascript" src="/static/js/openmdao/WorkflowFigure.js"           ></script>
     <script type="text/javascript" src="/static/js/openmdao/WorkflowComponentFigure.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/VariableFigure.js"           ></script>
     <script type="text/javascript" src="/static/js/openmdao/SlotFigure.js"               ></script>
@@ -106,7 +104,7 @@
     <script type="text/javascript" src="/static/js/openmdao/ValueEditor.js"        ></script>
     <script type="text/javascript" src="/static/js/openmdao/CustomEditors.js"      ></script>
 
-    <script type="text/javascript" src="/static/js/openmdao/LogFrame.js" ></script>
+    <script type="text/javascript" src="/static/js/openmdao/LogFrame.js"           ></script>
 
     {% block head %}
     {% if 'head_script' in globals() %} <script> {% raw head_script %} </script> {% end %}

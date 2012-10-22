@@ -99,9 +99,16 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
         setState('INVALID');
     }
 
-    model.addListener(pathname+'.exec_state', function(message) {
-        setState(message[1]);
-    });
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== pathname+'.exec_state') {
+            debug.warn('Invalid exec_state data for:', pathname, message);
+        }
+        else {
+            setState(message[1]);
+        }
+    }
+
+    model.addListener(pathname+'.exec_state', handleMessage);
 
     /***********************************************************************
      *  privileged
@@ -114,26 +121,17 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
 
     /** get width */
     this.getWidth = function(x, y) {
-//        debug.info('WorkflowComponentFigure.getWidth()',name,fig,fig.width());
         return fig.outerWidth();
     };
 
     /** get height */
     this.getHeight = function(x, y) {
-//        debug.info('WorkflowComponentFigure.getHeight()',name,fig,fig.height());
         return fig.outerHeight();
     };
 
     /** set position relative to parent div */
     this.getPosition = function() {
-//        debug.info('WorkflowComponentFigure.getPosition()',name,fig,fig.position().left,fig.position().top);
         return fig.position();
-    };
-
-    /** set position relative to parent div */
-    this.setPosition = function(x, y) {
-        debug.info('WorkflowComponentFigure.setPosition()',name,fig,x,y);
-        fig.css({ 'position': 'absolute', 'left': x+'px', 'top': y+'px' });
     };
 
     /** set type */
@@ -153,5 +151,9 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
         }
     };
 
+    /** clean up listener */
+    this.destroy = function() {
+        model.removeListener(pathname+'.exec_state', handleMessage);
+    };
 };
 

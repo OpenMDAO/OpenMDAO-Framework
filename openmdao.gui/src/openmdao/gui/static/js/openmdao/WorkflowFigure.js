@@ -1,76 +1,90 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowFigure=function(model,workflow,flowpath,pathname,driver){
+openmdao.WorkflowFigure=function(elm, model, json){
     var self = this,
-        id = 'WorkflowFigure-'+pathname.replace(/\./g,'-'),
-        name = flowpath,
-        parent = openmdao.Util.getPath(pathname),
-        parentName = openmdao.Util.getName(parent),
-        children = [],
-        svg = '<svg height="60" width="100">'
-            + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
-            + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
-            + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
-            + '</svg>',
-        fig = jQuery('<div class="WorkflowFigure"  style="width:100px;height:60px" />')
-            .append(svg),
+        pathname = json.pathname,
+        name = openmdao.Util.getName(pathname),
+        id = elm.attr('id')+'-'+pathname.replace(/\./g,'-')+'-WorkflowFigure',
+        fig = jQuery('<div class="WorkflowFigure" id='+id+' style="float:left;position:relative;left:0px" />')
+            .appendTo(elm),
+        driver = new openmdao.WorkflowComponentFigure(fig,model,json.pathname,json.type,json.valid),
+        flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
+        flow_div = jQuery('<div style="'+flow_css+'" id='+id+'-flow />')
+            .appendTo(fig),
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+            .appendTo(fig),
+        comp_figs = {},
         defaultBackgroundColor = '#FFFFFF',
         highlightBackgroundColor = '#FAFAC8',
         dropHighlightBackgroundColor = '#CFD6FE',
-        filledRectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill': 'white'},
-        filledTextCSS = {'fill': defaultBackgroundColor},
-        horizontal = true,
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-            .appendTo(fig);
+        horizontal = true;
 
-    workflow.append(fig);
-
-    // if my name is 'driver', then use my parent's (assembly) name
-    var tok = flowpath.split('.');
-    if (tok.length > 1) {
-        name = tok[tok.length-1];
-        if (tok.length > 2 && name === 'driver') {
-            name = tok[tok.length-2];
-        }
+    // if name is 'driver', then prepend parent assembly name
+    if (name === 'driver') {
+        name = openmdao.Util.getName(openmdao.Util.getPath(pathname))+'.driver';
     }
 
-    /** redraw workflow (container) figure */
-    function redraw() {
-        for (i=0;i<children.size;i++) {
-            child = children[i];
-            if (child instanceof openmdao.WorkflowFigure) {
-                x = child.driver.getPosition().left + child.driver.getWidth()-20;
-                y = child.driver.getPosition().top + child.driver.getHeight()-10;
-            }
-            else {
-                if (this.horizontal) {
-                    x = this.getX()+child.getWidth()*i*1.5;
-                    y = 20+this.getY();
+    // position flow fig to overlap bottom right corner of driver fig
+    flow_div.css({ 'position': 'absolute',
+                   'left': driver.getWidth()  - 15,
+                   'top':  driver.getHeight() - 15 });
+
+    /** arrange component figures horizontally or vertically */
+    function layout(horiz) {
+        var i = 0,
+            flow_height = 0,
+            comp_height = 0,
+            flow_width = 0,
+            comp_width = 0,
+            children;
+
+        horizontal = horiz;
+
+        jQuery.each(comp_figs, function(path, comp_fig) {
+            if (comp_figs.hasOwnProperty(path)) {
+                comp_width = comp_fig.getWidth();
+                comp_height = comp_fig.getHeight();
+                if (horizontal) {
+                    flow_width = flow_width + comp_width;
+                    flow_height = comp_height > flow_height ? comp_height : flow_height;
                 }
                 else {
-                    x = this.position().left;
-                    y = 20+this.getY()+child.getHeight()*i*1.5;
+                    flow_height = flow_height + comp_height;
+                    flow_width = comp_width > flow_width ? comp_width : flow_width;
                 }
             }
-            child.setPosition(x,y);
+        });
+
+        flow_div.css({ 'width': flow_width, 'height': flow_height });
+        fig.css({ 'width':  flow_width  + driver.getWidth(),
+                  'height': flow_height + driver.getHeight() });
+
+        children = flow_div.children('.WorkflowComponentFigure .WorkflowFigure');
+        if (horizontal) {
+            children.css({ 'clear': 'none' });
         }
-        self.resize();
+        else {
+            children.css({ 'clear': 'both' });
+        }
+        
+        var parent = fig.parents('.WorkflowFigure').first();
+        parent.trigger('layout');
     }
 
-    // set up for dropping components to add to workflow
-    fig.data('name',name);
-    fig.data('pathname',pathname);
+    // set up flow_div as a drop target for components to add to workflow
+    flow_div.data('name',name);
+    flow_div.data('pathname',pathname);
 
-    fig.highlightAsDropTarget = function() {
+    flow_div.highlightAsDropTarget = function() {
         fig.find('rect').css({ 'fill': dropHighlightBackgroundColor });
     };
 
-    fig.unhighlightAsDropTarget = function() {
+    flow_div.unhighlightAsDropTarget = function() {
         fig.find('rect').css({ 'fill': defaultBackgroundColor });
     };
 
-    fig.droppable ({
+    flow_div.droppable ({
         accept: '.component, .IComponent',
             out: function(ev,ui) {
                 openmdao.drag_and_drop_manager.draggableOut(fig);
@@ -139,25 +153,68 @@ openmdao.WorkflowFigure=function(model,workflow,flowpath,pathname,driver){
             }
     });
 
+    fig.bind('layout', function() {
+        layout();
+    });
+
     // create context menu
-    contextMenu.append(jQuery('<li><b>'+self.name+'</b></li>'));
+    contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
     contextMenu.append(jQuery('<li>Flip Workflow</li>').click(function(e) {
-        horizontal = !horizontal;
-        redraw();
+        layout(!horizontal);
     }));
     contextMenu.append(jQuery('<li>Clear Workflow</li>').click(function(e) {
         var cmd = pathname + '.workflow.clear();';
         model.issueCommand(cmd);
     }));
+    ContextMenu.set(contextMenu.attr('id'), flow_div.attr('id'));
+
+    /** update workflow figure from JSON workflow data */
+    function updateWorkflow(json) {
+        flow_div.html('');
+
+        jQuery.each(json, function(idx, comp) {
+            var comp_fig;
+            if (comp_figs.hasOwnProperty(comp.pathname)) {
+                comp_fig = comp_figs[comp.pathname];
+                if (comp.workflow) {
+                    if (comp_fig instanceof WorkflowFigure) {
+                        comp_fig.update(workflow);
+                    }
+                    else {
+                        debug.error('WorkflowFigure.updateWorkflow - comp has workflow');
+                    }
+                }
+                else {
+                    comp_fig.setType(comp.type);
+                    comp_fig.setValid(comp.valid);
+                }
+            }
+            else if (comp.hasOwnProperty('workflow')) {
+                // comp is a driver with it's own workflow
+                comp_fig = new openmdao.WorkflowFigure(flow_div, model, comp);
+                comp_figs[comp.pathname] = comp_fig;
+            }
+            else if (comp.hasOwnProperty('driver')) {
+                // comp is an assembly with a driver that has it's own workflow
+                comp_fig = new openmdao.WorkflowFigure(flow_div, model, comp.driver);
+                comp_figs[comp.pathname] = comp_fig;
+            }
+            else {
+                comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
+                                comp.pathname, comp.type, comp.valid);
+                comp_figs[comp.pathname] = comp_fig;
+            }
+        });
+
+        layout(horizontal);
+    }
+
+    // populate flow fig with component figures
+    updateWorkflow(json.workflow);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-
-    /** provide access to context menu (for use after fig is in the DOM */
-    this.getContextMenu = function() {
-        return contextMenu;
-    };
 
     /** get width */
     this.getWidth = function(x, y) {
@@ -179,61 +236,14 @@ openmdao.WorkflowFigure=function(model,workflow,flowpath,pathname,driver){
 
     /** set position relative to parent div */
     this.setPosition = function(x, y) {
-        debug.info('WorkflowFigure.setPosition()',name,fig,x,y);
-        fig.css({ 'position': 'relative', 'left': x+'px', 'top': y+'px' });
+        fig.css({ 'position': 'absolute', 'left': x+'px', 'top': y+'px' });
     };
 
-    /** add a component figure to this workflow (container) figure */
-    this.addComponentFigure = function(comp_fig){
-        var count = children.length;
-        debug.info('WorkflowFigure.addComponentFigure()',name,comp_fig,count);
-        if (horizontal) {
-            //x = this.getAbsoluteX()+getFlowWidth(this);
-            x = this.getPosition().left + comp_fig.getWidth()*count*1.5;
-            y = 20;
-        }
-        else {
-            x = 0;
-            //y = 20+this.getAbsoluteY()+getFlowHeight(this);
-            y = 20 + this.getPosition().top + comp_fig.getHeight()*count*1.5;
-        }
-        children.push(comp_fig);
-        debug.info('WorkflowFigure adding comp_fig:',comp_fig,'to',fig);
-        fig.append(comp_fig.getElement());
-        debug.info('WorkflowFigure.addComponentFigure()',fig,comp_fig,x,y);
-        comp_fig.setPosition(x,y);
-    };
-
-    /** resize workflow (container) figure to contain all it's children */
-    this.resize=function(){
-        var i=0,
-            xmin=999999, xmax=0,
-            ymin=999999, ymax=0,
-            width = 100, height = 50;
-        for (i=0;i<children.size;i++) {
-            child = children.get(i);
-            if (child instanceof openmdao.WorkflowComponentFigure) {
-                x = child.position().left;
-                if (x < xmin) {
-                    xmin = x;
-                }
-                if (x > xmax) {
-                    xmax = x;
-                    width = child.getWidth();
-                }
-                y = child.position().top;
-                if (y < ymin) {
-                    ymin = y;
-                }
-                if (y > ymax) {
-                    ymax = y;
-                    height = child.getHeight();
-                }
-            }
-        }
-        width = xmax+width-xmin;
-        height = ymax+height-ymin+20;
-        fig.css({ 'width':width, 'height':height });
+    /** update workflow fig from JSON data */
+    this.update = function(json) {
+        driver.setType(json.type);
+        driver.setValid(json.valid);
+        updateWorkflow(json.workflow);
     };
 
 };
