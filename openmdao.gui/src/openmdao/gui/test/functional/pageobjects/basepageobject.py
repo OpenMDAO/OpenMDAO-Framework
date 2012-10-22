@@ -88,7 +88,8 @@ class BasePageObject(object):
         Returns self.
         """
         time.sleep(0.5)  # Pacing for page load.
-        prefix = prefix or cls.title_prefix
+        if prefix is None:
+            prefix = cls.title_prefix
         if prefix:
             try:
                 WebDriverWait(browser, TMO).until(

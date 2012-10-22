@@ -93,7 +93,7 @@ openmdao.Model=function(listeners_ready) {
     }
 
     var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
-                               open_websocket('pubstream', handlePubMessage));
+                                         open_websocket('pubstream', handlePubMessage));
                                 
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();

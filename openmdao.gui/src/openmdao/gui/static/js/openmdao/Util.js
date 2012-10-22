@@ -478,9 +478,10 @@ openmdao.Util = {
                     index = openmdao.sockets.indexOf(this);
                     if (index >= 0) {
                         openmdao.sockets.splice(index, 1);
-                        if (typeof openmdao_test_mode !== 'undefined') {
-                            if (openmdao.sockets.length === 0) {
-                                openmdao.Util.notify('WebSockets closed');
+                        if (openmdao.sockets.length === 0) {
+                            if (typeof openmdao_test_mode !== 'undefined') {
+                                openmdao.Util.notify('WebSockets closed',
+                                                     'closed', 'ws_closed');
                             }
                         }
                     }
@@ -521,15 +522,6 @@ openmdao.Util = {
         return defrd.promise();
     },
 
-    /** Close all WebSockets. */
-    closeWebSockets: function(reason) {
-       if (openmdao.sockets) {
-          for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
-             openmdao.sockets[i].close(1000, reason);
-          }
-       }
-    },
-
     /** Notify when `nSockets` are open (used for testing). */
     webSocketsReady: function(nSockets) {
         function doPoll() {
@@ -544,13 +536,23 @@ openmdao.Util = {
                         return;
                     }
                 }
-                openmdao.Util.notify('WebSockets open');
+                openmdao.Util.notify('WebSockets open', 'open',
+                                      'ws_open');
             }
             else {
                 doPoll();
             }
         }
         poll();
+    },
+
+    /** Close all WebSockets. */
+    closeWebSockets: function(reason) {
+        if (openmdao.sockets) {
+           for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+              openmdao.sockets[i].close(1000, reason);
+           }
+        }
     },
 
     /*
@@ -565,5 +567,6 @@ openmdao.Util = {
         childObject.prototype.superClass = parentObject.prototype
     }
 };
+
 
 
