@@ -21,7 +21,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
         fig = jQuery('<div class="WorkflowFigure" id='+id+' style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
         drvr_fig = new openmdao.WorkflowComponentFigure(fig,model,driver,json.pathname,json.type,json.valid),
-        flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
+        flow_css = 'background-repeat:no-repeat;border-style:solid;border-color:yellow;border-width:thin;',
         flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+' />')
             .appendTo(fig),
         contextMenu = jQuery("<ul id="+id.replace(/WorkflowFigure/g,'menu')+" class='context-menu'>")
@@ -42,17 +42,22 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     // position flow fig to overlap bottom right corner of driver fig
     flow_div.css({ 'position': 'absolute',
                    'left': drvr_fig.getWidth()  - 15,
-                   'top':  drvr_fig.getHeight() - 15 });
+                   'top':  drvr_fig.getHeight() - 15,
+                   'background-image': 'url("/static/images/window_toolbar.png")' });
 
+    
     /** arrange component figures and resize flow div to contain them*/
     function layout() {
         debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal);
         var i = 0,
-            flow_height = 0,
             comp_height = 0,
-            flow_width = 0,
             comp_width = 0,
-            children;
+            flow_height = 0,
+            flow_width = 0,
+            bg_height = 0,
+            bg_width = 0,
+            children,
+            last_child, last_offset, last_width, last_height;
 
         jQuery.each(comp_figs, function(path, comp_fig) {
             if (comp_figs.hasOwnProperty(path)) {
@@ -71,25 +76,42 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
         children = flow_div.children('.WorkflowComponentFigure, .WorkflowFigure');
         debug.info('WorkflowFigure.layout()',self,pathname,'children =',children);
+        last_child = children.last();
+        last_offset = last_child.offset();
+        while (last_child.hasClass('WorkflowFigure')) {
+            last_child = last_child.children('.WorkflowComponentFigure, .WorkflowFigure').last();
+        }
+        last_width = last_child.outerWidth();
+        last_height = last_child.outerHeight();
+        debug.info('last_child:',last_child.attr('id'),
+                    'left:',last_offset.left,'width:',last_width,
+                    'top:',last_offset.top,'height:',last_height);
         if (children.length > 0) {
-            flow_div.css({ 'width': flow_width, 'height': flow_height });
-            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
-                      'height': flow_height + drvr_fig.getHeight() });
             if (horizontal) {
                 children.css({ 'clear': 'none' });
+                bg_width = last_child.offset().left - flow_div.offset().left + last_child.outerWidth();
+                bg_height = 70;
             }
             else {
                 children.css({ 'clear': 'both' });
+                bg_width = 110;
+                bg_height = last_child.offset().top - flow_div.offset().top  + last_child.outerHeight();
             }
         }
         else {
             flow_width = 100;
             flow_height = 60;
-            flow_div.css({ 'width': flow_width, 'height': flow_height });
-            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
-                      'height': flow_height + drvr_fig.getHeight() });
-
+            bg_width = 100;
+            bg_height = 60;
         }
+
+        debug.info('bg_width:',bg_width,'bg_height:',bg_height);
+        
+        flow_div.css({ 'width': flow_width,
+                       'height': flow_height });
+        fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
+                  'height': flow_height + drvr_fig.getHeight() });
+        flow_div.css({ 'background-size': bg_width + 'px ' + bg_height + 'px' });
 
         // tell the nearest parent workflow figure to update it's layout to
         // accomodate the new dimensions of this workflow figure
@@ -271,6 +293,11 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     /** get height */
     this.getHeight = function(x, y) {
         return fig.height();
+    };
+
+    /** get position relative to parent div */
+    this.getPosition = function() {
+        return fig.position();
     };
 
     /** update workflow fig from JSON data */
