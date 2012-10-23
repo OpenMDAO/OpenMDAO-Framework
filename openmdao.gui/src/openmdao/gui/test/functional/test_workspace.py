@@ -242,11 +242,10 @@ b = Float(0.0, iotype='out')
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
     
-    port = workspace_page.port
-    
     # forces a save and reload of project
     editor_page.save_document(overwrite=True, check=False)
     browser.switch_to_window(workspace_window)
+    port = workspace_page.port
     workspace_page = WorkspacePage.verify(browser, port)
 
     workspace_page.show_dataflow('top')
