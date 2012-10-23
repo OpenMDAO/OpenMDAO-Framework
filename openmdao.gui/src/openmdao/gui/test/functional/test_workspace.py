@@ -247,7 +247,6 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
     port = workspace_page.port
     workspace_page = WorkspacePage.verify(browser, port)
-
     workspace_page.show_dataflow('top')
     time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
