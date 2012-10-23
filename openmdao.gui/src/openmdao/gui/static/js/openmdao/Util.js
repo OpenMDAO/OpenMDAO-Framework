@@ -480,7 +480,8 @@ openmdao.Util = {
                         openmdao.sockets.splice(index, 1);
                         if (typeof openmdao_test_mode !== 'undefined') {
                             if (openmdao.sockets.length === 0) {
-                                openmdao.Util.notify('WebSockets closed');
+                                openmdao.Util.notify('WebSockets closed',
+                                                     'closed', 'ws_closed');
                             }
                         }
                     }
@@ -544,7 +545,8 @@ openmdao.Util = {
                         return;
                     }
                 }
-                openmdao.Util.notify('WebSockets open');
+                openmdao.Util.notify('WebSockets open', 'open',
+                                      'ws_open');
             }
             else {
                 doPoll();
@@ -565,5 +567,6 @@ openmdao.Util = {
         childObject.prototype.superClass = parentObject.prototype
     }
 };
+
 
 
