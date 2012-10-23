@@ -1,14 +1,26 @@
+/**
+ *  WorkflowFigure: an object representing an openmdao workflow
+ *
+ *  A workflowFigure consists of a driver component figure and an offset box
+ *  containing figures for each of the components in the driver's workflow
+ *
+ *  Arguments:
+ *      elm:    jQuery element which will contain the WorkflowFigure
+ *      model:  object that provides access to the openmdao model
+ *      driver: pathname of the driver of the parent workflow, if any
+ *      json:   json representation of the workflow, per the openmdao server API
+ **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowFigure = function(elm, model, json) {
+openmdao.WorkflowFigure = function(elm, model, driver, json) {
     var self = this,
         pathname = json.pathname,
         name = openmdao.Util.getName(pathname),
         id = elm.attr('id')+'-'+pathname.replace(/\./g,'-')+'-WorkflowFigure',
         fig = jQuery('<div class="WorkflowFigure" id='+id+' style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
-        driver = new openmdao.WorkflowComponentFigure(fig,model,json.pathname,json.type,json.valid),
+        drvr_fig = new openmdao.WorkflowComponentFigure(fig,model,driver,json.pathname,json.type,json.valid),
         flow_css = 'border-style:solid;border-color:black;border-width:thin;background-color:white;',
         flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+' />')
             .appendTo(fig),
@@ -16,9 +28,11 @@ openmdao.WorkflowFigure = function(elm, model, json) {
             .appendTo(fig),
         comp_figs = {},
         defaultBackgroundColor = '#FFFFFF',
-        highlightBackgroundColor = '#FAFAC8',
-        dropHighlightBackgroundColor = '#CFD6FE',
+        highlightBackgroundColor = '#CFD6FE',
         horizontal = true;
+
+    // store the pathname on the element for child component figures to access
+    fig.data('pathname', pathname);
 
     // if name is 'driver', then prepend parent assembly name
     if (name === 'driver') {
@@ -27,8 +41,8 @@ openmdao.WorkflowFigure = function(elm, model, json) {
 
     // position flow fig to overlap bottom right corner of driver fig
     flow_div.css({ 'position': 'absolute',
-                   'left': driver.getWidth()  - 15,
-                   'top':  driver.getHeight() - 15 });
+                   'left': drvr_fig.getWidth()  - 15,
+                   'top':  drvr_fig.getHeight() - 15 });
 
     /** arrange component figures and resize flow div to contain them*/
     function layout() {
@@ -59,8 +73,8 @@ openmdao.WorkflowFigure = function(elm, model, json) {
         debug.info('WorkflowFigure.layout()',self,pathname,'children =',children);
         if (children.length > 0) {
             flow_div.css({ 'width': flow_width, 'height': flow_height });
-            fig.css({ 'width':  flow_width  + driver.getWidth(),
-                      'height': flow_height + driver.getHeight() });
+            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
+                      'height': flow_height + drvr_fig.getHeight() });
             if (horizontal) {
                 children.css({ 'clear': 'none' });
             }
@@ -72,8 +86,8 @@ openmdao.WorkflowFigure = function(elm, model, json) {
             flow_width = 100;
             flow_height = 60;
             flow_div.css({ 'width': flow_width, 'height': flow_height });
-            fig.css({ 'width':  flow_width  + driver.getWidth(),
-                      'height': flow_height + driver.getHeight() });
+            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
+                      'height': flow_height + drvr_fig.getHeight() });
 
         }
 
@@ -87,21 +101,21 @@ openmdao.WorkflowFigure = function(elm, model, json) {
     flow_div.data('pathname',pathname);
 
     flow_div.highlightAsDropTarget = function() {
-        fig.find('rect').css({ 'fill': dropHighlightBackgroundColor });
+        flow_div.css({ 'background-color': highlightBackgroundColor });
     };
 
     flow_div.unhighlightAsDropTarget = function() {
-        fig.find('rect').css({ 'fill': defaultBackgroundColor });
+        flow_div.css({ 'background-color': defaultBackgroundColor });
     };
 
     flow_div.droppable ({
         accept: '.component, .IComponent',
             out: function(ev,ui) {
-                openmdao.drag_and_drop_manager.draggableOut(fig);
+                openmdao.drag_and_drop_manager.draggableOut(flow_div);
             },
             over: function(ev,ui) {
                 // only allow drops of components in same assembly as driver
-                var target_pathname = fig.data('pathname'),
+                var target_pathname = flow_div.data('pathname'),
                     target_parent = openmdao.Util.getPath(target_pathname),
                     dragged_object = jQuery(ui.draggable).clone(),
                     dragged_pathname,
@@ -110,11 +124,11 @@ openmdao.WorkflowFigure = function(elm, model, json) {
                     dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                     dragged_parent = openmdao.Util.getPath(dragged_pathname);
                     if (dragged_parent === target_parent) {
-                        openmdao.drag_and_drop_manager.draggableOver(fig);
+                        openmdao.drag_and_drop_manager.draggableOver(flow_div);
                     }
                 }
                 else if (dragged_object.hasClass('IComponent')) {
-                    openmdao.drag_and_drop_manager.draggableOver(fig);
+                    openmdao.drag_and_drop_manager.draggableOver(flow_div);
                 }
             },
             drop: function(ev,ui) {
@@ -126,7 +140,7 @@ openmdao.WorkflowFigure = function(elm, model, json) {
             },
             actualDropHandler: function(ev,ui) {
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables();
-                var target_pathname = fig.data('pathname'),
+                var target_pathname = flow_div.data('pathname'),
                     target_parent = openmdao.Util.getPath(target_pathname),
                     dropped_object = jQuery(ui.draggable).clone(),
                     dropped_pathname,
@@ -221,17 +235,17 @@ openmdao.WorkflowFigure = function(elm, model, json) {
             }
             else if (comp.hasOwnProperty('workflow')) {
                 // comp is a driver with it's own workflow
-                comp_fig = new openmdao.WorkflowFigure(flow_div, model, comp);
+                comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // comp is an assembly with a driver that has it's own workflow
-                comp_fig = new openmdao.WorkflowFigure(flow_div, model, comp.driver);
+                comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp.driver);
                 comp_figs[comp.pathname] = comp_fig;
             }
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
-                                comp.pathname, comp.type, comp.valid);
+                                pathname, comp.pathname, comp.type, comp.valid);
                 comp_figs[comp.pathname] = comp_fig;
             }
         });
@@ -261,8 +275,8 @@ openmdao.WorkflowFigure = function(elm, model, json) {
 
     /** update workflow fig from JSON data */
     this.update = function(json) {
-        driver.setType(json.type);
-        driver.setValid(json.valid);
+        drvr_fig.setType(json.type);
+        drvr_fig.setValid(json.valid);
         updateWorkflow(json.workflow);
     };
 

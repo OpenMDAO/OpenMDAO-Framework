@@ -46,21 +46,18 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         }
         workflow.html('');
 
-        var offset = 20,
-            drawnFlows = [];
+        var drawnFlows = [];
 
-        function draw(flow, offset) {
-           diagram = new openmdao.WorkflowFigure(workflow, model, flow);
-//           diagram.setPosition(offset, 50);
+        function draw(flow) {
+           var fig = new openmdao.WorkflowFigure(workflow, model, '', flow);
            drawnFlows.push(flow.pathname);
-           return offset + diagram.getWidth();
         }
 
         // Redraw existing flows in same order.
         jQuery.each(roots, function(idx, name) {
             jQuery.each(json, function(idx, flow) {
                 if (flow.pathname === name) {
-                    offset = draw(flow, offset);
+                    draw(flow);
                 }
             });
         });
@@ -68,7 +65,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         // Draw new flows.
         jQuery.each(json, function(idx, flow) {
             if (drawnFlows.indexOf(flow.pathname) < 0) {
-                offset = draw(flow, offset);
+                draw(flow);
             }
         });
 

@@ -1,10 +1,22 @@
+/**
+ *  WorkflowComponentFigure: an object representing a component in an openmdao workflow
+ *
+ *  A WorkflowComponentFigure consists of a rectangular box containing the
+ *  component name and type.  The rectangle is rendered with a red outline if
+ *  if the component's state is valid or green if it is invalid.
+ *
+ *  Arguments:
+ *      elm:      jQuery element which will contain the WorkflowComponentFigure
+ *      model:    object that provides access to the openmdao model
+ *      driver:   pathname of the driver of the parent workflow, if any
+ *      pathname: the pathname of the component
+ *      type:     the type of the component
+ *      valid:    the initial valid state of the component
+ **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
-
-openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
+openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, valid) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -27,7 +39,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
 
     elm.append(fig);
 
-    // get name for this figure and set title appropriately
+    // if my name is just 'driver', qualify with parent (assembly) name
     if (name === 'driver') {
         name = parentName + '.driver';
     }
@@ -58,17 +70,14 @@ openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
         model.issueCommand(cmd);
     }));
     contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
-        var parent = fig.closest('.WorkflowFigure');
-        if (parent) {
-            var cmd = parent.data('pathname')+".workflow.remove('";
-            if (/.driver$/.test(name)) {
-                cmd = cmd + name.replace(/.driver/g,'') + "')";
-            }
-            else {
-                cmd = cmd + name + "')";
-            }
-            model.issueCommand(cmd);
+        var cmd = driver+".workflow.remove('";
+        if (/.driver$/.test(name)) {
+            cmd = cmd + name.replace(/.driver/g,'') + "')";
         }
+        else {
+            cmd = cmd + name + "')";
+        }
+        model.issueCommand(cmd);
     }));
     ContextMenu.set(contextMenu.attr('id'), id+'-svg');
 
