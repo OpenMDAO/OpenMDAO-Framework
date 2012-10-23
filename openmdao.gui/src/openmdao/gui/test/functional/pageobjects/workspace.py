@@ -127,20 +127,20 @@ class WorkspacePage(BasePageObject):
 
         # Now wait for all WebSockets open.
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
-        expected = 'WebSockets open'
-        try:
-            msg = NotifierPage.wait(self)
-        except TimeoutException:  # Typically no exception text is provided.
-            raise TimeoutException('Timed-out waiting for web sockets')
-        while msg != expected:
-            # During 'automatic' reloads we can see 'WebSockets closed'
-            logging.warning('Acknowledged %r while waiting for %r',
-                            msg, expected)
-            time.sleep(1)
+        
+        try:  # We may get 2 notifiers: sockets open and sockets closed.
+            msg = NotifierPage.wait(self, base_id='ws_open')
+        except Exception as exc:
+            if 'Element is not clickable' in str(exc):
+                msg2 = NotifierPage.wait(self, base_id='ws_closed')
+                msg = NotifierPage.wait(self, base_id='ws_open')
+            else:
+                raise
+        else:
             try:
-                msg = NotifierPage.wait(self)
+                msg2 = NotifierPage.wait(self, base_id='ws_closed')
             except TimeoutException:
-                raise TimeoutException('Timed-out waiting for web sockets')
+                pass # ws closed dialog may not exist
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -192,7 +192,7 @@ class WorkspacePage(BasePageObject):
         if commit:
             self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self)
+        NotifierPage.wait(self, base_id='ws_closed')
         self('project_menu').click()
         self('close_button').click()
 

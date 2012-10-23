@@ -11,7 +11,7 @@ TestCase("ValueEditorTest", {
         assertTrue(openmdao.ValueEditor.defaultEditorEnabled);
         assertFalse(openmdao.ValueEditor.overridesEnabled);
         assertFalse(openmdao.ValueEditor.promptEnabled);
-        assertEquals(openmdao.ValueEditor.defaultEditor, TextCellEditor);
+        assertEquals(openmdao.ValueEditor.defaultEditor, Text);
     },
 
     "test_default_editor_enabled" : function(){
@@ -71,8 +71,8 @@ TestCase("ValueEditorTest", {
     "test_registration" : function(){
         var types = ["int", "str"];
         var editors = {
-            "int" : TextCellEditor,
-            "str" : TextCellEditor,
+            "int" : Slick.Editors.Text,
+            "str" : Slick.Editors.Text,
         };
 
         assertFalse(EditorTestUtils.areRegistered(types));
@@ -89,8 +89,8 @@ TestCase("ValueEditorTest", {
 
     "test_registered_editors" : function(){
         var editors = {
-            "int" : TextCellEditor,
-            "str" : TextCellEditor,
+            "int" : Slick.Editors.Text,
+            "str" : Slick.Editors.Text,
         };
 
         var testObject = EditorTestUtils.getSimpleTestObject(editors);

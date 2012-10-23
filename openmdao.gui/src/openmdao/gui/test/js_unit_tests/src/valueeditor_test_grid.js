@@ -40,7 +40,7 @@ EditorTestUtils.resetOptions = function(){
     openmdao.ValueEditor.defaultEditorEnabled = true;
     openmdao.ValueEditor.overridesEnabled = false;
     openmdao.ValueEditor.promptEnabled = false;
-    openmdao.ValueEditor.defaultEditor = TextCellEditor;
+    openmdao.ValueEditor.defaultEditor = Slick.Editors.Text;
     
 }
 
