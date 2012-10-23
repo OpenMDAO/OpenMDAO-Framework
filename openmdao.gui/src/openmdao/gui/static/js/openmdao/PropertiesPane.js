@@ -27,6 +27,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     if (meta) {
+        options.autoHeight = false;
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
             {id:"type",      name:"Type",        field:"type",      width:60 },
