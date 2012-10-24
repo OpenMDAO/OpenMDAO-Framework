@@ -52,7 +52,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 var contentID = self.id+'_'+name,
                     tab = jQuery('<li id="'+contentID+'_tab">')
                         .append('<a href="#'+contentID+'">'+tabname+'</a>'),
-                    contentPane = jQuery('<div id="'+contentID+'" style="overflow:auto"></div>');
+                    contentPane = jQuery('<div id="'+contentID+'" style="overflow:hidden"></div>');
 
                 tabs.append(tab);
                 tabbed_pane.append(contentPane);
