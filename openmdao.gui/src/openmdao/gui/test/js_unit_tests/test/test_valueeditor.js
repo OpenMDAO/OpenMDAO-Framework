@@ -11,7 +11,7 @@ TestCase("ValueEditorTest", {
         assertTrue(openmdao.ValueEditor.defaultEditorEnabled);
         assertFalse(openmdao.ValueEditor.overridesEnabled);
         assertFalse(openmdao.ValueEditor.promptEnabled);
-        assertEquals(openmdao.ValueEditor.defaultEditor, Text);
+        assertEquals(openmdao.ValueEditor.defaultEditor, Slick.Editors.Text);
     },
 
     "test_default_editor_enabled" : function(){
