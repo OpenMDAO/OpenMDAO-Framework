@@ -51,6 +51,10 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         function draw(flow) {
            var fig = new openmdao.WorkflowFigure(workflow, model, '', flow);
            drawnFlows.push(flow.pathname);
+            // give browser a few ms to reflow everything then resize background
+            setTimeout(function(){
+                fig.getElement().find('.WorkflowFigure').trigger('setBackground');
+            },1000);
         }
 
         // Redraw existing flows in same order.

@@ -138,11 +138,6 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
         return fig.outerHeight();
     };
 
-    /** get position relative to parent div */
-    this.getPosition = function() {
-        return fig.position();
-    };
-
     /** set type */
     this.setType = function(new_type) {
         type = new_type;
