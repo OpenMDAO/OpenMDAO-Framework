@@ -8,7 +8,7 @@ openmdao.Model=function(listeners_ready) {
      ***********************************************************************/
 
     var self = this,
-        modified = false,
+        _modified = false,
         outstream_opened = false,
         pubstream_opened = false,
         sockets = {},
@@ -51,8 +51,8 @@ openmdao.Model=function(listeners_ready) {
                     callbacks[i](message);
                 }
                 else {
-                    debug.error('Model: invalid callback for topic:',
-                                topic,callbacks[i]);
+                    debug.error('Model: invalid callback for output message:',
+                                callbacks[i]);
                 }
             }
         }
@@ -73,23 +73,7 @@ openmdao.Model=function(listeners_ready) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
-        var topic = message[0],
-            callbacks;
-        if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
-            callbacks = subscribers[message[0]].slice();  // Need a copy.
-            for (i = 0; i < callbacks.length; i++) {
-                if (typeof callbacks[i] === 'function') {
-                    callbacks[i](message);
-                }
-                else {
-                    debug.error('Model: invalid callback for topic:',
-                                topic,callbacks[i]);
-                }
-            }
-        }
-        else {
-            debug.warn('Model.handlePubMessage() no subscribers for', topic);
-        }
+        self.publish(message);
     }
 
     var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
@@ -117,7 +101,8 @@ openmdao.Model=function(listeners_ready) {
      ***********************************************************************/
 
     /** add a subscriber (i.e. a function to be called)
-        for messages with the given topic
+        for messages with the given topic.
+        Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
         if (subscribers.hasOwnProperty(topic)) {
@@ -127,7 +112,8 @@ openmdao.Model=function(listeners_ready) {
             subscribers[topic] = [ callback ];
         }
         // tell server there's a new subscriber to the topic
-        if (topic !== 'outstream' && topic.length > 0 && ! /.exec_state$/.test(topic)) {
+        if (topic !== 'outstream' && topic.length > 0 &&
+            ! /.exec_state$/.test(topic) && topic.charAt(0) !== '@') {
             jQuery.ajax({
                 type: 'GET',
                 url:  'publish',
@@ -143,15 +129,36 @@ openmdao.Model=function(listeners_ready) {
         if (subscribers.hasOwnProperty(topic)) {
             var listeners = subscribers[topic];
             while (listeners.indexOf(callback) !== -1) {
-              listeners.splice(listeners.indexOf(callback), 1);
+                listeners.splice(listeners.indexOf(callback), 1);
             }
             // tell server there's one less subscriber to the topic
-            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            if (topic.length > 0 && ! /.exec_state$/.test(topic) &&
+                topic.charAt(0) !== '@') {
                 jQuery.ajax({
                     type: 'GET',
                     url:  'publish',
                     data: {'topic': topic, 'publish': false}
                 });
+            }
+        }
+    };
+
+    /** publish message to subscribed listeners.
+    */
+    this.publish = function(message) {
+        var topic = message[0],
+            callbacks;
+        if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
+            // Need a copy in case subscriber removes itself during callback.
+            callbacks = subscribers[topic].slice();
+            for (i = 0; i < callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
+                }
+                else {
+                    debug.error('Model.publish: invalid callback for topic:',
+                                topic, callbacks[i]);
+                }
             }
         }
     };
@@ -192,7 +199,7 @@ openmdao.Model=function(listeners_ready) {
                           }
                       }
         });
-        modified = false;
+        self.setModified(false);
         return defrd.promise()
     };
     
@@ -218,7 +225,7 @@ openmdao.Model=function(listeners_ready) {
                                   }
                               }
                 });
-                modified = false;
+                self.setModified(false);
         });
     };
 
@@ -362,7 +369,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** add an object of the specified type & name to the specified parent */
@@ -383,7 +390,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** replace pathname with an object of the specified type */
@@ -395,7 +402,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** remove the component with the given pathname */
@@ -408,7 +415,7 @@ openmdao.Model=function(listeners_ready) {
             cmd = 'del('+openmdao.Util.getName(pathname)+')';
         }
         self.issueCommand(cmd);
-        modified = true;
+        self.setModified(true);
     };
 
     /** issue the specified command against the model */
@@ -421,7 +428,7 @@ openmdao.Model=function(listeners_ready) {
             error: errorHandler,
             complete: completeHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** issue the specified command against the model */
@@ -437,7 +444,7 @@ openmdao.Model=function(listeners_ready) {
             error: errorHandler,
             complete: completeHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** get any queued output from the model */
@@ -492,7 +499,7 @@ openmdao.Model=function(listeners_ready) {
                 409: handler409
              }
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** create new folder with  specified path in the model working directory */
@@ -504,7 +511,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** create a new file in the model working directory with the specified path  */
@@ -520,7 +527,7 @@ openmdao.Model=function(listeners_ready) {
                 contents = '[]';
             }
             self.setFile(name, contents, undefined, callback);
-            modified = true;
+            self.setModified(true);
     };
 
     /** prompt for name & create a new folder */
@@ -529,7 +536,7 @@ openmdao.Model=function(listeners_ready) {
                 name = folderpath+'/'+name;
             }
             self.createFolder(name);
-            modified = true;
+            self.setModified(true);
     };
 
     /** delete file with specified path from the model working directory */
@@ -545,7 +552,7 @@ openmdao.Model=function(listeners_ready) {
                                   jqXHR,textStatus,errorThrown);
                    }
             });
-            modified = true;
+            self.setModified(true);
     };
 
     /** execute the model */
@@ -570,7 +577,7 @@ openmdao.Model=function(listeners_ready) {
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** execute the specified file */
@@ -587,12 +594,12 @@ openmdao.Model=function(listeners_ready) {
             data: { 'filename': path },
             success: callback
         });
-        modified = true;
+        self.setModified(true);
     };
 
     /** reload the model */
     this.reload = function() {
-        modified = false;
+        self.setModified(false);
         openmdao.Util.closeWebSockets('reload');
         self.closeWindows();
         window.location.replace('/workspace/project');
@@ -603,10 +610,10 @@ openmdao.Model=function(listeners_ready) {
    /** since we've switched over to using a vcs to manage the project files, we don't
     ** really need to save when the user leaves because they won't lose anything.
     
-       if (modified) {
+       if (_modified) {
            openmdao.Util.confirm("Model has changed, close without saving?",
                function() {
-                   modified = false;
+                   self.setModified(false);
                    openmdao.Util.closeWebSockets('close');
                    self.closeWindows();
                    window.location.replace('/workspace/close');
@@ -624,10 +631,10 @@ openmdao.Model=function(listeners_ready) {
    this.exit = function() {
       /** see comment in close() function
       
-       if (modified) {
+       if (_modified) {
            openmdao.Util.confirm("Model has changed, exit without saving?",
                function() {
-                   modified = false;
+                   self.setModified(false);
                    openmdao.Util.closeWebSockets('exit');
                    self.closeWindows();
                    window.location.replace('/exit');
@@ -659,7 +666,13 @@ openmdao.Model=function(listeners_ready) {
 
     /** return if the model has changed since last save */
     this.getModified = function(){
-        return modified;
+        return _modified;
+    };
+
+    /** Set '_modified' flag and publish to '@model-modified' topic. */
+    this.setModified = function(value) {
+        _modified = value;
+        this.publish(['@model-modified', _modified]);
     };
 
 };

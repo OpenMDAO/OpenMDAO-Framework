@@ -62,10 +62,15 @@ nav ul ul a {
   border-left:none;
   border-right:none;
 }
+nav ul ul a.omg-disabled {
+  color: grey;
+}
 nav ul ul a:hover {
   background-color:#555;
 }
-
+nav ul ul a.omg-disabled:hover {
+  background:#6a6a6a;
+}
 
 /* file tree & object tree styles */
 .folder, .obj {
@@ -226,6 +231,9 @@ nav ul ul a:hover {
 }
 .rgba nav ul ul a:hover {
   background-color:rgba(85,85,85,.9);
+}
+.rgba nav ul ul a.omg-disabled:hover {
+  background-color:rgba(0,0,0,0.8);
 }
 .borderradius.rgba nav ul ul li.last {
   border-left:1px solid rgba(0,0,0,0.1);

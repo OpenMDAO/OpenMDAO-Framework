@@ -1,4 +1,5 @@
 import logging
+import os.path
 import time
 
 from nose.tools import eq_ as eq
@@ -253,7 +254,7 @@ class WorkspacePage(BasePageObject):
         self('add_button').click()
 
         self.file_chooser = file_path
-        time.sleep(0.5)
+        self.find_file(os.path.basename(file_path))  # Verify added.
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -269,7 +270,7 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(self)  # Wait for creation to complete.
 
     def find_file(self, filename, tmo=TMO):
-        """ Return elemnt corresponding to `filename`. """
+        """ Return element corresponding to `filename`. """
         xpath = "//a[(@path='/%s')]" % filename
         return WebDriverWait(self.browser, tmo).until(
             lambda browser: browser.find_element_by_xpath(xpath))
