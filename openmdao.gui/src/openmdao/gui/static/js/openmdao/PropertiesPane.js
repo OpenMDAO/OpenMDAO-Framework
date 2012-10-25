@@ -16,6 +16,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             multiSelect: false,
             enableAddRow: true,
             autoHeight: true,
+            enableTextSelectionOnCells: true
         },
         _collapsed = {};
 
