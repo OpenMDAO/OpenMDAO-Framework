@@ -15,8 +15,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             asyncEditorLoading: false,
             multiSelect: false,
             enableAddRow: true,
-            enableCellNavigation: true,
-            enableTextSelectionOnCells: true
+            autoHeight: true,
         },
         _collapsed = {};
 
@@ -27,6 +26,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     if (meta) {
+        options.autoHeight = false;
+        propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px'>"),
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
             {id:"type",      name:"Type",        field:"type",      width:60 },
@@ -91,13 +92,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
   
     // wire up model events to drive the grid
     dataView.onRowCountChanged.subscribe(function (e, args) {
-      props.updateRowCount();
-      props.render();
+        props.resizeCanvas();
     });
     
     dataView.onRowsChanged.subscribe(function (e, args) {
       props.invalidateRows(args.rows);
-      props.render();
+        props.resizeCanvas();
     });    
     
     if (editable) {
@@ -195,7 +195,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             debug.info(self.pathname,properties);
         }
         props.setCellCssStyles("highlight", editableCells);
-        props.updateRowCount();
-        props.render();
+        props.resizeCanvas();
     };
 };

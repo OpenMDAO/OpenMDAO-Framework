@@ -97,10 +97,12 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             panel.width(pane_width);
             // resize all slickgrid viewports and use viewport for scrolling
             panel.find('.slickgrid').each(function() {
-                panel.css('overflow','auto');
+                //panel.css('overflow','hidden');
                 var grid = jQuery(this),
                     grid_hdr = grid.children('.slick-header'),
                     grid_vwp = grid.children('.slick-viewport');
+                grid.height(pane_height);
+                grid.width(pane_width);
                 grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight());
                 grid_vwp.width(panel.innerWidth());
             });
