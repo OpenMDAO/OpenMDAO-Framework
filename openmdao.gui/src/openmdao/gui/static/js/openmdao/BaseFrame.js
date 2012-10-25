@@ -95,15 +95,24 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             var panel = jQuery(this);
             panel.height(pane_height);
             panel.width(pane_width);
+
+            // Accomodate any extra stuff after the slickgrid table. This content should
+            // be placed in a div called "post_slick"
+            var extra_height = 0;
+            extra = panel.find('.post_slick');
+            if (extra) {
+                extra_height = extra.height() + 10;
+            }
+            
             // resize all slickgrid viewports and use viewport for scrolling
             panel.find('.slickgrid').each(function() {
                 //panel.css('overflow','hidden');
                 var grid = jQuery(this),
                     grid_hdr = grid.children('.slick-header'),
                     grid_vwp = grid.children('.slick-viewport');
-                grid.height(pane_height);
+                grid.height(pane_height - extra_height);
                 grid.width(pane_width);
-                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight());
+                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight() - extra_height);
                 grid_vwp.width(panel.innerWidth());
             });
         });

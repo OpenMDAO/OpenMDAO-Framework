@@ -14,7 +14,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         options = {
             asyncEditorLoading: false,
             multiSelect: false,
-            enableAddRow: true,
             autoHeight: true,
             enableTextSelectionOnCells: true
         },
