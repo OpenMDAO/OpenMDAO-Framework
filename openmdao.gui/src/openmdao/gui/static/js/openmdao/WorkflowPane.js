@@ -16,7 +16,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                       'border: 0px',
         workflow = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
             .appendTo(elm),
-        roots = [];  // Tracks order for consistent redraw.
+        flows = {},
+        flow_order = [];  // Tracks order for consistent redraw.
 
     this.pathname = pathname;
 
@@ -40,40 +41,62 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
 
     /** update workflow diagram */
     this.loadData = function(json) {
-        // Where does non-Array come from? Occurs during drag-n-drop test.
+        var drawnFlows = [],
+            updated_flows = [],
+            deleted_flows = [];
+
+        // We may get a single workflow object or a list of workflow objects
+        // if we get a single workflow, stick it in a list for consistency
         if (!jQuery.isArray(json)) {
             json = [json];
         }
-        workflow.html('');
 
-        var drawnFlows = [];
-
-        function draw(flow) {
-           var fig = new openmdao.WorkflowFigure(workflow, model, '', flow);
-           drawnFlows.push(flow.pathname);
-            // give browser a few ms to reflow everything then resize background
-            setTimeout(function(){
-                fig.getElement().find('.WorkflowFigure').trigger('setBackground');
-            },1000);
-        }
-
-        // Redraw existing flows in same order.
-        jQuery.each(roots, function(idx, name) {
-            jQuery.each(json, function(idx, flow) {
-                if (flow.pathname === name) {
-                    draw(flow);
-                }
-            });
-        });
-
-        // Draw new flows.
+        // build lists of updated and deleted flows
         jQuery.each(json, function(idx, flow) {
-            if (drawnFlows.indexOf(flow.pathname) < 0) {
-                draw(flow);
+            if (flow_order.indexOf(flow.pathname) >= 0) {
+                updated_flows.push(flow.pathname);
+            }
+        });
+        jQuery.each(flow_order, function(idx, name) {
+            if (updated_flows.indexOf(name) < 0) {
+                deleted_flows.push(name);
             }
         });
 
-        roots = drawnFlows;
+        // redraw updated flows in same order, remove deleted flows
+        jQuery.each(flow_order, function(idx, name) {
+            if (updated_flows.indexOf(name) >= 0) {
+                jQuery.each(json, function(idx, flow) {
+                    if (flow.pathname === name) {
+                        flows[name].update(flow);
+                        drawnFlows.push(name);
+                    }
+                });
+            }
+            else {
+                flows[name].destroy();
+                delete flows[name];
+            }
+        });
+
+        // draw new flows
+        jQuery.each(json, function(idx, flow) {
+            if (drawnFlows.indexOf(flow.pathname) < 0) {
+                flows[flow.pathname] = new openmdao.WorkflowFigure(workflow, model, '', flow);
+                drawnFlows.push(flow.pathname);
+            }
+        });
+
+        // set a timeout on each flow fig to resize background after giving the
+        // browser a few ms to reflow everything
+//        jQuery.each(flow_order, function(idx, name) {
+//            var fig = flows[name];
+//            setTimeout(function(){
+//                fig.getElement().find('.WorkflowFigure').trigger('setBackground');
+//            },1000);
+//        });
+
+        flow_order = drawnFlows;
     };
 
 };

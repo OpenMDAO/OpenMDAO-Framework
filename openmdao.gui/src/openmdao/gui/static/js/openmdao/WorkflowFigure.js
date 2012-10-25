@@ -93,7 +93,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             flow_width = 0,
             children = flow_div.children('.WorkflowComponentFigure, .WorkflowFigure');
 
-debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'children =',children);
+        debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'children =',children);
         // set the children to horizontal or vertical layout per the flag
         if (horizontal) {
             children.css({ 'clear': 'none' });
@@ -103,20 +103,26 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
         }
 
         // determine width & height of flow div needed to contain all components
-        jQuery.each(comp_figs, function(path, comp_fig) {
-            if (comp_figs.hasOwnProperty(path)) {
-                comp_width = comp_fig.getWidth();
-                comp_height = comp_fig.getHeight();
-                if (horizontal) {
-                    flow_width = flow_width + comp_width;
-                    flow_height = comp_height > flow_height ? comp_height : flow_height;
+        if (children.length > 0) {
+            jQuery.each(comp_figs, function(path, comp_fig) {
+                if (comp_figs.hasOwnProperty(path)) {
+                    comp_width = comp_fig.getWidth();
+                    comp_height = comp_fig.getHeight();
+                    if (horizontal) {
+                        flow_width = flow_width + comp_width;
+                        flow_height = comp_height > flow_height ? comp_height : flow_height;
+                    }
+                    else {
+                        flow_height = flow_height + comp_height;
+                        flow_width = comp_width > flow_width ? comp_width : flow_width;
+                    }
                 }
-                else {
-                    flow_height = flow_height + comp_height;
-                    flow_width = comp_width > flow_width ? comp_width : flow_width;
-                }
-            }
-        });
+            });
+        }
+        else {
+            flow_width  = 100;
+            flow_height = 60;
+        }
 
         flow_div.css({ 'width': flow_width,
                        'height': flow_height });
@@ -126,11 +132,11 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
         // tell the nearest parent workflow figure to update it's layout to
         // accomodate the new dimensions of this workflow figure
         fig.parents('.WorkflowFigure').first().trigger('layout');
-        
+
         // give browser a few ms to reflow everything then resize background
         setTimeout(function(){
             setBackground();
-        },100); 
+        },100);
     }
 
     // set up flow_div as a drop target for components to add to workflow
@@ -240,20 +246,21 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
     function updateWorkflow(json) {
         var layout_triggered = false;
         debug.info('WorkflowFigure.updateWorkflow()',self,pathname,'horizontal=',horizontal,'json =',json);
-        flow_div.html('');
 
         // delete figures for components that are no longer in workflow
         jQuery.each(comp_figs, function(idx, comp) {
             var comp_found = false;
             jQuery.each(json, function(idx, json_comp) {
-                if (json_comp.pathname === comp.pathname) {
+                if (json_comp.pathname === comp.getPathname()) {
                     comp_found = true;
                 }
             });
             if (! comp_found) {
-                delete comp_figs[comp.pathname];
+                comp.destroy();
             }
         });
+
+//        flow_div.html('');  // FIXME: SOMETHING IS BROKEN IN UPDATE FOR NESTED FLOWS
 
         // update figures for components that are in updated workflow
         jQuery.each(json, function(idx, comp) {
@@ -262,7 +269,7 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
                 comp_fig = comp_figs[comp.pathname];
                 if (comp.workflow) {
                     if (comp_fig instanceof WorkflowFigure) {
-                        comp_fig.update(workflow);
+                        comp_fig.update(comp.workflow);
                         layout_triggered = true;
                     }
                     else {
@@ -279,11 +286,13 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
                 // comp is a driver with it's own workflow
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp);
                 comp_figs[comp.pathname] = comp_fig;
+//                layout_triggered = true;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // comp is an assembly with a driver that has it's own workflow
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp.driver);
                 comp_figs[comp.pathname] = comp_fig;
+//                layout_triggered = true;
             }
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
@@ -292,8 +301,10 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
             }
         });
 
+        // if any children are a WorkflowFigure, they will trigger the layout,
+        // otherwise we do it here
+        // note: will still get extra layouts if there are multiple child workflows
         if (! layout_triggered) {
-            // will still get extra layouts if there are multiple child workflows
             layout();
         }
     }
@@ -308,6 +319,11 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
     /** get element */
     this.getElement = function() {
         return fig;
+    };
+
+    /** get pathname */
+    this.getPathname = function() {
+        return pathname;
     };
 
     /** get width */
@@ -330,6 +346,14 @@ debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'ch
         drvr_fig.setType(json.type);
         drvr_fig.setValid(json.valid);
         updateWorkflow(json.workflow);
+    };
+
+    /** clean up listener */
+    this.destroy = function() {
+        jQuery.each(comp_figs, function(path, comp_fig) {
+            comp_fig.destroy();
+        });
+        fig.remove();
     };
 
 };

@@ -128,6 +128,11 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
         return fig;
     };
 
+    /** get pathname */
+    this.getPathname = function() {
+        return pathname;
+    };
+
     /** get width */
     this.getWidth = function(x, y) {
         return fig.outerWidth();
@@ -141,7 +146,6 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
     /** set type */
     this.setType = function(new_type) {
         type = new_type;
-        valid = new_valid;
     };
 
     /** set valid flag */
@@ -158,6 +162,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
     /** clean up listener */
     this.destroy = function() {
         model.removeListener(pathname+'.exec_state', handleMessage);
+        fig.remove();
     };
 };
 
