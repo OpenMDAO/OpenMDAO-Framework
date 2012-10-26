@@ -233,32 +233,41 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
     /** update workflow from JSON workflow data */
     function updateWorkflow(json) {
-        var layout_triggered = false;
+        var layout_triggered = false,
+            deleted_comps = [];
         debug.info('WorkflowFigure.updateWorkflow()',self,pathname,'horz:',horizontal,'json:',json);
 
         // delete figures for components that are no longer in workflow
         jQuery.each(comp_figs, function(idx, comp_fig) {
-            var comp_found = false;
+            var comp_pathname = comp_fig.getPathname(),
+                comp_found = false;
             jQuery.each(json, function(idx, comp) {
-                if (comp.driver && comp.driver.pathname === comp_fig.getPathname()) {
-                    // comp is an assembly and figure is a WorkflowFigure
+                if (comp.driver && comp.driver.pathname === comp_pathname) {
+                    // comp is an assembly (figure is a WorkflowFigure)
                     comp_found = true;
                 }
-                else if (comp.workflow && comp.pathname === comp_fig.getPathname()) {
-                    // comp is an driver and figure is a WorkflowFigure
+                else if (comp.workflow && comp.pathname === comp_pathname) {
+                    // comp is an driver (figure is a WorkflowFigure)
                     comp_found = true;
                 }
-                else if (comp.pathname === comp_fig.getPathname()) {
-                    // comp is just a component and figure is a WorkflowComponentFigure
+                else if (comp.pathname === comp_pathname) {
+                    // comp is just a component (figure is a WorkflowComponentFigure)
                     comp_found = true;
                 }
             });
             if (! comp_found) {
                 debug.info('WorkflowFigure.updateWorkflow() comp not found for:',
-                           comp_fig.getPathname());
-                comp_fig.destroy();
+                           comp_pathname);
+                deleted_comps.push(comp_pathname);
             }
         });
+        debug.info('comp_figs:',comp_figs,'deleted:',deleted_comps);
+        jQuery.each(deleted_comps, function(idx, comp_pathname) {
+            var comp_fig = comp_figs[comp_pathname];
+            delete comp_figs[comp_pathname];
+            comp_fig.destroy();
+        });
+        debug.info('comp_figs:',comp_figs);
 
         // update figures for components that are in the updated workflow
         jQuery.each(json, function(idx, comp) {
@@ -289,13 +298,13 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 // new comp is a driver with it's own workflow
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp);
                 comp_figs[comp.pathname] = comp_fig;
-//                layout_triggered = true;
+                layout_triggered = true;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // new comp is an assembly with a driver that has it's own workflow
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp.driver);
-                comp_figs[comp.pathname] = comp_fig;
-//                layout_triggered = true;
+                comp_figs[comp.driver.pathname] = comp_fig;
+                layout_triggered = true;
             }
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
