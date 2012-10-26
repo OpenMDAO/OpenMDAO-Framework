@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     var constraints,
-        constraintsDiv = jQuery("<div id='"+name+"_constraints' class='slickgrid' style='overflow:none; height:200px; width:620px'>"),
+        constraintsDiv = jQuery("<div id='"+name+"_constraints' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Constraint</button>").button(),
         clrButton = jQuery("<button>Clear Constraints</button>").button(),
         columns = [
@@ -26,7 +26,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     }
     elm.append(constraintsDiv);
 
-    var tabdiv = jQuery('<div class="post_slick">'),
+    var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
         table = jQuery('<table width="100%">'),
         row = jQuery('<tr>').append(jQuery('<td style="text-align:left">').append(addButton))
                             .append(jQuery('<td style="text-align:right">').append(clrButton));
@@ -55,6 +55,10 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         }
     });   
+
+    constraintsDiv.bind('resizeCanvas', function() {
+        constraints.resizeCanvas();
+    });
 
     /** add a new constraint */
     function addConstraint(expr,scaler,adder,name) {

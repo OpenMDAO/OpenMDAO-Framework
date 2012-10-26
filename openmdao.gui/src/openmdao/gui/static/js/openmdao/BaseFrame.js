@@ -87,7 +87,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 
     function resize_contents() {
         // resize content pane of all tabbed panes to fit dialog content pane
-        var tabs_height = dlg.find('.ui-tabs-nav').height(),
+        var tabs_height = dlg.find('.ui-tabs-nav').outerHeight(),
             pane_height = dlg.height()-tabs_height,
             pane_width  = dlg.width();
 
@@ -100,20 +100,21 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             // be placed in a div called "post_slick"
             var extra_height = 0;
             extra = panel.find('.post_slick');
-            if (extra) {
-                extra_height = extra.height() + 10;
+            if (extra.length>0) {
+                extra_height = extra.outerHeight();
             }
             
             // resize all slickgrid viewports and use viewport for scrolling
             panel.find('.slickgrid').each(function() {
-                //panel.css('overflow','hidden');
+                panel.css('overflow','hidden');
                 var grid = jQuery(this),
                     grid_hdr = grid.children('.slick-header'),
                     grid_vwp = grid.children('.slick-viewport');
-                grid.height(pane_height - extra_height);
+                grid.height(panel.innerHeight() - extra_height);
                 grid.width(pane_width);
-                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight() - extra_height);
+                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight()-extra_height);
                 grid_vwp.width(panel.innerWidth());
+                panel.find('.slickgrid').trigger('resizeCanvas');
             });
         });
     }
