@@ -154,7 +154,7 @@ class VariableTree(Container):
                                                         **metadata):
                             yield ('.'.join([name, chname]), child)
 
-    def get_attributes(self, io_only=True, indent=0, parent=None):
+    def get_attributes(self, io_only=True, indent=0, parent=''):
         """ get attributes for this variable tree. Variables may also include
         slots. Used by the GUI.
         

@@ -19,8 +19,11 @@ class DictTestCase(unittest.TestCase):
         # while here, let's test the get_attributes
         attrs = comp.get_attributes(True)
         attr = attrs['Inputs']
+        print attr
         self.assertTrue( { 'key_type' : 'Int',
                            'name' : 'arr',
+                           'id' : 'arr',
+                           'indent' : 0,
                            'value' : {1:2.0},
                            'value_type' : 'Float',
                            'valid' : True,

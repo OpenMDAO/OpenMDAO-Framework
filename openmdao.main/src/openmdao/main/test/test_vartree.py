@@ -182,21 +182,49 @@ class NamespaceTestCase(unittest.TestCase):
         # Check set_attributes on the vartrees
         attrs = self.asm.scomp1.cont_in.get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
+        print attrs['Inputs']
         self.assertTrue({'name': 'v1',
+                         'id': '_v1',
+                         'indent': 0,
                          'value': 1.0,
                          'high': None,
                          'connected': '',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1'} in attrs['Inputs'])
-        self.assertTrue({'name': 'v2', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Inputs'])
-        # The number shall be 4 (because there is a File.)
-        self.assertEqual(len(attrs['Inputs']), 4)
+        self.assertTrue({'name': 'v2',
+                         'id': '_v2',
+                         'indent': 0,
+                         'value': 2.0,
+                         'high': None,
+                         'connected': '',
+                         'low': None,
+                         'type': 'float',
+                         'desc': 'vv2'} in attrs['Inputs'])
+        # The number shall be 11 becuase of recursion, and also including
+        # file variables
+        self.assertEqual(len(attrs['Inputs']), 11)
         attrs = self.asm.scomp1.cont_out.get_attributes()
         self.assertTrue("Outputs" in attrs.keys())
-        self.assertTrue({'name': 'v1', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv1'} in attrs['Outputs'])
-        self.assertTrue({'name': 'v2', 'value': 3.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Outputs'])
-        self.assertEqual(len(attrs['Outputs']), 4)
+        self.assertTrue({'name': 'v1',
+                         'id': '_v1',
+                         'indent': 0,
+                         'value': 2.0,
+                         'high': None,
+                         'connected': '',
+                         'low': None,
+                         'type': 'float',
+                         'desc': 'vv1'} in attrs['Outputs'])
+        self.assertTrue({'name': 'v2',
+                         'id': '_v2',
+                         'indent': 0,
+                         'value': 3.0,
+                         'high': None,
+                         'connected': '',
+                         'low': None,
+                         'type': 'float',
+                         'desc': 'vv2'} in attrs['Outputs'])
+        self.assertEqual(len(attrs['Outputs']), 11)
 
         # Slots panel too
         attrs = self.asm.scomp1.cont_in.get_attributes(io_only=False)
