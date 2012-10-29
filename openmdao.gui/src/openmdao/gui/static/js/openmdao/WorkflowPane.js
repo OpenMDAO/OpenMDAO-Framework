@@ -10,8 +10,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
     // initialize private variables
     var self = this,
         workflowID = pathname.replace(/\./g,'-')+'-workflow',
-        workflowCSS = 'height:'+(screen.height-100)+'px;'+
-                      'width:'+(screen.width-100)+'px;'+
+        workflowCSS = 'min-height:'+screen.height+'px;'+
+                      'min-width:'+screen.width+'px;'+
                       'position:relative;' +
                       'border: 0px',
         workflow = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
@@ -86,15 +86,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 drawnFlows.push(flow.pathname);
             }
         });
-
-        // set a timeout on each flow fig to resize background after giving the
-        // browser a few ms to reflow everything
-//        jQuery.each(flow_order, function(idx, name) {
-//            var fig = flows[name];
-//            setTimeout(function(){
-//                fig.getElement().find('.WorkflowFigure').trigger('setBackground');
-//            },1000);
-//        });
 
         flow_order = drawnFlows;
     };

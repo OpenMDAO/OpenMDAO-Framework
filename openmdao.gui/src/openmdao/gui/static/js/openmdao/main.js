@@ -64,7 +64,11 @@ jQuery(function() {
             workflow_tab  = jQuery('#workflow_tab a');
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
-        workflow_tab.click(function(e) { central_label.text(work.getPathname()); });
+        workflow_tab.click(function(e) {
+            central_label.text(work.getPathname());
+            // ugly fix, can't calculate background until element is visible
+            jQuery('.WorkflowFigure').trigger('setBackground');
+        });
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
@@ -89,14 +93,6 @@ jQuery(function() {
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
-    
-    //jQuery(window).bind('beforeunload', function(e) {
-    //    // Don't check when testing -- it can cause a cascade of errors.
-    //    if (openmdao.model.getModified() &&
-    //        (typeof openmdao_test_mode === 'undefined')) {
-    //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
-    //    }
-    //});
 });
 
 
