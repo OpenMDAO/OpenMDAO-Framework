@@ -126,7 +126,6 @@ class GridCell(object):
     def value(self, value):
         chain = ActionChains(self._browser)
         chain.double_click(self._root).perform()
-        print self._root.text
         element = self._root.find_elements(By.XPATH, 'input')[0]
         WebDriverWait(self._browser, 5).until(
             lambda browser: element.is_displayed())

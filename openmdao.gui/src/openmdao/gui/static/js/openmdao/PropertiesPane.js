@@ -87,7 +87,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     });
 
     props.onCellChange.subscribe(function (e, args) {
-      dataView.updateItem(args.item.id, args.item);
+        dataView.updateItem(args.item.id, args.item);
     });
   
     // wire up model events to drive the grid
@@ -96,7 +96,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     });
     
     dataView.onRowsChanged.subscribe(function (e, args) {
-      props.invalidateRows(args.rows);
+        props.invalidateRows(args.rows);
         props.resizeCanvas();
     });    
     
@@ -105,6 +105,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
             model.setVariableValue(self.pathname + '.' + args.item.name, 
                                    args.item.value, args.item.type );
+            // Need to clear mouse selection so that slickgrid doesn't launch
+            // the editor for the next variable down (a la Excel)
+            props.clearTextSelection();
+            props.resizeCanvas();
         });
     }
 
