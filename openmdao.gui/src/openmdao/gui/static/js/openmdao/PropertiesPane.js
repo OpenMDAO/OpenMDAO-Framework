@@ -190,11 +190,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
             });
 
-            //props.setData(properties);
             dataView.beginUpdate();
             dataView.setItems(properties);
             dataView.setFilter(this.filter);
             dataView.endUpdate();
+            // This seems to be needed if we reuse this pane for another
+            // component (which is what the properties panel does.)
+            // The data view manages the data otherwise.
+            props.setData(properties);
 
         }
         else {
