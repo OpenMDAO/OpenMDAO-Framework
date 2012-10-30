@@ -120,14 +120,14 @@ def _test_connect(browser):
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
+    eq(inputs[6].value, ['s_in', ''])
+    inputs[6][1] = 'xyzzy'
+    inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
-    inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "xyzzy"
     
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])

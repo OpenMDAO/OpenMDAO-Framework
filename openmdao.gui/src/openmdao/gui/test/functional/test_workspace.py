@@ -533,6 +533,7 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
+    inputs.rows[2].cells[1].click()
     inputs[2][2] = '42'  # printvars
     message = NotifierPage.wait(editor)
     eq(message, "TraitError: The 'printvars' trait of a "

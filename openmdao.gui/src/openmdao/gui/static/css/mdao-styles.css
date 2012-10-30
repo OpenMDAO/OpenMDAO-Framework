@@ -176,6 +176,22 @@ nav ul ul a.omg-disabled:hover {
   height: 16px !important;
 } 
 
+.toggle {
+  height: 16px;
+  width: 16px;
+  display: inline-block;
+}
+
+.toggle.expand {
+  background: url(/static/css/ui-openmdao/images/ui-icons_ffffff_256x240.png);
+  background-position: -16px -128px;
+}
+
+.toggle.collapse {
+  background: url(/static/css/ui-openmdao/images/ui-icons_ffffff_256x240.png);
+  background-position: -48px -128px;
+}
+
 /* CSS3 */
 .borderradius nav, dl dt,  h3, .button {
   -moz-border-radius:4px;
