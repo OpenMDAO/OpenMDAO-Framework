@@ -15,7 +15,7 @@ information, please see the references that follow.
 References:
 
 * A reStructuredText Primer: http://docutils.sourceforge.net/docs/user/rst/quickstart.html 
-* Sphinx Python Documentation Generator: http://sphinx.pocoo.org/contents.html 
+* Sphinx Python Documentation Generator: http://sphinx-doc.org/contents.html 
 
 
 Some Basics 
