@@ -4,7 +4,6 @@ Tests of overall workspace functions.
 
 import sys
 import time
-import logging
 
 import pkg_resources
 
@@ -16,7 +15,8 @@ from unittest import TestCase
 if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
+                     startup, closeout, put_element_on_grid
+
     from pageobjects.basepageobject import TMO
     from pageobjects.util import NotifierPage
     from pageobjects.workspace import WorkspacePage
@@ -28,6 +28,26 @@ if sys.platform != 'win32':  # No testing on Windows yet.
         for _test, browser in generate(__name__):
             yield _test, browser
 
+
+def _test_slots_sorted_by_name(browser):
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    top = workspace_page.get_dataflow_figure('top')
+
+    #drop 'metamodel' onto the grid
+    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    #find it on the page
+    metamodel = workspace_page.get_dataflow_figure(meta_name)
+
+    #open the 'edit' dialog on metamodel
+    editor = metamodel.editor_page(False)
+
+    # see if the slot names are sorted
+    slot_name_elements = editor.root.find_elements_by_css_selector('text#name')
+    slot_names = [ s.text for s in slot_name_elements ]
+    eq( slot_names, sorted( slot_names ) )
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 def _test_console(browser):
     # Check basic console functionality.
