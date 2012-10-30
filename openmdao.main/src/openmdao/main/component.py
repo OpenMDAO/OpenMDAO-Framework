@@ -1740,10 +1740,6 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
-        #for item in attrs['Inputs']:
-        #    print item
-        #for item in attrs['Outputs']:
-        #    print item
         return attrs
 
 
