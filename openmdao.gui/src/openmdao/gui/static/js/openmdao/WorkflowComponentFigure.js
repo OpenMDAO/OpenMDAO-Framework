@@ -69,16 +69,18 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
         var cmd = pathname + '.run();';
         model.issueCommand(cmd);
     }));
-    contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
-        var cmd = driver+".workflow.remove('";
-        if (/.driver$/.test(name)) {
-            cmd = cmd + name.replace(/.driver/g,'') + "')";
-        }
-        else {
-            cmd = cmd + name + "')";
-        }
-        model.issueCommand(cmd);
-    }));
+    if (driver.length > 0) {
+        contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
+            var cmd = driver+".workflow.remove('";
+            if (/.driver$/.test(name)) {
+                cmd = cmd + name.replace(/.driver/g,'') + "')";
+            }
+            else {
+                cmd = cmd + name + "')";
+            }
+            model.issueCommand(cmd);
+        }));
+    };
     ContextMenu.set(contextMenu.attr('id'), id+'-svg');
 
     /** open object editor on double click */
