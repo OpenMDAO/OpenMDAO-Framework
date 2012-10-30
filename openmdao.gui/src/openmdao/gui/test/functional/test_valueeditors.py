@@ -64,6 +64,13 @@ def _test_value_editors(browser):
     inputs[1][1] = "abcd"
     time.sleep(1)
     
+    #bool editor - set to true
+    inputs = props.inputs
+    inputs.rows[3].cells[1].click()
+    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
+    browser.find_element_by_xpath(selection_path).click()    
+    time.sleep(0.5)
+    
     #enum editor - set to 3
     inputs = props.inputs
     inputs.rows[2].cells[1].click()
@@ -71,12 +78,11 @@ def _test_value_editors(browser):
     browser.find_element_by_xpath(selection_path).click()    
     time.sleep(0.5)
     
-    #bool editor - set to true
-    #inputs = props.inputs
-    #inputs.rows[3].cells[1].click()
-    #selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
-    #browser.find_element_by_xpath(selection_path).click()    
-    #time.sleep(0.5)
+    # float editor - set to 2.71
+    inputs = props.inputs
+    inputs.rows[5].cells[1].click()
+    inputs[5][1] = '2.71' 
+    time.sleep(0.5)
     
     #array 1d editor - add element, set to 4
     inputs = props.inputs
@@ -89,12 +95,6 @@ def _test_value_editors(browser):
     new_cell.send_keys("4.")
     submit_path = '//*[@id="array-edit-X-submit"]'
     browser.find_element_by_xpath(submit_path).click()
-    time.sleep(0.5)
-    
-    # float editor - set to 2.71
-    inputs = props.inputs
-    inputs.rows[5].cells[1].click()
-    inputs[5][1] = '2.71' 
     time.sleep(0.5)
     
     # array 2d editor - set to [[1, 4],[9, 16]]
@@ -113,7 +113,7 @@ def _test_value_editors(browser):
     #check that all values were set correctly by the editors
     commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute", 
                 "top.p1.e", "top.p1.x", "top.p1.X", "top.p1.directory"]
-    values = ["3.0", "1.61", "False", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd"]
+    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd"]
     
     for cmd_str, check_val in zip(commands, values):
         workspace_page.do_command(cmd_str)

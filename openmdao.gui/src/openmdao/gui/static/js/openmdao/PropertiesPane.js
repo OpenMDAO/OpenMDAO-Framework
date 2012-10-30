@@ -107,8 +107,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                                    args.item.value, args.item.type );
             // Need to clear mouse selection so that slickgrid doesn't launch
             // the editor for the next variable down (a la Excel)
-            props.clearTextSelection();
-            props.resizeCanvas();
+            e.stopImmediatePropagation();
         });
     }
 
