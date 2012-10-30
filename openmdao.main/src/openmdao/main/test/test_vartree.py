@@ -182,13 +182,13 @@ class NamespaceTestCase(unittest.TestCase):
         # Check set_attributes on the vartrees
         attrs = self.asm.scomp1.cont_in.get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
-        print attrs['Inputs']
         self.assertTrue({'name': 'v1',
                          'id': '_v1',
                          'indent': 0,
                          'value': 1.0,
                          'high': None,
                          'connected': '',
+                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1'} in attrs['Inputs'])
@@ -198,6 +198,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
+                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2'} in attrs['Inputs'])
@@ -212,6 +213,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
+                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1'} in attrs['Outputs'])
@@ -221,6 +223,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 3.0,
                          'high': None,
                          'connected': '',
+                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2'} in attrs['Outputs'])

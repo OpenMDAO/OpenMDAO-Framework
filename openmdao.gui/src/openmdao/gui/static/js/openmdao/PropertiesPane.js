@@ -42,7 +42,63 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     elm.append(propsDiv);
     dataView = new Slick.Data.DataView({ inlineFilters: false });
-    props = new Slick.Grid(propsDiv, dataView, columns, options);
+    SetupTable()
+    
+    function SetupTable() {
+        props = new Slick.Grid(propsDiv, dataView, columns, options);
+    
+        props.onBeforeEditCell.subscribe(function(row,cell) {
+            if (props.getDataItem(cell.row).connected.length > 0) {
+                return false;
+            }
+    
+            else {
+                return true;
+            }
+        });
+    
+        props.onClick.subscribe(function (e) {
+            var cell = props.getCellFromEvent(e);
+            if (cell.cell==0) {
+                var item = dataView.getItem(cell.row);
+                if (item.hasOwnProperty("vt")) {
+                    if (!_collapsed[item.id]) {
+                        _collapsed[item.id] = true;
+                    } else {
+                        _collapsed[item.id] = false;
+                    }
+                    // dataView needs to know to update.
+                    dataView.updateItem(item.id, item);
+                }
+                e.stopImmediatePropagation();
+            }
+        });
+    
+        props.onCellChange.subscribe(function (e, args) {
+            dataView.updateItem(args.item.id, args.item);
+        });
+      
+        // wire up model events to drive the grid
+        dataView.onRowCountChanged.subscribe(function (e, args) {
+            props.resizeCanvas();
+        });
+        
+        dataView.onRowsChanged.subscribe(function (e, args) {
+            props.invalidateRows(args.rows);
+            props.resizeCanvas();
+        });    
+        
+        if (editable) {
+            props.onCellChange.subscribe(function(e,args) {
+                // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+                model.setVariableValue(self.pathname + '.' + args.item.name, 
+                                       args.item.value, args.item.type );
+                // Need to clear mouse selection so that slickgrid doesn't launch
+                // the editor for the next variable down (a la Excel)
+                e.stopImmediatePropagation();
+            });
+        }
+    }
 
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
         var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
@@ -58,59 +114,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             return spacer + "<span class='toggle'></span>" + value;
         }
     }
-    
-    props.onBeforeEditCell.subscribe(function(row,cell) {
-        if (props.getDataItem(cell.row).connected.length > 0) {
-            return false;
-        }
-
-        else {
-            return true;
-        }
-    });
-
-    props.onClick.subscribe(function (e) {
-        var cell = props.getCellFromEvent(e);
-        if (cell.cell==0) {
-            var item = dataView.getItem(cell.row);
-            if (item.hasOwnProperty("vt")) {
-                if (!_collapsed[item.id]) {
-                    _collapsed[item.id] = true;
-                } else {
-                    _collapsed[item.id] = false;
-                }
-                // dataView needs to know to update.
-                dataView.updateItem(item.id, item);
-            }
-            e.stopImmediatePropagation();
-        }
-    });
-
-    props.onCellChange.subscribe(function (e, args) {
-        dataView.updateItem(args.item.id, args.item);
-    });
-  
-    // wire up model events to drive the grid
-    dataView.onRowCountChanged.subscribe(function (e, args) {
-        props.resizeCanvas();
-    });
-    
-    dataView.onRowsChanged.subscribe(function (e, args) {
-        props.invalidateRows(args.rows);
-        props.resizeCanvas();
-    });    
-    
-    if (editable) {
-        props.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            model.setVariableValue(self.pathname + '.' + args.item.name, 
-                                   args.item.value, args.item.type );
-            // Need to clear mouse selection so that slickgrid doesn't launch
-            // the editor for the next variable down (a la Excel)
-            e.stopImmediatePropagation();
-        });
-    }
-
+        
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
     this.filter = function myFilter(item) {
@@ -189,14 +193,17 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
             });
 
+            // We need to recreate the table if we reuse this pane for another
+            // component (which is what the properties panel does.)
+            // The data view manages the data otherwise.
+            if (!meta) {
+                SetupTable()
+            }
+            
             dataView.beginUpdate();
             dataView.setItems(properties);
             dataView.setFilter(this.filter);
             dataView.endUpdate();
-            // This seems to be needed if we reuse this pane for another
-            // component (which is what the properties panel does.)
-            // The data view manages the data otherwise.
-            props.setData(properties);
 
         }
         else {
