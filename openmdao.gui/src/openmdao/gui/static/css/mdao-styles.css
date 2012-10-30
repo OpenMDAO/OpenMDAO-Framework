@@ -171,6 +171,21 @@ nav ul ul a:hover {
   height: 16px !important;
 } 
 
+.ui-icon-minimized {
+  background-image: url(/static/css/ui-openmdao/images/ui-icons_222222_256x240.png);
+  background-position: -48px -16px !important;
+  width: 16px !important;
+  height: 16px !important;
+} 
+
+.ui-icon-maximized {
+  background-image: url(/static/css/ui-openmdao/images/ui-icons_222222_256x240.png);
+  background-position: -112px -16px !important;
+  width: 16px !important;
+  height: 16px !important;
+} 
+
+
 /* CSS3 */
 .borderradius nav, h3, .button {
   -moz-border-radius:4px;

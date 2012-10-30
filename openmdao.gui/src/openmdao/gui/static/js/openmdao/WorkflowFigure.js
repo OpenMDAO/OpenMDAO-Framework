@@ -22,12 +22,16 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             .appendTo(elm),
         drvr_fig = new openmdao.WorkflowComponentFigure(fig,model,driver,json.pathname,json.type,json.valid),
         flow_css = 'background-repeat:no-repeat', //;border-style:solid;border-color:yellow;border-width:thin;',
-        flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+' />')
+        flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+'/>')
             .appendTo(fig),
+        maxmin_css = 'position:absolute;top:0;left:0;width:16px;height:16px;z-index:9000',
+        maxmin_div = jQuery('<div style="'+maxmin_css+'"></div>')
+            .appendTo(flow_div),
         contextMenu = jQuery("<ul id="+id.replace(/WorkflowFigure/g,'menu')+" class='context-menu'>")
             .appendTo(fig),
         comp_figs = {},
-        horizontal = true;
+        horizontal = true,
+        minimized = false;
 
     // store the pathname on the element for child component figures to access
     fig.data('pathname', pathname);
@@ -39,8 +43,8 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
     // position flow fig to overlap bottom right corner of driver fig
     flow_div.css({ 'position': 'absolute',
-                   'left': drvr_fig.getWidth()  - 15,
-                   'top':  drvr_fig.getHeight() - 15,
+                   'left': drvr_fig.getWidth()  - 16,
+                   'top':  drvr_fig.getHeight() - 16,
                    'background-image': 'url("/static/images/workflow_bg.png")' });
 
     /** set the size and shape of the flow div background image */
@@ -53,38 +57,48 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             last_child = last_child.children('.WorkflowComponentFigure').first();
         }
 
-        debug.info('WorkflowFigure.setBackground()',self,pathname,'children:',children,'last_child:',last_child);
+        debug.info('WorkflowFigure.setBackground()',pathname,
+                   'children:',children,'last_child:',last_child.attr('id'));
 
-        // set size of flow fig and background image
-        if (children.length > 0) {
+        // set size of background image to extend to last child
+        if (minimized) {
+            bg_height = 0;
+            bg_width = 0;
+        }
+        else if (children.length > 0) {
             if (horizontal) {
                 bg_width = last_child.offset().left - flow_div.offset().left
                          + last_child.outerWidth();
                 bg_height = 70;
-                debug.info('last_child.offset().left',last_child.offset().left,
-                           'flow_div.offset().left',flow_div.offset().left,
-                           'last_child.outerWidth()',last_child.outerWidth());
-                debug.info('WorkflowFigure.setBackground()',self,pathname,'HORZ','bg_width:',bg_width,'bg_height:',bg_height);
+                debug.info('last_child left:',last_child.offset().left,
+                           'flow_div left:',flow_div.offset().left,
+                           'last_child width:',last_child.outerWidth());
+                debug.info('WorkflowFigure.setBackground()', pathname,
+                           'HORZ','bg_width:',bg_width,'bg_height:',bg_height);
             }
             else {
                 bg_width = 110;
                 bg_height = last_child.offset().top - flow_div.offset().top
                           + last_child.outerHeight();
-                debug.info('last_child.offset().top',last_child.offset().top,
-                           'flow_div.offset().top',flow_div.offset().top,
-                           'last_child.outerWidth()',last_child.outerHeight());
-                debug.info('WorkflowFigure.setBackground()',self,pathname,'VERT','bg_width:',bg_width,'bg_height:',bg_height);
+                debug.info('last_child top:',last_child.offset().top,
+                           'flow_div top:',flow_div.offset().top,
+                           'last_child height',last_child.outerHeight());
+                debug.info('WorkflowFigure.setBackground()', pathname,
+                           'VERT','bg_width:',bg_width,'bg_height:',bg_height);
+
             }
         }
         else {
             bg_height = 70;
             bg_width = 110;
+            debug.info('WorkflowFigure.setBackground()', pathname,'no children',
+                       'bg_width:',bg_width,'bg_height:',bg_height);
         }
-        debug.info('WorkflowFigure.setBackground()',self,pathname,'horz:',horizontal,'bg_width:',bg_width,'bg_height:',bg_height);
+
         flow_div.css({ 'background-size': bg_width + 'px ' + bg_height + 'px' });
     }
 
-    /** arrange component figures and resize flow div to contain them*/
+    /** arrange component figures and resize flow div to contain them */
     function layout() {
         var comp_height = 0,
             comp_width = 0,
@@ -92,55 +106,74 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             flow_width = 0,
             children = flow_div.children('.WorkflowComponentFigure, .WorkflowFigure');
 
-        debug.info('WorkflowFigure.layout()',self,pathname,'horizontal =',horizontal,'children =',children);
-        // set the children to horizontal or vertical layout per the flag
-        if (horizontal) {
-            children.css({ 'clear': 'none' });
+        if (minimized) {
+            maxmin_div.removeClass('ui-icon-maximized');
+            maxmin_div.addClass('ui-icon-minimized');
+            children.hide();
+            flow_width = 15;
+            flow_height = 15;
+            flow_div.css({ 'width': flow_width,
+                           'height': flow_height });
+            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
+                      'height': flow_height + drvr_fig.getHeight() });
         }
         else {
-            children.css({ 'clear': 'both' });
-        }
+            maxmin_div.removeClass('ui-icon-minimized');
+            maxmin_div.addClass('ui-icon-maximized');
+            children.show();
+            debug.info('WorkflowFigure.layout()',pathname,'horz:',horizontal,'children:',children);
+            // set the children to horizontal or vertical layout per the flag
+            if (horizontal) {
+                children.css({ 'clear': 'none' });
+            }
+            else {
+                children.css({ 'clear': 'both' });
+            }
 
-        // determine width & height of flow div needed to contain all components
-        if (children.length > 0) {
-            jQuery.each(comp_figs, function(path, comp_fig) {
-                if (comp_figs.hasOwnProperty(path)) {
-                    comp_width = comp_fig.getWidth();
-                    comp_height = comp_fig.getHeight();
-                    if (horizontal) {
-                        flow_width = flow_width + comp_width;
-                        flow_height = comp_height > flow_height ? comp_height : flow_height;
+            // determine width & height of flow div needed to contain all components
+            if (children.length > 0) {
+                jQuery.each(comp_figs, function(path, comp_fig) {
+                    if (comp_figs.hasOwnProperty(path)) {
+                        comp_width = comp_fig.getWidth();
+                        comp_height = comp_fig.getHeight();
+                        if (horizontal) {
+                            flow_width = flow_width + comp_width;
+                            flow_height = comp_height > flow_height ? comp_height : flow_height;
+                        }
+                        else {
+                            flow_height = flow_height + comp_height;
+                            flow_width = comp_width > flow_width ? comp_width : flow_width;
+                        }
                     }
-                    else {
-                        flow_height = flow_height + comp_height;
-                        flow_width = comp_width > flow_width ? comp_width : flow_width;
-                    }
-                }
-            });
-        }
-        else {
-            flow_width  = 100;
-            flow_height = 60;
-        }
+                });
+            }
+            else {
+                flow_width  = 100;
+                flow_height = 60;
+            }
 
-        flow_div.css({ 'width': flow_width,
-                       'height': flow_height });
-        fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
-                  'height': flow_height + drvr_fig.getHeight() });
+            flow_div.css({ 'width': flow_width,
+                           'height': flow_height });
+            fig.css({ 'width':  flow_width  + drvr_fig.getWidth(),
+                      'height': flow_height + drvr_fig.getHeight() });
 
-        // tell the nearest parent workflow figure to update it's layout to
-        // accomodate the new dimensions of this workflow figure
-        var parent_workflow = fig.parents('.WorkflowFigure').first();
-        if (parent_workflow.length > 0) {
-            debug.info('***',pathname,'TRIGGERING LAYOUT on',parent_workflow.attr('id'),'***');
-            parent_workflow.trigger('layout');
+            // tell the nearest parent workflow figure to update it's layout to
+            // accomodate the new dimensions of this workflow figure
+            var parent_workflow = fig.parents('.WorkflowFigure').first();
+            if (parent_workflow.length > 0) {
+                debug.info('***',pathname,'TRIGGERING LAYOUT on',parent_workflow.attr('id'),'***');
+                parent_workflow.trigger('layout');
+            }
         }
 
-        // give browser a few ms to reflow everything then resize background
-        setTimeout(function(){
-            setBackground();
-        },100);
+        setBackground();
     }
+
+    // add click handler to maxmin div
+    maxmin_div.click(function() {
+        minimized = !minimized;
+        layout();
+    });
 
     // set up flow_div as a drop target for components to add to workflow
     flow_div.data('name',name);
@@ -210,7 +243,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                     dropped_name = dropped_object.text();
                     prompt = 'Specify a name for the new '+dropped_name+'<br>'+
                              '(It will be added to '+target_parent +' and to <br>'+
-                             'the workflow of '+ target_pathname+')';
+                             'the workflow of '+target_pathname+')';
                     openmdao.Util.promptForValue(prompt, function(name) {
                             model.addComponent(dropped_pathname,name,target_parent, function() {
                                 // if successful, then add to workflow as well
@@ -252,9 +285,9 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     function updateWorkflow(json) {
         var layout_triggered = false,
             deleted_comps = [];
-        debug.info('WorkflowFigure.updateWorkflow()',self,pathname,'horz:',horizontal,'json:',json);
+        debug.info('WorkflowFigure.updateWorkflow()',pathname,'json:',json);
 
-        // delete figures for components that are no longer in workflow
+        // delete figures for components that are no longer in the workflow
         jQuery.each(comp_figs, function(idx, comp_fig) {
             var comp_pathname = comp_fig.getPathname(),
                 comp_found = false;
@@ -273,8 +306,6 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 }
             });
             if (! comp_found) {
-                debug.info('WorkflowFigure.updateWorkflow() comp not found for:',
-                           comp_pathname);
                 deleted_comps.push(comp_pathname);
             }
         });
@@ -290,13 +321,14 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 comp_fig;
             if (comp_figs.hasOwnProperty(comp_key)) {
                 comp_fig = comp_figs[comp_key];
-                debug.info('WorkflowFigure.updateWorkflow() found',comp_key,comp,comp_fig);
                 if (comp_fig instanceof openmdao.WorkflowFigure) {
                     if (comp.workflow) {
+                        // comp is a driver
                         comp_fig.update(comp);
                         layout_triggered = true;
                     }
                     else if (comp.driver) {
+                        // comp is an assembly
                         comp_fig.update(comp.driver);
                         layout_triggered = true;
                     }
@@ -312,17 +344,13 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             }
             else if (comp.hasOwnProperty('workflow')) {
                 // new comp is a driver with it's own workflow
-                debug.info('WorkflowFigure.updateWorkflow() creating figure for driver',comp.pathname,comp);
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp);
                 comp_figs[comp_key] = comp_fig;
-//                layout_triggered = true;
             }
             else if (comp.hasOwnProperty('driver')) {
                 // new comp is an assembly with a driver that has it's own workflow
-                debug.info('WorkflowFigure.updateWorkflow() creating figure for assembly',comp.pathname,comp);
                 comp_fig = new openmdao.WorkflowFigure(flow_div, model, pathname, comp.driver);
                 comp_figs[comp_key] = comp_fig;
-//                layout_triggered = true;
             }
             else {
                 comp_fig = new openmdao.WorkflowComponentFigure(flow_div, model,
@@ -374,7 +402,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
     /** update workflow fig from JSON data */
     this.update = function(json) {
-        debug.info('WorkflowFigure.update()',self,pathname,json);
+        debug.info('WorkflowFigure.update()',pathname,json);
         if (json.workflow) {
             drvr_fig.setType(json.type);
             drvr_fig.setValid(json.valid);
