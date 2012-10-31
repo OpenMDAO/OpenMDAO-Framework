@@ -152,7 +152,6 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title;
-        this.elm.dialog('option', 'title', title);
     }
 };
 

@@ -26,15 +26,15 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
         name = openmdao.Util.getName(pathname),
         parent = openmdao.Util.getPath(pathname),
         parentName = openmdao.Util.getName(parent),
-        svg = '<svg height="60" width="100">'
-            + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
-            + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
-            + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
-            + '</svg>',
+        svg = jQuery('<svg height="60" width="100">'
+                   + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
+                   + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
+                   + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
+                   + '</svg>'),
         fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px;float:left;padding:5px" />')
             .append(svg),
         rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill':'#999999'},
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+        contextMenu = jQuery("<ul class='context-menu'>")
             .appendTo(fig);
 
     elm.append(fig);
@@ -52,9 +52,10 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
 
     // set name, id, tooltip and width
     fig.attr('id',id);
-    fig.find('svg').attr('id',id+'-svg');
-    fig.find('#name').text(name);
-    fig.find('#klass').text(type);
+    svg.uniqueId();
+    svg.find('#name').text(name);
+    svg.find('#klass').text(type);
+    contextMenu.uniqueId();
 
     // create context menu
     contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
@@ -80,8 +81,8 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
             }
             model.issueCommand(cmd);
         }));
-    };
-    ContextMenu.set(contextMenu.attr('id'), id+'-svg');
+    }
+    ContextMenu.set(contextMenu.attr('id'), svg.attr('id'));
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
