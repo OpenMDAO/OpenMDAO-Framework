@@ -1635,7 +1635,8 @@ class Component(Container):
             if 'vt' in io_attr:
                 
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
-                                                   parent=name)
+                                                   parent=name, 
+                                                   valid=io_attr['valid'])
                 
                 if name in self.list_inputs():
                     inputs += vt_attrs['Inputs']
@@ -1739,10 +1740,6 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
-        #for item in attrs['Inputs']:
-        #    print item
-        #for item in attrs['Outputs']:
-        #    print item
         return attrs
 
 

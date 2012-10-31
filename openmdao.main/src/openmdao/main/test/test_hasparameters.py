@@ -131,7 +131,18 @@ class HasParametersTestCase(unittest.TestCase):
             #self.top.driver.set_parameters([-1., 3.])
         #except ValueError as err:
             #self.assertEqual(str(err), "parameter value (-1.0) is outside of allowed range [0.0 to 1e+99]")
-            
+
+    def test_add_passthrough_param(self):
+        self.top.create_passthrough('comp.x')
+        try:
+            self.top.driver.add_parameter('comp.x', 0., 1.e99) 
+        except Exception, err:
+            msg = 'driver: Cannot add target parameter "comp.x" - incoming connection exists'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Exception Expected')
+        self.top.remove("x")
+     
     def test_set_param_by_name(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99, name='abc') 
         self.top.driver.add_parameter('comp.y', 0., 1.e99, name='def')
