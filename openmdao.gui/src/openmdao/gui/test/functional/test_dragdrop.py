@@ -21,8 +21,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
     from pageobjects.component import NameInstanceDialog
     from pageobjects.dataflow import DataflowFigure
-    from pageobjects.dialog import NotifyDialog
-    from pageobjects.util import ConfirmationPage
+    from pageobjects.util import ArgsPrompt, ConfirmationPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -245,6 +244,8 @@ def _test_slots(browser):
     # model (IComponent) slot of a MetaModel. 
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -309,6 +310,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('DOEgenerator')
     generator = workspace_page.find_library_button('FullFactorial')
     slot_drop(browser, generator, generator_slot, True, 'generator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -333,6 +336,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -359,6 +364,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -389,6 +396,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('DBCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -719,7 +728,8 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
 
 def resize_editor(workspace_page, editor):
-    '''ensure that the editor is not covering the library (or else we cannot drag things from it!)'''
+    '''ensure that the editor is not covering the library
+    (or else we cannot drag things from it!)'''
     browser = workspace_page.browser
 
     page_width = browser.get_window_size()['width']
@@ -746,8 +756,10 @@ def resize_editor(workspace_page, editor):
             # do the resizing
             chain = ActionChains(browser)
             chain.click_and_hold(handle)
-            chain.move_by_offset(450 - dialog_width, 0).perform()  # we can resize editor down to 425px, any less and we cover drop targets
-            chain.click().perform()  # must click because release is not working. why? I do not know.
+            # we can resize editor down to 425px, any less and we cover drop targets
+            chain.move_by_offset(450 - dialog_width, 0).perform()
+            # must click because release is not working. why? I do not know.
+            chain.click().perform()
             chain.release(None).perform()
 
             # recalculate the overlap
