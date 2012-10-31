@@ -81,11 +81,10 @@ described below.
          
     - *Visual C++ 2008 (Optional)*
       
-      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
+      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it; mingw32 will work fine,
       but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
       but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/visualstudio/en-us/products/2010-editions/express/#2008-Visual-CPP>`_.  
-         
+      go to the `downloads page <http://www.microsoft.com/visualstudio/eng/products/visual-studio-overview#2008-Visual-CPP>`_.
          
 .. __: http://sourceforge.net/projects/mingw/files
 

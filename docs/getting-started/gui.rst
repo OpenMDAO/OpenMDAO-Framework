@@ -11,7 +11,7 @@ Disclaimer
 
 The OpenMDAO GUI is brand new and still under active development. We're working to add functionality 
 and make sure the features that are there work as expected. Please bear with us if you experience any bugs or you 
-find that a certain things don't work quite the way you would like them to. The development team would 
+find that certain things don't work quite the way you would like them to. The development team would 
 greatly appreciate any feedback you have (good or bad). Just post on our `forum <http://openmdao.org/forum>`_ or 
 :ref:`submit an issue <github_issues>`. 
 
@@ -28,7 +28,7 @@ type:
 
   openmdao gui
 
-Two things should happen next. First, you should see a couple of lines output into the console that looks similar to the following: 
+Two things should happen next. First, you should see a couple of lines output to the console that looks similar to the following: 
 
 :: 
     
@@ -40,7 +40,7 @@ The port number after ``http://localhost:`` and the process id after ``pid=`` wi
 every time you open the GUI, so don't worry if your numbers don't match the ones we show here. 
 
 Second, the Chrome web-browser (You did install a recent version of Chrome, right?) will pop up with a page showing a list of 
-all your OpenMDAO projects that the GUI knows about. If this is your first time with the GUI, even if you've been 
+all your OpenMDAO projects that the GUI knows about. If this is your first time using the GUI, even if you've been 
 using OpenMDAO for a while now, there won't be any projects in the list yet. You have to create new GUI projects for any
 existing models.
 
@@ -54,14 +54,14 @@ You can start a new project by clicking on the ``Start new project`` link at the
 you can input some details about your project, including a name, description, and version number.  You don't have to put anything
 in for description and version number, but they are there if you want to keep track of them. 
 
-Once you create the model, you just have to load it into the workspace. When it opens up, you'll be greeted by the following 
-screen: 
+Once you create the model, you just have to load it into the workspace. When it opens up, you'll be greeted by the following screen, but it
+will show your model:
 
 .. figure:: workspace_start_v030.png
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
 through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. Just
-follow this link to our YouTube channel: http://youtube.com/openmdao.  
+follow this link to our YouTube channel: http://www.youtube.com/openmdao.  
 
 That covers the basics you need to know to start working with the OpenMDAO GUI. You'll learn the rest as you work through the documentation. 
 
@@ -69,7 +69,7 @@ That covers the basics you need to know to start working with the OpenMDAO GUI. 
 How does the GUI Work?
 ----------------------
 
-If you're curious about what's going on with the GUI, and how it's serving a web page to a browser, you can continue
+If you're curious about what's going on with the GUI and how it's serving a web page to a browser, you can continue
 reading. But the following information is not required reading, so feel free to move  ahead to other parts of the docs or
 view our screen casts on  using the GUI. 
 
@@ -77,7 +77,7 @@ Built into OpenMDAO is a small web-server that is set up when you call ``openmda
 that points to the address ``http://localhost:xxxx``. You could open up the same page yourself by typing in that address
 manually.  What this means is that the server and the browser are both on the same machine but are still passing information
 between each other over the the computer's internal network using the HTTP protocol. Since everything is happening over the
-computer's  internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
+computer's internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
 
 The GUI and the computational server communicate with each other via a technology called 
 `web-sockets <http://en.wikipedia.org/wiki/WebSocket>`_, which enables bi-directional communication. All of the things 
