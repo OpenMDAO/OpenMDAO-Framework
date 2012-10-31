@@ -66,7 +66,14 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
         self.elm.height(400);
         self.elm.width(625);
-        jQuery('#'+self.id).tabs({selected: selected});
+
+        self.elm.tabs({selected: selected})
+            .on('tabsshow', function(event, ui) {
+                if (ui.tab.text === 'Workflow') {
+                    self.elm.find('.WorkflowFigure').trigger('setBackground');
+                }
+            });
+
         if (typeof openmdao_test_mode !== 'undefined') {
             openmdao.Util.notify(self.pathname+' loaded');
         }
@@ -136,7 +143,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 panes[name].loadData(props);
             }
             else if (name !== 'type' && props) {
-                debug.warn("ObjectFrame.loadData: Unexpected object",
+                debug.warn("ObjectFrame.loadData: Unexpected interface",
                            self.pathname, name, props);
             }
         });
