@@ -458,7 +458,7 @@ Glossary
 
       **Sphinx** 
         A Python documentation generator. It translates reStructuredText markup
-        language into HTML. (See the `Sphinx home page <http://sphinx.pocoo.org/index.html>`_
+        language into HTML. (See the `Sphinx home page <http://sphinx-doc.org/index.html>`_
         for more information.)
      
 

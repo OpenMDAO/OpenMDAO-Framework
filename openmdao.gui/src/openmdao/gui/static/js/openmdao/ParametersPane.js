@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
-        parmsDiv = jQuery("<div id='"+name+"_parms'>"),
+        parmsDiv = jQuery("<div id='"+name+"_parms' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Parameter</button>").button(),
         clrButton = jQuery("<button>Clear Parameters</button>").button(),
         columns = [
@@ -19,7 +19,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         options = {
             asyncEditorLoading: false,
             multiSelect: false,
-            autoHeight: true,
+            autoHeight: false,
             autoEdit: false
         };
 
@@ -29,11 +29,13 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     }
     elm.append(parmsDiv);
 
-    var table = jQuery('<table width="100%">'),
+    var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
+        table = jQuery('<table width="100%">'),
         row = jQuery('<tr>').append(jQuery('<td style="text-align:left">').append(addButton))
                             .append(jQuery('<td style="text-align:right">').append(clrButton));
     table.append(row);
-    elm.append(table);
+    tabdiv.append(table);
+    elm.append(tabdiv);
 
     if (editable) {
         options.editable = true;
@@ -63,6 +65,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         }
     });   
     
+    parmsDiv.bind('resizeCanvas', function() {
+        parms.resizeCanvas();
+    });
+
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
@@ -174,8 +180,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             alert('Error getting properties for '+pathname+' ('+name+')');
             debug.info(properties);
         }
-        parms.updateRowCount();
-        parms.render();
+        parms.resizeCanvas();
         
     };
 };

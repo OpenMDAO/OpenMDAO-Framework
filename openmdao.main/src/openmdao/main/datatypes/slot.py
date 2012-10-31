@@ -124,6 +124,7 @@ class Slot(Variable):
         io_attr = {}
         io_attr['name'] = name
         io_attr['type'] = trait.trait_type.klass.__name__
+        io_attr['ttype'] = 'slot'
 
         slot_attr = {}
         slot_attr['name'] = name
