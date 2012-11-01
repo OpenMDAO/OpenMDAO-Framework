@@ -17,7 +17,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             autoHeight: true,
             enableTextSelectionOnCells: true
         },
-        _collapsed = {};
+        _collapsed = {},
+        editableCells = {};
 
     self.pathname = pathname;
     if (editable) {
@@ -140,7 +141,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     /** load the table with the given properties */
     this.loadData = function(properties) {
         //variable to track cells that need to be highlighted
-        var editableCells = {};
+        editableCells = {};
 
         if (properties) {
             // Sort by name
