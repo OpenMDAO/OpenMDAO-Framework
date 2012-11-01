@@ -9,8 +9,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 
-from openmdao.util.log import logger
-
 # Set this True on fatal driver errors.
 _ABORT = False
 
@@ -37,6 +35,32 @@ class ValuePrompt(BasePageObject):
 
     def set_text(self, text):
         self.value = text
+
+    def click_ok(self):
+        self('ok_button').click()
+
+    def click_cancel(self):
+        self('cancel_button').click()
+
+
+class ArgsPrompt(BasePageObject):
+    """ Dialog displayed by ``openmdao.Util.promptForArgs()``. """
+
+    prompt = TextElement((By.ID, 'get-args-prompt'))
+    name = InputElement((By.ID, 'get-args-name'))
+    ok_button = ButtonElement((By.ID, 'get-args-ok'))
+    cancel_button = ButtonElement((By.ID, 'get-args-cancel'))
+
+    def set_name(self, value):
+        self.name = value + Keys.RETURN
+
+    def set_text(self, text):
+        self.name = text
+
+    def set_argument(self, index, text):
+        table = self.browser.find_element(By.ID, 'get-args-tbl')
+        arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
+        arg_inputs[index].send_keys(text)
 
     def click_ok(self):
         self('ok_button').click()

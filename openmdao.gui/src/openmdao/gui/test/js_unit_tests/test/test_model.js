@@ -348,26 +348,26 @@ TestCase("ModelTest", {
       var callback = sinon.spy() ;
 
       // Normal execution
-      openmdao.model.addComponent("typepath","component_name","parent",callback) ;
+      openmdao.model.addComponent("typepath","component_name","","parent",callback) ;
       assertEquals("component/component_name", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
-      assertEquals("type=typepath&parent=parent", this.requests[0].requestBody);
+      assertEquals("type=typepath&parent=parent&args=", this.requests[0].requestBody);
       this.requests[0].respond(200, 'response', '' ) ;
       sinon.assert.calledOnce( callback );
       assertEquals(callback.args[0][0], "" ) ;
 
       // With null parent
-      openmdao.model.addComponent("typepath","component_name",null,callback) ;
-      assertEquals("type=typepath&parent=", this.requests[1].requestBody);
+      openmdao.model.addComponent("typepath","component_name","",null,callback) ;
+      assertEquals("type=typepath&parent=&args=", this.requests[1].requestBody);
 
       // Are listeners updated?
-      openmdao.model.addComponent("typepath","component_name",null,callback) ;
+      openmdao.model.addComponent("typepath","component_name","",null,callback) ;
       this.requests[2].respond(200, 'response', '' ) ; // the ajax call just queues up the request
       sinon.assert.calledTwice( callback );
 
       // Does it handle the "if openmdao.Util" statement properly?
       openmdao.Util.$component_name = function() { } ;
-      openmdao.model.addComponent("driver_typepath","component_name",null,callback) ;
+      openmdao.model.addComponent("driver_typepath","component_name","",null,callback) ;
       sinon.assert.calledTwice( callback ); // Should not be called this time so still 2 calls
 
   },

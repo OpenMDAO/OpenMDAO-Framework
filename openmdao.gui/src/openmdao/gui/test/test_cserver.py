@@ -53,7 +53,8 @@ class ConsoleServerTestCase(unittest.TestCase):
         components = json.loads(self.cserver.get_components())
         
         # CREATE ASSEMBLY
-        self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
+        self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly',
+                                   '', '')
 
         oldnum = len(components)
         components = json.loads(self.cserver.get_components())
@@ -79,7 +80,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         # ADD CONMIN DRIVER
         self.cserver.add_component('driver',
-           'openmdao.lib.drivers.conmindriver.CONMINdriver', 'prob')
+           'openmdao.lib.drivers.conmindriver.CONMINdriver', 'prob', '')
 
         components = json.loads(self.cserver.get_components())
         self.assertEqual(len(components) - oldnum, 1)
@@ -120,7 +121,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(self.cserver.file_forces_reload('/paraboloid.py'), False)
 
         # CREATE PARABOLOID
-        self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
+        self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob', '')
 
         self.assertEqual(self.cserver.file_forces_reload('/paraboloid.py'), True)
         
