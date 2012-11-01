@@ -184,7 +184,7 @@ openmdao.CodeFrame = function(id,model) {
         debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
         // 409 gets special handling.
         // 400 is (normally) related to msg reported via publisher.
-        if (jqXHR.status != 409 && jqXHR.status != 400) {
+        if (jqXHR.status !== 409 && jqXHR.status !== 400) {
             var msg = jqXHR.responseXML || textStatus;
             openmdao.Util.notify(msg, 'Save Failed');
         }
@@ -204,7 +204,7 @@ openmdao.CodeFrame = function(id,model) {
                            jQuery(this).dialog('close');
                            model.setFile(filepath,editor.getSession().getValue(), 1,
                                          function(data, textStatus, jqXHR) {
-                                             model.reload()
+                                             model.reload();
                                          },
                                          failedSave);
                          }
@@ -234,7 +234,7 @@ openmdao.CodeFrame = function(id,model) {
                           function (data, textStatus, jqXHR) { // success callback
                             sessions[fname_nodot][1] = current_code; // store saved file for comparison
                             renameTab("#"+fname_nodot,filepath); // mark as not modified
-                            sessions[fname_nodot][3] = false;  
+                            sessions[fname_nodot][3] = false;
                             if (typeof openmdao_test_mode !== 'undefined') {
                                 openmdao.Util.notify('Save complete: ' + textStatus);
                             }
@@ -254,8 +254,11 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function saveAllFiles() {
+        var key;
         for (key in sessions) {
-            saveFile(key);
+            if (sessions.hasOwnProperty(key)) {
+                saveFile(key);
+            }
         }
     }
 
@@ -290,7 +293,7 @@ openmdao.CodeFrame = function(id,model) {
         newfile.setUndoManager(new UndoManager());
         newfile.setMode(mode);
         newfile.on('change', function(evt) {
-            if (sessions[fname_nodot][0].getValue() != contents) {
+            if (sessions[fname_nodot][0].getValue() !== contents) {
                 renameTab("#"+fname_nodot, filepath+"*");
                 sessions[fname_nodot][3] = true;
             }
@@ -301,7 +304,7 @@ openmdao.CodeFrame = function(id,model) {
         });
         editor.setSession(newfile);
         sessions[fname_nodot] = [newfile,contents,filepath,false]; // store session for efficent switching
-        
+
         jQuery('<div id="'+fname_nodot+'"></div>').appendTo(file_inner); // new empty div
         file_tabs.tabs("add",'#'+fname_nodot,filepath);
         file_tabs.tabs( 'select', "#"+fname_nodot);
@@ -336,7 +339,8 @@ openmdao.CodeFrame = function(id,model) {
     this.editor = editor;
 
     this.currentTablabel = function() {
-        return jQuery('#'+id+'-tabs .ui-tabs-selected a').text();
+        var selectedTab = file_tabs.tabs("option", "selected");
+        return selectedTab.find('a').text();
     };
 
     /** get contents of specified file from model, load into editor */
@@ -344,7 +348,7 @@ openmdao.CodeFrame = function(id,model) {
         filepath = pathname;
         mode = findMode(filepath);
         fname_nodot= nameSplit(filepath);
-        if (fname_nodot in sessions) {// file already has open tab? just switch to it
+        if (sessions[fname_nodot]) {  // file already has open tab? just switch to it
             editor.setSession(sessions[fname_nodot][0]);
             file_tabs.tabs("select","#"+fname_nodot);
         }
@@ -390,4 +394,3 @@ openmdao.CodeFrame = function(id,model) {
 /** set prototype */
 openmdao.CodeFrame.prototype = new openmdao.BaseFrame();
 openmdao.CodeFrame.prototype.constructor = openmdao.CodeFrame;
-
