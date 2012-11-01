@@ -136,7 +136,7 @@ Adding New Tests
 ----------------
 
 Generally, you should write your tests using Python's `unittest
-<http://docs.python.org/library/unittest.html>`_ framework if possible,
+<http://docs.python.org/2/library/unittest.html>`_ framework if possible,
 although the nose_ package is able to find and run tests that do not use
 unittest.
 
@@ -314,7 +314,7 @@ The doctest blocks share their workspace in a similar manner as the testcode
 blocks.  Other options can be enabled for the doctest blocks, but
 so far the default ones have been fine.
 
-More details on using the doctest builder can be found here: http://sphinx.pocoo.org/ext/doctest.html
+More details on using the doctest builder can be found here: http://sphinx-doc.org/ext/doctest.html
 
 
 .. _Including-Code-Straight-from-the-Source:
@@ -347,7 +347,7 @@ also be done with the *lines* option.
        :lines: 3,7-12,45
        :language: python
 
-More details on the ``literalinclude`` directive can be found at http://sphinx.pocoo.org/markup/code.html.       
+More details on the ``literalinclude`` directive can be found at http://sphinx-doc.org/markup/code.html.       
        
 *Helpful Tips*
 ++++++++++++++
