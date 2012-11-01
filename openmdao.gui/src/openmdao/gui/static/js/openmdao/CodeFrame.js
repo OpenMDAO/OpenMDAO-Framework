@@ -339,8 +339,7 @@ openmdao.CodeFrame = function(id,model) {
     this.editor = editor;
 
     this.currentTablabel = function() {
-        var selectedTab = file_tabs.tabs("option", "selected");
-        return selectedTab.find('a').text();
+        return file_tabs.find('.ui-tabs-active a span').text();
     };
 
     /** get contents of specified file from model, load into editor */
