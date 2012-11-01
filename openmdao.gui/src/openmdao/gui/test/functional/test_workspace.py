@@ -906,6 +906,17 @@ def _test_arguments(browser):
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
+def _test_casefilters(browser):
+    # Verify that CaseFilter objects are listed in the library.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    for classname in ('ExprCaseFilter', 'IteratorCaseFilter',
+                      'SequenceCaseFilter', 'SliceCaseFilter'):
+        workspace_page.find_library_button(classname)
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
 
