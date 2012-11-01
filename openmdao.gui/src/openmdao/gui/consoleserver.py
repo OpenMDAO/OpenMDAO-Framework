@@ -10,12 +10,13 @@ from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
-from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
-                                  ProjFinder, _clear_insts, _match_insts
+from openmdao.main.project import Project, ProjFinder, \
+                                  _clear_insts, _match_insts
 from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.factorymanager import register_class_factory, \
+                                         remove_class_factory, get_signature
 from openmdao.main.repo import get_repo, find_vcs
 
 from openmdao.main.releaseinfo import __version__, __date__
@@ -23,7 +24,7 @@ from openmdao.main.releaseinfo import __version__, __date__
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
 
-from openmdao.gui.util import packagedict, ensure_dir
+from openmdao.gui.util import packagedict
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
@@ -161,7 +162,7 @@ class ConsoleServer(cmd.Cmd):
         self._hist.append(line)
         try:
             cmd.Cmd.onecmd(self, line)
-        except Exception, err:
+        except Exception as err:
             self._error(err, sys.exc_info())
 
     def parseline(self, line):
@@ -210,7 +211,7 @@ class ConsoleServer(cmd.Cmd):
             result = self.proj.command(line)
             if result is not None:
                 print result
-        except Exception, err:
+        except Exception as err:
             self._error(err, sys.exc_info())
 
     @modifies_model
@@ -224,7 +225,7 @@ class ConsoleServer(cmd.Cmd):
                 comp = self.proj.get(pathname)
                 comp.run(*args, **kwargs)
                 print "Execution complete."
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         else:
             self._print_error("Execution failed: No %r component was found.",
@@ -237,7 +238,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             self.proj.command("execfile('%s', '%s')" %
                                  (filename, file_md5(filename)))
-        except Exception, err:
+        except Exception as err:
             self._error(err, sys.exc_info())
 
     def get_pid(self):
@@ -407,7 +408,7 @@ class ConsoleServer(cmd.Cmd):
                        or (not dst_name and dst.find('.') < 0)):
                         connections.append([src, dst])
                 conns['connections'] = connections
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(conns)
 
@@ -422,7 +423,7 @@ class ConsoleServer(cmd.Cmd):
                 asm, root = self.get_container(pathname)
                 if has_interface(asm, IAssembly):
                     dataflow = asm.get_dataflow()
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         else:
             components = []
@@ -455,7 +456,7 @@ class ConsoleServer(cmd.Cmd):
             if drvr:
                 try:
                     flow = drvr.get_workflow()
-                except Exception, err:
+                except Exception as err:
                     self._error(err, sys.exc_info())
                 flows.append(flow)
         else:
@@ -494,7 +495,7 @@ class ConsoleServer(cmd.Cmd):
         if comp:
             try:
                 attr = comp.get_attributes(io_only=False)
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
 
@@ -504,7 +505,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             val, root = self.get_container(pathname)
             return val
-        except Exception, err:
+        except Exception as err:
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
@@ -531,7 +532,7 @@ class ConsoleServer(cmd.Cmd):
             if repo is None:
                 find_vcs()[0](projdir).init_repo()
             self.proj.activate()
-        except Exception, err:
+        except Exception as err:
             self._error(err, sys.exc_info())
 
     def commit_project(self, comment=''):
@@ -542,7 +543,7 @@ class ConsoleServer(cmd.Cmd):
                 repo = get_repo(self.proj.path)
                 repo.commit(comment)
                 print 'Committed project in directory ', self.proj.path
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         else:
             self._print_error('No Project to commit')
@@ -558,7 +559,7 @@ class ConsoleServer(cmd.Cmd):
                 if commit_id is None:
                     commit_id = 'latest'
                 print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
                 return err # give the caller an indication that something went wrong so he can
                            # give the proper error response to the http call if desired. Raising
@@ -568,34 +569,44 @@ class ConsoleServer(cmd.Cmd):
             self._print_error(msg)
             return Exception(msg)
 
+    def get_signature(self, classname):
+        ''' Get constructor argument signature for `classname`.
+        '''
+        try:
+            return get_signature(str(classname))
+        except Exception as err:
+            self._error(err, sys.exc_info())
+
     @modifies_model
-    def add_component(self, name, classname, parentname):
+    def add_component(self, name, classname, parentname, args):
         ''' add a new component of the given type to the specified parent.
         '''
         if isidentifier(name):
             name = name.encode('utf8')
+            cmd = 'create("%s"%s)' % (classname, args)
             if parentname:
-                cmd = '%s.add("%s",create("%s"))' % (parentname, name, classname)
+                cmd = '%s.add("%s", %s)' % (parentname, name, cmd)
             else:
-                cmd = '%s = create("%s")' % (name, classname)
+                cmd = '%s = %s' % (name, cmd)
             try:
                 self.proj.command(cmd)
-            except Exception, err:
+            except Exception as err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('Error adding component: "%s" is not a valid identifier' % name)
+            self._print_error('Error adding component:'
+                              ' "%s" is not a valid identifier' % name)
 
     @modifies_model
-    def replace_component(self, pathname, classname):
+    def replace_component(self, pathname, classname, args):
         ''' replace existing component with component of the given type.
         '''
         pathname = pathname.encode('utf8')
         parentname, dot, name = pathname.rpartition('.')
         if parentname:
             try:
-                self.proj.command('%s.replace("%s", create("%s"))' % (parentname,
-                                                                      name, classname))
-            except Exception, err:
+                self.proj.command('%s.replace("%s", create("%s"))'
+                                  % (parentname, name, classname))
+            except Exception as err:
                 self._error(err, sys.exc_info())
         else:
             self._print_error('Error replacing component, no parent: "%s"'
