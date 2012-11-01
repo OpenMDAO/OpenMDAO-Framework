@@ -426,8 +426,10 @@ class MyCont(Container):
                                        'openmdao.main.container.Container']),
         }
         plugins = find_all_plugins(self.tdir)
-        self.assertEqual(expected.keys(), plugins.keys())
-        self.assertEqual(expected.values(), plugins.values())
+        self.assertEqual(sorted(expected.keys()), sorted(plugins.keys()))
+        for key, value in expected.items():
+            self.assertEqual(plugins[key], value)
+
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
