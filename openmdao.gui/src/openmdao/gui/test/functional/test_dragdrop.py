@@ -26,8 +26,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
     from pageobjects.component import NameInstanceDialog
     from pageobjects.dataflow import DataflowFigure
-    from pageobjects.dialog import NotifyDialog
-    from pageobjects.util import ConfirmationPage
+    from pageobjects.util import ArgsPrompt, ConfirmationPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -250,6 +249,8 @@ def _test_slots(browser):
     # model (IComponent) slot of a MetaModel. 
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -314,6 +315,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('DOEgenerator')
     generator = workspace_page.find_library_button('FullFactorial')
     slot_drop(browser, generator, generator_slot, True, 'generator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -338,6 +341,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -364,6 +369,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -394,6 +401,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('DBCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -680,8 +689,6 @@ def _test_drop_onto_layered_div(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-
 
 
 if __name__ == '__main__':

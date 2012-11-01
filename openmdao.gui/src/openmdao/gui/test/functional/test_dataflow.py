@@ -13,7 +13,7 @@ from nose.tools import with_setup
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
-    from pageobjects.util import NotifierPage
+    from pageobjects.util import ArgsPrompt, NotifierPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -457,6 +457,8 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
     message = NotifierPage.wait(workspace_page)
     eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
                 " 'postproc.result_in': top: Can't find 'comp.result'")

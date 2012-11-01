@@ -178,6 +178,21 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
+    /** get constructor signature for a type */
+    this.getSignature = function(typepath, callback, errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        jQuery.ajax({
+            type: 'GET',
+            url:  'signature',
+            data: {'type': typepath},
+            dataType: 'json',
+            success: callback,
+            error: errorHandler
+        });
+    };
+
     /** get a new (empty) model */
     this.newModel = function() {
         jQuery.ajax({
@@ -373,20 +388,19 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** add an object of the specified type & name to the specified parent */
-    this.addComponent = function(typepath,name,parent,callback,errorHandler) {
+    this.addComponent = function(typepath, name, args, parent,
+                                 callback, errorHandler) {
         if (!parent) {
             parent = '';
         }
-
         if (/driver/.test(typepath) && (openmdao.Util['$'+name])) {
             openmdao.Util['$'+name]();
             return;
         }
-
         jQuery.ajax({
             type: 'POST',
             url:  'component/'+name,
-            data: {'type': typepath, 'parent': parent },
+            data: {'type': typepath, 'parent': parent, 'args': args },
             success: callback,
             error: errorHandler
         });
@@ -394,11 +408,12 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** replace pathname with an object of the specified type */
-    this.replaceComponent = function(pathname, typepath, callback, errorHandler) {
+    this.replaceComponent = function(pathname, typepath, args,
+                                     callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'replace/'+pathname,
-            data: {'type': typepath},
+            data: {'type': typepath, 'args': args},
             success: callback,
             error: errorHandler
         });

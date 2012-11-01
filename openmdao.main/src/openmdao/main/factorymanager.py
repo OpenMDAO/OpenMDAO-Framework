@@ -8,7 +8,6 @@ Manages the creation of framework objects, either locally or remotely.
 __all__ = [ "create", "register_class_factory", "get_available_types" ]
 
 
-import os
 import threading
 
 from pkg_resources import parse_version
@@ -37,7 +36,7 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
         if obj is not None:
             break
         
-    if obj:
+    if obj is not None:
         typeset.add(typname)
         return obj
     
@@ -50,7 +49,6 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
 
 def register_class_factory(factory):
     """Add a Factory to the factory list."""
-    global _factories
     with _factory_lock:
         if factory not in _factories:
             logger.info("adding new factory: %s" % factory)
@@ -58,7 +56,6 @@ def register_class_factory(factory):
         
 def remove_class_factory(factory):
     """Remove a Factory from the factory list."""
-    global _factories
     with _factory_lock:
         for fct in _factories:
             if fct is factory:
@@ -90,12 +87,25 @@ def get_available_types(groups=None):
             if group not in plugin_groups:
                 badgroups.append(group)
         if badgroups:
-            raise RuntimeError("Didn't recognize the following entry point groups: %s. Allowed groups are: %s" %
+            raise RuntimeError("Didn't recognize the following entry point"
+                               " groups: %s. Allowed groups are: %s" %
                                (badgroups, plugin_groups.keys()))
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))
     return sorted(types, _cmp)
+
+
+def get_signature(typname, version=None):
+    """Return constructor argument signature for *typname,* using the
+    specified package version. The form of the return value matches that
+    of :meth:`inspect.getargspec`.
+    """
+    for fct in _factories:
+        signature = fct.get_signature(typname, version)
+        if signature is not None:
+            return signature
+    return None
 
 
 # register factory that loads plugins via pkg_resources
