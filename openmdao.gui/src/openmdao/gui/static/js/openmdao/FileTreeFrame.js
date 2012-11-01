@@ -258,7 +258,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     /** update the tree from JSON file structure */
     function updateFiles(files) {
         tree.html("<div>Updating...</div>")
-            .effect('highlight',{color:'#ffd'},1000);
+            //.effect('highlight',{color:'#ffd'},1000);
 
         // generate HTML for the file tree
         var html = "<ul>";
