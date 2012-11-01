@@ -132,7 +132,7 @@ class HasParametersTestCase(unittest.TestCase):
         #except ValueError as err:
             #self.assertEqual(str(err), "parameter value (-1.0) is outside of allowed range [0.0 to 1e+99]")
 
-    def test_add_passthrough_param(self):
+    def test_add_connected_param(self):
         self.top.create_passthrough('comp.x')
         try:
             self.top.driver.add_parameter('comp.x', 0., 1.e99) 
