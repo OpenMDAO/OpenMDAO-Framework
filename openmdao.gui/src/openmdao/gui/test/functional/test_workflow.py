@@ -24,7 +24,7 @@ def _test_global(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Add a NestedSimulation.
