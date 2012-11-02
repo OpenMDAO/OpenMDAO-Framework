@@ -18,7 +18,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             enableTextSelectionOnCells: true
         },
         _collapsed = {},
-        editableCells = {};
+        editableInTable = {},
+        editableCells;
 
     self.pathname = pathname;
     if (editable) {
@@ -141,7 +142,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     /** load the table with the given properties */
     this.loadData = function(properties) {
         //variable to track cells that need to be highlighted
-        editableCells = {};
+        var editableCells = {};
 
         if (properties) {
             // Sort by name
@@ -158,6 +159,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             });
 
             jQuery.each(properties, function(index, value) {
+            
+                editableInTable[value.id] = {};
+
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
@@ -183,17 +187,30 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         css['value'] = valueStyle;
                     }
                     if (css !== {}) {
-                        editableCells[index] = css;
+                        editableInTable[value.id] = css;
                     }
                 }
+                
                 if (value.hasOwnProperty("parent")) {
                     if ( !_collapsed.hasOwnProperty(value.id) ) {
                         _collapsed[value.id] = true; 
                         _collapsed[value.parent] = true;
                     }
                 }
+                
             });
 
+            var idx = 0;
+            jQuery.each(editableInTable, function(id, css) {
+                if ( !_collapsed[id] ) {
+                    editableCells[idx] = css[id];
+                    idx += 1;
+                }
+                else if () {
+                    
+                }
+            }
+                
             // We need to recreate the table if we reuse this pane for another
             // component (which is what the properties panel does.)
             // The data view manages the data otherwise.
