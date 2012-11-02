@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import shutil
 
-from openmdao.util.fileutil import find_files, build_directory
+from openmdao.util.fileutil import build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
                                   filter_macro, ProjFinder, _match_insts
@@ -52,6 +52,10 @@ class ProjectTestCase(unittest.TestCase):
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
+        self.assertEqual(proj.config.items('info'),
+                         [('version', '0'), ('description', '')])
+        new_info = [('version', 'stinky'), ('description', 'Frobozz rulz!')]
+        proj.set_info(dict(new_info))
         proj.activate()
         self._fill_project(proj)
         
@@ -64,6 +68,7 @@ class ProjectTestCase(unittest.TestCase):
                                        dest_dir=self.tdir)
 
         self.assertEqual(newproj.path, os.path.join(self.tdir, 'proj2'))
+        self.assertEqual(newproj.config.items('info'), new_info)
     
         try:
             newproj = project_from_archive(os.path.join(self.tdir,

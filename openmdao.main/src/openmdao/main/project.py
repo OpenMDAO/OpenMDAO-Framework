@@ -4,8 +4,6 @@ Routines for handling 'Projects' in Python.
 
 import os
 import sys
-import shutil
-from inspect import isclass
 import tarfile
 from tokenize import generate_tokens
 import token
@@ -22,9 +20,8 @@ from openmdao.main.api import set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
-from openmdao.main.mp_support import is_instance
 from openmdao.main.publisher import publish
-from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
 
@@ -46,24 +43,21 @@ _instclass_lock = RLock()
 _macro_lock = RLock()
 
 def _clear_insts():
-    global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.clear()
 
 def _register_inst(typname):
-    global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.add(typname)
 
 def _match_insts(classes):
-    global _instantiated_classes
     return _instantiated_classes.intersection(classes)
 
 
 def text_to_node(text):
-    """Given a python source string, return the corresponding AST node. The outer
-    Module node is removed so that the node corresponding to the given text can
-    be added to an existing AST.
+    """Given a python source string, return the corresponding AST node.
+    The outer Module node is removed so that the node corresponding to the
+    given text can be added to an existing AST.
     """
     modnode = ast.parse(text, 'exec')
     if len(modnode.body) == 1:
@@ -83,7 +77,8 @@ class CtorInstrumenter(ast.NodeTransformer):
         text = None
         for stmt in node.body:
             if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
-                stmt.name = '__%s_orig_init__' % node.name  # __init__ was found - rename it to __orig_init__
+                # __init__ was found - rename it to __orig_init__
+                stmt.name = '__%s_orig_init__' % node.name
                 break
         else:  # no __init__ found, make one
             text = """
@@ -91,7 +86,8 @@ def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     super(%s, self).__init__(*args, **kwargs)
 """ % node.name
-        if text is None:  # class has its own __init__ (name has been changed to __orig_init__)
+        if text is None:
+            # class has its own __init__ (name has been changed to __orig_init__)
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
@@ -113,16 +109,18 @@ def add_init_monitors(node):
     return node
 
 class ProjFinder(object):
-    """A finder class for custom imports from an OpenMDAO project. In order for this
-    to work, an entry must be added to sys.path of the form top_dir+PROJ_DIR_EXT, where top_dir
-    is the top directory of the project where python files are kept.
+    """A finder class for custom imports from an OpenMDAO project. In order for
+    this to work, an entry must be added to sys.path of the form
+    top_dir+PROJ_DIR_EXT, where top_dir is the top directory of the project
+    where python files are kept.
     """
     def __init__(self, path_entry):
-        """When path_entry has the form mentioned above (top_dir+PROJ_DIR_EXT), this
-        returns a ProjFinder instance that will be used to locate modules within the
-        project.
+        """When path_entry has the form mentioned above (top_dir+PROJ_DIR_EXT),
+        this returns a ProjFinder instance that will be used to locate modules
+        within the project.
         """
-        if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(os.path.splitext(path_entry)[0]):
+        if path_entry.endswith(PROJ_DIR_EXT) and \
+           os.path.isdir(os.path.splitext(path_entry)[0]):
             self.path_entry = path_entry
             self.projdir = os.path.splitext(path_entry)[0]
             if os.path.isdir(self.projdir):
@@ -130,8 +128,8 @@ class ProjFinder(object):
         raise ImportError("can't import from %s" % path_entry)
 
     def find_module(self, modpath, path=None):
-        """This looks within the project for the specified module, returning a loader
-        if the module is found, and None if it isn't.
+        """This looks within the project for the specified module, returning a
+        loader if the module is found, and None if it isn't.
         """
         if path is None:
             path = self.path_entry
@@ -141,9 +139,9 @@ class ProjFinder(object):
 
 
 class ProjLoader(object):
-    """This is the import loader for files within an OpenMDAO project.  We use it to instrument
-    the imported files so we can keep track of what classes have been instantiated so we know
-    when a project must be reloaded.
+    """This is the import loader for files within an OpenMDAO project.
+    We use it to instrument the imported files so we can keep track of what
+    classes have been instantiated so we know when a project must be reloaded.
     """
     def __init__(self, path_entry):
         self.path_entry = path_entry
@@ -166,8 +164,8 @@ class ProjLoader(object):
             return f.read()
         
     def get_code(self, modpath):
-        """Opens the file, compiles it into an AST and then translates it into the instrumented
-        version before compiling that into bytecode.
+        """Opens the file, compiles it into an AST and then translates it into
+        the instrumented version before compiling that into bytecode.
         """
         contents = self.get_source(modpath)
         if not contents.endswith('\n'):
@@ -177,8 +175,9 @@ class ProjLoader(object):
         return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
-        """Creates a new module if one doesn't exist already, and then updates the
-        dict of that module based on the contents of the instrumented module file.
+        """Creates a new module if one doesn't exist already, and then updates
+        the dict of that module based on the contents of the instrumented
+        module file.
         """
         if modpath in sys.modules:
             mod = sys.modules[modpath]
@@ -200,7 +199,8 @@ class ProjLoader(object):
             exec(code, mod.__dict__)
         except Exception as err:
             del sys.modules[modpath] # remove bad module
-            raise type(err)("Error in file "+os.path.basename(mod.__file__)+": "+str(err))
+            raise type(err)("Error in file %s: %s"
+                            % (os.path.basename(mod.__file__), err))
         return mod
 
 
@@ -211,8 +211,8 @@ def parse_archive_name(pathname):
     return os.path.splitext(os.path.basename(pathname))[0]
 
 
-def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True, 
-                         overwrite=False):
+def project_from_archive(archive_name, proj_name=None, dest_dir=None,
+                         create=True, overwrite=False):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to the newly
     expanded project.
@@ -254,7 +254,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
             f = open(archive_name, 'rb')
             tf = tarfile.open(fileobj=f, mode='r')
             tf.extractall(projpath)
-        except Exception, err:
+        except Exception as err:
             logger.error(str(err))
             print "Error expanding project archive:", err
         finally:
@@ -402,11 +402,21 @@ export_repo = false
 [info]
 version = 0
 description =
-       """
-        
+"""
         with open(os.path.join(self.path, '_settings.cfg'), 'wb') as f:
             f.write(settings)
         
+    def get_info(self):
+        """ Return settings 'info' section as a dictionary. """
+        return dict(self.config.items('info'))
+
+    def set_info(self, info):
+        """ Set settings 'info' section from `info` dictionary. """
+        for key, value in info.items():
+            self.config.set('info', key, value)
+        with open(os.path.join(self.path, '_settings.cfg'), 'wb') as f:
+            self.config.write(f)
+
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
         if server is None and res_desc is None and typname in self._model_globals:
             return getattr(self._model_globals, typname)(**ctor_args)
@@ -427,7 +437,8 @@ description =
         __import__(get_module_path(fname))
         newdigest = file_md5(fname)
         if digest and digest != newdigest:
-            logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
+            logger.warning("file '%s' has been modified since the last time"
+                           " it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
         if contents[-1] != '\n':
@@ -468,7 +479,8 @@ description =
                 self.command(line, save=False)
             except Exception as err:
                 msg = str(err)
-                logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
+                logger.error("%s",
+                             ''.join(traceback.format_tb(sys.exc_info()[2])))
                 try:
                     publish('console_errors', msg)
                 except:
@@ -562,9 +574,10 @@ description =
         if projname is None:
             projname = self.name
 
-        if os.path.basename(ddir) not in excludes and ddir.startswith(self.path):  # the project contains the dest directory... bad
-            raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
-                               (ddir, self.path))
+        if os.path.basename(ddir) not in excludes and ddir.startswith(self.path):
+            # the project contains the dest directory... bad
+            raise RuntimeError("Destination directory for export (%s) is within"
+                               " project directory (%s)" % (ddir, self.path))
 
         startdir = os.getcwd()
         os.chdir(self.path)
@@ -576,7 +589,7 @@ description =
                 for entry in os.listdir(self.path):
                     if export_repo or entry not in excludes:
                         tf.add(entry)
-            except Exception, err:
+            except Exception as err:
                 print "Error creating project archive:", err
                 fname = None
             finally:
