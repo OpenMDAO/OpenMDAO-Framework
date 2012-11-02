@@ -70,7 +70,7 @@ def _test_console_history(browser):
     # Check up and down arrow navigation through the command history
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    command_elem = browser.find_element(By.ID, "command")
+    command_elem = browser.find_element(By.ID, "cmdline")
 
     # Fill up the command history
     workspace_page.do_command("import sys")

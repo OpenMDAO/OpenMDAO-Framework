@@ -29,13 +29,13 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         this.elm = jQuery("#"+this.id);
     }
     else {
-        if (openmdao.uniqueID) {
-            openmdao.uniqueID = openmdao.uniqueID + 1;
+        if (openmdao.BaseFrame.uniqueID) {
+            openmdao.uniqueID = openmdao.BaseFrame.uniqueID + 1;
         }
         else {
-            openmdao.uniqueID = 1;
+            openmdao.BaseFrame.uniqueID = 1;
         }
-        this.id = "BaseFrame"+openmdao.uniqueID;
+        this.id = "BaseFrame"+openmdao.BaseFrame.uniqueID;
     }
 
     // add to list of frames
@@ -75,7 +75,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
     var dlg = this.elm;
     dlg.dialog({
         'modal': false,
-        'title': title,
+        'title': this.title,
         'close': function(ev, ui) {
                     this.close();
                     // if returning to a tab, need to trigger layout to resize
@@ -103,7 +103,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             if (extra.length>0) {
                 extra_height = extra.outerHeight();
             }
-            
+
             // resize all slickgrid viewports and use viewport for scrolling
             panel.find('.slickgrid').each(function() {
                 panel.css('overflow','hidden');
@@ -164,6 +164,9 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title;
+        if (this.elm.is(':data(dialog)')) {
+            this.elm.dialog('option', 'title', title);
+        }
     }
 };
 

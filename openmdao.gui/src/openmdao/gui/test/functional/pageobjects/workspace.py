@@ -109,7 +109,7 @@ class WorkspacePage(BasePageObject):
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
-    command = InputElement((By.ID, 'command'))
+    command = InputElement((By.ID, 'cmdline'))
     submit  = ButtonElement((By.ID, 'command-button'))
 
     def __init__(self, browser, port):
