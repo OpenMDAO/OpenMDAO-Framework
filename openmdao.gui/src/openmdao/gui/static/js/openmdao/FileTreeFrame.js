@@ -255,11 +255,12 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         return menu;
     }
 
+    function highlightFiles(files){
+        tree.html("<div>Updating...</div>")
+            .effect('highlight',{color:'#ffd'},1000);
+    }
     /** update the tree from JSON file structure */
     function updateFiles(files) {
-        tree.html("<div>Updating...</div>")
-            //.effect('highlight',{color:'#ffd'},1000);
-
         // generate HTML for the file tree
         var html = "<ul>";
         jQuery.each(files,function(path,val) {
@@ -351,6 +352,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         }
         else {
             files = message[1];
+            highlightFiles()
             updateFiles(files);
         }
     }

@@ -119,11 +119,7 @@ openmdao.ValueEditor = (function(){
 
 openmdao.ValueEditor.prototype.destroy = function(){
     if(!this.mumps){
-        debug.error("Editor is being destroyed")
         this.editor.destroy()    
-    }
-    else{
-        debug.error("Editor no longer exists ")
     }
 }
 
