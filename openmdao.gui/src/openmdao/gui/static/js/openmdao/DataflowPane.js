@@ -59,11 +59,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
 
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
-
-            openmdao.Util.promptForValue('Enter name for new '+ droppedName, function(name) {
-                model.addComponent(droppedPath,name,self.pathname);
-            });
+            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            openmdao.Util.addComponent(droppedPath, droppedName, self.pathname);
         }
     });
 

@@ -111,6 +111,12 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
       
+      [openmdao.casefilter]
+      openmdao.lib.casehandlers.filters.ExprCaseFilter = openmdao.lib.casehandlers.filters:ExprCaseFilter
+      openmdao.lib.casehandlers.filters.IteratorCaseFilter = openmdao.lib.casehandlers.filters:IteratorCaseFilter
+      openmdao.lib.casehandlers.filters.SequenceCaseFilter = openmdao.lib.casehandlers.filters:SequenceCaseFilter
+      openmdao.lib.casehandlers.filters.SliceCaseFilter = openmdao.lib.casehandlers.filters:SliceCaseFilter
+
       [openmdao.doegenerator]
       openmdao.lib.doegenerators.full_factorial.FullFactorial = openmdao.lib.doegenerators.full_factorial:FullFactorial
       openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite

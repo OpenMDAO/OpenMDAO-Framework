@@ -20,9 +20,7 @@ from elements import ButtonElement, GridElement, InputElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures
-from util import ValuePrompt, NotifierPage, ConfirmationPage
-
-from openmdao.util.log import logger
+from util import ArgsPrompt, ValuePrompt, NotifierPage, ConfirmationPage
 
 
 class WorkspacePage(BasePageObject):
@@ -118,8 +116,10 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
-        self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
+        self.locators["objects"] = \
+            (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        self.locators["files"] = \
+            (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, TMO).until(
@@ -137,10 +137,13 @@ class WorkspacePage(BasePageObject):
             else:
                 raise
         else:
+            self.browser.implicitly_wait(1)
             try:
-                msg2 = NotifierPage.wait(self, base_id='ws_closed')
+                msg2 = NotifierPage.wait(self, timeout=1, base_id='ws_closed')
             except TimeoutException:
                 pass # ws closed dialog may not exist
+            finally:
+                self.browser.implicitly_wait(TMO)
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -489,8 +492,8 @@ class WorkspacePage(BasePageObject):
             chain.release(None)
         chain.perform()
 
-        page = ValuePrompt(self.browser, self.port)
-        page.set_value(instance_name)
+        page = ArgsPrompt(self.browser, self.port)
+        page.set_name(instance_name)
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)

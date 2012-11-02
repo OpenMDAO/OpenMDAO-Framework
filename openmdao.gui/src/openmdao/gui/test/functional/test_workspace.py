@@ -13,15 +13,16 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
     from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout, put_element_on_grid
 
     from pageobjects.basepageobject import TMO
-    from pageobjects.util import NotifierPage
+    from pageobjects.slot import SlotFigure
+    from pageobjects.util import ArgsPrompt, NotifierPage
     from pageobjects.workspace import WorkspacePage
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.common.keys import Keys
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -211,6 +212,8 @@ def _test_menu(browser):
     workspace_page('project_menu').click()
 
     workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     workspace_page('project_menu').click()
     time.sleep(0.5)
@@ -320,11 +323,11 @@ b = Float(0.0, iotype='out')
     # These will likely overlap in a manner that 'Ok' is found but
     # later is hidden by the second notifier.
     try:  # We expect 2 notifiers: command complete and error.
-        msg = NotifierPage.wait(workspace_page, base_id='command')
+        NotifierPage.wait(workspace_page, base_id='command')
     except WebDriverException as exc:
         if 'Element is not clickable' in str(exc):
             err = NotifierPage.wait(workspace_page)
-            msg = NotifierPage.wait(workspace_page, base_id='command')
+            NotifierPage.wait(workspace_page, base_id='command')
     else:
         err = NotifierPage.wait(workspace_page)
     if err != "NameError: name 'xyzzy' is not defined":
@@ -850,6 +853,67 @@ def _test_libsearch(browser):
     eq(searches, doe_searches)
 
     # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_arguments(browser):
+    # Check that objects requiring constructor arguments are handled.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+    mm_figure = workspace_page.get_dataflow_figure('mm', 'top')
+    mm_editor = mm_figure.editor_page()
+    mm_editor.show_slots()
+    mm_editor.move(-200, 0)
+
+    # Plug ListCaseIterator into warm_start_data.
+    slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
+    slot.fill_from_library('ListCaseIterator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, '[]')
+    args_page.click_ok()
+
+    # Plug ListCaseRecorder into recorder.
+    slot = SlotFigure(workspace_page, 'top.mm.recorder')
+    slot.fill_from_library('ListCaseRecorder')
+
+    # Plug ExecComp into model.
+    slot = SlotFigure(workspace_page, 'top.mm.model')
+    slot.fill_from_library('ExecComp')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, "('z = x * y',)")
+    args_page.click_ok()
+
+    # Check that inputs were created from expression.
+    exe_editor = slot.editor_page()
+    exe_editor.move(-100, 0)
+    inputs = exe_editor.get_inputs()
+    expected = [
+        ['directory',     'str',   '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool',  'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x',             'float', '0',     '',  'true', '', '', ''],
+        ['y',             'float', '0',     '',  'true', '', '', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    exe_editor.close()
+    mm_editor.close()
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_casefilters(browser):
+    # Verify that CaseFilter objects are listed in the library.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    for classname in ('ExprCaseFilter', 'IteratorCaseFilter',
+                      'SequenceCaseFilter', 'SliceCaseFilter'):
+        workspace_page.find_library_button(classname)
+
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 

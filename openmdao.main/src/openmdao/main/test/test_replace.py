@@ -115,7 +115,6 @@ class ReplaceTestCase(unittest.TestCase):
         top.add('comp1', Simple())
         top.add('comp2', Simple())
         top.driver.workflow.add(['comp1', 'comp2'])
-        top.connect('comp1.c', 'comp2.a')
         top.driver.add_parameter('comp1.a', low=-100, high=100, 
                       scaler=1.2, adder=3, start=7,
                       fd_step=0.034, name='param1', scope=top)
