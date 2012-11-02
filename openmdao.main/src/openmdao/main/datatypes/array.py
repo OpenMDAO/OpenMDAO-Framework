@@ -12,12 +12,13 @@ from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.index import get_indexed_value
+from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
 try:
     from numpy import array, ndarray
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import array, ndarray
     from openmdao.main.variable import Variable
     
@@ -45,10 +46,13 @@ except ImportError as err:
 else:
     from enthought.traits.api import Array as TraitArray
 
+
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
     The unit applies to the entire array."""
     
+    implements(IVariable)
+
     def __init__(self, default_value=None, dtype = None, shape = None,
                  iotype=None, desc=None, units=None, **metadata):
         
