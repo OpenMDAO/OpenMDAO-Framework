@@ -1,22 +1,13 @@
 import logging
 import time
 
-from selenium.webdriver.common.by import By
-
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import TextElement
 
 
 class WorkflowFigure(BasePageObject):
     """ Represents elements within a workflow figure. """
-
-    # parts of the WorkflowFigure div. Nothing here yet. Not sure
-    #   if needed
-    title_bar = TextElement((By.CLASS_NAME, 'WorkflowFigureTitleBar'))
-
-    # Context menu. Not needed yet but will need later
 
     @property
     def pathname(self):
@@ -28,9 +19,47 @@ class WorkflowFigure(BasePageObject):
         self._pathname = path
 
     @property
-    def background_color(self):
-        """ Figure background-color property. """
-        return self.root.value_of_css_property('background-color')
+    def driver(self):
+        """ Driver figure for this workflow. """
+        children = self.root.find_elements_by_xpath('./*')
+        return children[0]
+
+    @property
+    def flow(self):
+        """ Flow div for this workflow. """
+        children = self.root.find_elements_by_xpath('./*')
+        return children[1]
+
+    @property
+    def components(self):
+        """ Component figures for this workflow. """
+        components = self.flow.find_elements_by_xpath('./*')
+        return components
+
+    @property
+    def component_names(self):
+        """ Names of the Component in this workflow. """
+        components = self.flow.find_elements_by_xpath('./*')
+        names = []
+        for component in components:
+            svg = component.find_elements_by_css_selector('svg')
+            if len(svg) > 0:
+                # WorkflowComponentFigure, get name from svg text
+                names.append(svg[0].find_element_by_css_selector('text').text)
+            else:
+                # WorkflowFigure, get driver name
+                children = component.find_elements_by_css_selector('.WorkflowComponentFigure')
+                if len(children) > 0:
+                    driver_fig = children[0]
+                    driver_name = driver_fig.find_element_by_css_selector('svg text').text
+                    names.append(driver_name)
+        return names
+
+    @property
+    def highlighted(self):
+        """ True if the flow div background is highlighted. """
+        bg_image = self.flow.value_of_css_property('background-image')
+        return (bg_image.find('highlight') > 0)
 
 
 def find_workflow_figures(page):
@@ -55,19 +84,18 @@ def find_workflow_figure(page, name, prefix=None, retries=5):
         figures = root.find_elements_by_class_name('WorkflowFigure')
         if not figures:
             continue
-        fig_name = None
+        driver_name = None
         for figure in figures:
             page.browser.implicitly_wait(1)
             try:
-                # figure name is the text of the only child of the WorkflowFigure div
                 children = figure.find_elements_by_xpath('./*')
-                fig_name = children[0].text
-                #   could also try figure.childNodes[0].text
+                driver_fig = children[0]
+                driver_name = driver_fig.find_element_by_css_selector('svg text').text
             except StaleElementReferenceException:
                 logging.warning('get_workflow_figure:'
                                 ' StaleElementReferenceException')
             else:
-                if fig_name == name:
+                if driver_name == name:
                     fig = WorkflowFigure(page.browser, page.port, figure)
                     if prefix is not None:
                         if prefix:
@@ -78,4 +106,3 @@ def find_workflow_figure(page, name, prefix=None, retries=5):
             finally:
                 page.browser.implicitly_wait(TMO)
     return None
-
