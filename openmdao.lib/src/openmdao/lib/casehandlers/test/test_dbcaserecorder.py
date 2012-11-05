@@ -55,6 +55,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         attrs = self.top.driver.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'dbfile',
+                         'id': 'dbfile',
                          'type': 'str',
                          'connected': '',
                          'value': ':memory:',
