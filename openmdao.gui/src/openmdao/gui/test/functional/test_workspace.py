@@ -660,6 +660,33 @@ def _test_driver_config(browser):
     finally:
         browser.implicitly_wait(TMO)
 
+    # Add MetaModel so we can test events.
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+
+    # Add the 'train_next' event'
+    editor('events_tab').click()
+    dialog = editor.new_event()
+    dialog.target = 'mm.train_next'
+    dialog('ok').click()
+    events = editor.get_events()
+    expected = [['', 'mm.train_next']]
+    for i, row in enumerate(events.value):
+        eq(row, expected[i])
+
+    # Delete the event.
+    delbutton = editor('events').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    events = editor.get_events()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(events.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
+
     # Clean up.
     editor.close()
     closeout(projects_page, project_info_page, project_dict, workspace_page)
