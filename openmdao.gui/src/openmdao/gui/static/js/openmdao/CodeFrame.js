@@ -68,13 +68,14 @@ openmdao.CodeFrame = function(id,model) {
         defaultSession = new EditSession(" ");
 
     file_tabs.tabs({
-        closable: true,
-        select: function(event, ui) { selectTab(event,ui); },
-        closableClick: function(event, ui) {
-            return closeTab(event,ui);
-        }
+        tabTemplate: "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close'></span></li>",
+        beforeActivate: function(ev, ui) { selectTab(ev,ui); }
     });
-    //file_tabs.find( ".ui-tabs-nav" ).sortable();
+    //file_tabs.find(".ui-tabs-nav").sortable();
+
+    jQuery('#'+id+'-tabs span.ui-icon-close').live( "click", function(ev, ui) {
+        return closeTab(jQuery(this).closest('li'));
+    });
 
     newBtn.click(function() {
         openmdao.Util.promptForValue('Specify a name for the new file',
@@ -97,16 +98,16 @@ openmdao.CodeFrame = function(id,model) {
     editor.setSession(defaultSession);
     editor.setReadOnly(true);
 
-    function selectTab(event, ui) { // switch ace session based on the selected tab
-        fname_nodot = nameSplit(ui.tab.innerText);
+    function selectTab(ev, ui) { // switch ace session based on the selected tab
+        fname_nodot = nameSplit(ui.newTab[0].innerText);
         selectedFile = fname_nodot;
         editor.setSession(sessions[fname_nodot][0]);
     }
 
-    function closeTab(event,ui) {
-        tab_id = ui.index;
-        pathname = ui.tab.innerText;
-        fname_nodot = nameSplit(pathname); //remove periods and slashes from filename
+    function closeTab(tab) {
+        fname_nodot = tab.attr('aria-controls')
+        pathname = tab.text();
+        debug.info('closeTab pathname:',pathname);
 
         //file changed since last save?
         code_last=sessions[fname_nodot][1];
@@ -114,10 +115,12 @@ openmdao.CodeFrame = function(id,model) {
 
         if (code_last === code_now) {  //nothing changed. close tab
             if (file_tabs.tabs("length") === 1) {
-                editor.setSession(defaultSession);editor.setReadOnly(true);
+                editor.setSession(defaultSession);
+                editor.setReadOnly(true);
             }
             delete sessions[fname_nodot];
-            file_tabs.tabs("remove",tab_id);
+            tab.remove();
+            file_tabs.tabs("refresh");
         }
         else { //file changed. require user choice
             var win = jQuery('<div>"'+pathname+'" has been changed. Save before closing?</div>');
@@ -144,7 +147,8 @@ openmdao.CodeFrame = function(id,model) {
                                    }
                                    delete sessions[fname_nodot];
                                    jQuery(this).dialog('close');
-                                   file_tabs.tabs("remove",tab_id);
+                                   tab.remove();
+                                   file_tabs.tabs("refresh");
                                }
                     },
                     {
@@ -318,7 +322,7 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function nameSplit(pathname) {
-        return pathname.split('.').join('').split('/').join('').split('*').join('');
+        return pathname.split('.').join('').split('/').join('').split('*').join('').trim();
     }
 
     /** display file error */
