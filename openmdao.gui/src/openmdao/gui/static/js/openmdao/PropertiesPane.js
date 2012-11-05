@@ -18,8 +18,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             enableTextSelectionOnCells: true
         },
         _collapsed = {},
-        editableInTable = {},
-        editableCells;
+        editableInTable = {};
 
     self.pathname = pathname;
     if (editable) {
@@ -53,6 +52,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             if (props.getDataItem(cell.row).connected.length > 0) {
                 return false;
             }
+            
+            else if (props.getDataItem(cell.row).ttype == 'slot') {
+                return false;
+            }
     
             else {
                 return true;
@@ -71,6 +74,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                     // dataView needs to know to update.
                     dataView.updateItem(item.id, item);
+                    highlightCells();
                 }
                 e.stopImmediatePropagation();
             }
@@ -134,6 +138,22 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
         return true;
     }
+    
+    /* Sets the CSS style for cells based on connection status, while
+    taking collapse/expand state into account. */
+    function highlightCells() {
+        var editableCells = {},
+            idx = 0,
+            properties = dataView.getItems();
+        
+        jQuery.each(properties, function(index, value) {
+            if (self.filter(value)) {
+                editableCells[idx] = editableInTable[value.id];
+                idx += 1;
+            }
+        })
+        props.setCellCssStyles("highlight", editableCells);
+    }
 
     propsDiv.bind('resizeCanvas', function() {
         props.resizeCanvas();
@@ -142,7 +162,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     /** load the table with the given properties */
     this.loadData = function(properties) {
         //variable to track cells that need to be highlighted
-        var editableCells = {};
 
         if (properties) {
             // Sort by name
@@ -162,6 +181,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             
                 editableInTable[value.id] = {};
 
+                if (value.hasOwnProperty("parent")) {
+                    if ( !_collapsed.hasOwnProperty(value.id) ) {
+                        _collapsed[value.id] = true; 
+                        _collapsed[value.parent] = true;
+                    }
+                }
+                
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
@@ -191,25 +217,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                 }
                 
-                if (value.hasOwnProperty("parent")) {
-                    if ( !_collapsed.hasOwnProperty(value.id) ) {
-                        _collapsed[value.id] = true; 
-                        _collapsed[value.parent] = true;
-                    }
-                }
-                
             });
 
-            var idx = 0;
-            jQuery.each(editableInTable, function(id, css) {
-                if ( !_collapsed[id] ) {
-                    editableCells[idx] = css[id];
-                    idx += 1;
-                }
-                else if () {
-                    
-                }
-            }
                 
             // We need to recreate the table if we reuse this pane for another
             // component (which is what the properties panel does.)
@@ -229,7 +238,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             alert('Error getting properties for '+self.pathname+' ('+name+')');
             debug.info(self.pathname,properties);
         }
-        props.setCellCssStyles("highlight", editableCells);
+        highlightCells()
         props.resizeCanvas();
     };
 };
