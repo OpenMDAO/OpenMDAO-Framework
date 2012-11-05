@@ -90,7 +90,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(result[32], '\n')
         self.assertEqual(result[33], '    # OpenMDAO Variables\n')
         self.assertEqual(result[34], "    int1 = Int(0, iotype='in', desc='Description1')\n")
-        self.assertEqual(result[35], "    float = Float(3.14159, iotype='desc', desc='Description2')\n")
+        self.assertEqual(result[35], "    float = Float(3.14159, iotype='out', desc='Description2')\n")
         self.assertEqual(result[36], "    ERROR = Str('ZZZ', iotype='in', desc='Description4')\n")
         self.assertEqual(result[37], "    ERROR2 = Str('', iotype='out', desc='Description4')\n")
         self.assertEqual(result[38], "    units = Float(0.0, iotype='in', units='ft', desc='Description5')\n")

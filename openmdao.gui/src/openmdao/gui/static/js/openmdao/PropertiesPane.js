@@ -238,7 +238,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             alert('Error getting properties for '+self.pathname+' ('+name+')');
             debug.info(self.pathname,properties);
         }
-        highlightCells()
+        highlightCells();
         props.resizeCanvas();
     };
 };
