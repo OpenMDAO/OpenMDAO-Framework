@@ -24,7 +24,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     ICaseIterator, ICaseRecorder
+                                     IHasEvents, ICaseIterator, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -1740,6 +1740,9 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
+            if has_interface(self, IHasEvents):
+                attrs['Events'] = [dict(target=path)
+                                   for path in self.get_events()]
         return attrs
 
 
