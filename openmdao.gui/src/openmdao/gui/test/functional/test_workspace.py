@@ -583,6 +583,11 @@ raise RuntimeError("__init__ failed")
 def _test_driver_config(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
+    # Add MetaModel so we can test events.
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+
     # Replace default driver with CONMIN and edit.
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
@@ -659,11 +664,6 @@ def _test_driver_config(browser):
             eq(row, expected[i])
     finally:
         browser.implicitly_wait(TMO)
-
-    # Add MetaModel so we can test events.
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.metamodel.MetaModel', 'mm')
 
     # Add the 'train_next' event'
     editor('events_tab').click()
