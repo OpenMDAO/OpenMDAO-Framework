@@ -175,6 +175,16 @@ def _test_vartrees(browser):
     
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
+        
+    # While expanded, verify that cell that became the 2nd vartree is now
+    # uneditable
+    inputs.rows[3].cells[1].click()
+    try:
+        inputs[3][1] = "abcd"
+    except IndexError:
+        pass
+    else:
+        self.fail('Exception expected: Slot value should not be settable on inputs.')    
     
     # Contract first vartree
     inputs.rows[0].cells[0].click()
