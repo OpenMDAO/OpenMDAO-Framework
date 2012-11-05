@@ -24,10 +24,6 @@ openmdao.CodeFrame = function(id,model) {
             .button({icons: {primary:'ui-icon-disk'}})
             .css({height:'25px'})
             .appendTo(uiBar),
-        //saveAllBtn = jQuery("<button id='"+uiBarID+"-saveAll'>Save All</button>")
-        //    .button({icons: {primary:'ui-icon-disk'}})
-        //    .css({height:'25px'})
-        //    .appendTo(uiBar),
         findBtn = jQuery("<button id='"+uiBarID+"-find'>Find</button>")
             .button({icons: {primary:'ui-icon-search'}})
             .css({height:'25px'})
@@ -44,11 +40,11 @@ openmdao.CodeFrame = function(id,model) {
             .button({icons: {primary:'ui-icon-arrowrefresh-1-n'}})
             .css({height:'25px'})
             .appendTo(uiBar),
-        file_tabs = jQuery('<div id='+id+'-tabs>')
+        fileTabs = jQuery('<div id='+id+'-tabs>')
             .css({'font-size':'95%'})
             .appendTo(self.elm),
-        file_inner = jQuery('<ul class="tabrow"></ul>')
-            .appendTo(file_tabs),
+        fileInner = jQuery('<ul class="tabrow"></ul>')
+            .appendTo(fileTabs),
         // editor
         editorID = id+'-textarea',
         overwriteID = id+'-overwrite',
@@ -62,21 +58,14 @@ openmdao.CodeFrame = function(id,model) {
         editor = ace.edit(editorID),
         EditSession = require("ace/edit_session").EditSession,
         UndoManager = require("ace/undomanager").UndoManager,
-        selectedFile = "",
-        waitClose=[],
-        sessions={}, //container for ace editor sessions
+        selectedTabName = "",
+        sessions = {}, //container for ace editor sessions
         defaultSession = new EditSession(" ");
 
-    file_tabs.tabs({
-        tabTemplate: "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close'></span></li>",
-        beforeActivate: function(ev, ui) { selectTab(ev,ui); }
-    });
-    //file_tabs.find(".ui-tabs-nav").sortable();
+    editor.setSession(defaultSession);
+    editor.setReadOnly(true);
 
-    jQuery('#'+id+'-tabs span.ui-icon-close').live( "click", function(ev, ui) {
-        return closeTab(jQuery(this).closest('li'));
-    });
-
+    // set up buttons
     newBtn.click(function() {
         openmdao.Util.promptForValue('Specify a name for the new file',
             function(name) {
@@ -86,43 +75,51 @@ openmdao.CodeFrame = function(id,model) {
             });
     });
     saveBtn.click(function() { saveFile(); });
-    //saveAllBtn.click(function() { saveAllFiles(); });
     findBtn.click(function() { editor.commands.commands.find.exec(editor); });
     replBtn.click(function() { editor.commands.commands.replace.exec(editor); });
     rAllBtn.click(function() { editor.commands.commands.replaceall.exec(editor); });
     undoBtn.click(function() { editor.commands.commands.undo.exec(editor); });
 
-    // set theme/mode
-    //editor.setTheme("ace/theme/chrome");
+    // set up tabs
+    fileTabs.tabs({
+        tabTemplate: "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close'></span></li>",
+        beforeActivate: function(ev, ui) { selectTab(ev,ui); }
+    });
 
-    editor.setSession(defaultSession);
-    editor.setReadOnly(true);
+    jQuery('#'+id+'-tabs span.ui-icon-close').live( "click", function(ev, ui) {
+        return closeTab(jQuery(this).closest('li'));
+    });
 
-    function selectTab(ev, ui) { // switch ace session based on the selected tab
-        fname_nodot = nameSplit(ui.newTab[0].innerText);
-        selectedFile = fname_nodot;
-        editor.setSession(sessions[fname_nodot][0]);
+    /** switch ace session based on the selected tab */
+    function selectTab(ev, ui) {
+        var tabName = nameSplit(ui.newTab[0].innerText);
+        selectedTabName = tabName;
+        editor.setSession(sessions[tabName].editSession);
     }
 
+    /** close tab, prompt to save file if contents have changed */
     function closeTab(tab) {
-        fname_nodot = tab.attr('aria-controls')
-        pathname = tab.text();
-        debug.info('closeTab pathname:',pathname);
+        var tabIndex = tab.index(),
+            tabName  = tab.attr('aria-controls'),
+            pathname = tab.text(),
+            session  = sessions[tabName];
 
-        //file changed since last save?
-        code_last=sessions[fname_nodot][1];
-        code_now=sessions[fname_nodot][0].getValue();
-
-        if (code_last === code_now) {  //nothing changed. close tab
-            if (file_tabs.tabs("length") === 1) {
+        function closeIt() {
+            if (fileTabs.tabs("length") === 1) {
                 editor.setSession(defaultSession);
                 editor.setReadOnly(true);
             }
-            delete sessions[fname_nodot];
+            delete sessions[tabName];
             tab.remove();
-            file_tabs.tabs("refresh");
+            fileTabs.tabs("refresh");
         }
-        else { //file changed. require user choice
+
+        if (session.editSession.getValue() === session.prevContent) {
+            //nothing changed, close tab
+            closeIt();
+        }
+        else {
+            //file changed. require user choice
             var win = jQuery('<div>"'+pathname+'" has been changed. Save before closing?</div>');
             jQuery(win).dialog({
                 'modal': true,
@@ -132,29 +129,22 @@ openmdao.CodeFrame = function(id,model) {
                         text: 'Save file',
                         id: saveID,
                         click: function() {
-                                   waitClose=[fname_nodot,tab_id];
-                                   saveFile(fname_nodot);
-                                   jQuery(this).dialog('close');
+                                    saveFile(tabName, closeIt);
+                                    jQuery(this).dialog('close');
                                }
                     },
                     {
                         text: 'Close without saving',
                         id: closeID,
                         click: function() {
-                                   if (file_tabs.tabs("length") === 1) {
-                                       editor.setSession(defaultSession);
-                                       editor.setReadOnly(true);
-                                   }
-                                   delete sessions[fname_nodot];
+                                   closeIt();
                                    jQuery(this).dialog('close');
-                                   tab.remove();
-                                   file_tabs.tabs("refresh");
                                }
                     },
                     {
                         text: 'Cancel',
                         id: cancelID,
-                        click: function() {//just close dialog
+                        click: function() {
                                    jQuery(this).dialog('close');
                                    return false;
                                }
@@ -184,6 +174,7 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
+    /** display error message is file save failed */
     function failedSave(jqXHR, textStatus, errorThrown) {
         debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
         // 409 gets special handling.
@@ -194,7 +185,10 @@ openmdao.CodeFrame = function(id,model) {
         }
     }
 
-    function handle409(jqXHR, textStatus, errorThrown) {
+    /** prompt user to save file and reload project (a 409 error code response
+        when saving a file indicates that a model reload will be necessary)
+    **/
+    function handle409(filepath) {
         var win = jQuery('<div>Changing this file can alter the model configuration. '+
                          'If you save this file, you must reload the project.</div>');
         jQuery(win).dialog({
@@ -207,7 +201,7 @@ openmdao.CodeFrame = function(id,model) {
                   click: function() {
                            jQuery(this).dialog('close');
                            model.setFile(filepath,editor.getSession().getValue(), 1,
-                                         function(data, textStatus, jqXHR) {
+                                         function() {
                                              model.reload();
                                          },
                                          failedSave);
@@ -225,47 +219,41 @@ openmdao.CodeFrame = function(id,model) {
         );
     }
 
-    /** tell the model to save the current contents to current filepath */
-    function saveFile(fname_nodot) {
-        if (! fname_nodot) {
-            fname_nodot=selectedFile;
+    /** Save the contents of the specified file tab. If no tabname is specified,
+        save the contents of the currently selected tab. If a callback function
+        is specified, call that function after successfully saving the file.
+    **/
+    function saveFile(tabName, callback) {
+        if (! tabName) {
+            tabName = selectedTabName;
         }
-        code_last = sessions[fname_nodot][1];
-        current_code = sessions[fname_nodot][0].getValue();
-        filepath = sessions[fname_nodot][2];
-        if (code_last !== current_code) {
-            model.setFile(filepath, current_code, 0,
-                          function (data, textStatus, jqXHR) { // success callback
-                            sessions[fname_nodot][1] = current_code; // store saved file for comparison
-                            renameTab("#"+fname_nodot,filepath); // mark as not modified
-                            sessions[fname_nodot][3] = false;
-                            if (typeof openmdao_test_mode !== 'undefined') {
-                                openmdao.Util.notify('Save complete: ' + textStatus);
-                            }
-                            if (waitClose.length !== 0) {
-                                fname_nodot = waitClose[0];
-                                tab_id = waitClose[1];
-                                if (file_tabs.tabs("length") === 1) {
-                                    editor.setSession(defaultSession);
-                                    editor.setReadOnly(true);
-                                }
-                                delete sessions[fname_nodot];
-                                file_tabs.tabs("remove", tab_id);
-                                waitClose = [];
-                            }
-                         }, failedSave, handle409);
+
+        var session     = sessions[tabName],
+            currentCode = session.editSession.getValue(),
+            lastCode    = session.prevContent,
+            filepath    = session.filepath;
+
+        if (currentCode !== lastCode) {
+            model.setFile(filepath, currentCode, 0,
+                function (data, textStatus, jqXHR) {  // success
+                    // store saved file for comparison
+                    session.prevContent = currentCode;
+                    // mark as not modified
+                    renameTab("#"+tabName, filepath);
+                    session.modifed = false;
+                    if (typeof openmdao_test_mode !== 'undefined') {
+                        openmdao.Util.notify('Save complete: ' + textStatus);
+                    }
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+                },
+                failedSave,
+                handle409(filepath));
         }
     }
 
-    function saveAllFiles() {
-        var key;
-        for (key in sessions) {
-            if (sessions.hasOwnProperty(key)) {
-                saveFile(key);
-            }
-        }
-    }
-
+    /** determine editor mode for file based on file extension */
     function findMode(filepath) {
         chunks = filepath.split('.');
         if (chunks.length === 2){
@@ -284,10 +272,11 @@ openmdao.CodeFrame = function(id,model) {
         }
     }
 
-    function newTab(contents,filepath,fname_nodot,mode) {
+    /** create a new tab for the given file */
+    function newTab(contents, filepath, tabName, mode) {
         editor.setReadOnly(false);
-        if (!fname_nodot) {
-            fname_nodot = nameSplit(filepath);
+        if (!tabName) {
+            tabName = nameSplit(filepath);
         }
         if (!mode) {
             mode = findMode(filepath);
@@ -297,32 +286,44 @@ openmdao.CodeFrame = function(id,model) {
         newfile.setUndoManager(new UndoManager());
         newfile.setMode(mode);
         newfile.on('change', function(evt) {
-            if (sessions[fname_nodot][0].getValue() !== contents) {
-                renameTab("#"+fname_nodot, filepath+"*");
-                sessions[fname_nodot][3] = true;
+            if (sessions[tabName].editSession.getValue() !== contents) {
+                renameTab("#"+tabName, filepath+"*");
+                sessions[tabName].modified = true;
             }
             else {
-                renameTab("#"+fname_nodot, filepath);
-                sessions[fname_nodot][3] = false;
+                renameTab("#"+tabName, filepath);
+                sessions[tabName].modified = false;
             }
         });
         editor.setSession(newfile);
-        sessions[fname_nodot] = [newfile,contents,filepath,false]; // store session for efficent switching
 
-        jQuery('<div id="'+fname_nodot+'"></div>').appendTo(file_inner); // new empty div
-        file_tabs.tabs("add",'#'+fname_nodot,filepath);
-        file_tabs.tabs( 'select', "#"+fname_nodot);
-        selectedFile=fname_nodot;
+        // store session for efficent switching
+        sessions[tabName] = {
+            'editSession': newfile,
+            'prevContent': contents,
+            'filepath':    filepath,
+            'modified':    false
+        };
+
+        jQuery('<div id="'+tabName+'"></div>').appendTo(fileInner); // new empty div
+        fileTabs.tabs("add", '#'+tabName, filepath);
+        fileTabs.tabs('select', "#"+tabName);
+        selectedTabName = tabName;
         self.resize();
         editor.resize();
     }
 
+    /** rename tab */
     function renameTab(selector, value) {
         jQuery('a[href="' + selector + '"]').text(value);
     }
 
+    /** remove periods and forward slashes from pathname */
     function nameSplit(pathname) {
-        return pathname.split('.').join('').split('/').join('').split('*').join('').trim();
+        return pathname.split('.').join('')
+                       .split('/').join('')
+                       .split('*').join('')
+                       .trim();
     }
 
     /** display file error */
@@ -342,31 +343,25 @@ openmdao.CodeFrame = function(id,model) {
     // for GUI testing
     this.editor = editor;
 
+    /** get the tab label for the currently selected tab */
     this.currentTablabel = function() {
-        return file_tabs.find('.ui-tabs-active a span').text();
+        return fileTabs.find('.ui-tabs-active a').text();
     };
 
     /** get contents of specified file from model, load into editor */
     this.editFile = function(pathname) {
         filepath = pathname;
         mode = findMode(filepath);
-        fname_nodot= nameSplit(filepath);
-        if (sessions[fname_nodot]) {  // file already has open tab? just switch to it
-            editor.setSession(sessions[fname_nodot][0]);
-            file_tabs.tabs("select","#"+fname_nodot);
+        tabName= nameSplit(filepath);
+        if (sessions[tabName]) {  // file already has open tab? just switch to it
+            editor.setSession(sessions[tabName].editSession);
+            fileTabs.tabs("select","#"+tabName);
         }
         else { // file not being edited; make new tab
             model.getFile(pathname,
                 // success
                 function(contents) {
-                    newTab(contents,filepath,fname_nodot,mode);
-                    if (filepath.charAt(0) === "/") {
-                        //file_label.text(filepath.substr(1));
-                    }
-                    else {
-                        //file_label.text(filepath);
-                    }
-                    //editor.session.doc.setValue(contents);
+                    newTab(contents,filepath,tabName,mode);
                     self.resize();
                     editor.resize();
                     editor.navigateFileStart();
@@ -381,7 +376,7 @@ openmdao.CodeFrame = function(id,model) {
         }
     };
 
-    // method to resize the Ace code pane
+    /** method to resize the Ace code pane */
     this.resize = function() {
         editorArea.width(self.elm.width());
         editorArea.height(self.elm.height()-editorArea.offset().top);
