@@ -122,6 +122,11 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 panes[name].loadData(val);
             }
         }
+        else if (name === 'Events') {
+            panes[name] = new openmdao.EventsPane(contentPane, model,
+                                                  self.pathname, name);
+            panes[name].loadData(val);
+        }
         else {
             debug.warn("ObjectFrame.getContent: Unexpected object",
                        self.pathname, name);
