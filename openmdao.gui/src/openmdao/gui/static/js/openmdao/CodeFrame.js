@@ -10,7 +10,6 @@ openmdao.CodeFrame = function(id,model) {
 
     // initialize private variables
     var self = this,
-        filepath = "",
         // toolbar
         uiBarID = id+'-uiBar',
         uiBar = jQuery('<div id="'+uiBarID+'">')
@@ -101,7 +100,7 @@ openmdao.CodeFrame = function(id,model) {
     function closeTab(tab) {
         var tabIndex = tab.index(),
             tabName  = tab.attr('aria-controls'),
-            pathname = tab.text(),
+            filepath = tab.text(),
             session  = sessions[tabName];
 
         function closeIt() {
@@ -120,7 +119,7 @@ openmdao.CodeFrame = function(id,model) {
         }
         else {
             //file changed. require user choice
-            var win = jQuery('<div>"'+pathname+'" has been changed. Save before closing?</div>');
+            var win = jQuery('<div>"'+filepath+'" has been changed. Save before closing?</div>');
             jQuery(win).dialog({
                 'modal': true,
                 'title': 'Save',
@@ -174,51 +173,6 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
-    /** display error message is file save failed */
-    function failedSave(jqXHR, textStatus, errorThrown) {
-        debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
-        // 409 gets special handling.
-        // 400 is (normally) related to msg reported via publisher.
-        if (jqXHR.status !== 409 && jqXHR.status !== 400) {
-            var msg = jqXHR.responseXML || textStatus;
-            openmdao.Util.notify(msg, 'Save Failed');
-        }
-    }
-
-    /** prompt user to save file and reload project (a 409 error code response
-        when saving a file indicates that a model reload will be necessary)
-    **/
-    function handle409(filepath) {
-        var win = jQuery('<div>Changing this file can alter the model configuration. '+
-                         'If you save this file, you must reload the project.</div>');
-        jQuery(win).dialog({
-            'modal': true,
-            'title': 'Save File and Reload Project',
-            'buttons': [
-                {
-                  text: 'Save File and Reload Project',
-                  id: overwriteID,
-                  click: function() {
-                           jQuery(this).dialog('close');
-                           model.setFile(filepath,editor.getSession().getValue(), 1,
-                                         function() {
-                                             model.reload();
-                                         },
-                                         failedSave);
-                         }
-                },
-                {
-                   text: 'Cancel',
-                   id: cancelID,
-                   click: function() {
-                             jQuery(this).dialog('close');
-                          }
-                }
-              ]
-            }
-        );
-    }
-
     /** Save the contents of the specified file tab. If no tabname is specified,
         save the contents of the currently selected tab. If a callback function
         is specified, call that function after successfully saving the file.
@@ -232,6 +186,49 @@ openmdao.CodeFrame = function(id,model) {
             currentCode = session.editSession.getValue(),
             lastCode    = session.prevContent,
             filepath    = session.filepath;
+
+        /** display error message if file save failed */
+        function failedSave(jqXHR, textStatus, errorThrown) {
+            debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
+            // 409 gets special handling.
+            // 400 is (normally) related to msg reported via publisher.
+            if (jqXHR.status !== 409 && jqXHR.status !== 400) {
+                var msg = jqXHR.responseXML || textStatus;
+                openmdao.Util.notify(msg, 'Save Failed');
+            }
+        }
+
+        /** 409 response when saving file indicates model reload will be necessary */
+        function handle409(jqXHR, textStatus, errorThrown) {
+            var win = jQuery('<div>Changing this file can alter the model configuration. '+
+                             'If you save this file, you must reload the project.</div>');
+            jQuery(win).dialog({
+                'modal': true,
+                'title': 'Save File and Reload Project',
+                'buttons': [
+                    {
+                      text: 'Save File and Reload Project',
+                      id: overwriteID,
+                      click: function() {
+                               jQuery(this).dialog('close');
+                               model.setFile(filepath,currentCode, 1,
+                                             function() {
+                                                 model.reload();
+                                             },
+                                             failedSave);
+                             }
+                    },
+                    {
+                       text: 'Cancel',
+                       id: cancelID,
+                       click: function() {
+                                 jQuery(this).dialog('close');
+                              }
+                    }
+                  ]
+                }
+            );
+        }
 
         if (currentCode !== lastCode) {
             model.setFile(filepath, currentCode, 0,
@@ -249,13 +246,13 @@ openmdao.CodeFrame = function(id,model) {
                     }
                 },
                 failedSave,
-                handle409(filepath));
+                handle409);
         }
     }
 
     /** determine editor mode for file based on file extension */
-    function findMode(filepath) {
-        chunks = filepath.split('.');
+    function findMode(filename) {
+        chunks = filename.split('.');
         if (chunks.length === 2){
             if (chunks[1] === "py") {
                 return "ace/mode/python";
@@ -318,9 +315,9 @@ openmdao.CodeFrame = function(id,model) {
         jQuery('a[href="' + selector + '"]').text(value);
     }
 
-    /** remove periods and forward slashes from pathname */
-    function nameSplit(pathname) {
-        return pathname.split('.').join('')
+    /** remove periods and forward slashes from file path */
+    function nameSplit(filepath) {
+        return filepath.split('.').join('')
                        .split('/').join('')
                        .split('*').join('')
                        .trim();
@@ -349,8 +346,7 @@ openmdao.CodeFrame = function(id,model) {
     };
 
     /** get contents of specified file from model, load into editor */
-    this.editFile = function(pathname) {
-        filepath = pathname;
+    this.editFile = function(filepath) {
         mode = findMode(filepath);
         tabName= nameSplit(filepath);
         if (sessions[tabName]) {  // file already has open tab? just switch to it
@@ -358,7 +354,7 @@ openmdao.CodeFrame = function(id,model) {
             fileTabs.tabs("select","#"+tabName);
         }
         else { // file not being edited; make new tab
-            model.getFile(pathname,
+            model.getFile(filepath,
                 // success
                 function(contents) {
                     newTab(contents,filepath,tabName,mode);
@@ -380,11 +376,6 @@ openmdao.CodeFrame = function(id,model) {
     this.resize = function() {
         editorArea.width(self.elm.width());
         editorArea.height(self.elm.height()-editorArea.offset().top);
-    };
-
-    /** get the pathname for the current file */
-    this.getPathname = function() {
-        return filepath;
     };
 
 };
