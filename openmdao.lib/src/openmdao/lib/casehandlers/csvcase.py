@@ -327,6 +327,7 @@ class CSVCaseRecorder(object):
         
         attr = {}
         attr['name'] = "filename"
+        attr['id'] = attr['name']
         attr['type'] = type(self.filename).__name__
         attr['value'] = str(self.filename)
         attr['connected'] = ''
@@ -335,6 +336,7 @@ class CSVCaseRecorder(object):
             
         attr = {}
         attr['name'] = "append"
+        attr['id'] = attr['name']
         attr['type'] = type(self.append).__name__
         attr['value'] = str(self.append)
         attr['connected'] = ''
@@ -343,6 +345,7 @@ class CSVCaseRecorder(object):
             
         attr = {}
         attr['name'] = "delimiter"
+        attr['id'] = attr['name']
         attr['type'] = type(self.delimiter).__name__
         attr['value'] = str(self.delimiter)
         attr['connected'] = ''
