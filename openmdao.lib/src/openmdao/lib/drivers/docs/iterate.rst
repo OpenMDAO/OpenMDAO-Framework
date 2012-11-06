@@ -26,8 +26,8 @@ produce the square root of a number.
         """ The Babylonians had a neat way of calculating square
         roots using Fixed Point Iteration"""
         
-        x = Float(1.0, iotype="in", doc="Input is x")
-        y = Float(iotype="out", doc="Output is y")
+        x = Float(1.0, iotype="in", desc="Input is x")
+        y = Float(iotype="out", desc="Output is y")
         
         def execute(self):
             """ Iterate to find the square root of 2, the Babylonian way:
