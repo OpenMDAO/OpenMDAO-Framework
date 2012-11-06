@@ -12,7 +12,7 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
     var self = this,
         pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow');
 
-    self.pathname = '';
+    self.pathname = false;
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {

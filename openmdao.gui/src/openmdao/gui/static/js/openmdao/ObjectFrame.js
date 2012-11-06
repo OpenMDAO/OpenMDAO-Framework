@@ -65,7 +65,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
         });
 
         self.elm.height(400);
-        self.elm.width(625);
+        self.elm.width(640);
 
         self.elm.tabs({selected: selected})
             .on('tabsshow', function(event, ui) {

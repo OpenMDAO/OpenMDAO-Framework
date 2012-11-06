@@ -180,76 +180,69 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
     flow_div.droppable ({
         accept: '.component, .IComponent',
-            out: function(ev,ui) {
-                openmdao.drag_and_drop_manager.draggableOut(flow_div);
-            },
-            over: function(ev,ui) {
-                // only allow drops of components in same assembly as driver
-                var target_pathname = flow_div.data('pathname'),
-                    target_parent = openmdao.Util.getPath(target_pathname),
-                    dragged_object = jQuery(ui.draggable).clone(),
-                    dragged_pathname,
-                    dragged_parent;
-debug.info('WorkflowFigure',pathname,'over',dragged_object);
-                if (dragged_object.hasClass('component')) {
-                    dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
-                    dragged_parent = openmdao.Util.getPath(dragged_pathname);
-                    if (dragged_parent === target_parent) {
-                        openmdao.drag_and_drop_manager.draggableOver(flow_div);
-                    }
-                }
-                else if (dragged_object.hasClass('IComponent')) {
+        greedy: true,
+        out: function(ev,ui) {
+            openmdao.drag_and_drop_manager.draggableOut(flow_div);
+        },
+        over: function(ev,ui) {
+            // only allow drops of components in same assembly as driver
+            var target_pathname = flow_div.data('pathname'),
+                target_parent = openmdao.Util.getPath(target_pathname),
+                dragged_object = jQuery(ui.draggable).clone(),
+                dragged_pathname,
+                dragged_parent;
+            if (dragged_object.hasClass('component')) {
+                dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
+                dragged_parent = openmdao.Util.getPath(dragged_pathname);
+                if (dragged_parent === target_parent) {
                     openmdao.drag_and_drop_manager.draggableOver(flow_div);
                 }
-            },
-            drop: function(ev,ui) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-debug.info('WorkflowFigure',pathname,'drop top_div:',top_div);
-                if (top_div) {
-                    var drop_function = top_div.droppable('option', 'actualDropHandler');
-                    drop_function(ev, ui);
-                }
-                return false;
-            },
-            actualDropHandler: function(ev,ui) {
-                openmdao.drag_and_drop_manager.clearHighlightingDroppables();
-                var target_pathname = flow_div.data('pathname'),
-                    target_parent = openmdao.Util.getPath(target_pathname),
-                    dropped_object = jQuery(ui.draggable).clone(),
-                    dropped_pathname,
-                    dropped_parent,
-                    dropped_name,
-                    prompt;
-debug.info('WorkflowFigure',pathname,'actualDropHandler',dropped_object);
-                if (dropped_object.hasClass('component')) {
-                    // dropped from component tree, component must be in same assembly as the driver
-                    dropped_pathname = jQuery(ui.draggable).parent().attr("path");
-                    dropped_parent = openmdao.Util.getPath(dropped_pathname);
-                    if (dropped_parent === target_parent) {
-                        dropped_name = openmdao.Util.getName(dropped_pathname);
-                        cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
-                        model.issueCommand(cmd);
-                    }
-                    return false;
-                }
-                else if (dropped_object.hasClass('IComponent')) {
-                    // dropped from library, create new component in same assembly as the driver
-                    dropped_pathname = dropped_object.attr("modpath");
-                    dropped_name = dropped_object.text();
-                    prompt = 'Specify a name for the new '+dropped_name+'<br>'+
-                             '(It will be added to '+target_parent +' and to <br>'+
-                             'the workflow of '+ target_pathname+')';
-                    openmdao.Util.addComponent(dropped_pathname, dropped_name,
-                                               target_parent, prompt, function(name) {
-                        // If successful, then add to workflow as well.
-                        cmd = target_pathname+'.workflow.add("'+name+'")';
-                        model.issueCommand(cmd);
-                    });
-                    return false;
+            }
+            else if (dragged_object.hasClass('IComponent')) {
+                openmdao.drag_and_drop_manager.draggableOver(flow_div);
+            }
+        },
+        drop: function(ev,ui) {
+            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+            if (top_div) {
+                var drop_function = top_div.droppable('option', 'actualDropHandler');
+                drop_function(ev, ui);
+            }
+        },
+        actualDropHandler: function(ev,ui) {
+            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            var target_pathname = flow_div.data('pathname'),
+                target_parent = openmdao.Util.getPath(target_pathname),
+                dropped_object = jQuery(ui.draggable).clone(),
+                dropped_pathname,
+                dropped_parent,
+                dropped_name,
+                prompt;
+            if (dropped_object.hasClass('component')) {
+                // dropped from component tree, component must be in same assembly as the driver
+                dropped_pathname = jQuery(ui.draggable).parent().attr("path");
+                dropped_parent = openmdao.Util.getPath(dropped_pathname);
+                if (dropped_parent === target_parent) {
+                    dropped_name = openmdao.Util.getName(dropped_pathname);
+                    cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
+                    model.issueCommand(cmd);
                 }
             }
+            else if (dropped_object.hasClass('IComponent')) {
+                // dropped from library, create new component in same assembly as the driver
+                dropped_pathname = dropped_object.attr("modpath");
+                dropped_name = dropped_object.text();
+                prompt = 'Specify a name for the new '+dropped_name+'<br>'+
+                         '(It will be added to '+target_parent +' and to <br>'+
+                         'the workflow of '+ target_pathname+')';
+                openmdao.Util.addComponent(dropped_pathname, dropped_name,
+                                           target_parent, prompt, function(name) {
+                    // If successful, then add to workflow as well.
+                    cmd = target_pathname+'.workflow.add("'+name+'")';
+                    model.issueCommand(cmd);
+                });
+            }
+        }
     });
 
     // make the layout() function triggerable

@@ -1,22 +1,21 @@
+/***********************************************************************
+ *  DragAndDropManager: Keeps a hash table of all drop targets that are
+ *                      currently under a dragged object.
+ *
+ * Drop targets (droppables) are added via the 'draggableOver'
+ * method and removed with the 'draggableOut' method.
+ *
+ * The 'draggableOver' method will also call the 'updateHighlighting'
+ * function, which will highlight the drop target with the highest
+ * z-index and set it to be the current drop target. It will also
+ * remove the highlighting from all other drop targets. Note that a
+ * droppable must implement both the "highlightAsDropTarget()" and
+ * "unhighlightAsDropTarget()" functions to be a valid drop target.
+ ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DragAndDropManager=function() {
-
-    /***********************************************************************
-     * Keep a hash table of all drop targets that are currently under a
-     * dragged object.
-     *
-     * Drop targets (droppables) are added via the 'draggableOver'
-     * method and removed with the 'draggableOut' method.
-     *
-     * The 'draggableOver' method will also call the 'updateHighlighting'
-     * function, which will highlight the drop target with the highest
-     * z-index and set it to be the current drop target. It will also
-     * remove the highlighting from all other drop targets. Note that a
-     * droppable must implement both the "highlightAsDropTarget()" and
-     * "unhighlightAsDropTarget()" functions to be a valid drop target.
-     ***********************************************************************/
 
     var self = this,
         droppables= {};
