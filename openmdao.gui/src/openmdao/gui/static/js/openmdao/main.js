@@ -63,10 +63,12 @@ jQuery(function() {
             dataflow_tab  = jQuery('#dataflow_tab a'),
             workflow_tab  = jQuery('#workflow_tab a');
 
-        dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
+        dataflow_tab.click(function(e) {
+            central_label.text(data.getPathname());
+        });
         workflow_tab.click(function(e) {
             central_label.text(work.getPathname());
-            // ugly fix, can't calculate background until element is visible
+            // unfortunately, can't compute background until element is visible
             jQuery('.WorkflowFigure').trigger('setBackground');
         });
 
@@ -87,7 +89,7 @@ jQuery(function() {
         new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
-        
+
         listeners_ready.resolve();
     }());
 
