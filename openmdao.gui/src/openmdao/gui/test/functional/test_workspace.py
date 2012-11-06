@@ -118,10 +118,6 @@ def _test_palette_update(browser):
     # Import some files and add components from them.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    # View the Workflow Pane.
-    workspace_page('workflow_tab').click()
-    time.sleep(0.5)  # Just so we can see it.
-
     # View dataflow.
     workspace_page('dataflow_tab').click()
 
@@ -130,6 +126,7 @@ def _test_palette_update(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'optimization_unconstrained.py')
+
     # add first file from workspace
     workspace_page.add_file(file1_path)
 
@@ -169,6 +166,7 @@ def _test_palette_update(browser):
     paraboloid_name = 'parab'
     workspace_page.add_library_item_to_dataflow('paraboloid.Paraboloid',
                                                 paraboloid_name)
+
     # Now there should be three.
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
@@ -709,45 +707,6 @@ def _test_noslots(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-# without the dialog to prompt for saving, the following 2 tests aren't really
-# useful any more
-#def _test_savechanges(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    ## Add ExternalCode to assembly.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
-
-    ##first try to close without saving changes, but click CANCEL and stay
-    #workspace_page.attempt_to_close_workspace(True, False)
-
-    ## add another object to the model to be sure it didn't close
-    #eq(len(workspace_page.get_dataflow_figures()), 3)
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext2')
-    #eq(len(workspace_page.get_dataflow_figures()), 4)
-
-    ## Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-
-#def _test_dontsavechanges(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    ## Add ExternalCode to assembly.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
-
-    ##Try to close without saving changes, but click OK and leave.
-    #workspace_page.attempt_to_close_workspace(True, True)
-
-    ## Clean up.
-    #project_info_page = projects_page.edit_project(project_dict['name'])
-    #project_info_page.delete_project()
-    #print "_test_dontsavechanges complete."
 
 
 def _test_logviewer(browser):
