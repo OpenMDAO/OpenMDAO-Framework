@@ -278,11 +278,11 @@ openmdao.CodeFrame = function(id,model) {
         if (!mode) {
             mode = findMode(filepath);
         }
-        var newfile = new EditSession(contents); // new code session for ace
-        newfile.setUseSoftTabs();
-        newfile.setUndoManager(new UndoManager());
-        newfile.setMode(mode);
-        newfile.on('change', function(evt) {
+        var newSession = new EditSession(contents); // new code session for ace
+        newSession.setUseSoftTabs();
+        newSession.setUndoManager(new UndoManager());
+        newSession.setMode(mode);
+        newSession.on('change', function(evt) {
             if (sessions[tabName].editSession.getValue() !== contents) {
                 renameTab("#"+tabName, filepath+"*");
                 sessions[tabName].modified = true;
@@ -292,11 +292,11 @@ openmdao.CodeFrame = function(id,model) {
                 sessions[tabName].modified = false;
             }
         });
-        editor.setSession(newfile);
+        editor.setSession(newSession);
 
         // store session for efficent switching
         sessions[tabName] = {
-            'editSession': newfile,
+            'editSession': newSession,
             'prevContent': contents,
             'filepath':    filepath,
             'modified':    false
@@ -347,21 +347,21 @@ openmdao.CodeFrame = function(id,model) {
 
     /** get contents of specified file from model, load into editor */
     this.editFile = function(filepath) {
-        mode = findMode(filepath);
-        tabName= nameSplit(filepath);
-        if (sessions[tabName]) {  // file already has open tab? just switch to it
+        var tabName = nameSplit(filepath);
+        if (sessions[tabName]) {
+            // file already has open tab, just switch to it
             editor.setSession(sessions[tabName].editSession);
             fileTabs.tabs("select","#"+tabName);
         }
-        else { // file not being edited; make new tab
+        else {
+            // file not being edited, make new tab
             model.getFile(filepath,
                 // success
                 function(contents) {
-                    newTab(contents,filepath,tabName,mode);
+                    newTab(contents, filepath, tabName);
                     self.resize();
                     editor.resize();
                     editor.navigateFileStart();
-                    var UndoManager = require("ace/undomanager").UndoManager;
                     editor.getSession().setUndoManager(new UndoManager());
                 },
                 // failure
