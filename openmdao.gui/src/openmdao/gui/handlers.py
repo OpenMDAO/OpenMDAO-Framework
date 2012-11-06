@@ -91,6 +91,8 @@ class PluginDocsHandler(StaticFileHandler):
         return True
     
     def initialize(self, route):
+        import pdb
+        pdb.set_trace()
         rpath = self.request.path[len(route):].strip('/')
         parts = rpath.split('/',1)
         self.cname = parts[0] + os.sep
@@ -100,7 +102,11 @@ class PluginDocsHandler(StaticFileHandler):
                 if self._cname_valid(parts[0]) and parts[0] not in self._plugin_map:
                     url = find_docs_url(parts[0], build_if_needed=False)
                     if self.cname.startswith('openmdao.'):
-                        root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
+                        if("egg" in url):
+                            # url points to docs in a release version, so use docs packaged with openmdao.main
+                            root = os.path.join(os.path.dirname(openmdao.main.__file__), "docs")
+                        else: # url points to docs in a developer version, so use locally built docs
+                            root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                             '_build', 'html')
                         if url.startswith('file://'):
                             url = url[7:]
