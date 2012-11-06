@@ -15,7 +15,8 @@ from unittest import TestCase
 if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
-    from selenium.common.exceptions import WebDriverException
+    from selenium.common.exceptions import StaleElementReferenceException, \
+                                           WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout, put_element_on_grid
 
@@ -787,6 +788,7 @@ def _test_logviewer(browser):
     # Note that by default the logging level is set to WARNING.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     viewer = workspace_page.show_log()
+    viewer.move(0, -200)  # Sometimes get a lot of 'send event' messages...
 
     # Incremental display.
     workspace_page.do_command("import logging")
@@ -844,8 +846,26 @@ def _test_logviewer(browser):
         'W root: warning 3',
         'C root: critical 3'])
 
+    # Pop-out to separate window.
+    workspace_window = browser.current_window_handle
+    viewer.popout()
+    time.sleep(1)
+    for handle in browser.window_handles:
+        if handle != workspace_window:
+            browser.switch_to_window(handle)
+            browser.close()
+            break
+    browser.switch_to_window(workspace_window)
+
+    # Verify that viewer was closed.
+    try:
+        viewer.get_messages()
+    except StaleElementReferenceException:
+        pass
+    else:
+        raise RuntimeError('Expected StaleElementReferenceException')
+
     # Clean up.
-    viewer.close()
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
