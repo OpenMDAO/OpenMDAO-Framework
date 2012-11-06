@@ -229,6 +229,10 @@ class SafeDriver(SafeBase):
         return self._delegate.current_window_handle
 
     @property
+    def window_handles(self):
+        return self._delegate.window_handles
+
+    @property
     def title(self):
         return self._delegate.title
 
