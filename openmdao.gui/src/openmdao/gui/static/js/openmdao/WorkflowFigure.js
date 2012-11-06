@@ -190,6 +190,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                     dragged_object = jQuery(ui.draggable).clone(),
                     dragged_pathname,
                     dragged_parent;
+debug.info('WorkflowFigure',pathname,'over',dragged_object);
                 if (dragged_object.hasClass('component')) {
                     dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                     dragged_parent = openmdao.Util.getPath(dragged_pathname);
@@ -202,11 +203,15 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 }
             },
             drop: function(ev,ui) {
+                ev.preventDefault();
+                ev.stopPropagation();
                 top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+debug.info('WorkflowFigure',pathname,'drop top_div:',top_div);
                 if (top_div) {
                     var drop_function = top_div.droppable('option', 'actualDropHandler');
                     drop_function(ev, ui);
                 }
+                return false;
             },
             actualDropHandler: function(ev,ui) {
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables();
@@ -217,7 +222,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                     dropped_parent,
                     dropped_name,
                     prompt;
-
+debug.info('WorkflowFigure',pathname,'actualDropHandler',dropped_object);
                 if (dropped_object.hasClass('component')) {
                     // dropped from component tree, component must be in same assembly as the driver
                     dropped_pathname = jQuery(ui.draggable).parent().attr("path");
@@ -227,6 +232,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                         cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
                         model.issueCommand(cmd);
                     }
+                    return false;
                 }
                 else if (dropped_object.hasClass('IComponent')) {
                     // dropped from library, create new component in same assembly as the driver
@@ -241,6 +247,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                         cmd = target_pathname+'.workflow.add("'+name+'")';
                         model.issueCommand(cmd);
                     });
+                    return false;
                 }
             }
     });
