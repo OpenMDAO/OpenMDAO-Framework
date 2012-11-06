@@ -105,7 +105,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
-                for driver in [obj for name, obj in v.items()
+                for driver in [obj for name, obj in v.items(recurse=True)
                                    if is_instance(obj, Driver)]:
                     driver.check_config()
 
