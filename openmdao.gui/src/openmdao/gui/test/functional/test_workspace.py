@@ -594,13 +594,14 @@ def _test_driver_config(browser):
     # Add a (nonsense) named parameter.
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
-    dialog.target = 'driver.force_execute'
+    dialog.target = 'mm.force_execute'
     dialog.low = '0'
     dialog.high = '1'
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['', 'driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    expected = [['', 'mm.force_execute', '0', '1', '', '', '', 'nonsense']]
+    eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
 
@@ -619,11 +620,12 @@ def _test_driver_config(browser):
     # Add a (nonsense) named objective.
     editor('objectives_tab').click()
     dialog = editor.new_objective()
-    dialog.expr = 'driver.force_execute'
+    dialog.expr = 'mm.force_execute'
     dialog.name = 'nonsense'
     dialog('ok').click()
     objectives = editor.get_objectives()
-    expected = [['', 'driver.force_execute', 'nonsense']]
+    expected = [['', 'mm.force_execute', 'nonsense']]
+    eq(len(objectives.value), len(expected))
     for i, row in enumerate(objectives.value):
         eq(row, expected[i])
 
@@ -642,11 +644,12 @@ def _test_driver_config(browser):
     # Add a (nonsense) named constraint.
     editor('constraints_tab').click()
     dialog = editor.new_constraint()
-    dialog.expr = 'driver.force_execute > 0'
+    dialog.expr = 'mm.force_execute > 0'
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['', 'driver.force_execute > 0', '1', '0', 'nonsense']]
+    expected = [['', 'mm.force_execute > 0', '1', '0', 'nonsense']]
+    eq(len(constraints.value), len(expected))
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
 
@@ -669,6 +672,7 @@ def _test_driver_config(browser):
     dialog('ok').click()
     events = editor.get_events()
     expected = [['', 'mm.train_next']]
+    eq(len(events.value), len(expected))
     for i, row in enumerate(events.value):
         eq(row, expected[i])
 

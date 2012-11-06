@@ -475,7 +475,8 @@ class WorkspacePage(BasePageObject):
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
-                                     check=True, offset=None, prefix=None):
+                                     check=True, offset=None, prefix=None,
+                                     args=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
@@ -494,6 +495,11 @@ class WorkspacePage(BasePageObject):
 
         page = ArgsPrompt(self.browser, self.port)
         page.set_name(instance_name)
+        if args is not None:
+            for i, arg in enumerate(args):
+                page.set_argument(i, arg)
+            page.click_ok()
+
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
