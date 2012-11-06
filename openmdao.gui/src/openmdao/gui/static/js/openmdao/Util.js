@@ -162,16 +162,6 @@ openmdao.Util = {
     },
 
     /**
-     * function to scroll to the bottom of an element (FIXME: doesn't work)
-     *
-     * el:      the element to scroll
-     */
-    scrollToBottom: function(el) {
-        el.scrollTop = el.scrollHeight;
-        el.scrollTop = el.scrollHeight - el.clientHeight;
-    },
-
-    /**
      * prompt for a value
      *
      * prompt:      prompt string
@@ -259,9 +249,8 @@ openmdao.Util = {
             win = null,
             userInput = null;
 
-        // FIXME: this looks like a bug
-        if (jQuery('#'+baseId).length> 0) {
-            debug.warn('removing existing confirm dialog',jQuery('#'+baseId));
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
             jQuery('#'+baseId).remove();
         }
 
@@ -316,9 +305,8 @@ openmdao.Util = {
         var msgId = baseId+'-msg',
             win = null;
 
-        // FIXME: this looks like a bug
-        if (jQuery('#'+baseId).length> 0) {
-            debug.warn('removing existing notify dialog',jQuery('#'+baseId));
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
             jQuery('#'+baseId).remove();
         }
 
@@ -366,9 +354,8 @@ openmdao.Util = {
             cancelId = baseId + '-cancel',
             win, nameInput, argsTable, argsHTML, i;
 
-        // FIXME: this looks like a bug
-        if (jQuery('#'+baseId).length> 0) {
-            debug.warn('removing existing get-args dialog',jQuery('#'+baseId));
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
             jQuery('#'+baseId).remove();
         }
 
