@@ -12,7 +12,7 @@ wingproj.wpr
 .installed.cfg
 buildout/bin/
 docs/readme.html
-wingp
+win
 _build
 doctrees
 repo_lock
