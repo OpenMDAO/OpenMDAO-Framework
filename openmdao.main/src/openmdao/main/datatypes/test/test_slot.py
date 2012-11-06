@@ -36,6 +36,8 @@ class SlotComp3(SlotComp2):
 class SlotComp4(SlotComp3):
     pass
         
+        
+        
 class SlotTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -121,11 +123,6 @@ class SlotTestCase(unittest.TestCase):
         else:
             self.fail('TypeError expected')
         
-    def test_klass(self):
-        assert_raises(self, 'Slot(object())', globals(), locals(), TypeError,
-                      'klass argument must be a Class or Interface,'
-                      ' not <object ')
-        
     def test_list_and_dict_slot_attributes(self):
         
         top = Assembly()
@@ -180,6 +177,7 @@ class SlotTestCase(unittest.TestCase):
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
 
+
 class MyIface(zope.interface.Interface):
     
     xx = zope.interface.Attribute("some attribute")
@@ -232,6 +230,40 @@ class SlotTestCase2(unittest.TestCase):
         except TypeError as err:
             self.assertEqual(str(err), ": class_sock must be an instance of class 'MyClass'")
         
+
+class SlotComp5(Assembly):
+    iterator = Slot(CIterator(), allow_none=False, desc='cases to evaluate')
+    num_cases = Int(0, iotype='out')
+    
+    def execute(self):
+        self.num_cases = 0
+        for case in self.iterator:
+            self.num_cases += 1
+
+
+class SlotTestCase3(unittest.TestCase):
+
+    def setUp(self):
+        """this setup function will be called before each test in this class"""
+        self.sc = SlotComp5()
+    
+    def tearDown(self):
+        """this teardown function will be called after each test"""
+        pass
+
+    def test_normal(self):
+        
+        # Run as is
+        self.sc.run()
+        self.assertEqual(self.sc.num_cases, 0)
+        
+        # Slot a new instance
+        self.sc.iterator = CIterator()
+        self.sc.run()
+        self.assertEqual(self.sc.num_cases, 0)
+
+
+
             
 if __name__ == "__main__":
     unittest.main()
