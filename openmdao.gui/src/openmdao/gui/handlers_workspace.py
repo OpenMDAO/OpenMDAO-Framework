@@ -9,8 +9,7 @@ from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
-from openmdao.main.publisher import publish
-from openmdao.util.log import logger
+
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -159,10 +158,14 @@ class ComponentHandler(ReqHandler):
             parent = self.get_argument('parent')
         else:
             parent = ''
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.add_component(name, type, parent)
+            cserver.add_component(name, type, parent, args)
         except Exception, e:
             result = sys.exc_info()
             cserver._error(e, result)
@@ -218,10 +221,14 @@ class ReplaceHandler(ReqHandler):
     @web.authenticated
     def post(self, pathname):
         type = self.get_argument('type')
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.replace_component(pathname, type)
+            cserver.replace_component(pathname, type, args)
         except Exception, e:
             print e
             result = sys.exc_info()
@@ -322,21 +329,21 @@ class FileHandler(ReqHandler):
         else:
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py'):
+            if filename.endswith('.py') or cserver.is_macro(filename):
                 if not contents.endswith('\n'):
                     text = contents + '\n' # to make ast.parse happy
                 else:
                     text = contents
                 try:
-                    ast.parse(text, filename=filename, mode='exec')
+                    ast.parse(text, filename=filename, mode='exec') # parse it looking for syntax errors
                 except Exception as err:
                     cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
-                    ret = cserver.file_has_instances(filename)
+                    ret = cserver.file_forces_reload(filename)
                     if ret:
-                        self.send_error(409)  # user will be prompted to overwrite classes
+                        self.send_error(409)  # user will be prompted to overwrite file and reload project
                         return
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -507,6 +514,19 @@ class TypesHandler(ReqHandler):
         self.write(jsonpickle.encode(types))
 
 
+class SignatureHandler(ReqHandler):
+    ''' Get type constructor signature.
+    '''
+
+    @web.authenticated
+    def get(self):
+        typename = self.get_argument('type')
+        cserver = self.get_server()
+        signature = cserver.get_signature(typename)
+        self.content_type = 'application/javascript'
+        self.write(jsonpickle.encode(signature))
+
+
 class UploadHandler(ReqHandler):
     ''' file upload utility
     '''
@@ -602,6 +622,7 @@ handlers = [
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
+    web.url(r'/workspace/signature/?',      SignatureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),

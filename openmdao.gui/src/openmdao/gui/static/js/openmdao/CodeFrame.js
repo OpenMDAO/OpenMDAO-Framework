@@ -191,8 +191,8 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function handle409(jqXHR, textStatus, errorThrown) {
-        var win = jQuery('<div>You have modified a class that may already have instances in the model. '+
-                         'If you save the file, you must reload the project.</div>');
+        var win = jQuery('<div>Changing this file can alter the model configuration. '+
+                         'If you save this file, you must reload the project.</div>');
         jQuery(win).dialog({
             'modal': true,
             'title': 'Save File and Reload Project',

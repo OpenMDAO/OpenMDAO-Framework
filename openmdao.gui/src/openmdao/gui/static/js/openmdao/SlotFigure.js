@@ -107,13 +107,37 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         },
         actualDropHandler: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone(),
-                droppedPath = droppedObject.attr("modpath"),
-                slotParent = openmdao.Util.getPath(pathname),
-                cmd = (slot.containertype === 'list' ?
-                    pathname + '.append(create("'+droppedPath+'"))' :
-                    slotParent + '.add("'+slot.name+'", create("'+droppedPath+'"))');
-            model.issueCommand(cmd);
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+                droppedName = droppedObject.text(),
+                droppedPath = droppedObject.attr("modpath");
+            openmdao.model.getSignature(droppedPath, function(signature) {
+                if (signature.args.length) {
+                    var prompt = 'Enter arguments for new '+droppedName;
+                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                        var cmd = 'create("'+droppedPath+'"'+args+')';
+                        if (slot.containertype === 'list') {
+                            cmd = pathname+'.append('+cmd+')';
+                        }
+                        else {
+                            var slotParent = openmdao.Util.getPath(pathname);
+                            cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                        }
+                        model.issueCommand(cmd);
+                        openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+                    }, true);
+                }
+                else {
+                    var cmd = 'create("'+droppedPath+'")';
+                    if (slot.containertype === 'list') {
+                        cmd = pathname+'.append('+cmd+')';
+                    }
+                    else {
+                        var slotParent = openmdao.Util.getPath(pathname);
+                        cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                    }
+                    model.issueCommand(cmd);
+                    openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+                }
+            });
         }
     });
 

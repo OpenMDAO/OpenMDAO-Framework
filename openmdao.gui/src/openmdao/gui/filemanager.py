@@ -6,27 +6,47 @@ import traceback
 import zipfile
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, PatternMatchingEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 from openmdao.util.log import logger
 
-
-class FilesPublisher(FileSystemEventHandler):
+class FilesPublisher(PatternMatchingEventHandler):
     ''' publishes file collection when ANY file system event occurs
     '''
 
     def __init__(self, files):
-        self.files = files
+        super(FilesPublisher, self).__init__(
+                ignore_patterns=[
+                    "*/_macros/*",
+                    "*.pyc", "*.pyd"])
 
-    def dispatch(self, event):
-        ''' just publish the updated file collection
+        self.files = files
+    
+    def on_any_event(self, event):
+        ''' publishes file collection when ANY file system event occurs
         '''
+
         try:
             self.files.publish_files()
         except Exception:
             traceback.print_exc()
+
+#class FilesPublisher(FileSystemEventHandler):
+#    ''' publishes file collection when ANY file system event occurs
+#    '''
+#
+#    def __init__(self, files):
+#        self.files = files
+#
+#    def dispatch(self, event):
+#        ''' just publish the updated file collection
+#        '''
+#        try:
+#            self.files.publish_files()
+#        except Exception:
+#            traceback.print_exc()
 
 class FileManager(object):
     ''' Object that keeps track of a collection of files (i.e. a directory)

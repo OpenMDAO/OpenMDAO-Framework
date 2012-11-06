@@ -260,6 +260,6 @@ PyPI is the default package index for ``plugin install``, so the command
 will attempt to download the MyDist distribution from PyPI. See this `link`__
 for more information about how to register your plugin with PyPI.
 
-.. __: http://docs.python.org/distutils/packageindex.html
+.. __: http://docs.python.org/2/distutils/packageindex.html
 
 

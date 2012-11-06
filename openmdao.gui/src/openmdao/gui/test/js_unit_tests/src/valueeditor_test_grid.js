@@ -40,7 +40,7 @@ EditorTestUtils.resetOptions = function(){
     openmdao.ValueEditor.defaultEditorEnabled = true;
     openmdao.ValueEditor.overridesEnabled = false;
     openmdao.ValueEditor.promptEnabled = false;
-    openmdao.ValueEditor.defaultEditor = TextCellEditor;
+    openmdao.ValueEditor.defaultEditor = Slick.Editors.Text;
     
 }
 
@@ -64,7 +64,7 @@ EditorTestUtils.TestObject = function(container, data, columns, options, registr
 EditorTestUtils.TestObject.prototype = {
 
     getRow : function(rowIndex){
-        return jQuery('div[row="' + rowIndex + '"]')[0];
+        return jQuery('.slick-row')[rowIndex];
     },
 
     getCell : function(row, cellIndex){

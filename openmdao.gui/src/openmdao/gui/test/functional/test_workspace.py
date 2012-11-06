@@ -4,7 +4,6 @@ Tests of overall workspace functions.
 
 import sys
 import time
-import logging
 
 import pkg_resources
 
@@ -14,20 +13,42 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from selenium.common.exceptions import WebDriverException
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
-    from pageobjects.basepageobject import TMO
-    from pageobjects.util import NotifierPage
-    from pageobjects.workspace import WorkspacePage
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
+    from selenium.common.exceptions import WebDriverException
+    from util import main, setup_server, teardown_server, generate, \
+                     startup, closeout, put_element_on_grid
+
+    from pageobjects.basepageobject import TMO
+    from pageobjects.slot import SlotFigure
+    from pageobjects.util import ArgsPrompt, NotifierPage
+    from pageobjects.workspace import WorkspacePage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
         for _test, browser in generate(__name__):
             yield _test, browser
 
+
+def _test_slots_sorted_by_name(browser):
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    top = workspace_page.get_dataflow_figure('top')
+
+    #drop 'metamodel' onto the grid
+    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    #find it on the page
+    metamodel = workspace_page.get_dataflow_figure(meta_name)
+
+    #open the 'edit' dialog on metamodel
+    editor = metamodel.editor_page(False)
+
+    # see if the slot names are sorted
+    slot_name_elements = editor.root.find_elements_by_css_selector('text#name')
+    slot_names = [ s.text for s in slot_name_elements ]
+    eq( slot_names, sorted( slot_names ) )
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 def _test_console(browser):
     # Check basic console functionality.
@@ -181,13 +202,37 @@ def _test_palette_update(browser):
 
 
 def _test_menu(browser):
-    # Just click on various main menu buttons.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Check enable/disable of commit/revert.
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
+
+    workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), '')
+    eq(workspace_page('revert_button').get_attribute('class'), '')
+    workspace_page('project_menu').click()
+
+    workspace_page.commit_project()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
 
     # Project-Run.
     workspace_page.run()
-    expected = 'Executing...\nExecution complete.'
-    eq(workspace_page.history, expected)
+    expected = ['Executing...', 'Execution complete.']
+    eq(workspace_page.history.split('\n')[-2:], expected)
     top_figure = workspace_page.get_dataflow_figure('top')
     eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
@@ -247,7 +292,7 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
     port = workspace_page.port
     workspace_page = WorkspacePage.verify(browser, port)
-    
+
     workspace_page.show_dataflow('top')
     time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -278,11 +323,11 @@ b = Float(0.0, iotype='out')
     # These will likely overlap in a manner that 'Ok' is found but
     # later is hidden by the second notifier.
     try:  # We expect 2 notifiers: command complete and error.
-        msg = NotifierPage.wait(workspace_page, base_id='command')
+        NotifierPage.wait(workspace_page, base_id='command')
     except WebDriverException as exc:
         if 'Element is not clickable' in str(exc):
             err = NotifierPage.wait(workspace_page)
-            msg = NotifierPage.wait(workspace_page, base_id='command')
+            NotifierPage.wait(workspace_page, base_id='command')
     else:
         err = NotifierPage.wait(workspace_page)
     if err != "NameError: name 'xyzzy' is not defined":
@@ -491,6 +536,7 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
+    inputs.rows[2].cells[1].click()
     inputs[2][2] = '42'  # printvars
     message = NotifierPage.wait(editor)
     eq(message, "TraitError: The 'printvars' trait of a "
@@ -536,6 +582,11 @@ raise RuntimeError("__init__ failed")
 
 def _test_driver_config(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Add MetaModel so we can test events.
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
 
     # Replace default driver with CONMIN and edit.
     workspace_page.replace('driver',
@@ -610,6 +661,28 @@ def _test_driver_config(browser):
     browser.implicitly_wait(1)  # Not expecting to find anything.
     try:
         for i, row in enumerate(constraints.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
+
+    # Add the 'train_next' event'
+    editor('events_tab').click()
+    dialog = editor.new_event()
+    dialog.target = 'mm.train_next'
+    dialog('ok').click()
+    events = editor.get_events()
+    expected = [['', 'mm.train_next']]
+    for i, row in enumerate(events.value):
+        eq(row, expected[i])
+
+    # Delete the event.
+    delbutton = editor('events').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    events = editor.get_events()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(events.value):
             eq(row, expected[i])
     finally:
         browser.implicitly_wait(TMO)
@@ -807,6 +880,67 @@ def _test_libsearch(browser):
     eq(searches, doe_searches)
 
     # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_arguments(browser):
+    # Check that objects requiring constructor arguments are handled.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+    mm_figure = workspace_page.get_dataflow_figure('mm', 'top')
+    mm_editor = mm_figure.editor_page()
+    mm_editor.show_slots()
+    mm_editor.move(-200, 0)
+
+    # Plug ListCaseIterator into warm_start_data.
+    slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
+    slot.fill_from_library('ListCaseIterator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, '[]')
+    args_page.click_ok()
+
+    # Plug ListCaseRecorder into recorder.
+    slot = SlotFigure(workspace_page, 'top.mm.recorder')
+    slot.fill_from_library('ListCaseRecorder')
+
+    # Plug ExecComp into model.
+    slot = SlotFigure(workspace_page, 'top.mm.model')
+    slot.fill_from_library('ExecComp')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, "('z = x * y',)")
+    args_page.click_ok()
+
+    # Check that inputs were created from expression.
+    exe_editor = slot.editor_page()
+    exe_editor.move(-100, 0)
+    inputs = exe_editor.get_inputs()
+    expected = [
+        ['directory',     'str',   '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool',  'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x',             'float', '0',     '',  'true', '', '', ''],
+        ['y',             'float', '0',     '',  'true', '', '', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    exe_editor.close()
+    mm_editor.close()
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_casefilters(browser):
+    # Verify that CaseFilter objects are listed in the library.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    for classname in ('ExprCaseFilter', 'IteratorCaseFilter',
+                      'SequenceCaseFilter', 'SliceCaseFilter'):
+        workspace_page.find_library_button(classname)
+
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 

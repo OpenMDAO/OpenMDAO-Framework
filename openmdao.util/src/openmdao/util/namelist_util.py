@@ -366,7 +366,8 @@ class Namelist(object):
         card_token = Group(fieldval("name") + \
                            Optional(index_token("index")) + \
                            Suppress('=') + \
-                           data_token("value") +
+                           Optional(num_int("dimension") + Suppress('*')) + \
+                           data_token("value") + \
                            Optional(Suppress('*') + num_int("dimension")))
         multi_card_token = (card_token + ZeroOrMore(Suppress(',') + card_token))
         array_continuation_token = numstr_token.setResultsName("value")

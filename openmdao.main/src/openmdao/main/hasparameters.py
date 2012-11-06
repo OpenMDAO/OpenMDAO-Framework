@@ -378,6 +378,15 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
+        
+        if self._parent.parent:
+            parent_cnns = self._parent.parent.list_connections()
+            for lhs, rhs in parent_cnns:
+                if rhs == target:
+                    self._parent.raise_exception('Cannot add target'
+                    ' parameter "%s" - incoming connection exists' % target,
+                                                                 RuntimeError)
+                
         if isinstance(target,Parameter): 
             self._parameters[target.name] = self._override_param(target, low, high, 
                                                                  scaler, adder, start,

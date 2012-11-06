@@ -131,14 +131,12 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
                     prompt = 'Specify a name for the new '+dropped_name+'<br>'+
                              '(It will be added to '+target_parent +' and to <br>'+
                              'the workflow of '+ target_pathname+')';
-                    openmdao.Util.promptForValue(prompt, function(name) {
-                            model.addComponent(dropped_pathname,name,target_parent, function() {
-                                // if successful, then add to workflow as well
-                                cmd = target_pathname+'.workflow.add("'+name+'")';
-                                model.issueCommand(cmd);
-                            });
-                        }
-                    );
+                    openmdao.Util.addComponent(dropped_pathname, dropped_name,
+                                               target_parent, prompt, function(name) {
+                        // If successful, then add to workflow as well.
+                        cmd = target_pathname+'.workflow.add("'+name+'")';
+                        model.issueCommand(cmd);
+                    });
                 }
             }
         });

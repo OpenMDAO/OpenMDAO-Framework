@@ -13,7 +13,7 @@ from nose.tools import with_setup
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
-    from pageobjects.util import NotifierPage
+    from pageobjects.util import ArgsPrompt, NotifierPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -120,14 +120,14 @@ def _test_connect(browser):
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
+    eq(inputs[6].value, ['s_in', ''])
+    inputs[6][1] = 'xyzzy'
+    inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
-    inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "xyzzy"
     
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
@@ -457,6 +457,8 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
     message = NotifierPage.wait(workspace_page)
     eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
                 " 'postproc.result_in': top: Can't find 'comp.result'")

@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from dialog import DialogPage 
 from elements import ButtonElement, GridElement, TextElement, InputElement 
 from workflow import find_workflow_component_figures
-from util import NotifierPage, ValuePrompt
+from util import ArgsPrompt, NotifierPage
  
  
 class ComponentPage(DialogPage): 
@@ -59,14 +59,17 @@ class DriverPage(ComponentPage):
     workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']")) 
     objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']")) 
     constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']")) 
+    events_tab      = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']")) 
  
     parameters  = GridElement((By.ID, 'Parameters_parms')) 
     objectives  = GridElement((By.ID, 'Objectives_objectives')) 
     constraints = GridElement((By.ID, 'Constraints_constraints')) 
+    events      = GridElement((By.ID, 'Events_events')) 
  
-    add_parameter  = ButtonElement((By.XPATH, "//div[text()='Add Parameter']"))
-    add_objective  = ButtonElement((By.XPATH, "//div[text()='Add Objective']"))
-    add_constraint = ButtonElement((By.XPATH, "//div[text()='Add Constraint']"))
+    add_parameter  = ButtonElement((By.XPATH, "//span[text()='Add Parameter']"))
+    add_objective  = ButtonElement((By.XPATH, "//span[text()='Add Objective']"))
+    add_constraint = ButtonElement((By.XPATH, "//span[text()='Add Constraint']"))
+    add_event      = ButtonElement((By.XPATH, "//span[text()='Add Event']"))
 
     def get_parameters(self): 
         """ Return parameters grid. """ 
@@ -82,6 +85,11 @@ class DriverPage(ComponentPage):
         """ Return constraints grid. """ 
         self('constraints_tab').click() 
         return self.constraints
+ 
+    def get_events(self): 
+        """ Return events grid. """ 
+        self('events_tab').click() 
+        return self.events
  
     def new_parameter(self):
         """ Return :class:`ParameterDialog`. """
@@ -100,6 +108,12 @@ class DriverPage(ComponentPage):
         self('add_constraint').click()
         return ConstraintDialog(self.browser, self.port,
                                 (By.XPATH, "//div[@id='constraint-dialog']/.."))
+
+    def new_event(self):
+        """ Return :class:`EventDialog`. """
+        self('add_event').click()
+        return EventDialog(self.browser, self.port,
+                           (By.XPATH, "//div[@id='event-dialog']/.."))
 
     def show_workflow(self): 
         """switch to workflow tab""" 
@@ -143,6 +157,14 @@ class ConstraintDialog(DialogPage):
     cancel = ButtonElement((By.ID, 'constraint-cancel'))
 
 
+class EventDialog(DialogPage):
+    """ Dialog for adding a new event. """
+
+    target =  InputElement((By.ID, 'event-target'))
+    ok     = ButtonElement((By.ID, 'event-ok'))
+    cancel = ButtonElement((By.ID, 'event-cancel'))
+
+
 class AssemblyPage(ComponentPage): 
     """ Assembly editor page. """ 
  
@@ -173,8 +195,8 @@ class PropertiesPage(DialogPage):
         raise RuntimeError('%r not found in inputs %s' % (name, found)) 
  
  
-class NameInstanceDialog(ValuePrompt): 
-    """ Adds :meth:`create_and_dismiss` to :class:`ValuePrompt`. """ 
+class NameInstanceDialog(ArgsPrompt): 
+    """ Adds :meth:`create_and_dismiss` to :class:`ArgsPrompt`. """ 
  
     def __init__(self, parent):
         super(NameInstanceDialog, self).__init__(parent.browser, parent.port)
@@ -184,7 +206,7 @@ class NameInstanceDialog(ValuePrompt):
         chars = string.ascii_uppercase 
         name = name or ''.join(random.choice(chars).strip() for x in range(8)) 
  
-        self.value = name 
+        self.name = name 
         self.click_ok() 
  
         return name 

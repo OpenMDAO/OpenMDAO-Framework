@@ -33,20 +33,11 @@ def _test_value_editors(browser):
     workspace_page.add_library_item_to_dataflow('variable_editors.Topp',"top")
     
     paraboloid = workspace_page.get_dataflow_figure('p1',"top")
-    component_editor = paraboloid.editor_page()
-    inputs = component_editor('inputs')
+    props = paraboloid.properties_page()
+    inputs = props.inputs
     
-    dict_path = 'div[4]/div/div[1]/div[3]'
-    str_path = 'div[4]/div/div[2]/div[3]'
-    enum_path = 'div[4]/div/div[3]/div[3]'
-    bool_path = 'div[4]/div/div[4]/div[3]'
-    array1d_path = 'div[4]/div/div[5]/div[3]'
-    float_path = 'div[4]/div/div[6]/div[3]'
-    array2d_path = 'div[4]/div/div[7]/div[3]'
-
-
     #edit dictionary - remove 'e', add 'phi', round down 'pi'
-    inputs.find_element_by_xpath(dict_path).click()
+    inputs.rows[0].cells[1].click()
     
     pi_value_path = '//*[@id="d-editor"]/input[2]'
     pi_value = browser.find_element_by_xpath(pi_value_path)
@@ -66,34 +57,36 @@ def _test_value_editors(browser):
     browser.find_element_by_xpath(add_new_path).click()
     browser.find_element_by_xpath(submit_path).click()
     time.sleep(0.5)
+    inputs = props.inputs
     
     # string editor - set to "abcd"
-    inputs.find_element_by_xpath(str_path).click()
-    cell_path = 'div[4]/div/div[2]/div[3]'
-    inputs.find_element_by_xpath(cell_path).click()
-    cell_input_path = 'div[4]/div/div[2]/div[3]/input'
-    cell_input = inputs.find_element_by_xpath(cell_input_path)
-    cell_input.clear()
-    cell_input.send_keys("abcd")
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    inputs.rows[1].cells[1].click()
+    inputs[1][1] = "abcd"
     time.sleep(1)
-        
-    #enum editor - set to 3
-    inputs.find_element_by_xpath(enum_path).click()
-    selector_path = 'div[4]/div/div[3]/div[3]/select/option[4]'
-    inputs.find_element_by_xpath(selector_path).click()
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
-    time.sleep(0.5)
     
     #bool editor - set to true
-    inputs.find_element_by_xpath(bool_path).click()
+    inputs = props.inputs
+    inputs.rows[3].cells[1].click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
-    browser.find_element_by_xpath(selection_path).click()
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
+    browser.find_element_by_xpath(selection_path).click()    
+    time.sleep(0.5)
+    
+    #enum editor - set to 3
+    inputs = props.inputs
+    inputs.rows[2].cells[1].click()
+    selection_path = '//*[@id="editor-enum-e"]/option[4]'
+    browser.find_element_by_xpath(selection_path).click()    
+    time.sleep(0.5)
+    
+    # float editor - set to 2.71
+    inputs = props.inputs
+    inputs.rows[5].cells[1].click()
+    inputs[5][1] = '2.71' 
     time.sleep(0.5)
     
     #array 1d editor - add element, set to 4
-    inputs.find_element_by_xpath(array1d_path).click()
+    inputs = props.inputs
+    inputs.rows[4].cells[1].click()
     add_path = '//*[@id="array-edit-add-X"]'
     browser.find_element_by_xpath(add_path).click()
     new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
@@ -104,19 +97,9 @@ def _test_value_editors(browser):
     browser.find_element_by_xpath(submit_path).click()
     time.sleep(0.5)
     
-    # float editor - set to 2.71
-    inputs.find_element_by_xpath(float_path).click()
-    cell_path = 'div[4]/div/div[6]/div[3]'
-    inputs.find_element_by_xpath(cell_path).click()
-    cell_input_path = 'div[4]/div/div[6]/div[3]/input'
-    cell_input = inputs.find_element_by_xpath(cell_input_path)
-    cell_input.clear()
-    cell_input.send_keys("2.71")
-    inputs.find_element_by_xpath('div[4]/div/div[3]/div[4]').click()
-    time.sleep(0.5)
-        
     # array 2d editor - set to [[1, 4],[9, 16]]
-    inputs.find_element_by_xpath(array2d_path).click()
+    inputs = props.inputs
+    inputs.rows[6].cells[1].click()
     for i in range(1, 5):
         cell_path = '//*[@id="array-editor-dialog-Y"]/div/input['+str(i)+']'
         cell_input = browser.find_element_by_xpath(cell_path)
@@ -125,7 +108,7 @@ def _test_value_editors(browser):
     submit_path = '//*[@id="array-edit-Y-submit"]'
     browser.find_element_by_xpath(submit_path).click()
     
-    component_editor.close()    
+    props.close()    
     
     #check that all values were set correctly by the editors
     commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute", 
@@ -146,7 +129,121 @@ def _test_value_editors(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
     
+def _test_vartrees(browser):
+    # 
+    
+    # Creates a file in the GUI.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
+    # Import variable_editor.py
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'model_vartree.py')
+    workspace_page.add_file(file_path)
+    
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp',"top")
+
+    comp = workspace_page.get_dataflow_figure('p1',"top")
+    editor = comp.editor_page()
+    editor.move(-100, 0)
+    inputs = editor.get_inputs()
+    expected = [
+        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+    ]
+    
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    
+    # Expand first vartree
+    inputs.rows[0].cells[0].click()
+    inputs = editor.get_inputs()
+    expected = [
+        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
+        ['v1', 'float',  '1',  '', 'true', 'vv1', '', ''],
+        ['v2', 'float',  '2',  '', 'true', 'vv2', '', ''],
+        [' vt2', 'DumbVT2',  '',  '', 'true', '', '', ''],
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+    ]
+    
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+        
+    # While expanded, verify that cell that became the 2nd vartree is now
+    # uneditable
+    inputs.rows[3].cells[1].click()
+    try:
+        inputs[3][1] = "abcd"
+    except IndexError:
+        pass
+    else:
+        self.fail('Exception expected: Slot value should not be settable on inputs.')    
+    
+    # Contract first vartree
+    inputs.rows[0].cells[0].click()
+    inputs = editor.get_inputs()
+    expected = [
+        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+    ]
+    
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+            
+    editor.close()
+    
+    # Now, do it all again on the Properties Pane
+    workspace_page.select_object('top')
+    workspace_page.expand_object('top')
+    workspace_page.select_object('top.p1')
+    workspace_page.show_properties()
+    inputs = workspace_page.props_inputs
+    expected = [
+        [' cont_in',      ''],
+        ['directory',     ''],
+        ['force_execute', 'False'],
+    ]
+    
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+        
+    # Expand first vartree
+    inputs.rows[0].cells[0].click()
+    inputs = workspace_page.props_inputs
+    expected = [
+        [' cont_in',      ''],
+        ['v1', '1'],
+        ['v2', '2'],
+        [' vt2', ''],
+        ['directory',     ''],
+        ['force_execute', 'False'],
+    ]
+        
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    # Contract first vartree
+    inputs.rows[0].cells[0].click()
+    inputs = workspace_page.props_inputs
+    expected = [
+        [' cont_in',      ''],
+        ['directory',     ''],
+        ['force_execute', 'False'],
+    ]
+        
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+        
 if __name__ == '__main__':
     main()
 
