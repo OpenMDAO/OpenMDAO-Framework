@@ -38,6 +38,7 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
+        self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
@@ -97,6 +98,16 @@ class ConsoleServer(cmd.Cmd):
                     v.name = k
             if is_instance(v, Assembly) and v._call_cpath_updated:
                 set_as_top(v)
+
+    def _update_workflows(self):
+        ''' Call :meth:`check_config` on drivers to capture any workflow
+            updates now rather than waiting until they are run.
+        '''
+        for k, v in self.proj.items():
+            if has_interface(v, IContainer):
+                for driver in [obj for name, obj in v.items()
+                                   if is_instance(obj, Driver)]:
+                    driver.check_config()
 
     def publish_components(self):
         ''' publish the current component tree and subscribed components
