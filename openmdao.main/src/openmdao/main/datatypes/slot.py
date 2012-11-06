@@ -32,19 +32,20 @@ class Slot(Variable):
 
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
+        
+        default_value = None
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
         except TypeError:
             iszopeiface = False
             if not isclass(klass):
-                raise TypeError('klass argument must be a Class or Interface,'
-                                ' not %s' % klass)
+                default_value = klass
+                klass = klass.__class__
 
         metadata.setdefault('copy', 'deep')
 
         self._allow_none = allow_none
         self.klass = klass
-        default_value = None
 
         if has_interface(klass, IContainer) or (isclass(klass) and \
                                             IContainer.implementedBy(klass)):
@@ -61,9 +62,13 @@ class Slot(Variable):
             self._instance = Instance(klass=klass, allow_none=allow_none,
                                       factory=factory, args=args, kw=kw,
                                       **metadata)
-            default_value = self._instance.default_value
+            if default_value:
+                self._instance.default_value = default_value
+            else:
+                default_value = self._instance.default_value
+                
         super(Slot, self).__init__(default_value, **metadata)
-
+        
     def validate(self, obj, name, value):
         ''' wrapper around Enthought validate method'''
 
