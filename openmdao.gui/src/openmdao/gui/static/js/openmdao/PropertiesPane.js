@@ -161,8 +161,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
-        //variable to track cells that need to be highlighted
-
+        
         if (properties) {
             // Sort by name
             properties.sort(function(a, b) {
