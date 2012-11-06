@@ -5,7 +5,7 @@ import copy
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.has_traits import FunctionType
 
-from openmdao.main.variable import Variable
+from openmdao.main.interfaces import IVariable
 from openmdao.main.container import Container
 from openmdao.main.datatypes.api import Slot, Str
 from openmdao.main.rbac import rbac
@@ -60,7 +60,7 @@ class VariableTree(Container):
             if self.trait(name) is None:
                 self.add_trait(name, Slot(VariableTree, iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
-        elif not isinstance(obj, Variable):
+        elif not IVariable.providedBy(obj):
             msg = "a VariableTree may only contain Variables or other " + \
                   "VariableTrees"
             self.raise_exception(msg, TypeError)

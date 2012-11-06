@@ -58,14 +58,17 @@ class DriverPage(ComponentPage):
     workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']"))
     objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']"))
     constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']"))
+    events_tab      = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
 
     parameters  = GridElement((By.ID, 'Parameters_parms'))
     objectives  = GridElement((By.ID, 'Objectives_objectives'))
     constraints = GridElement((By.ID, 'Constraints_constraints'))
+    events      = GridElement((By.ID, 'Events_events'))
 
     add_parameter  = ButtonElement((By.XPATH, "//span[text()='Add Parameter']"))
     add_objective  = ButtonElement((By.XPATH, "//span[text()='Add Objective']"))
     add_constraint = ButtonElement((By.XPATH, "//span[text()='Add Constraint']"))
+    add_event      = ButtonElement((By.XPATH, "//span[text()='Add Event']"))
 
     def get_parameters(self):
         """ Return parameters grid. """
@@ -81,6 +84,11 @@ class DriverPage(ComponentPage):
         """ Return constraints grid. """
         self('constraints_tab').click()
         return self.constraints
+
+    def get_events(self):
+        """ Return events grid. """
+        self('events_tab').click()
+        return self.events
 
     def new_parameter(self):
         """ Return :class:`ParameterDialog`. """
@@ -99,6 +107,12 @@ class DriverPage(ComponentPage):
         self('add_constraint').click()
         return ConstraintDialog(self.browser, self.port,
                                 (By.XPATH, "//div[@id='constraint-dialog']/.."))
+
+    def new_event(self):
+        """ Return :class:`EventDialog`. """
+        self('add_event').click()
+        return EventDialog(self.browser, self.port,
+                           (By.XPATH, "//div[@id='event-dialog']/.."))
 
     def show_workflow(self):
         """switch to workflow tab"""
@@ -140,6 +154,14 @@ class ConstraintDialog(DialogPage):
     name   =  InputElement((By.ID, 'constraint-name'))
     ok     = ButtonElement((By.ID, 'constraint-ok'))
     cancel = ButtonElement((By.ID, 'constraint-cancel'))
+
+
+class EventDialog(DialogPage):
+    """ Dialog for adding a new event. """
+
+    target =  InputElement((By.ID, 'event-target'))
+    ok     = ButtonElement((By.ID, 'event-ok'))
+    cancel = ButtonElement((By.ID, 'event-cancel'))
 
 
 class AssemblyPage(ComponentPage):

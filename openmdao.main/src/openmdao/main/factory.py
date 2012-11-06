@@ -54,7 +54,7 @@ class Factory(object):
             non_default -= len(argspec.defaults)
         args = [[arg] for arg in arglist[:non_default]]
         if argspec.defaults is not None:
-            defstrs = [str(default) for default in argspec.defaults]
+            defstrs = [repr(default) for default in argspec.defaults]
             args.extend([arg, default]
                         for arg, default in zip(arglist[non_default:], defstrs))
         return dict(args=args,

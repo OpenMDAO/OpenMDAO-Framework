@@ -24,9 +24,13 @@ ORIG_DIR = os.getcwd()
 class Model(Assembly):
     """ Run AnalysisServer component inside an Assembly. """
 
+    def __init__(self, factory):
+        self.factory = factory
+        super(Model, self).__init__()
+
     def configure(self):
         self.add('source', Source())
-        self.add('as_comp', factory.create('ASTestComp'))
+        self.add('as_comp', self.factory.create('ASTestComp'))
         self.add('sink', Sink())
         self.connect('source.x', 'as_comp.x')
         self.connect('source.y', 'as_comp.y')

@@ -26,11 +26,11 @@ component.
     class MIMOSystem(Component):
         """ Two equations, two unknowns """
         
-        x = Float(10.0, iotype="in", doc="Input 1")
-        y = Float(10.0, iotype="in", doc="Input 2")
+        x = Float(10.0, iotype="in", desc="Input 1")
+        y = Float(10.0, iotype="in", desc="Input 2")
         
-        f_xy = Float(0.0, iotype="out", doc="Output 1")
-        g_xy = Float(0.0, iotype="out", doc="Output 2")
+        f_xy = Float(0.0, iotype="out", desc="Output 1")
+        g_xy = Float(0.0, iotype="out", desc="Output 2")
         
         def execute(self):
             """ Evaluate:
