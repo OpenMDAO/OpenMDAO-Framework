@@ -376,9 +376,41 @@ interface. The Slot called *recorder* is required to implement the
 
 The attribute *required* is used to indicate whether the object that plugs into
 a Slot is required. If ``required`` is True, then an exception will be raised
-if the object is not present.
+if the component is executed when that object is not present.
 
+You can also use a class name to define what is permitted in the slot. In this
+code sample, we've specified that the ``recorder`` slot can only contain an
+object of class ``CSVCaseRecorder```.
 
+.. testcode:: instance_example
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import Slot
+    from openmdao.lib.casehandlers.api import CSVCaseRecorder
+    
+    
+    class Fred(Component):
+        """ A component that takes a class as an input """
+    
+        recorder = Slot(CSVCaseRecorder, desc='Something to append() to.',
+                          required=True)
+                          
+We can also declare a pre-filled slot by passing an instance instead of the class
+name. This is a shortcut for adding it later.
+
+.. testcode:: instance_example
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import Slot
+    from openmdao.lib.casehandlers.api import CSVCaseRecorder
+    
+    
+    class Fred(Component):
+        """ A component that takes a class as an input """
+    
+        recorder = Slot(CSVCaseRecorder(), desc='Something to append() to.',
+                          required=True)
+                          
 .. index:: Float; Array; unit conversion with
 .. index:: unit conversion; with Float
 
