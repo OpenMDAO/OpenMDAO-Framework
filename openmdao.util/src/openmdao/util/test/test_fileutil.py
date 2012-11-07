@@ -54,6 +54,7 @@ class FileUtilTestCase(unittest.TestCase):
         # make sure we don't find directories
         fname = find_in_path('blah', path)
         self.assertEqual(fname, None)
+        self.fail('blah')
         
     def test_find_files(self):
         flist = find_files(self.tempdir)

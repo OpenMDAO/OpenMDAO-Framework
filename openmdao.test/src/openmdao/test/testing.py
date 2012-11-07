@@ -41,17 +41,17 @@ class TestFailureSummary(Plugin):
         if self._failed_tests:
             stream.writeln("The following tests had failures:")
             for test in self._failed_tests:
-                stream.writeln(str(test))
+                stream.writeln(test)
         if self._error_tests:
             stream.writeln("\nThe following tests had errors:")
             for test in self._error_tests:
-                stream.writeln(str(test))
+                stream.writeln(test)
 
     def addError(self, test, err, capt=None):
-        self._error_tests.append(test)
+        self._error_tests.append(test.id())
 
     def addFailure(self, test, err, capt=None, tb_info=None):
-        self._failed_tests.append(test)
+        self._failed_tests.append(test.id())
 
     def addSuccess(self, test, capt=None):
         pass
