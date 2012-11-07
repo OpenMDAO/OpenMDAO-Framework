@@ -16,4 +16,4 @@ class Topp(Assembly):
 
     def configure(self):
         self.add('p1', dummy_comp())
-    
+

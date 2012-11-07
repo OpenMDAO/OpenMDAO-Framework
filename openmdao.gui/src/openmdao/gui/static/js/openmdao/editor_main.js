@@ -22,9 +22,9 @@ jQuery(function() {
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {
+        openmdao.model.editor = undefined;
         code.close();
         ftree.close();
-        openmdao.model.editor = undefined;
     });
 
     // set the layout (note: global scope)
