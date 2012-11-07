@@ -4,11 +4,57 @@ import os
 import ConfigParser
 
 import nose
+from nose.plugins.base import Plugin
 from pkg_resources import working_set, to_filename
 
 from openmdao.main.resource import ResourceAllocationManager
 
 import atexit
+
+
+class TestFailureSummary(Plugin):
+    """This plugin lists the names of the failed tests. Run nose
+    with the option --with-fail-summary to activate it.
+    """
+
+    name = 'fail-summary'
+    score = 1
+
+    def options(self, parser, env):
+        """Sets additional command line options."""
+        super(TestFailureSummary, self).options(parser, env)
+
+    def configure(self, options, config):
+        """Configures the plugin."""
+        super(TestFailureSummary, self).configure(options, config)
+        self.config = config
+        self._failed_tests = []
+        self._error_tests = []
+
+    def startTest(self, test):
+        pass
+
+    def report(self, stream):
+        """Report the test failures"""
+        if not self.enabled:
+            return
+        if self._failed_tests:
+            stream.writeln("The following tests had failures:")
+            for test in self._failed_tests:
+                stream.writeln(str(test))
+        if self._error_tests:
+            stream.writeln("\nThe following tests had errors:")
+            for test in self._error_tests:
+                stream.writeln(str(test))
+
+    def addError(self, test, err, capt=None):
+        self._error_tests.append(test)
+
+    def addFailure(self, test, err, capt=None, tb_info=None):
+        self._failed_tests.append(test)
+
+    def addSuccess(self, test, capt=None):
+        pass
 
 
 # Code based on Python 2.7 atexit.py
