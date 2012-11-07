@@ -28,9 +28,9 @@ class FullFactorial(Container):
     num_levels = Int(0, iotype="in", desc="Number of levels of values for "
                                           "each parameter.")
     
-    def __init__(self, num_levels=0, *args, **kwargs):
+    def __init__(self, num_levels=0):
         
-        super(FullFactorial, self).__init__(*args, **kwargs)
+        super(FullFactorial, self).__init__()
         self.num_levels = num_levels
     
     def __iter__(self):

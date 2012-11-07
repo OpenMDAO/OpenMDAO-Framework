@@ -30,10 +30,17 @@ class PkgResourcesFactory(Factory):
         if server is not None or res_desc is not None:
             return None
         klass = self._load(typ, version)
+
+        print "inside pkg_res_factory klass is", klass
+        
         if klass is None:
             return None
         else:
-            return klass(**ctor_args)
+            print "before klass instantiation in pkg_res_factory"
+            k = klass(**ctor_args)
+            print "after klass instantiation in pkg_res_factory"
+            return k
+            #return klass(**ctor_args)
 
     def _load(self, typ, version):
         """Return class for *typ* and *version*."""
