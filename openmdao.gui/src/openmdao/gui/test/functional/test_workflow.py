@@ -4,7 +4,7 @@ Tests of workflow functions.
 
 import pkg_resources
 import sys
-
+import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -19,8 +19,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
             yield _test, browser
 
 
-def _test_global(browser):
-    # 'global' view should be populated (originally was blank).
+def _test_basic(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -35,6 +34,30 @@ def _test_global(browser):
     workspace_page('workflow_tab').click()
     eq(len(workspace_page.get_workflow_figures()), 3)
     eq(len(workspace_page.get_workflow_component_figures()), 6)
+
+    # Verify flow layout is horizontal and can be switched to vertical
+    sim = workspace_page.get_workflow_figure('sim.driver')
+    assert sim.horizontal
+    sim.flip()
+    assert not sim.horizontal
+
+    # Verify workflow can be collapsed and expanded
+    sim.collapse()
+    assert sim.collapsed
+    sim.expand()
+    assert sim.expanded
+
+    # Verify that component state is represented properly
+    driver = workspace_page.get_workflow_component_figure('sim.driver')
+    assert driver.state == 'INVALID'
+    driver.run()
+    time.sleep(2.0)
+    assert driver.state == 'VALID'
+
+    # Verify workflow can be cleared
+    nested = workspace_page.get_workflow_figure('nested.driver')
+    nested.clear()
+    eq(len(workspace_page.get_workflow_component_figures()), 2)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -73,4 +96,3 @@ def _test_update(browser):
 
 if __name__ == '__main__':
     main()
-

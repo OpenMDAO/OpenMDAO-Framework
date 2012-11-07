@@ -19,7 +19,7 @@ from editor import EditorPage
 from elements import ButtonElement, GridElement, InputElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
-                     find_workflow_component_figures
+                     find_workflow_component_figures, find_workflow_component_figure
 from util import ArgsPrompt, ValuePrompt, NotifierPage, ConfirmationPage
 
 
@@ -594,6 +594,10 @@ class WorkspacePage(BasePageObject):
     def get_workflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`WorkflowFigure` for `name`. """
         return find_workflow_figure(self, name, prefix, retries)
+
+    def get_workflow_component_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowComponentFigure` for `name`. """
+        return find_workflow_component_figure(self, name, prefix, retries)
 
     def show_log(self):
         """ Open log viewer.  Returns :class:`LogViewer`. """

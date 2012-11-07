@@ -770,6 +770,9 @@ def _test_logviewer(browser):
     msgs = viewer.get_messages()
     eq(msgs, [''])
 
+    # move log viewer away from file tree pane
+    viewer.move(300, 0)
+
     # Exercise filtering.
     logger = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                              'files/logger.py')
