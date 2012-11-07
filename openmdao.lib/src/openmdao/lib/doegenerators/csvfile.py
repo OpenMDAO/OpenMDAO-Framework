@@ -18,8 +18,8 @@ class CSVFile(Container):
 
     doe_filename = Str('', iotype='in', desc='Name of CSV file.')
 
-    def __init__(self, doe_filename='doe_inputs.csv', *args, **kwargs):
-        super(CSVFile, self).__init__(*args, **kwargs)
+    def __init__(self, doe_filename='doe_inputs.csv'):
+        super(CSVFile, self).__init__()
         self.doe_filename = doe_filename
 
     def __iter__(self):

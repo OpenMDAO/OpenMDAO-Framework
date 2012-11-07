@@ -233,9 +233,20 @@ class ProjDirFactory(Factory):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
+
+        print "inside projdirfactory.py with typ", typ
         if server is None and res_desc is None:
+
+
             klass = self._lookup(typ, version)
+
+            print "klass =", klass
+
+
             if klass is not None:
+
+                print "return klass"
+                
                 return klass(**ctor_args)
         return None
     

@@ -21,9 +21,9 @@ class Uniform(Container):
     num_samples = Int(0, iotype="in", desc="Number of total samples in "
                                               "the DOE.")
     
-    def __init__(self, num_samples=None, *args, **kwargs):
+    def __init__(self, num_samples=None):
     
-        super(Uniform, self).__init__(*args, **kwargs)
+        super(Uniform, self).__init__()
         
         self.num = 0
         
