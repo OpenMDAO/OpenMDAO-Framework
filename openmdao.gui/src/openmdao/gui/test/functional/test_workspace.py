@@ -12,23 +12,22 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.common.keys import Keys
-    from selenium.common.exceptions import StaleElementReferenceException, \
-                                           WebDriverException
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout, put_element_on_grid
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException, \
+                                       WebDriverException
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout, put_element_on_grid
 
-    from pageobjects.basepageobject import TMO
-    from pageobjects.slot import SlotFigure
-    from pageobjects.util import ArgsPrompt, NotifierPage
-    from pageobjects.workspace import WorkspacePage
+from pageobjects.basepageobject import TMO
+from pageobjects.slot import SlotFigure
+from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.workspace import WorkspacePage
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
 
 
 def _test_slots_sorted_by_name(browser):

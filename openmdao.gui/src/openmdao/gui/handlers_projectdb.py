@@ -14,7 +14,7 @@ from openmdao.main.project import parse_archive_name, Project
 from openmdao.main.repo import find_vcs
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
-from openmdao.util.fileutil import clean_filename
+from openmdao.util.fileutil import clean_filename, onerror
 from openmdao.util.log import logger
 
 
@@ -55,7 +55,7 @@ class DeleteHandler(ReqHandler):
         if project['projpath']:
             dirname = str(project['projpath'])
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname)
+                shutil.rmtree(dirname, onerror=onerror)
 
         pdb.remove(project_id)
         self.redirect('/')

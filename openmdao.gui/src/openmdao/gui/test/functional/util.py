@@ -25,6 +25,8 @@ if sys.platform != 'win32':
 from optparse import OptionParser
 
 from openmdao.util.network import get_unused_ip_port
+from openmdao.util.fileutil import onerror
+from openmdao.gui.util import find_chrome
 
 from pageobjects.project import ProjectsListPage
 from pageobjects.util import SafeDriver, abort
@@ -47,13 +49,10 @@ _display = None
 
 
 def check_for_chrome():
-    """ Determine if Chrome is available. """
-    if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
+    if len(find_chrome()) > 0:
         return True
-    for exe in ('google-chrome', 'chrome', 'chromium-browser'):
-        if find_executable(exe):
-            return True
-    return False
+    else:
+        return False
 
 
 def setup_chrome():
@@ -139,9 +138,16 @@ def setup_server(virtual_display=True):
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
-    if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
-    os.mkdir(server_dir)
+
+    if sys.platform == 'win32':
+        # FIXME: Windows error deleting directory, so just reuse it for now
+        if not os.path.exists(server_dir):
+            os.mkdir(server_dir)        
+    else:
+        if os.path.exists(server_dir):
+            shutil.rmtree(server_dir, onerror=onerror)
+        os.mkdir(server_dir)
+
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
     os.chdir(server_dir)
@@ -170,7 +176,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if virtual_display:
+    if virtual_display and sys.platform != 'win32':
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
@@ -199,7 +205,7 @@ def teardown_server():
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
         try:
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         except Exception as exc:
             print '%s cleanup failed: %s' % (server_dir, exc)
 
@@ -207,11 +213,6 @@ def teardown_server():
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
     global _display_set
-
-    # Because Xvfb does not exist on Windows, it's difficult to do
-    # headless (EC2) testing on Windows. So for now we don't test there.
-    if sys.platform == 'win32':
-        return
 
     # Check if functional tests are to be skipped.
     skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
