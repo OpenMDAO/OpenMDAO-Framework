@@ -133,8 +133,8 @@ class Component(Container):
 
     create_instance_dir = Bool(False)
 
-    def __init__(self, directory=''):
-        super(Component, self).__init__()
+    def __init__(self, doc=None, directory=''):
+        super(Component, self).__init__(doc)
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 

@@ -8,11 +8,11 @@ class ComponentWithDerivatives (Component):
     accessible to the OpenMDAO framework and are "runnable."
     """
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """ Only one thing to do: create Derivatives object."""
         
         self.derivatives = Derivatives(self)
-        super(ComponentWithDerivatives, self).__init__()
+        super(ComponentWithDerivatives, self).__init__(*args, **kwargs)
         
         
     def _execute_ffd(self, ffd_order):

@@ -42,10 +42,10 @@ class ZMQServer(object):
             socket = context.socket(zmq.PUB)
             DEBUG('binding output to ' + self.options.out_url)
             socket.bind(self.options.out_url)
-            # self.sysout = sys.stdout
-            # self.syserr = sys.stderr
-            # sys.stdout = OutStream(socket, 'stdout')
-            # sys.stderr = sys.stdout
+            self.sysout = sys.stdout
+            self.syserr = sys.stderr
+            sys.stdout = OutStream(socket, 'stdout')
+            sys.stderr = sys.stdout
         except Exception, err:
             print err, sys.exc_info()
 
