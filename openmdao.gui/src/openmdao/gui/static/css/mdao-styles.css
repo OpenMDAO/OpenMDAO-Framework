@@ -63,7 +63,7 @@ nav ul ul a {
   border-right:none;
 }
 nav ul ul a.omg-disabled {
-  color: grey;
+  color: gray;
 }
 nav ul ul a:hover {
   background-color:#555;
@@ -127,7 +127,7 @@ nav ul ul a.omg-disabled:hover {
 
 /* console history box */
 #historybox {
-  background-color:grey;
+  background-color: gray;
   border-style:groove;
 }
 
@@ -176,6 +176,20 @@ nav ul ul a.omg-disabled:hover {
   height: 16px !important;
 } 
 
+.ui-icon-minimized {
+  background-image: url(/static/css/ui-openmdao/images/ui-icons_222222_256x240.png);
+  background-position: -48px -16px !important;
+  width: 16px !important;
+  height: 16px !important;
+} 
+
+.ui-icon-maximized {
+  background-image: url(/static/css/ui-openmdao/images/ui-icons_222222_256x240.png);
+  background-position: -112px -16px !important;
+  width: 16px !important;
+  height: 16px !important;
+} 
+
 .toggle {
   height: 16px;
   width: 16px;
@@ -193,16 +207,16 @@ nav ul ul a.omg-disabled:hover {
 }
 
 /* CSS3 */
-.borderradius nav, dl dt,  h3, .button {
+.borderradius nav, h3, .button {
   -moz-border-radius:4px;
   -webkit-border-radius:4px;
   border-radius:4px; 
 }
-.cssgradients nav, dl dt, h3, .button {
+.cssgradients nav, h3, .button {
   background-image:-moz-linear-gradient(0% 22px 90deg, #222, #999);
   background-image:-webkit-gradient(linear, 0% 0%, 0% 70%, from(#999), to(#222));
 }
-.boxshadow.rgba nav, dl dt, h3 .button {
+.boxshadow.rgba nav, h3, .button {
   -moz-box-shadow:2px 2px 2px rgba(0,0,0,.75);
   -webkit-box-shadow:2px 2px 2px rgba(0,0,0,.75);
   box-shadow:2px 2px 2px rgba(0,0,0,.75);

@@ -32,7 +32,7 @@ def _test_maxmin(browser):
 
     # Add maxmin.py to project
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
+                                                'files/maxmin.py')
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
@@ -93,7 +93,7 @@ def _test_connect(browser):
 
     # Import connect.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'connect.py')
+                                                'files/connect.py')
     workspace_page.add_file(file_path)
 
     # Replace 'top' with connect.py's top.
@@ -287,7 +287,7 @@ def _test_driverflows(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -338,7 +338,7 @@ def _test_replace(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
