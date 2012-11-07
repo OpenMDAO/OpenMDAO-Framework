@@ -263,9 +263,11 @@ class Assembly (Component):
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
     
-    def __init__(self, doc=None, directory=''):
+    def __init__(self, directory=''):
+
+        print "inside Assembly init"
         
-        super(Assembly, self).__init__(doc=doc, directory=directory)
+        super(Assembly, self).__init__(directory=directory)
         
         self._exprmapper = ExprMapper(self)
         
