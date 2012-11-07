@@ -16,8 +16,8 @@ class VariableTree(Container):
     
     _iotype = Str('')
     
-    def __init__(self, iotype='', doc=None):
-        super(VariableTree, self).__init__(doc=doc)
+    def __init__(self, iotype=''):
+        super(VariableTree, self).__init__()
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
         # register callbacks for our class traits

@@ -55,8 +55,8 @@ class MetaModel(Component):
     #when fired, the next execution will reset all training data
     reset_training_data = Event()
 
-    def __init__(self, *args, **kwargs):
-        super(MetaModel, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MetaModel, self).__init__()
         self._surrogate_input_names = None
         self._surrogate_output_names = None
         self._surrogate_overrides = set() # keeps track of which sur_<name> slots are full

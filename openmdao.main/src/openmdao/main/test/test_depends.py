@@ -20,9 +20,9 @@ exec_order = []
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class DumbDriver(Driver):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.oldval = None
-        super(DumbDriver, self).__init__(*args, **kwargs)
+        super(DumbDriver, self).__init__()
         
     def execute(self):
         global exec_order

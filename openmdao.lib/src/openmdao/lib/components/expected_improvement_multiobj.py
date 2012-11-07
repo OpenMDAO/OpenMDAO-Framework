@@ -52,8 +52,8 @@ class MultiObjExpectedImprovement(Component):
 
     reset_y_star = Event()
 
-    def __init__(self, *args, **kwargs):
-        super(MultiObjExpectedImprovement, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MultiObjExpectedImprovement, self).__init__()
         self.y_star = None
 
     def _reset_y_star_fired(self):

@@ -16,9 +16,9 @@ class DriverUsesDerivatives(Driver):
     differentiator = Slot(IDifferentiator, iotype='in',
                           desc = "Slot for a differentiator")
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         
-        super(DriverUsesDerivatives, self).__init__(*args, **kwargs)
+        super(DriverUsesDerivatives, self).__init__()
         
         # These flags tell whether to check for missing derivatives during
         # check_config. Default as stated.

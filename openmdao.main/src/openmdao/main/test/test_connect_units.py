@@ -36,9 +36,9 @@ class Oneout(Component):
     ratio10 = Float(1, iotype='out',
                    desc='Float variable', units= 'rad')       #   angle in rad 
 
-    def __init__(self, doc=None, directory=''):
+    def __init__(self):
 
-        super(Oneout, self).__init__(doc, directory)
+        super(Oneout, self).__init__()
 
     def execute(self):
         """                                                                    
@@ -86,9 +86,9 @@ class Oneinp(Component):
     ratio17 = Float(1, iotype='in',
                    desc='Float variable', units= 'deg')   #   angle in deg 
 
-    def __init__(self, doc=None, directory=''):
+    def __init__(self):
 
-        super(Oneinp, self).__init__(doc, directory)
+        super(Oneinp, self).__init__()
 
 
     def execute(self):

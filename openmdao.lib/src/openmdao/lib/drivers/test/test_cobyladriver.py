@@ -45,8 +45,8 @@ class OptRosenSuzukiComponent(Component):
     opt_objective = Float(iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
-        super(OptRosenSuzukiComponent, self).__init__(doc)
+    def __init__(self):
+        super(OptRosenSuzukiComponent, self).__init__()
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
         
