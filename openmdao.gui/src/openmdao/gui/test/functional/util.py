@@ -49,7 +49,7 @@ _display = None
 
 
 def check_for_chrome():
-    if len(find_chrome()) > 0:
+    if find_chrome() is not None:
         return True
     else:
         return False
