@@ -156,7 +156,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         self.assertTrue('Outputs' in attributes)
         outputs = attributes['Outputs']
-        self.assertEqual(len(outputs), 1)
+        self.assertEqual(len(outputs), 4)
         found_f_xy = False
         for output in outputs:
             self.assertTrue('desc'  in output)

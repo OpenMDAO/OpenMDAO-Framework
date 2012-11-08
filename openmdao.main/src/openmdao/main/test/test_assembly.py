@@ -469,7 +469,39 @@ class AssemblyTestCase(unittest.TestCase):
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('Exception expected')
-            
+
+        # Unconnected added twice shouldn't cause exception.
+        asm = Assembly()
+        asm.add('a', Simple())
+        asm.add('b', Simple())
+        dup1 = asm.add('dup1', Simple())
+        dup2 = asm.add('dup2', Simple())
+        self.assertEqual(dup1.exec_count, 0)
+        self.assertEqual(dup2.exec_count, 0)
+        sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
+        asm.driver.workflow.add(sequence)
+        self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
+        asm.run()
+        self.assertEqual(dup1.exec_count, 1)
+        self.assertEqual(dup2.exec_count, 1)
+
+        # With force_execute True, all executions are run.
+        asm = Assembly()
+        asm.add('a', Simple())
+        asm.add('b', Simple())
+        dup1 = asm.add('dup1', Simple())
+        dup1.force_execute = True
+        dup2 = asm.add('dup2', Simple())
+        dup2.force_execute = True
+        self.assertEqual(dup1.exec_count, 0)
+        self.assertEqual(dup2.exec_count, 0)
+        sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
+        asm.driver.workflow.add(sequence)
+        self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
+        asm.run()
+        self.assertEqual(dup1.exec_count, 3)
+        self.assertEqual(dup2.exec_count, 2)
+
     def test_disconnect(self):
         # first, run connected
         comp2 = self.asm.get('comp2')

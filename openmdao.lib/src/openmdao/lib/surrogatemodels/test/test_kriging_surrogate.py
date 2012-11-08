@@ -19,7 +19,8 @@ class KrigingSurrogateTests(unittest.TestCase):
         
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate()
+        krig1.train(x,y)
         
         self.assertAlmostEqual(1.18375,krig1.thetas,places=4)
         
@@ -35,7 +36,8 @@ class KrigingSurrogateTests(unittest.TestCase):
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
         
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate()
+        krig1.train(x,y)
         new_x = array([0.5])
         pred = krig1.predict(new_x)
         
@@ -47,7 +49,8 @@ class KrigingSurrogateTests(unittest.TestCase):
         """Test for least squares solver utilization when ill-conditioned"""
         x = [[case] for case in linspace(0.,1.,40)]
         y = sin(x).flatten()
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate()
+        krig1.train(x,y)
         new_x = array([0.5])
         pred = krig1.predict(new_x)
        
@@ -63,7 +66,8 @@ class KrigingSurrogateTests(unittest.TestCase):
                    [10.,12.],[7.,13.5],[2.5,15.]])
         y = array([bran(case) for case in x])
 
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate()
+        krig1.train(x,y)
         pred = krig1.predict([-2.,0.])
         self.assertAlmostEqual(bran(x[0]),pred.mu,places=5)
         
@@ -75,7 +79,8 @@ class KrigingSurrogateTests(unittest.TestCase):
     def test_get_uncertain_value(self): 
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate()
+        krig1.train(x,y)
         
         self.assertEqual(krig1.get_uncertain_value(1).mu,NormalDistribution(1.,0.).mu)
         self.assertEqual(krig1.get_uncertain_value(1).sigma,NormalDistribution(1.,0.).sigma)
