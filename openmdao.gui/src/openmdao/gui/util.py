@@ -132,12 +132,13 @@ def find_chrome():
          + os.pathsep \
          + "C:\Program Files (x86)\Google\Chrome\Application" \
          + os.pathsep \
-         + os.environ['PATH'] \
+         + os.environ['PATH']
 
     # Windows7
     USERPROFILE = os.getenv("USERPROFILE")
     if USERPROFILE:
-        path += USERPROFILE + '\AppData\Local\Google\Chrome\Application'
+        path += os.pathsep \
+             +  USERPROFILE + '\AppData\Local\Google\Chrome\Application'
 
     exe_names = ('chrome', 'chrome.exe', 'Google Chrome',
                  'google-chrome', 'chromium-browser') 

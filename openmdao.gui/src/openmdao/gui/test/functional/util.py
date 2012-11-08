@@ -274,7 +274,12 @@ def generate(modname):
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
-            browser.quit()
+            try:
+                browser.quit()
+            except WindowsError:
+                # if it already died, calling kill on a defunct process
+                # raises a WindowsError: Access Denied
+                pass
             if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
                 os.remove('chromedriver.log')
 
