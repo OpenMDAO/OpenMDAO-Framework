@@ -155,9 +155,14 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['derivative_exec_count', 'int', '0', '', 'true',
+         'Number of times this Component has been executed for derivatives.', '', ''],
         ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
+        ['exec_count', 'int', '1', '', 'true',
+         'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
