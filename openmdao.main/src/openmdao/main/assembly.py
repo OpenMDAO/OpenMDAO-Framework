@@ -560,11 +560,12 @@ class Assembly (Component):
     
         # Check if src is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
-            if isinstance(item, Driver):
-                if src in item.list_param_targets():
+            comp = self.get(item)
+            if isinstance(comp, Driver):
+                if dest in comp.list_param_targets():
                     msg = "Can't connect '%s' to '%s' " % (src, dest)
                     msg += "because the target is a Parameter in " + \
-                           "driver %s." % item.name
+                           "driver '%s'." % comp.name
                     self.raise_exception(msg, RuntimeError)
     
         super(Assembly, self).connect(src, dest)
