@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import shutil
 
-from openmdao.util.fileutil import find_files, build_directory
+from openmdao.util.fileutil import build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
                                   filter_macro, ProjFinder, _match_insts
@@ -52,6 +52,11 @@ class ProjectTestCase(unittest.TestCase):
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
+        self.assertEqual(proj.config.items('info'),
+                         [('version', '0'), ('description', '')])
+        new_info = [('version', 'stinky'), ('description', 'Frobozz rulz!')]
+        proj.set_info(dict(new_info))
+        proj.activate()
         self._fill_project(proj)
         
         proj.export(destdir=self.tdir)
@@ -63,6 +68,7 @@ class ProjectTestCase(unittest.TestCase):
                                        dest_dir=self.tdir)
 
         self.assertEqual(newproj.path, os.path.join(self.tdir, 'proj2'))
+        self.assertEqual(newproj.config.items('info'), new_info)
     
         try:
             newproj = project_from_archive(os.path.join(self.tdir,
@@ -75,8 +81,9 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_using(self):
         proj = Project('a_proj')
-        top = proj.get('top')
+        proj.activate()
         self._fill_project(proj)
+        top = proj.get('top')
         top.run()
         self.assertEqual(top.comp1.rval_out, 10.)
         self.assertEqual(top.comp2.rval_out, 40.)
@@ -85,6 +92,7 @@ class ProjectTestCase(unittest.TestCase):
         proj.export(projname='fooproj')
         
         fooproj = project_from_archive('fooproj.proj')
+        fooproj.activate()
         footop = fooproj.get('top')
         self.assertEqual(footop.comp1.rval_in, top.comp1.rval_in)
         footop.run()
@@ -93,6 +101,7 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_localfile_factory(self):
         proj = Project(os.path.join(self.tdir, 'proj2'))
+        proj.activate()
         self._fill_project(proj)
         
     def test_filter_macro(self):

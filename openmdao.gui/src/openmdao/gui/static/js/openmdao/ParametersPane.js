@@ -3,11 +3,11 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
-        parmsDiv = jQuery("<div id='"+name+"_parms'>"),
-        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
-        addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
+        parmsDiv = jQuery("<div id='"+name+"_parms' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
+        addButton = jQuery("<button>Add Parameter</button>").button(),
+        clrButton = jQuery("<button>Clear Parameters</button>").button(),
         columns = [
+            {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -19,17 +19,23 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         options = {
             asyncEditorLoading: false,
             multiSelect: false,
-            autoHeight: true,
+            autoHeight: false,
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        button = '<div class="ui-icon-trash"></div>';
+        return button;
+    }
     elm.append(parmsDiv);
 
-    var table = jQuery('<table width="100%">'),
+    var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
+        table = jQuery('<table width="100%">'),
         row = jQuery('<tr>').append(jQuery('<td style="text-align:left">').append(addButton))
                             .append(jQuery('<td style="text-align:right">').append(clrButton));
     table.append(row);
-    elm.append(table);
+    tabdiv.append(table);
+    elm.append(tabdiv);
 
     if (editable) {
         options.editable = true;
@@ -45,6 +51,24 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    parms.onClick.subscribe(function (e) {
+        var cell = parms.getCellFromEvent(e);
+        if (cell.cell==0) {
+            var delname = parms.getData()[cell.row].name
+            if (delname.split(",").length>1) {
+                cmd = pathname+'.remove_parameter('+delname+');';
+            }
+            else {
+                cmd = pathname+'.remove_parameter("'+delname+'");';
+            }
+            model.issueCommand(cmd);
+        }
+    });   
+    
+    parmsDiv.bind('resizeCanvas', function() {
+        parms.resizeCanvas();
+    });
+
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
@@ -144,6 +168,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
 
     addButton.click(function() { promptForParameter(addParameter); });
     clrButton.click(function() { clearParameters(); });
+    
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -155,7 +180,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             alert('Error getting properties for '+pathname+' ('+name+')');
             debug.info(properties);
         }
-        parms.updateRowCount();
-        parms.render();
+        parms.resizeCanvas();
+        
     };
 };

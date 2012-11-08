@@ -49,7 +49,7 @@ class IDF(Architecture):
         self.parent.driver.add_objective(objective[1].text, name=objective[0])
         
         #add the coupling vars parameters/constraints to the solver
-        for key,couple in self.parent.get_coupling_vars().iteritems(): 
+        for key,couple in self.parent.list_coupling_vars().iteritems(): 
             self.parent.driver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
             self.parent.driver.add_constraint("(%s-%s) <= .001"%(couple.indep.target,couple.dep.target))
             self.parent.driver.add_constraint("(%s-%s) <= .001"%(couple.dep.target,couple.indep.target))

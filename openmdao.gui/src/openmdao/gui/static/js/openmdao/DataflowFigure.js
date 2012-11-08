@@ -263,16 +263,12 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables();
 
                 if (maxmin !== '') {
-                    openmdao.Util.promptForValue('Enter name for new '+droppedName,
-                        function(name) {
-                            model.addComponent(droppedPath,name,elm.data("pathname"));
-                        });
+                    openmdao.Util.addComponent(droppedPath, droppedName,
+                                               elm.data("pathname"));
                 }
                 else {
-                    openmdao.Util.confirm('Replace '+elm.data("pathname")+' with '+droppedName,
-                        function() {
-                            model.replaceComponent( elm.data("pathname"), droppedPath);
-                        });
+                    openmdao.Util.replaceComponent(droppedPath, droppedName,
+                                                   elm.data("pathname"));
                 }
             }
         });
@@ -281,7 +277,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     return item;
 };
 
-/** Highlight this figure when it the cursor is over it and it can accept a drop */
+/** Highlight this figure when the cursor is over it and it can accept a drop */
 openmdao.DataflowFigure.prototype.highlightAsDropTarget=function(){
     var circleIMG = "url(/static/images/circle-plus-drop-zone.png)";
     this.bottom_right.style.backgroundImage=circleIMG ;
@@ -509,8 +505,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
-            var cmd = pathname + '.run();';
-            model.issueCommand(cmd);
+            model.runComponent(pathname);
         }));
 
 
@@ -544,6 +539,16 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
             menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
                 self.drawDriverFlows = !self.drawDriverFlows;
                 self.maximize();
+            }));
+
+            // menu spacer
+            menu.appendMenuItem(new draw2d.MenuItem("-", null, function() {
+            }));
+
+            // Edit passthroughs
+            menu.appendMenuItem(new draw2d.MenuItem("Edit Passthroughs", null, function() {
+                var f = new openmdao.PassthroughsFrame(model, pathname);
+
             }));
 
             // menu spacer

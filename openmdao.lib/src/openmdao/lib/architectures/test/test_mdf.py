@@ -13,7 +13,7 @@ class TestMDF(unittest.TestCase):
         prob.run()
 
         solver_params = prob.solver.get_parameters()
-        coupling = prob.get_coupling_vars()
+        coupling = prob.list_coupling_vars()
 
         params = prob.get_parameters()
         opt_params = prob.driver.get_parameters()

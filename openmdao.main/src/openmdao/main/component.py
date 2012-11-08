@@ -24,7 +24,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     ICaseIterator, ICaseRecorder
+                                     IHasEvents, ICaseIterator, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -35,6 +35,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
+from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -128,7 +129,14 @@ class Component(Container):
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, desc='Number of times this Component has been executed.')
+    exec_count = Int(0, iotype='out',
+                     desc='Number of times this Component has been executed.')
+
+    derivative_exec_count = Int(0, iotype='out',
+                     desc='Number of times this Component has been executed'
+                          ' for derivatives.')
+
+    itername = Str('', iotype='out', desc='Iteration coordinates')
 
     create_instance_dir = Bool(False)
 
@@ -173,6 +181,7 @@ class Component(Container):
 
         self.exec_count = 0
         self.derivative_exec_count = 0
+        self.itername = ''
         self.create_instance_dir = False
         if directory:
             self.directory = directory
@@ -184,8 +193,6 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
-
-        self._itername = ''
 
     @property
     def dir_context(self):
@@ -204,7 +211,7 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
-        return self._itername
+        return self.itername
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername):
@@ -214,7 +221,7 @@ class Component(Container):
         itername: string
             Iteration coordinates.
         """
-        self._itername = itername
+        self.itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -865,7 +872,7 @@ class Component(Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(v, 0) \
+            self._expr_sources = [(u, 0) \
                 for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
@@ -1584,7 +1591,10 @@ class Component(Container):
 
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-
+            
+            io_attr['id'] = name
+            io_attr['indent'] = 0
+            
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
 
@@ -1608,16 +1618,36 @@ class Component(Container):
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
 
+            # Let the GUI know that this var is the top element of a
+            # variable tree
+            if slot_attr is not None:
+                vartable = self.get(name)
+                if isinstance(vartable, VariableTree):
+                    io_attr['vt'] = 'vt'
+
             if name in self.list_inputs():
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
-
+                
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
                     slots.append(slot_attr)
+                    
+            # For variables trees only: recursively add the inputs and outputs
+            # into this variable list
+            if 'vt' in io_attr:
+                
+                vt_attrs = vartable.get_attributes(io_only, indent=1,
+                                                   parent=name, 
+                                                   valid=io_attr['valid'])
+                
+                if name in self.list_inputs():
+                    inputs += vt_attrs['Inputs']
+                else:
+                    outputs += vt_attrs['Outputs']
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
@@ -1716,6 +1746,9 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
+            if has_interface(self, IHasEvents):
+                attrs['Events'] = [dict(target=path)
+                                   for path in self.get_events()]
         return attrs
 
 

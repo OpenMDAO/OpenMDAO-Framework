@@ -6,7 +6,8 @@ openmdao.Menu = function(id, json) {
      *  private
      ***********************************************************************/
     var self = this,
-        elm = jQuery("#"+id);
+        elm = jQuery("#"+id),
+        _onclick = [];
 
     /** build menus from JSON data structure */
     function buildMenus(menus) {
@@ -84,6 +85,39 @@ openmdao.Menu = function(id, json) {
         return menuHTML;
     }
 
+    /** Disable menu item given its ID */
+    function disableById(id) {
+        var button = jQuery('#'+id),
+            binding = button.attr('onclick');
+        if (binding) {  // We can get multiple disables in a row.
+            _onclick[id] = binding;
+            button.attr('onclick', null);
+            button.addClass('omg-disabled');
+        }
+    }
+
+    /** Enable menu item given its ID */
+    function enableById(id) {
+        var button = jQuery('#'+id),
+            binding = _onclick[id];
+        if (binding) {
+            button.attr('onclick', binding);
+            button.removeClass('omg-disabled');
+        }
+    }
+
+    /** Control commit/revert menu buttons */
+    function modelModified(message) {
+        var modified = message[1];
+        if (modified) {
+            enableById('project-commit');
+            enableById('project-revert');
+        } else {
+            disableById('project-commit');
+            disableById('project-revert');
+        }
+    }
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -107,5 +141,9 @@ openmdao.Menu = function(id, json) {
     };
 
     buildMenus(json);
+
+    // Initially nothing modified.
+    modelModified(['@model-modified', false]);
+    openmdao.model.addListener('@model-modified', modelModified);
 };
 

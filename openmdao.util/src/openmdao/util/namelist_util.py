@@ -307,8 +307,8 @@ class Namelist(object):
                     
                 else:
                     raise RuntimeError("Error generating input file. Don't" + \
-                                       "know how to handle data in variable" + \
-                                       "%s in group %s." % (card.name, \
+                                       " know how to handle data in variable" + \
+                                       " %s in group %s." % (card.name, \
                                                             group_name))
 
                 data.append(line)
@@ -366,7 +366,8 @@ class Namelist(object):
         card_token = Group(fieldval("name") + \
                            Optional(index_token("index")) + \
                            Suppress('=') + \
-                           data_token("value") +
+                           Optional(num_int("dimension") + Suppress('*')) + \
+                           data_token("value") + \
                            Optional(Suppress('*') + num_int("dimension")))
         multi_card_token = (card_token + ZeroOrMore(Suppress(',') + card_token))
         array_continuation_token = numstr_token.setResultsName("value")
@@ -594,7 +595,7 @@ class Namelist(object):
                         
                 else:
                     for item in [name, name.lower()]:
-                        if self.comp.contains(item):
+                        if item in self.comp.list_vars():
                             found = True
                             varpath = item
                             break
@@ -629,3 +630,22 @@ class Namelist(object):
                 
         return empty_groups, unlisted_groups, unlinked_vars
 
+    def find_card(self, group, name):
+        """Returns the value for a given namelist variable in a given group.
+        
+        group: string
+            namelist group name.
+            
+        name: string
+            namelist variable name."""
+        
+        group_id = self.groups.index(group)
+        
+        for card in self.cards[group_id]:
+            if card.name==name:
+                return card.value
+            
+        msg = "Variable %s" % name + \
+              " not found in namelist %s." % group
+        raise RuntimeError(msg)
+        

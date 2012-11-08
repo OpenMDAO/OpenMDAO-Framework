@@ -83,6 +83,14 @@ class _BaseElement(object):
         """ Convenience routine. """
         return self.element.find_elements_by_xpath(xpath)
 
+    def find_elements_by_css_selector(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_css_selector(xpath)
+
+    def get_attribute(self, name):
+        """ Return value for the attribute `name`. """
+        return self.element.get_attribute(name)
+
     def value_of_css_property(self, name):
         """ Return value for the the CSS property `name`. """
         return self.element.value_of_css_property(name)
@@ -98,6 +106,11 @@ class _ButtonElement(_BaseElement):
     def value(self):
         """ The element's ``value`` attribute. """
         return self.element.get_attribute('value')
+
+    @property
+    def text(self):
+        """ The element's text. """
+        return self.element.text
 
     def click(self):
         """ 'Click' on the button. """

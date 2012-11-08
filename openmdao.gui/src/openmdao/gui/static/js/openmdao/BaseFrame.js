@@ -29,13 +29,13 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         this.elm = jQuery("#"+this.id);
     }
     else {
-        if (openmdao.uniqueID) {
-            openmdao.uniqueID = openmdao.uniqueID + 1;
+        if (openmdao.BaseFrame.uniqueID) {
+            openmdao.uniqueID = openmdao.BaseFrame.uniqueID + 1;
         }
         else {
-            openmdao.uniqueID = 1;
+            openmdao.BaseFrame.uniqueID = 1;
         }
-        this.id = "BaseFrame"+openmdao.uniqueID;
+        this.id = "BaseFrame"+openmdao.BaseFrame.uniqueID;
     }
 
     // add to list of frames
@@ -75,7 +75,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
     var dlg = this.elm;
     dlg.dialog({
         'modal': false,
-        'title': title,
+        'title': this.title,
         'close': function(ev, ui) {
                     this.close();
                     // if returning to a tab, need to trigger layout to resize
@@ -87,7 +87,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 
     function resize_contents() {
         // resize content pane of all tabbed panes to fit dialog content pane
-        var tabs_height = dlg.find('.ui-tabs-nav').height(),
+        var tabs_height = dlg.find('.ui-tabs-nav').outerHeight(),
             pane_height = dlg.height()-tabs_height,
             pane_width  = dlg.width();
 
@@ -95,14 +95,26 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             var panel = jQuery(this);
             panel.height(pane_height);
             panel.width(pane_width);
+
+            // Accomodate any extra stuff after the slickgrid table. This content should
+            // be placed in a div called "post_slick"
+            var extra_height = 0;
+            extra = panel.find('.post_slick');
+            if (extra.length>0) {
+                extra_height = extra.outerHeight();
+            }
+
             // resize all slickgrid viewports and use viewport for scrolling
             panel.find('.slickgrid').each(function() {
                 panel.css('overflow','hidden');
                 var grid = jQuery(this),
                     grid_hdr = grid.children('.slick-header'),
                     grid_vwp = grid.children('.slick-viewport');
-                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight());
+                grid.height(panel.innerHeight() - extra_height);
+                grid.width(pane_width);
+                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight()-extra_height);
                 grid_vwp.width(panel.innerWidth());
+                panel.find('.slickgrid').trigger('resizeCanvas');
             });
         });
     }
@@ -152,7 +164,9 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title;
-        this.elm.dialog('option', 'title', title);
+        if (this.elm.is(':data(dialog)')) {
+            this.elm.dialog('option', 'title', title);
+        }
     }
 };
 

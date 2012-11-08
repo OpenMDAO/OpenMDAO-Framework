@@ -1,14 +1,33 @@
-import os
+import cStringIO as StringIO
+import os.path
+import shutil
+import tarfile
+from ConfigParser import SafeConfigParser
+from tempfile import mkdtemp
 from time import strftime
 from urllib2 import HTTPError
 
-# tornado
 from tornado import web
 
 from openmdao.main import __version__
+from openmdao.main.project import parse_archive_name, Project
+from openmdao.main.repo import find_vcs
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename
+from openmdao.util.log import logger
+
+
+def _get_unique_name(dirname, basename):
+    """Returns a unique pathname for a file with the given basename
+    in the specified directory.
+    """
+    i = 1
+    name = basename
+    while os.path.exists(os.path.join(dirname, name)):
+        name = '%s_%d' % (basename, i)
+        i += 1
+    return os.path.join(dirname, name)
 
 
 class IndexHandler(ReqHandler):
@@ -33,11 +52,10 @@ class DeleteHandler(ReqHandler):
         pdb = Projects()
         project = pdb.get(project_id)
 
-        if project['filename']:
-            filename = os.path.join(self.get_project_dir(),
-                                    str(project['filename']))
-            if os.path.exists(filename):
-                os.remove(filename)
+        if project['projpath']:
+            dirname = str(project['projpath'])
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
 
         pdb.remove(project_id)
         self.redirect('/')
@@ -68,7 +86,7 @@ class DetailHandler(ReqHandler):
         else:
             project = {}
             project['active'] = 0
-            project['filename'] = None
+            project['projpath'] = None
             project_is_new = True
 
         if 'projectname' not in forms or \
@@ -85,39 +103,44 @@ class DetailHandler(ReqHandler):
         if 'version' in forms:
             project['version'] = forms['version'].strip()
         else:
-            project['version'] =''
+            project['version'] = ''
+            
+        directory = forms.get('directory', self.get_project_dir())
 
-        # if there's no proj file yet, create en empty one
-        if not project['filename']:
+        # if there's no proj dir yet, create an empty one
+        if not project['projpath']:
 
             version = project['version']
             pname = project['projectname']
 
             if len(version):
-                filename = '%s-%s' % (pname, version)
+                filename = clean_filename('%s-%s' % (pname, version))
             else:
-                filename = '%s' % pname
-            filename = clean_filename(filename)
+                filename = clean_filename(pname)
 
-            unique = '%s.proj' % filename
+            unique = filename
             i = 1
-            while os.path.exists(os.path.join(self.get_project_dir(), \
-                                              unique)):
-                unique = '%s_%s.proj' % (filename, str(i))
+            while os.path.exists(os.path.join(directory, unique)):
+                unique = '%s_%s' % (filename, str(i))
                 i = i+1
 
-            with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
-                out.write('')
-                out.close()
-
-            project['filename'] = unique
+            project['projpath'] = os.path.join(directory, unique)
 
         if project_is_new:
             pdb.new(project)
+            os.mkdir(project['projpath'])
         else:
             for key, value in project.iteritems():
                 pdb.set(project_id, key, value)
             pdb.modified(project_id)
+
+        # Update project settings.
+        proj = Project(project['projpath'])
+        dummy = proj.get_info()  # Just to get required keys.
+        info = {}
+        for key in dummy:
+            info[key] = project[key]
+        proj.set_info(info)
 
         self.redirect(self.request.uri)
 
@@ -140,26 +163,35 @@ class DownloadHandler(ReqHandler):
         '''
         pdb = Projects()
         project = pdb.get(project_id)
-        if project['filename']:
-            filename = os.path.join(self.get_project_dir(), project['filename'])
+        if project['projpath']:
+            dirname = project['projpath']
 
-            if os.path.exists(filename):
-                proj_file = file(filename, 'rb')
-                self.set_header('content_type', 'application/octet-stream')
-                self.set_header('Content-Length', str(os.path.getsize(filename)))
-                form_proj = clean_filename(project['projectname'])
-                form_ver = clean_filename(project['version'])
-                form_date = strftime('%Y-%m-%d_%H%M%S')
-                self.set_header('Content-Disposition',
-                                'attachment; filename=%s-%s-%s.proj' %
-                                (form_proj, form_ver, form_date))
-
+            if os.path.isdir(dirname):
+                proj = Project(dirname)
+                tdir = mkdtemp()
                 try:
-                    self.write(proj_file.read())
+                    filename = proj.export(destdir=tdir)
+                    proj_file = open(filename, 'rb')
+                    self.set_header('content_type', 'application/octet-stream')
+                    self.set_header('Content-Length', str(os.path.getsize(filename)))
+                    form_proj = clean_filename(project['projectname'])
+                    form_ver = clean_filename(project['version'])
+                    form_date = strftime('%Y-%m-%d_%H%M%S')
+                    self.set_header('Content-Disposition',
+                                    'attachment; filename=%s-%s-%s.proj' %
+                                    (form_proj, form_ver, form_date))
+    
+                    try:
+                        self.write(proj_file.read())
+                    finally:
+                        proj_file.close()
                 finally:
-                    proj_file.close()
+                    try:
+                        shutil.rmtree(tdir)
+                    except:
+                        pass
             else:
-                raise HTTPError(filename, 403, "%s is not a file" % filename,
+                raise HTTPError(dirname, 403, "%s is not a directory" % dirname,
                                 None, None)
         else:
             raise HTTPError(filename, 403, "no file found for %s" % \
@@ -181,7 +213,7 @@ class NewHandler(ReqHandler):
         project['description'] = ''
         project['created'] = 'New Project'
         project['modified'] = 'New Project'
-        project['filename'] = ''
+        project['projpath'] = ''
         project['active'] = ''
 
         self.render('projdb/project_detail.html', project=project,
@@ -189,7 +221,8 @@ class NewHandler(ReqHandler):
 
 
 class AddHandler(ReqHandler):
-    ''' upload a file and add it to the project database
+    ''' Add a project to the project database. This extracts the project file
+    into a directory under the users projects directory.
     '''
 
     @web.authenticated
@@ -200,6 +233,9 @@ class AddHandler(ReqHandler):
             filename = sourcefile['filename']
             if len(filename) > 0:
 
+                unique = _get_unique_name(self.get_project_dir(),
+                                          parse_archive_name(filename))
+                
                 pdb = Projects()
 
                 project = {}
@@ -207,24 +243,27 @@ class AddHandler(ReqHandler):
                 project['version'] = ''
                 project['description'] = ''
                 project['active'] = 1
+                project['projectname'] = parse_archive_name(unique)
+                project['projpath'] = unique
 
-                if filename[-5:] == '.proj':
-                    filename = filename[:-5]
-                project['projectname'] = 'Added_%s' % (filename)
+                os.mkdir(unique)
+                
+                buff = StringIO.StringIO(sourcefile['body'])
+                
+                archive = tarfile.open(fileobj=buff, mode='r:gz')
+                archive.extractall(path=unique)
+                
+                vcslist = find_vcs()
+                if vcslist:
+                    vcs = vcslist[0](unique)
+                else:
+                    vcs = DumbVCS(unique)
+                vcs.init_repo()
+                
+                # Update project dict with info section of config file.
+                proj = Project(unique)
+                project.update(proj.get_info())
 
-                unique = '%s.proj' % filename
-                i = 1
-                while os.path.exists(os.path.join(self.get_project_dir(), \
-                                                  unique)):
-                    unique = '%s_%s.proj' % (filename, str(i))
-                    i = i+1
-
-                with open(os.path.join(self.get_project_dir(),
-                                       unique), 'wb') as out:
-                    out.write(sourcefile['body'])
-                    out.close()
-
-                project['filename'] = unique
                 pdb.new(project)
 
                 self.redirect('/projects/'+str(project['id']))
@@ -234,6 +273,7 @@ class AddHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.render('projdb/add_project.html')
+
 
 handlers = [
     web.url(r'/projects/?',                              IndexHandler),

@@ -86,6 +86,7 @@ openmdao.Util = {
 
         win = window.open(url, title, spec_string);
         win.document.title = title;
+        return win;
     },
 
     /**
@@ -161,16 +162,6 @@ openmdao.Util = {
     },
 
     /**
-     * function to scroll to the bottom of an element (FIXME: doesn't work)
-     *
-     * el:      the element to scroll
-     */
-    scrollToBottom: function(el) {
-        el.scrollTop = el.scrollHeight;
-        el.scrollTop = el.scrollHeight - el.clientHeight;
-    },
-
-    /**
      * prompt for a value
      *
      * prompt:      prompt string
@@ -189,8 +180,7 @@ openmdao.Util = {
             inputId = baseId+'-input',
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
-            element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
 
         function handleResponse(ok) {
@@ -256,9 +246,13 @@ openmdao.Util = {
         var promptId = baseId+'-prompt',
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
-            element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
+
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
 
         function handleResponse(ok) {
             // close dialog
@@ -309,29 +303,29 @@ openmdao.Util = {
         baseId = baseId || 'notify';
 
         var msgId = baseId+'-msg',
-            element = document.getElementById(msgId),
             win = null;
 
-        if (element === null) {
-            win = jQuery('<div id="'+msgId+'"></div>');
-            win.dialog({
-                autoOpen: false,
-                modal: true,
-                title: title,
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: baseId+'-ok',
-                        click: function() {
-                            win.dialog('close');
-                        }
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
+
+        win = jQuery('<div id="'+msgId+'"></div>');
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            title: title,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: baseId+'-ok',
+                    click: function() {
+                        win.dialog('close');
+                        win.remove();
                     }
-                ]
-            });
-        }
-        else {
-            win = jQuery('#'+msgId);
-        }
+                }
+            ]
+        });
 
         if (msg.indexOf('\n') >= 0) {
             // Try to retain any message formatting.
@@ -343,10 +337,147 @@ openmdao.Util = {
         win.dialog('open');
     },
 
-    errCBNotify: function(jqXHR, textStatus, errorThrown) {
-        notify(textStatus, 'Error');
+    /**
+     * Prompt for object name and arguments.
+     *
+     * prompt:    prompt string
+     * signature: constructor argument signature
+     * callback:  the function to call with the name and argument values
+     * anonymous: optional, if true then don't include a name input field
+     */
+    promptForArgs: function(prompt, signature, callback, anonymous) {
+        var baseId = 'get-args',
+            promptId = baseId+'-prompt',
+            nameId = baseId+'-name',
+            argsId = baseId+'-tbl',
+            okId = baseId+'-ok',
+            cancelId = baseId + '-cancel',
+            win, nameInput, argsTable, argsHTML, i;
+
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
+
+        function handleResponse(ok) {
+            // close dialog
+            win.dialog('close');
+            // if response was 'Ok' then invoke the callback
+            if (ok && callback) {
+                var args = '';
+                jQuery('#'+argsId+ ' input').each(function(i, element) {
+                    if (element.value) {
+                        args += ', '+signature.args[i][0]+'='+element.value;
+                    }
+                });
+                if (anonymous) {
+                    callback('', args);
+                } else {
+                    callback(nameInput.val(), args);
+                }
+            }
+            // remove from DOM
+            win.remove();
+        }
+
+        win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
+
+        if (!anonymous) {
+            nameInput = jQuery('<input type="text" id="'+nameId+'" style="width:100%"></input>');
+            nameInput.appendTo(win);
+        }
+
+        if (signature.args.length) {
+            argsHTML = '<table id="'+argsId+'" style="width:100%;">';
+            for (i = 0 ; i < signature.args.length ; ++i) {
+                argsHTML += '<tr><td align="right">'+signature.args[i][0]+':</td>';
+                argsHTML += '<td><input type="text"';
+                if (signature.args[i].length > 1) {
+                    argsHTML += ' placeholder="'+signature.args[i][1]+'"';
+                }
+                argsHTML += ' /></td>';
+                argsHTML += '</tr>';
+            }
+            argsHTML += '</table>';
+            argsTable = jQuery(argsHTML);
+            argsTable.appendTo(win);
+        }
+        else if (!anonymous) {
+            nameInput.bind('keypress.enterkey', function(e) {
+                if (e.which === 13) {
+                    handleResponse(true);
+                }
+            });
+        }
+
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: okId,
+                    click: function() { handleResponse(true); }
+                },
+                {
+                    text: 'Cancel',
+                    id: cancelId,
+                    click: function() { handleResponse(false); }
+                }
+            ]
+        });
+
+        jQuery('#'+promptId).html(prompt+':');
+
+        win.dialog('open');
     },
-    
+
+    /**
+     * Get name and arguments for new component, add it to model,
+     * and optionally invoke callback.
+     *
+     * typePath: python path for type of component.
+     * typeName: last component of typePath.
+     * parentPath: pathname for component's parent.
+     * prompt: optional prompt use when requesting name.
+     * callback: optional callback invoked after adding component to model.
+     */
+    addComponent: function(typePath, typeName, parentPath, prompt, callback) {
+        prompt = prompt || 'Enter name for new '+ typeName;
+        openmdao.model.getSignature(typePath, function(signature) {
+            openmdao.Util.promptForArgs(prompt, signature, function(name, args) {
+                openmdao.model.addComponent(typePath, name, args, parentPath, function() {
+                    if (callback) {
+                        callback(name);
+                    }
+                });
+            });
+        });
+    },
+
+    /**
+     * Confirm and then replace component.
+     *
+     * typePath: python path for type of component.
+     * typeName: last component of typePath.
+     * compPath: pathname for replaced component.
+     */
+    replaceComponent: function(typePath, typeName, compPath) {
+        prompt = 'Replace '+compPath+' with '+typeName;
+        openmdao.Util.confirm(prompt, function() {
+            openmdao.model.getSignature(typePath, function(signature) {
+                if (signature.args.length) {
+                    prompt = 'Replacement '+typeName;
+                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                        openmdao.model.replaceComponent(compPath, typePath, args);
+                    }, true);
+                } else {
+                    openmdao.model.replaceComponent(compPath, typePath, '');
+                }
+            });
+        });
+    },
+
     /**
      * show the properties of an object on the log (debug only)
      *
@@ -488,7 +619,8 @@ openmdao.Util = {
                         openmdao.sockets.splice(index, 1);
                         if (typeof openmdao_test_mode !== 'undefined') {
                             if (openmdao.sockets.length === 0) {
-                                openmdao.Util.notify('WebSockets closed');
+                                openmdao.Util.notify('WebSockets closed',
+                                                     'closed', 'ws_closed');
                             }
                         }
                     }
@@ -531,11 +663,12 @@ openmdao.Util = {
 
     /** Close all WebSockets. */
     closeWebSockets: function(reason) {
-       if (openmdao.sockets) {
-          for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+        var i;
+        if (openmdao.sockets) {
+            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
              openmdao.sockets[i].close(1000, reason);
-          }
-       }
+            }
+        }
     },
 
     /** Notify when `nSockets` are open (used for testing). */
@@ -545,14 +678,16 @@ openmdao.Util = {
         }
 
         function poll() {
+            var i;
             if (openmdao.sockets.length >= nSockets) {
-                for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
                     if (openmdao.sockets[i].readyState !== 1) {
                         doPoll();
                         return;
                     }
                 }
-                openmdao.Util.notify('WebSockets open');
+                openmdao.Util.notify('WebSockets open', 'open',
+                                      'ws_open');
             }
             else {
                 doPoll();
@@ -568,10 +703,11 @@ openmdao.Util = {
      * prototype.
      */
     inherit : function(childObject, parentObject){
-        childObject.prototype = new parentObject
-        childObject.prototype.constructor = childObject
-        childObject.prototype.superClass = parentObject.prototype
+        childObject.prototype = new parentObject();
+        childObject.prototype.constructor = childObject;
+        childObject.prototype.superClass = parentObject.prototype;
     }
 };
+
 
 

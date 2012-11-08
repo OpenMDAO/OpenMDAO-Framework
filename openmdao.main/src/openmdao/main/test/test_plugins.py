@@ -43,7 +43,7 @@ class PluginsTestCase(unittest.TestCase):
             options, args = parser.parse_known_args(argv)
             retval = plugin_quickstart(parser, options, args)
             self.assertEqual(retval, 0)
-            fandd = find_files(self.tdir, nodirs=False)
+            fandd = find_files(self.tdir, showdirs=True)
             self.assertEqual(set([os.path.basename(f) for f in fandd]), 
                              set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                                   'MANIFEST.in', '__init__.py', 'conf.py',
@@ -223,7 +223,7 @@ class PluginsTestCase(unittest.TestCase):
         options, args = parser.parse_known_args(argv)
         retval = plugin_quickstart(parser, options, args)
         self.assertEqual(retval, 0)
-        fandd = find_files(self.tdir, nodirs=False)
+        fandd = find_files(self.tdir, showdirs=True)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                               'MANIFEST.in', '__init__.py', 'conf.py',
@@ -426,8 +426,10 @@ class MyCont(Container):
                                        'openmdao.main.container.Container']),
         }
         plugins = find_all_plugins(self.tdir)
-        self.assertEqual(expected.keys(), plugins.keys())
-        self.assertEqual(expected.values(), plugins.values())
+        self.assertEqual(sorted(expected.keys()), sorted(plugins.keys()))
+        for key, value in expected.items():
+            self.assertEqual(plugins[key], value)
+
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')

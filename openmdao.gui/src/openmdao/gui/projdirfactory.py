@@ -9,27 +9,20 @@ import traceback
 import fnmatch
 import ast
 from inspect import isclass, getmembers
-import imp
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from zope.interface import implementedBy
 
-import openmdao.main.api
-import openmdao.main.datatypes.api
-from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver, \
-                                     IDOEgenerator, ISurrogate, ICaseFilter, ICaseIterator, ICaseRecorder, \
-                                     IArchitecture, IDifferentiator
-
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import find_files, plugin_groups
-from openmdao.util.fileutil import get_module_path, get_ancestor_dir
+from openmdao.util.fileutil import get_module_path
 from openmdao.util.log import logger
 from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
-
+from openmdao.main.project import PROJ_DIR_EXT
 
 class PyWatcher(FileSystemEventHandler):
     """
@@ -65,7 +58,8 @@ class PyWatcher(FileSystemEventHandler):
             deleted_set = set()
         
             pub = False
-            if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
+            if event._src_path and \
+               (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
                 if not event.is_directory:
                     compiled = event._src_path+'c'
                     if os.path.exists(compiled):
@@ -97,20 +91,6 @@ class PyWatcher(FileSystemEventHandler):
             traceback.print_exc()
 
             
-plugin_ifaces = set([
-    'IContainer', 
-    'IComponent', 
-    'IAssembly', 
-    'IDriver', 
-    'IDOEgenerator', 
-    'ISurrogate', 
-    'ICaseFilter', 
-    'ICaseIterator', 
-    'ICaseRecorder',
-    'IArchitecture', 
-    'IDifferentiator',
-])
-
 def _find_module_attr(modpath):
     """Return an attribute from a module based on the given modpath.
     Import the module if necessary.
@@ -218,7 +198,7 @@ class ProjDirFactory(Factory):
             changed_set = set()
             deleted_set = set()
             
-            modeldir = watchdir+'.prj'
+            modeldir = watchdir+PROJ_DIR_EXT
             if modeldir not in sys.path:
                 sys.path = [modeldir]+sys.path
                 logger.info("added %s to sys.path" % modeldir)
@@ -230,7 +210,8 @@ class ProjDirFactory(Factory):
                 self._start_observer(observer)
                 self.publish_updates(added_set, changed_set, deleted_set)
             else:
-                self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
+                # sometimes for debugging/testing it's easier to turn observer off
+                self.observer = None
         except Exception as err:
             self._error(str(err))
             logger.error(str(err))
@@ -253,16 +234,20 @@ class ProjDirFactory(Factory):
         this Factory can't satisfy the request.
         """
         if server is None and res_desc is None:
-            try:
-                cinfo = self._classes[typ].classes[typ]
-                mod = sys.modules[cinfo['modpath']]
-                klass = getattr(mod, cinfo['ctor'])
-            except KeyError:
-                return None
-            
-            return klass(**ctor_args)
+            klass = self._lookup(typ, version)
+            if klass is not None:
+                return klass(**ctor_args)
         return None
     
+    def _lookup(self, typ, version):
+        """ Return class for `typ`. """
+        try:
+            cinfo = self._classes[typ].classes[typ]
+            mod = sys.modules[cinfo['modpath']]
+            return getattr(mod, cinfo['ctor'])
+        except KeyError:
+            return None
+
     def get_available_types(self, groups=None):
         """Return a list of available types."""
         with self._lock:
@@ -286,6 +271,15 @@ class ProjDirFactory(Factory):
                     types.append((typ, meta))
             return types
 
+    def get_signature(self, typname, version=None):
+        """Return constructor argument signature for *typname,* using the
+        specified package version. The return value is a dictionary."""
+        cls = self._lookup(typname, version)
+        if cls is None:
+            return None
+        else:
+            return self.form_signature(cls)
+      
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return None
@@ -327,9 +321,10 @@ class ProjDirFactory(Factory):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                finfo = self._files[fpath]
-                deleted_set.update(finfo.classes.keys())
-                self._remove_fileinfo(fpath)
+                finfo = self._files.get(fpath)
+                if finfo:
+                    deleted_set.update(finfo.classes.keys())
+                    self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
         types = get_available_types()
@@ -362,8 +357,8 @@ class ProjDirFactory(Factory):
             return classes
                 
     def cleanup(self):
-        """If this factory is removed from the FactoryManager during execution, this function
-        will stop the watchdog observer thread.
+        """If this factory is removed from the FactoryManager during execution,
+        this function will stop the watchdog observer thread.
         """
         try:
             sys.path.remove(self.watchdir)
@@ -373,6 +368,7 @@ class ProjDirFactory(Factory):
             self.observer.unschedule_all()
             self.observer.stop()
             self.observer.join()
+
 
 if __name__ == '__main__':
     import time

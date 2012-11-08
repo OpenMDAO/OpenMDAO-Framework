@@ -10,6 +10,14 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import rgba
 
+def _row_sorter(row_element):
+    '''Sort rows by the Style attribute, which for slickgrids should
+    be something like: "top: 30px"'''
+    
+    style = row_element.get_attribute('style')
+    style = style.replace('top: ', '')
+    style = style.replace('px;', '')
+    return int(style)
 
 class Grid(object):
     """
@@ -24,10 +32,15 @@ class Grid(object):
 
     @property
     def rows(self):
+        '''Grid contains a list of GridRow objects. Note, they are not
+        always sorted correctly in the DOM, so we must sort them based 
+        on the value of "top" in the style attribute.'''
+        
         if self._rows is None:
             rows = self._root.find_elements(By.CLASS_NAME, 'slick-row')
+            rows_sort = sorted(rows, key=_row_sorter)
             self._rows = [GridRow(self._browser, row, self._root, i)
-                          for i, row in enumerate(rows)]
+                          for i, row in enumerate(rows_sort)]
         return self._rows
 
     @property

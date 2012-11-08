@@ -113,26 +113,26 @@ TestCase("ModelTest", {
   },
 
 
-  "test saveProject": function () {
+  "test commitProject": function () {
 
       callback1 = sinon.spy() ;
       openmdao.model.addListener( '', callback1 ) ;
 
-      openmdao.model.saveProject( );
+      openmdao.model.commit_with_comment( 'a comment' );
 
       // Check the requests
       assertEquals("project", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
       assertEquals(true, this.requests[0].async);
       assertEquals(1, this.requests.length);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("comment=a+comment", this.requests[0].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
       this.requests[0].respond(200, {}, '');
 
-      // saving project has no side effects, so no callbacks at this time
+      // committing project has no side effects, so no callbacks at this time
       sinon.assert.notCalled( callback1 );
 
   },
@@ -348,26 +348,26 @@ TestCase("ModelTest", {
       var callback = sinon.spy() ;
 
       // Normal execution
-      openmdao.model.addComponent("typepath","component_name","parent",callback) ;
+      openmdao.model.addComponent("typepath","component_name","","parent",callback) ;
       assertEquals("component/component_name", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
-      assertEquals("type=typepath&parent=parent", this.requests[0].requestBody);
+      assertEquals("type=typepath&parent=parent&args=", this.requests[0].requestBody);
       this.requests[0].respond(200, 'response', '' ) ;
       sinon.assert.calledOnce( callback );
       assertEquals(callback.args[0][0], "" ) ;
 
       // With null parent
-      openmdao.model.addComponent("typepath","component_name",null,callback) ;
-      assertEquals("type=typepath&parent=", this.requests[1].requestBody);
+      openmdao.model.addComponent("typepath","component_name","",null,callback) ;
+      assertEquals("type=typepath&parent=&args=", this.requests[1].requestBody);
 
       // Are listeners updated?
-      openmdao.model.addComponent("typepath","component_name",null,callback) ;
+      openmdao.model.addComponent("typepath","component_name","",null,callback) ;
       this.requests[2].respond(200, 'response', '' ) ; // the ajax call just queues up the request
       sinon.assert.calledTwice( callback );
 
       // Does it handle the "if openmdao.Util" statement properly?
       openmdao.Util.$component_name = function() { } ;
-      openmdao.model.addComponent("driver_typepath","component_name",null,callback) ;
+      openmdao.model.addComponent("driver_typepath","component_name","",null,callback) ;
       sinon.assert.calledTwice( callback ); // Should not be called this time so still 2 calls
 
   },
@@ -394,6 +394,34 @@ TestCase("ModelTest", {
 
       // Does error handler get called?
       openmdao.model.issueCommand("command",success_handler,error_handler) ;
+      this.requests[2].respond(500, { "Content-Type": "application/json" }, '{ }');
+
+      sinon.assert.calledTwice( success_handler );
+      sinon.assert.calledOnce( error_handler );
+
+  },
+
+  "test setVariableValue": function () {
+
+      var success_handler = sinon.spy() ;
+      var error_handler = sinon.spy() ;
+
+      // Normal execution
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
+      assertEquals("variable", this.requests[0].url);
+      assertEquals("POST", this.requests[0].method);
+      assertEquals("lhs=varname&rhs=value&type=vtype", this.requests[0].requestBody);
+      this.requests[0].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
+      sinon.assert.calledOnce( success_handler );
+      assertEquals({ "status" : "OK"}, success_handler.args[0][0]) ;
+
+      // Are listeners updated?
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
+      this.requests[1].respond(200, 'response', '' ) ; // the ajax call just queues up the request
+      sinon.assert.calledTwice( success_handler );
+
+      // Does error handler get called?
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
       this.requests[2].respond(500, { "Content-Type": "application/json" }, '{ }');
 
       sinon.assert.calledTwice( success_handler );
@@ -614,7 +642,7 @@ TestCase("ModelTest", {
       openmdao.model.runModel() ;
       assertEquals("exec", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("pathname=", this.requests[0].requestBody);
       this.requests[0].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
 
   },

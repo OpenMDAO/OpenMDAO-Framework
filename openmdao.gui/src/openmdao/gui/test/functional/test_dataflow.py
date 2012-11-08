@@ -13,7 +13,7 @@ from nose.tools import with_setup
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
-    from pageobjects.util import NotifierPage
+    from pageobjects.util import ArgsPrompt, NotifierPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -32,7 +32,7 @@ def _test_maxmin(browser):
 
     # Add maxmin.py to project
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
+                                                'files/maxmin.py')
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
@@ -93,7 +93,7 @@ def _test_connect(browser):
 
     # Import connect.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'connect.py')
+                                                'files/connect.py')
     workspace_page.add_file(file_path)
 
     # Replace 'top' with connect.py's top.
@@ -120,27 +120,27 @@ def _test_connect(browser):
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
+    eq(inputs[6].value, ['s_in', ''])
+    inputs[6][1] = 'xyzzy'
+    inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
-    inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "'xyzzy'"
     
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
     inputs.rows[0].cells[1].click()
     browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
-    inputs.rows[0].cells[0].click()
+    #inputs.rows[0].cells[0].click()
     #inputs[0][1] = 'True'
     
     inputs = props.inputs
     eq(inputs[2].value, ['e_in', '1'])
     inputs.rows[2].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
-    inputs.rows[2].cells[0].click()
+    #inputs.rows[2].cells[0].click()
     #inputs[2][1] = '3'    
     
     props.close()
@@ -156,9 +156,14 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['derivative_exec_count', 'int', '0', '', 'true',
+         'Number of times this Component has been executed for derivatives.', '', ''],
         ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
+        ['exec_count', 'int', '1', '', 'true',
+         'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
@@ -287,7 +292,7 @@ def _test_driverflows(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -311,7 +316,8 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ["('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
+        ['', 
+         "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
          '-10', '99', '', '', '', 
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
@@ -337,7 +343,7 @@ def _test_replace(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -456,6 +462,8 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
     message = NotifierPage.wait(workspace_page)
     eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
                 " 'postproc.result_in': top: Can't find 'comp.result'")

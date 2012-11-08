@@ -3,28 +3,34 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     var objectives,
-        objectivesDiv = jQuery("<div id='"+name+"_objectives' >"),
-        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
-        addButton = jQuery("<div "+buttonSpec +">Add Objective</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Objectives</div>"),
+        objectivesDiv = jQuery("<div id='"+name+"_objectives' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
+        addButton = jQuery("<button>Add Objective</button>").button(),
+        clrButton = jQuery("<button>Clear Objectives</button>").button(),
         columns = [
+            {id:"del",   name:"",            field:"del",   width:25, formatter:buttonFormatter},
             {id:"expr",  name:"Expression",  field:"expr",  width:180},
             {id:"name",  name:"Name",        field:"name",  width:50}
         ],
         options = {
             asyncEditorLoading: false,
             multiSelect: false,
-            autoHeight: true,
+            autoHeight: false,
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        button = '<div class="ui-icon-trash"></div>';
+        return button;
+    }
     elm.append(objectivesDiv).width('100%');
 
-    var table = jQuery('<table width="100%">'),
+    var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
+        table = jQuery('<table width="100%">'),
         row = jQuery('<tr>').append(jQuery('<td style="text-align:left">').append(addButton))
                             .append(jQuery('<td style="text-align:right">').append(clrButton));
     table.append(row);
-    elm.append(table);
+    tabdiv.append(table);
+    elm.append(tabdiv);
 
     if (editable) {
         options.editable = true;
@@ -39,6 +45,14 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    objectives.onClick.subscribe(function (e) {
+        var cell = objectives.getCellFromEvent(e);
+        if (cell.cell==0) {
+            var delname = objectives.getData()[cell.row].name
+            cmd = pathname+'.remove_objective("'+delname+'");';
+            model.issueCommand(cmd);
+        }
+    });
 
     /** add a new objective */
     function addObjective(expr,name) {
@@ -49,6 +63,10 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         cmd = cmd + ");";
         model.issueCommand(cmd);
     }
+
+    objectivesDiv.bind('resizeCanvas', function() {
+        objectives.resizeCanvas();
+    });
 
     /** prompt for new objective */
     function promptForObjective(callback) {

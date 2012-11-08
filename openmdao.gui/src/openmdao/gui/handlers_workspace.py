@@ -8,8 +8,8 @@ import jsonpickle
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
-from openmdao.main.publisher import publish
-from openmdao.util.log import logger
+from openmdao.gui.projectdb import Projects
+
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -20,7 +20,7 @@ class AddOnsHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        ''' easy_install the POST'd addon
+        ''' easy_install the POSTed addon
         '''
         pass
 
@@ -87,7 +87,8 @@ class CommandHandler(ReqHandler):
     @web.authenticated
     def post(self):
         history = ''
-        command = self.get_argument('command')
+        command = self.get_argument('command', default=None)
+
         # if there is a command, execute it & get the result
         if command:
             result = ''
@@ -99,6 +100,44 @@ class CommandHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
+                
+        self.content_type = 'text/html'
+        self.write(history)
+
+    @web.authenticated
+    def get(self):
+        self.content_type = 'text/html'
+        self.write('')  # not used for now, could render a form
+
+
+class VariableHandler(ReqHandler):
+    ''' get a command to set a variable, send it to the cserver, return response
+    '''
+
+    @web.authenticated
+    def post(self):
+        history = ''
+        lhs = self.get_argument('lhs', default=None)
+        rhs = self.get_argument('rhs', default=None)
+        vtype = self.get_argument('type', default=None)
+        if ( lhs and rhs and vtype ):
+            if vtype == 'str' :
+                command = '%s = "%s"' % ( lhs, rhs )
+            else :
+                command = '%s = %s' % ( lhs, rhs )
+
+        # if there is a command, execute it & get the result
+        if command:
+            result = ''
+            try:
+                cserver = self.get_server()
+                result = cserver.onecmd(command)
+            except Exception, e:
+                print e
+                result = sys.exc_info()
+            if result:
+                history = history + str(result) + '\n'
+                
         self.content_type = 'text/html'
         self.write(history)
 
@@ -119,10 +158,14 @@ class ComponentHandler(ReqHandler):
             parent = self.get_argument('parent')
         else:
             parent = ''
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.add_component(name, type, parent)
+            cserver.add_component(name, type, parent, args)
         except Exception, e:
             result = sys.exc_info()
             cserver._error(e, result)
@@ -178,10 +221,14 @@ class ReplaceHandler(ReqHandler):
     @web.authenticated
     def post(self, pathname):
         type = self.get_argument('type')
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.replace_component(pathname, type)
+            cserver.replace_component(pathname, type, args)
         except Exception, e:
             print e
             result = sys.exc_info()
@@ -242,7 +289,7 @@ class EditorHandler(ReqHandler):
 
 
 class ExecHandler(ReqHandler):
-    ''' if a filename is POST'd, have the cserver execute the file
+    ''' if a filename is POSTed, have the cserver execute the file
         otherwise just run() the project
     '''
 
@@ -258,8 +305,9 @@ class ExecHandler(ReqHandler):
                 print e
                 result = result + str(sys.exc_info()) + '\n'
         else:
+            pathname = self.get_argument('pathname', default='')
             try:
-                cserver.run()
+                cserver.run(pathname)
             except Exception, e:
                 print e
                 result = result + str(sys.exc_info()) + '\n'
@@ -281,21 +329,21 @@ class FileHandler(ReqHandler):
         else:
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py'):
+            if filename.endswith('.py') or cserver.is_macro(filename):
                 if not contents.endswith('\n'):
                     text = contents + '\n' # to make ast.parse happy
                 else:
                     text = contents
                 try:
-                    ast.parse(text, filename=filename, mode='exec')
+                    ast.parse(text, filename=filename, mode='exec') # parse it looking for syntax errors
                 except Exception as err:
                     cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
-                    ret = cserver.file_has_instances(filename)
+                    ret = cserver.file_forces_reload(filename)
                     if ret:
-                        self.send_error(409)  # user will be prompted to overwrite classes
+                        self.send_error(409)  # user will be prompted to overwrite file and reload project
                         return
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -360,43 +408,59 @@ class ProjectLoadHandler(ReqHandler):
     '''
     @web.authenticated
     def get(self):
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            self.set_secure_cookie('filename', filename)
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
         else:
-            filename = self.get_secure_cookie('filename')
-        if filename:
+            path = self.get_secure_cookie('projpath')
+        if path:
             cserver = self.get_server()
-            filename = os.path.join(self.get_project_dir(), filename)
-            cserver.load_project(filename)
+            #path = os.path.join(self.get_project_dir(), path)
+            cserver.load_project(path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
+            
+class ProjectRevertHandler(ReqHandler):
+    ''' POST:  revert back to the most recent commit of the project
+    '''
+    @web.authenticated
+    def post(self):
+        commit_id = self.get_argument('commit_id', default=None)
+        cserver = self.get_server()
+        ret = cserver.revert_project(commit_id)
+        if isinstance(ret, Exception):
+            self.send_error(500)
+        else:
+            self.write('Reverted.')
             
             
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: save project archive of the current project
+        POST: commit the current project
     '''
 
     @web.authenticated
     def post(self):
+        comment = self.get_argument('comment', default='')
         cserver = self.get_server()
-        cserver.save_project()
-        self.write('Saved.')
+        cserver.commit_project(comment)
+        self.write('Committed.')
 
     @web.authenticated
     def get(self):
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            self.set_secure_cookie('filename', filename)
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
         else:
-            filename = self.get_secure_cookie('filename')
-        if filename:
+            path = self.get_secure_cookie('projpath')
+        if path:
             self.delete_server()
             cserver = self.get_server()
-            filename = os.path.join(self.get_project_dir(), filename)
+            name = Projects().get_by_path(path)['projectname']
+            cserver.set_current_project(name)
+            path = os.path.join(self.get_project_dir(), path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -448,6 +512,19 @@ class TypesHandler(ReqHandler):
         types = cserver.get_types()
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
+
+
+class SignatureHandler(ReqHandler):
+    ''' Get type constructor signature.
+    '''
+
+    @web.authenticated
+    def get(self):
+        typename = self.get_argument('type')
+        cserver = self.get_server()
+        signature = cserver.get_signature(typename)
+        self.content_type = 'application/javascript'
+        self.write(jsonpickle.encode(signature))
 
 
 class UploadHandler(ReqHandler):
@@ -505,7 +582,9 @@ class WorkspaceHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        self.render('workspace/workspace.html')
+        cserver = self.get_server()
+        project = cserver.get_current_project()
+        self.render('workspace/workspace.html', project=project)
 
 
 class TestHandler(ReqHandler):
@@ -523,6 +602,7 @@ handlers = [
     web.url(r'/workspace/base/?',           ReqHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
     web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/variable',         VariableHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
@@ -536,11 +616,13 @@ handlers = [
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
+    web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
+    web.url(r'/workspace/signature/?',      SignatureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),
