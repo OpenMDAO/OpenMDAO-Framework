@@ -91,8 +91,6 @@ class PluginDocsHandler(StaticFileHandler):
         return True
     
     def initialize(self, route):
-        import pdb
-        pdb.set_trace()
         rpath = self.request.path[len(route):].strip('/')
         parts = rpath.split('/',1)
         self.cname = parts[0] + os.sep
@@ -121,6 +119,7 @@ class PluginDocsHandler(StaticFileHandler):
         super(PluginDocsHandler, self).initialize(root, default)
     
     def get(self, path, include_body=True):
+        path = os.path.normcase(path)
         if path+os.sep == self.cname:
             self.redirect(os.path.join('/docs','plugins',self.cname, self.default_filename))
         elif path.startswith(self.cname):
