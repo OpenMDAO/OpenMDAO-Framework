@@ -158,7 +158,6 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.

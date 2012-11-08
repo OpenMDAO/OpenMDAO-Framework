@@ -139,13 +139,13 @@ def setup_server(virtual_display=True):
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
 
-    if sys.platform == 'win32':
-        # FIXME: Windows error deleting directory, so just reuse it for now
-        if not os.path.exists(server_dir):
-            os.mkdir(server_dir)        
-    else:
-        if os.path.exists(server_dir):
+    # Try to clean up old server dir. If this fails (looking at you Windows), then just go with it.
+    if os.path.exists(server_dir):
+        try:
             shutil.rmtree(server_dir, onerror=onerror)
+        except WindowsError as exc:
+            print 'Could not delete %s: %s' % (server_dir, exc)
+    if not os.path.exists(server_dir):
         os.mkdir(server_dir)
 
     TEST_CONFIG['server_dir'] = server_dir
@@ -176,7 +176,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if virtual_display and sys.platform != 'win32':
+    if sys.platform != 'win32' and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
@@ -281,7 +281,10 @@ def generate(modname):
                 # raises a WindowsError: Access Denied
                 pass
             if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
-                os.remove('chromedriver.log')
+                try:
+                    os.remove('chromedriver.log')
+                except Exception as exc:
+                    print 'Could not delete chromedriver.log: %s' % exc
 
 
 class _Runner(object):
