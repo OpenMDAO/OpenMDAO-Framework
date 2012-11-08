@@ -681,7 +681,12 @@ def main(args=None):
                 test(browser)
         finally:
             if not options.noclose:
-                browser.quit()
+                try:
+                    browser.quit()
+                except WindowsError:
+                    # if it already died, calling kill on a defunct process
+                    # raises a WindowsError: Access Denied
+                    pass
                 teardown_server()
     else:
         # Run under nose.
