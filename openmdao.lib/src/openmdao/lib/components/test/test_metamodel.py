@@ -169,6 +169,62 @@ class MetaModelTestCase(unittest.TestCase):
         outputs = set(metamodel.list_outputs())
         self.assertEquals(inputs-mmins, set(['w','x']))
         self.assertEquals(outputs-mmouts, set(['y','z']))
+
+    def test_default_surrogate_change(self):
+        metamodel = MetaModel()
+        mmins = set(metamodel.list_inputs())
+        mmouts = set(metamodel.list_outputs())
+        metamodel.default_surrogate = KrigingSurrogate()
+        metamodel.model = Simple()
+        metamodel.default_surrogate = LogisticRegression()
+        attrs = metamodel.get_attributes(io_only=False)
+        for s in attrs['Slots']:
+            self.assertNotEqual(s['name'], 'c')
+            self.assertNotEqual(s['name'], 'd')
+        inputs = set(metamodel.list_inputs())
+        outputs = set(metamodel.list_outputs())
+        self.assertEquals(inputs-mmins, set(['a','b']))
+        self.assertEquals(outputs-mmouts, set(['c','d']))
+        for i in range(3):
+            metamodel.train_next = True
+            metamodel.run()
+            
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue(len(metamodel._training_data['d']) == 3)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
+        
+        metamodel.includes = ['a','b','c','d']
+        
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue(len(metamodel._training_data['d']) == 3)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
+        
+        # removing an output shouldn't clobber the rest of the training data
+        metamodel.includes = ['a','b','c']
+        
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue('d' not in metamodel._training_data)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
+        
+        # now put a different model in with the same inputs/outputs
+        metamodel.model = SimpleMatch()
+        metamodel.includes = ['a','b','c','d']
+        inputs = set(metamodel.list_inputs())
+        outputs = set(metamodel.list_outputs())
+        self.assertEquals(inputs-mmins, set(['a','b']))
+        self.assertEquals(outputs-mmouts, set(['c', 'd']))
+
+        self.assertTrue(len(metamodel._training_data['c']) == 0)
+        self.assertTrue(len(metamodel._training_data['d']) == 0)
+        self.assertTrue(len(metamodel._training_input_history) == 0)
+
+        # now put a different model in
+        metamodel.model = Simple2()
+        metamodel.includes = ['w','x','y','z']
+        inputs = set(metamodel.list_inputs())
+        outputs = set(metamodel.list_outputs())
+        self.assertEquals(inputs-mmins, set(['w','x']))
+        self.assertEquals(outputs-mmouts, set(['y','z']))    
         
     def _get_assembly(self, default=True, meta=True):
         asm = set_as_top(Assembly())
