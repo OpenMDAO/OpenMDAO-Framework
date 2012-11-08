@@ -387,11 +387,11 @@ class HasParameters(object):
                     ' parameter "%s" - incoming connection exists' % target,
                                                                  RuntimeError)
                 
-        if isinstance(target,Parameter): 
+        if isinstance(target, Parameter): 
             self._parameters[target.name] = self._override_param(target, low, high, 
                                                                  scaler, adder, start,
                                                                  fd_step, name)
-        elif isinstance(target,ParameterGroup): 
+        elif isinstance(target, ParameterGroup): 
             self._parameters[target.name] = self._override_param(target, low, high, 
                                                                  scaler, adder, start,
                                                                  fd_step, name)
@@ -443,9 +443,9 @@ class HasParameters(object):
                 pg.typename = parameters[0].valtypename
                 self._parameters[key] = pg
             
-            #if start is given, then initilze the var now
+            #if start is given, then initialze the var now
             if start is not None: 
-                self._parameters[key].set(start,self._get_scope(scope))
+                self._parameters[key].set(start, self._get_scope(scope))
         
         self._parent._invalidate()
 
