@@ -14,7 +14,7 @@ openmdao.Model=function(listeners_ready) {
         sockets = {},
         subscribers = {},
         windows = [];
-        
+
     this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
@@ -68,22 +68,22 @@ openmdao.Model=function(listeners_ready) {
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
+                self.publish(message);
             }
             catch(err) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
-        self.publish(message);
     }
 
     var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
                                open_websocket('pubstream', handlePubMessage));
-                                
+
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();
         listeners_ready.resolve();
     }
-    
+
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
     jQuery.when(ws_ready, listeners_ready).done(function() {
@@ -215,9 +215,9 @@ openmdao.Model=function(listeners_ready) {
                       }
         });
         self.setModified(false);
-        return defrd.promise()
+        return defrd.promise();
     };
-    
+
     /** commit the current project to the repository (after supplying a comment)*/
     this.commit = function(callback, errorHandler) {
         openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
@@ -231,7 +231,7 @@ openmdao.Model=function(listeners_ready) {
                     type: 'POST',
                     url:  'project_revert',
                     success: function(data, textStatus, jqXHR) {
-                        self.reload()
+                        self.reload();
                     },
                     error: errorHandler,
                     complete: function(jqXHR, textStatus) {
@@ -573,7 +573,7 @@ openmdao.Model=function(listeners_ready) {
     /** execute the model */
     this.runModel = function() {
         self.runComponent('');
-    }
+    };
 
     /** execute a component */
     this.runComponent = function(pathname) {
@@ -622,44 +622,16 @@ openmdao.Model=function(listeners_ready) {
 
     /** close the model */
    this.close = function() {
-   /** since we've switched over to using a vcs to manage the project files, we don't
-    ** really need to save when the user leaves because they won't lose anything.
-    
-       if (_modified) {
-           openmdao.Util.confirm("Model has changed, close without saving?",
-               function() {
-                   self.setModified(false);
-                   openmdao.Util.closeWebSockets('close');
-                   self.closeWindows();
-                   window.location.replace('/workspace/close');
-               });
-       }
-       else {
-    */
-           openmdao.Util.closeWebSockets('close');
-           self.closeWindows();
-           window.location.replace('/workspace/close');
-    //   }
+       openmdao.Util.closeWebSockets('close');
+       self.closeWindows();
+       window.location.replace('/workspace/close');
    };
 
    /** exit the gui */
    this.exit = function() {
-      /** see comment in close() function
-      
-       if (_modified) {
-           openmdao.Util.confirm("Model has changed, exit without saving?",
-               function() {
-                   self.setModified(false);
-                   openmdao.Util.closeWebSockets('exit');
-                   self.closeWindows();
-                   window.location.replace('/exit');
-               });
-       }
-       else { */
-           openmdao.Util.closeWebSockets('exit');
-           self.closeWindows();
-           window.location.replace('/exit');
-      // }
+       openmdao.Util.closeWebSockets('exit');
+       self.closeWindows();
+       window.location.replace('/exit');
    };
 
     /** add window to window list. */

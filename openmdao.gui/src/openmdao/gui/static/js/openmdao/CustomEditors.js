@@ -1,4 +1,4 @@
-// Custom openMDAO slickgrid cell editors 
+// Custom openMDAO slickgrid cell editors
 (function($) {
 
     var customEditors = {
