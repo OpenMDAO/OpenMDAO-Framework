@@ -91,7 +91,8 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
-      openmdao.lib.surrogatemodels.nn_surrogate.NeuralNet = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface.ResponseSurface
+
       
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
