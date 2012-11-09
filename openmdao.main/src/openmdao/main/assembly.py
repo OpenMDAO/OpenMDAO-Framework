@@ -550,11 +550,24 @@ class Assembly (Component):
         """Handle one connection destination. This should only be called via the connect()
         function, never directly.
         """
+        
+        # Among other things, check if already connected.
         try:
             srcexpr, destexpr = self._exprmapper.check_connect(src, dest, self)
         except Exception as err:
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
+    
+        # Check if src is declared as a parameter in any driver in the assembly
+        for item in self.list_containers():
+            comp = self.get(item)
+            if isinstance(comp, Driver) and \
+               hasattr(comp, 'list_param_targets'):
+                if dest in comp.list_param_targets():
+                    msg = "Can't connect '%s' to '%s' " % (src, dest)
+                    msg += "because the target is a Parameter in " + \
+                           "driver '%s'." % comp.name
+                    self.raise_exception(msg, RuntimeError)
     
         super(Assembly, self).connect(src, dest)
 
