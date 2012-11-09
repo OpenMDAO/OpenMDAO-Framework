@@ -456,9 +456,9 @@ def resize_editor(workspace_page, editor):
     browser = workspace_page.browser
 
     page_width = browser.get_window_size()['width']
-    lib_width = workspace_page('library_tab').find_element_by_xpath('..').size['width']
+    lib_width    = workspace_page('library_tab').find_element_by_xpath('..').size['width']
     lib_position = workspace_page('library_tab').find_element_by_xpath('..').location['x']
-    dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
+    dialog_width    = editor('dialog_title').find_element_by_xpath('../..').size['width']
     dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
 
     # how much overlap do we have?

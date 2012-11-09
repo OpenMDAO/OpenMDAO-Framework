@@ -293,7 +293,7 @@ def _test_list_slot(browser):
     # open the object editor dialog for the driver
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(False)
-    editor.move(-100, 0)
+    editor.move(-200, 0)
     editor.show_slots()
 
     # get the generator slot figure
@@ -331,7 +331,6 @@ def _test_list_slot(browser):
     workspace_page('workflow_tab').click()
 
     # drop a DumpCaseRecorder onto the recorders slot
-    workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
@@ -621,7 +620,7 @@ def _test_drop_onto_layered_div(browser):
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
                                                              sim_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
-    driver_editor.move(-100, 0)
+    driver_editor.move(-200, 0)
     driver_editor.show_workflow()
 
     # Confirm expected number of workflow component figures before adding one

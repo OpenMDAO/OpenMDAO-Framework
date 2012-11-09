@@ -11,7 +11,7 @@ def test_generator():
         yield _test, browser
 
 
-def _test_new_project(browser):
+def _test_projects_begone(browser):
     projects_page = begin(browser)
     projects_page.delete_all_test_projects(True)
 
