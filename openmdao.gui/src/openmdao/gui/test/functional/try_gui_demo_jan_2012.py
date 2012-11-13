@@ -91,7 +91,7 @@ class Plane(Component):
 
     workspace_page.objects_tab()
 
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
 
     # !!!!!! This next call is not working because the context menu
     #           is not coming up. I have no idea why. Maybe because of
