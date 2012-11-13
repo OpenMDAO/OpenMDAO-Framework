@@ -33,7 +33,6 @@ from pageobjects.util import SafeDriver, abort
 
 from pageobjects.component import NameInstanceDialog
 from pageobjects.dataflow import DataflowFigure
-from pageobjects.dialog import NotifyDialog
 from pageobjects.util import ConfirmationPage
 
 from selenium.webdriver.common.action_chains import ActionChains
@@ -62,14 +61,11 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-#        version = '19.0.1068.0'
-#        version = '21.0.1180.4'
         version = '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-#            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -443,7 +439,7 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
     #find the slots (this is both the drop target and highlight area)
     browser = workspace_page.browser
-    slot_id = 'SlotFigure-'+meta_name+'-%s'
+    slot_id = 'SlotFigure-' + meta_name + '-%s'
     caseiter = browser.find_element(By.ID, slot_id % 'warm_start_data')
     caserec  = browser.find_element(By.ID, slot_id % 'recorder')
     model    = browser.find_element(By.ID, slot_id % 'model')
@@ -599,7 +595,8 @@ def drag_element_to(browser, element, drag_to, centerx):
     chain.click_and_hold(element)
     chain.move_to_element(drag_to).perform()
     if centerx:
-        chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
+        offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
+        chain.move_by_offset(offset, 1).perform()
     else:
         chain.move_by_offset(2, 1).perform()
     return chain
@@ -702,4 +699,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-
