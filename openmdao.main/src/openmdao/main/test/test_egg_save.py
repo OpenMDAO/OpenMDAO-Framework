@@ -65,8 +65,8 @@ class Source(Assembly):
     text_data = Str(iotype='in')
     text_file = File(path='source.txt', iotype='out')
 
-    def __init__(self):
-        super(Source, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Source, self).__init__(*args, **kwargs)
 
         global SOURCE_INIT
         SOURCE_INIT = True
@@ -157,8 +157,8 @@ class Sink(Component):
     executions = Int(0, iotype='in',
                      desc='Count of Oddball instance_method() calls.')
 
-    def __init__(self):
-        super(Sink, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Sink, self).__init__(*args, **kwargs)
         global SINK_INIT
         SINK_INIT = True
 
