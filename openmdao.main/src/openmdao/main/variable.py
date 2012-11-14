@@ -5,10 +5,12 @@
 __all__ = ["Variable", "gui_excludes"]
 
 import re
+from keyword import iskeyword
 
 from enthought.traits.api import TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from openmdao.main.interfaces import implements, IVariable
+from openmdao.main.expreval import _expr_dict
 
 # regex to check for valid names. 
 namecheck_rgx = re.compile(
@@ -17,10 +19,12 @@ namecheck_rgx = re.compile(
 gui_excludes = ['type', 'vartypename', 'iotype', 'copy']
             
 def is_legal_name(name):
-    '''Verifies a Pythonic legal name for use as an OpenMDAO variable.'''
+    '''Verifies a Pythonic legal name for use as an OpenMDAO object'''
     
     match = namecheck_rgx.match(name)
-    return not (match is None or match.group() != name)
+    if match is None or match.group() != name or iskeyword(name) or name in _expr_dict:
+        return False
+    return name not in ['parent', 'self']
 
 class Variable(TraitType):
     """An OpenMDAO-specific trait type that serves as a common base

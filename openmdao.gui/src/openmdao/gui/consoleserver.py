@@ -598,7 +598,7 @@ class ConsoleServer(cmd.Cmd):
             if parentname:
                 cmd = '%s.add("%s", %s)' % (parentname, name, cmd)
             else:
-                cmd = '%s = %s' % (name, cmd)
+                cmd = '%s = set_as_top(%s)' % (name, cmd)
             try:
                 self.proj.command(cmd)
             except Exception as err:
