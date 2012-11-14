@@ -419,19 +419,10 @@ description =
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
 
-        print "inside create"
-
         if server is None and res_desc is None and typname in self._model_globals:
             return getattr(self._model_globals, typname)(**ctor_args)
 
-        print "before factory create"
-        
-        f = factory_create(typname, version, server, res_desc, **ctor_args)
-
-        print "after factory create"
-        
-        return f
-        #return factory_create(typname, version, server, res_desc, **ctor_args)
+        return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property
     def name(self):
@@ -539,9 +530,7 @@ description =
             self.load_macro(self.macro)
         else:
             self.command("# Auto-generated file - MODIFY AT YOUR OWN RISK")
-            print "before command"
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-            print "after command"
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it
