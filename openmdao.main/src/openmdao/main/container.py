@@ -589,6 +589,9 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'add does not allow dotted path names like %s' %
                 name, ValueError)
+        elif not is_legal_name(name):
+            self.raise_exception("'%s' is a reserved or invalid name" % name,
+                                 NameError)
         if is_instance(obj, Container):
             self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
