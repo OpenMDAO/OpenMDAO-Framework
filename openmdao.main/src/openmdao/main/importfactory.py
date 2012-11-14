@@ -26,23 +26,15 @@ class ImportFactory(Factory):
         name as the module. The module must be importable in the current Python
         environment.
         """
-
-        print "inside importfactory create"
-
         if server is not None or version is not None:
             return None
         if res_desc is not None and len(res_desc)>0:
             return None
         ctor = self._import(typ)
-
-        print "inside importfactory create with ctor", ctor
-        
         if ctor is None:
             return None
         else:
-            print "ctor args", ctor_args
-            #return ctor(**ctor_args)
-            return ctor()
+            return ctor(**ctor_args)
 
     def _import(self, typ):
         """Return class for *typ*."""

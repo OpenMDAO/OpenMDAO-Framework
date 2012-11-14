@@ -65,8 +65,8 @@ class CaseIterDriverBase(Driver):
                                         ' requirements will be included in the'
                                         ' generated egg.')
 
-    def __init__(self):
-        super(CaseIterDriverBase, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(CaseIterDriverBase, self).__init__(*args, **kwargs)
         self._iter = None  # Set to None when iterator is empty.
         self._seqno = 0    # Used to set itername for case.
         self._replicants = 0

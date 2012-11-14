@@ -318,6 +318,31 @@ class HasParametersTestCase(unittest.TestCase):
         pg = ParameterGroup([p,p2])
         self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
 
+    def test_connected_input_as_parameter(self):
+        self.top.add('comp2', ExecComp(exprs=['c=x+y','d=x-y']))
+        self.top.driver.add_parameter('comp2.x', low=-99.0, high=99.9)
+        
+        try:
+            self.top.connect('comp.c', 'comp2.x')
+        except RuntimeError as err:
+            msg = "Can't connect 'comp.c' to 'comp2.x' because" + \
+                  " the target is a Parameter in driver 'driver'."
+        else:
+            self.fail("Exception expected")
+            
+        # try with parameter group
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter(('comp2.x', 'comp2.y'),
+                                       low=-99.0, high=99.9)
+        
+        try:
+            self.top.connect('comp.c', 'comp2.x')
+        except RuntimeError as err:
+            msg = "Can't connect 'comp.c' to 'comp2.x' because" + \
+                  " the target is a Parameter in driver 'driver'."
+        else:
+            self.fail("Exception expected")
+
 class ParametersTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())

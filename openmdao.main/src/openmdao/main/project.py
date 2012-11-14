@@ -418,10 +418,8 @@ description =
             self.config.write(f)
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
-
         if server is None and res_desc is None and typname in self._model_globals:
             return getattr(self._model_globals, typname)(**ctor_args)
-
         return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property

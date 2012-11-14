@@ -30,7 +30,6 @@ class PkgResourcesFactory(Factory):
         if server is not None or res_desc is not None:
             return None
         klass = self._load(typ, version)
-
         if klass is None:
             return None
         else:

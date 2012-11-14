@@ -456,12 +456,15 @@ class MetaModel(Component):
         if new_obj:
             new_obj.on_trait_change(self._def_surrogate_trait_modified)
             
-        for name in self.surrogate_output_names():
-            surname = __surrogate_prefix__+name
-            if surname not in self._surrogate_overrides:
-                surrogate = deepcopy(self.default_surrogate)
-                self._default_surrogate_copies[surname] = surrogate
-                self._add_var_for_surrogate(surrogate, name)
+            #due to the way "add" works, container will always remove the old 
+            #  before it adds the new one. So you actually get this method called 
+            #  twice on a replace. You only do this update when the new one gets set
+            for name in self.surrogate_output_names():
+                surname = __surrogate_prefix__+name
+                if surname not in self._surrogate_overrides:
+                    surrogate = deepcopy(self.default_surrogate)
+                    self._default_surrogate_copies[surname] = surrogate
+                    self._add_var_for_surrogate(surrogate, name)
                 
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
         # a trait inside of the default_surrogate was changed, so we need to

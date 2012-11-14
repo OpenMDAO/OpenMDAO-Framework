@@ -26,13 +26,11 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """
     obj = None
     msgs = []
-
+    
     for fct in _factories:
-        
         try:
             obj = fct.create(typname, version, server, res_desc, **ctor_args)
         except Exception as err:
-            print "Exception", str( err )
             if str(err) not in msgs:
                 msgs.append(str(err))
         if obj is not None:
@@ -95,7 +93,6 @@ def get_available_types(groups=None):
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))
-
     return sorted(types, _cmp)
 
 

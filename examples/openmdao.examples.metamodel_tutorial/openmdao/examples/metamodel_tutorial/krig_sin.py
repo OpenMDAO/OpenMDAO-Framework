@@ -8,7 +8,7 @@ from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial, Uniform
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.casehandlers.api import DBCaseRecorder
-from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+from openmdao.lib.surrogatemodels.api import FloatKrigingSurrogate #, KrigingSurrogate as FloatKrigingSurrogate
 
 
 
@@ -29,7 +29,7 @@ class Simulation(Assembly):
         #Components
         self.add("sin_meta_model",MetaModel())      
         self.sin_meta_model.model = Sin()        
-        self.sin_meta_model.default_surrogate = KrigingSurrogate()
+        self.sin_meta_model.default_surrogate = FloatKrigingSurrogate()
 
 
         #Training the MetaModel
@@ -67,19 +67,18 @@ if __name__ == "__main__":
     train_data = sim.DOE_Trainer.recorders[0].get_iterator()
     validate_data = sim.DOE_Validate.recorders[0].get_iterator()
     
-    #Note: Kriging outputs NormalDistribution (not float), so you need to grab
-    #    the mean (.mu) or the std-deviation (.sigma) from the returned object
     train_inputs = [case['sin_meta_model.x'] for case in train_data]
-    train_actual = [case['sin_meta_model.f_x'].mu for case in train_data]
+    train_actual = [case['sin_meta_model.f_x'] for case in train_data]
     inputs = [case['sin_calc.x'] for case in validate_data]    
     actual = [case['sin_calc.f_x'] for case in validate_data]  
-    predicted = [case['sin_meta_model.f_x'].mu for case in validate_data]
+    predicted = [case['sin_meta_model.f_x'] for case in validate_data]
 
     if '--noplot' not in sys.argv:
         import pylab as p
     
-        p.scatter(train_inputs,train_actual,c='g')
-        p.scatter(inputs,predicted,c='b')
+        p.scatter(train_inputs,train_actual,c='g',label="training data")
+        p.scatter(inputs,predicted,c='b',label="predicted result")
+        p.legend()
         p.show()
         
     for a,p in zip(actual,predicted): 
