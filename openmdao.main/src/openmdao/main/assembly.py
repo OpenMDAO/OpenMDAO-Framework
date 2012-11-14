@@ -265,8 +265,6 @@ class Assembly (Component):
     
     def __init__(self, directory=''):
 
-        print "inside Assembly init"
-        
         super(Assembly, self).__init__(directory=directory)
         
         self._exprmapper = ExprMapper(self)
