@@ -63,8 +63,14 @@ jQuery(function() {
             dataflow_tab  = jQuery('#dataflow_tab a'),
             workflow_tab  = jQuery('#workflow_tab a');
 
-        dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
-        workflow_tab.click(function(e) { central_label.text(work.getPathname()); });
+        dataflow_tab.click(function(e) {
+            central_label.text(data.getPathname());
+        });
+        workflow_tab.click(function(e) {
+            central_label.text(work.getPathname());
+            // unfortunately, can't compute background until element is visible
+            jQuery('.WorkflowFigure').trigger('setBackground');
+        });
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
@@ -83,20 +89,12 @@ jQuery(function() {
         new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
-        
+
         listeners_ready.resolve();
     }());
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
-    
-    //jQuery(window).bind('beforeunload', function(e) {
-    //    // Don't check when testing -- it can cause a cascade of errors.
-    //    if (openmdao.model.getModified() &&
-    //        (typeof openmdao_test_mode === 'undefined')) {
-    //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
-    //    }
-    //});
 });
 
 

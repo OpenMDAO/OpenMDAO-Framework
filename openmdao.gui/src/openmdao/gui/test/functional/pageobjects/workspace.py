@@ -19,10 +19,8 @@ from editor import EditorPage
 from elements import ButtonElement, GridElement, InputElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
-                     find_workflow_component_figures
-from util import ValuePrompt, NotifierPage, ConfirmationPage
-
-from openmdao.util.log import logger
+                     find_workflow_component_figures, find_workflow_component_figure
+from util import ArgsPrompt, ValuePrompt, NotifierPage, ConfirmationPage
 
 
 class WorkspacePage(BasePageObject):
@@ -111,15 +109,17 @@ class WorkspacePage(BasePageObject):
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
-    command = InputElement((By.ID, 'command'))
+    command = InputElement((By.ID, 'cmdline'))
     submit  = ButtonElement((By.ID, 'command-button'))
 
     def __init__(self, browser, port):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
-        self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
+        self.locators["objects"] = \
+            (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        self.locators["files"] = \
+            (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, TMO).until(
@@ -127,7 +127,7 @@ class WorkspacePage(BasePageObject):
 
         # Now wait for all WebSockets open.
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
-        
+
         try:  # We may get 2 notifiers: sockets open and sockets closed.
             msg = NotifierPage.wait(self, base_id='ws_open')
         except Exception as exc:
@@ -137,10 +137,13 @@ class WorkspacePage(BasePageObject):
             else:
                 raise
         else:
+            self.browser.implicitly_wait(1)
             try:
-                msg2 = NotifierPage.wait(self, base_id='ws_closed')
+                msg2 = NotifierPage.wait(self, timeout=1, base_id='ws_closed')
             except TimeoutException:
-                pass # ws closed dialog may not exist
+                pass  # ws closed dialog may not exist
+            finally:
+                self.browser.implicitly_wait(TMO)
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -198,12 +201,12 @@ class WorkspacePage(BasePageObject):
 
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
-    
+
     def attempt_to_close_workspace(self, expectDialog, confirm):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self('project_menu').click()
         self('close_button').click()
-    
+
         #if you expect the "close without saving?" dialog
         if expectDialog:
             dialog = ConfirmationPage(self)
@@ -215,7 +218,7 @@ class WorkspacePage(BasePageObject):
                 return ProjectsListPage.verify(self.browser, self.port)
             else:  #return to the project, intact.
                 dialog.click_cancel()
-        else:      #no unsaved changes 
+        else:      #no unsaved changes
             from project import ProjectsListPage
             return ProjectsListPage.verify(self.browser, self.port)
 
@@ -472,7 +475,8 @@ class WorkspacePage(BasePageObject):
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
-                                     check=True, offset=None, prefix=None):
+                                     check=True, offset=None, prefix=None,
+                                     args=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
@@ -489,8 +493,13 @@ class WorkspacePage(BasePageObject):
             chain.release(None)
         chain.perform()
 
-        page = ValuePrompt(self.browser, self.port)
-        page.set_value(instance_name)
+        page = ArgsPrompt(self.browser, self.port)
+        page.set_name(instance_name)
+        if args is not None:
+            for i, arg in enumerate(args):
+                page.set_argument(i, arg)
+            page.click_ok()
+
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
@@ -556,11 +565,12 @@ class WorkspacePage(BasePageObject):
         for retry in range(3):
             try:
                 obj = self.find_object_button(obj_path)
-                target = self.get_workflow_figure(target_name)
+                workflow = self.get_workflow_figure(target_name)
+                flow_fig = workflow.flow
                 chain = ActionChains(self.browser)
                 chain.move_to_element(obj)
                 chain.click_and_hold(obj)
-                chain.move_to_element(target.root)
+                chain.move_to_element(flow_fig)
                 chain.move_by_offset(2, 1)
                 chain.release(None)
                 chain.perform()
@@ -584,6 +594,10 @@ class WorkspacePage(BasePageObject):
     def get_workflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`WorkflowFigure` for `name`. """
         return find_workflow_figure(self, name, prefix, retries)
+
+    def get_workflow_component_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowComponentFigure` for `name`. """
+        return find_workflow_component_figure(self, name, prefix, retries)
 
     def show_log(self):
         """ Open log viewer.  Returns :class:`LogViewer`. """

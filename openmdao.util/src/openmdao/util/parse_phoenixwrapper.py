@@ -168,7 +168,7 @@ def _gen_publicvar(data):
         else:
             desc = data.description
             
-        var += sep + "doc=" + desc
+        var += sep + "desc=" + desc
 
     
     if data.enumAliases:

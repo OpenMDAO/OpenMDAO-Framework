@@ -2,7 +2,6 @@
 Tests of overall workspace functions.
 """
 
-import logging
 import pkg_resources
 import sys
 import time
@@ -14,20 +13,16 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
 
-    from selenium.common.exceptions import StaleElementReferenceException
-
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
-    from util import slot_drop, slot_reset, resize_editor, get_slot_target, \
+    from util import slot_drop, slot_reset, \
                      get_dataflow_fig_in_assembly_editor, put_assembly_on_grid, \
                      put_element_on_grid, get_pathname, ensure_names_in_workspace, \
                      drag_element_to, release, check_highlighting, getDropableElements, \
                      replace_driver
 
     from pageobjects.component import NameInstanceDialog
-    from pageobjects.dataflow import DataflowFigure
-    from pageobjects.dialog import NotifyDialog
-    from pageobjects.util import ConfirmationPage
+    from pageobjects.util import ArgsPrompt
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -220,8 +215,6 @@ def _test_drop_on_component_editor_grid(browser):
 def _test_slots(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    top = workspace_page.get_dataflow_figure('top')
-
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(workspace_page)
 
     workspace_page.set_library_filter('ExecComp')
@@ -247,9 +240,11 @@ def _test_slots(browser):
 
     ##################################################
     # Second part of test: Drag and drop ExecComp from the Library onto the
-    # model (IComponent) slot of a MetaModel. 
+    # model (IComponent) slot of a MetaModel.
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -314,6 +309,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('DOEgenerator')
     generator = workspace_page.find_library_button('FullFactorial')
     slot_drop(browser, generator, generator_slot, True, 'generator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -338,6 +335,8 @@ def _test_list_slot(browser):
     workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -364,6 +363,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -394,6 +395,8 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('DBCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
 
     # refresh
     time.sleep(1.0)  # give it a second to update the figure
@@ -439,32 +442,27 @@ def _test_simple_component_to_workflow(browser):
     chain = drag_element_to(browser, paraboloid, top('content_area').element, False)
     release(chain)
     #deal with the modal dialog
-    name = NameInstanceDialog(workspace_page).create_and_dismiss()
+    paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     # View the Workflow Pane.
     workspace_page('workflow_tab').click()
 
     # Show the top level workflow
     workspace_page.show_workflow('top')
-    time.sleep(0.5)  # Just so we can see it.
-
     eq(len(workspace_page.get_workflow_component_figures()), 1)
 
     # Drop the paraboloid component from the component tree onto the workflow for top
     workspace_page.expand_object('top')
-    paraboloid_component = workspace_page.find_object_button('top.' + name)
-    top = workspace_page.get_workflow_figure('top')
-    chain = drag_element_to(browser, paraboloid_component, top.root, False)
-    check_highlighting(top.root, True, "Top's workflow")
+    paraboloid_component = workspace_page.find_object_button('top.' + paraboloid_name)
+    top = workspace_page.get_workflow_figure('top.driver')
+    chain = drag_element_to(browser, paraboloid_component, top.flow, False)
+    assert top.highlighted
     release(chain)
 
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()
-    pathnames = [get_pathname(browser, fig) for fig in figs]
-
-    assert  ("top." + name) in pathnames
+    # Confirm that the paraboloid has been added to the top workflow
+    assert paraboloid_name in top.component_names
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -490,24 +488,21 @@ def _test_library_to_workflow(browser):
     eq(len(workspace_page.get_workflow_component_figures()), 1)
 
     # Drop the paraboloid component from the library onto the workflow for top
-    top = workspace_page.get_workflow_figure('top')
+    top = workspace_page.get_workflow_figure('top.driver')
     paraboloid = workspace_page.find_library_button('Paraboloid')
-    chain = drag_element_to(browser, paraboloid, top.root, True)
+    chain = drag_element_to(browser, paraboloid, top.flow, True)
     chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2])/3, 1).perform()
-    check_highlighting(top.root, True, "Top's workflow")
+    assert top.highlighted
     release(chain)
     #deal with the modal dialog
-    name = NameInstanceDialog(workspace_page).create_and_dismiss()
+    paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
 
     time.sleep(0.5)  # Just so we can see it.
 
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()
-    pathnames = [get_pathname(browser, fig) for fig in figs]
-
-    assert  ("top." + name) in pathnames
+    # Confirm that the paraboloid has been added to the top workflow
+    assert paraboloid_name in top.component_names
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -524,83 +519,76 @@ def _test_component_to_complex_workflow(browser):
     workspace_page.add_file(file1_path)
     workspace_page.add_file(file2_path)
 
-    # add VehicleSim2 to the globals
+    # create an instance of VehicleSim2
     workspace_page.set_library_filter('In Project')
-    vehicle_name = put_element_on_grid(workspace_page, "VehicleSim2")
+    sim_name = put_element_on_grid(workspace_page, "VehicleSim2")
 
-    # Drag paraboloid element into vehicle dataflow figure
-    vehicle = workspace_page.get_dataflow_figure(vehicle_name)
+    # Drag paraboloid element into sim dataflow figure
+    sim = workspace_page.get_dataflow_figure(sim_name)
     paraboloid = workspace_page.find_library_button('Paraboloid')
-    chain = drag_element_to(browser, paraboloid, vehicle('content_area').element, False)
+    chain = drag_element_to(browser, paraboloid, sim('content_area').element, False)
     release(chain)
     paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
+    paraboloid_pathname = sim_name + "." + paraboloid_name
 
-    # View the Workflow Pane.
+    # Switch to Workflow pane and show the sim workflow
     workspace_page('workflow_tab').click()
-
-    # Show the vehicle workflow
-    workspace_page.show_workflow(vehicle_name)
+    workspace_page.show_workflow(sim_name)
 
     # See how many workflow component figures there are before we add to it
     eq(len(workspace_page.get_workflow_component_figures()), 16)
 
-    ########################################
-    # Drop the paraboloid component from the component tree onto the top level
-    #     workflow for VehicleSim2
-    ########################################
-    workspace_page.expand_object(vehicle_name)
-    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
-    vehicle_workflow_figure = workspace_page.get_workflow_figure(vehicle_name)
+    ############################################################################
+    # Drop paraboloid component onto the top level workflow for sim
+    ############################################################################
+    workspace_page.expand_object(sim_name)
+    paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
+    sim_workflow_figure = workspace_page.get_workflow_figure(sim_name+'.driver')
     chain = drag_element_to(browser, paraboloid_component,
-                            vehicle_workflow_figure.root, False)
-    check_highlighting(vehicle_workflow_figure.root, True,
-                       "Three Sim Vehicle workflow")
+                            sim_workflow_figure.components[0], True)
+    assert sim_workflow_figure.highlighted
     release(chain)
-    # Check to make sure there is one more workflow component figure
+
+    # Confirm that there is one more workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 17)
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()
-    pathnames = [get_pathname(browser, fig) for fig in figs]
-    assert  (vehicle_name + "." + paraboloid_name) in pathnames
 
-    ########################################
-    # Drop the paraboloid component from the component tree onto the
-    #     workflow for sim_acc under VehicleSim2
-    ########################################
+    # Confirm that the paraboloid has been added to the sim workflow
+    assert paraboloid_name in sim_workflow_figure.component_names
+
+    ############################################################################
+    # Drop paraboloid component onto the sim_acc workflow under sim
+    ############################################################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
-    sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc")  # returns a pageobject
-
+    paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
+    sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc")
     chain = drag_element_to(browser, paraboloid_component,
-                            sim_acc_workflow_figure.root, False)
-    check_highlighting(sim_acc_workflow_figure.root, True, "sim_acc workflow")
+                            sim_acc_workflow_figure.components[0], True)
+    assert sim_acc_workflow_figure.highlighted
     release(chain)
-    # Check to make sure there is one more workflow component figure
+
+    # Confirm that there is one more workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()  # returns Selenium WebElements
-    pathnames = [get_pathname(browser, fig) for fig in figs]
 
-    # should have two instances of the vehicle_name.paraboloid_name
-    pathnames_matching_vehicle_name_paraboloid_name = \
-           [p for p in pathnames if p == (vehicle_name + "." + paraboloid_name)]
-    #assert  ("sim_acc" + "." + paraboloid_name) in pathnames
-    eq(len(pathnames_matching_vehicle_name_paraboloid_name), 2)
+    # Confirm that the paraboloid has been added to the sim_acc workflow
+    assert paraboloid_name in sim_acc_workflow_figure.component_names
 
-    ########################################
-    # Drop the paraboloid component from the component tree onto the
-    #     workflow for vehicle under sim_acc under VehicleSim2.
-    # This should NOT work since the paraboloid is not at the right level
-    ########################################
+    ############################################################################
+    # Drop paraboloid component onto the vehicle workflow under sim_acc
+    # This should NOT work since the paraboloid is not in the vehicle assembly
+    ############################################################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
-    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")
+    paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
+    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle.driver")
     chain = drag_element_to(browser, paraboloid_component,
-                            vehicle_workflow_figure.root, False)
-    check_highlighting(vehicle_workflow_figure.root, False, "vehicle workflow")
+                            vehicle_workflow_figure.components[0], True)
+    assert not vehicle_workflow_figure.highlighted
     release(chain)
-    # Check to make sure there is no new workflow component figure
+
+    # Confirm that there is NOT a new workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
+
+    # Confirm that the paraboloid has NOT been added to the vehicle workflow
+    assert paraboloid_name not in vehicle_workflow_figure.component_names
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -619,69 +607,65 @@ def _test_drop_onto_layered_div(browser):
 
     # add VehicleSim2 to the globals
     workspace_page.set_library_filter('In Project')
-    vehicle_name = put_element_on_grid(workspace_page, "VehicleSim2")
+    sim_name = put_element_on_grid(workspace_page, 'VehicleSim2')
 
     # add Paraboloid to VehicleSim dataflow assembly
-    vehicle = workspace_page.get_dataflow_figure(vehicle_name)
+    sim = workspace_page.get_dataflow_figure(sim_name)
     paraboloid = workspace_page.find_library_button('Paraboloid')
     chain = drag_element_to(browser, paraboloid,
-                            vehicle('content_area').element, False)
+                            sim('content_area').element, False)
     release(chain)
     paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
+    paraboloid_pathname = sim_name + "." + paraboloid_name
 
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
-                                                             vehicle_name)
+                                                             sim_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
     driver_editor.move(-100, 0)
     driver_editor.show_workflow()
 
-    # Check to make sure we have the expected number of
-    #   workflow component figures before we add to it
+    # Confirm expected number of workflow component figures before adding one
     eq(len(driver_editor.get_workflow_component_figures()), 5)
     eq(len(workspace_page.get_workflow_component_figures()), 22)
 
-    # Drag paraboloid component into sim_EPA_city workflow figure
-    # should add to the list of workflow component figures
-    workspace_page.expand_object(vehicle_name)
-    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
-    vehicle_workflow_figure = workspace_page.get_workflow_figure("sim_EPA_city")
+    # Drag paraboloid component into sim_EPA_city workflow
+    workspace_page.expand_object(sim_name)
+    paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
+    city_workflow_figure = workspace_page.get_workflow_figure('sim_EPA_city')
     chain = drag_element_to(browser, paraboloid_component,
-                            vehicle_workflow_figure.root, False)
-    check_highlighting(vehicle_workflow_figure.root, True,
-                       "Three Sim Vehicle workflow")
+                            city_workflow_figure.components[0], True)
+    assert city_workflow_figure.highlighted
     release(chain)
-    # Check to make sure there is one more workflow component figure
-    eq(len(driver_editor.get_workflow_component_figures()), 6)
-    eq(len(workspace_page.get_workflow_component_figures()), 24)
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()
-    pathnames = [get_pathname(browser, fig) for fig in figs]
-    assert  (vehicle_name + "." + paraboloid_name) in pathnames
 
-    # Try dragging paraboloid component into vehicle workflow figure under
-    #     sim_EPA_city workflow figure
+    # Confirm there is one more workflow component figure in the editor
+    eq(len(driver_editor.get_workflow_component_figures()), 6)
+
+    # Confirm two more workflow component figures in the workspace as a whole
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
+
+    # Confirm that the paraboloid has been added to the sim_EPA_city workflow
+    assert paraboloid_name in city_workflow_figure.component_names
+
+    # Try dragging paraboloid component into vehicle workflow under sim_EPA_city
     # should NOT add to the list of workflow component figures
-    workspace_page.expand_object(vehicle_name)
-    paraboloid_component = workspace_page.find_object_button(vehicle_name + "." + paraboloid_name)
-    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")
+    workspace_page.expand_object(sim_name)
+    paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
+    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle.driver")
     chain = drag_element_to(browser, paraboloid_component,
-                            vehicle_workflow_figure.root, False)
-    check_highlighting(vehicle_workflow_figure.root, False,
-                       "Three Sim Vehicle workflow")
+                            vehicle_workflow_figure.components[0], True)
+    assert not vehicle_workflow_figure.highlighted
     release(chain)
-    # Check to make sure there is one more workflow component figure
+
+    # Confirm that there is NOT a new workflow component figure in either place
     eq(len(driver_editor.get_workflow_component_figures()), 6)
     eq(len(workspace_page.get_workflow_component_figures()), 24)
-    # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures()
-    pathnames = [get_pathname(browser, fig) for fig in figs]
-    assert  (vehicle_name + "." + paraboloid_name) in pathnames
+
+    # Confirm that the paraboloid has NOT been added to the vehicle workflow
+    assert paraboloid_name not in vehicle_workflow_figure.component_names
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-
 
 
 if __name__ == '__main__':

@@ -59,7 +59,8 @@ class PassthroughTestCase(unittest.TestCase):
     def test_simple_passthrough(self):
         varnames = ['a','b','c','d']
         self._setup_simple()
-        self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
+        self.assertEqual(set(self.asm.c1.list_outputs()),
+                         set(['c','d', 'derivative_exec_count', 'exec_count', 'itername']))
         self.assertTrue('c2.b' in self.asm.a1.list_inputs())
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-2,2,0,-4))

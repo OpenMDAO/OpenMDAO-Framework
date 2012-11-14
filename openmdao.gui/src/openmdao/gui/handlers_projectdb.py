@@ -1,20 +1,22 @@
-import os
+import cStringIO as StringIO
+import os.path
 import shutil
+import tarfile
+from ConfigParser import SafeConfigParser
+from tempfile import mkdtemp
 from time import strftime
 from urllib2 import HTTPError
-import cStringIO as StringIO
-import tarfile
-from tempfile import mkdtemp
 
 from tornado import web
 
 from openmdao.main import __version__
+from openmdao.main.project import parse_archive_name, Project
+from openmdao.main.repo import find_vcs
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename
 from openmdao.util.log import logger
-from openmdao.main.project import parse_archive_name, Project
-from openmdao.main.repo import find_vcs
+
 
 def _get_unique_name(dirname, basename):
     """Returns a unique pathname for a file with the given basename
@@ -26,6 +28,7 @@ def _get_unique_name(dirname, basename):
         name = '%s_%d' % (basename, i)
         i += 1
     return os.path.join(dirname, name)
+
 
 class IndexHandler(ReqHandler):
     ''' get project list
@@ -100,7 +103,7 @@ class DetailHandler(ReqHandler):
         if 'version' in forms:
             project['version'] = forms['version'].strip()
         else:
-            project['version'] =''
+            project['version'] = ''
             
         directory = forms.get('directory', self.get_project_dir())
 
@@ -130,6 +133,14 @@ class DetailHandler(ReqHandler):
             for key, value in project.iteritems():
                 pdb.set(project_id, key, value)
             pdb.modified(project_id)
+
+        # Update project settings.
+        proj = Project(project['projpath'])
+        dummy = proj.get_info()  # Just to get required keys.
+        info = {}
+        for key in dummy:
+            info[key] = project[key]
+        proj.set_info(info)
 
         self.redirect(self.request.uri)
 
@@ -249,8 +260,10 @@ class AddHandler(ReqHandler):
                     vcs = DumbVCS(unique)
                 vcs.init_repo()
                 
-                # TODO: look for project config and retrieve project db info from it
-                
+                # Update project dict with info section of config file.
+                proj = Project(unique)
+                project.update(proj.get_info())
+
                 pdb.new(project)
 
                 self.redirect('/projects/'+str(project['id']))
@@ -260,6 +273,7 @@ class AddHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.render('projdb/add_project.html')
+
 
 handlers = [
     web.url(r'/projects/?',                              IndexHandler),

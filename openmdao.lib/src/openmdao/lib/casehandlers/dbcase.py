@@ -245,6 +245,7 @@ class DBCaseRecorder(object):
         
         attr = {}
         attr['name'] = "dbfile"
+        attr['id'] = attr['name']
         attr['type'] = type(self.dbfile).__name__
         attr['value'] = str(self.dbfile)
         attr['connected'] = ''

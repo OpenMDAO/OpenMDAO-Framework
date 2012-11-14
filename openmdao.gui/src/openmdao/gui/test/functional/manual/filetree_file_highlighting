@@ -1,0 +1,39 @@
+Author: Calvin Robinson
+Last Modified: Novemiber 2, 2012
+Test: Files Tab
+Location: Filetree( Left-panel in workspace )
+Feature: Highlighting
+
+The files listing in the file tree should not be highlighted in the following instances:
+
+1) When the workspace is loaded for the first time
+2) When hidden files are toggled to be viewed/hidden
+3) When the only files that are updated are
+    a) anything in '_macros/*'
+    b) any file with the following file extensions
+        i) '.pyd' - python dynamically linked library (DLL)
+        ii) '.pyc' - compiled python file
+
+To verify that this feature is working correctly, complete the following steps.
+If behavior is experienced that does not match the desired results of any 
+step that says 'ensure', the test should end, and the behavior should be issued
+as a bug. 
+
+1) Load a project
+2) Immediately click the files tab while the workspace is loading.
+3) Ensure that the listing of files does not highlight.
+4) Right click in the file tree and select 'toggle hidden files'
+5) When the tree is refreshed to display the files, ensure the list does not highlight.
+6) Right click in the file tree and select 'toggle hidden files'
+7) When the tree is refreshed to hide hidden files, ensure the list does not highlight.
+8) Perform any action that would only update the macro file. Examples of such actions include
+    a) Adding an assembly/component to the dataflow.
+    b) Removing an assembly/component from the dataflow.
+    c) Editing the macro file itself.
+9) When any of these actions are performed, ensure that the file listing does not highlight.
+10) Perform any action that modifies unhidden files. Examples of such actions include:
+    a) Modifying a python source file. Such files have a '.py' file extension.
+    b) Adding a new file to the file tree.
+    c) Deleting a file from the file tree.
+    d) Importing files through the code editor.
+11) Ensure that any of the above actions causes the file listing to highlight.

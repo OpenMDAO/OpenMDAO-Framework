@@ -6,11 +6,37 @@ import traceback
 import zipfile
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, PatternMatchingEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 from openmdao.util.log import logger
+
+
+# FIXME: The pattern matching bit seems to be causing random errors
+#        See Pivotal story # 39063129
+#        It has been disabled until the error can be investigated and fixed
+
+#class FilesPublisher(PatternMatchingEventHandler):
+#    ''' publishes file collection when ANY file system event occurs
+#    '''
+
+#    def __init__(self, files):
+#        super(FilesPublisher, self).__init__(
+#                ignore_patterns=[
+#                    "*/_macros/*",
+#                    "*.pyc", "*.pyd"])
+
+#        self.files = files
+#
+#    def on_any_event(self, event):
+#        ''' publishes file collection when ANY file system event occurs
+#        '''
+
+#        try:
+#            self.files.publish_files()
+#        except Exception:
+#            traceback.print_exc()
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -27,6 +53,7 @@ class FilesPublisher(FileSystemEventHandler):
             self.files.publish_files()
         except Exception:
             traceback.print_exc()
+
 
 class FileManager(object):
     ''' Object that keeps track of a collection of files (i.e. a directory)
@@ -94,7 +121,7 @@ class FileManager(object):
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
-            contents=open(filepath, 'rb').read()
+            contents = open(filepath, 'rb').read()
             return contents
         else:
             return None
@@ -145,13 +172,13 @@ class FileManager(object):
             zfile.printdir()
             for fname in zfile.namelist():
                 if fname.endswith('/'):
-                    dirname = userdir+'/'+fname
+                    dirname = userdir + '/' + fname
                     if not os.path.exists(dirname):
                         os.makedirs(dirname)
             for fname in zfile.namelist():
                 if not fname.endswith('/'):
                     data = zfile.read(fname)
-                    fname = userdir+'/'+fname
+                    fname = userdir + '/' + fname
                     fname = fname.replace('\\', '/')
                     fout = open(fname, "wb")
                     fout.write(data)

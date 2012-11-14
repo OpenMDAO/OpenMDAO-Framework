@@ -89,8 +89,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
+      openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
-      openmdao.lib.surrogatemodels.nn_surrogate.NeuralNet = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
+
       
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
@@ -111,6 +113,12 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
       
+      [openmdao.casefilter]
+      openmdao.lib.casehandlers.filters.ExprCaseFilter = openmdao.lib.casehandlers.filters:ExprCaseFilter
+      openmdao.lib.casehandlers.filters.IteratorCaseFilter = openmdao.lib.casehandlers.filters:IteratorCaseFilter
+      openmdao.lib.casehandlers.filters.SequenceCaseFilter = openmdao.lib.casehandlers.filters:SequenceCaseFilter
+      openmdao.lib.casehandlers.filters.SliceCaseFilter = openmdao.lib.casehandlers.filters:SliceCaseFilter
+
       [openmdao.doegenerator]
       openmdao.lib.doegenerators.full_factorial.FullFactorial = openmdao.lib.doegenerators.full_factorial:FullFactorial
       openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite

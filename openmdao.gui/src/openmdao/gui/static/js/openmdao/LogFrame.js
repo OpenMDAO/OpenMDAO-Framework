@@ -58,6 +58,7 @@ openmdao.LogFrame = function(id, model) {
     function doPopout(ev) {
         var init_fn = 'jQuery(function() { openmdao.PopoutLogFrame() })';
         openmdao.Util.popupScript('', init_fn);
+        self.close();
     }
 
     // Display filtering options and possibly execute.

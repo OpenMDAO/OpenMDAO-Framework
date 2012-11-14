@@ -24,7 +24,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     ICaseIterator, ICaseRecorder
+                                     IHasEvents, ICaseIterator, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -129,7 +129,14 @@ class Component(Container):
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, desc='Number of times this Component has been executed.')
+    exec_count = Int(0, iotype='out',
+                     desc='Number of times this Component has been executed.')
+
+    derivative_exec_count = Int(0, iotype='out',
+                     desc='Number of times this Component has been executed'
+                          ' for derivatives.')
+
+    itername = Str('', iotype='out', desc='Iteration coordinates')
 
     create_instance_dir = Bool(False)
 
@@ -174,6 +181,7 @@ class Component(Container):
 
         self.exec_count = 0
         self.derivative_exec_count = 0
+        self.itername = ''
         self.create_instance_dir = False
         if directory:
             self.directory = directory
@@ -185,8 +193,6 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
-
-        self._itername = ''
 
     @property
     def dir_context(self):
@@ -205,7 +211,7 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
-        return self._itername
+        return self.itername
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername):
@@ -215,7 +221,7 @@ class Component(Container):
         itername: string
             Iteration coordinates.
         """
-        self._itername = itername
+        self.itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -1740,6 +1746,9 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
+            if has_interface(self, IHasEvents):
+                attrs['Events'] = [dict(target=path)
+                                   for path in self.get_events()]
         return attrs
 
 
