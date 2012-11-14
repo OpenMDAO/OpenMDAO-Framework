@@ -210,6 +210,16 @@ class ContainerTestCase(unittest.TestCase):
         self.root.foo.add('foochild', Container())
         self.assertEqual(self.root.foo.foochild.get_pathname(), 'foo.foochild')
 
+    def test_add_bad_name(self):
+        bad_names = ['parent', 'self', 'for', 'if', 'while', 'sin', 'cos', 'tan']
+        for bad in bad_names:
+            try:
+                self.root.add(bad, Container())
+            except Exception as err:
+                self.assertEqual(str(err), ": '%s' is a reserved or invalid name" % bad)
+            else:
+                self.fail("name '%s' should be illegal" % bad)
+
     def test_get(self):
         obj = self.root.get('c2.c21')
         self.assertEqual(obj.get_pathname(), 'c2.c21')

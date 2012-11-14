@@ -558,9 +558,10 @@ class Component(Container):
         Returns the added Container object.
         """
         self.config_changed()
+        super(Component, self).add(name, obj)
         if is_instance(obj, Container) and not is_instance(obj, Component):
             self._depgraph.add(name)
-        return super(Component, self).add(name, obj)
+        return obj
 
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
