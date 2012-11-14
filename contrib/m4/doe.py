@@ -24,8 +24,8 @@ class DOE(CaseIteratorDriver):
     lhs = Int(value=2, low=1, iotype='in',
                 desc='???, used by LHS and Rand_LHS.')
 
-    def __init__(self, *args, **kwargs):
-        super(DOE, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(DOE, self).__init__()
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
 

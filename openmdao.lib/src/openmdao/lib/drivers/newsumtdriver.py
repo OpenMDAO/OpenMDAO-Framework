@@ -324,8 +324,8 @@ class NEWSUMTdriver(DriverUsesDerivatives):
                      If 0, initial value computed by NEWSUMT. \
                      If 1, initial value set by ra.')
     
-    def __init__(self, *args, **kwargs):
-        super(NEWSUMTdriver, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(NEWSUMTdriver, self).__init__()
         
         self.iter_count = 0
 

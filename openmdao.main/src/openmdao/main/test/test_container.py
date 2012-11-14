@@ -35,8 +35,8 @@ class DumbTrait(Variable):
 class MyContainer(Container):
     uncertain = Slot(NormalDistribution, iotype="out")
 
-    def __init__(self, *args, **kwargs):
-        super(MyContainer, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MyContainer, self).__init__()
         self.uncertain = NormalDistribution()
         self.add('dyntrait', Float(9., desc='some desc'))
 

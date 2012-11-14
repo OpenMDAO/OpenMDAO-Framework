@@ -122,8 +122,8 @@ class AxodCompn(Component):
     effs  = Array(_ZEROS48, dtype=float32, shape=(48,), iotype='out')
     effr  = Array(_ZEROS48, dtype=float32, shape=(48,), iotype='out')
 
-    def __init__(self, doc=None, directory='', input_filename=''):
-        super(AxodCompn, self).__init__(doc, directory)
+    def __init__(self, input_filename=''):
+        super(AxodCompn, self).__init__()
         self.input_filename = input_filename
         self.out_filename=self.input_filename+'O'
         self.ncases = _ncases
