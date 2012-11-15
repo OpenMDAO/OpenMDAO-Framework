@@ -25,8 +25,8 @@ class SphereFunction(Component):
     y = Enum([-10,0,1,2,3,4,5], iotype="in")
     z = Int(0, low=-5,high=5, iotype="in")
 
-    def __init__(self, desc=None):
-        super(SphereFunction, self).__init__(desc)
+    def __init__(self):
+        super(SphereFunction, self).__init__()
 
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
@@ -47,8 +47,8 @@ class SphereFunctionArray(Component):
     total = Float(0., iotype='out')
     x = Array([0.0,0.0,0.0], iotype="in")
 
-    def __init__(self, desc=None):
-        super(SphereFunctionArray, self).__init__(desc)
+    def __init__(self):
+        super(SphereFunctionArray, self).__init__()
 
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """

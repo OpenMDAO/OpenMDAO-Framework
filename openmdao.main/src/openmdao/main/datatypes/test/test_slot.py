@@ -19,7 +19,7 @@ class SlotComp(Assembly):
     num_cases = Int(0, iotype='out')
     
     def __init__(self):
-        super(SlotComp, self).__init__('SlotComp')
+        super(SlotComp, self).__init__()
         
     def execute(self):
         self.num_cases = 0

@@ -13,7 +13,6 @@ import __builtin__
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
-from openmdao.main.variable import is_legal_name
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 

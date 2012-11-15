@@ -35,8 +35,8 @@ class RosenSuzukiComponent(Component):
     x3 = Float(1., iotype='in', low=-11., high=11.)
     rosen_suzuki = Float(0., iotype='out')
     
-    def __init__(self, *args, **kwargs):
-        super(RosenSuzukiComponent, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(RosenSuzukiComponent, self).__init__()
     
     def execute(self):
         """ Compute results from input vector. """

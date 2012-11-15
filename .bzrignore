@@ -1,4 +1,4 @@
-*.log
+*.lo
 *.egg-info
 *_log.txt
 *.tar.gz

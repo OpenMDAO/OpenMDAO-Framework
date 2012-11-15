@@ -34,8 +34,8 @@ class SimpleComp(Component):
     cont_in = Slot(DumbVT, iotype='in')
     cont_out = Slot(DumbVT, iotype='out')
 
-    def __init__(self, *args, **kwargs):
-        super(SimpleComp, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(SimpleComp, self).__init__()
         self.add('cont_in', DumbVT())
         self.add('cont_out', DumbVT())
 

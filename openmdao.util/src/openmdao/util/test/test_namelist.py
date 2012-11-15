@@ -51,9 +51,9 @@ class VarComponent(Component):
     
     varcontainer = Slot(VarContainer, iotype='input')
     
-    def __init__(self, directory=''):
+    def __init__(self):
         
-        super(VarComponent, self).__init__(directory)
+        super(VarComponent, self).__init__()
 
         # Variable Containers
         self.add('varcontainer',  VarContainer())

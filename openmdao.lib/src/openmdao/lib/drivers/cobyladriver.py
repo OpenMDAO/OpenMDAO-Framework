@@ -67,9 +67,9 @@ class COBYLAdriver(Driver):
                   desc = 'Error code returned from COBYLA.')
     
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         
-        super(COBYLAdriver, self).__init__(*args, **kwargs)
+        super(COBYLAdriver, self).__init__()
         
         self.error_messages = {
             1 : 'Max. number of function evaluations reached',

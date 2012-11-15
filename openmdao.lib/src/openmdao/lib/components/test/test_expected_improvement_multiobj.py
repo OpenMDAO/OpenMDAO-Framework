@@ -10,7 +10,7 @@ from openmdao.main.case import Case
 class MultiObjExpectedImprovementTests(unittest.TestCase):
     
     def test_ei_2obj(self):
-        ei = MultiObjExpectedImprovement(2)
+        ei = MultiObjExpectedImprovement()
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",10)]),Case(outputs=[("y1",1),("y2",-10)])]
         for case in list_of_cases:
@@ -25,7 +25,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         self.assertEqual(0.5,ei.PI,6)
 
     def test_ei_nobj(self):
-        ei = MultiObjExpectedImprovement(3)
+        ei = MultiObjExpectedImprovement()
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -39,7 +39,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         self.assertAlmostEqual(0.875,ei.PI,1)
 
     def test_ei_calc_switch(self):
-        ei = MultiObjExpectedImprovement(3)
+        ei = MultiObjExpectedImprovement()
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -57,7 +57,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
                                             ' for more than 2 objectives')
 
     def test_reset_y_star_event(self):
-        ei = MultiObjExpectedImprovement(3)
+        ei = MultiObjExpectedImprovement()
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -78,7 +78,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         self.assertEqual(ei.y_star.all(),array([2,2,2]).all())
         
     def test_bad_criteria(self):
-        ei = MultiObjExpectedImprovement(2)
+        ei = MultiObjExpectedImprovement()
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1)])]
         for case in list_of_cases:

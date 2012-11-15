@@ -759,7 +759,7 @@ def update_libpath(options=None):
         'linux': 'LD_LIBRARY_PATH',
         'darwin': 'DYLD_LIBRARY_PATH',
         }
-    libpathvname = ldict[sys.platform]
+    libpathvname = ldict.get(sys.platform)
     
     if options is None:
         parser = ArgumentParser(description="adds any shared library paths"
@@ -767,7 +767,7 @@ def update_libpath(options=None):
                                 " %s" % libpathvname)
         parser.usage = "update_libpath [options]"
         options = parser.parse_args()
-    
+   
     if libpathvname:
         topdir = os.path.dirname(os.path.dirname(sys.executable))
         bindir = os.path.join(topdir, 'bin')
@@ -775,6 +775,8 @@ def update_libpath(options=None):
                               'python%s.%s' % sys.version_info[:2], 
                               'site-packages')
         sofiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.so')]
+        if sys.platform == 'darwin':
+            sofiles.extend([os.path.abspath(x) for x in find_files(pkgdir, '*.dylib')])
                       
         final = set()
         for fname in sofiles:
