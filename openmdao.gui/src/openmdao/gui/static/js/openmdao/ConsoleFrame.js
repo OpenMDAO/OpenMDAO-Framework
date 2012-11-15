@@ -118,7 +118,7 @@ openmdao.ConsoleFrame = function(id,model) {
     function consoleError(msg) {
         text = msg[1];
         updateHistory(text+'\n');
-        openmdao.Util.notify(text, 'Console Error');
+        openmdao.Util.notify(text, 'Error');
     }
 
     // ask model for an update whenever something changes
