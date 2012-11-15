@@ -17,8 +17,8 @@ from openmdao.lib.optproblems.branin import BraninComponent
         
     
 class MyDriver(Driver): 
-    def __init__(self,doc=None):
-        super(MyDriver,self).__init__(doc)
+    def __init__(self):
+        super(MyDriver, self).__init__()
         
         self.ins = ['branin_meta_model.x','branin_meta_model.y']
         self.outs = ['branin_meta_model.f_xy']  

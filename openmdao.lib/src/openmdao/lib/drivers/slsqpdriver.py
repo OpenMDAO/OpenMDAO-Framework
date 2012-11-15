@@ -66,9 +66,9 @@ class SLSQPdriver(DriverUsesDerivatives):
                   desc = 'Error code returned from SLSQP.')
     
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         
-        super(SLSQPdriver, self).__init__(*args, **kwargs)
+        super(SLSQPdriver, self).__init__()
         
         self.error_messages = {
             -1 : "Gradient evaluation required (g & a)",

@@ -82,9 +82,6 @@ class Genetic(Driver):
                     "for repeatable results; otherwise leave as None for truly "
                     "random seeding.")
     
-    def __init__(self, *args, **kwargs):
-        super(Genetic, self).__init__(*args, **kwargs)
-    
     def _make_alleles(self): 
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
         the parameters specified by the user"""

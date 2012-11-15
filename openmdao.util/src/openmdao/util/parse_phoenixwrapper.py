@@ -335,11 +335,11 @@ def parse_phoenixwrapper(infile, outfile, compname):
             # Write the constructors.
             if constructs[group] != "":
                 text = "\n"
-                text += tab + "def __init__(self, directory=''):\n"
+                text += tab + "def __init__(self):\n"
                 text += tab + tab + '"""Constructor for the %s component"""' \
                         % container_name
                 text += "\n\n"
-                text += tab + tab + "super(%s, self).__init__(directory)" \
+                text += tab + tab + "super(%s, self).__init__()" \
                         % container_name
                 text += "\n\n"
                 text += tab + tab + "# Variable Containers\n"
@@ -357,10 +357,10 @@ def parse_phoenixwrapper(infile, outfile, compname):
     openmdao.write(variables[""])
     
     text = "\n"
-    text += tab + "def __init__(self, directory=''):\n"
+    text += tab + "def __init__(self):\n"
     text += tab + tab + '"""Constructor for the %s component"""' % compname
     text += "\n\n"
-    text += tab + tab + "super(%s, self).__init__(directory)" % compname
+    text += tab + tab + "super(%s, self).__init__()" % compname
     text += "\n\n"
     text += tab + tab + "# Variable Containers\n"
     openmdao.write(text)

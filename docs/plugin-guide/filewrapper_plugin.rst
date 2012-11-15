@@ -128,10 +128,10 @@ To do this, we create a component that looks like this:
         var_input = Float(3.612, iotype='in', desc='A floating point input')
         var_output = Float(6.312, iotype='out', desc='output')
 
-        def __init__(self, directory=''):
+        def __init__(self):
             """Constructor for the PdcylComp component"""
     
-            super(WrappedComp, self).__init__(directory)
+            super(WrappedComp, self).__init__()
     
             # External Code public variables
             self.input_file = 'myinput.txt'
