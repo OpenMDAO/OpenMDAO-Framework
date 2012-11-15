@@ -1,4 +1,8 @@
 import sys
+import os
+
+import openmdao.main
+import webbrowser
 
 
 def view_docs(browser=None):
@@ -15,17 +19,13 @@ def view_docs(browser=None):
             if arg.startswith('--browser='):
                 browser = arg.split('=')[-1].strip()
     try:
-        import openmdao.devtools.build_docs
+        import openmdao.devtools.build_docs as build_docs
     except ImportError:
-        # look for docs online
-        import openmdao.util.releaseinfo
-        version = openmdao.util.releaseinfo.__version__
-        idxpath = 'http://openmdao.org/releases/%s/docs' % version
-        
-        import webbrowser
+        idxpath = "file://"+os.path.join(os.path.dirname(openmdao.main.__file__),
+                                         "docs", "index.html")
         wb = webbrowser.get(browser)
         wb.open(idxpath)
     else:
-        openmdao.devtools.build_docs.view_docs(browser)
+        build_docs.view_docs(browser)
 
 
