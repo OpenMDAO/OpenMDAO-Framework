@@ -261,7 +261,6 @@ class SafeDriver(SafeBase):
     def switch_to_window(self, *args, **kwargs):
         return self._invoke('switch_to_window', *args, **kwargs)
 
-
 class SafeInvoker(object):
     """ Invokes methods on a delegate with a timeout. """
 

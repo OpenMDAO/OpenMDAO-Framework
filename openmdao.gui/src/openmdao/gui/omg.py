@@ -67,7 +67,7 @@ class App(web.Application):
             # doc_handler = web.RedirectHandler
             # doc_handler_options = { 'url': idxpath, 'permanent': False }
             import openmdao.main
-            idxpath = os.path.join(openmdao.main.__file__, 'docs')
+            idxpath = os.path.join(os.path.dirname(openmdao.main.__file__), 'docs')
 
         doc_handler = web.StaticFileHandler
         doc_handler_options = { 'path' : idxpath, 'default_filename': 'index.html' }
