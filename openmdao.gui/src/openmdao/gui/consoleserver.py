@@ -100,14 +100,14 @@ class ConsoleServer(cmd.Cmd):
                 set_as_top(v)
 
     def _update_workflows(self):
-        ''' Call :meth:`check_config` on drivers to capture any workflow
+        ''' Call :meth:`_update_workflow` on drivers to capture any workflow
             updates now rather than waiting until they are run.
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
                                    if is_instance(obj, Driver)]:
-                    driver.check_config()
+                    driver._update_workflow()
 
     def publish_components(self):
         ''' publish the current component tree and subscribed components
