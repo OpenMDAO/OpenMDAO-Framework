@@ -107,8 +107,8 @@ class HollowSphere(Component):
     surface_area = Float(iotype='out', units='cm**2')
     pid = Int(iotype='out')
 
-    def __init__(self, doc=None, directory=''):
-        super(HollowSphere, self).__init__(doc, directory) 
+    def __init__(self):
+        super(HollowSphere, self).__init__() 
         self.pid = os.getpid()
 
     def execute(self):
