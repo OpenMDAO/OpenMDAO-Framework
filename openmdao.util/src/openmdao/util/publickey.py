@@ -9,7 +9,6 @@ issues found with some keys read from ssh ``id_rsa`` files.
 import base64
 import cPickle
 import getpass
-import logging
 import os.path
 import socket
 import sys
@@ -22,6 +21,7 @@ from Crypto.Util.number import bytes_to_long
 if sys.platform == 'win32':  #pragma no cover
     try:
         import win32api
+        import win32con
         import win32security
         import ntsecuritycon
     except ImportError:
@@ -255,7 +255,7 @@ def is_private(path):
             return False  # No way to know.
 
         # Find the SIDs for user and system.
-        username = win32api.GetUserName()
+        username = win32api.GetUserNameEx(win32con.NameSamCompatible)
 
         # Map Cygwin 'root' to 'Administrator'. Typically these are intended
         # to be identical, but /etc/passwd might configure them differently.
@@ -299,7 +299,7 @@ def make_private(path):
             raise ImportError('No pywin32')
 
         # Find the SIDs for user and system.
-        username = win32api.GetUserName()
+        username = win32api.GetUserNameEx(win32con.NameSamCompatible)
 
         # Map Cygwin 'root' to 'Administrator'. Typically these are intended
         # to be identical, but /etc/passwd might configure them differently.
