@@ -32,7 +32,7 @@ def _test_maxmin(browser):
 
     # Add maxmin.py to project
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
+                                                'files/maxmin.py')
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
@@ -93,7 +93,7 @@ def _test_connect(browser):
 
     # Import connect.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'connect.py')
+                                                'files/connect.py')
     workspace_page.add_file(file_path)
 
     # Replace 'top' with connect.py's top.
@@ -156,9 +156,14 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['derivative_exec_count', 'int', '0', '', 'true',
+         'Number of times this Component has been executed for derivatives.', '', ''],
         ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
+        ['exec_count', 'int', '1', '', 'true',
+         'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
@@ -287,7 +292,7 @@ def _test_driverflows(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -338,7 +343,7 @@ def _test_replace(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.

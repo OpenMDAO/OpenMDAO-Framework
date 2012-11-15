@@ -172,10 +172,10 @@ class PdcylComp(ExternalCode):
     
 
     
-    def __init__(self, directory=''):
+    def __init__(self):
         """Constructor for the PdcylComp component"""
 
-        super(PdcylComp, self).__init__(directory)
+        super(PdcylComp, self).__init__()
 
         # External Code public variables
         self.stdin = 'PDCYL.in'

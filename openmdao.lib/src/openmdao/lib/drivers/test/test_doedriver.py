@@ -50,8 +50,8 @@ class DrivenComponent(Component):
     stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
 
-    def __init__(self, *args, **kwargs):
-        super(DrivenComponent, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(DrivenComponent, self).__init__()
         self._raise_err = False
 
     def _err_event_fired(self):

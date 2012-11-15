@@ -21,8 +21,8 @@ class MyComponent(Component):
     x = Float(1., iotype='in')
     xout = Float(2., iotype='out')
     
-    def __init__(self, *args, **kwargs):
-        super(MyComponent, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MyComponent, self).__init__()
         self.add('cont', Container())
         self.cont.add('dyntrait', Float(3.))
     

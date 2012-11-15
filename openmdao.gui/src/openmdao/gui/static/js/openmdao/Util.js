@@ -162,16 +162,6 @@ openmdao.Util = {
     },
 
     /**
-     * function to scroll to the bottom of an element (FIXME: doesn't work)
-     *
-     * el:      the element to scroll
-     */
-    scrollToBottom: function(el) {
-        el.scrollTop = el.scrollHeight;
-        el.scrollTop = el.scrollHeight - el.clientHeight;
-    },
-
-    /**
      * prompt for a value
      *
      * prompt:      prompt string
@@ -259,6 +249,11 @@ openmdao.Util = {
             win = null,
             userInput = null;
 
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
+
         function handleResponse(ok) {
             // close dialog
             win.dialog('close');
@@ -310,6 +305,11 @@ openmdao.Util = {
         var msgId = baseId+'-msg',
             win = null;
 
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
+
         win = jQuery('<div id="'+msgId+'"></div>');
         win.dialog({
             autoOpen: false,
@@ -346,16 +346,18 @@ openmdao.Util = {
      * anonymous: optional, if true then don't include a name input field
      */
     promptForArgs: function(prompt, signature, callback, anonymous) {
-        baseId = 'get-args';
-
-        var promptId = baseId+'-prompt',
+        var baseId = 'get-args',
+            promptId = baseId+'-prompt',
             nameId = baseId+'-name',
             argsId = baseId+'-tbl',
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
-            win = null,
-            nameInput = null,
-            argsTable = null;
+            win, nameInput, argsTable, argsHTML, i;
+
+        // FIXME: this looks like a bug, should be removed in handleResponse()
+        if (jQuery('#'+baseId).length > 0) {
+            jQuery('#'+baseId).remove();
+        }
 
         function handleResponse(ok) {
             // close dialog
@@ -386,8 +388,8 @@ openmdao.Util = {
         }
 
         if (signature.args.length) {
-            var argsHTML = '<table id="'+argsId+'" style="width:100%;">';
-            for (var i = 0 ; i < signature.args.length ; ++i) {
+            argsHTML = '<table id="'+argsId+'" style="width:100%;">';
+            for (i = 0 ; i < signature.args.length ; ++i) {
                 argsHTML += '<tr><td align="right">'+signature.args[i][0]+':</td>';
                 argsHTML += '<td><input type="text"';
                 if (signature.args[i].length > 1) {
@@ -661,11 +663,12 @@ openmdao.Util = {
 
     /** Close all WebSockets. */
     closeWebSockets: function(reason) {
-       if (openmdao.sockets) {
-          for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+        var i;
+        if (openmdao.sockets) {
+            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
              openmdao.sockets[i].close(1000, reason);
-          }
-       }
+            }
+        }
     },
 
     /** Notify when `nSockets` are open (used for testing). */
@@ -675,8 +678,9 @@ openmdao.Util = {
         }
 
         function poll() {
+            var i;
             if (openmdao.sockets.length >= nSockets) {
-                for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
                     if (openmdao.sockets[i].readyState !== 1) {
                         doPoll();
                         return;
@@ -699,9 +703,9 @@ openmdao.Util = {
      * prototype.
      */
     inherit : function(childObject, parentObject){
-        childObject.prototype = new parentObject
-        childObject.prototype.constructor = childObject
-        childObject.prototype.superClass = parentObject.prototype
+        childObject.prototype = new parentObject();
+        childObject.prototype.constructor = childObject;
+        childObject.prototype.superClass = parentObject.prototype;
     }
 };
 

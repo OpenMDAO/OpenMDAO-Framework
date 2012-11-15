@@ -102,16 +102,19 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         attrs = self.top.driver.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'filename',
+                         'id': 'filename',
                          'type': 'str',
                          'connected': '',
                          'value': 'openmdao_test_csv_case_iterator.csv',
                          'desc': 'Name of the CSV file to be output.'} in attrs['Inputs'])
         self.assertTrue({'name': 'append',
+                         'id': 'append',
                          'type': 'bool',
                          'connected': '',
                          'value': 'False',
                          'desc': 'Set to True to append to the existing CSV file.'} in attrs['Inputs'])
         self.assertTrue({'name': 'delimiter',
+                         'id': 'delimiter',
                          'type': 'str',
                          'connected': '',
                          'value': ';',

@@ -79,6 +79,6 @@ def test_json():
 
 if __name__ == "__main__":
     test_filetree()
-    test_types()
-    test_json()
-    
+#    test_types()
+#    test_json()
+#    

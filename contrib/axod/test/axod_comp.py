@@ -44,8 +44,8 @@ class AxodComp(Component):
     # effs  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
     # effr  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
 
-    def __init__(self, doc=None, directory='', input_filename=''):
-        super(AxodComp, self).__init__(doc, directory)
+    def __init__(self, input_filename=''):
+        super(AxodComp, self).__init__()
         self.input_filename = input_filename
 
     def execute(self):

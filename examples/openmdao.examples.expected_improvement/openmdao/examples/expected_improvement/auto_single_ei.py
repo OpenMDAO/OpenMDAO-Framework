@@ -8,8 +8,8 @@ from openmdao.lib.optproblems.branin import BraninComponent
 
         
 class Analysis(ArchitectureAssembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def __init__(self):
+        super(Analysis,self).__init__(self)
                 
         self.add('branin',BraninComponent())
         

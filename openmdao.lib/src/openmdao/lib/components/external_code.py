@@ -51,8 +51,8 @@ class ExternalCode(ComponentWithDerivatives):
     timed_out = Bool(False, iotype='out', desc='True if the command timed-out.')
     return_code = Int(0, iotype='out', desc='Return code from the command.')
 
-    def __init__(self, *args, **kwargs):
-        super(ExternalCode, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(ExternalCode, self).__init__()
         self.check_external_outputs=True
 
         self.stdin  = self.DEV_NULL

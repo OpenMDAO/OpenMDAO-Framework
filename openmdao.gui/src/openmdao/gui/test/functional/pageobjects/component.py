@@ -1,88 +1,95 @@
-import random 
-import string 
- 
-from selenium.webdriver.common.by import By 
- 
-from dialog import DialogPage 
-from elements import ButtonElement, GridElement, TextElement, InputElement 
+import random
+import string
+
+from selenium.webdriver.common.by import By
+
+from dialog import DialogPage
+from elements import ButtonElement, GridElement, TextElement, InputElement
 from workflow import find_workflow_component_figures
 from util import ArgsPrompt, NotifierPage
- 
- 
-class ComponentPage(DialogPage): 
-    """ Component editor page. """ 
- 
-    inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']")) 
-    slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']")) 
-    outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']")) 
- 
-    inputs  = GridElement((By.ID, 'Inputs_props')) 
-    outputs = GridElement((By.ID, 'Outputs_props')) 
- 
-    def __init__(self, browser, port, locator): 
-        super(ComponentPage, self).__init__(browser, port, locator) 
-        # It takes a while for the full load to complete. 
-        NotifierPage.wait(self)
- 
-    def get_inputs(self): 
-        """ Return inputs grid. """ 
-        self('inputs_tab').click() 
-        return self.inputs 
- 
-    def set_input(self, name, value): 
-        """ Set input `name` to `value`. """ 
-        self('inputs_tab').click() 
-        grid = self.inputs 
-        found = [] 
-        for row in grid.rows: 
-            if row[0] == name: 
-                row[2] = value 
-                return 
-            found.append(row[0]) 
-        raise RuntimeError('%r not found in inputs %s' % (name, found)) 
- 
-    def get_outputs(self): 
-        """ Return outputs grid. """ 
-        self('outputs_tab').click() 
-        return self.outputs 
- 
-    def show_slots(self): 
-        """switch to slots tab""" 
-        self('slots_tab').click() 
- 
 
- 
-class DriverPage(ComponentPage): 
-    """ Driver editor page. """ 
- 
-    parameters_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Parameters']")) 
-    workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']")) 
-    objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']")) 
-    constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']")) 
- 
-    parameters  = GridElement((By.ID, 'Parameters_parms')) 
-    objectives  = GridElement((By.ID, 'Objectives_objectives')) 
-    constraints = GridElement((By.ID, 'Constraints_constraints')) 
- 
+
+class ComponentPage(DialogPage):
+    """ Component editor page. """
+
+    inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
+    slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
+    outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
+
+    inputs  = GridElement((By.ID, 'Inputs_props'))
+    outputs = GridElement((By.ID, 'Outputs_props'))
+
+    def __init__(self, browser, port, locator):
+        super(ComponentPage, self).__init__(browser, port, locator)
+        # It takes a while for the full load to complete.
+        NotifierPage.wait(self)
+
+    def get_inputs(self):
+        """ Return inputs grid. """
+        self('inputs_tab').click()
+        return self.inputs
+
+    def set_input(self, name, value):
+        """ Set input `name` to `value`. """
+        self('inputs_tab').click()
+        grid = self.inputs
+        found = []
+        for row in grid.rows:
+            if row[0] == name:
+                row[2] = value
+                return
+            found.append(row[0])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
+
+    def get_outputs(self):
+        """ Return outputs grid. """
+        self('outputs_tab').click()
+        return self.outputs
+
+    def show_slots(self):
+        """switch to slots tab"""
+        self('slots_tab').click()
+
+
+class DriverPage(ComponentPage):
+    """ Driver editor page. """
+
+    parameters_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Parameters']"))
+    workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']"))
+    objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']"))
+    constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']"))
+    events_tab      = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
+
+    parameters  = GridElement((By.ID, 'Parameters_parms'))
+    objectives  = GridElement((By.ID, 'Objectives_objectives'))
+    constraints = GridElement((By.ID, 'Constraints_constraints'))
+    events      = GridElement((By.ID, 'Events_events'))
+
     add_parameter  = ButtonElement((By.XPATH, "//span[text()='Add Parameter']"))
     add_objective  = ButtonElement((By.XPATH, "//span[text()='Add Objective']"))
     add_constraint = ButtonElement((By.XPATH, "//span[text()='Add Constraint']"))
+    add_event      = ButtonElement((By.XPATH, "//span[text()='Add Event']"))
 
-    def get_parameters(self): 
-        """ Return parameters grid. """ 
-        self('parameters_tab').click() 
-        return self.parameters 
- 
-    def get_objectives(self): 
-        """ Return objectives grid. """ 
-        self('objectives_tab').click() 
-        return self.objectives 
- 
-    def get_constraints(self): 
-        """ Return constraints grid. """ 
-        self('constraints_tab').click() 
+    def get_parameters(self):
+        """ Return parameters grid. """
+        self('parameters_tab').click()
+        return self.parameters
+
+    def get_objectives(self):
+        """ Return objectives grid. """
+        self('objectives_tab').click()
+        return self.objectives
+
+    def get_constraints(self):
+        """ Return constraints grid. """
+        self('constraints_tab').click()
         return self.constraints
- 
+
+    def get_events(self):
+        """ Return events grid. """
+        self('events_tab').click()
+        return self.events
+
     def new_parameter(self):
         """ Return :class:`ParameterDialog`. """
         self('add_parameter').click()
@@ -101,14 +108,20 @@ class DriverPage(ComponentPage):
         return ConstraintDialog(self.browser, self.port,
                                 (By.XPATH, "//div[@id='constraint-dialog']/.."))
 
-    def show_workflow(self): 
-        """switch to workflow tab""" 
-        self('workflow_tab').click() 
- 
+    def new_event(self):
+        """ Return :class:`EventDialog`. """
+        self('add_event').click()
+        return EventDialog(self.browser, self.port,
+                           (By.XPATH, "//div[@id='event-dialog']/.."))
+
+    def show_workflow(self):
+        """switch to workflow tab"""
+        self('workflow_tab').click()
+
     def get_workflow_component_figures(self):
         """ Return workflow component figure elements. """
         return find_workflow_component_figures(self)
- 
+
 
 class ParameterDialog(DialogPage):
     """ Dialog for adding a new parameter. """
@@ -143,49 +156,55 @@ class ConstraintDialog(DialogPage):
     cancel = ButtonElement((By.ID, 'constraint-cancel'))
 
 
-class AssemblyPage(ComponentPage): 
-    """ Assembly editor page. """ 
- 
-    dataflow_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Dataflow']")) 
- 
-    def show_dataflow(self): 
-        self('dataflow_tab').element.click() 
- 
- 
- 
-class PropertiesPage(DialogPage): 
-    """ Component properties page. """ 
- 
-    header  = TextElement((By.XPATH, 'h3[1]')) 
-    inputs  = GridElement((By.ID, 'Inputs_props')) 
-    outputs = GridElement((By.ID, 'Outputs_props')) 
- 
-    def set_input(self, name, value): 
-        """ Set input `name` to `value`. """ 
-        self('inputs_tab').click() 
-        grid = self.inputs 
-        found = [] 
-        for row in grid.rows: 
-            if row[0] == name: 
-                row[1] = value 
-                return 
-            found.append(row[0]) 
-        raise RuntimeError('%r not found in inputs %s' % (name, found)) 
- 
- 
-class NameInstanceDialog(ArgsPrompt): 
-    """ Adds :meth:`create_and_dismiss` to :class:`ArgsPrompt`. """ 
- 
+class EventDialog(DialogPage):
+    """ Dialog for adding a new event. """
+
+    target =  InputElement((By.ID, 'event-target'))
+    ok     = ButtonElement((By.ID, 'event-ok'))
+    cancel = ButtonElement((By.ID, 'event-cancel'))
+
+
+class AssemblyPage(ComponentPage):
+    """ Assembly editor page. """
+
+    dataflow_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Dataflow']"))
+
+    def show_dataflow(self):
+        self('dataflow_tab').element.click()
+
+
+class PropertiesPage(DialogPage):
+    """ Component properties page. """
+
+    header  = TextElement((By.XPATH, 'h3[1]'))
+    inputs  = GridElement((By.ID, 'Inputs_props'))
+    outputs = GridElement((By.ID, 'Outputs_props'))
+
+    def set_input(self, name, value):
+        """ Set input `name` to `value`. """
+        self('inputs_tab').click()
+        grid = self.inputs
+        found = []
+        for row in grid.rows:
+            if row[0] == name:
+                row[1] = value
+                return
+            found.append(row[0])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
+
+
+class NameInstanceDialog(ArgsPrompt):
+    """ Adds :meth:`create_and_dismiss` to :class:`ArgsPrompt`. """
+
     def __init__(self, parent):
         super(NameInstanceDialog, self).__init__(parent.browser, parent.port)
 
-    def create_and_dismiss(self, name=None): 
-        """Names the instance. Returns the name. Force a name with the name argument""" 
-        chars = string.ascii_uppercase 
-        name = name or ''.join(random.choice(chars).strip() for x in range(8)) 
- 
-        self.name = name 
-        self.click_ok() 
- 
-        return name 
+    def create_and_dismiss(self, name=None):
+        """Names the instance. Returns the name. Force a name with the name argument"""
+        chars = string.ascii_uppercase
+        name = name or ''.join(random.choice(chars).strip() for x in range(8))
 
+        self.name = name
+        self.click_ok()
+
+        return name

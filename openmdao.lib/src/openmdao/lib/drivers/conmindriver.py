@@ -242,8 +242,8 @@ class CONMINdriver(DriverUsesDerivatives):
                       'indicate convergence (relative or absolute).')
         
     
-    def __init__(self, *args, **kwargs):
-        super(CONMINdriver, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(CONMINdriver, self).__init__()
         
         # Save data from common blocks into our CONMINdriver object
         self.cnmn1 = _cnmn1()
