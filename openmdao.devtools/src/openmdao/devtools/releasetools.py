@@ -399,8 +399,12 @@ def build_release(parser, options):
         
         if not os.path.isfile(idxpath) or not options.nodocbuild:
             build_docs(parser, options)
+
         shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
                     os.path.join(destdir,'docs'))
+    
+        shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
+                    os.path.join(topdir,'openmdao.main', 'src', 'openmdao', 'main', 'docs'))
 
         if not options.test:
             # commit the changes to the release branch
@@ -449,6 +453,8 @@ def build_release(parser, options):
     finally:
         if options.test:
             _rollback_releaseinfo_files()
+        #Cleanup
+        shutil.rmtree(os.path.join(topdir, "openmdao.main", 'src', 'openmdao', 'main', "docs"))
         os.chdir(startdir)
     
         

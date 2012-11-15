@@ -17,6 +17,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.keys import Keys
     from selenium.common.exceptions import StaleElementReferenceException, \
                                            WebDriverException
+    from selenium.webdriver import ActionChains
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout, put_element_on_grid
 
@@ -199,6 +200,29 @@ def _test_palette_update(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
+def _test_loading_docs(browser):
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Check that the docs are viewable
+    workspace_page('help_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('doc_button').get_attribute('id'), 'help-doc')
+    
+    workspace_window = browser.current_window_handle
+    current_windows = set(browser.window_handles)
+    workspace_page('doc_button').click()
+    new_windows = set(browser.window_handles) - current_windows
+    docs_window = list(new_windows)[0]
+    browser.switch_to_window(docs_window)
+    time.sleep(0.5)
+    eq("OpenMDAO User Guide" in browser.title, True)
+    eq("OpenMDAO Documentation" in browser.title, True)
+   
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 def _test_menu(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
@@ -242,10 +266,6 @@ def _test_menu(browser):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
         time.sleep(0.5)  # Just so we can see it.
-
-    # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
-
 
 def _test_macro(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
