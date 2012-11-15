@@ -267,6 +267,9 @@ def _test_menu(browser):
         workspace_page('%s_button' % item).click()
         time.sleep(0.5)  # Just so we can see it.
 
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
 def _test_macro(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
