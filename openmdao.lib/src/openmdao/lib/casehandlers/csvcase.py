@@ -1,7 +1,7 @@
 """A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
-import csv
+import csv, datetime, glob, os, shutil
 import cStringIO, StringIO
 
 # pylint: disable-msg=E0611,F0401
@@ -209,6 +209,7 @@ class CSVCaseRecorder(object):
         self.append = append
         self.outfile = None
         self.csv_writer = None
+        self.num_backups = 0
         self._header_size = 0
         
         #Open output file
@@ -228,7 +229,7 @@ class CSVCaseRecorder(object):
         self._filename = name
         
     def startup(self):
-        """ Opens the CSV file for recordering."""
+        """ Opens the CSV file for recording."""
         
         if self.append:
             self.outfile = open(self.filename, 'a')
@@ -309,7 +310,30 @@ class CSVCaseRecorder(object):
                 self.outfile.close()
             self.outfile = None
             self.csv_writer = None
-
+            
+        # Save off a backup copy if requested.
+        if self.num_backups > 0:
+            
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            parts = self.filename.split('.')
+            if len(parts) > 1:
+                name = ''.join(parts[:-1])
+                extension = parts[-1]
+                backup_name = '%s_%s.%s' % (name, timestamp, extension)
+                globname = name
+            else:
+                backup_name = '%s_%s' % (self.filename, timestamp)
+                globname = self.filename
+                
+            shutil.copyfile(self.filename, backup_name)
+            
+            # Clean up old backups if we exceed our max
+            backups = glob.glob(globname + '_*')
+            if len(backups) > self.num_backups:
+                sortbackups = sorted(backups)
+                for item in sortbackups[:len(backups) - self.num_backups]:
+                    os.remove(item)
+        
     def get_iterator(self):
         '''Return CSVCaseIterator that points to our current file'''
         
@@ -353,6 +377,15 @@ class CSVCaseRecorder(object):
         attr['value'] = str(self.delimiter)
         attr['connected'] = ''
         attr['desc'] = 'CSV delimiter. Default is ",".'
+        variables.append(attr)
+            
+        attr = {}
+        attr['name'] = "num_backups"
+        attr['id'] = attr['name']
+        attr['type'] = "int"
+        attr['value'] = str(self.num_backups)
+        attr['connected'] = ''
+        attr['desc'] = 'Number of csv files to keep from previous runs.'
         variables.append(attr)
             
         attrs["Inputs"] = variables
