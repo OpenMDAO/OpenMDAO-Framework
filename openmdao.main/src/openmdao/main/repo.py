@@ -41,18 +41,13 @@ Thumbs.db
 .svn
 """
 
-class SimpleObj(object):
-    def __init__(self, **kwargs):
-        for arg,val in kwargs.items():
-            setattr(self, arg, val)
-
-def _run_command(cmd):
+def _run_command(cmd, silent=False):
     fd, fname = tempfile.mkstemp()
     proc = subprocess.Popen(cmd, stdout=fd, stderr=subprocess.STDOUT, shell=True)
     proc.wait()
     os.close(fd)
     try:
-        if proc.returncode != 0:
+        if proc.returncode != 0 and not silent:
             with open(fname, 'rb') as f:
                 out = f.read()
             logger.error("out: %s" % out)
@@ -89,7 +84,7 @@ class GitRepo(RepositoryBase):
     @staticmethod
     def is_present():
         try:
-            return _run_command('git --version') == 0
+            return _run_command('git --version', silent=True) == 0
         except:
             return False
     
@@ -128,7 +123,7 @@ class BzrRepo(RepositoryBase):
     @staticmethod
     def is_present():
         try:
-            return _run_command('bzr --version') == 0
+            return _run_command('bzr --version', silent=True) == 0
         except:
             return False
     
@@ -168,7 +163,7 @@ class HgRepo(RepositoryBase):
     @staticmethod
     def is_present():
         try:
-            return _run_command('hg --version') == 0
+            return _run_command('hg --version', silent=True) == 0
         except:
             return False
         

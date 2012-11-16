@@ -22,7 +22,7 @@ from tornado import httpserver, web
 # openmdao
 from openmdao.util.network import get_unused_ip_port
 from openmdao.util.fileutil import get_ancestor_dir, is_dev_build
-from openmdao.util.log import enable_console
+from openmdao.util.log import enable_console, logger
 
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
@@ -199,7 +199,6 @@ def get_argument_parser():
 def run(parser=None, options=None, args=None):
     ''' launch the gui with specified options
     '''
-
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
 
