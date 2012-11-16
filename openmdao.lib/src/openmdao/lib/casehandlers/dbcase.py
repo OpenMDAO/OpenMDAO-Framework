@@ -191,6 +191,10 @@ class DBCaseRecorder(object):
         self._connection = sqlite3.connect(value)
         self._iter_conn = sqlite3.connect(value)
     
+    def startup(self):
+        """ Opens the database for recordering."""
+        pass
+        
     def record(self, case):
         """Record the given Case."""
         if self._connection is None:
