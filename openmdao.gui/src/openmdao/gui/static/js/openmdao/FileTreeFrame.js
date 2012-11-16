@@ -29,6 +29,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     // Enable dropping of files onto file tree frame to add them to project
     self.elm.bind({
+        greedy: true,
         dragenter: function () {
             self.elm.addClass('hover ui-state-highlight');
             return false;

@@ -52,6 +52,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     // this is just to prevent drops from falling thru to underlying panes
     elm.droppable ({
         accept: '.objtype',
+        greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(elm);
         },
@@ -59,6 +60,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
+            debug.info('SlotsPane drop event:', ev)
             /* divs could be in front of divs and the div that gets the drop
                event might not be the one that is in front visibly and therefore
                is not the div the user wants the drop to occur on */

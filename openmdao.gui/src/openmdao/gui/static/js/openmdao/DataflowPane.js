@@ -41,6 +41,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
     */
     elm.droppable ({
         accept: '.IComponent',
+        greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(elm);
         },

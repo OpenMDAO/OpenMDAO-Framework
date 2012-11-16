@@ -94,6 +94,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     // set up as drop target
     fig.droppable ({
         accept: '.'+slot.klass,
+        greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
@@ -101,12 +102,14 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             openmdao.drag_and_drop_manager.draggableOver(fig);
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
+            debug.info('SlotFigure drop event:', ev)
+             var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
                 drop_function = top_div.droppable('option', 'actualDropHandler');
             drop_function(ev, ui);
         },
         actualDropHandler: function(ev,ui) {
-            var droppedObject = jQuery(ui.draggable).clone(),
+            debug.info('SlotFigure actualDropHandler:', ev)
+             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
             openmdao.model.getSignature(droppedPath, function(signature) {
@@ -121,6 +124,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                             var slotParent = openmdao.Util.getPath(pathname);
                             cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                         }
+                        debug.info('SlotFigure issuing command:',cmd)
                         model.issueCommand(cmd);
                         openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                     }, true);
@@ -134,6 +138,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                         var slotParent = openmdao.Util.getPath(pathname);
                         cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                     }
+                    debug.info('SlotFigure issuing command:',cmd)
                     model.issueCommand(cmd);
                     openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                 }

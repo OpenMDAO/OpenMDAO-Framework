@@ -239,7 +239,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error("Execution failed: No %r component was found.",
+            self._print_error("Execution failed: No %r component was found." %
                               pathname)
 
     @modifies_model
@@ -685,7 +685,7 @@ class ConsoleServer(cmd.Cmd):
             if publish:
                 self._start_log_msgs(pathname)
             else:
-                self._stop_log_msgs(pathname)
+                self._stop_log_msgs()
         else:
             parts = pathname.split('.')
             if len(parts) > 1:

@@ -426,8 +426,15 @@ description =
     def name(self):
         return os.path.basename(self.path)
 
-    def __contains__(self, name):
-        return name in self._model_globals
+    def __contains__(self, pathname):
+        parts = pathname.split('.')
+        try:
+            obj = self._model_globals[parts[0]]
+            for name in parts[1:]:
+                obj = getattr(obj, name)
+        except Exception:
+            return False
+        return True
 
     def items(self):
         return self._model_globals.items()

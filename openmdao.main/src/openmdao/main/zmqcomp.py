@@ -1,4 +1,5 @@
 import sys
+import os
 import traceback
 import cPickle as pickle
 
@@ -13,7 +14,8 @@ from zmq.eventloop import ioloop, zmqstream
 
 from openmdao.main.api import set_as_top
 from openmdao.main.container import deep_getattr
-from openmdao.util.log import logger
+from openmdao.util.debug import DEBUG
+
 
 def msg_split(frames):
     """Take a list of message frames and split it into routing frames and payload
@@ -64,14 +66,14 @@ class ZmqCompWrapper(object):
         
     def handle_req(self, msg):
         parts = self._decoder(msg[0])
-        logger.error('received %s' % parts)
+        DEBUG('received %s' % parts)
         try:
             funct = deep_getattr(self._comp, parts[0])
             ret = funct(*parts[1], **parts[2])
         except Exception as err:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             ret = traceback.format_exc(exc_traceback)
-        logger.error('returning %s' % ret)
+        DEBUG('returning %s' % ret)
         self._repstream.send_multipart([self._encoder(ret)])
         
     @staticmethod

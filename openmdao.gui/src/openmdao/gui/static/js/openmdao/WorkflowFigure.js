@@ -203,7 +203,8 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             }
         },
         drop: function(ev,ui) {
-            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+            debug.info('WorkflowFigure drop event:', ev)
+             top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             if (top_div) {
                 var drop_function = top_div.droppable('option', 'actualDropHandler');
                 drop_function(ev, ui);
