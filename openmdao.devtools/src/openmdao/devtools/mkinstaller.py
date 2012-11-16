@@ -271,11 +271,12 @@ def after_install(options, home_dir):
         for req in options.reqs:
             _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
-        activate = os.join(home_dir, 'activate')
-        deactivate = os.join(home_dir, 'deactivate')
+        activate = os.path.join(home_dir, 'activate')
+        deactivate = os.path.join(home_dir, 'deactivate')
         source_command = "." if not sys.platform.startswith("win") else ""
         
-        os.system('%s %s && openmdao build_docs && %s' % (source_commad, activate, deactivate))
+        if(os.system('%%s %%s && openmdao build_docs && %%s' %% (source_commad, activate, deactivate)) != 0):
+            print "Failed to build the docs."
 
         if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
             try:
