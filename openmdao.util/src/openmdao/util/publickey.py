@@ -259,8 +259,8 @@ def is_private(path):
 
         # Map Cygwin 'root' to 'Administrator'. Typically these are intended
         # to be identical, but /etc/passwd might configure them differently.
-        if username == 'root':
-            username = 'Administrator'
+        if username.endswith('\\root'):
+            username = username.replace('\\root', '\\Administrator')
         user, domain, type = win32security.LookupAccountName('', username)
         system, domain, type = win32security.LookupAccountName('', 'System')
 
@@ -303,8 +303,8 @@ def make_private(path):
 
         # Map Cygwin 'root' to 'Administrator'. Typically these are intended
         # to be identical, but /etc/passwd might configure them differently.
-        if username == 'root':
-            username = 'Administrator'
+        if username.endswith('\\root'):
+            username = username.replace('\\root', '\\Administrator')
         user, domain, type = win32security.LookupAccountName('', username)
         system, domain, type = win32security.LookupAccountName('', 'System')
 
