@@ -349,6 +349,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
+        rec.startup()
         rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
         try:
             rec.record(Case(inputs=[('comp1.x',2.0),('comp2.x',1.9)]))

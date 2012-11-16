@@ -227,6 +227,9 @@ class CSVCaseRecorder(object):
         
         self._filename = name
         
+    def startup(self):
+        """ Opens the CSV file for recordering."""
+        
         if self.append:
             self.outfile = open(self.filename, 'a')
         else:
@@ -236,10 +239,10 @@ class CSVCaseRecorder(object):
             # of headers. These won't be available until the first
             # case is passed to self.record.
             self._write_headers = True
-            
-        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
-                                     quotechar=self.quotechar,
-                                     quoting=csv.QUOTE_NONNUMERIC)
+
+            self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                         quotechar=self.quotechar,
+                                         quoting=csv.QUOTE_NONNUMERIC)
 
 
     def record(self, case):
