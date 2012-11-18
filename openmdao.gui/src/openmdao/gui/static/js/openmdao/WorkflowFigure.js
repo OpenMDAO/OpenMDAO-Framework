@@ -191,6 +191,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dragged_object = jQuery(ui.draggable).clone(),
                 dragged_pathname,
                 dragged_parent;
+
             if (dragged_object.hasClass('component')) {
                 dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                 dragged_parent = openmdao.Util.getPath(dragged_pathname);
@@ -203,14 +204,21 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             }
         },
         drop: function(ev,ui) {
-            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             if (top_div) {
                 var drop_function = top_div.droppable('option', 'actualDropHandler');
                 drop_function(ev, ui);
             }
         },
         actualDropHandler: function(ev,ui) {
+            // could get same event multiple times if drop triggers for sibling targets
+            if (this.dropEvent && this.dropEvent === ev.originalEvent) {
+                return;  // already handled this drop event
+            }
+            this.dropEvent = ev.originalEvent;
+
             openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+
             var target_pathname = flow_div.data('pathname'),
                 target_parent = openmdao.Util.getPath(target_pathname),
                 dropped_object = jQuery(ui.draggable).clone(),
@@ -218,6 +226,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dropped_parent,
                 dropped_name,
                 prompt;
+
             if (dropped_object.hasClass('component')) {
                 // dropped from component tree, component must be in same assembly as the driver
                 dropped_pathname = jQuery(ui.draggable).parent().attr("path");
