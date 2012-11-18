@@ -94,6 +94,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     // set up as drop target
     fig.droppable ({
         accept: '.'+slot.klass,
+        greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
@@ -106,9 +107,16 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             drop_function(ev, ui);
         },
         actualDropHandler: function(ev,ui) {
+            // could get same event multiple times if drop triggers for sibling targets
+            if (this.dropEvent && this.dropEvent === ev.originalEvent) {
+                return;  // already handled this drop event
+            }
+            this.dropEvent = ev.originalEvent;
+
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
+
             openmdao.model.getSignature(droppedPath, function(signature) {
                 if (signature.args.length) {
                     var prompt = 'Enter arguments for new '+droppedName;
