@@ -105,16 +105,15 @@ class Driver(Component):
             iterset = set(c.name for c in self.iteration_set())
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
-            #reqcomps = self._get_required_compnames()
             if len(self.workflow) == 0:
                 pass
             elif alldrivers is True:
                 reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-                # calling get_components() here just makes sure that all of the
-                # components can be resolved
-                comps = self.workflow.get_components()
+            # calling get_components() here just makes sure that all of the
+            # components can be resolved
+            comps = self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
 
