@@ -102,8 +102,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             openmdao.drag_and_drop_manager.draggableOver(fig);
         },
         drop: function(ev,ui) {
-            debug.info('SlotFigure drop event:', ev)
-             var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
+            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
                 drop_function = top_div.droppable('option', 'actualDropHandler');
             drop_function(ev, ui);
         },
@@ -130,7 +129,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                             var slotParent = openmdao.Util.getPath(pathname);
                             cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                         }
-                        debug.info('SlotFigure issuing command:',cmd)
                         model.issueCommand(cmd);
                         openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                     }, true);
@@ -144,7 +142,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                         var slotParent = openmdao.Util.getPath(pathname);
                         cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                     }
-                    debug.info('SlotFigure issuing command:',cmd)
                     model.issueCommand(cmd);
                     openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                 }
