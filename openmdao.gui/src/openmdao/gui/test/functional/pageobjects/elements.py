@@ -166,15 +166,15 @@ class _InputElement(_BaseElement):
     @value.setter
     def value(self, new_value):
         element = self.element
-        WebDriverWait(self._browser, TMO).until(
-            lambda browser: element.is_displayed())
-        WebDriverWait(self._browser, TMO).until(
-            lambda browser: element.is_enabled())
-        if element.get_attribute('value'):
-            element.clear()
-        time.sleep(0.1)  # Just some pacing.
         for retry in range(3):
             try:
+                WebDriverWait(self._browser, TMO).until(
+                    lambda browser: element.is_displayed())
+                WebDriverWait(self._browser, TMO).until(
+                    lambda browser: element.is_enabled())
+                if element.get_attribute('value'):
+                    element.clear()
+                time.sleep(0.1)  # Just some pacing.
                 element.send_keys(new_value)
                 return
             except StaleElementReferenceException:
