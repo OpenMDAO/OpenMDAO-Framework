@@ -8,7 +8,7 @@ import re
 import linecache
 import StringIO
 
-from openmdao.util.log import logger
+from openmdao.util.log import logger, LOG_DEBUG
 
 
 def traceit(frame, event, arg):
@@ -57,8 +57,11 @@ def dumpit(obj, stream=sys.stdout, recurse=True, ignore_address=True):
 
 debug = os.environ.get('OPENMDAO_DEBUG', '').strip()
 if debug and debug.lower() not in ['0', 'false']:
-   DEBUG = logger.error
+    logger.setLevel(LOG_DEBUG)
+    DEBUG = logger.debug
+    debug = True
 else:
+    debug = False
     def DEBUG(msg):
         pass
 
