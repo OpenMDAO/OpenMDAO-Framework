@@ -199,6 +199,7 @@ def get_argument_parser():
 def run(parser=None, options=None, args=None):
     ''' launch the gui with specified options
     '''
+
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
 
