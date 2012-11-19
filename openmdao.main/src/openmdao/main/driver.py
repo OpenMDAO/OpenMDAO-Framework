@@ -244,6 +244,10 @@ class Driver(Component):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+        
+        for recorder in self.recorders:
+            recorder.startup()
+            
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)

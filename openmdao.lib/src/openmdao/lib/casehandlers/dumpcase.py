@@ -13,6 +13,10 @@ class DumpCaseRecorder(object):
     def __init__(self, out=sys.stdout):
         self.out = out
 
+    def startup(self):
+        """ Nothing needed for a dumpcase."""
+        pass
+        
     def record(self, case):
         """Dump the given Case in a "pretty" form."""
         if self.out:  # if self.out is None, just do nothing
