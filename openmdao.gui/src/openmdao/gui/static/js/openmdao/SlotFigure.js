@@ -108,10 +108,16 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             drop_function(ev, ui);
         },
         actualDropHandler: function(ev,ui) {
-            debug.info('SlotFigure actualDropHandler:', ev)
-             var droppedObject = jQuery(ui.draggable).clone(),
+            // could get same event multiple times if drop triggers for sibling targets
+            if (this.dropEvent && this.dropEvent === ev.originalEvent) {
+                return;  // already handled this drop event
+            }
+            this.dropEvent = ev.originalEvent;
+
+            var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
+
             openmdao.model.getSignature(droppedPath, function(signature) {
                 if (signature.args.length) {
                     var prompt = 'Enter arguments for new '+droppedName;

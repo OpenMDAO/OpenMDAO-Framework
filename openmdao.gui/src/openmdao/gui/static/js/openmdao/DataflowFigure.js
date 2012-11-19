@@ -239,6 +239,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.droppable ({
             greedy: true,
             accept: '.IComponent',
+            greedy: true,
             out: function(ev,ui){
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
@@ -246,17 +247,19 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.draggableOver(elm);
             },
             drop: function(ev,ui) {
-                /* divs could be in front of divs and the div that gets the drop
-                   event might not be the one that is in front visibly and therefore
-                   is not the div the user wants the drop to occur on
-                */
-                top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+                var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
                 if (top_div) {
                     var drop_function = top_div.droppable('option', 'actualDropHandler');
                     drop_function(ev, ui);
                 }
             },
             actualDropHandler: function(ev,ui) {
+                // could get same event multiple times if drop triggers for sibling targets
+                if (this.dropEvent && this.dropEvent === ev.originalEvent) {
+                    return;  // already handled this drop event
+                }
+                this.dropEvent = ev.originalEvent;
+
                 var droppedObject = jQuery(ui.draggable).clone(),
                     droppedName = droppedObject.text(),
                     droppedPath = droppedObject.attr("modpath");
