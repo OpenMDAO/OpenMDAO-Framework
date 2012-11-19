@@ -1,7 +1,7 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
-import os
+import glob, os, time
 import StringIO
 import unittest
 
@@ -385,7 +385,34 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         assert_raises(self, 'self.top.driver.recorders[0].record(case)',
                       globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
+        
+    def test_csvbackup(self):
+        
+        # Cleanup from any past failures
+        parts = self.filename.split('.')
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        for item in backups:
+            os.remove(item)
+        
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
 
+        # Run twice, two backups.
+        self.top.driver.recorders[0].num_backups = 2
+        self.top.run()
+        # (Case driver asynchronous? Seems to need this.)
+        time.sleep(1)
+        self.top.run()
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        self.assertEqual(len(backups), 2)
+
+        # Set backups to 1 and rerun. Should delete down to 1 backup.
+        self.top.driver.recorders[0].num_backups = 1
+        self.top.run()
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        self.assertEqual(len(backups), 1)
+        
+        for item in backups:
+            os.remove(item)
 
 if __name__ == '__main__':
     unittest.main()
