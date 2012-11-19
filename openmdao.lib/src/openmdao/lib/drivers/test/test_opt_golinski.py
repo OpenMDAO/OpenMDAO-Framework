@@ -126,8 +126,8 @@ class OptGolinskiComponent(Component):
     result = Float(0., iotype='out')
         
     # pylint: disable-msg=C0103
-    def __init__(self, desc=None):
-        super(OptGolinskiComponent, self).__init__(desc)
+    def __init__(self):
+        super(OptGolinskiComponent, self).__init__()
         self.x = numpy.array([3.3,0.70,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.3,0.589999970,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.5,0.700,17.0,7.3,7.7153201,3.50215,5.2866545],dtype=float)

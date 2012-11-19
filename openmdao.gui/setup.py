@@ -62,7 +62,6 @@ setup(name='openmdao.gui',
       install_requires=[
           'pyzmq-static>=2.1.11.1',
           'tornado>=2.2',
-          'jsonpickle',
           'watchdog'
       ],
       extras_require = {

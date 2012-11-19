@@ -82,10 +82,10 @@ class OptRosenSuzukiComponent(Component):
     opt_objective = Float(iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
+    def __init__(self):
         """Initialize"""
         
-        super(OptRosenSuzukiComponent, self).__init__(doc)
+        super(OptRosenSuzukiComponent, self).__init__()
         # Initial guess
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
@@ -127,10 +127,10 @@ class Example1FromManualComponent(Component):
     result = Float(iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
+    def __init__(self):
         """Initialize"""
         
-        super(Example1FromManualComponent, self).__init__(doc)
+        super(Example1FromManualComponent, self).__init__()
         # Initial guess
         self.x = numpy.array([2.0, 1.0], dtype=float)
         self.result = 0.0
@@ -154,8 +154,8 @@ class ParaboloidComponent(Component):
     result = Float(iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
-        super(ParaboloidComponent, self).__init__(doc)
+    def __init__(self):
+        super(ParaboloidComponent, self).__init__()
         self.x = numpy.array([10., 10.], dtype=float) # initial guess
         self.result = 0.
         
@@ -199,8 +199,8 @@ class ConstrainedBettsComponent(Component):
     result = Float(iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
-        super(ConstrainedBettsComponent, self).__init__(doc)
+    def __init__(self):
+        super(ConstrainedBettsComponent, self).__init__()
         self.x = numpy.array([-1.0, -1.0], dtype=float) # initial guess
         self.result = 0.
         
@@ -668,10 +668,10 @@ class OptRosenSuzukiComponent_Deriv(ComponentWithDerivatives):
     result = Float(0.0, iotype='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, doc=None):
+    def __init__(self):
         """Initialize"""
         
-        super(OptRosenSuzukiComponent_Deriv, self).__init__(doc)
+        super(OptRosenSuzukiComponent_Deriv, self).__init__()
         # Initial guess
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]

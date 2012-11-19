@@ -40,7 +40,7 @@ def _test_MDAO_MDF(browser):
     # Add Solver
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.drivers.iterate.FixedPointIterator',
-        'solver', offset=(50, 50))
+        'solver', offset=(150, 50))
 
     # One data connection
     dis1 = workspace_page.get_dataflow_figure('dis1', 'top')
