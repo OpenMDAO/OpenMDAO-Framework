@@ -399,7 +399,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         # Run twice, two backups.
         self.top.driver.recorders[0].num_backups = 2
         self.top.run()
-        # (Case driver asynchronous? Seems to need this.)
+        # Granularity on timestamp is 1 second.
         time.sleep(1)
         self.top.run()
         backups = glob.glob(''.join(parts[:-1]) + '_*')
@@ -413,6 +413,9 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         for item in backups:
             os.remove(item)
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        
+        self.top.driver.recorders[0].num_backups = 0
 
 if __name__ == '__main__':
     unittest.main()
