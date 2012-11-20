@@ -164,6 +164,7 @@ openmdao.CodeFrame = function(id,model) {
     // make the editor a drop target for file objects
     editorArea.droppable ({
         accept: '.file',
+        greedy: true,
         drop: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedPath = droppedObject.attr("path");

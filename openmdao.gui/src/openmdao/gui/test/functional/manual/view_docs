@@ -1,0 +1,25 @@
+Author: Calvin Robinson
+Last Modified: Novemiber 15, 2012
+Test: Files Tab
+Location: Library( Right-panel in workspace )
+Feature: View Docs through context menu for library item
+
+You should be able to view the docs of any library item by right clicking on the item. This should
+produce a context menu with two options, "View Docs" and "View Metadata". Left clicking "View Docs"
+should cause a new tab to open in the browser, directed directly to the documentation for that particular
+item.
+
+To verify that this feature is working correctly, complete the following steps.
+If behavior is experienced that does not match the desired results of any 
+step that says 'ensure', the test should end, and the behavior should be issued
+as a bug. 
+
+1) Load a project
+2) Navigate to the Library column on the right side of the workspace
+3) Right click on the button marked as "Assembly".
+4) Ensure that a context menu appears with the options "View Docs" and "View Metadata".
+5) Left click on the option "View Docs"
+6) Ensure that new webpage is loaded either in a new brower or new tab in the same browser.
+7) Ensure that that the URL, beyond "http://localhost:<port_number>" is as follows:
+
+    "/docs/plugins/openmdao.main.assembly.Assembly/openmdao.main.html#module-openmdao.main.assembly"

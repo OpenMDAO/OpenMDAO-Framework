@@ -402,6 +402,9 @@ class ICaseIterator(Interface):
 class ICaseRecorder(Interface):
     """A recorder of Cases."""
     
+    def startup():
+        """Perform any operations required to start-up this recorder."""
+        
     def record(case):
         """Record the given Case."""
         

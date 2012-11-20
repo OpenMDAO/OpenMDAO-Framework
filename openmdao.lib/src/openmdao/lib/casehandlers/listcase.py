@@ -38,6 +38,10 @@ class ListCaseRecorder(object):
     def __len__(self):
         return len(self.cases)
 
+    def startup(self):
+        """ Nothing needed for a list case."""
+        pass
+        
     def record(self, case):
         """Store the case in our internal list."""
         self.cases.append(case)
