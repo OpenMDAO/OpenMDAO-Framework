@@ -1652,6 +1652,27 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
+    if sys.platform != 'win32':
+        # Put lib64_path at front of paths rather than end.
+        # As of virtualenv 1.8.2 this fix had not made it in the release.
+        patched = False
+        site_orig = join(lib_dir, 'site.py')
+        site_patched = join(lib_dir, 'site-patched.py')
+        with open(site_orig, 'r') as inp:
+            with open(site_patched, 'w') as out:
+                for line in inp:
+                    if 'paths.append(lib64_path)' in line:
+                        print 'Patching site.py...'
+                        print '  found %r' % line
+                        line = line.replace('append(', 'insert(0, ')
+                        print '    new %r' % line
+                        sys.stdout.flush()
+                        patched = True
+                    out.write(line)
+        if patched:
+            os.rename(site_orig, join(lib_dir, 'site-orig.py'))
+            os.rename(site_patched, site_orig)
+
     failed_imports = []
     for pkg in openmdao_prereqs:
         try:
