@@ -100,14 +100,14 @@ class ConsoleServer(cmd.Cmd):
                 set_as_top(v)
 
     def _update_workflows(self):
-        ''' Call :meth:`check_config` on drivers to capture any workflow
+        ''' Call :meth:`_update_workflow` on drivers to capture any workflow
             updates now rather than waiting until they are run.
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
                                    if is_instance(obj, Driver)]:
-                    driver.check_config()
+                    driver._update_workflow()
 
     def publish_components(self):
         ''' publish the current component tree and subscribed components
@@ -239,7 +239,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error("Execution failed: No %r component was found.",
+            self._print_error("Execution failed: No %r component was found." %
                               pathname)
 
     @modifies_model
@@ -685,7 +685,7 @@ class ConsoleServer(cmd.Cmd):
             if publish:
                 self._start_log_msgs(pathname)
             else:
-                self._stop_log_msgs(pathname)
+                self._stop_log_msgs()
         else:
             parts = pathname.split('.')
             if len(parts) > 1:
