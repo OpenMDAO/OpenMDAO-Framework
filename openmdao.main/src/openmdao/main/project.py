@@ -54,15 +54,26 @@ def _match_insts(classes):
     return _instantiated_classes.intersection(classes)
 
 
-def text_to_node(text):
+def text_to_node(text, lineno=None):
     """Given a python source string, return the corresponding AST node.
     The outer Module node is removed so that the node corresponding to the
     given text can be added to an existing AST.
     """
     modnode = ast.parse(text, 'exec')
     if len(modnode.body) == 1:
-        return modnode.body[0]
-    return modnode.body
+        node = modnode.body[0]
+    else:
+        node = modnode.body
+
+    # If specified, fixup line numbers.
+    if lineno is not None:
+        node.lineno = lineno
+        node.col_offset = 0
+        for child in ast.iter_child_nodes(node):
+            child.lineno = lineno
+            child.col_offset = 0
+
+    return node
 
 
 class CtorInstrumenter(ast.NodeTransformer):
@@ -93,7 +104,7 @@ def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     self.__%s_orig_init__(*args, **kwargs)
 """ % node.name
-        node.body = [text_to_node(text)] + node.body
+        node.body = [text_to_node(text, node.lineno)] + node.body
         return node
 
 
