@@ -331,6 +331,7 @@ def _test_list_slot(browser):
     workspace_page('workflow_tab').click()
 
     # drop a DumpCaseRecorder onto the recorders slot
+    workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
