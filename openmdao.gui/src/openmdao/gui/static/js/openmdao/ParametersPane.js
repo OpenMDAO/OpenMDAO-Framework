@@ -130,6 +130,12 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                 model.getComponent(comp.pathname, function findInputs(cjson) {
                     var high, low;
                     jQuery.each(cjson.Inputs, function(idx, input) {
+                    
+                        // Do not include connected inputs.
+                        if (input.connected.length > 0) || (input.implicit.length > 0) }
+                            return;
+                        };
+                        
                         low = null;
                         high = null;
                         if (input.low) {
