@@ -1696,9 +1696,7 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            # No GUI unit or functional testing on Windows at this time.
-            if sys.platform != 'win32':
-                allreqs = allreqs + guitestreqs 
+            allreqs = allreqs + guitestreqs 
             
         for req in allreqs:
             if req.startswith('openmdao.'):
