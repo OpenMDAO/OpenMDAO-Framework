@@ -128,32 +128,36 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                 
                 // Loop through inputs in component and fill our table of candidates
                 model.getComponent(comp.pathname, function findInputs(cjson) {
-                    var high, low;
+                    var highlimit, lowlimit;
                     jQuery.each(cjson.Inputs, function(idx, input) {
-                    
+                        
                         // Do not include connected inputs.
-                        if (input.connected || input.implicit) {
+                        // TODO: Recurse into subdriver workflows.
+                        if (input.connected) {
                             return;
                         };
                         
-                        low = null;
-                        high = null;
+                        // Do not include parameters already connected in any workflow.
+                        // TODO: Should limit it to this workflow.
+                        if (input.implicit) {
+                            return;
+                        }
+                        
+                        lowlimit = null;
+                        highlimit = null;
                         if (input.low) {
-                            low = input.low;
+                            lowlimit = input.low;
                         };
                         if (input.high) {
-                            high = input.high;
+                            highlimit = input.high;
                         };
                         fullpath = comppath + '.' + input.name
                         candidates.push(fullpath);
-                        limits[fullpath] = [low, high];
-                        console.log("inner ", candidates);
+                        limits[fullpath] = [lowlimit, highlimit];
                     });
                 });     
             });
     
-            console.log(candidates)
-            
             // Build dialog markup
             var win = jQuery('<div id="parameter-dialog"></div>'),
                 target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
@@ -193,6 +197,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     select: function(event, ui) {
                         selector.val(ui.item.value);
                         selector.blur();
+                        console.log(low);
+                        limit = limits[ui.item.value];
+                        if (limit[0]) {
+                            low.val(limit[0]);
+                        }
+                        if (limit[1]) {
+                            high.val(limit[1]);
+                        }
                     },
                     delay: 0,
                     minLength: 0
