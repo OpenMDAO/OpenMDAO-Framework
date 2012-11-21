@@ -197,7 +197,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     select: function(event, ui) {
                         selector.val(ui.item.value);
                         selector.blur();
-                        console.log(low);
                         limit = limits[ui.item.value];
                         if (limit[0]) {
                             low.val(limit[0]);
