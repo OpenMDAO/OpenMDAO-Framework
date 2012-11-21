@@ -10,15 +10,14 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 from nose.tools import assert_not_equal as neq
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
-    from pageobjects.util import NotifierPage
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout
+from pageobjects.util import NotifierPage
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
 
 
 def _test_editfile(browser):
@@ -159,7 +158,6 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
