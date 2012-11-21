@@ -3,6 +3,8 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
+        candidates = [],
+        limits = {},
         parmsDiv = jQuery("<div id='"+name+"_parms' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Parameter</button>").button(),
         clrButton = jQuery("<button>Clear Parameters</button>").button(),
@@ -106,58 +108,129 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         model.issueCommand(cmd);
     }
 
-    /** prompt new parameter */
-    function promptForParameter(callback) {
-        // Build dialog markup
-        var win = jQuery('<div id="parameter-dialog"></div>'),
-            target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
-            low    = jQuery('<input id="parameter-low" type="text" style="width:50%"></input>'),
-            high   = jQuery('<input id="parameter-high" type="text" style="width:50%"></input>'),
-            scaler = jQuery('<input id="parameter-scaler" type="text" style="width:50%"></input>'),
-            adder  = jQuery('<input id="parameter-adder" type="text" style="width:50%"></input>'),
-            name   = jQuery('<input id="parameter-name" type="text" style="width:50%"></input>');
-
-        win.append(jQuery('<div>Target: </div>').append(target));
-
-        var table = jQuery('<table>');
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
-                            .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
-        table.append(row);
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
-                            .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
-        table.append(row);
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
-        table.append(row);
-        win.append(table);
-
-
-        // Display dialog
-        jQuery(win).dialog({
-            modal: true,
-            title: 'New Parameter',
-            buttons: [
-                {
-                    text: 'Ok',
-                    id: 'parameter-ok',
-                    click: function() {
-                        jQuery(this).dialog('close');
-                        callback(target.val(),low.val(),high.val(),
-                                 scaler.val(),adder.val(),name.val());
-                        // remove from DOM
-                        win.remove();
+    function error_handler(jqXHR, textStatus, errorThrown) {
+        debug.error("Error while trying to find candidate parameters.", jqXHR);
+    }
+    
+    /** Breakout dialog for adding a new parameter */
+    function promptForParameter(callback, model) {
+    
+        // Figure out all of our candidates for parameter addition.
+        model.getWorkflow(pathname, function findComps(wjson) {
+        
+            var candidates = [];
+            var limits = {};
+            
+            // Loop through components in workflow to gather all our param candidates
+            jQuery.each(wjson[0].workflow, function(idx, comp) {
+            
+                var comppath = comp.pathname.split('.').slice(-1)[0];
+                
+                // Loop through inputs in component and fill our table of candidates
+                model.getComponent(comp.pathname, function findInputs(cjson) {
+                    var high, low;
+                    jQuery.each(cjson.Inputs, function(idx, input) {
+                        low = null;
+                        high = null;
+                        if (input.low) {
+                            low = input.low;
+                        };
+                        if (input.high) {
+                            high = input.high;
+                        };
+                        fullpath = comppath + '.' + input.name
+                        candidates.push(fullpath);
+                        limits[fullpath] = [low, high];
+                        console.log("inner ", candidates);
+                    });
+                });     
+            });
+    
+            console.log(candidates)
+            
+            // Build dialog markup
+            var win = jQuery('<div id="parameter-dialog"></div>'),
+                target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
+                low    = jQuery('<input id="parameter-low" type="text" style="width:50%"></input>'),
+                high   = jQuery('<input id="parameter-high" type="text" style="width:50%"></input>'),
+                scaler = jQuery('<input id="parameter-scaler" type="text" style="width:50%"></input>'),
+                adder  = jQuery('<input id="parameter-adder" type="text" style="width:50%"></input>'),
+                name   = jQuery('<input id="parameter-name" type="text" style="width:50%"></input>');
+    
+            win.append(jQuery('<div>Target: </div>').append(target));
+            parm_selector = win.find('#parameter-target');
+    
+            var table = jQuery('<table>');
+            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
+                                .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
+            table.append(row);
+            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
+                                .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
+            table.append(row);
+            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
+            table.append(row);
+            win.append(table);
+    
+            // update the parameter selector.
+            parm_selector.html('');
+            parm_selector.autocomplete({ source: candidates, minLength:0});
+    
+            function setupSelector(selector) {
+        
+                // process new selector value when selector loses focus
+                selector.bind('blur', function(e) {
+                    selector.autocomplete('close');
+                });
+        
+                // set autocomplete to trigger blur (remove focus)
+                selector.autocomplete({
+                    select: function(event, ui) {
+                        selector.val(ui.item.value);
+                        selector.blur();
+                    },
+                    delay: 0,
+                    minLength: 0
+                });
+        
+                // set enter key to trigger blur (remove focus)
+                selector.bind('keypress.enterkey', function(e) {
+                    if (e.which === 13) {
+                        selector.blur();
                     }
-                },
-                {
-                    text: 'Cancel',
-                    id: 'parameter-cancel',
-                    click: function() {
-                        jQuery(this).dialog('close');
-                        // remove from DOM
-                        win.remove();
+                });
+            }
+        
+            setupSelector(parm_selector);
+    
+            // Display dialog
+            jQuery(win).dialog({
+                modal: true,
+                title: 'New Parameter',
+                buttons: [
+                    {
+                        text: 'Ok',
+                        id: 'parameter-ok',
+                        click: function() {
+                            jQuery(this).dialog('close');
+                            callback(target.val(),low.val(),high.val(),
+                                     scaler.val(),adder.val(),name.val());
+                            // remove from DOM
+                            win.remove();
+                        }
+                    },
+                    {
+                        text: 'Cancel',
+                        id: 'parameter-cancel',
+                        click: function() {
+                            jQuery(this).dialog('close');
+                            // remove from DOM
+                            win.remove();
+                        }
                     }
-                }
-            ]
-        });
+                ]
+            });
+        }, error_handler);
+
     }
 
     /** clear all parameters */
@@ -166,7 +239,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         model.issueCommand(cmd);
     }
 
-    addButton.click(function() { promptForParameter(addParameter); });
+    addButton.click(function() { promptForParameter(addParameter, model); });
     clrButton.click(function() { clearParameters(); });
     
 
