@@ -27,7 +27,11 @@ class Connectable(Component):
         self.i_out = self.i_in
         self.s_out = self.s_in
 
+class Conn_Bounds(Connectable):
+    
+    x = Float(3.3, iotype='in', low=-100, high=299)
 
+    
 class Topp(Assembly):
 
     def configure(self):

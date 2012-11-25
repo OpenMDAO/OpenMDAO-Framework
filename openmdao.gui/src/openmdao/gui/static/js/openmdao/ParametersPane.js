@@ -213,6 +213,18 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                 selector.bind('keypress.enterkey', function(e) {
                     if (e.which === 13) {
                         selector.blur();
+                        
+                        // If the user types the var name manually, we should
+                        // still add the limits from that variable.
+                        if (candidates.indexOf(selector.val()) >= 0) {
+                            limit = limits[selector.val()];
+                            if (limit[0]) {
+                                low.val(limit[0]);
+                            }
+                            if (limit[1]) {
+                                high.val(limit[1]);
+                            }
+                        }
                     }
                 });
             }
