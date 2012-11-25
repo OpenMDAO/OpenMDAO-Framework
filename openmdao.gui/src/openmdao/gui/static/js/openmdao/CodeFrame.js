@@ -360,8 +360,6 @@ openmdao.CodeFrame = function(id,model) {
                 // success
                 function(contents) {
                     newTab(contents, filepath, tabName);
-                    self.resize();
-                    editor.resize();
                     editor.navigateFileStart();
                     editor.getSession().setUndoManager(new UndoManager());
                 },

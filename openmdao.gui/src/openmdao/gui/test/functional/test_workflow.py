@@ -9,14 +9,13 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
 
 
 def _test_basic(browser):
@@ -94,5 +93,25 @@ def _test_update(browser):
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
+def _test_duplicates(browser):
+    # Duplicate unconnected components are legal in a workflow.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Create model with multiple ExecComps.
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.test.execcomp.ExecComp', 'exe', args=["('z = x * y',)"])
+    workspace_page('workflow_tab').click()
+    workspace_page.expand_object('top')
+    workspace_page.add_object_to_workflow('top.exe', 'top.driver')
+    workspace_page.add_object_to_workflow('top.exe', 'top.driver')
+    eq(len(workspace_page.get_workflow_figures()), 1)
+    eq(len(workspace_page.get_workflow_component_figures()), 3)
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
+

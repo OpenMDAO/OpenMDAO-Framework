@@ -51,7 +51,16 @@ class Grid(object):
         return len(self.rows)
 
     def __getitem__(self, index):
-        return self.rows[index]
+        for retry in range(5):    	
+            try:
+        	       item = self.rows[index]
+            except StaleElementReferenceException:
+                if retry < 4:
+                    logging.warning('Grid.__getitem__: StaleElementReferenceException')
+                    self._rows = None  # refetch row
+                else:
+                    raise
+        return item
 
 
 class GridRow(object):

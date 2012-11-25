@@ -25,13 +25,14 @@ if sys.platform != 'win32':
 from optparse import OptionParser
 
 from openmdao.util.network import get_unused_ip_port
+from openmdao.util.fileutil import onerror
+from openmdao.gui.util import find_chrome
 
 from pageobjects.project import ProjectsListPage
 from pageobjects.util import SafeDriver, abort
 
 from pageobjects.component import NameInstanceDialog
 from pageobjects.dataflow import DataflowFigure
-from pageobjects.dialog import NotifyDialog
 from pageobjects.util import ConfirmationPage
 
 from selenium.webdriver.common.action_chains import ActionChains
@@ -47,13 +48,10 @@ _display = None
 
 
 def check_for_chrome():
-    """ Determine if Chrome is available. """
-    if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
+    if find_chrome() is not None:
         return True
-    for exe in ('google-chrome', 'chrome', 'chromium-browser'):
-        if find_executable(exe):
-            return True
-    return False
+    else:
+        return False
 
 
 def setup_chrome():
@@ -63,14 +61,11 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-#        version = '19.0.1068.0'
-#        version = '21.0.1180.4'
         version = '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-#            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -139,9 +134,16 @@ def setup_server(virtual_display=True):
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
+
+    # Try to clean up old server dir. If this fails (looking at you Windows), then just go with it.
     if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
-    os.mkdir(server_dir)
+        try:
+            shutil.rmtree(server_dir, onerror=onerror)
+        except WindowsError as exc:
+            print 'Could not delete %s: %s' % (server_dir, exc)
+    if not os.path.exists(server_dir):
+        os.mkdir(server_dir)
+
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
     os.chdir(server_dir)
@@ -170,7 +172,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if virtual_display:
+    if sys.platform != 'win32' and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
@@ -199,7 +201,7 @@ def teardown_server():
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
         try:
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         except Exception as exc:
             print '%s cleanup failed: %s' % (server_dir, exc)
 
@@ -207,11 +209,6 @@ def teardown_server():
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
     global _display_set
-
-    # Because Xvfb does not exist on Windows, it's difficult to do
-    # headless (EC2) testing on Windows. So for now we don't test there.
-    if sys.platform == 'win32':
-        return
 
     # Check if functional tests are to be skipped.
     skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
@@ -273,9 +270,17 @@ def generate(modname):
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
-            browser.quit()
+            try:
+                browser.quit()
+            except WindowsError:
+                # if it already died, calling kill on a defunct process
+                # raises a WindowsError: Access Denied
+                pass
             if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
-                os.remove('chromedriver.log')
+                try:
+                    os.remove('chromedriver.log')
+                except Exception as exc:
+                    print 'Could not delete chromedriver.log: %s' % exc
 
 
 class _Runner(object):
@@ -434,7 +439,7 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
     #find the slots (this is both the drop target and highlight area)
     browser = workspace_page.browser
-    slot_id = 'SlotFigure-'+meta_name+'-%s'
+    slot_id = 'SlotFigure-' + meta_name + '-%s'
     caseiter = browser.find_element(By.ID, slot_id % 'warm_start_data')
     caserec  = browser.find_element(By.ID, slot_id % 'recorder')
     model    = browser.find_element(By.ID, slot_id % 'model')
@@ -447,9 +452,9 @@ def resize_editor(workspace_page, editor):
     browser = workspace_page.browser
 
     page_width = browser.get_window_size()['width']
-    lib_width = workspace_page('library_tab').find_element_by_xpath('..').size['width']
+    lib_width    = workspace_page('library_tab').find_element_by_xpath('..').size['width']
     lib_position = workspace_page('library_tab').find_element_by_xpath('..').location['x']
-    dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
+    dialog_width    = editor('dialog_title').find_element_by_xpath('../..').size['width']
     dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
 
     # how much overlap do we have?
@@ -590,7 +595,8 @@ def drag_element_to(browser, element, drag_to, centerx):
     chain.click_and_hold(element)
     chain.move_to_element(drag_to).perform()
     if centerx:
-        chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
+        offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
+        chain.move_by_offset(offset, 1).perform()
     else:
         chain.move_by_offset(2, 1).perform()
     return chain
@@ -680,7 +686,12 @@ def main(args=None):
                 test(browser)
         finally:
             if not options.noclose:
-                browser.quit()
+                try:
+                    browser.quit()
+                except WindowsError:
+                    # if it already died, calling kill on a defunct process
+                    # raises a WindowsError: Access Denied
+                    pass
                 teardown_server()
     else:
         # Run under nose.
@@ -688,4 +699,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-
