@@ -3,6 +3,7 @@ Trivial model for testing connect/disconnect.
 """
 
 from openmdao.main.api import Assembly, Component
+from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
 
 
@@ -31,6 +32,12 @@ class Conn_Bounds(Connectable):
     
     x = Float(3.3, iotype='in', low=-100, high=299)
 
+class Conn_Assy(Assembly):
+
+    def configure(self):
+        self.add('comp', Conn_Bounds())
+        self.add('driver', CONMINdriver())
+        self.driver.workflow.add(('comp'))
     
 class Topp(Assembly):
 

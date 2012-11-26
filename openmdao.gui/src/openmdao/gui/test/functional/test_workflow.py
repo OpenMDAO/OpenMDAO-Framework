@@ -115,17 +115,14 @@ def _test_parameter_auto(browser):
     # Test auto-filling the min and max for a parameter.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    workspace_page.show_dataflow('top')
-    
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
     
-    workspace_page.add_library_item_to_dataflow('connect.Conn_Bounds',
-                                                'comp')
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
-
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page.add_library_item_to_dataflow('connect.Conn_Assy',
+                                                'top')
     # Add parameter to driver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
