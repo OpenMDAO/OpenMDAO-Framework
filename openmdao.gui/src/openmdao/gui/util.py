@@ -126,7 +126,30 @@ def get_executable_path(executable_names):
             break
     return path
 
+def find_chrome():
+    """ Find the chrome executable. """
+    path = '/Applications/Google Chrome.app/Contents/MacOS' \
+         + os.pathsep \
+         + "C:\Program Files (x86)\Google\Chrome\Application" \
+         + os.pathsep \
+         + os.environ['PATH']
 
+    # Windows7
+    USERPROFILE = os.getenv("USERPROFILE")
+    if USERPROFILE:
+        path += os.pathsep \
+             +  USERPROFILE + '\AppData\Local\Google\Chrome\Application'
+
+    exe_names = ('chrome', 'chrome.exe', 'Google Chrome',
+                 'google-chrome', 'chromium-browser') 
+
+    for name in exe_names:
+        pathname = find_executable(name, path)
+        if pathname:
+            break
+
+    return pathname
+    
 def launch_browser(port, preferred_browser=None):
     ''' launch web browser on specified port
         try to use preferred browser if specified, fall back to default
@@ -135,26 +158,16 @@ def launch_browser(port, preferred_browser=None):
     url = 'http://localhost:' + str(port)
     print 'Opening URL in browser: ' + url + ' (pid=' + str(os.getpid()) + ')'
 
-    # webbrowser doesn't know about chrome, so try to find it
+    # webbrowser doesn't know about chrome, so try to find it, use app mode if possible
     if preferred_browser and preferred_browser.lower() == 'chrome':
-        if sys.platform == 'win32':
-            # Windows7
-            USERPROFILE = os.getenv("USERPROFILE")
-            if USERPROFILE:
-                CHROMEPATH = USERPROFILE + '\AppData\Local\Google\Chrome\Application\chrome.exe'
-                if os.path.isfile(CHROMEPATH):
-                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s &'
-        elif sys.platform == 'darwin':
-            # Mac OSX
-            CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-            if os.path.isfile(CHROMEPATH):
-                CHROMEPATH = CHROMEPATH.replace('Google Chrome', 'Google\ Chrome')
-                preferred_browser = 'open -a ' + CHROMEPATH + ' %s'
-        elif sys.platform == 'linux2':
-            # Linux
-            CHROMEPATH = get_executable_path(["google-chrome", "chrome", "chromium-browser"])
-            if CHROMEPATH and os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH + ' --app=%s &'
+        chrome_path = find_chrome()
+        if chrome_path:
+            if sys.platform == 'win32':
+                preferred_browser = chrome_path.replace('\\', '\\\\') + ' --app=%s &'
+            elif sys.platform == 'darwin':
+                preferred_browser = 'open -a ' + chrome_path + ' %s'
+            elif sys.platform == 'linux2':
+                preferred_browser = chrome_path + ' --app=%s &'
 
     # try to get preferred browser, fall back to default
     if preferred_browser:

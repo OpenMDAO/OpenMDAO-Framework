@@ -131,10 +131,10 @@ class MetaModel(Component):
         predict outputs.
         """
 
+        if self.model is None:
+            self.raise_exception("MetaModel object must have a model!",
+                                 RuntimeError)
         if self._train:
-            if self.model is None:
-                self.raise_exception("MetaModel object must have a model!",
-                                     RuntimeError)
             try:
                 inputs = self.update_model_inputs()
 
