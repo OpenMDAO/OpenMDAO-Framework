@@ -3,8 +3,6 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
-        candidates = [],
-        limits = {},
         parmsDiv = jQuery("<div id='"+name+"_parms' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Parameter</button>").button(),
         clrButton = jQuery("<button>Clear Parameters</button>").button(),
@@ -155,7 +153,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         candidates.push(fullpath);
                         limits[fullpath] = [lowlimit, highlimit];
                     });
-                });     
+                    candidates.sort();
+                });
             });
     
             // Build dialog markup
