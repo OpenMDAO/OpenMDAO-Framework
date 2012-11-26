@@ -930,7 +930,8 @@ def _test_arguments(browser):
          'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool',  'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x',             'float', '0',     '',  'true', '', '', ''],
+        ['frobozz_rulz',  'float', '0',     '',  'true', '', '', ''],
+        ['y',             'float', '0',     '',  'true', '', '', ''],
         ['y',             'float', '0',     '',  'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):

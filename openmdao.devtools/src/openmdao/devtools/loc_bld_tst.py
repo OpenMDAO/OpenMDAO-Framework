@@ -1,14 +1,11 @@
-import sys
+import codecs
 import os
 import shutil
 import subprocess
-import codecs
-import subprocess
-import fnmatch
-import getpass
-import datetime
-import urllib2
+import sys
 import tarfile
+import time
+import urllib2
 
 
 def get_file(url):
@@ -29,6 +26,7 @@ def get_file(url):
             shutil.copy(url, fname)
     return fname
 
+
 def _run_gofile(startdir, gopath, args=()):
     retcode = -1
     godir, gofile = os.path.split(gopath)
@@ -38,11 +36,10 @@ def _run_gofile(startdir, gopath, args=()):
     f = open(outname, 'wb')
     py = sys.executable.replace('\\','/')
     try:
-        p = subprocess.Popen('%s %s %s' % (py, gofile, 
-                                           ' '.join(args)), 
+        p = subprocess.Popen('%s %s %s' % (py, gofile, ' '.join(args)), 
                              stdout=f, stderr=subprocess.STDOUT,
                              shell=True)
-        p.wait()
+        _wait(p)
         retcode = p.returncode
     finally:
         f.close()
@@ -56,16 +53,17 @@ def _run_gofile(startdir, gopath, args=()):
         with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
+        sys.stdout.flush()
         os.chdir(startdir)
     return retcode
 
+
 def _run_sub(outname, cmd, env=None):
     f = open(outname, 'wb')
-    
     try:
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT,
                              shell=True, env=env)
-        p.wait()
+        _wait(p)
     finally:
         f.close()
         # in some cases there are some unicode characters in the
@@ -78,8 +76,26 @@ def _run_sub(outname, cmd, env=None):
         with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
+        sys.stdout.flush()
     return p.returncode
         
+
+def _wait(p):
+    """ To avoid firewall inactivity timeouts, print while waiting. """
+    # Using 'keepalive' options in fabric or paramiko did not fix this problem.
+    print 'process launched...'
+    sys.stdout.flush()
+    start = time.time()
+    while p.returncode is None:
+        if p.poll() is not None:
+            break
+        else:
+            time.sleep(10)
+            if time.time() - start >= 10 * 60:
+                print 'waiting for process to finish...'
+                sys.stdout.flush()
+                start = time.time()
+
 
 def build_and_test(fname=None, workdir='.', keep=False, 
                    branch=None, testargs=()):
@@ -218,7 +234,7 @@ def install_dev_env(url, branch=None):
         treedir = os.path.abspath(treedir)
         os.chdir(treedir)
         try:
-            subprocess.check_call(['git','checkout',options.branch])
+            subprocess.check_call(['git', 'checkout', options.branch])
         finally:
             os.chdir(startdir)
     elif url.endswith('.tar.gz') or url.endswith('.tar'):
@@ -228,7 +244,8 @@ def install_dev_env(url, branch=None):
         tar.extractall()
         tar.close()
     else:
-        raise RuntimeError("url '%s' does not end in '.git' or '.tar.gz' or '.tar'" % url)
+        raise RuntimeError("url '%s' does not end in"
+                           " '.git' or '.tar.gz' or '.tar'" % url)
     
     newfiles = set(os.listdir('.')) - dirfiles
     if len(newfiles) != 1:
@@ -260,17 +277,18 @@ def activate_and_test(envdir, testargs=()):
         command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao test %s 2>&1 | tee ../../test.out' % ' '.join(testargs)
+        command = '. ./activate && openmdao test %s 2>&1 | tee ../../test.out' \
+                  % ' '.join(testargs)
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
     os.chdir(devbinpath)
     print "running tests from %s" % devbinpath 
     env = os.environ.copy()
-    for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
+    for name in ['VIRTUAL_ENV', '_OLD_VIRTUAL_PATH', '_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
-    print "command = ",command
+    print "command = ", command
     return _run_sub('test.out', command, env=env)
     
 
@@ -281,10 +299,11 @@ if __name__ == '__main__':
     parser.add_option("--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
-    parser.add_option("-f","--file", action="store", type='string', 
+    parser.add_option("-f", "--file", action="store", type='string', 
                       dest='fname',
-                      help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
-    parser.add_option("-d","--dir", action="store", type='string', 
+                      help="pathname or URL of a git repo, tar file,"
+                           " or go-openmdao.py file")
+    parser.add_option("-d", "--dir", action="store", type='string', 
                       dest='directory', default='.',
                       help="name of a directory the build will be created in")
     parser.add_option("--testargs", action="store", type='string', 
@@ -294,5 +313,6 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args(sys.argv[1:])
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
-                            branch=options.branch, testargs=options.testargs.split()))
+                            branch=options.branch,
+                            testargs=options.testargs.split()))
     
