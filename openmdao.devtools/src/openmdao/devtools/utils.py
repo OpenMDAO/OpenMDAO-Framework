@@ -1,5 +1,6 @@
+import glob
 import logging
-import os
+import os.path
 import shutil
 import socket
 from subprocess import Popen, STDOUT, PIPE, check_call
@@ -317,7 +318,7 @@ def retrieve_docs(remote_dir):
              "tar.close()",
              ]
     
-    result = remote_py_cmd(cmds)
+    remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
     
 
@@ -344,16 +345,17 @@ def retrieve_pngs(remote_dir):
              "tar.close()",
              ]
     
-    result = remote_py_cmd(cmds)
+    for name in glob.glob('*.png'):
+        os.remove(name)
+    remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'png.tar'), 'png.tar')
     tar = tarfile.open('png.tar', mode='r')
     for name in tar.getnames():
-        fileobj = tar.extract(name)
+        fileobj = tar.extractfile(name)
         with open(os.path.basename(name), 'wb') as png:
             png.write(fileobj.read())
         fileobj.close()
     tar.close()
-#    os.remove('png.tar')
     
 
 #

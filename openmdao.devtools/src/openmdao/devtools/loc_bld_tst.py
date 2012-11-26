@@ -121,8 +121,6 @@ def build_and_test(fname=None, workdir='.', keep=False,
     if branch:
         args.append('--branch=%s' % branch)
         
-    expectedfiles = set(['build.out', os.path.basename(fname)])
-    
     os.chdir(workdir)
     
     print 'building...'

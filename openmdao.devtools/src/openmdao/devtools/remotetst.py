@@ -101,8 +101,6 @@ def test_branch(parser, options, args=None):
         print "nothing to do - no hosts specified"
         sys.exit(0)
     
-    startdir = os.getcwd()
-    
     if options.fname is None: # assume we're testing the current repo
         print 'creating tar file of current branch: ',
         options.fname = os.path.join(os.getcwd(),
@@ -182,8 +180,6 @@ def test_release(parser, options):
         
     options.filters = ['test_release==true']
     config, conn, ec2_hosts = process_options(options)
-    
-    startdir = os.getcwd()
     
     fname = options.fname
     if fname.startswith('http'):
