@@ -89,6 +89,18 @@ not yet supported by the CSVCaseRecorder, and it is not clear how some of these 
 represented in a comma-separated format. However, the other case recorders should support every type
 of variable, provided that it can be serialized.
 
+The CSVCaseRecorder also saves the csv output files from previous runs. These backup files are given
+unique names that contain the current date and time. The user can specify the number of backups
+to keep for each CSVCaseRecorder object by adding the following line to the above example.
+
+::
+
+   opt_problem.driver.recorders[0].num_backups = 3
+
+If you set the number of backups to 0, no backup files are saved. The default number of backup
+files is 5. Note that it is a rolling save, so the oldest files are deleted as the newest ones 
+are saved so that the total is kept at the desired number.
+
 The DumpCaseRecorder is generally used to write readable text to a
 file or to STDOUT. Let's try using a DumpCaseRecorder to output a history
 of our parameters, constraints, and objectives to a file named ``'data.txt'``.
