@@ -732,6 +732,12 @@ class IRepository(Interface):
         """
         
         
+class IGeometryEngine(Interface):
+    """An Interface to a Geometry Engine"""
+    
+        
+    
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
