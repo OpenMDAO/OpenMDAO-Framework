@@ -57,6 +57,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         #being run for the second time.
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         # now use the CSV recorder as source of Cases
@@ -97,6 +98,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename, delimiter=';', \
                                                      quotechar="'")]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
 
         attrs = self.top.driver.recorders[0].get_attributes()
@@ -276,6 +278,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.iterator = ListCaseIterator(cases)
             
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
 
         # now use the CSV recorder as source of Cases
@@ -308,6 +311,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
         self.top.driver.iterator = ListCaseIterator([Case(inputs=inputs, outputs=outputs, label='case1')])
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         # now use the CSV recorder as source of Cases
@@ -380,6 +384,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
     def test_close(self):
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         case = Case(inputs=[('comp2.a_slot', None)])
         assert_raises(self, 'self.top.driver.recorders[0].record(case)',
