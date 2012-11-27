@@ -2,7 +2,6 @@
 Tests of overall workspace functions.
 """
 
-import sys
 import time
 
 import pkg_resources
@@ -947,6 +946,27 @@ def _test_casefilters(browser):
                       'SequenceCaseFilter', 'SliceCaseFilter'):
         workspace_page.find_library_button(classname)
 
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_rename_file(browser):
+    # Rename a file in the project.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Add paraboloid.py
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                     'paraboloid.py')
+    workspace_page.add_file(paraboloidPath)
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    eq(file_names, ['paraboloid.py'])
+
+    workspace_page.rename_file('paraboloid.py', 'xyzzy.py')
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    eq(file_names, ['xyzzy.py'])
+
+    # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 

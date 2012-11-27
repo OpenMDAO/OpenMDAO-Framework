@@ -19,7 +19,8 @@ from editor import EditorPage
 from elements import ButtonElement, GridElement, InputElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
-                     find_workflow_component_figures, find_workflow_component_figure
+                     find_workflow_component_figures, \
+                     find_workflow_component_figure
 from util import ArgsPrompt, ValuePrompt, NotifierPage, ConfirmationPage
 
 
@@ -83,11 +84,11 @@ class WorkspacePage(BasePageObject):
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
     file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-#    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
 #    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
     file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
     file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
     file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
+    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
     file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
@@ -307,6 +308,16 @@ class WorkspacePage(BasePageObject):
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
         time.sleep(1)  # Wait for cute animation.
+
+    def rename_file(self, old, new):
+        """ Rename `old` to `new`. """
+        self('files_tab').click()
+        element = self.find_file(old)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        self('file_rename').click()
+        prompt = ValuePrompt(self.browser, self.port)
+        prompt.set_value(new)
 
     def toggle_files(self, filename):
         """ Toggle files display, using context menu of `filename`. """
