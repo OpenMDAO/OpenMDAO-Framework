@@ -209,7 +209,7 @@ class CSVCaseRecorder(object):
         self.append = append
         self.outfile = None
         self.csv_writer = None
-        self.num_backups = 0
+        self.num_backups = 5
         self._header_size = 0
         
         #Open output file

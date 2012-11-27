@@ -84,6 +84,7 @@ class ZMQServer(object):
                '-r', str(rep_url),
                '-p', str(pub_url),
                '-o', str(out_url)]
+
         return subprocess.Popen(cmd)
 
 

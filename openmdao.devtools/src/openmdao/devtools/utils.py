@@ -1,24 +1,21 @@
-import sys
-import os
-import time
-import shutil
+import glob
 import logging
-import urllib2
-from subprocess import Popen, STDOUT, PIPE, check_call
+import os.path
+import shutil
 import socket
-
-import tempfile
+from subprocess import Popen, STDOUT, PIPE, check_call
 import tarfile
+import tempfile
+import time
 
 try:
     import paramiko
-    from fabric.api import run, local, env, put, get, cd, prompt, hide, show, settings
+    from fabric.api import run, env, put, get, cd, prompt, hide, show, settings
     from fabric.state import connections
-    from fabric.network import connect
 except ImportError as err:
     run = None
     connections = {}
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
 
 from openmdao.util.fileutil import find_up, cleanup
 from openmdao.util.decorators import stub_if_missing_deps
@@ -44,13 +41,15 @@ def check_openmdao_version(release_dir, version):
     """Checks to see if the specified version of openmdao already exists on
     the current active host.
     """
-    # TODO: make this smarter.  maybe have it grab the latest version via pkg_resources
-    # or packaging and see if it's the same or newer then the specified version
+    # TODO: make this smarter.  maybe have it grab the latest version via
+    # pkg_resources or packaging and see if it's the same or newer then the
+    # specified version
     with settings(hide('running', 'stdout')):
         result = run('ls %s/downloads' % release_dir)
     lst = [x.strip() for x in result.split('\n')]
     if version in lst:
-        raise VersionError('Version %s already exists. Please specify a different version' % version)
+        raise VersionError('Version %s already exists. Please specify a'
+                           ' different version' % version)
     return version
 
 
@@ -83,9 +82,9 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]), 
                         ' '.join(args))
     with cd(remotedir):
-        print 'running: ',cmd
+        print 'running:', cmd
         return run(cmd)
-    return retval
+
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
@@ -160,7 +159,8 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
         #except (paramiko.SSHException, socket.timeout) as e:
         except Exception as e:
             tries += 1
-            print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
+            print "connection attempt %d for host %s failed: %s" \
+                  % (tries, host, str(e))
 
         time.sleep(sleep)
         
@@ -318,8 +318,44 @@ def retrieve_docs(remote_dir):
              "tar.close()",
              ]
     
-    result = remote_py_cmd(cmds)
+    remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
+    
+
+@stub_if_missing_deps('fabric')
+def retrieve_pngs(remote_dir):
+    """Retrieve a tar file of PNG files generated on a remote machine."""
+    cmds = [ "import tarfile",
+             "import os",
+             "import glob",
+             "import sys",
+             "remote_dir = os.path.expanduser('%s')" % remote_dir,
+             "for fname in os.listdir(remote_dir):",
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+             "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found in %s' % remote_dir)",
+             "if sys.platform == 'win32':",
+             "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'Scripts')",
+             "else:",
+             "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'bin')",
+             "tar = tarfile.open(os.path.join(remote_dir, 'png.tar'), mode='w')",
+             "for png in glob.glob(os.path.join(pngdir, '*.png')):",
+             "    tar.add(png)",
+             "tar.close()",
+             ]
+    
+    for name in glob.glob('*.png'):
+        os.remove(name)
+    remote_py_cmd(cmds)
+    get(os.path.join(remote_dir, 'png.tar'), 'png.tar')
+    tar = tarfile.open('png.tar', mode='r')
+    for name in tar.getnames():
+        fileobj = tar.extractfile(name)
+        with open(os.path.basename(name), 'wb') as png:
+            png.write(fileobj.read())
+        fileobj.close()
+    tar.close()
     
 
 #

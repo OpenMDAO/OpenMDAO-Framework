@@ -9,25 +9,24 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from selenium.webdriver.common.action_chains import ActionChains
-    from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
 
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
-    from util import slot_drop, slot_reset, \
-                     get_dataflow_fig_in_assembly_editor, put_assembly_on_grid, \
-                     put_element_on_grid, get_pathname, ensure_names_in_workspace, \
-                     drag_element_to, release, check_highlighting, getDropableElements, \
-                     replace_driver
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout
+from util import slot_drop, slot_reset, \
+                 get_dataflow_fig_in_assembly_editor, put_assembly_on_grid, \
+                 put_element_on_grid, get_pathname, ensure_names_in_workspace, \
+                 drag_element_to, release, check_highlighting, getDropableElements, \
+                 replace_driver
 
-    from pageobjects.component import NameInstanceDialog
-    from pageobjects.util import ArgsPrompt
+from pageobjects.component import NameInstanceDialog
+from pageobjects.util import ArgsPrompt
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
 
 
 def _test_drop_on_driver(browser):
@@ -294,7 +293,7 @@ def _test_list_slot(browser):
     # open the object editor dialog for the driver
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(False)
-    editor.move(-100, 0)
+    editor.move(-200, 0)
     editor.show_slots()
 
     # get the generator slot figure
@@ -622,7 +621,7 @@ def _test_drop_onto_layered_div(browser):
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
                                                              sim_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
-    driver_editor.move(-100, 0)
+    driver_editor.move(-200, 0)
     driver_editor.show_workflow()
 
     # Confirm expected number of workflow component figures before adding one
