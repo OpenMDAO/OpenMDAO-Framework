@@ -1,17 +1,19 @@
-import sys
+import atexit
 import os
 import subprocess
-import atexit
+import sys
 import tempfile
 
 import paramiko.util
 
 from openmdao.devtools.utils import push_and_run, rm_remote_tree, \
                                     make_git_archive, fabric_cleanup, \
-                                    remote_mkdir, put_dir, \
-                                    cleanup, retrieve_docs
-from openmdao.devtools.remote_cfg import process_options, run_host_processes, \
-                                         get_tmp_user_dir, print_host_codes
+                                    remote_mkdir, put_dir, cleanup, \
+                                    retrieve_docs, retrieve_pngs
+
+from openmdao.devtools.remote_cfg import process_options, \
+                                         run_host_processes, get_tmp_user_dir, \
+                                         print_host_codes
 
 from openmdao.main.plugin import print_sub_help
 
@@ -74,6 +76,11 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         else:
             print "not pulling docs from %s" % hostname
 
+        if build_type == 'dev':
+            print "pulling any pngs from %s" % hostname
+            retrieve_pngs(os.path.join('~', remotedir))
+            print "png retrieval successful"
+
         return result.return_code
     finally:
         if not keep:
@@ -95,13 +102,15 @@ def test_branch(parser, options, args=None):
         parser.print_help()
         print "nothing to do - no hosts specified"
         sys.exit(0)
-
+    
     if options.fname is None:  # assume we're testing the current repo
         print 'creating tar file of current branch: ',
-        options.fname = os.path.join(os.getcwd(), 'OpenMDAO-Framework-testbranch.tar')
+        options.fname = os.path.join(os.getcwd(),
+                                     'OpenMDAO-Framework-testbranch.tar')
         ziptarname = options.fname + '.gz'
         cleanup(ziptarname)  # clean up the old tar file
-        make_git_archive(options.fname, prefix='OpenMDAO-OpenMDAO-Framework-testbranch/')
+        make_git_archive(options.fname,
+                         prefix='OpenMDAO-OpenMDAO-Framework-testbranch/')
         subprocess.check_call(['gzip', options.fname])
         options.fname = os.path.abspath(ziptarname)
         print options.fname
@@ -110,15 +119,16 @@ def test_branch(parser, options, args=None):
         cleanup_tar = False
 
     fname = options.fname
-    if not (fname.startswith('http') or fname.startswith('git:') or fname.startswith('git@')):
+    if not (fname.startswith('http') or \
+       fname.startswith('git:') or fname.startswith('git@')):
         fname = os.path.abspath(os.path.expanduser(options.fname))
 
     if fname.endswith('.tar.gz') or fname.endswith('.tar'):
         if not os.path.isfile(fname):
             print "can't find file '%s'" % fname
             sys.exit(-1)
-    elif fname.endswith('.git') or (fname.startswith('http') \
-         and os.path.splitext(fname)[1] == ''):
+    elif fname.endswith('.git') or \
+         (fname.startswith('http') and os.path.splitext(fname)[1]==''):
         pass
     else:
         parser.print_help()
@@ -169,7 +179,8 @@ def test_release(parser, options):
     cleanup_files = [os.path.join(os.getcwd(), 'paramiko.log')]
 
     if options.fname is None:
-        print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
+        print '\nyou must supply a release directory'
+        print ' or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
 
     options.filters = ['test_release==true']
@@ -198,7 +209,8 @@ def test_release(parser, options):
         cleanup_files.append(release_dir)
     else:
         parser.print_help()
-        print "\nfilename must be a release directory or a pathname or URL of a go-openmdao.py file"
+        print "\nfilename must be a release directory"
+        print " or a pathname or URL of a go-openmdao.py file"
         sys.exit(-1)
 
     funct_kwargs = {'keep': options.keep,
