@@ -670,6 +670,11 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self.files.delete_file(filename)
 
+    def rename_file(self, oldpath, newname):
+        ''' rename file
+        '''
+        return self.files.rename_file(oldpath, newname)
+
     def install_addon(self, url, distribution):
         print "Installing", distribution, "from", url
         easy_install.main(["-U", "-f", url, distribution])
