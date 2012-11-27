@@ -554,6 +554,21 @@ openmdao.Model=function(listeners_ready) {
             self.setModified(true);
     };
 
+    /** rename file with specified path. */
+    this.renameFile = function(filepath, newname, callback) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'rename',
+            data: { 'old': filepath, 'new': newname },
+            success: callback,
+            error: function(jqXHR, textStatus, errorThrown) {
+                       debug.warn("model.renameFile",
+                                  jqXHR, textStatus, errorThrown);
+                   }
+            });
+            self.setModified(true);
+    };
+
     /** delete file with specified path from the model working directory */
     this.removeFile = function(filepath, callback) {
         jQuery.ajax({
