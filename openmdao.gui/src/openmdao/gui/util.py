@@ -165,6 +165,7 @@ def launch_browser(port, preferred_browser=None):
             if sys.platform == 'win32':
                 preferred_browser = chrome_path.replace('\\', '\\\\') + ' --app=%s &'
             elif sys.platform == 'darwin':
+                chrome_path = chrome_path.replace('Google Chrome', 'Google\ Chrome')
                 preferred_browser = 'open -a ' + chrome_path + ' %s'
             elif sys.platform == 'linux2':
                 preferred_browser = chrome_path + ' --app=%s &'

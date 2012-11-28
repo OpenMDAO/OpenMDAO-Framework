@@ -1,7 +1,5 @@
-import os
 import os.path
 import shutil
-import tempfile
 import traceback
 import zipfile
 
@@ -147,9 +145,9 @@ class FileManager(object):
             if filename.endswith('.py'):
                 initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
                 files = os.listdir(os.path.dirname(fpath))
-                # FIXME: This is a bit of a kludge, but for now we only create an __init__.py
-                # file if it's the very first file in the directory where a new
-                # file is being added.
+                # FIXME: This is a bit of a kludge, but for now we only create
+                # an __init__.py file if it's the very first file in the
+                # directory where a new file is being added.
                 if not files and not os.path.isfile(initpath):
                     with open(initpath, 'w') as f:
                         f.write(' ')
@@ -199,3 +197,15 @@ class FileManager(object):
             return True
         else:
             return False
+
+    def rename_file(self, oldpath, newname):
+        ''' rename last component of `oldpath` to `newname`.
+        '''
+        filepath = self._get_abs_path(oldpath)
+        if os.path.exists(filepath):
+            newpath = os.path.join(os.path.dirname(filepath), newname)
+            os.rename(filepath, newpath)
+            return True
+        else:
+            return False
+

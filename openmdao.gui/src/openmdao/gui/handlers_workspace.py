@@ -214,6 +214,25 @@ class ObjectHandler(ReqHandler):
         self.write(attr)
 
 
+class RenameHandler(ReqHandler):
+    ''' rename a file
+    '''
+
+    @web.authenticated
+    def post(self):
+        oldpath = self.get_argument('old')
+        newname = self.get_argument('new')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.rename_file(oldpath, newname)
+        except Exception, e:
+            print e
+            result = sys.exc_info()
+        self.content_type = 'text/html'
+        self.write(result)
+
+
 class ReplaceHandler(ReqHandler):
     ''' replace a component
     '''
@@ -335,7 +354,8 @@ class FileHandler(ReqHandler):
                 else:
                     text = contents
                 try:
-                    ast.parse(text, filename=filename, mode='exec') # parse it looking for syntax errors
+                    # parse it looking for syntax errors
+                    ast.parse(text, filename=filename, mode='exec')
                 except Exception as err:
                     cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
@@ -343,7 +363,8 @@ class FileHandler(ReqHandler):
                 if not force:
                     ret = cserver.file_forces_reload(filename)
                     if ret:
-                        self.send_error(409)  # user will be prompted to overwrite file and reload project
+                        # user will be prompted to overwrite file and reload project
+                        self.send_error(409)
                         return
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -621,6 +642,7 @@ handlers = [
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/rename',           RenameHandler),
     web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
     web.url(r'/workspace/signature/?',      SignatureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
