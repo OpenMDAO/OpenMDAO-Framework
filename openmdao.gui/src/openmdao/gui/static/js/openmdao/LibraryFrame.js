@@ -37,7 +37,6 @@ openmdao.LibraryFrame = function(id,model) {
         (libname, meta_dict) */
     function updateLibrary(packages) {
         // build the new html
-        console.log(packages)
         var html = '<div class="ui-widget" style="clear:both">'
                  +   '<label for="objtt-select" id="objtt-search">Search: </label>'
                  +   '<table id="objtt-group"><tr>'
