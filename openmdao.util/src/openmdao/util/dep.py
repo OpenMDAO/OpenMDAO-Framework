@@ -375,6 +375,7 @@ class PythonSourceTreeAnalyser(object):
         return paths.keys()
 
     def get_interfaces(self, classname):
+        ''' Returns a set of interfaces for a given class.'''
         ifaces = set()
         klass = self.find_classinfo(classname)
         if klass:
