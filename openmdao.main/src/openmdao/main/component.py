@@ -133,8 +133,8 @@ class Component(Container):
                      desc='Number of times this Component has been executed.')
 
     derivative_exec_count = Int(0, iotype='out',
-                     desc='Number of times this Component has been executed'
-                          ' for derivatives.')
+                     desc="Number of times this Component's derivative "
+                          "function has been executed."
 
     itername = Str('', iotype='out', desc='Iteration coordinates')
 

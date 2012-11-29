@@ -156,7 +156,7 @@ def _test_connect(browser):
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
         ['derivative_exec_count', 'int', '0', '', 'true',
-         'Number of times this Component has been executed for derivatives.', '', ''],
+         "Number of times this Component's derivative function has been executed.", '', ''],
         ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
         ['exec_count', 'int', '1', '', 'true',
          'Number of times this Component has been executed.', '', ''],
