@@ -36,6 +36,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
     def test_get_available_types(self):
         tups = get_available_types()
         types = set([x[0] for x in tups])
+        iface_dict = dict((key, value['ifaces']) for (key, value) in tups)
         expected = set(['openmdao.lib.components.external_code.ExternalCode',
                         'openmdao.lib.components.mux.DeMux',
                         'openmdao.lib.drivers.doedriver.DOEdriver',
@@ -64,6 +65,8 @@ class PkgResFactoryTestCase(unittest.TestCase):
             if 'ifaces' not in meta:
                 self.fail("the metadata for %s did not contain 'ifaces'" % typ)
         
+        self.assertEqual(iface_dict['openmdao.lib.drivers.conmindriver.CONMINdriver'],
+                         ['IHasObjective', 'IComponent', 'IHasParameters', 'IHasIneqConstraints', 'IContainer', 'IDriver', 'IOptimizer'])
 if __name__ == "__main__":
     unittest.main()
 
