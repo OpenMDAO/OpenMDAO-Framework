@@ -135,7 +135,8 @@ def setup_server(virtual_display=True):
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
 
-    # Try to clean up old server dir. If this fails (looking at you Windows), then just go with it.
+    # Try to clean up old server dir. If this fails (looking at you Windows),
+    # then just go with it.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
@@ -147,9 +148,13 @@ def setup_server(virtual_display=True):
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
     os.chdir(server_dir)
-    stdout = open('stdout', 'w')
-    TEST_CONFIG['stdout'] = stdout
     try:
+        stdout = open('stdout', 'w')
+        TEST_CONFIG['stdout'] = stdout
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM')
+        if os.path.exists(sigfile):
+            os.remove(sigfile)
+        TEST_CONFIG['sigfile'] = sigfile
         server = subprocess.Popen(('python', '-m', 'openmdao.gui.omg',
                                    '--server', '--port', str(port)),
                                    stdout=stdout, stderr=subprocess.STDOUT)
@@ -193,7 +198,11 @@ def teardown_server():
     _display_set = False
 
     # Shut down server.
-    TEST_CONFIG['server'].terminate()
+    if sys.platform == 'win32':
+        with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
+            sigfile.write('Shutdown now\n')
+    else:
+        TEST_CONFIG['server'].terminate()
     TEST_CONFIG['server'].wait()
     TEST_CONFIG['stdout'].close()
 
@@ -211,8 +220,7 @@ def generate(modname):
     global _display_set
 
     # Check if functional tests are to be skipped.
-    skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
-    if skip:
+    if int(os.environ.get('OPENMDAO_SKIP_GUI', '0')):
         return
 
     # Search for tests to run.
@@ -300,6 +308,7 @@ class _Runner(object):
     def __call__(self, browser):
         if isinstance(browser, Exception):
             raise browser  # Likely a hung webdriver.
+        base_window = browser.current_window_handle
         try:
             self.test(browser)
         except Exception as exc:
@@ -308,6 +317,7 @@ class _Runner(object):
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
+
             # Don't try screenshot if webdriver is hung.
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
@@ -322,6 +332,17 @@ class _Runner(object):
                     msg = 'Screenshot in %s' % filename
                     print msg
                     logging.critical(msg)
+
+                # Close all extra windows.
+                for window in browser.window_handles:
+                    if window == base_window:
+                        continue
+                    elif window != browser.current_window_handle:
+                        browser.switch_to_window(window)
+                    browser.close()
+                if browser.current_window_handle != base_window:
+                    browser.switch_to_window(base_window)
+
             sys.stdout.flush()
             sys.stderr.flush()
             raise saved_exc[0], saved_exc[1], saved_exc[2]
@@ -448,14 +469,19 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
 
 def resize_editor(workspace_page, editor):
-    '''ensure that the editor is not covering the library (or else we cannot drag things from it!)'''
+    '''ensure that the editor is not covering the library
+    (or else we cannot drag things from it!)'''
     browser = workspace_page.browser
 
     page_width = browser.get_window_size()['width']
-    lib_width    = workspace_page('library_tab').find_element_by_xpath('..').size['width']
-    lib_position = workspace_page('library_tab').find_element_by_xpath('..').location['x']
-    dialog_width    = editor('dialog_title').find_element_by_xpath('../..').size['width']
-    dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+
+    lib_tab      = workspace_page('library_tab').find_element_by_xpath('..')
+    lib_width    = lib_tab.size['width']
+    lib_position = lib_tab.location['x']
+
+    dialog_title    = editor('dialog_title').find_element_by_xpath('../..')
+    dialog_width    = dialog_title.size['width']
+    dialog_position = dialog_title.location['x']
 
     # how much overlap do we have?
     overlap = lib_position - (dialog_position + dialog_width)
@@ -466,7 +492,7 @@ def resize_editor(workspace_page, editor):
             # not enough, need to rezize the editor
 
             # look for the resize handle
-            sibblings = editor('dialog_title').find_elements_by_xpath('../../div')
+            sibblings = dialog_title.find_elements_by_xpath('../../div')
             handle = None
             for sib in sibblings:
                 if "ui-resizable-se" in sib.get_attribute('class'):
@@ -475,25 +501,30 @@ def resize_editor(workspace_page, editor):
             # do the resizing
             chain = ActionChains(browser)
             chain.click_and_hold(handle)
-            chain.move_by_offset(450 - dialog_width, 0).perform()  # we can resize editor down to 425px, any less and we cover drop targets
-            chain.click().perform()  # must click because release is not working. why? I do not know.
+            # we can resize editor down to 425px, any less and we cover drop targets
+            chain.move_by_offset(450 - dialog_width, 0).perform()
+            # must click because release is not working. why? I do not know.
+            chain.click().perform()
             chain.release(None).perform()
 
             # recalculate the overlap
-            dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
-            dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+            dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+            dialog_width = dialog_title.size['width']
+            dialog_position = dialog_title.location['x']
             overlap = lib_position - (dialog_position + dialog_width)
 
         # We are good, move out!
         chain = ActionChains(browser)
         chain.click_and_hold(editor('dialog_title').element)
         chain.move_by_offset(overlap, 0).perform()
-        chain.click().perform()  # must click because release is not working. why? I do not know.
+        # must click because release is not working. why? I do not know.
+        chain.click().perform()
         chain.release(None).perform()
 
         # recalculate the overlap
-        dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
-        dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+        dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+        dialog_width = dialog_title.size['width']
+        dialog_position = dialog_title.location['x']
         overlap = lib_position - (dialog_position + dialog_width)
 
         if overlap < 0:
@@ -605,10 +636,11 @@ def drag_element_to(browser, element, drag_to, centerx):
 def release(chain):
     '''The drop part of the ActionChain when doing drag and drop'''
     chain.release(on_element=None).perform()
+    time.sleep(0.5)  # Pacing for diagram update.
 
 
 def check_highlighting(element, should_highlight=True, message='Element'):
-    '''check to see that the background-color of the element is rgb(207, 214, 254)'''
+    '''check to see that the background-color of the element is highlighted'''
     if 'SlotFigure' in element.get_attribute('class'):
         # a slot figure is a div containing a ul element (the context menu) and
         # one or more svg elements, each of which contains a rect and two texts
@@ -699,3 +731,4 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
+

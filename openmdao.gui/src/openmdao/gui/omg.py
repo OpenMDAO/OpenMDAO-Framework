@@ -10,6 +10,7 @@ for WebSockets is required.
 import os
 import signal
 import sys
+import threading
 import time
 
 from argparse import ArgumentParser
@@ -29,7 +30,8 @@ from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
 
-from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler, PluginDocsHandler
+from openmdao.gui.handlers import LoginHandler, LogoutHandler, \
+                                  ExitHandler, PluginDocsHandler
 import openmdao.gui.handlers_projectdb as proj
 import openmdao.gui.handlers_workspace as wksp
 
@@ -42,6 +44,7 @@ def DEBUG(msg):
 
 
 def get_user_dir():
+    """ Return user's GUI directory. """
     user_dir = os.path.expanduser("~/.openmdao/gui/")
     ensure_dir(user_dir)
     return user_dir
@@ -57,28 +60,22 @@ class App(web.Application):
         if is_dev_build():
             idxpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
                                    '_build', 'html')
-            #doc_handler = web.StaticFileHandler
-            #doc_handler_options = { 'path': idxpath, 'default_filename': 'index.html' }
         else:
-            # look for docs online
-            # import openmdao.util.releaseinfo
-            # version = openmdao.util.releaseinfo.__version__
-            # idxpath = 'http://openmdao.org/releases/%s/docs/index.html' % version
-            # doc_handler = web.RedirectHandler
-            # doc_handler_options = { 'url': idxpath, 'permanent': False }
             import openmdao.main
             idxpath = os.path.join(os.path.dirname(openmdao.main.__file__), 'docs')
 
         doc_handler = web.StaticFileHandler
-        doc_handler_options = { 'path' : idxpath, 'default_filename': 'index.html' }
-            
+        doc_handler_options = { 'path': idxpath,
+                                'default_filename': 'index.html' }
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
-            web.url(r'/docs/plugins/(.*)',  PluginDocsHandler, { 'route': '/docs/plugins/' }),
+            web.url(r'/docs/plugins/(.*)', PluginDocsHandler,
+                                           { 'route': '/docs/plugins/' }),
             web.url(r'/docs/(.*)',  doc_handler, doc_handler_options ),
-            web.url(r'/',       web.RedirectHandler, { 'url':'/projects', 'permanent':False })
+            web.url(r'/',       web.RedirectHandler,
+                                { 'url':'/projects', 'permanent':False })
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
@@ -106,19 +103,41 @@ class App(web.Application):
         self.session_manager = TornadoSessionManager(secret, session_dir)
         self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
 
-        global _MGR
-        _MGR = self.server_manager
-        signal.signal(signal.SIGTERM, self._sigterm_handler)
+        # External termination normally only used during GUI testing.
+        if sys.platform == 'win32':
+            # Fake SIGTERM by polling for a .sigterm file.
+            poller = threading.Thread(target=self._sigterm_poller,
+                                      name='SIGTERM poller')
+            poller.daemon = True
+            poller.start()
+        else:
+            signal.signal(signal.SIGTERM, self._sigterm_handler)
+
         super(App, self).__init__(handlers, **app_settings)
 
+    def _sigterm_poller(self):
+        """ On Windows, poll for an external termination request file. """
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM')
+        while True:
+            time.sleep(1)
+            if os.path.exists(sigfile):
+                DEBUG('Detected SIGTERM, shutting down....\n')
+                self._shutdown()
+                break
+
     def _sigterm_handler(self, signum, frame):
+        """ On Linux/OS X, handle SIGTERM signal. """
         DEBUG('Received SIGTERM, shutting down....\n')
-        _MGR.cleanup()
-        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
+        self._shutdown()
         
     def exit(self):
-        self.server_manager.cleanup()
+        """ Shutdown. """
         DEBUG('Exit requested, shutting down....\n')
+        self._shutdown()
+
+    def _shutdown(self):
+        """ Stop all subprocesses and exit. """
+        self.server_manager.cleanup()
         ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
 
 

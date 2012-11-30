@@ -574,10 +574,9 @@ def execute(self)
 """, check=False)
 
     message = NotifierPage.wait(editor_page, base_id='file-error')
-    eq(message, 'invalid syntax (bug.py, line 6)')
-
     browser.close()
     browser.switch_to_window(workspace_window)
+    eq(message, 'invalid syntax (bug.py, line 6)')
 
     # Load file with instantiation error.
     workspace_window = browser.current_window_handle
