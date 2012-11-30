@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Event
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -1581,6 +1581,7 @@ class Component(Container):
         inputs = []
         outputs = []
         slots = []
+        events = []
 
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
@@ -1653,6 +1654,7 @@ class Component(Container):
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
         attrs['Slots'] = slots
+        attrs['Events'] = events
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.
