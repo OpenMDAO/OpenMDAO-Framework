@@ -79,6 +79,7 @@ openmdao.LibraryFrame = function(id,model) {
                     "Differentiator",
                     "DOEgenerator",
                     "Driver",
+                    "Optimizer",
                     "Solver",
                     "Surrogate",
                     //"UncertainVariable",

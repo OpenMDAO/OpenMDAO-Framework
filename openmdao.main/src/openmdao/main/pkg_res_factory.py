@@ -5,7 +5,8 @@ import copy
 from pkg_resources import working_set, Environment
 
 from openmdao.main.factory import Factory
-from openmdao.util.dep import plugin_groups, find_module, PythonSourceTreeAnalyser
+from openmdao.util.dep import plugin_groups, find_module, \
+                              PythonSourceTreeAnalyser
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
@@ -100,7 +101,7 @@ class PkgResourcesFactory(Factory):
                 fpath = find_module(modname)
                 if fpath is not None:
                     fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
-                    meta['ifaces'].update(self.tree_analyser.get_interfaces(name))
+                    meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
                     
             meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
