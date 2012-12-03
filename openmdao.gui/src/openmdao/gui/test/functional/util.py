@@ -151,7 +151,7 @@ def setup_server(virtual_display=True):
     try:
         stdout = open('stdout', 'w')
         TEST_CONFIG['stdout'] = stdout
-        sigfile = os.path.join(os.getcwd(), 'SIGTERM')
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM.txt')
         if os.path.exists(sigfile):
             os.remove(sigfile)
         TEST_CONFIG['sigfile'] = sigfile
@@ -186,9 +186,10 @@ def setup_server(virtual_display=True):
 def teardown_server():
     """ This function gets called once after all of the tests are run. """
     global _display, _display_set
+    server = TEST_CONFIG['server']
 
     # Do nothing if the server isn't started.
-    if TEST_CONFIG['server'] is None:
+    if server is None:
         return
 
     # Shut down virtual framebuffer.
@@ -199,11 +200,28 @@ def teardown_server():
 
     # Shut down server.
     if sys.platform == 'win32':
+        # First try to have all subprocesses go down cleanly.
+        print 'Signalling via %s' % TEST_CONFIG['sigfile']
         with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
             sigfile.write('Shutdown now\n')
+        for i in range(10):
+            time.sleep(1)
+            if server.poll() is not None:
+                print 'Server exited'
+                break
+        else:
+            # No luck, at least terminate the server.
+            print 'Killing server'
+            server.terminate()
+            for i in range(10):
+                if server.poll() is not None:
+                    print 'Server exited'
+                    break
+            else:
+                print 'Server is a zombie!'
     else:
-        TEST_CONFIG['server'].terminate()
-    TEST_CONFIG['server'].wait()
+        server.terminate()
+        server.wait()
     TEST_CONFIG['stdout'].close()
 
     # Clean up.

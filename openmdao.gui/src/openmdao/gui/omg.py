@@ -117,7 +117,7 @@ class App(web.Application):
 
     def _sigterm_poller(self):
         """ On Windows, poll for an external termination request file. """
-        sigfile = os.path.join(os.getcwd(), 'SIGTERM')
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM.txt')
         while True:
             time.sleep(1)
             if os.path.exists(sigfile):

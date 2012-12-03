@@ -117,6 +117,7 @@ def _test_connect(browser):
     # Set inputs (re-fetch required after updating).
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
+    props.move(0, -120)  # Move up for short displays.
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
