@@ -1,244 +1,211 @@
+/**
+ *  VariableFigure: an object representing a component in an openmdao workflow
+ *
+ *  A VariableFigure consists of a rectangular box containing the
+ *  variable name and type.
+ *
+ *  Arguments:
+ *      elm:      jQuery element which will contain the VariableFigure
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the component
+ *      variable: a dictionary of the variable's attributes
+ *      inout:    'input' or 'output' for an input or output variable respectively
+ **/
+
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.VariableFigure=function(myModel,pathname,variable,inout){
-    this.myModel = myModel;
-    this.pathname = pathname;
-    this.variable = variable;
-    this.inout = inout;
-    if (inout === 'input') {
-        this.outputPort=null;
-        this.inputPort=new draw2d.InputPort();
-        if (this.variable.connected) {
-            this.inputPort.setBackgroundColor(new draw2d.Color(255,0,0));
-        }
-    }
-    else {
-        this.outputPort=new draw2d.OutputPort();
-        this.inputPort=null;
-        if (this.variable.connected) {
-            this.outputPort.setBackgroundColor(new draw2d.Color(255,0,0));
-        }
-    }
-    draw2d.Node.call(this);
-    this.setDimension(100,30);
-    this.originalHeight=-1;
+openmdao.VariableFigure=function(model, pathname, variable, inout) {
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
 
-    var tok = pathname.split('.');
-    if (tok.length > 1) {
-        this.name = tok[tok.length-1];
-        if (this.name === 'driver') {
-            this.name = tok[tok.length-2] + '.' + this.name;
-        }
-    }
-    else {
-        this.name = pathname;
-    }
-    this.setTitle(this.name);
+    var self = this,
+        id = 'VariableFigure-'+pathname.replace(/\./g,'-'),
+        name = openmdao.Util.getName(pathname),
+        parent = openmdao.Util.getPath(pathname),
+        parentName = openmdao.Util.getName(parent),
+        svg = jQuery('<svg height="35" width="150">'
+                   + '    <rect x="0" y="5" height="30" width="150" rx="5" ry="5";" />'
+                   + '    <text id="name" x="75" y="17" text-anchor="middle">Name</text>'
+                   + '    <text id="units" x="75" y="30" font-style="italic" text-anchor="middle">Units</text>'
+                   + '</svg>'),
+        fig = jQuery('<div class="VariableFigure" style="width:100px;height:35px;float:left;padding:5px;position:absolute" />')
+            .append(svg),
+        rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill':'#999999'},
+        contextMenu = jQuery("<ul class='context-menu'>")
+            .appendTo(fig),
+        tok,
+        units;
+
+//    elm.append(fig);
+
+//    if (inout === 'input') {
+//        this.outputPort=null;
+//        this.inputPort=new draw2d.InputPort();
+//        if (this.variable.connected) {
+//            this.inputPort.setBackgroundColor(new draw2d.Color(255,0,0));
+//        }
+//    }
+//    else {
+//        this.outputPort=new draw2d.OutputPort();
+//        this.inputPort=null;
+//        if (this.variable.connected) {
+//            this.outputPort.setBackgroundColor(new draw2d.Color(255,0,0));
+//        }
+//    }
 
     tok = variable.type.split('.');
     if (tok.length > 1) {
-        this.setContent('<center><i>' + variable.units +
-                        ' (' + tok[tok.length-1] + ') </i></center>');
+        units = variable.units + ' (' + tok[tok.length-1] + ')';
     }
     else {
-        this.setContent('<center><i>' + variable.units +
-                        ' (' + tok + ') </i></center>');
+        units = variable.units + ' (' + tok + ')';
     }
 
-    this.setCanDrag(false);
-};
+    // set name, id, tooltip and width
+    fig.attr('id',id);
+    svg.uniqueId();
+    svg.find('#name').text(name);
+    svg.find('#units').text(units);
+    fig.find('rect').css(rectCSS);  // defaults
+    contextMenu.uniqueId();
 
-openmdao.VariableFigure.prototype=new draw2d.Node();
-
-openmdao.VariableFigure.prototype.type="VariableFigure";
-
-openmdao.VariableFigure.prototype.createHTMLElement=function(){
-    var item=document.createElement("div");
-    item.id=this.id;
-    item.style.color="black";
-    item.style.position="absolute";
-    item.style.left=this.x+"px";
-    item.style.top=this.y+"px";
-    item.style.height=this.width+"px";
-    item.style.width=this.height+"px";
-    item.style.margin="0px";
-    item.style.padding="0px";
-    item.style.outline="none";
-    item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
-
-    this.header=document.createElement("div");
-    this.header.style.position="absolute";
-    this.header.style.left="0px";
-    this.header.style.top="0px";
-    this.header.style.height="15px";
-    this.header.style.backgroundColor="#CCCCCC";
-    this.header.style.borderTop="3px solid #666666";
-    this.header.style.borderLeft="1px solid #666666";
-    this.header.style.borderRight="1px solid #666666";
-    this.header.style.fontSize="9px";
-    this.header.style.textAlign="center";
-    this.disableTextSelection(this.header);
-    this.header.className="VariableFigureHeader";
-
-    this.textarea=document.createElement("div");
-    this.textarea.style.position="absolute";
-    this.textarea.style.left="0px";
-    this.textarea.style.top="15px";
-    this.textarea.style.backgroundColor="white";
-    this.textarea.style.borderTop="2px solid #666666";
-    this.textarea.style.borderLeft="1px solid #666666";
-    this.textarea.style.borderRight="1px solid #666666";
-    this.textarea.style.overflow="hidden";
-    this.textarea.style.fontSize="9pt";
-    this.disableTextSelection(this.textarea);
-
-    item.appendChild(this.header);
-    item.appendChild(this.textarea);
-    return item;
-};
-
-openmdao.VariableFigure.prototype.setDimension=function(w,h){
-    draw2d.Node.prototype.setDimension.call(this,w,h);
-    if(this.top_left!==null){
-        this.textarea.style.width=(this.width)+"px";
-        this.textarea.style.height=(this.height-this.header.height)+"px";
-        this.header.style.width=(this.width)+"px";
-    }
-    if(this.outputPort!==null){
-        this.outputPort.setPosition(this.width+5,this.height/2);
-    }
-    if(this.inputPort!==null){
-        this.inputPort.setPosition(0,this.height/2);
-    }
-};
-
-openmdao.VariableFigure.prototype.setTitle=function(title){
-    this.header.innerHTML=title;
-};
-
-openmdao.VariableFigure.prototype.setContent=function(html){
-    this.textarea.innerHTML=html;
-};
-
-openmdao.VariableFigure.prototype.onDragstart=function(x,y){
-    var dragStarted=draw2d.Node.prototype.onDragstart.call(this,x,y);
-    if (this.header===null){
-        return false;
-    }
-    if (this.originalHeight===-1) {
-        if (this.canDrag === true &&
-            x < parseInt(this.header.style.width,10) &&
-            y < parseInt(this.header.style.height,10)) {
-            return true;
-        }
-    }
-    else {
-        return dragStarted;
-    }
-};
-
-openmdao.VariableFigure.prototype.setCanDrag=function(flag){
-    draw2d.Node.prototype.setCanDrag.call(this,flag);
-    this.html.style.cursor="";
-    if(this.header===null){
-        return;
-    }
-    if(flag){
-        this.header.style.cursor="move";
-    }else{
-        this.header.style.cursor="";
-    }
-};
-
-openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
-    draw2d.Node.prototype.setWorkflow.call(this,wkflw);
-    if (wkflw !== null) {
-        if (this.inputPort!==null) {
-            this.inputPort.setWorkflow(wkflw);
-            this.inputPort.setName("input");
-            this.addPort(this.inputPort,0,this.height/2);
-        }
-        if (this.outputPort!==null) {
-            this.outputPort.setWorkflow(wkflw);
-            this.outputPort.setName("output");
-            this.addPort(this.outputPort,this.width+5,this.height/2);
-            var oThis=this;
-            this.outputPort.createCommand = function(request) {
-                if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
-                    if( request.source.parentNode.id === request.target.parentNode.id) {
-                        return null;
-                    }
-                    if (request.source instanceof draw2d.InputPort) {
-                        var srcName       = openmdao.Util.getName(oThis.pathname),
-                            srcParent     = openmdao.Util.getPath(oThis.pathname),
-                            srcParentName = openmdao.Util.getName(srcParent),
-                            srcParentPath = openmdao.Util.getPath(srcParent),
-                            dstFigure     = request.source.getParent(),
-                            dstName       = openmdao.Util.getName(dstFigure.pathname),
-                            dstParent     = openmdao.Util.getPath(dstFigure.pathname),
-                            dstParentName = openmdao.Util.getName(dstParent),
-                            dstParentPath = openmdao.Util.getPath(dstParent),
-                            asm = null,
-                            src = null,
-                            dst = null;
-
-                        if (srcParentPath === dstParentPath) {
-                            // both vars are in components of a common assembly
-                            asm = srcParentPath;
-                            src = srcParentName + "." + srcName;
-                            dst = dstParent + "." + dstName;
-                        }
-                        else if (srcParent === dstParentPath) {
-                            // this is an assembly var, connecting to a comp var
-                            asm = srcParent;
-                            src = srcName;
-                            dst = dstParentName + "." + dstName;
-                        }
-                        else if (srcParentPath === dstParent) {
-                            // this is a comp var, connecting to a assembly var
-                            asm = srcParentPath;
-                            src = srcParentName + "." + srcName;
-                            dst = dstName;
-                        }
-                        else  {
-                            alert("Can't connect",oThis.pathname,'to',dstFigure.pathname);
-                            return false;
-                        }
-                        oThis.myModel.issueCommand(asm+".connect('"+src+"','"+dst+"')");
-                    }
-                    return true;
-                }
-            };
-        }
-    }
-};
-
-openmdao.VariableFigure.prototype.getContextMenu=function(){
-    var menu=new draw2d.Menu();
-    var oThis=this;
-    if (oThis.inout === 'output') {
-        menu.appendMenuItem(new draw2d.MenuItem("Create Passthrough",null,function(){
-            var parent     = openmdao.Util.getPath(oThis.pathname),
-                parentName = openmdao.Util.getName(parent),
-                parentAssm = openmdao.Util.getPath(parent),
-                cmd = parentAssm+".create_passthrough('"+parentName+"."+oThis.name+"')";
-            oThis.myModel.issueCommand(cmd);
+    // create context menu
+    contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
+    if (inout === 'output') {
+        contextMenu.append(jQuery('<li>Create Passthrough</li>').click(function(e) {
+            var parentAssm = openmdao.Util.getPath(parent),
+                cmd = parentAssm+".create_passthrough('"+parentName+"."+name+"')";
+            model.issueCommand(cmd);
         }));
     }
-    return menu;
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
+
+    /** get element */
+    this.getElement = function() {
+        return fig;
+    };
+
+    /** get pathname */
+    this.getPathname = function() {
+        return pathname;
+    };
+
+    /** get width */
+    this.getWidth = function() {
+        return fig.width();
+    };
+
+    /** get height */
+    this.getHeight = function() {
+        return fig.height();
+    };
+
+    /** get position relative to parent div */
+    this.getPosition = function() {
+        return fig.position();
+    };
+
+    /** get position relative to parent div */
+    this.setPosition = function(x, y) {
+        return fig.css({ left: x, top: y });
+    };
+
 };
 
-// openmdao.VariableFigure.prototype.onMouseEnter=function(){
-    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
-// };
+//openmdao.VariableFigure.prototype.onDragstart=function(x,y){
+//    var dragStarted=draw2d.Node.prototype.onDragstart.call(this,x,y);
+//    if (this.header===null){
+//        return false;
+//    }
+//    if (this.originalHeight===-1) {
+//        if (this.canDrag === true &&
+//            x < parseInt(this.header.style.width,10) &&
+//            y < parseInt(this.header.style.height,10)) {
+//            return true;
+//        }
+//    }
+//    else {
+//        return dragStarted;
+//    }
+//};
 
-openmdao.VariableFigure.prototype.onDoubleClick=function(){
-    // nada ATM
-};
+//openmdao.VariableFigure.prototype.setCanDrag=function(flag){
+//    draw2d.Node.prototype.setCanDrag.call(this,flag);
+//    this.html.style.cursor="";
+//    if(this.header===null){
+//        return;
+//    }
+//    if(flag){
+//        this.header.style.cursor="move";
+//    }else{
+//        this.header.style.cursor="";
+//    }
+//};
 
-openmdao.VariableFigure.prototype.onMouseEnter=function(){
-    this.setColor(new draw2d.Color(0,255,0));
-};
-openmdao.VariableFigure.prototype.onMouseLeave=function(){
-    this.setColor(null);
-};
+//openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
+//    draw2d.Node.prototype.setWorkflow.call(this,wkflw);
+//    if (wkflw !== null) {
+//        if (this.inputPort!==null) {
+//            this.inputPort.setWorkflow(wkflw);
+//            this.inputPort.setName("input");
+//            this.addPort(this.inputPort,0,this.height/2);
+//        }
+//        if (this.outputPort!==null) {
+//            this.outputPort.setWorkflow(wkflw);
+//            this.outputPort.setName("output");
+//            this.addPort(this.outputPort,this.width+5,this.height/2);
+//            var oThis=this;
+//            this.outputPort.createCommand = function(request) {
+//                if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
+//                    if( request.source.parentNode.id === request.target.parentNode.id) {
+//                        return null;
+//                    }
+//                    if (request.source instanceof draw2d.InputPort) {
+//                        var srcName       = openmdao.Util.getName(oThis.pathname),
+//                            srcParent     = openmdao.Util.getPath(oThis.pathname),
+//                            srcParentName = openmdao.Util.getName(srcParent),
+//                            srcParentPath = openmdao.Util.getPath(srcParent),
+//                            dstFigure     = request.source.getParent(),
+//                            dstName       = openmdao.Util.getName(dstFigure.pathname),
+//                            dstParent     = openmdao.Util.getPath(dstFigure.pathname),
+//                            dstParentName = openmdao.Util.getName(dstParent),
+//                            dstParentPath = openmdao.Util.getPath(dstParent),
+//                            asm = null,
+//                            src = null,
+//                            dst = null;
+
+//                        if (srcParentPath === dstParentPath) {
+//                            // both vars are in components of a common assembly
+//                            asm = srcParentPath;
+//                            src = srcParentName + "." + srcName;
+//                            dst = dstParent + "." + dstName;
+//                        }
+//                        else if (srcParent === dstParentPath) {
+//                            // this is an assembly var, connecting to a comp var
+//                            asm = srcParent;
+//                            src = srcName;
+//                            dst = dstParentName + "." + dstName;
+//                        }
+//                        else if (srcParentPath === dstParent) {
+//                            // this is a comp var, connecting to a assembly var
+//                            asm = srcParentPath;
+//                            src = srcParentName + "." + srcName;
+//                            dst = dstName;
+//                        }
+//                        else  {
+//                            alert("Can't connect",oThis.pathname,'to',dstFigure.pathname);
+//                            return false;
+//                        }
+//                        oThis.model.issueCommand(asm+".connect('"+src+"','"+dst+"')");
+//                    }
+//                    return true;
+//                }
+//            };
+//        }
+//    }
+//};
+

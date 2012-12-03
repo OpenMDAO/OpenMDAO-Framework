@@ -26,14 +26,10 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         src_cmp_selector = componentsDiv.find('#src_cmp_list'),
         dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
         component_list = [],
-        // dataflow diagram
-        connectionsCSS = 'background:grey; position:static; width:100%;',
-        connectionsDiv = jQuery('<div style="'+connectionsCSS+'">')
+        // connections diagram
+        connectionsCSS = 'background:grey; position:relative; width:100%; overflow:auto',
+        connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
             .appendTo(self.elm),
-        dataflowID  = id + '-dataflow',
-        dataflowDiv = jQuery('<div id='+dataflowID+' style="'+connectionsCSS+'">')
-            .appendTo(connectionsDiv),
-        dataflow = new draw2d.Workflow(dataflowID),
         // variable selectors and connect button
         variablesHTML = '<div style="'+connectionsCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
@@ -59,36 +55,25 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         assemblyKey = '<Assembly>',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
         normalCSS = {'font-style':'normal', 'opacity':'1.0'},
-        showAllVariables = false;  // only show connected variables by default
+        showAllVariables = true,  // only show connected variables by default
+        contextMenu = jQuery("<ul class='context-menu'>")
+            .appendTo(connectionsDiv);
 
     self.pathname = null;
 
-    // plain background, non-selectable
-    dataflow.setBackgroundImage(null);
-    dataflowDiv.css({'background-color':'transparent','position':'absolute','width':'100%'});
-    dataflowDiv.on('selectstart dragstart',function(evt){ evt.preventDefault(); return false; });
-
     // create context menu for toggling the showAllVariables option
-    dataflow.getContextMenu=function(){
-        var menu=new draw2d.Menu();
+    contextMenu.uniqueId();
+    contextMenu.append(jQuery('<li>Toggle All Variables</li>').click(function(e) {
         if (showAllVariables) {
-            menu.appendMenuItem(new draw2d.MenuItem("Show Connections Only",null,
-                function(){
-                    showAllVariables = false;
-                    showConnections();
-                })
-            );
+            showAllVariables = false;
+            showConnections();
         }
         else {
-            menu.appendMenuItem(new draw2d.MenuItem("Show All Variables",null,
-                function(){
-                    showAllVariables = true;
-                    showConnections();
-                })
-            );
+            showAllVariables = true;
+            showConnections();
         }
-        return menu;
-    };
+    }));
+    ContextMenu.set(contextMenu.attr('id'), connectionsDiv.attr('id'));
 
     function setupSelector(selector) {
         // if selector gains focus with assemblyKey then clear it
@@ -176,6 +161,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         if (!data || !data.Dataflow || !data.Dataflow.components
                   || !data.Dataflow.components.length) {
             // don't have what we need, probably something got deleted
+            debug.warn('ConnectionFrame.loadData(): Invalid data',data);
             self.close();
         }
         else {
@@ -211,16 +197,17 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     function loadConnectionData(data) {
-        
+        debug.info('ConnectionFrame.loadConnectionData(): data',data);
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
+            debug.warn('ConnectionFrame.loadConnectionData(): Invalid data',data);
             self.close();
         }
         else {
-            dataflow.clear();
+            connectionsDiv.html('');
             figures = {};
             var i = 0,
-                x = 15,
+                x = 5,
                 y = 10,
                 conn_list = jQuery.map(data.connections, function(n) {
                     return n;
@@ -243,63 +230,65 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
                         src_path = self.pathname+'.'+src_name,
                         fig = new openmdao.VariableFigure(model,src_path,srcvar,'output');
-                    dataflow.addFigure(fig);
+                    connectionsDiv.append(fig.getElement());
                     fig.setPosition(x,y);
+                    debug.info('ConnectionFrame.loadConnectionData(): srcvar', src_name, fig, x, y);
                     figures[src_name] = fig;
-                    y = y + fig.height + 10;
+                    y = y + fig.getHeight() + 10;
                 }
             });
             var end_outputs = y;
 
-            x = 220;
+            x = 210;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
                 if (showAllVariables || conn_list.contains(dstvar.name)) {
                     var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name,
                         dst_path = self.pathname+'.'+dst_name,
                         fig = new openmdao.VariableFigure(model,dst_path,dstvar,'input');
-                    dataflow.addFigure(fig);
+                    connectionsDiv.append(fig.getElement());
                     fig.setPosition(x,y);
+                    debug.info('ConnectionFrame.loadConnectionData(): dstvar', dst_name, fig, x, y);
                     figures[dst_name] = fig;
-                    y = y + fig.height + 10;
+                    y = y + fig.getHeight() + 10;
                 }
             });
             var end_inputs = y;
 
-            var height = Math.max(end_inputs, end_outputs, 25) + 'px';
-            dataflowDiv.height(height);
-            connectionsDiv.height(height);
+//            var height = Math.max(end_inputs, end_outputs, 25) + 'px';
+//            connectionsDiv.height(height);
+            connectionsDiv.css({'min-height': 300 });
             connectionsDiv.show();
             variablesDiv.show();
 
-            jQuery.each(data.connections,function(idx,conn) {
-                var src_name = conn[0],
-                    dst_name = conn[1],
-                    src_fig = figures[src_name],
-                    dst_fig = figures[dst_name],
-                    src_port = src_fig.getPort("output"),
-                    dst_port = dst_fig.getPort("input");
-                c = new draw2d.Connection();
-                c.setSource(src_port);
-                c.setTarget(dst_port);
-                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
-                c.setRouter(new draw2d.BezierConnectionRouter());
-                c.setCoronaWidth(10);
-                c.getContextMenu=function(){
-                    var menu=new draw2d.Menu();
-                    var oThis=this;
-                    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                            var asm = self.pathname,
-                                cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
-                            model.issueCommand(cmd);
-                        })
-                    );
-                    return menu;
-                };
-                dataflow.addFigure(c);
-                src_port.setBackgroundColor(new draw2d.Color(0,0,0));
-                dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
-            });
+//            jQuery.each(data.connections,function(idx,conn) {
+//                var src_name = conn[0],
+//                    dst_name = conn[1],
+//                    src_fig = figures[src_name],
+//                    dst_fig = figures[dst_name],
+//                    src_port = src_fig.getPort("output"),
+//                    dst_port = dst_fig.getPort("input");
+//                c = new draw2d.Connection();
+//                c.setSource(src_port);
+//                c.setTarget(dst_port);
+//                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+//                c.setRouter(new draw2d.BezierConnectionRouter());
+//                c.setCoronaWidth(10);
+//                c.getContextMenu=function(){
+//                    var menu=new draw2d.Menu();
+//                    var oThis=this;
+//                    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+//                            var asm = self.pathname,
+//                                cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
+//                            model.issueCommand(cmd);
+//                        })
+//                    );
+//                    return menu;
+//                };
+//                connectionsDiv.append(c);
+//                src_port.setBackgroundColor(new draw2d.Color(0,0,0));
+//                dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
+//            });
 
             // update the output & input selectors to current outputs & inputs
             src_var_selector.html('');
