@@ -1,6 +1,18 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
+if (!Raphael.fn.hasOwnProperty('variableNode')) {
+    Raphael.fn.variableNode = function(x, y, name) {
+        this.x = x;
+        this.y = y;
+        this.name = name;
+        this.rectObj = paper.rect(x, y, 125, 30, 10, 10, {'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
+        this.textObj = paper.text(this.x, this.y, this.name);
+        this.entireSet = paper.set(this.rectObj, this.textObj);
+        return this
+    }
+}
+
 openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
@@ -27,11 +39,13 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
         component_list = [],
         // connections diagram
-        connectionsCSS = 'background:grey; position:relative; width:100%; overflow:auto',
+        connectionsCSS = 'background:grey; position:relative; width:100%; overflow-x:hidden; overflow-y:auto; min-height:300px;',
         connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
-            .appendTo(self.elm),
+            .appendTo(self.elm)
+            .svg(),
         // variable selectors and connect button
-        variablesHTML = '<div style="'+connectionsCSS+'"><table>'
+        variablesCSS = 'background:grey; position:relative; width:100%;',
+        variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
@@ -58,7 +72,12 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         showAllVariables = false,  // only show connected variables by default
         contextMenu = jQuery("<ul class='context-menu'>")
             .appendTo(connectionsDiv),
-        r = Raphael(connectionsDiv.attr('id'), 640, 480);
+        r = connectionsDiv.svg('get'),
+        rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill':'#999999'},
+        textCSS = {'stroke':'#000000', 'text-anchor':'middle'};
+//        r = Raphael(connectionsDiv.attr('id'));
+
+debug.info('r',r);
 
     self.pathname = null;
 
@@ -233,10 +252,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
                         src_path = self.pathname+'.'+src_name,
                         fig = new openmdao.VariableFigure(model,src_path,srcvar,'output');
-                    fig = r.rect(x, y, 125, 30, 10);
-                    fig.attr('title',src_name);
-                    connectionsDiv.find('a[title="'+src_name+'"]').find('rect').append('<text>'+src_name+'</text>');
-                    fig.attr({'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
+                    fig = r.rect(x, y, 125, 30, 10, 10, {'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
+                    r.text(fig,src_name);
+//                    fig.attr('title',src_name);
+//                    connectionsDiv.find('a[title="'+src_name+'"]').find('rect').append('<text>'+src_name+'</text>');
+//                    fig.attr({'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
 //                    connectionsDiv.append(fig.getElement());
 //                    fig.setPosition(x,y);
 //                    debug.info('ConnectionFrame.loadConnectionData(): srcvar', src_name, fig, x, y);
@@ -254,10 +274,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name,
                         dst_path = self.pathname+'.'+dst_name,
                         fig = new openmdao.VariableFigure(model,dst_path,dstvar,'input');
-                    fig = r.rect(x, y, 125, 30, 10);
-                    fig.attr('title',dst_name);
-                    connectionsDiv.find('a[title="'+dst_name+'"]').find('rect').append('<text>'+dst_name+'</text>');
-                    fig.attr({'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
+                    fig = r.rect(x, y, 125, 30, 10, 10, {'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
+                    r.text(fig,dst_name);
+//                    fig.attr('title',dst_name);
+//                    connectionsDiv.find('a[title="'+dst_name+'"]').find('rect').append('<text>'+dst_name+'</text>');
+//                    fig.attr({'stroke':'#0b93d5', 'fill':'#999999', "stroke-width": 2});
 //                    connectionsDiv.append(fig.getElement());
 //                    fig.setPosition(x,y);
 //                    debug.info('ConnectionFrame.loadConnectionData(): dstvar', dst_name, fig, x, y);
@@ -268,9 +289,10 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             });
             var end_inputs = y;
 
-//            var height = Math.max(end_inputs, end_outputs, 25) + 'px';
+            var height = Math.max(end_inputs, end_outputs, 25); // + 'px';
 //            connectionsDiv.height(height);
-            connectionsDiv.css({'min-height': 300 });
+//            r.setSize(connectionsDiv.width(), height);
+
             connectionsDiv.show();
             variablesDiv.show();
 
@@ -301,7 +323,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 //                connectionsDiv.append(c);
 //                src_port.setBackgroundColor(new draw2d.Color(0,0,0));
 //                dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
-                r.connection(src_fig, dst_fig, "#000", "#fff")
+                r.connection(src_fig, dst_fig, "#000", "#fff");
             });
 
             // update the output & input selectors to current outputs & inputs
@@ -347,7 +369,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        if (self.pathname && self.pathname.length>0) {
+        if (self.pathname && self.pathname.length > 0) {
             self.editAssembly(self.pathname,self.src_comp,self.dst_comp);
         }
     };

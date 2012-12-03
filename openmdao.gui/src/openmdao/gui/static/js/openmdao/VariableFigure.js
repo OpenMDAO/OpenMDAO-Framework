@@ -84,6 +84,11 @@ openmdao.VariableFigure=function(model, pathname, variable, inout) {
      *  privileged
      ***********************************************************************/
 
+    /** get SVG element */
+    this.getSVGElement = function() {
+        return svg;
+    };
+
     /** get element */
     this.getElement = function() {
         return fig;
