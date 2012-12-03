@@ -357,7 +357,13 @@ class FileHandler(ReqHandler):
                     # parse it looking for syntax errors
                     ast.parse(text, filename=filename, mode='exec')
                 except Exception as err:
-                    cserver.send_pub_msg(str(err), 'file_errors')
+                    if isinstance(err, SyntaxError):
+                        # Drop leading '/' on filename, show actual line.
+                        err_str = 'invalid syntax (%s, line %s)\n%s' \
+                                % (err.filename[1:], err.lineno, err.text)
+                    else:
+                        err_str = str(err)
+                    cserver.send_pub_msg(err_str, 'file_errors')
                     self.send_error(400)
                     return
                 if not force:

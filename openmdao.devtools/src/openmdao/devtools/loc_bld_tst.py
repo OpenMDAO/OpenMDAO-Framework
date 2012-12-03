@@ -1,5 +1,6 @@
 import codecs
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -308,9 +309,22 @@ if __name__ == '__main__':
                       dest='testargs', default='',
                       help="args to pass to openmdao test")
 
-    (options, args) = parser.parse_args(sys.argv[1:])
+    # Handle quoting problem that happens on Windows (at least).
+    # (--testargs="-v --gui" gets split into: '--testargs="-v', '--gui', '"')
+    args = []
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        i += 1
+        while arg.count('"') == 1 and i < len(sys.argv):
+            next_arg = sys.argv[i]
+            i += 1
+            arg += ' '+next_arg
+        args.append(arg)
+        
+    (options, args) = parser.parse_args(args)
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
                             branch=options.branch,
-                            testargs=options.testargs.split()))
+                            testargs=shlex.split(options.testargs)))
     

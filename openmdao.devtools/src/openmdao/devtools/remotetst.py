@@ -76,13 +76,16 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         else:
             print "not pulling docs from %s" % hostname
 
-        if build_type == 'dev':
-            print "pulling any pngs from %s" % hostname
-            retrieve_pngs(os.path.join('~', remotedir))
-            print "png retrieval successful"
-
         return result.return_code
     finally:
+        if build_type == 'dev':
+            print "pulling any pngs from %s" % hostname
+            try:
+                retrieve_pngs(os.path.join('~', remotedir))
+                print "png retrieval successful"
+            except Exception as exc:
+                print "png retrieval failed:", exc
+
         if not keep:
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
