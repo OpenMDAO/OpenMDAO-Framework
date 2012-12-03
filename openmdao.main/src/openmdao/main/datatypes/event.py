@@ -15,7 +15,7 @@ class Event(Enthought_Event):
 
     def get_attribute(self, name, meta):
         """Return the attribute dictionaries for this variable. This dict is
-        used by the GUI to populate the edit UI.
+        used by the GUI to populate the object editor pane.
 
         name: str
           Name of variable

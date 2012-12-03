@@ -1654,7 +1654,28 @@ class Component(Container):
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
         attrs['Slots'] = slots
-        attrs['Events'] = events
+        
+        # Find any event traits
+        
+        tset1 = set(self._alltraits(events=True))
+        tset2 = set(self._alltraits(events=False))
+        event_set = tset1.difference(tset2)
+        # Remove the Enthought events common to all has_traits objects
+        event_set.remove('trait_added')
+        event_set.remove('trait_modified')
+        
+        events = []
+        for name in event_set:
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            ttype = trait.trait_type
+            
+            event_attr = ttype.get_attribute(name, meta)
+            events.append(event_attr)
+            
+        if len(events) > 0:
+            attrs['EventTraits'] = events
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.

@@ -456,6 +456,16 @@ class ConsoleServer(cmd.Cmd):
             dataflow['objectives'] = []
         return jsonpickle.encode(dataflow)
 
+    def get_available_events(self, pathname):
+        ''' Serve a list of events that are available to a driver.
+        '''
+        events = []
+        if pathname:
+            drvr, root = self.get_container(pathname)
+            events = drvr.list_available_events()
+            
+        return jsonpickle.encode(events)    
+        
     def get_workflow(self, pathname):
         flows = []
         if pathname:
