@@ -107,7 +107,7 @@ class HasEventsTestCase(unittest.TestCase):
         
         attr = self.asm.comp1.get_attributes()
         
-        event_attr = attr['EventTraits']
+        event_attr = attr['Events']
         self.assertTrue( { 'desc' : 'Do It!',
                            'name' : 'doit',
                            'transient' : True,
@@ -120,9 +120,24 @@ class HasEventsTestCase(unittest.TestCase):
                            'type' : 'event'} in event_attr)
         
         event_list = self.asm.driver.list_available_events()
-        
         self.assertEqual(['comp1.doit', 'comp1.doit2'],
                          event_list)
+
+        self.asm.driver.add_event('comp1.doit')
+        self.asm.driver.add_event('comp1.doit2')
+
+        # Already linked events should not show up.
+        event_list = self.asm.driver.list_available_events()
+        self.assertEqual([],
+                         event_list)
+
+        attr = self.asm.driver.get_attributes(io_only=False)
+        
+        event_attr = attr['Triggers']
+        self.assertEqual([{'target': 'comp1.doit'},
+                          {'target': 'comp1.doit2'}],
+                         event_attr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1581,7 +1581,6 @@ class Component(Container):
         inputs = []
         outputs = []
         slots = []
-        events = []
 
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
@@ -1675,7 +1674,7 @@ class Component(Container):
             events.append(event_attr)
             
         if len(events) > 0:
-            attrs['EventTraits'] = events
+            attrs['Events'] = events
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.
@@ -1771,7 +1770,7 @@ class Component(Container):
                 attrs['Constraints'] = constraints
 
             if has_interface(self, IHasEvents):
-                attrs['Events'] = [dict(target=path)
+                attrs['Triggers'] = [dict(target=path)
                                    for path in self.get_events()]
         return attrs
 

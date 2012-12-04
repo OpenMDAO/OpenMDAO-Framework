@@ -63,7 +63,10 @@ class HasEvents(object):
             event_set.remove('trait_added')
             event_set.remove('trait_modified')
             
-            events += ['%s.%s' % (comp.name, item) for item in event_set]
+            for item in event_set:
+                name = '%s.%s' % (comp.name, item)
+                if name not in self._events:
+                    events.append(name)
             
         return events
     
