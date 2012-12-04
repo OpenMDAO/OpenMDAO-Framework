@@ -790,10 +790,22 @@ def get_full_libpath():
                 if len(paths) > 1:
                     for p in paths:
                         libfiles.remove(p)
-        final = set(libpaths)
+
+        added = []
+        exts = ['.py', '.pyc', '.pyo']
         for fname in libfiles:
-            if not os.path.exists(os.path.splitext(fname)[0]+'.py'):
-                final.add(os.path.dirname(fname))
+            for ext in exts:
+                if os.path.exists(os.path.splitext(fname)[0]+ext):
+                    break
+            else:
+                added.append(os.path.dirname(fname))
+
+        final = []
+        seen = set()
+        for p in added + libpaths:
+            if p not in seen:
+                seen.add(p)
+                final.append(p)
                 
         print os.pathsep.join(final)
         
