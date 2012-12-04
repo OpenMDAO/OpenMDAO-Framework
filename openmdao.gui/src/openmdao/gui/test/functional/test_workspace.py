@@ -717,10 +717,11 @@ def _test_remove(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
+    workspace_page.show_dataflow('top')  # Displays 'top' slightly higher.
     workspace_page.select_object('top')
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(-100, 100)  # Move it away from context menu.
+    editor.move(-100, 150)  # Move it away from context menu.
     connections = top.connections_page()
     properties = top.properties_page()
 

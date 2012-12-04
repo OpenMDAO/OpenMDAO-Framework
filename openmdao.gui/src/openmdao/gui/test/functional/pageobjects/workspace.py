@@ -446,7 +446,7 @@ class WorkspacePage(BasePageObject):
 
     def set_library_filter(self, filter):
         """ Set the search filter text. """
-        for retry in range(10):  # This has had issues...
+        for retry in range(3):  # This has had issues...
             try:
                 self.library_search = filter + '\n'
             except StaleElementReferenceException:
@@ -454,7 +454,7 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
-        time.sleep(0.5)  # Wait for display update.
+        time.sleep(1)  # Wait for display update.
 
     def clear_library_filter(self):
         """ Clear the search filter via the 'X' button. """
