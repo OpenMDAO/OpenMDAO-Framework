@@ -279,7 +279,7 @@ class SafeInvoker(object):
         """ Send request to worker and wait (with timeout) for results. """
         self._request_q.put((method, args, kwargs))
         try:
-            retval, exc = self._reply_q.get(timeout=3*60)
+            retval, exc = self._reply_q.get(timeout=2*60)
         except Queue.Empty:
             self._request_q.put((None, None, None))  # In case it finishes.
             abort(True)

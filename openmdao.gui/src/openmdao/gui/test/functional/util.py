@@ -297,16 +297,20 @@ def generate(modname):
             logging.critical('Aborting tests, skipping browser close')
         else:
             try:
-                browser.quit()
-            except WindowsError:
-                # if it already died, calling kill on a defunct process
-                # raises a WindowsError: Access Denied
-                pass
-            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
-                try:
-                    os.remove('chromedriver.log')
-                except Exception as exc:
-                    print 'Could not delete chromedriver.log: %s' % exc
+                browser.close()
+            except Exception as exc:
+                print 'browser.close failed:', exc
+        try:
+            browser.quit()
+        except Exception as exc:
+            # if it already died, calling kill on a defunct process
+            # raises a WindowsError: Access Denied
+            print 'browser.quit failed:', exc
+        if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
+            try:
+                os.remove('chromedriver.log')
+            except Exception as exc:
+                print 'Could not delete chromedriver.log: %s' % exc
 
 
 class _Runner(object):
