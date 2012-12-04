@@ -102,7 +102,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
-        console.log(cmd)
         model.issueCommand(cmd);
     }
 
