@@ -59,7 +59,6 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
         
         model.getAvailableEvents(pathname, function (cjson) {
             candidates = cjson;
-            console.log(candidates);
 
             // Build dialog markup
             var win = jQuery('<div id="event-dialog"></div>'),
@@ -92,7 +91,6 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
                     select: function(event, ui) {
                         selector.val(ui.item.value);
                         selector.blur();
-                        console.log(candidates);
                     },
                     delay: 0,
                     minLength: 0
