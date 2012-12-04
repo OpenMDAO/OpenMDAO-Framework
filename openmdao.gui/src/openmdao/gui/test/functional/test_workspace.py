@@ -722,7 +722,7 @@ def _test_remove(browser):
     workspace_page.select_object('top')
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(0, 200)  # Move it away from context menu.
+    editor.move(0, 290)  # Move it away from context menu.
     connections = top.connections_page()
     properties = top.properties_page()
 
