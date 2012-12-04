@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Event
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -1581,6 +1581,7 @@ class Component(Container):
         inputs = []
         outputs = []
         slots = []
+        events = []
 
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
@@ -1653,6 +1654,28 @@ class Component(Container):
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
         attrs['Slots'] = slots
+        
+        # Find any event traits
+        
+        tset1 = set(self._alltraits(events=True))
+        tset2 = set(self._alltraits(events=False))
+        event_set = tset1.difference(tset2)
+        # Remove the Enthought events common to all has_traits objects
+        event_set.remove('trait_added')
+        event_set.remove('trait_modified')
+        
+        events = []
+        for name in event_set:
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            ttype = trait.trait_type
+            
+            event_attr = ttype.get_attribute(name, meta)
+            events.append(event_attr)
+            
+        if len(events) > 0:
+            attrs['EventTraits'] = events
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.

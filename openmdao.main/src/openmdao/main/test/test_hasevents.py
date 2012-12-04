@@ -20,8 +20,8 @@ class MyDriver(Driver):
 
 
 class MyEvComp(Component):
-    doit = Event()
-    doit2 = Event()
+    doit = Event(desc='Do It!')
+    doit2 = Event(desc='Do It Again!')
     doit_count = Int(0, iotype='out')
     doit2_count = Int(0, iotype='out')
     some_int = Int(0, iotype='in')
@@ -103,6 +103,26 @@ class HasEventsTestCase(unittest.TestCase):
         events = self.asm.driver.get_events()
         self.assertEqual(events, [])
         
+    def test_get_attributes(self):
+        
+        attr = self.asm.comp1.get_attributes()
+        
+        event_attr = attr['EventTraits']
+        self.assertTrue( { 'desc' : 'Do It!',
+                           'name' : 'doit',
+                           'transient' : True,
+                           'vartypename' : 'Event',
+                           'type' : 'event'} in event_attr)          
+        self.assertTrue( { 'desc' : 'Do It Again!',
+                           'name' : 'doit2',
+                           'transient' : True,
+                           'vartypename' : 'Event',
+                           'type' : 'event'} in event_attr)
+        
+        event_list = self.asm.driver.list_available_events()
+        
+        self.assertEqual(['comp1.doit', 'comp1.doit2'],
+                         event_list)
 
 if __name__ == "__main__":
     unittest.main()
