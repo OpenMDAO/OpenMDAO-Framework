@@ -141,6 +141,8 @@ def extend_parser(parser):
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_false", dest='gui', default=True,
                       help="do not install the openmdao graphical user interface and its dependencies")
+    parser.add_option("--nodocs", action="store_false", dest='docs', default=True,
+                      help="do not build the docs")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -197,6 +199,36 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
     except OSError:
         failures.append(req)
+
+def _update_activate(bindir):
+    _lpdict = {
+        'linux2': 'LD_LIBRARY_PATH',
+        'linux': 'LD_LIBRARY_PATH',
+        'darwin': 'DYLD_LIBRARY_PATH',
+        'win32': 'PATH',
+    }
+    libpathvname = _lpdict.get(sys.platform)
+    if libpathvname:
+        libfiles = []
+        if sys.platform.startswith('win'):
+            activate_base = 'activate.bat'
+        else:
+            activate_base = 'activate'
+                
+        absbin = os.path.abspath(bindir)
+        activate_fname = os.path.join(absbin, activate_base)
+        with open(activate_fname, 'r') as inp:
+            content = inp.read()
+            
+        if 'get_full_libpath' not in content:
+            if sys.platform.startswith('win'):
+                content += '''\\nfor /f "delims=" %%%%A in ('get_full_libpath') do @set PATH=%%%%A\\n\\n'''
+            else:
+                content += "\\n%%s=$(get_full_libpath)\\nexport %%s\\n\\n" %% (libpathvname, libpathvname)
+            
+        with open(activate_fname, 'w') as out:
+            out.write(content)
+            
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
@@ -294,8 +326,11 @@ def after_install(options, home_dir):
         deactivate = os.path.join(bin_dir, 'deactivate')
         source_command = "." if not sys.platform.startswith("win") else ""
         
-        if(os.system('%%s %%s && openmdao build_docs && deactivate' %% (source_command, activate)) != 0):
-            print "Failed to build the docs."
+        if options.docs:
+            if(os.system('%%s %%s && openmdao build_docs && deactivate' %% (source_command, activate)) != 0):
+                print "Failed to build the docs."
+        else:
+            print "\\nSkipping build of OpenMDAO docs.\\n"
 
         if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
             try:
@@ -309,7 +344,8 @@ def after_install(options, home_dir):
         print "ERROR: build failed: %%s" %% str(err)
         sys.exit(-1)
     
-
+    _update_activate(bin_dir)
+    
     abshome = os.path.abspath(home_dir)
     
     if failures:
