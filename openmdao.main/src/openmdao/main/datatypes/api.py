@@ -5,6 +5,7 @@ from openmdao.main.datatypes.bool import Bool
 from openmdao.main.datatypes.complex import Complex
 from openmdao.main.datatypes.dict import Dict
 from openmdao.main.datatypes.enum import Enum
+from openmdao.main.datatypes.event import Event
 from openmdao.main.datatypes.float import Float
 from openmdao.main.datatypes.file import File
 from openmdao.main.datatypes.int import Int
@@ -14,4 +15,4 @@ from openmdao.main.datatypes.str import Str
 
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later
-from enthought.traits.api import Python, Event, on_trait_change
+from enthought.traits.api import Python, on_trait_change

@@ -331,6 +331,23 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
+    /** get all available events in a workflow */
+    this.getAvailableEvents = function(name,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'events/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
 
     /** get value for pathname */
     this.getValue = function(pathname,callback,errorHandler) {

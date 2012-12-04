@@ -15,6 +15,7 @@ class ComponentPage(DialogPage):
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
     outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
+    events_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
@@ -41,6 +42,11 @@ class ComponentPage(DialogPage):
             found.append(row[0])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
+    def get_events(self):
+        """ Return events grid. """
+        self('events_tab').click()
+        return self.events
+
     def get_outputs(self):
         """ Return outputs grid. """
         self('outputs_tab').click()
@@ -58,17 +64,17 @@ class DriverPage(ComponentPage):
     workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']"))
     objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']"))
     constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']"))
-    events_tab      = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
+    triggers_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Triggers']"))
 
     parameters  = GridElement((By.ID, 'Parameters_parms'))
     objectives  = GridElement((By.ID, 'Objectives_objectives'))
     constraints = GridElement((By.ID, 'Constraints_constraints'))
-    events      = GridElement((By.ID, 'Events_events'))
+    triggers    = GridElement((By.ID, 'Triggers_triggers'))
 
     add_parameter  = ButtonElement((By.XPATH, "//span[text()='Add Parameter']"))
     add_objective  = ButtonElement((By.XPATH, "//span[text()='Add Objective']"))
     add_constraint = ButtonElement((By.XPATH, "//span[text()='Add Constraint']"))
-    add_event      = ButtonElement((By.XPATH, "//span[text()='Add Event']"))
+    add_trigger    = ButtonElement((By.XPATH, "//span[text()='Add Event']"))
 
     def get_parameters(self):
         """ Return parameters grid. """
@@ -85,10 +91,10 @@ class DriverPage(ComponentPage):
         self('constraints_tab').click()
         return self.constraints
 
-    def get_events(self):
-        """ Return events grid. """
-        self('events_tab').click()
-        return self.events
+    def get_triggers(self):
+        """ Return triggers grid. """
+        self('triggers_tab').click()
+        return self.triggers
 
     def new_parameter(self):
         """ Return :class:`ParameterDialog`. """
@@ -108,9 +114,9 @@ class DriverPage(ComponentPage):
         return ConstraintDialog(self.browser, self.port,
                                 (By.XPATH, "//div[@id='constraint-dialog']/.."))
 
-    def new_event(self):
+    def new_trigger(self):
         """ Return :class:`EventDialog`. """
-        self('add_event').click()
+        self('add_trigger').click()
         return EventDialog(self.browser, self.port,
                            (By.XPATH, "//div[@id='event-dialog']/.."))
 
