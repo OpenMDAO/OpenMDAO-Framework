@@ -36,11 +36,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
         component_list = [],
         // connections diagram
-        connectionsCSS = 'background:grey; position:relative; width:100%; overflow-x:hidden; overflow-y:auto; min-height:300px; height: 100%;',
+        connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
         connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
             .appendTo(self.elm),
         // variable selectors and connect button
-        variablesCSS = 'background:grey; position:absolute; bottom:0; width:100%;',
+        variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
         variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
@@ -72,8 +72,21 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         textCSS = {'stroke':'#000000', 'text-anchor':'middle'};
         r = Raphael(connectionsDiv.attr('id'));
 
-    self.elm.css({'position':'relative'});
+    self.elm.css({'position':'relative', 'height':'100%', 'overflow':'hidden' });
     self.pathname = null;
+
+    // set the connections pane height to dynamically fill the space between the
+    // component and variable selectors
+    function resize_contents() {
+        connectionsDiv.height(self.elm.innerHeight() 
+                            - componentsDiv.outerHeight()
+                            - variablesDiv.outerHeight());
+    }
+
+    // resize contents when told to do so (e.g. by BaseFrame when dialog is resized)
+    self.elm.on('resize_contents', function(e) {
+        resize_contents();
+    });
 
     // create context menu for toggling the showAllVariables option
     contextMenu.uniqueId();
@@ -210,7 +223,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     function loadConnectionData(data) {
-        debug.info('ConnectionFrame.loadConnectionData(): data',data);
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
             debug.warn('ConnectionFrame.loadConnectionData(): Invalid data',data);
@@ -272,19 +284,20 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     else {
                         typ = dstvar.units + ' (' + typ + ')';
                     }
-                    fig = r.variableNode(r, x, y,  openmdao.Util.getName(dst_name), typ);
+                    fig = r.variableNode(r, x, y, openmdao.Util.getName(dst_name), typ);
                     figures[dst_name] = fig;
                     y = y + 50 + 10;
                 }
             });
             var end_inputs = y;
 
-            var height = Math.max(end_inputs, end_outputs, 25); // + 'px';
-            connectionsDiv.height(height-variablesDiv.height());
+            var height = Math.max(end_inputs, end_outputs, 25);
             r.setSize(connectionsDiv.width(), height);
 
             connectionsDiv.show();
             variablesDiv.show();
+
+            resize_contents();
 
             jQuery.each(data.connections,function(idx,conn) {
                 var src_name = conn[0],
