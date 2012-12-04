@@ -640,14 +640,15 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 def drag_element_to(browser, element, drag_to, centerx):
     '''Drag one element over to another element'''
     chain = ActionChains(browser)
-    chain.move_to_element(element).perform()
+    chain.move_to_element(element)
     chain.click_and_hold(element)
-    chain.move_to_element(drag_to).perform()
+    chain.move_to_element(drag_to)
     if centerx:
         offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
-        chain.move_by_offset(offset, 1).perform()
+        chain.move_by_offset(offset, 1)
     else:
-        chain.move_by_offset(2, 1).perform()
+        chain.move_by_offset(5, 1)
+    chain.perform()
     return chain
 
 

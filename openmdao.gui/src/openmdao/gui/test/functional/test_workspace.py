@@ -610,6 +610,7 @@ def _test_driver_config(browser):
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
 
     # Add a (nonsense) named parameter.
     editor('parameters_tab').click()
@@ -721,7 +722,7 @@ def _test_remove(browser):
     workspace_page.select_object('top')
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(-100, 150)  # Move it away from context menu.
+    editor.move(0, 200)  # Move it away from context menu.
     connections = top.connections_page()
     properties = top.properties_page()
 
