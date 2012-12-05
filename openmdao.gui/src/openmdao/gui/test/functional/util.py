@@ -344,13 +344,7 @@ class _Runner(object):
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
                 print 'Attempting to take screenshot...'
-                try:
-                    browser.save_screenshot(filename)
-                except Exception as err:
-                    msg = 'Screenshot failed: %s' % err
-                    print msg
-                    logging.critical(msg)
-                else:
+                if _save_screenshot(browser, filename):
                     msg = 'Screenshot in %s' % filename
                     print msg
                     logging.critical(msg)
@@ -368,6 +362,26 @@ class _Runner(object):
             sys.stdout.flush()
             sys.stderr.flush()
             raise saved_exc[0], saved_exc[1], saved_exc[2]
+
+def _save_screenshot(browser, filename, retry=True):
+    """ Attempt to take a screenshot. """
+    try:
+        browser.save_screenshot(filename)
+    except Exception as exc:
+        msg = 'Screenshot failed: %s' % exc
+        print msg
+        logging.critical(msg)
+        if 'An open modal dialog blocked the operation' in msg and retry:
+            alert = browser.switch_to_alert()
+            msg = 'alert text: %s' % alert.text
+            print msg
+            logging.critical(msg)
+            alert.dismiss()
+            print 'Retrying...'
+            return _save_screenshot(browser, filename, False)
+        else:
+            return False
+    return True
 
 
 def startup(browser):

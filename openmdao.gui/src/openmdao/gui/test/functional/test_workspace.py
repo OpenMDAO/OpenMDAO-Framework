@@ -345,7 +345,8 @@ b = Float(0.0, iotype='out')
     try:  # We expect 2 notifiers: command complete and error.
         NotifierPage.wait(workspace_page, base_id='command')
     except WebDriverException as exc:
-        if 'Element is not clickable' in str(exc):
+        err = str(exc)
+        if 'Element is not clickable' in err:
             err = NotifierPage.wait(workspace_page)
             NotifierPage.wait(workspace_page, base_id='command')
     else:

@@ -261,6 +261,9 @@ class SafeDriver(SafeBase):
     def save_screenshot(self, *args, **kwargs):
         return self._invoke('save_screenshot', args, kwargs)
 
+    def switch_to_alert(self, *args, **kwargs):
+        return self._invoke('switch_to_alert', args, kwargs)
+
     def switch_to_window(self, *args, **kwargs):
         return self._invoke('switch_to_window', args, kwargs)
 
