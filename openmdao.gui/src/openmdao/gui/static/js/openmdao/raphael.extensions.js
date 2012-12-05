@@ -79,18 +79,38 @@ Raphael.fn.connection = function (obj1, obj2, line, bg) {
 };
 
 // ┌────────────────────────────────────────────────────────────────────┐ \\
-// │ node from the example at:                                          │ \\
-// |     http://stackoverflow.com/questions/8989777/                    │ \\
+// │ openmdao variable node                                             │ \\
 // └────────────────────────────────────────────────────────────────────┘ \\
 
-Raphael.fn.node = function(x, y, radius, txt) {
-    this.x = x;
-    this.y = y;
-    this.radius = radius;
-    this.txt = txt;
-    this.circleObj = paper.circle(this.x, this.y, radius);
-    this.textObj   = paper.text(this.x, this.y, this.txt);
-    this.entireSet = paper.set(this.circleObj, this.textObj);
-    return this
-}
+Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
+    var typeStr = attr.type.split('.'),
+        outline = '#0b93d5',
+        rectObj, nameObj, typeObj, setObj;
+
+    if (typeStr.length > 1) {
+        typeStr = attr.units + ' (' + typeStr[typeStr.length-1] + ')';
+    }
+    else {
+        typeStr = attr.units + ' (' + typeStr + ')';
+    }
+
+    if (attr.connected) {
+        outline = '#666666';
+    }
+
+    rectObj = paper.rect(x, y, 150, 30, 10, 10)
+        .attr({'stroke':outline, 'fill':'#999999', 'stroke-width': 2}),
+    nameObj = paper.text(x+75, y+10, openmdao.Util.getName(name))
+        .attr({'text-anchor':'middle', 'font-size':'12pt'}),
+    typeObj = paper.text(x+75, y+20, typeStr)
+        .attr({'text-anchor':'middle', 'font-size':'10pt'});
+    setObj = paper.set(rectObj, nameObj, typeObj);
+
+    setObj.data('input',input);
+    setObj.data('name',name);
+    setObj.data('connected',attr.connected);
+
+    return setObj;
+};
+
 
