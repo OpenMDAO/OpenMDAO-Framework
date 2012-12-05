@@ -30,7 +30,7 @@ Raphael.fn.connection = function (obj1, obj2, line, bg) {
         for (var j = 4; j < 8; j++) {
             var dx = Math.abs(p[i].x - p[j].x),
                 dy = Math.abs(p[i].y - p[j].y);
-            if ((i == j - 4) || 
+            if ((i == j - 4) ||
                 (((i != 3 && j != 6) || p[i].x < p[j].x) &&
                  ((i != 2 && j != 7) || p[i].x > p[j].x) &&
                  ((i != 0 && j != 5) || p[i].y > p[j].y) &&
