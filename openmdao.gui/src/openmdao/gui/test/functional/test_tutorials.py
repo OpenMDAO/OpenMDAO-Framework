@@ -6,6 +6,7 @@ import pkg_resources
 import sys
 from unittest import TestCase
 
+from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 from util import main, setup_server, teardown_server, generate, \
@@ -118,8 +119,24 @@ def _test_MDAO_MDF(browser):
     dialog('ok').click()
     editor.close()
 
+    # Get an implicitly connected output before the run.
+    dis1_fig = workspace_page.get_dataflow_figure('dis1', 'top')
+    editor = dis1_fig.editor_page()
+    outputs = editor.get_outputs()
+    eq(outputs.value[3][:3], ['y1', 'float', '0'])
+
     # Run the model
     workspace_page.run()
+
+    # Verify implicitly connected output has been updated with valid result.
+    outputs = editor.get_outputs()
+    eq(outputs.value[3][:2], ['y1', 'float'])
+    dis1_y1 = float(outputs.value[3][2])
+    if abs(dis1_y1 - 3.16) > 0.01:
+        raise TestCase.failureException(
+            "Output dis1.y1 did not reach correct value, but instead is %s"
+            % dis1_y1)
+    editor.close()
 
     # Check the objective
     workspace_page.do_command("top.dis1.z1")

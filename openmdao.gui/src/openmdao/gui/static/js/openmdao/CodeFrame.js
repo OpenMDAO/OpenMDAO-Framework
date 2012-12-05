@@ -307,8 +307,12 @@ openmdao.CodeFrame = function(id,model) {
         fileTabs.tabs("add", '#'+tabName, filepath);
         fileTabs.tabs('select', "#"+tabName);
         selectedTabName = tabName;
-        self.resize();
-        editor.resize();
+        if (Object.keys(sessions) > 1) {
+            // On OS X an initial self.resize() would result in a blank display.
+            // Keeping original resize code for possibly handling lots 'o tabs.
+            self.resize();
+            editor.resize();
+        }
     }
 
     /** rename tab */

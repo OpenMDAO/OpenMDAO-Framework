@@ -61,7 +61,8 @@ class ProjDirFactoryTestCase(unittest.TestCase):
             self.assertEqual(set(typenames), set(expected))
             self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), 
                              set(['IContainer', 'IComponent', 'IDriver','IHasEvents']))
-            self.assertEqual(set(types['mycomp.MyComp']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertEqual(set(types['mycomp.MyComp']['ifaces']),
+                             set(['IContainer', 'IComponent']))
             self.assertTrue('mydrv.MyDrv' in pdf._classes)
             self.assertTrue('mydrv.MyDrv2' in pdf._classes)
             self.assertTrue('mycomp.MyComp' in pdf._classes)
@@ -83,7 +84,8 @@ class MyComp2(Component):
             types = dict(pdf.get_available_types())
             typenames = types.keys()
             self.assertEqual(set(typenames), set(expected + ['mycomp2.MyComp2']))
-            self.assertEqual(set(types['mycomp2.MyComp2']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertEqual(set(types['mycomp2.MyComp2']['ifaces']),
+                             set(['IContainer', 'IComponent']))
             self.assertTrue('mycomp2.MyComp2' in pdf._classes)
 
             # now test removal

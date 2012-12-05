@@ -1,0 +1,14 @@
+On OS X there had been an issue with the contents of a file not being displayed
+initially.  Resizing the display or editing another file would correctly
+refresh the display of the initial file.  Once initially displayed there were
+no further problems, even when closing and reopening the editor.
+
+To check:
+
+Start the GUI.
+Create a new project.
+Load it into the workspace.
+Add a file.
+Double-click on the file.
+Verify that the file contents are shown, not a single blank line.
+

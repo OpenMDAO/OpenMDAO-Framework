@@ -211,3 +211,29 @@ class Float(Variable):
             return self._validator.validate(obj, name, pq.value)
         except Exception:
             self.error(obj, name, pq.value)
+
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. The basic functionality that
+        most variables need is provided here; you can overload this for
+        special cases, like lists and dictionaries, or custom datatypes.
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        trait: CTrait
+          The variable's trait
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        attr, other = super(Float, self).get_attribute(name, value, trait, meta)
+        # Fix type 'synonym'.
+        if attr['type'] == 'float64':
+            attr['type'] = 'float'
+            attr['value'] = float(value)
+        return attr, other
+
