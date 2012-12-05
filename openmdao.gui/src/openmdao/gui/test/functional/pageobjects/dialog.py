@@ -11,6 +11,7 @@ class DialogPage(BasePageObject):
 
     dialog_title = TextElement((By.XPATH, '../div/span'))
     close_button = ButtonElement((By.XPATH, '../div/a'))
+    dialog_resize = ButtonElement((By.XPATH, '../div[contains(@class, "ui-resizable-se")]'))
 
     def __init__(self, browser, port, locator):
         root = WebDriverWait(browser, TMO).until(
@@ -33,6 +34,14 @@ class DialogPage(BasePageObject):
         chain.move_by_offset(delta_x, delta_y)
         chain.release(None)
         chain.perform()
+
+    def resize(self, delta_x, delta_y):
+        """ Resize dialog. """
+        chain = ActionChains(self.browser)
+        chain.click_and_hold(self('dialog_resize').element)
+        chain.move_by_offset(delta_x, delta_y).perform()
+        chain.click()  # Not clear why click is needed here.
+        chain.release(None).perform()
 
 
 class NotifyDialog(DialogPage): 
