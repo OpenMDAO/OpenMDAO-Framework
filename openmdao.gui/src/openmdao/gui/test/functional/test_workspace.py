@@ -2,6 +2,7 @@
 Tests of overall workspace functions.
 """
 
+import sys
 import time
 
 import pkg_resources
@@ -718,18 +719,21 @@ def _test_remove(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
-    workspace_page.show_dataflow('top')  # Displays 'top' slightly higher.
     workspace_page.select_object('top')
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.resize(0, -200)  # Make it shorter
-    editor.move(0, 290)     # Move it away from context menu.
+    editor.move(-100, 100)  # Move it away from context menu.
     connections = top.connections_page()
     properties = top.properties_page()
 
     eq(editor.is_visible, True)
     eq(connections.is_visible, True)
     eq(properties.is_visible, True)
+
+    # On EC2 Windows hosts the short default screen height causes the
+    # editor to obscure the remove button.
+    if sys.platform == 'win32':
+        editor.close()
 
     # Remove component.
     top.remove()
