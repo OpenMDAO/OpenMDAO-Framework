@@ -1,4 +1,4 @@
-  
+ 
 .. index:: CONMIN
 
 .. _CONMINDriver:
@@ -89,7 +89,7 @@ The CONMIN driver allows control over both the number of iterations
 before termination as well as the convergence tolerance (both absolute and
 relative).
 
-The maximum number of iterations is specified by setting the ``itmax`` parameter.
+The maximum number of iterations is specified by setting the `itmax` parameter.
 The default value is 10.
 
 .. testsetup:: CONMIN_show
@@ -102,12 +102,12 @@ The default value is 10.
 
         self.driver.itmax = 30
 
-The convergence tolerance is controlled with ``dabfun`` and ``delfun``. ``Dabfun`` is the
+The convergence tolerance is controlled with `dabfun` and `delfun`. `Dabfun` is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than ``dabfun``, then the problem is converged).
-Similarly, ``delfun`` is the relative change of the objective function with respect
-to the value at the previous step. Note that ``delfun`` has a hard-wired minimum of 
-``1e-10`` in the Fortran code, and ``dabfun`` has a minimum of 0.0001.
+objective function changes by less than `dabfun`, then the problem is converged).
+Similarly, `delfun` is the relative change of the objective function with respect
+to the value at the previous step. Note that `delfun` has a hard-wired minimum of 
+1e-10 in the Fortran code, and `dabfun` has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -123,7 +123,7 @@ tests are performed in the following sequence:
 4. Reduce constraint thickness for slow convergence
 
 The number of successive iterations that the convergence tolerance should be checked before
-terminating the loop can also be specified with the ``itrm`` parameter, whose
+terminating the loop can also be specified with the `itrm` parameter, whose
 default value is 3.
 
 .. testcode:: CONMIN_show
@@ -134,8 +134,8 @@ CONMIN can calculate the gradient of both the objective functions and of the
 constraints using a finite difference approximation. This is the default
 behavior if no Differentiator is plugged into the differentiator socket. Two
 parameters control the step size used for numerically estimating the local
-gradient: ``fdch`` and ``fdchm``. The ``fdchm`` parameter is the minimum
-absolute step size that the finite difference will use, and ``fdch`` is the
+gradient: `fdch` and `fdchm`. The `fdchm` parameter is the minimum
+absolute step size that the finite difference will use, and `fdch` is the
 step size relative to the design variable.
 
 .. testcode:: CONMIN_show
@@ -144,7 +144,7 @@ step size relative to the design variable.
         self.driver.fdchm = .0001
 
 .. note::
-   The default values of ``fdch`` and ``fdchm`` are set to 0.01. This may be too
+   The default values of `fdch` and `fdchm` are set to 0.01. This may be too
    large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
@@ -159,11 +159,11 @@ Several scaling options are available, as summarized here:
 ==============  ========================================================
 Value           Result
 ==============  ========================================================
-``nscal < 0``   User-defined scaling with the vector in ``scal``
+``nscal < 0``   User-defined scaling with the vector in scal
 --------------  --------------------------------------------------------
 ``nscal = 0``   No scaling of the design variables
 --------------  --------------------------------------------------------
-``nscal > 0``   Scale the design variables every ``NSCAL`` iteration. Please
+``nscal > 0``   Scale the design variables every NSCAL iteration. Please
                 see the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_ 
                 for additional notes about using this option.
 ==============  ========================================================
@@ -180,11 +180,11 @@ variables as follows:
     
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
 ``cons_is_linear`` is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is ``ISC``. If
+nonlinear. Note that the original CONMIN parameter for this is `ISC`. If
 your constraint includes some framework output in the equation, then it is 
 probably not a linear function of the design variables.
 
-Finally, the ``iprint`` parameter can be used to display diagnostic
+Finally, the `iprint` parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.
 
@@ -192,8 +192,8 @@ output.
 
         self.driver.iprint = 0
 
-Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized
-below. To make it easier to swap drivers, and ``iprint`` of -1 also suppresses all
+Higher positive values of `iprint` turn on the display of more levels of output, as summarized
+below. To make it easier to swap drivers, an `iprint` of -1 also suppresses all
 output.
 
 ================  ========================================================
@@ -231,19 +231,19 @@ parameters; more information is available in the `CONMIN User's Manual
 **icndir**
   Conjugate direction restart parameter. For an unconstrained problem
   (no side constraints either), Fletcher-Reeves conjugate direction method will
-  be restarted with the steepest descent direction every ``ICNDIR`` iterations.  If 
+  be restarted with the steepest descent direction every `ICNDIR` iterations.  If 
   ``ICNDIR = 1``, only the steepest descent will be used. Default value is the number of
   design variables + 1.
 
 **Constraint Thickness** 
   CONMIN gives four parameters for controlling the 
-  thickness of constraints -- ``ct, ctmin, ctl,`` and ``ctlmin``. Using these parameters
-  essentially puts a tolerance around a constraint surface. Note that ``ct`` is used
-  for general constraints, and ``ctl`` is used only for linear constraints. A wide
+  thickness of constraints -- `ct, ctmin, ctl,` and `ctlmin`. Using these parameters
+  essentially puts a tolerance around a constraint surface. Note that `ct` is used
+  for general constraints, and `ctl` is used only for linear constraints. A wide
   initial value of the constraint thickness is desirable for highly nonlinear 
   problems so that when a constraint becomes active, it tends to remain active,
-  thus reducing the zigzagging problem. The values of ``ct`` and ``ctl`` adapt as the
-  problem converges, so the minima can be set with ``ctl`` and ``ctlmin``.
+  thus reducing the zigzagging problem. The values of `ct` and `ctl` adapt as the
+  problem converges, so the minima can be set with `ctl` and `ctlmin`.
 
 **theta** 
   Mean value of the push-off factor in the method of feasible
@@ -259,12 +259,12 @@ parameters; more information is available in the `CONMIN User's Manual
 
 **phi** 
   Participation coefficient, used if a design is infeasible (i.e.,
-  one or more violated constraints). ``Phi`` is a measure of how hard the design
+  one or more violated constraints). `Phi` is a measure of how hard the design
   will be "pushed" towards the feasible region and is, in effect, a penalty
   parameter. If in a given problem, a feasible solution cannot be obtained with
-  the default value, ``phi`` should be increased, and the problem run again. If a
+  the default value, `phi` should be increased, and the problem run again. If a
   feasible solution cannot be obtained with ``phi = 100``, it is probable that no
-  feasible solution exists. The default value of 5.0 is usually adequate. ``Phi`` is
+  feasible solution exists. The default value of 5.0 is usually adequate. `Phi` is
   used only for constrained problems.
 
 **linobj**

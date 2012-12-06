@@ -58,7 +58,7 @@ def _run_command(cmd, silent=False):
             
 
 def in_dir(f):
-    """Go to a specified directory before executing the function, then return 
+    """Go to a specified directory before executing the function and then return 
     to the original directory.
     """
     def wrapper(self, *args, **kwargs):

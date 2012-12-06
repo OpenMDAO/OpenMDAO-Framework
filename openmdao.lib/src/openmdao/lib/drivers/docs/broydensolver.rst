@@ -107,7 +107,7 @@ Five parameters control the solution process in the BroydenSolver.
   SciPy's nonlinear package contained several algorithms for solving
   a set of nonlinear equations. Three of these methods were considered by their
   developers to be of good quality, so those three were implemented as part of 
-  the BroydenSolver. The variable ``algorithm`` is an Enum where the following values
+  the BroydenSolver. The variable `algorithm` is an Enum where the following values
   represent the algorithms that follow.
 
 - ``broyden2``: Broyden's second method -- the same as ``broyden1`` but
@@ -118,7 +118,7 @@ Five parameters control the solution process in the BroydenSolver.
   product, thus avoiding the expensive NxN matrix multiplication. 
 - ``excitingmixing``: The excitingmixing algorithm. ``J=-1/alpha``
 
-  The default value for ``algorithm`` is ``"broyden2"``.
+  The default value for `algorithm` is ``"broyden2"``.
 
   .. testsetup:: Broyden3
 

@@ -187,9 +187,9 @@ class CONMINdriver(DriverUsesDerivatives):
 
         1: Initial evaluation of objective and constraint values
 
-        2: Evalute gradients of objective and constraints (internal only)
+        2: Evaluate gradients of objective and constraints (internal only)
 
-        3: Evalute gradients of objective and constraints
+        3: Evaluate gradients of objective and constraints
 
         4: One-dimensional search on unconstrained function
 
@@ -213,11 +213,11 @@ class CONMINdriver(DriverUsesDerivatives):
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '
-                      'when calculating finite difference gradients.'
-                      ' (only when CONMIN calculates gradient)')
+                      'when calculating finite difference gradients'
+                      ' (only when CONMIN calculates gradient).')
     fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite '
-                      'difference gradient calculations.'
-                      ' (only when CONMIN calculates gradient)')
+                      'difference gradient calculations'
+                      ' (only when CONMIN calculates gradient).')
     icndir = Float(0, iotype='in', desc='Conjugate gradient restart. '
                       'parameter.')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')

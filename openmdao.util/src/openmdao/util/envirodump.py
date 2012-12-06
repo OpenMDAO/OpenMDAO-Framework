@@ -159,7 +159,7 @@ def get_system_env(f):
 
 def get_aliases(f):
     """
-    Gets aliases on Unix/Mac
+    Gets aliases on Unix/Mac.
     """
     if  platform.system() is not "Windows":
         f.write('\n================ALIASES================\n')

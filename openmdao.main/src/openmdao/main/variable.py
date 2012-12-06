@@ -19,7 +19,7 @@ namecheck_rgx = re.compile(
 gui_excludes = ['type', 'vartypename', 'iotype', 'copy']
             
 def is_legal_name(name):
-    '''Verifies a Pythonic legal name for use as an OpenMDAO object'''
+    '''Verifies a Pythonic legal name for use as an OpenMDAO object.'''
     
     match = namecheck_rgx.match(name)
     if match is None or match.group() != name or iskeyword(name) or name in _expr_dict:
@@ -44,16 +44,16 @@ class Variable(TraitType):
         special cases, like lists and dictionaries, or custom datatypes.
         
         name: str
-          Name of variable
+          Name of variable.
           
         value: object
-          The value of the variable
+          The value of the variable.
           
         trait: CTrait
-          The variable's trait
+          The variable's trait.
           
         meta: dict
-          Dictionary of metadata for this variable
+          Dictionary of metadata for this variable.
         """
         
         attr = {}

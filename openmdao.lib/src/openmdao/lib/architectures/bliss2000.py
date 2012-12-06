@@ -160,7 +160,7 @@ class BLISS2000(Architecture):
 
     
     def configure(self): 
-        """setup and BLISS2000 architecture inside this assembly.
+        """Setup a BLISS2000 architecture inside this assembly.
         """
         
         global_dvs = self.parent.get_global_des_vars()

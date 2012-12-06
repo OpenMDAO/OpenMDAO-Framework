@@ -30,9 +30,9 @@ from openmdao.gui.projdirfactory import ProjDirFactory
 
 
 def modifies_model(target):
-    ''' decorator for methods that may have modified the model
+    ''' Decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
-        publishes the potentially updated components
+        publishes the potentially updated components.
     '''
 
     def wrapper(self, *args, **kwargs):
@@ -90,7 +90,7 @@ class ConsoleServer(cmd.Cmd):
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
-            their own name and that all root assemblies are set as top
+            their own name and that all root assemblies are set as top.
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
@@ -110,7 +110,7 @@ class ConsoleServer(cmd.Cmd):
                     driver._update_workflow()
 
     def publish_components(self):
-        ''' publish the current component tree and subscribed components
+        ''' Publish the current component tree and subscribed components.
         '''
         try:
             publish('components', self.get_components())
@@ -129,12 +129,12 @@ class ConsoleServer(cmd.Cmd):
                     publish(pathname, comp.get_attributes(io_only=False))
 
     def send_pub_msg(self, msg, topic):
-        ''' publish the given message with the given topic
+        ''' Publish the given message with the given topic.
         '''
         publish(topic, msg)
 
     def _error(self, err, exc_info):
-        ''' publish error message and save stack trace in case it's requested
+        ''' Publish error message and save stack trace in case it's requested.
         '''
         self._partial_cmd = None
         self.exc_info = exc_info
@@ -143,7 +143,7 @@ class ConsoleServer(cmd.Cmd):
         self._print_error(msg)
 
     def _print_error(self, msg):
-        ''' publish error message
+        ''' Publish error message.
         '''
         try:
             publish('console_errors', msg)
@@ -163,7 +163,7 @@ class ConsoleServer(cmd.Cmd):
     def precmd(self, line):
         ''' This method is called after the line has been input but before
             it has been interpreted. If you want to modify the input line
-            before execution (for example, variable substitution) do it here.
+            before execution (for example, variable substitution), do it here.
         '''
         #self._hist += [line.strip()]
         return line
@@ -227,7 +227,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def run(self, pathname, *args, **kwargs):
-        ''' run `pathname` or the model (i.e. the top assembly)
+        ''' Run `pathname` or the model (i.e., the top assembly).
         '''
         pathname = pathname or 'top'
         if pathname in self.proj:
@@ -273,13 +273,13 @@ class ConsoleServer(cmd.Cmd):
         return self._recorded_cmds[:]
 
     def get_JSON(self):
-        ''' return current state as JSON
+        ''' Return current state as JSON.
         '''
         return jsonpickle.encode(self.proj._model_globals)
 
     def get_container(self, pathname, report=True):
-        ''' get the container with the specified pathname
-            returns the container and the name of the root object
+        ''' Get the container with the specified pathname.
+            Returns the container and the name of the root object.
         '''
         cont = None
         parts = pathname.split('.', 1)
@@ -304,9 +304,9 @@ class ConsoleServer(cmd.Cmd):
         return cont, root
 
     def _get_components(self, cont, pathname=None):
-        ''' get a heierarchical list of all the components in the given
-            container or dictionary.  the name of the root container, if
-            specified, is prepended to all pathnames
+        ''' Get a heierarchical list of all the components in the given
+            container or dictionary.  The name of the root container, if
+            specified, is prepended to all pathnames.
         '''
         comps = []
         for k, v in cont.items():
@@ -329,13 +329,13 @@ class ConsoleServer(cmd.Cmd):
         return comps
 
     def get_components(self):
-        ''' get hierarchical dictionary of openmdao objects
+        ''' Get hierarchical dictionary of openmdao objects.
         '''
         return jsonpickle.encode(self._get_components(self.proj._model_globals))
 
     def get_connections(self, pathname, src_name, dst_name):
-        ''' get list of source variables, destination variables and the
-            connections between them
+        ''' Get list of source variables, destination variables, and the
+            connections between them.
         '''
         conns = {}
         asm, root = self.get_container(pathname)
@@ -424,9 +424,9 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(conns)
 
     def get_dataflow(self, pathname):
-        ''' get the structure of the specified assembly, or of the global
-            namespace if no pathname is specified, consisting of the list of
-            components and the connections between them (i.e. the dataflow)
+        ''' Get the structure of the specified assembly or of the global
+            namespace if no pathname is specified; consists of the list of
+            components and the connections between them (i.e., the dataflow).
         '''
         dataflow = {}
         if pathname and len(pathname) > 0:
@@ -521,7 +521,7 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(attr)
 
     def get_value(self, pathname):
-        ''' get the value of the object with the given pathname
+        ''' Get the value of the object with the given pathname.
         '''
         try:
             val, root = self.get_container(pathname)
@@ -557,7 +557,7 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     def commit_project(self, comment=''):
-        ''' save the current project macro and commit to the project repo
+        ''' Save the current project macro and commit to the project repo.
         '''
         if self.proj:
             try:
@@ -571,7 +571,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def revert_project(self, commit_id=None):
-        ''' revert back to the most recent commit of the project
+        ''' Revert back to the most recent commit of the project.
         '''
         if self.proj:
             try:
@@ -600,7 +600,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def add_component(self, name, classname, parentname, args):
-        ''' add a new component of the given type to the specified parent.
+        ''' Add a new component of the given type to the specified parent.
         '''
         if isidentifier(name):
             name = name.encode('utf8')
@@ -619,7 +619,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def replace_component(self, pathname, classname, args):
-        ''' replace existing component with component of the given type.
+        ''' Replace existing component with component of the given type.
         '''
         pathname = pathname.encode('utf8')
         parentname, dot, name = pathname.rpartition('.')
@@ -653,35 +653,35 @@ class ConsoleServer(cmd.Cmd):
             return {}
 
     def get_file(self, filename):
-        ''' get contents of a file
-            returns None if file was not found
+        ''' Get contents of a file.
+            Returns None if file was not found.
         '''
         return self.files.get_file(filename)
 
     def ensure_dir(self, dirname):
-        ''' create directory
-            (does nothing if directory already exists)
+        ''' Create directory
+            (does nothing if directory already exists).
         '''
         return self.files.ensure_dir(dirname)
 
     def write_file(self, filename, contents):
-        ''' write contents to file
+        ''' Write contents to file.
         '''
         return self.files.write_file(filename, contents)
 
     def add_file(self, filename, contents):
-        ''' add file
+        ''' Add file.
         '''
         return self.files.add_file(filename, contents)
 
     def delete_file(self, filename):
-        ''' delete file from project
-            returns False if file was not found, otherwise returns True
+        ''' Delete file from project.
+            Returns False if file was not found; otherwise, returns True.
         '''
         return self.files.delete_file(filename)
 
     def rename_file(self, oldpath, newname):
-        ''' rename file
+        ''' Rename file.
         '''
         return self.files.rename_file(oldpath, newname)
 
@@ -690,7 +690,7 @@ class ConsoleServer(cmd.Cmd):
         easy_install.main(["-U", "-f", url, distribution])
 
     def add_subscriber(self, pathname, publish):
-        ''' publish the specified topic
+        ''' Publish the specified topic.
         '''
         if pathname in ['', 'components', 'files', 'types',
                         'console_errors', 'file_errors']:

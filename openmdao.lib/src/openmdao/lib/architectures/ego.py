@@ -17,10 +17,10 @@ from openmdao.lib.datatypes.api import Str, Array, Float, Int, Enum
 #TODO: Only supports HasObjective,HasParameters - real/contiunous variables        
 class EGO(Architecture): 
     
-    initial_DOE_size = Int(10, iotype="in",desc="number of initial training points to use")
-    sample_iterations = Int(10, iotype="in", desc="number of adaptively sampled points to use")
-    EI_PI = Enum("PI",values=["EI","PI"],iotype="in",desc="switch to decide between EI or PI for infill criterion")
-    min_ei_pi = Float(0.001, iotype="in", desc="EI or PI to use for stopping condition of optimization")
+    initial_DOE_size = Int(10, iotype="in",desc="Number of initial training points to use.")
+    sample_iterations = Int(10, iotype="in", desc="Number of adaptively sampled points to use.")
+    EI_PI = Enum("PI",values=["EI","PI"],iotype="in",desc="Switch to decide between EI or PI for infill criterion.")
+    min_ei_pi = Float(0.001, iotype="in", desc="EI or PI to use for stopping condition of optimization.")
     
     def __init__(self,*args,**kwargs): 
         super(EGO,self).__init__(*args,**kwargs)

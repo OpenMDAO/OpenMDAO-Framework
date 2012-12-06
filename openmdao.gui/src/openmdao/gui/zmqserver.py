@@ -19,7 +19,7 @@ def DEBUG(msg):
 
 
 class ZMQServer(object):
-    ''' wraps an an openmdao object with ZMQ and runs it as a server
+    ''' Wraps an an openmdao object with ZMQ and runs it as a server.
     '''
 
     def __init__(self, options):
@@ -57,7 +57,7 @@ class ZMQServer(object):
 
     @staticmethod
     def get_options_parser():
-        ''' create a parser for command line arguments
+        ''' Create a parser for command line arguments.
         '''
         parser = OptionParser()
         parser.add_option("-c", "--class",
@@ -89,7 +89,7 @@ class ZMQServer(object):
 
 
 def main():
-    ''' process command line arguments, create server and start it up
+    ''' Process command line arguments, create server, and start it up.
     '''
     # make sure to install zmq ioloop before creating any tornado objects
     ioloop.install()
