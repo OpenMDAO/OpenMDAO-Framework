@@ -7,12 +7,12 @@ Sphinx documentation.
 
 from sys import maxint, float_info
 
-from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
+from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, \
                                  Instance
 from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
-from openmdao.main.datatypes.api import Slot
+from openmdao.main.datatypes.api import Slot, Event
 
 excludes = (Any, Python, Event, type)
 

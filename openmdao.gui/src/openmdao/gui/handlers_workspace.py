@@ -196,6 +196,21 @@ class ComponentHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(attr)
 
+class AvailableEventsHandler(ReqHandler):
+    ''' Get a list of events that are available to a driver.
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_available_events(name)
+        except Exception, err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print 'Error getting attributes on', name, ':', err
+        self.content_type = 'application/javascript'
+        self.write(attr)
 
 class ObjectHandler(ReqHandler):
     ''' Get the data for a slotable object (including components).
@@ -628,6 +643,7 @@ handlers = [
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
     web.url(r'/workspace/dataflow/(.*)/?',  DataflowHandler),
+    web.url(r'/workspace/events/(.*)',      AvailableEventsHandler),
     web.url(r'/workspace/editor/?',         EditorHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
