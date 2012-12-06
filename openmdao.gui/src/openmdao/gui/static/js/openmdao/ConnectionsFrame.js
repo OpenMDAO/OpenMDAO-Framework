@@ -1,3 +1,22 @@
+/**
+ *  ConnectionsFrame: a frame for viewing/editing connections in an assembly
+ *
+ *  Source and destination components are selected via input boxes at the top
+ *  of the frame. Source (output) and destination (input) variables are
+ *  rendered as SVG figures with curves between them representing connections.
+ *  Source and destination variables can be selected via input boxes at the
+ *  bottom of the frame and connected by clicking on the 'connect' button.
+ *  Alternatively, dragging from one variable figure to another will connect
+ *  them if they are eligible to be connected. Input variables can be 
+ *  disconnected by right clicking on them and choosing 'Disconnect' from the
+ *  context menu.
+ *
+ *  Arguments:
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the assembly
+ *      src_comp: (optional) the source component to select initially
+ *      dst_comp: (optional) the destination component to select initially
+ **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
@@ -56,7 +75,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                         }),
         assemblyKey = '<Assembly>',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
-        normalCSS = {'font-style':'normal', 'opacity':'1.0'},
+        normalCSS   = {'font-style':'normal', 'opacity':'1.0'},
         // context menu
         contextMenu = jQuery("<ul class='context-menu'>")
             .appendTo(connectionsDiv),
@@ -79,6 +98,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         resize_contents();
     });
 
+    // disallow annoying text selection in the connections div
     connectionsDiv.on('selectstart',false);
 
     // create context menu for toggling the showAllVariables option
@@ -95,6 +115,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }));
     ContextMenu.set(contextMenu.attr('id'), connectionsDiv.attr('id'));
 
+    /** set up a component selector */
     function setupSelector(selector) {
         // if selector gains focus with assemblyKey then clear it
         selector.focus(function() {
@@ -173,9 +194,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         });
     }
 
+    // set up source and destination component selectors
     setupSelector(src_cmp_selector);
     setupSelector(dst_cmp_selector);
 
+    /** populate component selectors from dataflow data and show connections */
     function loadData(data) {
         if (!data || !data.Dataflow || !data.Dataflow.components
                   || !data.Dataflow.components.length) {
@@ -215,6 +238,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         showConnections();
     }
 
+    /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
@@ -246,7 +270,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             jQuery.each(data.sources, function(idx,srcvar) {
                 if (showAllVariables || conn_list.contains(srcvar.name)) {
                     var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
-                    figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, true);
+                    figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             });
@@ -257,7 +281,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             jQuery.each(data.destinations, function(idx,dstvar) {
                 if (showAllVariables || conn_list.contains(dstvar.name)) {
                     var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
-                    figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, false);
+                    figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             });
@@ -288,6 +312,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         }
     }
 
+    /** draw a line on the connections div */
     function drawLine(startX, startY, endX, endY) {
         var start = {
             x: startX,
@@ -322,56 +347,88 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         };
     }
 
+    // configure mouse handlers to connect source and dest variables when a
+    // line is drawn from one to the other and to add a 'disconnect' option
+    // to the context menu when right clicking on a connected input variable
     connectionsDiv.on('mousedown', function(e) {
         var offset = connectionsDiv.offset(),
             x = e.clientX - offset.left,
             y = e.clientY - offset.top,
             source = r.getElementByPoint(e.clientX, e.clientY),
-            line = drawLine(x, y, x, y),
-            target;
+            target,
+            line;
 
         if (source !== null) {
-            connectionsDiv.on({
-                'mousemove': function(e) {
-                    x = e.clientX - offset.left;
-                    y = e.clientY - offset.top;
-                    line.updateEnd(x, y);
-                },
-                'mouseup': function(e) {
-                    connectionsDiv.off('mousemove mouseup');
-                    line.element.remove();
-                    target = r.getElementByPoint(e.clientX, e.clientY);
-                    if (target !== null && target !== source) {
-                        var cmd = self.pathname + '.connect("',
-                            src_name = source.data('name'),
-                            tgt_name = target.data('name');
-                        if (src_name && tgt_name) {
-                            if (source.data('connected')) {
-                                openmdao.Util.notify(src_name+' is already connected to something!');
-                            }
-                            else if (target.data('connected')) {
-                                openmdao.Util.notify(tgt_name+' is already connected to something!');
-                            }
-                            else if (source.data('input') && !target.data('input')) {
-                                cmd = cmd+src_name+'","'+tgt_name+'")';
+            // debug.info('ConnectionsFrame: source',source.data('name'), source, e);
+            if (e.button === 2) {
+                // context menu option to disconnect the variable
+                if (source.data('input') && source.data('connected')) {
+                    var src_name = source.data('name'),
+                        menuItem = jQuery('<li>Disconnect '+openmdao.Util.getName(src_name)+'</li>')
+                            .click(function(e) {
+                                cmd = self.pathname+'.disconnect("'+src_name+'")';
                                 model.issueCommand(cmd);
+                            });
+                        removeItem = function() {
+                            menuItem.remove();
+                            ContextMenu._removeEvent(document,"click", this);
+                        };
+                    contextMenu.append(menuItem);
+                    ContextMenu._addEvent(document,'click', removeItem);
+                }
+            }
+            else {
+                line = drawLine(x, y, x, y),
+                connectionsDiv.on({
+                    'mousemove': function(e) {
+                        x = e.clientX - offset.left;
+                        y = e.clientY - offset.top;
+                        line.updateEnd(x, y);
+                    },
+                    'mouseup': function(e) {
+                        connectionsDiv.off('mousemove mouseup');
+                        line.element.remove();
+                        target = r.getElementByPoint(e.clientX, e.clientY);
+                        // debug.info('ConnectionsFrame: target',target);
+                        if (target !== null && target !== source) {
+                            // debug.info('ConnectionsFrame: target',target.data('name'), target);
+                            var cmd = self.pathname + '.connect("',
+                                src_name = source.data('name'),
+                                tgt_name = target.data('name');
+                            if (src_name && tgt_name) {
+                                if (!source.data('input') && target.data('input')) {
+                                    if (target.data('connected')) {
+                                        openmdao.Util.notify('Input variable ('+
+                                            tgt_name+') is already connected to something!');
+                                    }
+                                    else {
+                                        cmd = cmd+src_name+'","'+tgt_name+'")';
+                                        model.issueCommand(cmd);
+                                    }
+                                }
+                                else if (source.data('input') && !target.data('input')) {
+                                    if (source.data('connected')) {
+                                        openmdao.Util.notify('Input variable ('+
+                                            src_name+') is already connected to something!');
+                                    }
+                                    else {
+                                        cmd = cmd+tgt_name+'","'+src_name+'")';
+                                        model.issueCommand(cmd);
+                                    }
+                                }
                             }
-                            else if (source.data('input') && !target.data('input')) {
-                                cmd = cmd+tgt_name+'","'+src_name+'")';
-                                model.issueCommand(cmd);
+                            else {
+                                //debug.warn('ConnectionsFrame: Invalid source or target',
+                                //           src_name, source, tgt_name, target);
                             }
-                        }
-                        else {
-                            //debug.warn('ConnectionsFrame: Invalid source or target',
-                            //           src_name, source, tgt_name, target);
                         }
                     }
-                }
-            });
+                });
+            }
         }
     });
 
-    /** edit connections between the source and destination objects in the assembly */
+    /** show connections between the source and destination components */
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
             model.getConnections(self.pathname, self.src_comp, self.dst_comp,
@@ -388,7 +445,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         }
     }
 
-    /** handle message about the assembly */
+    /** handle message containing the assembly connection data (dataflow) */
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {
             debug.warn('Invalid component data for:',self.pathname,message);
