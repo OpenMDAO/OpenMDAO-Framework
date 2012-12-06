@@ -9,7 +9,7 @@ from openmdao.main.plugin import find_docs_url
 from openmdao.util.fileutil import get_ancestor_dir
 
 class ReqHandler(RequestHandler):
-    ''' override the get_current_user() method in your request handlers to
+    ''' Override the get_current_user() method in your request handlers to
         determine the current user based on the value of a cookie.
     '''
 
@@ -33,7 +33,7 @@ class ReqHandler(RequestHandler):
 
 
 class LoginHandler(ReqHandler):
-    ''' lets users log into the application simply by specifying a nickname,
+    ''' Lets users log into the application simply by specifying a nickname,
         which is then saved in a cookie.
     '''
 
@@ -60,8 +60,8 @@ class LoginHandler(ReqHandler):
 
 
 class LogoutHandler(ReqHandler):
-    ''' lets users log out of the application simply by deleting the
-        nickname cookie
+    ''' Lets users log out of the application simply by deleting the
+        nickname cookie.
     '''
 
     def get(self):
@@ -74,7 +74,7 @@ class LogoutHandler(ReqHandler):
 
 
 class ExitHandler(ReqHandler):
-    ''' shut it down, try to close the browser window
+    ''' Shut it down; try to close the browser window.
     '''
 
     def get(self):

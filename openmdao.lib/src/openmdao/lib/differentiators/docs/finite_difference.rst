@@ -64,11 +64,11 @@ optimizer by plugging it into the differentiator socket.
             
 The only argument that ``FiniteDifference`` takes is the driver you are plugging into.
 
-``FiniteDifference`` has two additional control variables. The ``form`` parameter is used to declare
+``FiniteDifference`` has two additional control variables. The `form` parameter is used to declare
 which difference the first derivative will use. (The default is ``'central'``.) The ``default_stepsize`` parameter is used to set a
 default finite difference step size. Note that you can declare a separate finite difference step size
 for each parameter in the call to ``add_parameter``. Here, the finite difference step size for the input
-``'x'`` to paraboloid is set to .01. If you don't specify ``fd_step`` for a parameter, then the default
+`'x'` to paraboloid is set to .01. If you don't specify ``fd_step`` for a parameter, then the default
 step size is used.
 
 

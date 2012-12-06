@@ -33,15 +33,15 @@ the underlying component.
             self.meta_model.x = 9
             self.meta_model.y = 9
 
-A second slot, called `default_surrogate` can be filled with a surrogate model
+A second slot, called ``default_surrogate`` can be filled with a surrogate model
 generator instance. Copies of this default surrogate model generator will be used for
 any outputs that don't have a specific surrogate model generator associated
 with them. To associate a surrogate model generator with a specific output,
 you must first fill the `model` slot so that MetaModel can determine what your
 outputs are. When `model` is filled, MetaModel will create a slot named
-`sur_<output_name>` for each output of the model. To override the default
+``sur_<output_name>`` for each output of the model. To override the default
 surrogate model generator for a specific output, just drop the new surrogate
-model generator into the `sur_<output_name>` slot. All surrogate model
+model generator into the ``sur_<output_name>`` slot. All surrogate model
 generators must implement the ISurrogate interface. OpenMDAO provides some
 surrogate model generators in the ``openmdao.lib.surrogatemodels`` directory.
 

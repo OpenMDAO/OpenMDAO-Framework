@@ -383,7 +383,7 @@ class ExprEvaluator(object):
     
     @property
     def text(self):
-        """The expression string"""
+        """The expression string."""
         return self._text
     
     @text.setter
@@ -394,7 +394,7 @@ class ExprEvaluator(object):
 
     @property
     def scope(self):
-        """The scoping object used to evaluate the expression"""
+        """The scoping object used to evaluate the expression."""
         if self._scope:
             scope = self._scope()
             if scope is None:
@@ -423,7 +423,7 @@ class ExprEvaluator(object):
         return self._allow_set
     
     def refers_to(self, name):
-        """Returns True if this expression refers to the given variable or component"""
+        """Returns True if this expression refers to the given variable or component."""
         if name == self.text:
             return True
         elif name in self.text:
@@ -824,7 +824,7 @@ class ConnectedExprEvaluator(ExprEvaluator):
                                    self.text)
     
     def refers_to(self, name):
-        """Returns True if this expression refers to the given variable or component"""
+        """Returns True if this expression refers to the given variable or component."""
         if super(ConnectedExprEvaluator, self).refers_to(name):
             return True
         return name in self.refs(copy=False)

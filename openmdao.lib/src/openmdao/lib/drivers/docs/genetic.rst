@@ -105,7 +105,7 @@ In the second example above, a more complex objective function was created where
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` variable of Genetic to ``"minimize"`` or ``"maximize``.
+``opt_type`` variable of Genetic to ``"minimize"`` or ``"maximize"``.
 
 .. testcode:: Genetic
 

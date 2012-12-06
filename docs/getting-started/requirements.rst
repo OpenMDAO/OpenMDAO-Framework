@@ -15,7 +15,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Python (2.6.x or 2.7.x)
 
-  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python
+  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternative Python
     builds, such as Enthought, ActiveState Python or Python(x,y) are not officially supported at this time,
     though some may work with OpenMDAO.  
 

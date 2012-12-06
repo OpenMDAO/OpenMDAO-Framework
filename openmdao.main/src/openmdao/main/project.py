@@ -55,7 +55,7 @@ def _match_insts(classes):
 
 
 def text_to_node(text, lineno=None):
-    """Given a python source string, return the corresponding AST node.
+    """Given a Python source string, return the corresponding AST node.
     The outer Module node is removed so that the node corresponding to the
     given text can be added to an existing AST.
     """
@@ -122,11 +122,11 @@ def add_init_monitors(node):
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for
     this to work, an entry must be added to sys.path of the form
-    top_dir+PROJ_DIR_EXT, where top_dir is the top directory of the project
-    where python files are kept.
+    ``top_dir+PROJ_DIR_EXT``, where `top_dir` is the top directory of the project
+    where Python files are kept.
     """
     def __init__(self, path_entry):
-        """When path_entry has the form mentioned above (top_dir+PROJ_DIR_EXT),
+        """When path_entry has the form mentioned above (``top_dir+PROJ_DIR_EXT``),
         this returns a ProjFinder instance that will be used to locate modules
         within the project.
         """
@@ -175,7 +175,7 @@ class ProjLoader(object):
             return f.read()
         
     def get_code(self, modpath):
-        """Opens the file, compiles it into an AST and then translates it into
+        """Opens the file, compiles it into an AST, and then translates it into
         the instrumented version before compiling that into bytecode.
         """
         contents = self.get_source(modpath)
@@ -186,7 +186,7 @@ class ProjLoader(object):
         return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
-        """Creates a new module if one doesn't exist already, and then updates
+        """Creates a new module if one doesn't exist already and then updates
         the dict of that module based on the contents of the instrumented
         module file.
         """

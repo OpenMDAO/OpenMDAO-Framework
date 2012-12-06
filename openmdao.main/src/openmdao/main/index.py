@@ -9,7 +9,7 @@ def process_index_entry(obj, idx):
     
     Return a new object based on a starting object and some operation
     indicated by idx that can be either an index into a container, an 
-    attribute access, or a fuction call.  idx can be non-tuple hashable
+    attribute access, or a function call.  idx can be a non-tuple hashable
     object, which will be interpreted as an index to a container, or it can
     be a tuple of the form (operation_id, stuff) where operation_id is 
     as follows (the named constants are defined in expreval.py)::

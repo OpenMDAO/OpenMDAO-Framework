@@ -75,7 +75,7 @@ Common Install Problems
 -----------------------
 
 * In general, OpenMDAO supports the specified versions of Python found at ``python.org``. At this time we do not officially
-  support alternate Python builds, such as Enthought, ActiveState Python or Python(x,y), although some may
+  support alternative Python builds, such as Enthought, ActiveState Python or Python(x,y), although some may
   work with OpenMDAO.  
 
 * OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect

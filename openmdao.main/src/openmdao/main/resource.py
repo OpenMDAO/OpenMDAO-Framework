@@ -497,7 +497,7 @@ class ResourceAllocationManager(object):
         """
         Determine the maximum resources requested by `assembly`.
 
-        Resource descriptions are assumed to be attributes named ``resources``.
+        Resource descriptions are assumed to be attributes named `resources`.
         Scans the assembly's components for resources and determines a 'peak'
         value of requested CPUs and resource limits. This can be used to
         ensure an allocated server can support the maximum of any resources
@@ -768,7 +768,7 @@ class ResourceAllocator(object):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        The default implementation does nothing
+        The default implementation does nothing.
         """
         return
 
@@ -1014,7 +1014,7 @@ class LocalAllocator(FactoryAllocator):
         in created servers. Use with caution!
 
     Resource configuration file entry equivalent to the default
-    ``LocalHost`` allocator::
+    `LocalHost` allocator::
 
         [LocalHost]
         classname: openmdao.main.resource.LocalAllocator
@@ -1353,8 +1353,8 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         The Python executable is specified by the `python` option. It defaults
         to the currently executing Python.
 
-        Resource configuration file entry for a cluster named ``HX`` consisting
-        of 19 hosts with the first host named ``hx00`` and using the current
+        Resource configuration file entry for a cluster named `HX` consisting
+        of 19 hosts with the first host named `hx00` and using the current
         OpenMDAO Python::
 
             [HX]
