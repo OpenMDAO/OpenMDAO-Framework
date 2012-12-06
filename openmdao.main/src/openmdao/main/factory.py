@@ -14,7 +14,7 @@ class Factory(object):
         
     def create(self, typname, version=None, server=None, 
                res_desc=None, **ctor_args):
-        """Return an object of type *typname,* (or a proxy to it if it resides
+        """Return an object of type *typname* (or a proxy to it if it resides
         in another process) using the specified package version, server
         location, and resource description. Returns None if this factory is
         unable to create the specified type.
@@ -34,7 +34,7 @@ class Factory(object):
 
         args: list
             List of 1 or 2-element lists. The first element is the argument
-            name, the second element is the default value.
+            name; the second element is the default value.
 
         varargs: string
             The name of the '*' argument.

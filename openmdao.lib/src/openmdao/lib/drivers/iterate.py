@@ -40,7 +40,7 @@ class FixedPointIterator(Driver):
                                             'tolerance between iterations.')
     
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
-                       desc = 'For multivariable iteration, type of norm'
+                       desc = 'For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
 
@@ -140,14 +140,14 @@ class FixedPointIterator(Driver):
 
 @add_delegate(HasStopConditions)
 class IterateUntil(Driver):
-    """ A simple driver to run a workflow until some stop condition is met """
+    """ A simple driver to run a workflow until some stop condition is met. """
 
-    max_iterations = Int(10,iotype="in", desc="maximun number of iterations")
-    iteration = Int(0,iotype="out",desc="current iteration counter")
-    run_at_least_once = Bool(True, iotype="in", desc="If True, driver will ignore stop conditions for the first iteration, and run at least one iteration")
+    max_iterations = Int(10,iotype="in", desc="Maximum number of iterations.")
+    iteration = Int(0,iotype="out",desc="Current iteration counter.")
+    run_at_least_once = Bool(True, iotype="in", desc="If True, driver will ignore stop conditions for the first iteration and run at least one iteration.")
     
     def start_iteration(self):
-        """ Code executed before the iteration """
+        """ Code executed before the iteration. """
         self.iteration = 0
     
     def continue_iteration(self): 

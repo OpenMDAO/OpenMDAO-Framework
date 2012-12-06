@@ -24,27 +24,27 @@ class FDhelper(object):
         removed from the model.
         
         model: Assembly
-            Parent assembly of the components we want to finite difference
+            Parent assembly of the components we want to finite difference.
             
         comps: list( string )
             List of component names that we want to finite difference as a
-            group
+            group.
             
         wrt: list( string )
-            List of variable paths to use as finite difference inputs
+            List of variable paths to use as finite difference inputs.
             
         outs: list( string )
-            List of variable paths to return as outputs
+            List of variable paths to return as outputs.
             
         stepsize: float
-            Default stepsize to use
+            Default stepsize to use.
             
         order: int
             Finite Difference order. Only first order is supported right now.
             
         form: string
             Choose from 'CENTRAL', 'FORWARD', and "BACKWARD'. Default is central
-            differencing
+            differencing.
         '''
         
         # Copy model. We need to null out the reference to the parent before
@@ -100,10 +100,10 @@ class FDhelper(object):
         Variables are intialized with init_vals. 
         
         input_dict: dict( string : value )
-            Dictionary of baseline values for input paramters
+            Dictionary of baseline values for input paramters.
             
         input_dict: dict( string : value )
-            Dictionary of baseline values for desired outputs
+            Dictionary of baseline values for desired outputs.
         """
         
         # Set all initial values

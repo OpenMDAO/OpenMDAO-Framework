@@ -15,12 +15,12 @@ called `Differentiator`. This slot can take a Differentiator object.
 The ``ChainRule`` differentiator calculates the gradient of a Drivers's
 workflow using forward automatic differentiation (i.e., successive
 application of the chainrule from the Parameters to the Objectives and
-Constraints.)
+Constraints).
 
 This differentiator is under construction. At present, it works for any
 workflow that contains Assemblies or Components for which derivatives have
 been specified for all connected components. Work is underway to include
-finite differencing of subsections of the model, and to support nested
+finite differencing of subsections of the model and to support nested
 drivers. If your model requires any of these features, then you should use
 the ``FiniteDifference`` differentiator.
 

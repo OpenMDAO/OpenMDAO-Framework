@@ -163,8 +163,8 @@ class Parameter(object):
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
         entry for each variable referenced by the parameter expression. The
-        metadata value found in the tuple with be either the specified piece
-        of metadata if metaname is provided, or the whole metadata dictionary
+        metadata value found in the tuple will be either the specified piece
+        of metadata, if metaname is provided, or the whole metadata dictionary
         for that variable if it is not.
         """
         if self._metadata is None:
@@ -250,8 +250,8 @@ class ParameterGroup(object):
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
         entry for each variable referenced by a target expression. The
-        metadata value found in the tuple with be either the specified piece
-        of metadata if metaname is provided, or the whole metadata dictionary
+        metadata value found in the tuple will be either the specified piece
+        of metadata, if metaname is provided, or the whole metadata dictionary
         for that variable if it is not.
         """
         dct = {'low':self.low,
@@ -310,7 +310,7 @@ class HasParameters(object):
 
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from the
-        target object is 'empty' or not.  If it's empty then it's not an error if the
+        target object is 'empty' or not.  If it's empty, it's not an error if the
         replacing object doesn't have this delegate.
         """
         return len(self._parameters)
@@ -343,11 +343,11 @@ class HasParameters(object):
             
         low: float (optional)
             Minimum allowed value of the parameter. If scaler and/or adder
-            are supplied, use the transformed value here.
+            is supplied, use the transformed value here.
             
         high: float (optional)
             Maximum allowed value of the parameter. If scaler and/or adder
-            are supplied, use the transformed value here.
+            is supplied, use the transformed value here.
             
         scaler: float (optional)
             Value to multiply the possibly offset parameter value by. 
@@ -515,7 +515,7 @@ class HasParameters(object):
         return self._parameters
     
     def init_parameters(self): 
-        """Sets all parameters to their start value, if a start value is given""" 
+        """Sets all parameters to their start value if a start value is given""" 
         for key,param in self._parameters.iteritems():
             if param.start is not None: 
                 param.set(param.start, self._get_scope())
@@ -526,7 +526,7 @@ class HasParameters(object):
         
         name: str
             Name of the parameter. This is either the name alias given when
-            the parameter was added, or the variable path of the parameter's
+            the parameter was added or the variable path of the parameter's
             target if no name was given.
             
         value: object (typically a float)
@@ -553,7 +553,7 @@ class HasParameters(object):
         
         values: iterator
             Iterator of input values with an order defined to match the 
-            order of parameters returned by the get_parameters method. 
+            order of parameters returned by the get_parameters method. All  
             'values' must support the len() function.
             
         case: Case (optional)

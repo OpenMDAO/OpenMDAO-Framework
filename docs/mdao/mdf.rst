@@ -173,7 +173,7 @@ just as easily picked ``dis2.z2``.
         self.driver.add_constraint('dis2.y2 < 24.0')
         
 As before, the ``add_constraint`` method is used to add our constraints. This time however, we used a more
-general expression for the first constraint. Alternate examples of the same constraint, composed
+general expression for the first constraint. Alternative examples of the same constraint, composed
 slightly  differently, are commented out in the example below. 
 
 Finally, putting it all together gives:

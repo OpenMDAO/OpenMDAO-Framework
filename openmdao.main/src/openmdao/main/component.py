@@ -136,7 +136,7 @@ class Component(Container):
                      desc="Number of times this Component's derivative " + \
                           "function has been executed.")
 
-    itername = Str('', iotype='out', desc='Iteration coordinates')
+    itername = Str('', iotype='out', desc='Iteration coordinates.')
 
     create_instance_dir = Bool(False)
 
@@ -413,9 +413,9 @@ class Component(Container):
 
     def calc_derivatives(self, first=False, second=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives, and saving the current state as the baseline. The user
-        must supply calculate_first_derivatives() and/or
-        calculate_second_derivatives() in the component.
+        derivatives and saving the current state as the baseline. The user
+        must supply *calculate_first_derivatives()* and/or
+        *calculate_second_derivatives()* in the component.
 
         This function is overridden by ComponentWithDerivatives
 
@@ -432,7 +432,7 @@ class Component(Container):
         """ComponentsWithDerivatives overloads this function to check for
         missing derivatives.
 
-        This function is overridden by ComponentWithDerivatives
+        This function is overridden by ComponentWithDerivatives.
         """
 
         pass
@@ -574,7 +574,7 @@ class Component(Container):
         return obj
 
     def add_trait(self, name, trait):
-        """Overrides base definition of add_trait in order to
+        """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
@@ -598,7 +598,7 @@ class Component(Container):
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
 
     def remove_trait(self, name):
-        """Overrides base definition of add_trait in order to
+        """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
@@ -1534,8 +1534,8 @@ class Component(Container):
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
-        """ get attributes of component. includes inputs and ouputs and, if
-        io_only is not true, a dictionary of attributes for each interface
+        """ Get attributes of component. Includes inputs and ouputs and, if
+        *io_only* is not true, a dictionary of attributes for each interface
         implemented by the component.  Used by the GUI.
 
         io_only: Bool
@@ -1754,7 +1754,7 @@ class Component(Container):
 
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
-    """prints out validity status of all input and output traits
+    """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
     """

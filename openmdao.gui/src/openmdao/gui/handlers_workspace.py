@@ -12,7 +12,7 @@ from openmdao.gui.projectdb import Projects
 
 
 class AddOnsHandler(ReqHandler):
-    ''' addon installation utility
+    ''' Addon installation utility.
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
     '''
@@ -20,24 +20,24 @@ class AddOnsHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        ''' easy_install the POSTed addon
+        ''' Easy_install the POSTed addon.
         '''
         pass
 
     @web.authenticated
     def get(self):
-        ''' show available plugins, prompt for plugin to be installed
+        ''' Show available plugins; prompt for plugin to be installed.
         '''
         self.render('workspace/addons.html')
 
 
 class ReqHandler(ReqHandler):
-    ''' render the base template
+    ''' Render the base template.
     '''
 
     @web.authenticated
     def post(self):
-        ''' render the base template with the posted content
+        ''' Render the base template with the posted content.
         '''
         attributes = {}
         for field in ['head']:
@@ -81,7 +81,7 @@ class CloseHandler(ReqHandler):
 
 
 class CommandHandler(ReqHandler):
-    ''' get the command, send it to the cserver, return response
+    ''' Get the command, send it to the cserver, and return response.
     '''
 
     @web.authenticated
@@ -111,7 +111,7 @@ class CommandHandler(ReqHandler):
 
 
 class VariableHandler(ReqHandler):
-    ''' get a command to set a variable, send it to the cserver, return response
+    ''' Get a command to set a variable, send it to the cserver, and return response.
     '''
 
     @web.authenticated
@@ -148,7 +148,7 @@ class VariableHandler(ReqHandler):
 
 
 class ComponentHandler(ReqHandler):
-    ''' add, get, or remove a component
+    ''' Add, get, or remove a component.
     '''
 
     @web.authenticated
@@ -198,7 +198,7 @@ class ComponentHandler(ReqHandler):
 
 
 class ObjectHandler(ReqHandler):
-    ''' get the data for a slotable object (including components)
+    ''' Get the data for a slotable object (including components).
     '''
 
     @web.authenticated
@@ -215,7 +215,7 @@ class ObjectHandler(ReqHandler):
 
 
 class RenameHandler(ReqHandler):
-    ''' rename a file
+    ''' Rename a file.
     '''
 
     @web.authenticated
@@ -234,7 +234,7 @@ class RenameHandler(ReqHandler):
 
 
 class ReplaceHandler(ReqHandler):
-    ''' replace a component
+    ''' Replace a component.
     '''
 
     @web.authenticated
@@ -266,7 +266,7 @@ class ComponentsHandler(ReqHandler):
 
 
 class ConnectionsHandler(ReqHandler):
-    ''' get connections between two components in an assembly
+    ''' Get connections between two components in an assembly.
     '''
 
     @web.authenticated
@@ -284,9 +284,9 @@ class ConnectionsHandler(ReqHandler):
 
 
 class DataflowHandler(ReqHandler):
-    ''' get the structure of the specified assembly, or of the global
-        namespace if no pathname is specified, consisting of the list of
-        components and the connections between them (i.e. the dataflow)
+    ''' Get the structure of the specified assembly or of the global
+        namespace if no pathname is specified; consists of the list of
+        components and the connections between them (i.e., the dataflow).
     '''
 
     @web.authenticated
@@ -308,8 +308,8 @@ class EditorHandler(ReqHandler):
 
 
 class ExecHandler(ReqHandler):
-    ''' if a filename is POSTed, have the cserver execute the file
-        otherwise just run() the project
+    ''' If a filename is POSTed, have the cserver execute the file;
+        otherwise, just run() the project.
     '''
 
     @web.authenticated
@@ -336,7 +336,7 @@ class ExecHandler(ReqHandler):
 
 
 class FileHandler(ReqHandler):
-    ''' get/set the specified file/folder
+    ''' Get/set the specified file/folder.
     '''
 
     @web.authenticated
@@ -382,7 +382,7 @@ class FileHandler(ReqHandler):
 
 
 class FilesHandler(ReqHandler):
-    ''' get a list of the users files in JSON format
+    ''' Get a list of the user's files in JSON format.
     '''
 
     @web.authenticated
@@ -395,8 +395,8 @@ class FilesHandler(ReqHandler):
 
 
 class ModelHandler(ReqHandler):
-    ''' POST: get a new model (delete existing console server)
-        GET:  get JSON representation of the model
+    ''' POST: get a new model (delete existing console server).
+        GET:  get JSON representation of the model.
     '''
 
     @web.authenticated
@@ -413,7 +413,7 @@ class ModelHandler(ReqHandler):
 
 
 class OutstreamHandler(ReqHandler):
-    ''' return the url of the zmq outstream server,
+    ''' Return the url of the zmq outstream server.
     '''
 
     @web.authenticated
@@ -424,8 +424,8 @@ class OutstreamHandler(ReqHandler):
 
 
 class ProjectLoadHandler(ReqHandler):
-    ''' GET:  load model fom the given project archive,
-              or reload remembered project for session if no file given
+    ''' GET:  load model from the given project archive,
+              or reload remembered project for session if no file given.
     '''
     @web.authenticated
     def get(self):
@@ -443,7 +443,7 @@ class ProjectLoadHandler(ReqHandler):
             self.redirect('/')
             
 class ProjectRevertHandler(ReqHandler):
-    ''' POST:  revert back to the most recent commit of the project
+    ''' POST:  revert back to the most recent commit of the project.
     '''
     @web.authenticated
     def post(self):
@@ -459,7 +459,7 @@ class ProjectRevertHandler(ReqHandler):
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: commit the current project
+        POST: commit the current project.
     '''
 
     @web.authenticated
@@ -488,8 +488,8 @@ class ProjectHandler(ReqHandler):
 
 
 class PlotHandler(ReqHandler):
-    ''' GET: open a websocket server to supply updated valaues for the
-             specified variable
+    ''' GET: open a websocket server to supply updated values for the
+             specified variable.
     '''
 
     @web.authenticated
@@ -500,7 +500,7 @@ class PlotHandler(ReqHandler):
 
 
 class PublishHandler(ReqHandler):
-    ''' GET: tell the server to publish the specified topic/variable
+    ''' GET: tell the server to publish the specified topic/variable.
     '''
 
     @web.authenticated
@@ -513,7 +513,7 @@ class PublishHandler(ReqHandler):
 
 
 class PubstreamHandler(ReqHandler):
-    ''' return the url of the zmq publisher server
+    ''' Return the url of the zmq publisher server.
     '''
 
     @web.authenticated
@@ -524,7 +524,7 @@ class PubstreamHandler(ReqHandler):
 
 
 class TypesHandler(ReqHandler):
-    ''' get hierarchy of package/types to populate the Palette
+    ''' Get hierarchy of package/types to populate the Palette.
     '''
 
     @web.authenticated
@@ -549,7 +549,7 @@ class SignatureHandler(ReqHandler):
 
 
 class UploadHandler(ReqHandler):
-    ''' file upload utility
+    ''' File upload utility
     '''
 
     @web.authenticated
@@ -575,7 +575,7 @@ class UploadHandler(ReqHandler):
 
 
 class ValueHandler(ReqHandler):
-    ''' GET: get a value for the given pathname
+    ''' GET: get a value for the given pathname.
         TODO: combine with ComponentHandler? handle Containers as well?
     '''
 
@@ -609,7 +609,7 @@ class WorkspaceHandler(ReqHandler):
 
 
 class TestHandler(ReqHandler):
-    ''' initialize the server manager &  render the workspace
+    ''' Initialize the server manager & render the workspace.
     '''
 
     @web.authenticated

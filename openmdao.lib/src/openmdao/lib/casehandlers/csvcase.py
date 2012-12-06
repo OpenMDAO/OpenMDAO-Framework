@@ -168,7 +168,7 @@ class CSVCaseIterator(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -335,7 +335,7 @@ class CSVCaseRecorder(object):
                     os.remove(item)
         
     def get_iterator(self):
-        '''Return CSVCaseIterator that points to our current file'''
+        '''Return CSVCaseIterator that points to our current file.'''
         
         # I think we can safely close the oufile if someone is
         # requesting the iterator
@@ -345,7 +345,7 @@ class CSVCaseRecorder(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}

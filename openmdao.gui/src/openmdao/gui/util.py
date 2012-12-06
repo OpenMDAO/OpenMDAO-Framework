@@ -1,4 +1,4 @@
-"""  utility functions used by openmdao gui
+"""  Utility functions used by openmdao GUI.
 """
 
 import sys
@@ -12,21 +12,21 @@ from distutils.spawn import find_executable
 from openmdao.util.fileutil import find_files
 
 def ensure_dir(d):
-    ''' create directory if it doesn't exist
+    ''' Create directory if it doesn't exist.
     '''
     if not isdir(d):
         os.makedirs(d)
 
 
 def print_list(list):
-    ''' print the contents of a list
+    ''' Print the contents of a list.
     '''
     for item in list:
         print item
 
 
 def print_dict(dict):
-    ''' print the contents of a dictionary
+    ''' Print the contents of a dictionary.
     '''
     for item in dict.items():
         key, value = item
@@ -34,13 +34,13 @@ def print_dict(dict):
 
 
 def print_json(data):
-    ''' pretty print json data
+    ''' Pretty print json data.
     '''
     print json.dumps(json.loads(str(data)), indent=2)
 
 
 def makenode(doc, path):
-    ''' Return a document node contains a directory tree for the path.
+    ''' Return a document node containing a directory tree for the path.
         modified version of:
         http://code.activestate.com/recipes/305313-xml-directory-tree/
     '''
@@ -58,7 +58,7 @@ def makenode(doc, path):
 
 
 def filedict(path):
-    ''' create a nested dictionary for a file structure with 
+    ''' Create a nested dictionary for a file structure with 
     names relative to the starting directory.
     '''
     rootlen = len(path)
@@ -103,7 +103,7 @@ def unique_shortnames(names):
 
 
 def packagedict(types):
-    ''' create a nested dict for a package structure
+    ''' Create a nested dict for a package structure.
     '''
     dct = {}
     namedict = unique_shortnames([t[0] for t in types])
@@ -117,7 +117,7 @@ def packagedict(types):
 
 
 def get_executable_path(executable_names):
-    '''Look for an executable given a list of the possible names
+    '''Look for an executable given a list of the possible names.
     '''
     path = None
     for name in executable_names:
@@ -151,9 +151,9 @@ def find_chrome():
     return pathname
     
 def launch_browser(port, preferred_browser=None):
-    ''' launch web browser on specified port
-        try to use preferred browser if specified, fall back to default
-        (chrome will launch in "app mode")
+    ''' Launch web browser on specified port.
+        Try to use preferred browser if specified; fall back to default.
+        (Chrome will launch in "app mode".)
     '''
     url = 'http://localhost:' + str(port)
     print 'Opening URL in browser: ' + url + ' (pid=' + str(os.getpid()) + ')'
