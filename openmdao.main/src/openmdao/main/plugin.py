@@ -697,10 +697,6 @@ def plugin_install(parser, options, args=None, capture=None):
             sys.stderr.write("\nERROR: command '%s' returned error code: %s\n"
                              % (cmd,retcode))
             return -1
-            
-    if not sys.platform.startswith('win'):
-        # make sure LD_LIBRARY_PATH is updated if necessary in activate script
-        update_libpath(options)
     
     return 0
 
