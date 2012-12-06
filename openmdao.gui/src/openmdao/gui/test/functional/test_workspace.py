@@ -720,10 +720,13 @@ def _test_remove(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
+    # Lots of futzing here to handle short screens (EC2 Windows).
     workspace_page.select_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(-100, 100)  # Move it away from context menu.
+    editor.move(100, 200)
     connections = top.connections_page()
     properties = top.properties_page()
 
@@ -733,8 +736,8 @@ def _test_remove(browser):
 
     # On EC2 Windows hosts the short default screen height causes the
     # editor to obscure the remove button.
-    if sys.platform == 'win32':
-        editor.close()
+#    if sys.platform == 'win32':
+#        editor.close()
 
     # Remove component.
     top.remove()
