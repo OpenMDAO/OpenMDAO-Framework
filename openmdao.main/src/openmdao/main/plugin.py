@@ -778,8 +778,9 @@ def get_full_libpath():
             if sys.platform == 'darwin':
                 libfiles.extend([os.path.abspath(x) for x in find_files(pkgdir, '*.dylib')])
 
-        # if the same library appears multiple times, remove it from the libpath.  Better
-        # to fail due to missing lib than to use one with the wrong bitsize...
+        # if the same library appears multiple times under the same subdir parent, remove 
+        # it from the libpath. 
+        # Better to fail due to missing lib than to use one with the wrong bitsize...
         # TODO: add some smarts to figure out desired bitsize and keep the correct lib
         #       in the libpath
         bases = {}
@@ -788,8 +789,10 @@ def get_full_libpath():
         if len(bases) != len(libfiles):
             for base, paths in bases.items():
                 if len(paths) > 1:
-                    for p in paths:
-                        libfiles.remove(p)
+                    pardirs = [os.path.dirname(os.path.dirname(p)) for p in paths]
+                    for d,p in zip(pardirs, paths):
+                        if pardirs.count(d) > 1:
+                            libfiles.remove(p)
 
         added = []
         exts = ['.py', '.pyc', '.pyo']
@@ -808,7 +811,6 @@ def get_full_libpath():
                 final.append(p)
                 
         print os.pathsep.join(final)
-        
 
 
     
