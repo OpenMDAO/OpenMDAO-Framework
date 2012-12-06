@@ -1,18 +1,22 @@
 
-import threading
 
-from openmdao.main.api import Component
-from openmdao.main.interfaces import IGeometryEngine
-from openmdao.main.datatypes.api import Slot
+from openmdao.main.component import Component
+from openmdao.main.interfaces import IParametricGeometry
 
+class GeomComponent(Component):
 
-class GeometryComp(Component): 
-    """A component that represents a 3D geometry.
-    """
-    geom_engine = Slot(IGeometryEngine)
-    
+    # pylint: disable-msg=E1101
+    geom_builder = Slot(IParametricGeometry, allow_none=True,
+                   desc='Slot for a parametric geometry.')
+
+    def __init__(self):
+        super(GeomComponent, self).__init__()
         
-    def execute(self): 
+
+    def execute(self):
+        """Rebuild the geometry using the current set of parameters.
+        """
         pass
-        
 
+    def _model_changed(self, oldmodel, newmodel):
+        pass

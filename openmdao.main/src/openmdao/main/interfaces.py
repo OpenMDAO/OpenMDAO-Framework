@@ -732,8 +732,9 @@ class IRepository(Interface):
         """
         
         
-class IGeometryEngine(Interface):
-    """An Interface to a Geometry Engine"""
+class IParametricGeometry(Interface):
+    """An Interface to a parametric geometry model"""
+    
     
         
     
