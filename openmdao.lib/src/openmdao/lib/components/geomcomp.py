@@ -1,7 +1,8 @@
 
-
 from openmdao.main.component import Component
 from openmdao.main.interfaces import IParametricGeometry
+from openmdao.main.datatypes.api import Slot
+
 
 class GeomComponent(Component):
 
@@ -11,7 +12,6 @@ class GeomComponent(Component):
 
     def __init__(self):
         super(GeomComponent, self).__init__()
-        
 
     def execute(self):
         """Rebuild the geometry using the current set of parameters.
