@@ -130,17 +130,17 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
 
         try:  # We may get 2 notifiers: sockets open and sockets closed.
-            msg = NotifierPage.wait(self, base_id='ws_open')
+            NotifierPage.wait(self, base_id='ws_open')
         except Exception as exc:
             if 'Element is not clickable' in str(exc):
-                msg2 = NotifierPage.wait(self, base_id='ws_closed')
-                msg = NotifierPage.wait(self, base_id='ws_open')
+                NotifierPage.wait(self, base_id='ws_closed')
+                NotifierPage.wait(self, base_id='ws_open')
             else:
                 raise
         else:
             self.browser.implicitly_wait(1)
             try:
-                msg2 = NotifierPage.wait(self, timeout=1, base_id='ws_closed')
+                NotifierPage.wait(self, timeout=1, base_id='ws_closed')
             except TimeoutException:
                 pass  # ws closed dialog may not exist
             finally:

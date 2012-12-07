@@ -161,6 +161,7 @@ def setup_server(virtual_display=True):
     finally:
         os.chdir(orig)
     TEST_CONFIG['server'] = server
+    TEST_CONFIG['failed'] = []
 
     # Wait for server port to open.
     for i in range(200):  # ~20 sec.
@@ -224,8 +225,19 @@ def teardown_server():
         server.wait()
     TEST_CONFIG['stdout'].close()
 
-    # Clean up.
     server_dir = TEST_CONFIG['server_dir']
+
+    if TEST_CONFIG['failed']:
+        # Save server log & stdout for post-mortem.
+        modname = TEST_CONFIG['modname']
+        logfile = os.path.join(server_dir, 'openmdao_log.txt')
+        if os.path.exists(logfile):
+            os.rename(logfile, '%s-log.txt' % modname)
+        stdout = os.path.join(server_dir, 'stdout')
+        if os.path.exists(stdout):
+            os.rename(stdout, '%s-stdout.txt' % modname)
+
+    # Clean up.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
@@ -262,6 +274,7 @@ def generate(modname):
     # Due to the way nose handles generator functions, setup_server()
     # won't be called until *after* we yield a test, which is too late.
     if not _display_set:
+        TEST_CONFIG['modname'] = modname
         setup_server()
 
     for name in available_browsers:
@@ -315,7 +328,7 @@ def generate(modname):
 
 class _Runner(object):
     """
-    Used to get better descriptions on tests.
+    Used to get better descriptions on tests and post-mortem screenshots.
     If `browser` is an exception, raise it rather than running the test.
     """
 
@@ -339,11 +352,7 @@ class _Runner(object):
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
-
-            # Try to save server log for post-mortem.
-            logfile = os.path.join('gui-server', 'openmdao_log.txt')
-            if os.path.exists(logfile):
-                os.rename(logfile, '%s_log.txt' % testname)
+            TEST_CONFIG['failed'].append(testname)
 
             # Don't try screenshot if webdriver is hung.
             if not isinstance(exc, SkipTest):
@@ -753,6 +762,7 @@ def main(args=None):
             tests = [func for name, func in functions
                         if name.startswith('_test_')]
 
+        TEST_CONFIG['modname'] = '__main__'
         setup_server(virtual_display=False)
         browser = SafeDriver(setup_chrome())
         try:
