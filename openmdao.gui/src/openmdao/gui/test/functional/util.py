@@ -340,6 +340,11 @@ class _Runner(object):
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
 
+            # Try to save server log for post-mortem.
+            logfile = os.path.join('gui-server', 'openmdao_log.txt')
+            if os.path.exists(logfile):
+                os.rename(logfile, '%s_log.txt' % testname)
+
             # Don't try screenshot if webdriver is hung.
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)

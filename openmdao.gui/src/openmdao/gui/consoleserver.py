@@ -524,6 +524,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, projdir):
+        logging.critical('load_project %s', projdir)
         _clear_insts()
         self.cleanup()
         

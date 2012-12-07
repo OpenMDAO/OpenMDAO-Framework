@@ -734,11 +734,6 @@ def _test_remove(browser):
     eq(connections.is_visible, True)
     eq(properties.is_visible, True)
 
-    # On EC2 Windows hosts the short default screen height causes the
-    # editor to obscure the remove button.
-#    if sys.platform == 'win32':
-#        editor.close()
-
     # Remove component.
     top.remove()
 
