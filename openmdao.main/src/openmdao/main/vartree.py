@@ -155,11 +155,11 @@ class VariableTree(Container):
                             yield ('.'.join([name, chname]), child)
 
     def get_attributes(self, io_only=True, indent=0, parent='', valid='false'):
-        """ get attributes for this variable tree. Variables may also include
+        """ Get attributes for this variable tree. Variables may also include
         slots. Used by the GUI.
         
         io_only: bool
-            Set to true if we only want to populate the input and output
+            Set to True if we only want to populate the input and output
             fields of the attributes dictionary.
             
         indent: int
@@ -169,7 +169,7 @@ class VariableTree(Container):
             ID name of parent table line
             
         valid: str
-            validity state of the parent table"""
+            Validity state of the parent table"""
             
         attrs = {}
         attrs['type'] = type(self).__name__

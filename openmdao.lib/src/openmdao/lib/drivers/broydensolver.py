@@ -48,17 +48,17 @@ class BroydenSolver(Driver):
 
     A collection of general-purpose nonlinear multidimensional solvers.
 
-    - broyden2: Broyden's second method -- the same as broyden1 but
+    - ``broyden2``: Broyden's second method -- the same as ``broyden1`` but
       updates the inverse Jacobian directly
-    - broyden3: Broyden's second method -- the same as broyden2 but
+    - ``broyden3``: Broyden's second method -- the same as ``broyden2`` but
       instead of directly computing the inverse Jacobian,
       it remembers how to construct it using vectors. 
       When computing ``inv(J)*F``, it uses those vectors to
       compute this product, thus avoiding the expensive NxN
       matrix multiplication.
-    - excitingmixing: The excitingmixing algorithm. ``J=-1/alpha``
+    - ``excitingmixing``: The excitingmixing algorithm. ``J=-1/alpha``
 
-    The broyden2 is the best. For large systems, use broyden3; excitingmixing is
+    The ``broyden2`` is the best. For large systems, use ``broyden3``; excitingmixing is
     also very effective. The remaining nonlinear solvers from SciPy are, in
     their own words, of "mediocre quality," so they were not implemented.
     """ 
@@ -249,7 +249,7 @@ class BroydenSolver(Driver):
         The best norm(F(x))=0.005 achieved in ~140 iterations.
         
         Note: SciPy uses 0.1 as the default value for alpha for this algorithm.
-        Ours is set at 0.4, which is appropriate for Broyden2 and Broyden3, so
+        Ours is set at 0.4, which is appropriate for ``Broyden2`` and ``Broyden3``, so
         adjust it accordingly if there are problems.
         """
     

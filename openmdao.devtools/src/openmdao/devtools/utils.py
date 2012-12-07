@@ -105,7 +105,7 @@ def tar_dir(dirpath, archive_name, destdir):
 
 @stub_if_missing_deps('paramiko')
 def ssh_test(host, port=22, timeout=3):
-    """Returns true if we can connect to the host via ssh."""
+    """Returns True if we can connect to the host via ssh."""
     # Set the timeout
     original_timeout = socket.getdefaulttimeout()
     socket.setdefaulttimeout(timeout)

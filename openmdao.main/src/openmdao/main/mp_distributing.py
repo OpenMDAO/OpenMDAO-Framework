@@ -281,7 +281,7 @@ class Host(object):  #pragma no cover
 
     hostname: string
         Name of the host. `ssh` is used to log into the host. To log in as a
-        different user use a host name of the form: "username@somewhere.org".
+        different user, use a host name of the form: "username@somewhere.org".
 
     python: string
         Path the the Python command to be used on `hostname`.

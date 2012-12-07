@@ -51,9 +51,10 @@ class MetaModel(Component):
                     desc='Records training cases')
 
     # when fired, the next execution will train the metamodel
-    train_next = Event()
+    train_next = Event(desc='Train metamodel on next execution')
+    
     #when fired, the next execution will reset all training data
-    reset_training_data = Event()
+    reset_training_data = Event(desc='Reset training data on next execution')
 
     def __init__(self):
         super(MetaModel, self).__init__()

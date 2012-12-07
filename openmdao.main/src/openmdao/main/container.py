@@ -250,7 +250,7 @@ class Container(SafeHasTraits):
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression. 
-        When a name begins with 'parent.', that indicates
+        When a name begins with "parent.", that indicates
         it is referring to a variable outside of this object's scope.
         
         srcexpr: str or ExprEvaluator
@@ -960,7 +960,7 @@ class Container(SafeHasTraits):
 
         If you want to use a tuple as a key into a dict, you'll have to
         nest your key tuple inside of an INDEX tuple to avoid ambiguity, 
-        for example, (0, my_tuple)
+        for example, (0, my_tuple).
         """
         childname, _, restofpath = path.partition('.')
         if restofpath:
@@ -1143,13 +1143,13 @@ class Container(SafeHasTraits):
                 (name, self._depgraph.get_source(name)), RuntimeError)
             
     def _input_nocheck(self, name, old):
-        """This method is substituted for _input_check to avoid source
+        """This method is substituted for `_input_check` to avoid source
         checking during a set() call when we've already verified the source.
         """
         pass
     
     def _add_path(self, msg):
-        """Adds our pathname to the beginning of the given message"""
+        """Adds our pathname to the beginning of the given message."""
         return "%s: %s" % (self.get_pathname(), msg)
         
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
@@ -1531,7 +1531,7 @@ def dump(cont, recurse=False, stream=None, **metadata):
 
 def find_name(parent, obj):
     """Find the given object in the specified parent and return its name 
-    in the parent's __dict__.  There could be multiple names bound to a
+    in the parent's `__dict__`.  There could be multiple names bound to a
     given object. Only the first name found is returned.
     
     Return '' if not found.
@@ -1596,15 +1596,15 @@ def find_trait_and_value(obj, pathname):
 
 
 def create_io_traits(cont, obj_info, iotype='in'):
-    """Create io trait(s) specified by the contents of obj_info. Calls
-    build_trait() on the scoping object, which can be overridden by 
+    """Create io trait(s) specified by the contents of `obj_info`. Calls
+    `build_trait()` on the scoping object, which can be overridden by 
     subclasses, to create each trait.
     
-    obj_info is assumed to be either a string, a tuple, or a list
+    `obj_info` is assumed to be either a string, a tuple, or a list
     that contains strings and/or tuples. Tuples must contain a name and an
-    'internal' name, and may optionally contain an iotype and a validation trait.
+    "internal" name and may optionally contain an iotype and a validation trait.
     The first name is the one that will be used to access the trait's attribute
-    in the Container, while the second name represents some alternate naming 
+    in the Container, while the second name represents some alternative naming 
     scheme within the Container.
     
     For example, the following are valid calls:

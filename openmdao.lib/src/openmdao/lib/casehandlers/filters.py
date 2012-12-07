@@ -66,7 +66,7 @@ class IteratorCaseFilter(object):
             return True
 
     def _next(self):
-        """ Set `_current` to next value in sequence, or None. """
+        """ Set `_current` to next value in sequence or None. """
         old = self._current
         try:
             self._current = self._iterator.next()

@@ -20,7 +20,7 @@ from openmdao.main.datatypes.api import Float
 
 @stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(Container): 
-    """Surrogate Modeling method based on the simple kriging interpolation. Predictions are returned
+    """Surrogate Modeling method based on the simple Kriging interpolation. Predictions are returned
     as a NormalDistribution instance."""
     
     implements(ISurrogate)
@@ -158,7 +158,7 @@ class KrigingSurrogate(Container):
 
 
 class FloatKrigingSurrogate(KrigingSurrogate):
-    """Surrogate model based on the simple kriging interpolation. Predictions are returned as floats,
+    """Surrogate model based on the simple Kriging interpolation. Predictions are returned as floats,
     which are the mean of the NormalDistribution predicted by the model."""
 
     def predict(self,new_x): 

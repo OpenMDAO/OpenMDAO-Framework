@@ -687,20 +687,20 @@ def _test_driver_config(browser):
         browser.implicitly_wait(TMO)
 
     # Add the 'train_next' event'
-    editor('events_tab').click()
-    dialog = editor.new_event()
+    editor('triggers_tab').click()
+    dialog = editor.new_trigger()
     dialog.target = 'mm.train_next'
     dialog('ok').click()
-    events = editor.get_events()
+    events = editor.get_triggers()
     expected = [['', 'mm.train_next']]
     eq(len(events.value), len(expected))
     for i, row in enumerate(events.value):
         eq(row, expected[i])
 
     # Delete the event.
-    delbutton = editor('events').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton = editor('triggers').find_elements_by_css_selector('.ui-icon-trash')
     delbutton[0].click()
-    events = editor.get_events()
+    events = editor.get_triggers()
     expected = []
     browser.implicitly_wait(1)  # Not expecting to find anything.
     try:
