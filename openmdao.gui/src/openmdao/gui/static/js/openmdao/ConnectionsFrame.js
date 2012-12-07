@@ -103,8 +103,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     // create context menu for toggling the showAllVariables option
     contextMenu.uniqueId();
-    contextMenu.append(jQuery('<li>Toggle All Variables</li>').click(function(e) {
+    contextMenu.append(jQuery('<li>Show Connected Variables Only</li>').click(function(e) {
         showAllVariables = !showAllVariables;
+        if (showAllVariables) {
+            jQuery(this).text('Show Connected Variables Only');
+        }
+        else {
+            jQuery(this).text('Show All Variables');
+        }
         showConnections();
     }));
     ContextMenu.set(contextMenu.attr('id'), connectionsDiv.attr('id'));
