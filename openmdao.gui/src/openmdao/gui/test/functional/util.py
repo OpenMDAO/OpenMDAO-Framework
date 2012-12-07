@@ -230,12 +230,21 @@ def teardown_server():
     if TEST_CONFIG['failed']:
         # Save server log & stdout for post-mortem.
         modname = TEST_CONFIG['modname']
+        if '.' in modname:
+            prefix, dot, modname = modname.rpartition('.')
+        time.sleep(5)  # Wait for Windows...
         logfile = os.path.join(server_dir, 'openmdao_log.txt')
         if os.path.exists(logfile):
-            os.rename(logfile, '%s-log.txt' % modname)
+            try:
+                os.rename(logfile, '%s-log.txt' % modname)
+            except Exception as exc:
+                print '%s rename failed: %s' % (logfile, exc)
         stdout = os.path.join(server_dir, 'stdout')
         if os.path.exists(stdout):
-            os.rename(stdout, '%s-stdout.txt' % modname)
+            try:
+                os.rename(stdout, '%s-stdout.txt' % modname)
+            except Exception as exc:
+                print '%s rename failed: %s' % (stdout, exc)
 
     # Clean up.
     if os.path.exists(server_dir):

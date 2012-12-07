@@ -324,7 +324,7 @@ def retrieve_docs(remote_dir):
 
 @stub_if_missing_deps('fabric')
 def retrieve_pngs(remote_dir):
-    """Retrieve a tar file of PNG files generated on a remote machine."""
+    """Retrieve a tar file of PNG & server files generated on a remote machine."""
     cmds = [ "import tarfile",
              "import os",
              "import glob",
@@ -340,13 +340,15 @@ def retrieve_pngs(remote_dir):
              "else:",
              "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'bin')",
              "tar = tarfile.open(os.path.join(remote_dir, 'png.tar'), mode='w')",
-             "for png in glob.glob(os.path.join(pngdir, '*.png')):",
-             "    tar.add(png)",
+             "for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):",
+             "    for path in glob.glob(os.path.join(pngdir, pattern)):",
+             "        tar.add(path)",
              "tar.close()",
              ]
     
-    for name in glob.glob('*.png'):
-        os.remove(name)
+    for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):
+        for name in glob.glob(pattern):
+            os.remove(name)
     remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'png.tar'), 'png.tar')
     tar = tarfile.open('png.tar', mode='r')

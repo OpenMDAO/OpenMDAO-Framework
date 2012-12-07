@@ -524,13 +524,13 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, projdir):
-        logging.critical('load_project %s', projdir)
         _clear_insts()
         self.cleanup()
         
         try:
             # Start a new log file.
             logging.getLogger().handlers[0].doRollover()
+            logging.critical('load_project %s', projdir)
 
             self.files = FileManager('files', path=projdir,
                                      publish_updates=self.publish_updates)
@@ -540,6 +540,7 @@ class ConsoleServer(cmd.Cmd):
             register_class_factory(self.projdirfactory)
             
             self.proj = Project(projdir)
+            logging.critical('    self.proj %s', self.proj)
             repo = get_repo(projdir)
             if repo is None:
                 find_vcs()[0](projdir).init_repo()
