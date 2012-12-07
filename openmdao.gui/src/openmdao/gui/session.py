@@ -24,7 +24,7 @@
 
     The basic session mechanism is this:
     * Take some data, pickle it, store it somewhere.
-    * Sssign an id to it. Run that id through a HMAC (NOT just a hash function) to prevent tampering.
+    * Assign an id to it. Run that id through a HMAC (NOT just a hash function) to prevent tampering.
     * Put the id and HMAC output in a cookie.
     * When you get a request, load the id, verify the HMAC. If it matches, load the data from wherever you put it and depickle it.
 
