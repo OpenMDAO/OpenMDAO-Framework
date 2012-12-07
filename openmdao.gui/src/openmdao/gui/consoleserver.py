@@ -149,7 +149,6 @@ class ConsoleServer(cmd.Cmd):
             publish('console_errors', msg)
         except:
             logger.error('publishing of message failed')
-        
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -526,18 +525,18 @@ class ConsoleServer(cmd.Cmd):
     def load_project(self, projdir):
         _clear_insts()
         self.cleanup()
-        
+
         try:
             # Start a new log file.
             logging.getLogger().handlers[0].doRollover()
 
             self.files = FileManager('files', path=projdir,
                                      publish_updates=self.publish_updates)
-            
+
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            
+
             self.proj = Project(projdir)
             repo = get_repo(projdir)
             if repo is None:
@@ -572,9 +571,9 @@ class ConsoleServer(cmd.Cmd):
                 print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
             except Exception as err:
                 self._error(err, sys.exc_info())
-                return err # give the caller an indication that something went wrong so he can
-                           # give the proper error response to the http call if desired. Raising
-                           # an exception here doesn't work
+                return err  # give the caller an indication that something went wrong so he can
+                            # give the proper error response to the http call if desired. Raising
+                            # an exception here doesn't work
         else:
             msg = 'No Project to revert'
             self._print_error(msg)
@@ -698,7 +697,7 @@ class ConsoleServer(cmd.Cmd):
                 if root:
                     rest = '.'.join(parts[1:])
                     root.register_published_vars(rest, publish)
-    
+
             cont, root = self.get_container(pathname)
             if has_interface(cont, IComponent):
                 if publish:
@@ -760,7 +759,7 @@ class ConsoleServer(cmd.Cmd):
             self._log_subscribers = 0
 
     def is_macro(self, filename):
-        return filename.lstrip('/') == os.path.join(os.path.basename(self.proj.macrodir), 
+        return filename.lstrip('/') == os.path.join(os.path.basename(self.proj.macrodir),
                                                     self.proj.macro)
 
     def file_forces_reload(self, filename):
@@ -802,4 +801,3 @@ class _LogStream(object):
 
     def flush(self):
         pass
-

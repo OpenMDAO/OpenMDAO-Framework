@@ -7,7 +7,7 @@
  *  Source and destination variables can be selected via input boxes at the
  *  bottom of the frame and connected by clicking on the 'connect' button.
  *  Alternatively, dragging from one variable figure to another will connect
- *  them if they are eligible to be connected. Input variables can be 
+ *  them if they are eligible to be connected. Input variables can be
  *  disconnected by right clicking on them and choosing 'Disconnect' from the
  *  context menu.
  *
@@ -104,14 +104,8 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     // create context menu for toggling the showAllVariables option
     contextMenu.uniqueId();
     contextMenu.append(jQuery('<li>Toggle All Variables</li>').click(function(e) {
-        if (showAllVariables) {
-            showAllVariables = false;
-            showConnections();
-        }
-        else {
-            showAllVariables = true;
-            showConnections();
-        }
+        showAllVariables = !showAllVariables;
+        showConnections();
     }));
     ContextMenu.set(contextMenu.attr('id'), connectionsDiv.attr('id'));
 
@@ -305,10 +299,10 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             // update the output & input selectors to current outputs & inputs
             src_var_selector.html('');
-            src_var_selector.autocomplete({ source: src_list ,minLength:0});
+            src_var_selector.autocomplete({ source: src_list, minLength: 0 });
 
             dst_var_selector.html('');
-            dst_var_selector.autocomplete({ source: dst_list ,minLength:0});
+            dst_var_selector.autocomplete({ source: dst_list, minLength: 0 });
         }
     }
 
