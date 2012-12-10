@@ -118,7 +118,7 @@ use it, you must have compilers (C and Fortran) on your system.
    fix.
  - `NumPy <http://sourceforge.net/projects/numpy/files/>`_ 
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
- - `gfortran <http://r.research.att.com/gfortran-42-5646.pkg>`_ -- This version goes with Xcode. 
+ - `gfortran-42-5646.pkg <http://r.research.att.com/tools/>`_ -- This version goes with Xcode. 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
 
