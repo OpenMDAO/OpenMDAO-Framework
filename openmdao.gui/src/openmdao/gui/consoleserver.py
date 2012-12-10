@@ -524,13 +524,16 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, projdir):
+        logging.critical('load_project %s', projdir)
         _clear_insts()
+        logging.critical('load_project after _clear_insts()')
         self.cleanup()
+        logging.critical('load_project after cleanup()')
         
         try:
             # Start a new log file.
             logging.getLogger().handlers[0].doRollover()
-            logging.critical('load_project %s', projdir)
+            logging.critical('load_project after rollover')
 
             self.files = FileManager('files', path=projdir,
                                      publish_updates=self.publish_updates)
@@ -546,6 +549,7 @@ class ConsoleServer(cmd.Cmd):
                 find_vcs()[0](projdir).init_repo()
             self.proj.activate()
         except Exception as err:
+            logging.exception('in load_project')
             self._error(err, sys.exc_info())
 
     def commit_project(self, comment=''):
