@@ -373,14 +373,17 @@ class _Runner(object):
                     logging.critical(msg)
 
                 # Close all extra windows.
-                for window in browser.window_handles:
-                    if window == base_window:
-                        continue
-                    elif window != browser.current_window_handle:
-                        browser.switch_to_window(window)
-                    browser.close()
-                if browser.current_window_handle != base_window:
-                    browser.switch_to_window(base_window)
+                try:
+                    for window in browser.window_handles:
+                        if window == base_window:
+                            continue
+                        elif window != browser.current_window_handle:
+                            browser.switch_to_window(window)
+                        browser.close()
+                    if browser.current_window_handle != base_window:
+                        browser.switch_to_window(base_window)
+                except Exception as exc:
+                    logging.exception('window closing failed')
 
             sys.stdout.flush()
             sys.stderr.flush()

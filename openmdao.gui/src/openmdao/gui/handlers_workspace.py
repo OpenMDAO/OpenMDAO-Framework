@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import ast
+import logging
 
 import jsonpickle
 
@@ -39,6 +40,7 @@ class ReqHandler(ReqHandler):
     def post(self):
         ''' render the base template with the posted content
         '''
+        logging.critical('ReqHandler.post')
         attributes = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
@@ -46,9 +48,11 @@ class ReqHandler(ReqHandler):
             else:
                 attributes[field] = False
         self.render('workspace/base.html', **attributes)
+        logging.critical('ReqHandler.post done')
 
     @web.authenticated
     def get(self):
+        logging.critical('ReqHandler.get')
         attributes = {}
         print 'self.request.arguments:', self.request.arguments
         for field in ['head_script']:
@@ -60,6 +64,7 @@ class ReqHandler(ReqHandler):
             else:
                 attributes[field] = False
         self.render('workspace/base.html', **attributes)
+        logging.critical('ReqHandler.get done')
 
 
 class GeometryHandler(ReqHandler):
@@ -86,6 +91,7 @@ class CommandHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
+        logging.critical('CommandHandler.post')
         history = ''
         command = self.get_argument('command', default=None)
 
@@ -96,6 +102,7 @@ class CommandHandler(ReqHandler):
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception, e:
+                logging.critical('CommandHandler %s', e)
                 print e
                 result = sys.exc_info()
             if result:
@@ -103,6 +110,7 @@ class CommandHandler(ReqHandler):
                 
         self.content_type = 'text/html'
         self.write(history)
+        logging.critical('CommandHandler.post done')
 
     @web.authenticated
     def get(self):
@@ -259,10 +267,13 @@ class ComponentsHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
+        logging.critical('ComponentsHandler.get')
         cserver = self.get_server()
         json = cserver.get_components()
+        logging.critical('ComponentsHandler.get %s', json)
         self.content_type = 'application/javascript'
         self.write(json)
+        logging.critical('ComponentsHandler.get done')
 
 
 class ConnectionsHandler(ReqHandler):
@@ -291,10 +302,13 @@ class DataflowHandler(ReqHandler):
 
     @web.authenticated
     def get(self, name):
+        logging.critical('DataflowHandler.get')
         cserver = self.get_server()
         json = cserver.get_dataflow(name)
+        logging.critical('DataflowHandler.get %s', json)
         self.content_type = 'application/javascript'
         self.write(json)
+        logging.critical('DataflowHandler.get done')
 
 
 class EditorHandler(ReqHandler):
@@ -412,10 +426,13 @@ class ModelHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
+        logging.critical('ModelHandler.get')
         cserver = self.get_server()
         json = cserver.get_JSON()
+        logging.critical('ModelHandler %s', json)
         self.content_type = 'application/javascript'
         self.write(json)
+        logging.critical('ModelHandler.get done')
 
 
 class OutstreamHandler(ReqHandler):
@@ -435,18 +452,24 @@ class ProjectLoadHandler(ReqHandler):
     '''
     @web.authenticated
     def get(self):
+        logging.critical('ProjectLoadHandler.get')
         path = self.get_argument('projpath', default=None)
+        logging.critical('ProjectLoadHandler path %s', path)
         if path:
             self.set_secure_cookie('projpath', path)
         else:
             path = self.get_secure_cookie('projpath')
         if path:
+            logging.critical('ProjectLoadHandler load %s', path)
             cserver = self.get_server()
             #path = os.path.join(self.get_project_dir(), path)
             cserver.load_project(path)
+            logging.critical('ProjectLoadHandler loaded %s', path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
+            logging.critical('ProjectLoadHandler redirecting')
             self.redirect('/')
+        logging.critical('ProjectLoadHandler.get done')
             
 class ProjectRevertHandler(ReqHandler):
     ''' POST:  revert back to the most recent commit of the project
