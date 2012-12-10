@@ -119,7 +119,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     function setupSelector(selector) {
         // if selector gains focus with assemblyKey then clear it
         selector.input = selector.siblings('input');
-        debug.info('selector:',selector);
+        // debug.info('selector:',selector);
         selector.input.focus(function() {
             if (selector.input.val() === assemblyKey) {
                 selector.input.val('').css(normalCSS);
@@ -191,7 +191,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         //         selector.blur();
         //     }
         // });
-
     }
 
     // set up source and destination component selectors
@@ -278,7 +277,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             });
             var end_outputs = y;
 
-            x = 195;
+            x = (componentsDiv.width() - connect_button.width())/2;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
                 if (showAllVariables || conn_list.contains(dstvar.name)) {
@@ -365,7 +364,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             line;
 
         if (source !== null) {
-            // debug.info('ConnectionsFrame: source',source.data('name'), source, e);
             if (e.button === 2) {
                 // context menu option to disconnect the variable
                 if (source.data('input') && source.data('connected')) {
@@ -395,9 +393,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                         connectionsDiv.off('mousemove mouseup');
                         line.element.remove();
                         target = r.getElementByPoint(e.clientX, e.clientY);
-                        // debug.info('ConnectionsFrame: target',target);
                         if (target !== null && target !== source) {
-                            // debug.info('ConnectionsFrame: target',target.data('name'), target);
                             var cmd = self.pathname + '.connect("',
                                 src_name = source.data('name'),
                                 tgt_name = target.data('name');
