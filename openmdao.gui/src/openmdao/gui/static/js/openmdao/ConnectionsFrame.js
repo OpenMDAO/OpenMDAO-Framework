@@ -36,14 +36,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                        +        '<tr><td>Source Component:</td>'
                        +            '<td>Target Component:</td>'
                        +        '</tr>'
-                       +        '<tr><td><input id="src_cmp_list" /></td>'
-                       +            '<td><input id="dst_cmp_list" /></td>'
+                       +        '<tr><td><select id="src_cmp_list" /></td>'
+                       +            '<td><select id="dst_cmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
             .appendTo(self.elm),
-        src_cmp_selector = componentsDiv.find('#src_cmp_list'),
-        dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
+        src_cmp_selector = componentsDiv.find('#src_cmp_list').combobox(),
+        dst_cmp_selector = componentsDiv.find('#dst_cmp_list').combobox(),
         component_list = [],
         // connections diagram
         connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
@@ -52,19 +52,19 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         r = Raphael(connectionsDiv.attr('id')),
         // variable selectors and connect button
         variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
-        variablesHTML = '<div style="'+variablesCSS+'"><table>'
+                variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
-                      +        '<tr><td><input  id="src_var_list" /></td>'
-                      +        '    <td><input  id="dst_var_list" /></td>'
+                      +        '<tr><td><select id="src_var_list" /></td>'
+                      +        '    <td><select id="dst_var_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
                       + '</table></div>',
         variablesDiv = jQuery(variablesHTML)
             .appendTo(self.elm),
-        src_var_selector = variablesDiv.find('#src_var_list'),
-        dst_var_selector = variablesDiv.find('#dst_var_list'),
+        src_var_selector = variablesDiv.find('#src_var_list').combobox(),
+        dst_var_selector = variablesDiv.find('#dst_var_list').combobox(),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
                             var src = src_var_selector.val();
@@ -73,7 +73,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                             src_var_selector.val('');
                             dst_var_selector.val('');
                         }),
-        assemblyKey = '<Assembly>',
+        assemblyKey = '-- Assembly --',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
         normalCSS   = {'font-style':'normal', 'opacity':'1.0'},
         // context menu
@@ -118,80 +118,80 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     /** set up a component selector */
     function setupSelector(selector) {
         // if selector gains focus with assemblyKey then clear it
-        selector.focus(function() {
-            selector = jQuery(this);
-            if (selector.val() === assemblyKey) {
-                selector.val('').css(normalCSS);
+        selector.input = selector.siblings('input');
+        debug.info('selector:',selector);
+        selector.input.focus(function() {
+            if (selector.input.val() === assemblyKey) {
+                selector.input.val('').css(normalCSS);
             }
         });
 
         // process new selector value when selector loses focus
-        selector.on('blur', function(e) {
-            selector.autocomplete('close');
-
-            if (e.target.value === '' || e.target.value === assemblyKey) {
-                selector.val(assemblyKey);
-                selector.css(assemblyCSS);
+        selector.change(function(e) {
+            if (this.value === '' || this.value === assemblyKey) {
+                selector.input.val(assemblyKey);
+                selector.input.css(assemblyCSS);
             }
 
             if (selector.attr('id') === src_cmp_selector.attr('id')) {
-                if (e.target.value === assemblyKey) {
+                if (this.value === assemblyKey) {
                     self.src_comp = '';
                 }
                 else {
-                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
-                        self.src_comp = e.target.value;
+                    if (jQuery.inArray(this.value, component_list) >= 0) {
+                        self.src_comp = this.value;
                     }
                     else {
-                        selector.val(self.src_comp);
+                        selector.input.val(self.src_comp);
                     }
                 }
             }
             else {
-                if (e.target.value === assemblyKey) {
+                if (this.value === assemblyKey) {
                     self.dst_comp = '';
                 }
                 else {
-                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
-                        self.dst_comp = e.target.value;
+                    if (jQuery.inArray(this.value, component_list) >= 0) {
+                        self.dst_comp = this.value;
                     }
                     else {
-                        selector.val(self.dst_comp);
+                        selector.input.val(self.dst_comp);
                     }
                 }
             }
 
-            if (e.target.value === '' || e.target.value === assemblyKey) {
-                selector.val(assemblyKey);
-                selector.css(assemblyCSS);
+            if (this.value === '' || this.value === assemblyKey) {
+                selector.input.val(assemblyKey);
+                selector.input.css(assemblyCSS);
             }
 
             showConnections();
         });
 
         // set autocomplete to trigger blur (remove focus)
-        selector.autocomplete({
-            select: function(event, ui) {
-                if (ui.item.value === '') {
-                    selector.val(assemblyKey);
-                    selector.css(assemblyCSS);
-                }
-                else {
-                    selector.val(ui.item.value);
-                    selector.css(normalCSS);
-                }
-                selector.blur();
-            },
-            delay: 0,
-            minLength: 0
-        });
+        // selector.autocomplete({
+        //     select: function(event, ui) {
+        //         if (ui.item.value === '') {
+        //             selector.val(assemblyKey);
+        //             selector.css(assemblyCSS);
+        //         }
+        //         else {
+        //             selector.val(ui.item.value);
+        //             selector.css(normalCSS);
+        //         }
+        //         selector.blur();
+        //     },
+        //     delay: 0,
+        //     minLength: 0
+        // });
 
-        // set enter key to trigger blur (remove focus)
-        selector.on('keypress.enterkey', function(e) {
-            if (e.which === 13) {
-                selector.blur();
-            }
-        });
+        // // set enter key to trigger blur (remove focus)
+        // selector.on('keypress.enterkey', function(e) {
+        //     if (e.which === 13) {
+        //         selector.blur();
+        //     }
+        // });
+
     }
 
     // set up source and destination component selectors
@@ -213,10 +213,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             // update the output & input selectors with component list
             src_cmp_selector.html('');
-            src_cmp_selector.autocomplete({source: component_list});
-
             dst_cmp_selector.html('');
-            dst_cmp_selector.autocomplete({source: component_list});
+            jQuery.each(component_list, function(idx, comp_name) {
+                src_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
+                dst_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
+            });
         }
 
         if (self.src_comp) {
@@ -235,6 +236,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             dst_cmp_selector.val(assemblyKey);
             dst_cmp_selector.css(assemblyCSS);
         }
+
         showConnections();
     }
 
@@ -305,10 +307,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             // update the output & input selectors to current outputs & inputs
             src_var_selector.html('');
-            src_var_selector.autocomplete({ source: src_list, minLength: 0 });
+            jQuery.each(src_list, function(idx, var_name) {
+                src_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
+            });
 
             dst_var_selector.html('');
-            dst_var_selector.autocomplete({ source: dst_list, minLength: 0 });
+            jQuery.each(dst_list, function(idx, var_name) {
+                dst_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
+            });
         }
     }
 
