@@ -3,7 +3,6 @@ import sys
 import traceback
 
 from openmdao.main.zmqrpc import ZMQ_RPC
-from openmdao.main.publisher import Publisher, publish
 from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.zmqserver import ZMQServer
 from openmdao.gui.zmqstreamserver import ZMQStreamServer
@@ -13,7 +12,7 @@ debug = True
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> ZMQServerManager --', msg
+        print '<<<' + str(os.getpid()) + '>>> ZMQServerManager --', msg
 
 
 class ZMQServerManager(object):
@@ -49,7 +48,7 @@ class ZMQServerManager(object):
                 return proxy
         except Exception, err:
             print 'Error getting server', server_id
-            print str(err.__class__.__name__),":", err
+            print str(err.__class__.__name__), ":", err
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             traceback.print_tb(exc_traceback, limit=30)
