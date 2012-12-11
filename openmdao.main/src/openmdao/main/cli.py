@@ -171,8 +171,8 @@ def _get_openmdao_parser():
                           help="don't launch browser, just run server")
         parser.add_argument('-r', '--reset', action='store_true', dest='reset',
                           help='reset project database')
-        parser.add_argument('-d', '--dev', action='store_true', dest='development',
-                          help='enable development options')
+        parser.add_argument('-x', '--external', action='store_true', dest='external',
+                          help='allow access to server from external clients (WARNING: Not Safe or Secure!!')
         parser.set_defaults(func=gui.run)
 
     except ImportError:
