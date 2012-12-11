@@ -89,7 +89,7 @@ def _configure_root():
     date_fmt = '%b %d %H:%M:%S'
     formatter = logging.Formatter(msg_fmt, date_fmt)
 
-    handler = logging.handlers.RotatingFileHandler(filename, backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(filename)
     handler.setFormatter(formatter)
     handler.setLevel(logging.WARNING)
 

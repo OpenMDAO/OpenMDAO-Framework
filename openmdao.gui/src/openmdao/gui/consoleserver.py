@@ -526,9 +526,7 @@ class ConsoleServer(cmd.Cmd):
     def load_project(self, projdir):
         logging.critical('load_project %s', projdir)
         _clear_insts()
-        logging.critical('load_project after _clear_insts()')
         self.cleanup()
-        logging.critical('load_project after cleanup()')
         
         try:
             # Start a new log file.
