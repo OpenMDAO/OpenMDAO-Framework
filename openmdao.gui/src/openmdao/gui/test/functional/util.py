@@ -214,12 +214,6 @@ def teardown_server():
             # No luck, at least terminate the server.
             print 'Killing server'
             server.terminate()
-            for i in range(10):
-                if server.poll() is not None:
-                    print 'Server exited'
-                    break
-            else:
-                print 'Server is a zombie!'
     else:
         server.terminate()
         server.wait()
@@ -328,11 +322,16 @@ def generate(modname):
             # if it already died, calling kill on a defunct process
             # raises a WindowsError: Access Denied
             print 'browser.quit failed:', exc
-        if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
-            try:
-                os.remove('chromedriver.log')
-            except Exception as exc:
-                print 'Could not delete chromedriver.log: %s' % exc
+        if name == 'Chrome':
+            if sys.platform == 'win32':
+                time.sleep(1)
+                # Kill any stubborn chromedriver processes.
+                subprocess.call(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'])
+            if cleanup and os.path.exists('chromedriver.log'):
+                try:
+                    os.remove('chromedriver.log')
+                except Exception as exc:
+                    print 'Could not delete chromedriver.log: %s' % exc
 
 
 class _Runner(object):

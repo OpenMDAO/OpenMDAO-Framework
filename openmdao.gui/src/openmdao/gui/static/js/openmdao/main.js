@@ -90,6 +90,7 @@ jQuery(function() {
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
 
+        debug.info('listeners now ready');
         listeners_ready.resolve();
     }());
 

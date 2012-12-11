@@ -28,9 +28,11 @@ openmdao.Model=function(listeners_ready) {
                    debug.error('Error getting websocket url',jqXHR,textStatus,err);
                })
                .pipe(function(addr) {
+                   debug.info('open_websocket pipe '+url);
                    return openmdao.Util.openWebSocket(addr,handler);
                })
                .done(function(sock) {
+                   debug.info('open_websocket done '+url);
                    sockets[url] = sock;
                });
     }
@@ -87,6 +89,7 @@ openmdao.Model=function(listeners_ready) {
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
     jQuery.when(ws_ready, listeners_ready).done(function() {
+        debug.info('ws and listeners ready');
         jQuery.ajax({ type: 'GET', url: 'project_load' })
         .done(function() {
              self.model_ready.resolve();
