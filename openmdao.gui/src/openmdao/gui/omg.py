@@ -38,13 +38,14 @@ debug = True
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> OMG --', msg
+        print '<<<' + str(os.getpid()) + '>>> OMG --', msg
 
 
 def get_user_dir():
     user_dir = os.path.expanduser("~/.openmdao/gui/")
     ensure_dir(user_dir)
     return user_dir
+
 
 class App(web.Application):
     ''' openmdao web application
@@ -59,14 +60,14 @@ class App(web.Application):
         else:
             import openmdao.main
             docpath = os.path.join(os.path.dirname(openmdao.main.__file__), 'docs')
-            
+
         handlers = [
-            web.url(r'/',       web.RedirectHandler, { 'url':'/projects', 'permanent':False }),
+            web.url(r'/',       web.RedirectHandler, {'url': '/projects', 'permanent': False}),
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
-            web.url(r'/docs/(.*)', web.StaticFileHandler, { 'path':docpath, 'default_filename':'index.html' }),
-            web.url(r'/docs/plugins/(.*)',  PluginDocsHandler, { 'route': '/docs/plugins/' })
+            web.url(r'/docs/plugins/(.*)', PluginDocsHandler, {'route': '/docs/plugins/'}),
+            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'})
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
@@ -102,12 +103,12 @@ class App(web.Application):
     def _sigterm_handler(self, signum, frame):
         DEBUG('Received SIGTERM, shutting down....\n')
         _MGR.cleanup()
-        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
-        
+        ioloop.IOLoop.instance().add_timeout(time.time() + 5, sys.exit)
+
     def exit(self):
         self.server_manager.cleanup()
         DEBUG('Exit requested, shutting down....\n')
-        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
+        ioloop.IOLoop.instance().add_timeout(time.time() + 5, sys.exit)
 
 
 class AppServer(object):
@@ -167,7 +168,7 @@ class AppServer(object):
     def get_argument_parser():
         ''' create a parser for command line arguments
         '''
-        parser = ArgumentParser(description = "launch the graphical user interface")
+        parser = ArgumentParser(description="launch the graphical user interface")
         parser.add_argument("-p", "--port", type=int, dest="port", default=0,
                           help="port to run server on (defaults to any available port)")
         parser.add_argument("-b", "--browser", dest="browser", default="chrome",
