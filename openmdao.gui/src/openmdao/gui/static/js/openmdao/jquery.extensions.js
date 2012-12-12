@@ -98,7 +98,8 @@
                      input.focus();
                  })
                  .css({'margin-left': '-2px'});
-             this.button.find('.ui-button-text').css({'padding':0})
+
+             this.button.find('.ui-button-text').css({'padding':0});
          },
 
          destroy: function() {

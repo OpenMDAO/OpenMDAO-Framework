@@ -20,7 +20,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
+openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname));
@@ -117,20 +117,32 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** set up a component selector */
     function setupSelector(selector) {
-        // if selector gains focus with assemblyKey then clear it
-        selector.input = selector.siblings('input');
-        // debug.info('selector:',selector);
-        selector.input.focus(function() {
-            if (selector.input.val() === assemblyKey) {
-                selector.input.val('').css(normalCSS);
-            }
+        // get a reference to the INPUT element, which is a sibling to the SELECT
+        selector.input = selector.siblings('.ui-autocomplete-input');
+        debug.info('setup selector:',selector,'input:',selector.input);
+
+        // if input gains focus then clear it
+        selector.input.focus(function(e) {
+            debug.info('selector input focus:',selector.input, selector.input.val());
+            selector.input.val('').css(normalCSS);
         });
 
-        // process new selector value when selector loses focus
+        // process new selector value on change
         selector.change(function(e) {
-            if (this.value === '' || this.value === assemblyKey) {
+            // 'this' is the select element
+            debug.info('BEG selector change:',this, this.value, 'input:', selector.input, selector.input.val());
+
+            if (this.value === '') {
+                this.value = assemblyKey;
+            }
+
+            if (this.value === assemblyKey) {
                 selector.input.val(assemblyKey);
                 selector.input.css(assemblyCSS);
+            }
+            else {
+                selector.input.val(this.value);
+                selector.input.css(normalCSS);
             }
 
             if (selector.attr('id') === src_cmp_selector.attr('id')) {
@@ -160,37 +172,44 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                 }
             }
 
-            if (this.value === '' || this.value === assemblyKey) {
-                selector.input.val(assemblyKey);
-                selector.input.css(assemblyCSS);
-            }
+            // if (this.value === '' || this.value === assemblyKey) {
+            //     selector.input.val(assemblyKey);
+            //     selector.input.css(assemblyCSS);
+            // }
+            // else {
+            //    selector.input.css(normalCSS);
+            // }
+
+            debug.info('END selector change:',this, this.value, 'input:', selector.input, selector.input.val());
+            selector.input.blur();
 
             showConnections();
         });
 
-        // set autocomplete to trigger blur (remove focus)
-        // selector.autocomplete({
-        //     select: function(event, ui) {
-        //         if (ui.item.value === '') {
-        //             selector.val(assemblyKey);
-        //             selector.css(assemblyCSS);
-        //         }
-        //         else {
-        //             selector.val(ui.item.value);
-        //             selector.css(normalCSS);
-        //         }
-        //         selector.blur();
-        //     },
-        //     delay: 0,
-        //     minLength: 0
-        // });
+        // when input loses focus, apply proper style
+        selector.input.blur(function(e) {
+            // 'this' is the INPUT element
+            debug.info('BEG selector input blur:', this, this.value, selector, selector.value, selector.val());
+            if (this.value === '') {
+                selector.val(assemblyKey);
+            }
+            if (selector.val() === assemblyKey) {
+                jQuery(this).css(assemblyCSS);
+            }
+            else {
+                jQuery(this).css(normalCSS);
+            }
+            debug.info('END selector input blur:', this, this.value, selector, selector.value, selector.val());
+        });
 
-        // // set enter key to trigger blur (remove focus)
-        // selector.on('keypress.enterkey', function(e) {
-        //     if (e.which === 13) {
-        //         selector.blur();
-        //     }
-        // });
+        // set enter key to trigger blur (remove focus)
+        selector.input.on('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                selector.change();
+            }
+        });
+
+        selector.input.blur();
     }
 
     // set up source and destination component selectors
