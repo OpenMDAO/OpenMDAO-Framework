@@ -29,11 +29,6 @@ def get_file(url):
 
 
 def _run_gofile(startdir, gopath, args=()):
-    for i in range(3):
-        print '_run_gofile pausing before run...'
-        sys.stdout.flush()
-        time.sleep(10 * 60)
-
     retcode = -1
     godir, gofile = os.path.split(gopath)
     os.chdir(godir)
@@ -65,11 +60,6 @@ def _run_gofile(startdir, gopath, args=()):
 
 
 def _run_sub(outname, cmd, env=None):
-    for i in range(3):
-        print '_run_sub pausing before run...'
-        sys.stdout.flush()
-        time.sleep(10 * 60)
-
     f = open(outname, 'wb')
     try:
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT,

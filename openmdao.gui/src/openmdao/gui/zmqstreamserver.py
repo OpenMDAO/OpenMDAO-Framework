@@ -19,6 +19,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
+        sy.stdout.flush()
 
 
 def make_unicode(content):
@@ -40,6 +41,9 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         DEBUG('__init__ %s %s' % (request, kwargs))
         super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
+
+    def allow_draft76(self):
+        return True  # Not recommended.
 
     def initialize(self, addr):
         DEBUG('initialize %s' % addr)

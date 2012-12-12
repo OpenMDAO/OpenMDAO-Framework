@@ -324,7 +324,7 @@ def generate(modname):
             print 'browser.quit failed:', exc
         if name == 'Chrome':
             if sys.platform == 'win32':
-                time.sleep(1)
+                time.sleep(2)
                 # Kill any stubborn chromedriver processes.
                 subprocess.call(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'])
             if cleanup and os.path.exists('chromedriver.log'):
