@@ -131,6 +131,7 @@ class ZMQStreamServer(object):
     def serve(self):
         ''' start server listening on port & start the ioloop
         '''
+        DEBUG('serve %s:%s' % ("localhost", self.options.port))
         self.http_server.listen(self.options.port, address="localhost")
 
         try:
