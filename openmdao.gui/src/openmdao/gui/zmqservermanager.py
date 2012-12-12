@@ -47,7 +47,7 @@ class ZMQServerManager(object):
                     'out_url':    out_url
                 }
                 return proxy
-        except Exception, err:
+        except Exception as err:
             print 'Error getting server', server_id
             print str(err.__class__.__name__),":", err
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -63,20 +63,31 @@ class ZMQServerManager(object):
             del self.server_dict[server_id]
 
             if 'out_server' in server_info:
-                server_info['out_server'].terminate()
-                server_info['out_server'].wait()
-            if 'pub_server' in server_info:
-                server_info['pub_server'].terminate()
-                server_info['pub_server'].wait()
+                try:
+                    server_info['out_server'].terminate()
+                    server_info['out_server'].wait()
+                except Exception as exc:
+                    print 'Error terminating out_server', server_id
 
-            server = server_info['server']
+            if 'pub_server' in server_info:
+                try:
+                    server_info['pub_server'].terminate()
+                    server_info['pub_server'].wait()
+                except Exception as exc:
+                    print 'Error terminating pub_server', server_id
+
             proxy = server_info['proxy']
             try:
                 proxy.cleanup()
-            except Exception:
-                pass
-            server.terminate()
-            server.wait()
+            except Exception as exc:
+                print 'Error cleaning up proxy', server_id
+
+            server = server_info['server']
+            try:
+                server.terminate()
+                server.wait()
+            except Exception as exc:
+                print 'Error terminating server', server_id
 
     def get_pub_socket_url(self, server_id):
         ''' get the url of the publisher socket for the server associated with

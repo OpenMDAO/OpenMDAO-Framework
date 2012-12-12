@@ -106,10 +106,11 @@ class App(web.Application):
         # External termination normally only used during GUI testing.
         if sys.platform == 'win32':
             # Fake SIGTERM by polling for a .sigterm file.
-            poller = threading.Thread(target=self._sigterm_poller,
-                                      name='SIGTERM poller')
-            poller.daemon = True
-            poller.start()
+            self._exit_requested = False
+            self._poller = threading.Thread(target=self._sigterm_poller,
+                                            name='SIGTERM poller')
+            self._poller.daemon = True
+            self._poller.start()
         else:
             signal.signal(signal.SIGTERM, self._sigterm_handler)
 
@@ -118,7 +119,7 @@ class App(web.Application):
     def _sigterm_poller(self):
         """ On Windows, poll for an external termination request file. """
         sigfile = os.path.join(os.getcwd(), 'SIGTERM.txt')
-        while True:
+        while not self._exit_requested:
             time.sleep(1)
             if os.path.exists(sigfile):
                 DEBUG('Detected SIGTERM, shutting down....\n')
@@ -133,6 +134,9 @@ class App(web.Application):
     def exit(self):
         """ Shutdown. """
         DEBUG('Exit requested, shutting down....\n')
+        if sys.platform == 'win32':
+            self._exit_requested = True
+            self._poller.join(3)
         self._shutdown()
 
     def _shutdown(self):

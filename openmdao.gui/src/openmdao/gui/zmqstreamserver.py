@@ -19,7 +19,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
-        sy.stdout.flush()
+        sys.stdout.flush()
 
 
 def make_unicode(content):
