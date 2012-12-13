@@ -119,23 +119,15 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     function setupSelector(selector) {
         // get a reference to the INPUT element, which is a sibling to the SELECT
         selector.input = selector.siblings('.ui-autocomplete-input');
-        debug.info('setup selector:',selector,'input:',selector.input);
 
-        // if input gains focus then clear it
+        // when input gains focus, clear it
         selector.input.focus(function(e) {
-            debug.info('selector input focus:',selector.input, selector.input.val());
             selector.input.val('').css(normalCSS);
         });
 
         // process new selector value on change
         selector.change(function(e) {
-            // 'this' is the select element
-            debug.info('BEG selector change:',this, this.value, 'input:', selector.input, selector.input.val());
-
-            if (this.value === '') {
-                this.value = assemblyKey;
-            }
-
+            // make sure the input field shows the proper value with the proper style
             if (this.value === assemblyKey) {
                 selector.input.val(assemblyKey);
                 selector.input.css(assemblyCSS);
@@ -145,6 +137,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 selector.input.css(normalCSS);
             }
 
+            // set active source/destination component to current selection if valid
             if (selector.attr('id') === src_cmp_selector.attr('id')) {
                 if (this.value === assemblyKey) {
                     self.src_comp = '';
@@ -172,56 +165,29 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 }
             }
 
-            // if (this.value === '' || this.value === assemblyKey) {
-            //     selector.input.val(assemblyKey);
-            //     selector.input.css(assemblyCSS);
-            // }
-            // else {
-            //    selector.input.css(normalCSS);
-            // }
-
-            debug.info('END selector change:',this, this.value, 'input:', selector.input, selector.input.val());
             selector.input.blur();
 
             showConnections();
         });
 
-        // when input loses focus, apply proper style
-        selector.input.blur(function(e) {
-            // 'this' is the INPUT element
-            debug.info('BEG selector input blur:', this, this.value, selector, selector.value, selector.val());
-            if (this.value === '') {
-                selector.val(assemblyKey);
-            }
-            if (selector.val() === assemblyKey) {
-                jQuery(this).css(assemblyCSS);
-            }
-            else {
-                jQuery(this).css(normalCSS);
-            }
-            debug.info('END selector input blur:', this, this.value, selector, selector.value, selector.val());
-        });
-
-        // set enter key to trigger blur (remove focus)
+        // set enter key to trigger change event
         selector.input.on('keypress.enterkey', function(e) {
             if (e.which === 13) {
                 selector.change();
             }
         });
-
-        selector.input.blur();
     }
 
-    // set up source and destination component selectors
+    // set up source and destination component selector behaviors
     setupSelector(src_cmp_selector);
     setupSelector(dst_cmp_selector);
 
     /** populate component selectors from dataflow data and show connections */
-    function loadData(data) {
+    function loadComponentData(data) {
         if (!data || !data.Dataflow || !data.Dataflow.components
                   || !data.Dataflow.components.length) {
             // don't have what we need, probably something got deleted
-            debug.warn('ConnectionFrame.loadData(): Invalid data',data);
+            debug.warn('ConnectionFrame.loadComponentData(): Invalid data',data);
             self.close();
         }
         else {
@@ -236,26 +202,30 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 src_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
                 dst_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
             });
-        }
 
-        if (self.src_comp) {
-            src_cmp_selector.val(self.src_comp);
-            src_cmp_selector.css(normalCSS);
-        }
-        else {
-            src_cmp_selector.val(assemblyKey);
-            src_cmp_selector.css(assemblyCSS);
-        }
-        if (self.dst_comp) {
-            dst_cmp_selector.val(self.dst_comp);
-            dst_cmp_selector.css(normalCSS);
-        }
-        else {
-            dst_cmp_selector.val(assemblyKey);
-            dst_cmp_selector.css(assemblyCSS);
-        }
+            if (self.src_comp) {
+                src_cmp_selector.val(self.src_comp);
+                src_cmp_selector.input.val(self.src_comp);
+                src_cmp_selector.input.css(normalCSS);
+            }
+            else {
+                src_cmp_selector.val(assemblyKey);
+                src_cmp_selector.input.val(assemblyKey);
+                src_cmp_selector.input.css(assemblyCSS);
+            }
+            if (self.dst_comp) {
+                dst_cmp_selector.val(self.dst_comp);
+                dst_cmp_selector.input.val(self.dst_comp);
+                dst_cmp_selector.input.css(normalCSS);
+            }
+            else {
+                dst_cmp_selector.val(assemblyKey);
+                dst_cmp_selector.input.val(assemblyKey);
+                dst_cmp_selector.input.css(assemblyCSS);
+            }
 
-        showConnections();
+            showConnections();
+        }
     }
 
     /** populate connections and variable selectors with source and dest variables */
@@ -473,7 +443,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             debug.warn('message length',message.length,'topic',message[0]);
         }
         else {
-            loadData(message[1]);
+            loadComponentData(message[1]);
         }
     }
 
@@ -501,7 +471,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        model.getComponent(path, loadData,
+        model.getComponent(path, loadComponentData,
             function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',
                             jqXHR, textStatus, errorThrown);

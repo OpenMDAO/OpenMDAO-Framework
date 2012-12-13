@@ -158,6 +158,19 @@ class AppServer(object):
         if not self.options.serveronly:
             launch_browser(self.options.port, self.options.browser)
 
+        if self.options.external:
+            print '***********************************************************'
+            print '** WARNING: You have exposed the server to the external  **'
+            print '**          network.  THIS IS NOT SAFE!!  Clients will   **'
+            print '**          have access to a command prompt on the host  **'
+            print '**          computer with the identity and privileges of **'
+            print '**          the userid under which the server was run.   **'
+            print '**                                                       **'
+            print '**    This is very dangerous and you should NOT do it.   **'
+            print '**      You exercise this option at your own risk!!!     **'
+            print '**              (Ctrl-C to terminate server)             **'
+            print '***********************************************************'
+
         DEBUG('Serving on port %d' % self.options.port)
         try:
             ioloop.IOLoop.instance().start()
