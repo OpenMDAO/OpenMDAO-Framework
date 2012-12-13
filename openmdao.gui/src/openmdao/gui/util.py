@@ -130,6 +130,8 @@ def find_chrome():
     """ Find the chrome executable. """
     path = '/Applications/Google Chrome.app/Contents/MacOS' \
          + os.pathsep \
+         + "C:\Program Files\Google\Chrome\Application" \
+         + os.pathsep \
          + "C:\Program Files (x86)\Google\Chrome\Application" \
          + os.pathsep \
          + os.environ['PATH']

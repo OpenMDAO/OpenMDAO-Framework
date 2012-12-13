@@ -52,6 +52,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             else:
                 if version < 13:
                     print msg % ('obsolete', version, addr)
+        sys.stdout.flush()
         super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
 
     def allow_draft76(self):
