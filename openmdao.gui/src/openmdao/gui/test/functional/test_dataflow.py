@@ -3,7 +3,6 @@ Tests of dataflow functions.
 """
 
 import pkg_resources
-import sys
 import time
 
 from nose.tools import eq_ as eq
@@ -13,6 +12,7 @@ from nose.tools import with_setup
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from pageobjects.util import ArgsPrompt, NotifierPage
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -105,6 +105,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
+    conn_page.move(-100, -100)
     eq(conn_page.dialog_title, 'Connections: top')
     eq(conn_page.source_component, 'comp1')
     eq(conn_page.target_component, 'comp2')
@@ -118,6 +119,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
+    props.move(-100, -100)
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
     inputs[6][1] = 'xyzzy'
@@ -127,21 +129,21 @@ def _test_connect(browser):
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
-    
+
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
     inputs.rows[0].cells[1].click()
     browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
     #inputs.rows[0].cells[0].click()
     #inputs[0][1] = 'True'
-    
+
     inputs = props.inputs
     eq(inputs[2].value, ['e_in', '1'])
     inputs.rows[2].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
     #inputs.rows[2].cells[0].click()
-    #inputs[2][1] = '3'    
-    
+    #inputs[2][1] = '3'
+
     props.close()
 
     # Run the simulation.
@@ -315,9 +317,9 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ['', 
+        ['',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
-         '-10', '99', '', '', '', 
+         '-10', '99', '', '', '',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
     for i, row in enumerate(outputs.value):

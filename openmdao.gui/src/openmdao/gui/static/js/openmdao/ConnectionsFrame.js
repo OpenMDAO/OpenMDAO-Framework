@@ -44,6 +44,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             .appendTo(self.elm),
         src_cmp_selector = componentsDiv.find('#src_cmp_list').combobox(),
         dst_cmp_selector = componentsDiv.find('#dst_cmp_list').combobox(),
+        src_cmp_input = src_cmp_selector.siblings('.ui-autocomplete-input').attr('id','src_cmp_input'),
+        dst_cmp_input = dst_cmp_selector.siblings('.ui-autocomplete-input').attr('id','dst_cmp_input'),
         component_list = [],
         // connections diagram
         connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
@@ -65,6 +67,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             .appendTo(self.elm),
         src_var_selector = variablesDiv.find('#src_var_list').combobox(),
         dst_var_selector = variablesDiv.find('#dst_var_list').combobox(),
+        src_var_input = src_var_selector.siblings('.ui-autocomplete-input').attr('id','src_var_input'),
+        dst_var_input = dst_var_selector.siblings('.ui-autocomplete-input').attr('id','dst_var_input'),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
                             var src = src_var_selector.val();
@@ -80,7 +84,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         contextMenu = jQuery("<ul class='context-menu'>")
             .appendTo(connectionsDiv),
         busyCSS = 'position:absolute;left:150px;top:25px;color:black;background-color:DarkGray;border:1px solid black;',
-        busyDiv = jQuery('<div class="busy" style="'+busyCSS+'">&nbsp;&nbsp;Loading... Please wait&nbsp;&nbsp;</div>')
+        busyDiv = jQuery('<div class="busy" style="'+busyCSS+'">&nbsp;&nbsp;Updating... Please wait&nbsp;&nbsp;</div>')
             .appendTo(connectionsDiv).hide(),
         showAllVariables = true;  // show all vars vs only connected vars
 

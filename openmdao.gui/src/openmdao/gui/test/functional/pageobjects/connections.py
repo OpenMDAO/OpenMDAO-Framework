@@ -11,11 +11,11 @@ from elements import ButtonElement, InputElement
 class ConnectionsPage(DialogPage):
     """ Connection editor page. """
 
-    source_component = InputElement((By.ID, 'src_cmp_list'))
-    target_component = InputElement((By.ID, 'dst_cmp_list'))
+    source_component = InputElement((By.ID, 'src_cmp_input'))
+    target_component = InputElement((By.ID, 'dst_cmp_input'))
 
-    source_variable = InputElement((By.ID, 'src_var_list'))
-    target_variable = InputElement((By.ID, 'dst_var_list'))
+    source_variable = InputElement((By.ID, 'src_var_input'))
+    target_variable = InputElement((By.ID, 'dst_var_input'))
 
     connect_button = ButtonElement((By.ID, 'connect'))
 
