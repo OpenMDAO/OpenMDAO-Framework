@@ -15,6 +15,7 @@ import time
 import urllib2
 import zipfile
 
+from cStringIO import StringIO
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -326,7 +327,13 @@ def generate(modname):
             if sys.platform == 'win32':
                 time.sleep(2)
                 # Kill any stubborn chromedriver processes.
-                subprocess.call(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'])
+                stdout = StringIO()
+                subprocess.call(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'],
+                                stdout=stdout, stderr=subprocess.STDOUT)
+                output = stdout.getvalue().strip()
+                stdout.close()
+                if output != 'ERROR: The process "chromedriver.exe" not found.':
+                    print 'taskkill output: %r' % output
             if cleanup and os.path.exists('chromedriver.log'):
                 try:
                     os.remove('chromedriver.log')
@@ -606,8 +613,8 @@ def get_slot_target(labels, element_str):
 
 def get_dataflow_fig_in_assembly_editor(workspace_page, name):
     '''Find the named dataflow fig in the assembly editor'''
-    allFigs = workspace_page.get_dataflow_figures()
-    for fig in allFigs:
+    all_figs = workspace_page.get_dataflow_figures()
+    for fig in all_figs:
         location = fig.find_element_by_xpath("..").get_attribute('id')
         if location == "top-dataflow":
             return DataflowFigure(workspace_page.browser, workspace_page.port, fig)
