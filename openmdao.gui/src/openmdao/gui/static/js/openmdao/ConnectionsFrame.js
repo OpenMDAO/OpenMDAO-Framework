@@ -79,6 +79,9 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         // context menu
         contextMenu = jQuery("<ul class='context-menu'>")
             .appendTo(connectionsDiv),
+        busyCSS = 'position:absolute;left:150px;top:25px;color:black;background-color:DarkGray;border:1px solid black;',
+        busyDiv = jQuery('<div class="busy" style="'+busyCSS+'">&nbsp;&nbsp;Loading... Please wait&nbsp;&nbsp;</div>')
+            .appendTo(connectionsDiv).hide(),
         showAllVariables = true;  // show all vars vs only connected vars
 
     self.elm.css({'position':'relative', 'height':'100%',
@@ -127,6 +130,9 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
 
         // process new selector value on change
         selector.change(function(e) {
+            var src_prev = self.src_comp,
+                dst_prev = self.dst_comp;
+
             // make sure the input field shows the proper value with the proper style
             if (this.value === assemblyKey) {
                 selector.input.val(assemblyKey);
@@ -165,17 +171,29 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 }
             }
 
-            selector.input.blur();
-
-            showConnections();
+            // if the selection has changed, re-render the connections
+            if (self.src_comp !== src_prev || self.dst_comp !== dst_prev) {
+                showConnections();
+            }
         });
 
-        // set enter key to trigger change event
+        // trigger selector change event when enter key is pressed in input field
         selector.input.on('keypress.enterkey', function(e) {
             if (e.which === 13) {
                 selector.change();
             }
         });
+
+        // trigger selector change event when input loses focus,
+        // if input field is empty, then select the assembly
+        selector.input.blur(function(e) {
+            if (this.value === '') {
+                this.value = assemblyKey;
+                selector.val(assemblyKey);
+            }
+            selector.change();
+        });
+
     }
 
     // set up source and destination component selector behaviors
@@ -303,6 +321,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             jQuery.each(dst_list, function(idx, var_name) {
                 dst_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
             });
+
+            busyDiv.hide();
         }
     }
 
@@ -371,11 +391,12 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 }
             }
             else {
-                line = drawLine(x, y, x, y),
+                line = drawLine(x, y + connectionsDiv.scrollTop(),
+                                x, y + connectionsDiv.scrollTop());
                 connectionsDiv.on({
                     'mousemove': function(e) {
                         x = e.clientX - offset.left;
-                        y = e.clientY - offset.top;
+                        y = e.clientY - offset.top + connectionsDiv.scrollTop();
                         line.updateEnd(x, y);
                     },
                     'mouseup': function(e) {
@@ -422,6 +443,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     /** show connections between the source and destination components */
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
+            busyDiv.show();
             model.getConnections(self.pathname, self.src_comp, self.dst_comp,
                 loadConnectionData,
                 function(jqXHR, textStatus, errorThrown) {
