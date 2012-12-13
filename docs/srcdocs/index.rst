@@ -29,6 +29,8 @@ Source Documentation
 
 .. _openmdao.main.datatypes.enum.py:
 
+.. _openmdao.main.datatypes.event.py:
+
 .. _openmdao.main.datatypes.file.py:
 
 .. _openmdao.main.datatypes.float.py:

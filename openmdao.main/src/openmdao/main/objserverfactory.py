@@ -213,7 +213,7 @@ class ObjServerFactory(Factory):
         Starts servers in a subdirectory of the current directory.
 
         typname: string
-            Type of object to create. If null then a proxy for the new
+            Type of object to create. If null, then a proxy for the new
             :class:`ObjServer` is returned.
 
         version: string or None

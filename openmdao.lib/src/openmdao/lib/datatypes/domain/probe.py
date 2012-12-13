@@ -31,8 +31,8 @@ def mesh_probe(domain, regions, variables, weighting_scheme='area'):
     variables: list
         List of ``(metric_name, units)`` tuples. Legal pre-existing metric
         names can be obtained from :meth:`list_metrics`. If `units` is
-        None then no unit conversion is attempted. `metric_name` may also
-        be the name of a flow solution scalar variable, if `units` is None.
+        None, then no unit conversion is attempted. `metric_name` may also
+        be the name of a flow solution scalar variable if `units` is None.
         In this case a minimal metric calculator will be auto-generated.
 
     weighting_scheme: string

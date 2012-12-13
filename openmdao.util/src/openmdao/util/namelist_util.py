@@ -507,7 +507,7 @@ class Namelist(object):
         
         single_group: integer (optional)
              Group id number to use for processing one single namelist group. Useful
-             if extra processing is needed, or if multiple groups have the same name.
+             if extra processing is needed or if multiple groups have the same name.
         
              Returns a tuple containing the following values:
              (empty_groups, unlisted_groups, unlinked_vars). These need to be

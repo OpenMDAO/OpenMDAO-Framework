@@ -77,7 +77,7 @@ def _cmp(tup1, tup2):
 def get_available_types(groups=None):
     """Return a set of tuples of the form (typename, dist_version), one
     for each available plugin type in the given entry point groups.
-    If groups is None, return the set for all openmdao entry point groups.
+    If groups is *None*, return the set for all openmdao entry point groups.
     """
     if groups is None:
         groups = plugin_groups.keys()
@@ -97,7 +97,7 @@ def get_available_types(groups=None):
 
 
 def get_signature(typname, version=None):
-    """Return constructor argument signature for *typname,* using the
+    """Return constructor argument signature for *typname* using the
     specified package version. The form of the return value matches that
     of :meth:`inspect.getargspec`.
     """

@@ -1,10 +1,10 @@
 """
-Generates either a go-openmdao.py script for installation
-of an openmdao release or a go-openmdao-dev.py script for creating a 
-virtualenv with 'develop' versions of all of the openmdao packages. Both
+Generates either a ``go-openmdao.py`` script for installation
+of an openmdao release or ``a go-openmdao-dev.py`` script for creating a 
+virtualenv with "develop" versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
 
-Use the --dev option to generate a go-openmdao-dev.py script.
+Use the --dev option to generate a ``go-openmdao-dev.py`` script.
 
 This script should be run from within an activated OpenMDAO virtual environment
 in order to capture all of the required dependencies correctly.
@@ -209,7 +209,7 @@ def after_install(options, home_dir):
         url = '%(url)s'
     else:
         url = options.findlinks
-    # for testing we allow one to specify a url where the openmdao
+    # For testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
     # url where the dependencies are located. We do this because
     # setuptools only allows us to specify a single -f parameter,

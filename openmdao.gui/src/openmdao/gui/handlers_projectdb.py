@@ -44,7 +44,7 @@ class IndexHandler(ReqHandler):
 
 
 class DeleteHandler(ReqHandler):
-    ''' delete a project
+    ''' Delete a project.
     '''
 
     @web.authenticated
@@ -66,7 +66,7 @@ class DeleteHandler(ReqHandler):
 
 
 class DetailHandler(ReqHandler):
-    ''' get/set project details
+    ''' Get/set project details.
     '''
 
     @web.authenticated
@@ -154,7 +154,7 @@ class DetailHandler(ReqHandler):
 
 
 class DownloadHandler(ReqHandler):
-    ''' download a copy of the project
+    ''' Download a copy of the project.
     '''
 
     @web.authenticated
@@ -199,7 +199,7 @@ class DownloadHandler(ReqHandler):
 
 
 class NewHandler(ReqHandler):
-    ''' create a new (empty) project
+    ''' Create a new (empty) project.
     '''
 
     @web.authenticated
@@ -222,7 +222,7 @@ class NewHandler(ReqHandler):
 
 class AddHandler(ReqHandler):
     ''' Add a project to the project database. This extracts the project file
-    into a directory under the users projects directory.
+    into a directory under the user's projects directory.
     '''
 
     @web.authenticated

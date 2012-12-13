@@ -511,7 +511,7 @@ class Assembly (Component):
 
     def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
-        name of the form 'compname.varname'. If the name is of the form 'varname'
+        name of the form 'compname.varname'. If the name is of the form 'varname',
         then compname will be None and comp is self. 
         """
         try:
@@ -529,8 +529,8 @@ class Assembly (Component):
         """Connect one src expression to one destination expression. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
-        of this object.  When a pathname begins with 'parent.', that indicates
-        that it is referring to a Variable outside of this object's scope.
+        of this object.  When a pathname begins with 'parent.', that indicates 
+        it is referring to a Variable outside of this object's scope.
         
         src: str
             Source expression string.
@@ -868,8 +868,8 @@ class Assembly (Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def get_dataflow(self):
-        ''' get a dictionary of components and the connections between them
-            that make up the data flow for the assembly
+        ''' Get a dictionary of components and the connections between them
+            that make up the data flow for the assembly;
             also includes parameter, constraint, and objective flows
         '''
         components = []

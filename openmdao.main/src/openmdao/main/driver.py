@@ -118,7 +118,7 @@ class Driver(Component):
             self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow(s), and
+        """Return a set of all Components in our workflow(s) and
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
@@ -256,7 +256,7 @@ class Driver(Component):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
         *post_iteration*, etc., just override this function. As a result, none
-        of the <start/pre/post/continue>_iteration() functions will be called.
+        of the ``<start/pre/post/continue>_iteration()`` functions will be called.
         """
         self._iter = None
         self.start_iteration()
@@ -454,8 +454,8 @@ class Driver(Component):
         return matched_vars
 
     def get_workflow(self):
-        """ get the driver info and the list of components that make up the
-            driver's workflow, recurse on nested drivers
+        """ Get the driver info and the list of components that make up the
+            driver's workflow; recurse on nested drivers.
         """
         from openmdao.main.assembly import Assembly
         ret = {}
@@ -486,7 +486,7 @@ class Driver(Component):
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow
     a single time. The only difference between this and the Driver base class
-    is that record_case is called at the conclusion of the workflow execution.
+    is that `record_case` is called at the conclusion of the workflow execution.
     """
 
     def execute(self):

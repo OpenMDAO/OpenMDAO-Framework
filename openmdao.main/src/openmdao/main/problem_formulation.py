@@ -71,14 +71,14 @@ class HasCouplingVars(object):
         """Adds a new coupling var to the assembly.
         
         indep_dep: 2-tuple (str,str)
-            2-tuple of (indep,dep) where indep is the name of the 
+            2-tuple of (indep,dep) where `indep` is the name of the 
             independent variable, or the variable that should be 
-            varied, to meet the coupling constraint, and dep is the
+            varied, to meet the coupling constraint, and `dep` is the
             name of the dependent variable, or the variable that 
-            needs to be consistent with the independent    
+            needs to be consistent with the independent.    
             
         name: str (optional)
-            Short name used to idenfity the coupling variable.
+            Short name used to identify the coupling variable.
             
         start: float (optional)    
             Initial value to set to the independent part of the coupling constraint.
@@ -120,7 +120,7 @@ class HasCouplingVars(object):
         return c
             
     def remove_coupling_var(self,indep_dep):
-        """Removes the coupling var, indep/dep pair from the assembly. 
+        """Removes the coupling var, indep/dep, pair from the assembly. 
         
         indep_dep: tuple of str 
             Two tuple of (<indep>,<dep>) to be removed.
@@ -290,7 +290,7 @@ class ArchitectureAssembly(Assembly):
         return result        
                 
     def get_coupling_deps_by_comp(self): 
-        """Returns a dictionary of coupling var dependent 
+        """Returns a dictionary of coupling var dependents 
         keyed to the component they are part of.""" 
         
         result = {}
@@ -321,8 +321,8 @@ class OptProblem(ArchitectureAssembly):
     """Class for specifying test problems for optimization 
     algorithms and architectures."""
     
-    solution = Dict({},iotype="in",desc="dictionary of expected values for "
-                     "all des_vars and coupling_vars")
+    solution = Dict({},iotype="in",desc="Dictionary of expected values for "
+                     "all des_vars and coupling_vars.")
 
     
     def check_solution(self,strict=False): 

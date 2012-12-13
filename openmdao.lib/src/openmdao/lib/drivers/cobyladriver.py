@@ -3,7 +3,7 @@ cobyladriver.py - Contains a driver that wraps the cobyla
 optimizer as used in pyOpt:
 
 Minimize a function using the Constrained Optimization BY Linear
-Approximation (COBYLA) method
+Approximation (COBYLA) method.
 
 COBYLA is gradient-free and can handle inequality constraints.
 """
@@ -38,8 +38,8 @@ class COBYLAdriver(Driver):
 
     COBYLA is gradient-free and can handle inequality constraints.
     
-    Note: constraints should be added using the OpenMDAO convention
-    (positive = violated)
+    Note: Constraints should be added using the OpenMDAO convention
+    (positive = violated).
     """
     
     implements(IHasParameters, IHasIneqConstraints, IHasObjective, IOptimizer)
@@ -52,13 +52,13 @@ class COBYLAdriver(Driver):
                    desc = 'Final accuracy in the optimization (not precisely guaranteed).')
 
     iprint = Enum(1, [0, 1, 2, 3], iotype='in',
-                  desc = 'Controls the frequency of output: 0 (no output),1,2,3')
+                  desc = 'Controls the frequency of output: 0 (no output),1,2,3.')
     
     maxfun = Int(1000, iotype='in',
                   desc = 'Maximum number of function evaluations.')
     
     iout = Int(6, iotype='in',
-                  desc = 'Fortran output unit. Leave this at 6 for STDOUT')
+                  desc = 'Fortran output unit. Leave this at 6 for STDOUT.')
     
     output_filename = Str('cobyla.out', iotype='in',
                           desc = 'Name of output file (if iout not 6).')

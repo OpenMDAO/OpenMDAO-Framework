@@ -16,7 +16,7 @@ class TreeProxy(object):
         def call(pathname, *args, **kwargs)
         def __contains__(pathname)
     
-    where pathname is a dot separated name, and index is a list of element
+    where pathname is a dot-separated name, and index is a list of element
     indices or attribute names, e.g., [2,1], ['mykey'] or [2,1,['attrname']].
     Attribute names are buried inside of a nested list to avoid confusion
     with strings used to index into a container.  Also, nested tuples are not

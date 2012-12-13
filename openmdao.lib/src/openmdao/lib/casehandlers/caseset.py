@@ -207,21 +207,21 @@ class CaseSet(CaseArray):
     def __init__(self, obj=None, parent_uuid=None, names=None):
         """
         obj: dict, Case, or None
-            if obj is a dict, it is assumed to contain all var names as keys, with
+            If obj is a dict, it is assumed to contain all var names as keys, with
             values that are lists.  All lists are assumed to have the same length.
             
-            if obj is a Case, the inputs and outputs of the Case will become those
+            If obj is a Case, the inputs and outputs of the Case will become those
             of the CaseSet, and any subsequent Cases that are added must have the
             same set of inputs and outputs.
             
-            if obj is None, the first Case that is recorded will be used to set
+            If obj is None, the first Case that is recorded will be used to set
             the inputs and outputs for the CaseSet.
         
         parent_uuid: UUID (optional)
-            The id of the parent Case (if any)
+            The id of the parent Case (if any).
             
         names: iter of str (optional)
-            names/expressions that the Cases will contain. This is useful if you
+            Names/expressions that the Cases will contain. This is useful if you
             only want this container to keep track of some subset of the contents
             of Cases that are recorded in it.
         """

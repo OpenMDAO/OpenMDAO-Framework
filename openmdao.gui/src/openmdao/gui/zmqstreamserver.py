@@ -35,7 +35,7 @@ def make_unicode(content):
 
 
 class ZMQStreamHandler(websocket.WebSocketHandler):
-    ''' a handler that forwards output from a ZMQStream to a WebSocket
+    ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
 
     def __init__(self, application, request, **kwargs):
@@ -119,7 +119,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
 
 class ZMQStreamApp(web.Application):
-    ''' a web application that serves a ZMQStream over a WebSocket
+    ''' A web application that serves a ZMQStream over a WebSocket.
     '''
 
     def __init__(self, zmqstream_addr, websocket_url):
@@ -134,7 +134,7 @@ class ZMQStreamApp(web.Application):
 
 
 class ZMQStreamServer(object):
-    ''' runs an http server that serves a ZMQStream over a WebSocket
+    ''' Runs an http server that serves a ZMQStream over a WebSocket.
     '''
 
     def __init__(self, options):
@@ -143,7 +143,7 @@ class ZMQStreamServer(object):
         self.http_server = httpserver.HTTPServer(self.web_app)
 
     def serve(self):
-        ''' start server listening on port & start the ioloop
+        ''' Start server listening on port & start the ioloop.
         '''
         DEBUG('serve %s:%s' % ("localhost", self.options.port))
         self.http_server.listen(self.options.port, address="localhost")
@@ -171,8 +171,8 @@ class ZMQStreamServer(object):
 
     @staticmethod
     def spawn_process(zmq_url, ws_port, ws_url='/'):
-        ''' run zmqstreamserver in it's own process, mapping a zmq
-            stream to a websocket
+        ''' Run zmqstreamserver in its own process, mapping a zmq
+            stream to a websocket.
 
             args:
             zmq_url     the url of the ZMQStream
@@ -188,7 +188,7 @@ class ZMQStreamServer(object):
 
 
 def main():
-    ''' process command line arguments, create server and start it up
+    ''' Process command line arguments, create server, and start it up.
     '''
     # make sure to install zmq ioloop before creating any tornado objects
     ioloop.install()

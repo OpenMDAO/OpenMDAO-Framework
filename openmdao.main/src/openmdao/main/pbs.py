@@ -42,7 +42,7 @@ class PBS_Allocator(FactoryAllocator):
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
         in created servers. Since :meth:`execute_command` is required, this
-        is defaulted to be True.
+        defaults to be True.
 
     .. warning::
 

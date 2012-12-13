@@ -23,7 +23,7 @@ def sigmoid(x):
 class LogisticRegression(Container): 
     implements(ISurrogate)
     
-    alpha = Float(.1,low=0,iotype='in',desc='L2 regularization strength')
+    alpha = Float(.1,low=0,iotype='in',desc='L2 regularization strength.')
     
     def __init__(self,X=None,Y=None,alpha=.1):
         
