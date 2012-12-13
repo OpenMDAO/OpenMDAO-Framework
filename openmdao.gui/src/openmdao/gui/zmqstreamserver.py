@@ -39,18 +39,29 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     '''
 
     def __init__(self, application, request, **kwargs):
-        DEBUG('__init__ %s %s' % (request, kwargs))
+        addr = kwargs.get('addr')
+        version = request.headers.get('Sec-Websocket-Version')
+        msg = 'Warning: %s WebSocket protocol version %s from %s'
+        if version is None:
+            print msg % ('unknown', '', addr)
+        else:
+            try:
+                version = int(version)
+            except ValueError:
+                print msg % ('invalid', version, addr)
+            else:
+                if version < 13:
+                    print msg % ('obsolete', version, addr)
         super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
 
     def allow_draft76(self):
-        return True  # Not recommended.
+        ''' Not recommended, but enabled so we can display in __init__(). '''
+        return True
 
     def initialize(self, addr):
-        DEBUG('initialize %s' % addr)
         self.addr = addr
 
     def open(self):
-        DEBUG('open %s' % self.addr)
         stream = None
         try:
             context = zmq.Context()
@@ -68,7 +79,6 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        DEBUG('_write_message %s %s' % (self.addr, message))
         if len(message) == 1:
             message = message[0]
             message = make_unicode(message)  # tornado websocket wants unicode
@@ -101,11 +111,10 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             self.write_message(message)
 
     def on_message(self, message):
-        DEBUG('on_message %s %s' % (self.addr, message))
         pass
 
     def on_close(self):
-        DEBUG('zmqstream %s connection closed' % self.addr)
+        pass
 
 
 class ZMQStreamApp(web.Application):

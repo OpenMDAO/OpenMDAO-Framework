@@ -2,7 +2,6 @@ import sys
 import os
 import re
 import ast
-import logging
 
 import jsonpickle
 
@@ -40,7 +39,6 @@ class ReqHandler(ReqHandler):
     def post(self):
         ''' render the base template with the posted content
         '''
-        print 'ReqHandler.post'
         attributes = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
@@ -48,13 +46,10 @@ class ReqHandler(ReqHandler):
             else:
                 attributes[field] = False
         self.render('workspace/base.html', **attributes)
-        print 'ReqHandler.post done'
 
     @web.authenticated
     def get(self):
-        print 'ReqHandler.get'
         attributes = {}
-        print 'self.request.arguments:', self.request.arguments
         for field in ['head_script']:
             if field in self.request.arguments.keys():
                 s = self.request.arguments[field][0]
@@ -64,7 +59,6 @@ class ReqHandler(ReqHandler):
             else:
                 attributes[field] = False
         self.render('workspace/base.html', **attributes)
-        print 'ReqHandler.get done'
 
 
 class GeometryHandler(ReqHandler):
@@ -264,13 +258,10 @@ class ComponentsHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'ComponentsHandler.get'
         cserver = self.get_server()
         json = cserver.get_components()
-        print 'ComponentsHandler.get', json
         self.content_type = 'application/javascript'
         self.write(json)
-        print 'ComponentsHandler.get done'
 
 
 class ConnectionsHandler(ReqHandler):
@@ -299,13 +290,10 @@ class DataflowHandler(ReqHandler):
 
     @web.authenticated
     def get(self, name):
-        print 'DataflowHandler.get'
         cserver = self.get_server()
         json = cserver.get_dataflow(name)
-        print 'DataflowHandler.get', json
         self.content_type = 'application/javascript'
         self.write(json)
-        print 'DataflowHandler.get done'
 
 
 class EditorHandler(ReqHandler):
@@ -423,13 +411,10 @@ class ModelHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'ModelHandler.get'
         cserver = self.get_server()
         json = cserver.get_JSON()
-        print 'ModelHandler.get', json
         self.content_type = 'application/javascript'
         self.write(json)
-        print 'ModelHandler.get done'
 
 
 class OutstreamHandler(ReqHandler):
@@ -449,24 +434,18 @@ class ProjectLoadHandler(ReqHandler):
     '''
     @web.authenticated
     def get(self):
-        print 'ProjectLoadHandler.get'
         path = self.get_argument('projpath', default=None)
-        print 'ProjectLoadHandler path', path
         if path:
             self.set_secure_cookie('projpath', path)
         else:
             path = self.get_secure_cookie('projpath')
         if path:
-            print 'ProjectLoadHandler load', path
             cserver = self.get_server()
             #path = os.path.join(self.get_project_dir(), path)
             cserver.load_project(path)
-            print 'ProjectLoadHandler loaded', path
             self.redirect(self.application.reverse_url('workspace'))
         else:
-            print 'ProjectLoadHandler redirecting'
             self.redirect('/')
-        print 'ProjectLoadHandler.get done'
             
 class ProjectRevertHandler(ReqHandler):
     ''' POST:  revert back to the most recent commit of the project
@@ -490,34 +469,27 @@ class ProjectHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        print 'ProjectHandler.post'
         comment = self.get_argument('comment', default='')
         cserver = self.get_server()
         cserver.commit_project(comment)
         self.write('Committed.')
-        print 'ProjectHandler.post done'
 
     @web.authenticated
     def get(self):
-        print 'ProjectHandler.get'
         path = self.get_argument('projpath', default=None)
-        print 'ProjectHandler.get path', path
         if path:
             self.set_secure_cookie('projpath', path)
         else:
             path = self.get_secure_cookie('projpath')
-            print 'ProjectHandler.get path', path
         if path:
             self.delete_server()
             cserver = self.get_server()
             name = Projects().get_by_path(path)['projectname']
             cserver.set_current_project(name)
-            print 'ProjectHandler.get set_current', name
             path = os.path.join(self.get_project_dir(), path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
-        print 'ProjectHandler.get done'
 
 
 class PlotHandler(ReqHandler):
@@ -538,14 +510,11 @@ class PublishHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'PublishHandler.get'
         topic = self.get_argument('topic')
         publish = self.get_argument('publish', default=True)
         publish = publish in [True, 'true', 'True']
-        print 'PublishHandler.get', topic, publish
         cserver = self.get_server()
         cserver.add_subscriber(topic, publish)
-        print 'PublishHandler.get done'
 
 
 class PubstreamHandler(ReqHandler):
@@ -554,11 +523,9 @@ class PubstreamHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'PubstreamHandler.get'
         url = self.application.server_manager.\
               get_pub_server_url(self.get_sessionid(), '/workspace/pubstream')
         self.write(url)
-        print 'PubstreamHandler.get done'
 
 
 class TypesHandler(ReqHandler):
@@ -641,11 +608,9 @@ class WorkspaceHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'WorkspaceHandler.get'
         cserver = self.get_server()
         project = cserver.get_current_project()
         self.render('workspace/workspace.html', project=project)
-        print 'WorkspaceHandler.get done'
 
 
 class TestHandler(ReqHandler):
@@ -654,9 +619,7 @@ class TestHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        print 'TestHandler.get'
         self.render('workspace/test.html')
-        print 'TestHandler.get done'
 
 
 handlers = [
