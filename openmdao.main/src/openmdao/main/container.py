@@ -41,7 +41,7 @@ from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer
+                                     IContainer, IParametricGeometry
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
@@ -1498,12 +1498,13 @@ def _get_entry_group(obj):
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (Variable,           'openmdao.variable'),
-            (Driver,             'openmdao.driver'),
-            (ICaseIterator,      'openmdao.case_iterator'),
-            (IResourceAllocator, 'openmdao.resource_allocator'),
-            (Component,          'openmdao.component'),
-            (Container,          'openmdao.container'),
+            (Variable,             'openmdao.variable'),
+            (IParametricGeometry,  'openmdao.parametric_geometry'),
+            (Driver,               'openmdao.driver'),
+            (ICaseIterator,        'openmdao.case_iterator'),
+            (IResourceAllocator,   'openmdao.resource_allocator'),
+            (Component,            'openmdao.component'),
+            (Container,            'openmdao.container'),
         ]
 
     for cls, group in _get_entry_group.group_map:
