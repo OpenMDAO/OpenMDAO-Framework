@@ -327,13 +327,12 @@ def generate(modname):
             if sys.platform == 'win32':
                 time.sleep(2)
                 # Kill any stubborn chromedriver processes.
-                stdout = StringIO()
-                subprocess.call(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'],
-                                stdout=stdout, stderr=subprocess.STDOUT)
-                output = stdout.getvalue().strip()
-                stdout.close()
-                if output != 'ERROR: The process "chromedriver.exe" not found.':
-                    print 'taskkill output: %r' % output
+                proc = subprocess.Popen(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'],
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                stdout, stderr = proc.communicate()
+                stdout = stdout.strip()
+                if stdout != 'ERROR: The process "chromedriver.exe" not found.':
+                    print 'taskkill output: %r' % stdout
             if cleanup and os.path.exists('chromedriver.log'):
                 try:
                     os.remove('chromedriver.log')
