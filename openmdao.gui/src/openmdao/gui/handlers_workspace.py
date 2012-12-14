@@ -276,7 +276,12 @@ class ComponentsHandler(ReqHandler):
         cserver = self.get_server()
         json = cserver.get_components()
         self.content_type = 'application/javascript'
-        self.write(json)
+        try:
+            self.write(json)
+        except AssertionError as exc:
+            # Have had issues with `json` not being unicode somehow.
+            print "Can't write %r: %s" % (json, exc)
+            raise
 
 
 class ConnectionsHandler(ReqHandler):
@@ -308,7 +313,12 @@ class DataflowHandler(ReqHandler):
         cserver = self.get_server()
         json = cserver.get_dataflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        try:
+            self.write(json)
+        except AssertionError as exc:
+            # Have had issues with `json` not being unicode somehow.
+            print "Can't write %r: %s" % (json, exc)
+            raise
 
 
 class EditorHandler(ReqHandler):
@@ -614,7 +624,12 @@ class WorkflowHandler(ReqHandler):
         cserver = self.get_server()
         json = cserver.get_workflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        try:
+            self.write(json)
+        except AssertionError as exc:
+            # Have had issues with `json` not being unicode somehow.
+            print "Can't write %r: %s" % (json, exc)
+            raise
 
 
 class WorkspaceHandler(ReqHandler):

@@ -125,6 +125,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     os.chdir(workdir)
     
     print 'building...'
+    sys.stdout.flush()
     
     try:
         if build_type == 'release':
@@ -135,6 +136,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
         os.chdir(workdir)
 
     print "build return code =", retcode
+    sys.stdout.flush()
     if retcode != 0:
         sys.exit(retcode)
         
@@ -147,10 +149,13 @@ def build_and_test(fname=None, workdir='.', keep=False,
                 testargs.append('--all') # otherwise release test runs small set by default
     
     print '\ntesting  (testargs=%s) ...' % testargs
+    sys.stdout.flush()
 
     try:
         retcode = activate_and_test(envdir, testargs)
+        print "test return code =", retcode
     finally:
+        sys.stdout.flush()
         os.chdir(startdir)
     
     return retcode
