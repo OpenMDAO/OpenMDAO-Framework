@@ -181,13 +181,6 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             }
         });
 
-        // trigger selector change event when enter key is pressed in input field
-        selector.input.on('keypress.enterkey', function(e) {
-            if (e.which === 13) {
-                selector.change();
-            }
-        });
-
         // trigger selector change event when input loses focus,
         // if input field is empty, then select the assembly
         selector.input.blur(function(e) {
@@ -198,6 +191,12 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             selector.change();
         });
 
+        // trigger selector change event when enter key is pressed in input field
+        selector.input.on('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                this.blur();
+            }
+        });
     }
 
     // set up source and destination component selector behaviors
@@ -316,11 +315,13 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             });
 
             // update the output & input selectors to current outputs & inputs
+            src_var_input.val('');
             src_var_selector.html('');
             jQuery.each(src_list, function(idx, var_name) {
                 src_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
             });
 
+            dst_var_input.val('');
             dst_var_selector.html('');
             jQuery.each(dst_list, function(idx, var_name) {
                 dst_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');

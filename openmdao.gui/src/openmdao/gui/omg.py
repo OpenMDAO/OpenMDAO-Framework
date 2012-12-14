@@ -181,17 +181,17 @@ class AppServer(object):
     def get_argument_parser():
         ''' create a parser for command line arguments
         '''
-        parser = ArgumentParser(description="launch the graphical user interface")
-        parser.add_argument("-p", "--port", type=int, dest="port", default=0,
-                          help="port to run server on (defaults to any available port)")
-        parser.add_argument("-b", "--browser", dest="browser", default="chrome",
-                          help="preferred browser")
-        parser.add_argument("-s", "--server", action="store_true", dest="serveronly",
+        parser = ArgumentParser(description='launch the graphical user interface')
+        parser.add_argument('-p', '--port', type=int, dest='port', default=0,
+                          help='port to run server on (defaults to any available port)')
+        parser.add_argument('-b', '--browser', dest='browser', default='chrome',
+                          help='preferred browser')
+        parser.add_argument('-s', '--server', action='store_true', dest='serveronly',
                           help="don't launch browser, just run server")
-        parser.add_argument("-r", "--reset", action="store_true", dest="reset",
-                          help="reset project database")
-        parser.add_argument("-x", "--external", action="store_true", dest="external",
-                          help="allow access to the server from external clients (WARNING: Not Safe or Secure!!)")
+        parser.add_argument('-r', '--reset', action='store_true', dest='reset',
+                          help='reset project database')
+        parser.add_argument('-x', '--external', action='store_true', dest='external',
+                          help='allow access to server from external clients (WARNING: Not Safe or Secure!!)')
         return parser
 
 
