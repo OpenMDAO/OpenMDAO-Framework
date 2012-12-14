@@ -201,17 +201,19 @@ def _test_connections(browser):
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
 
-    conn_page.move(0, -100)
+    conn_page.move(-50, -100)
+
+    eq(conn_page.count_variable_connections(), 0)
 
     conn_page.show_connected_variables()
-    eq(conn_page.count_variable_figures(), 0)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
     eq(conn_page.source_variable, '')
     eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 4)
+    eq(conn_page.count_variable_figures(), 4)
+    eq(conn_page.count_variable_connections(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
@@ -220,7 +222,8 @@ def _test_connections(browser):
     conn_page.set_target_component('engine')
     eq(conn_page.source_variable, '')
     eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
 
@@ -234,11 +237,13 @@ def _test_connections(browser):
     conn_page.set_target_component('engine')
     time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
     time.sleep(0.5)
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
 
@@ -246,10 +251,12 @@ def _test_connections(browser):
     conn_page.set_target_component('chassis')
     time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # reconnect transmission torque to chassis torque
     conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['torque_ratio', 'torque_ratio'])
 
@@ -258,17 +265,20 @@ def _test_connections(browser):
     conn_page.set_target_component('transmission')
     time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['current_gear', 'current_gear'])
 
     # one connection from chassis component to vehicle assembly
     conn_page.set_source_component('chassis')
     conn_page.set_target_component('')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['acceleration', 'acceleration'])
 
@@ -280,14 +290,13 @@ def _test_connections(browser):
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
     conn_page = vehicle.connections_page()
-    conn_page.show_connected_variables()
-    eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # connect component variable to assembly variable
-    conn_page.move(0, -100)
+    conn_page.move(-50, -100)
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
     conn_page.set_source_component('chassis')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['acceleration', 'acceleration'])
 

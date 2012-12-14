@@ -111,7 +111,7 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     rectObj = paper.rect(x, y, 150, 30, 10, 10)
         .attr({'stroke':border, 'fill':'#999999', 'stroke-width': 2}),
     nameObj = paper.text(x+75, y+10, openmdao.Util.getName(name))
-        .attr({'text-anchor':'middle', ' font-size':'12pt'}),
+        .attr({'text-anchor':'middle', 'font-size':'12pt'}),
     typeObj = paper.text(x+75, y+20, typeStr)
         .attr({'text-anchor':'middle', 'font-size':'10pt'});
     setObj = paper.set(rectObj, nameObj, typeObj);
@@ -120,14 +120,10 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     setObj.data('name',name);
     setObj.data('connected',attr.connected);
 
-    // classes for test/inspection
-    if (typeof openmdao_test_mode !== 'undefined') {
-        rectObj.node.className.baseVal += ' variable-figure';
-        nameObj.node.className.baseVal += ' variable-name';
-        typeObj.node.className.baseVal += ' variable-type';
-    }
+    // add classes for test/inspection
+    rectObj.node.className.baseVal += ' variable-figure';
+    nameObj.node.className.baseVal += ' variable-name';
+    typeObj.node.className.baseVal += ' variable-type';
 
     return setObj;
 };
-
-

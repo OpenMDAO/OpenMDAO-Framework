@@ -92,6 +92,16 @@ class ConnectionsPage(DialogPage):
             self.browser.implicitly_wait(TMO)
         return count
 
+    def count_variable_connections(self):
+        """ Return number of variable figure elements, assume zero. """
+        self.browser.implicitly_wait(1)
+        try:
+            figs = self.browser.find_elements_by_class_name('variable-connection')
+            count = len(figs)
+        finally:
+            self.browser.implicitly_wait(TMO)
+        return count
+
     def get_variable_figures(self):
         """ Return variable figure elements. """
         return self.browser.find_elements_by_class_name('variable-figure')

@@ -311,7 +311,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                     dst_name = conn[1],
                     src_fig = figures[src_name],
                     dst_fig = figures[dst_name],
-                    c = r.connection(src_fig, dst_fig, "#000", "#fff");
+                    c = r.connection(src_fig, dst_fig, "#000", "#fff")
+                        .line.node.className.baseVal += ' variable-connection';
             });
 
             // update the output & input selectors to current outputs & inputs
@@ -345,12 +346,12 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             return "M" + start.x + " " + start.y + " L" + end.x + " " + end.y;
         };
         var redraw = function() {
-            node.attr("path", getPath());
+            line.attr("path", getPath());
         };
 
-        var node = r.path(getPath());
+        var line = r.path(getPath());
         return {
-            element: node,
+            element: line,
             updateStart: function(x, y) {
                 start.x = x;
                 start.y = y;
