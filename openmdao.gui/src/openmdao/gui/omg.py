@@ -41,6 +41,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<'+str(os.getpid())+'>>> OMG --', msg
+        sys.stdout.flush()
 
 
 def get_user_dir():

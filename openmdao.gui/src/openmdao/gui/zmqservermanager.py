@@ -14,6 +14,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<'+str(os.getpid())+'>>> ZMQServerManager --', msg
+        sys.stdout.flush()
 
 
 class ZMQServerManager(object):

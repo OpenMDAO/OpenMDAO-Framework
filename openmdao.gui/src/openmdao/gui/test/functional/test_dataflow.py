@@ -163,7 +163,7 @@ def _test_connect(browser):
          'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
-        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates.', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):

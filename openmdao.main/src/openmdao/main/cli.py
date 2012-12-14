@@ -70,10 +70,8 @@ def _get_openmdao_parser():
                                    description='run the OpenMDAO test suite')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='display test progress')
-    parser.add_argument('--gui', action='store_true',
-                        help='do GUI functional tests, regardless of default')
     parser.add_argument('--skip-gui', action='store_true',
-                        help='skip GUI functional tests, regardless of default')
+                        help='skip GUI functional tests')
     parser.add_argument('packages', metavar='package', type=str, nargs='*',
                         help='package to be tested')
     parser.set_defaults(func=test_openmdao)
@@ -100,10 +98,8 @@ def _get_openmdao_parser():
                             help='args to be passed to openmdao test')
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='display test progress')
-        parser.add_argument('--gui', action='store_true', dest='gui',
-                            help='do GUI functional tests, regardless of default')
         parser.add_argument('--skip-gui', action='store_true', dest='skip_gui',
-                            help='skip GUI functional tests, regardless of default')
+                            help='skip GUI functional tests')
         parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
 
