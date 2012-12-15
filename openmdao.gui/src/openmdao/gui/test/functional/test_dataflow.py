@@ -295,8 +295,12 @@ def _test_connections(browser):
     # connect component variable to assembly variable
     conn_page.move(-50, -100)
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    message = NotifierPage.wait(workspace_page)
+    eq(message, "Invalid source variable")
     conn_page.set_source_component('chassis')
+    conn_page.connect_vars('chassis.acceleration', 'acceleration')
     eq(conn_page.count_variable_connections(), 1)
+    conn_page.show_connected_variables()
     eq(sorted(conn_page.get_variable_names()),
        ['acceleration', 'acceleration'])
 

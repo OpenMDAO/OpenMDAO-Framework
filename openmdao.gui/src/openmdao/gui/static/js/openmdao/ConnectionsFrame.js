@@ -71,11 +71,19 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         dst_var_input = dst_var_selector.siblings('.ui-autocomplete-input').attr('id','dst_var_input'),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
-                            var src = src_var_selector.val();
-                            var dst = dst_var_selector.val();
-                            model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
-                            src_var_selector.val('');
-                            dst_var_selector.val('');
+                            var src = src_var_input.val(),
+                                dst = dst_var_input.val();
+                            if (src === '') {
+                                openmdao.Util.notify('Invalid source variable');
+                            }
+                            else if (dst === '') {
+                                openmdao.Util.notify('Invalid target variable');
+                            }
+                            else {
+                                model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
+                                src_var_selector.val('');
+                                dst_var_selector.val('');
+                            }
                         }),
         assemblyKey = '-- Assembly --',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
@@ -303,8 +311,6 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
 
             connectionsDiv.show();
             variablesDiv.show();
-
-            resize_contents();
 
             jQuery.each(data.connections,function(idx,conn) {
                 var src_name = conn[0],
