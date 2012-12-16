@@ -367,12 +367,12 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     };
 
     /** get width */
-    this.getWidth = function(x, y) {
+    this.getWidth = function() {
         return fig.width();
     };
 
     /** get height */
-    this.getHeight = function(x, y) {
+    this.getHeight = function() {
         return fig.height();
     };
 

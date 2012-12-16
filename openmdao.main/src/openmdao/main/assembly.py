@@ -57,6 +57,7 @@ def set_as_top(cont, first_only=False):
         cont.cpath_updated()
     return cont
 
+
 class PassthroughTrait(Variable):
     """A trait that can use another trait for validation, but otherwise is
     just a trait that lives on an Assembly boundary and can be connected
@@ -87,13 +88,13 @@ class PassthroughProperty(Variable):
             self._vals[obj] = {}
         self._vals[obj][name] = self._trait.validate(obj, name, value)
 
-        
+
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
-    
+
     def get_output_exprs(self):
         """Return all destination expressions at the output boundary"""
         exprs = []
@@ -104,26 +105,26 @@ class ExprMapper(object):
                 if len(expr.get_referenced_compnames()) == 0:
                     exprs.append(expr)
         return exprs
-        
+
     def get_expr(self, text):
         node = self._exprgraph.node.get(text)
         if node:
             return node['expr']
         return None
-    
+
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        excludes = set([name for name, data in self._exprgraph.nodes(data=True) 
+        excludes = set([name for name, data in self._exprgraph.nodes(data=True)
                         if data['expr'].refs_parent()])
         if show_passthrough:
-            return [(u,v) for u,v in self._exprgraph.edges() if not (u in excludes or v in excludes)]
+            return [(u, v) for u, v in self._exprgraph.edges() if not (u in excludes or v in excludes)]
         else:
-            return [(u,v) for u,v in self._exprgraph.edges() 
+            return [(u, v) for u, v in self._exprgraph.edges()
                        if '.' in u and '.' in v and not (u in excludes or v in excludes)]
-    
+
     def get_source(self, dest_expr):
-        """Returns the text of the source expression that is connected to the given 
+        """Returns the text of the source expression that is connected to the given
         destination expression.
         """
         dct = self._exprgraph.pred.get(dest_expr)
@@ -131,9 +132,9 @@ class ExprMapper(object):
             return dct.keys()[0]
         else:
             return None
-    
+
     def get_dests(self, src_expr):
-        """Returns the list of destination expressions that are connected to the given 
+        """Returns the list of destination expressions that are connected to the given
         source expression.
         """
         graph = self._exprgraph
@@ -145,16 +146,16 @@ class ExprMapper(object):
         if refs:
             self._exprgraph.remove_nodes_from(refs)
             self._remove_disconnected_exprs()
-        
+
     def connect(self, srcexpr, destexpr, scope):
         src = srcexpr.text
         dest = destexpr.text
         srcvars = srcexpr.get_referenced_varpaths(copy=False)
         destvar = destexpr.get_referenced_varpaths().pop()
-        
+
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
         desttrait = None
-        
+
         if not destvar.startswith('parent.'):
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
@@ -164,11 +165,11 @@ class ExprMapper(object):
                     if desttrait is None:
                         dest_io = 'out' if destcomp is scope else 'in'
                         desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
-                    
+
             if not srcexpr.refs_parent() and desttrait is not None:
-                # punt if dest is not just a simple var name. 
+                # punt if dest is not just a simple var name.
                 # validity will still be checked at execution time
-                if destvar == destexpr.text: 
+                if destvar == destexpr.text:
                     ttype = desttrait.trait_type
                     if not ttype:
                         ttype = desttrait
@@ -180,20 +181,20 @@ class ExprMapper(object):
                               # it's a property trait.  No way to validate without
                               # unknown side effects. Have to wait until later when data actually
                               # gets passed via the connection.
-            
+
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
         if dest not in self._exprgraph:
             self._exprgraph.add_node(dest, expr=destexpr)
-            
+
         self._exprgraph.add_edge(src, dest)
-        
+
     def find_referring_exprs(self, name):
         """Returns a list of expression strings that reference the given name, which
         can refer to either a variable or a component.
         """
         return [node for node, data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
-    
+
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
         to_remove = []
@@ -207,7 +208,7 @@ class ExprMapper(object):
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
-        
+
         if destpath is None:
             if srcpath in graph:
                 graph.remove_node(srcpath)
@@ -219,31 +220,31 @@ class ExprMapper(object):
         if srcpath in graph and destpath in graph:
             graph.remove_edge(srcpath, destpath)
             self._remove_disconnected_exprs()
-        else: # assume they're disconnecting two variables, so find connected exprs that refer to them
+        else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
             src_exprs = set(self.find_referring_exprs(srcpath))
             dest_exprs = set(self.find_referring_exprs(destpath))
-            graph.remove_edges_from([(src,dest) for src,dest in graph.edges() 
+            graph.remove_edges_from([(src, dest) for src, dest in graph.edges()
                                            if src in src_exprs and dest in dest_exprs])
-            
+
     def check_connect(self, src, dest, scope):
         """Check validity of connecting a source expression to a destination expression."""
-        
+
         if self.get_source(dest) is not None:
             scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
                                   RuntimeError)
-        
-        destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr', 
+
+        destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr',
                                           is_dest=True)
         srcexpr = ConnectedExprEvaluator(src, scope, getter='get_wrapped_attr')
-        
+
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = destexpr.get_referenced_compnames()
-        
+
         if destcomps and destcomps.pop() in srccomps:
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
         return srcexpr, destexpr
 
-    
+
 def _find_common_interface(obj1, obj2):
     for iface in (IAssembly, IComponent, IDriver, IArchitecture, IContainer,
                   ICaseIterator, ICaseRecorder, IDOEgenerator):
@@ -262,18 +263,18 @@ class Assembly (Component):
     driver = Slot(IDriver, allow_none=True,
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
-    
+
     def __init__(self, directory=''):
 
         super(Assembly, self).__init__(directory=directory)
-        
+
         self._exprmapper = ExprMapper(self)
-        
+
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
-        
+
         set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
-        
+
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
         """
@@ -296,22 +297,22 @@ class Assembly (Component):
     def add(self, name, obj):
         """Call the base class *add*.  Then,
         if obj is a Component, add it to the component graph.
-        
+
         Returns the added object.
         """
         obj = super(Assembly, self).add(name, obj)
         if is_instance(obj, Component):
             self._depgraph.add(obj.name)
         return obj
-    
+
     def find_referring_connections(self, name):
         """Returns a list of connections where the given name is referred
         to either in the source or the destination.
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u,v) for u,v in self.list_connections(show_passthrough=True) 
+        return [(u,v) for u,v in self.list_connections(show_passthrough=True)
                                                 if u in exprset or v in exprset]
-        
+
     def find_in_workflows(self, name):
         """Returns a list of tuples of the form (workflow, index) for all
         workflows in the scope of this Assembly that contain the given
@@ -322,7 +323,7 @@ class Assembly (Component):
             if is_instance(obj, Driver) and name in obj.workflow:
                 wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
-        
+
     def _cleanup_autopassthroughs(self, name):
         """Clean up any autopassthrough connections involving the given name.
         Returns a list containing a tuple for each removed connection.
@@ -331,7 +332,7 @@ class Assembly (Component):
         if self.parent:
             old_rgx = re.compile(r'(\W?)%s.' % name)
             par_rgx = re.compile(r'(\W?)parent.')
-            
+
             for u,v in self._depgraph.list_autopassthroughs():
                 newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
                 newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
@@ -341,31 +342,31 @@ class Assembly (Component):
                     v = re.sub(par_rgx, r'\g<1>', newv)
                     self.parent.disconnect(u,v)
         return old_autos
-        
+
     def rename(self, oldname, newname):
         """Renames a child of this object from oldname to newname."""
         self._check_rename(oldname, newname)
         conns = self.find_referring_connections(oldname)
         wflows = self.find_in_workflows(oldname)
         old_autos = self._cleanup_autopassthroughs(oldname)
-        
+
         obj = self.remove(oldname)
         self.add(newname, obj)
-        
+
         # oldname has now been removed from workflows, but newname may be in the wrong
         # location, so force it to be at the same index as before removal
         for wflow, idx in wflows:
             wflow.remove(newname)
             wflow.add(newname, idx)
-            
+
         old_rgx = re.compile(r'(\W?)%s.' % oldname)
         par_rgx = re.compile(r'(\W?)parent.')
-        
+
         # recreate all of the broken connections after translating oldname to newname
         for u,v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
                          re.sub(old_rgx, r'\g<1>%s.' % newname, v))
-        
+
         # recreate autopassthroughs
         if self.parent:
             for u,v in old_autos:
@@ -374,7 +375,7 @@ class Assembly (Component):
                 u = re.sub(par_rgx, r'\g<1>', u)
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u,v)
-    
+
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the inputs and connections
         of the replaced object as much as possible.
@@ -401,20 +402,20 @@ class Assembly (Component):
         wflows = self.find_in_workflows(target_name)
         target_rgx = re.compile(r'(\W?)%s.' % target_name)
         conns.extend([(u,v) for u,v in self._depgraph.list_autopassthroughs() if
-                                 re.search(target_rgx, u) is not None or 
+                                 re.search(target_rgx, u) is not None or
                                  re.search(target_rgx, v) is not None])
-        
+
         self.add(target_name, newobj) # this will remove the old object (and any connections to it)
-        
+
         # recreate old connections
         for u,v in conns:
             self.connect(u,v)
-            
+
         # add new object (if it's a Component) to any workflows where target was
         if has_interface(newobj, IComponent):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
-    
+
         # Restore driver references.
         if refs:
             for obj in self.__dict__.values():
@@ -433,7 +434,7 @@ class Assembly (Component):
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
                     obj.remove_references(name)
-                    
+
         return super(Assembly, self).remove(name)
 
     def create_passthrough(self, pathname, alias=None):
@@ -465,7 +466,7 @@ class Assembly (Component):
         else:
             trait = comp.get_trait(parts[-1])
             iotype = comp.get_iotype(parts[-1])
-            
+
         if trait:
             ttype = trait.trait_type
             if ttype is None:
@@ -475,71 +476,71 @@ class Assembly (Component):
                 self.raise_exception("the variable named '%s' can't be found" %
                                      pathname, KeyError)
             iotype = self.get_metadata(pathname, 'iotype')
-            
+
         if trait is not None and not trait.validate:
             trait = None  # no validate function, so just don't use trait for validation
-            
+
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
         # PassthroughTrait to a trait with get/set methods causes a core dump
         # in Traits (at least through 3.6) while pickling.
-        if "validation_trait" in metadata: 
+        if "validation_trait" in metadata:
             if metadata['validation_trait'].get is None:
                 newtrait = PassthroughTrait(**metadata)
             else:
                 newtrait = PassthroughProperty(metadata['validation_trait'],
                                                **metadata)
-        elif trait and ttype.get: 
+        elif trait and ttype.get:
             newtrait = PassthroughProperty(ttype, **metadata)
-        else: 
+        else:
             newtrait = PassthroughTrait(validation_trait=trait, **metadata)
         self.add_trait(newname, newtrait)
-        
+
         # Copy trait value according to 'copy' attribute in the trait
         val = self.get(pathname)
         ttype = trait.trait_type
         if ttype.copy:
-            val = _copydict[ttype.copy](val)  
+            val = _copydict[ttype.copy](val)
         setattr(self, newname, val)
 
         if iotype == 'in':
             self.connect(newname, pathname)
         else:
             self.connect(pathname, newname)
-            
+
         return newtrait
 
     def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname',
-        then compname will be None and comp is self. 
+        then compname will be None and comp is self.
         """
         try:
             compname, varname = path.split('.', 1)
         except ValueError:
             return (None, self, path)
-        
+
         t = self.get_trait(compname)
         if t and t.iotype:
             return (None, self, path)
         return (compname, getattr(self, compname), varname)
-        
+
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
         """Connect one src expression to one destination expression. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
-        of this object.  When a pathname begins with 'parent.', that indicates 
+        of this object.  When a pathname begins with 'parent.', that indicates
         it is referring to a Variable outside of this object's scope.
-        
+
         src: str
             Source expression string.
-            
+
         dest: str or list(str)
             destination expression string(s).
         """
         src = eliminate_expr_ws(src)
-        
+
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
@@ -550,14 +551,14 @@ class Assembly (Component):
         """Handle one connection destination. This should only be called via the connect()
         function, never directly.
         """
-        
+
         # Among other things, check if already connected.
         try:
             srcexpr, destexpr = self._exprmapper.check_connect(src, dest, self)
         except Exception as err:
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
-    
+
         # Check if src is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
             comp = self.get(item)
@@ -568,7 +569,7 @@ class Assembly (Component):
                     msg += "because the target is a Parameter in " + \
                            "driver '%s'." % comp.name
                     self.raise_exception(msg, RuntimeError)
-    
+
         super(Assembly, self).connect(src, dest)
 
         try:
@@ -577,19 +578,19 @@ class Assembly (Component):
             super(Assembly, self).disconnect(src, dest)
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
-        
+
         if not srcexpr.refs_parent():
             if not destexpr.refs_parent():
                 # if it's an internal connection, could change dependencies, so we have
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
-    
+
                 destcompname, destcomp, destvarname = self._split_varpath(dest)
-                
+
                 outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
                 if (outs is None) or outs:
                     bouts = self.child_invalidated(destcompname, outs, force=True)
-                    
+
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -597,7 +598,7 @@ class Assembly (Component):
         varpath2. Otherwise, if varpath is the name of a trait, remove all
         connections to/from varpath in the current scope. If varpath is the
         name of a Component, remove all connections from all of its inputs
-        and outputs. 
+        and outputs.
         """
         to_remove = []
         if varpath2 is None:
@@ -612,12 +613,12 @@ class Assembly (Component):
                     to_remove.add((u,v))
         else:
             to_remove = [(varpath, varpath2)]
-            
+
         for u,v in to_remove:
             super(Assembly, self).disconnect(u, v)
-                
+
         self._exprmapper.disconnect(varpath, varpath2)
-            
+
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed, connections are made
@@ -628,13 +629,13 @@ class Assembly (Component):
         # dependencies may have changed
         if self.driver is not None:
             self.driver.config_changed(update_parent=False)
-        
+
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
-        
+
         valids = self._valid_dict
-        
+
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
             if valids[expr.text] is False:
@@ -653,20 +654,20 @@ class Assembly (Component):
                         srctxt = self._exprmapper.get_source(expr.text)
                         srcexpr = self._exprmapper.get_expr(srctxt)
                         expr.set(srcexpr.evaluate(), src=srctxt)
-    
+
     def step(self):
         """Execute a single child component and return."""
         self.driver.step()
-        
+
     def stop(self):
         """Stop the calculation."""
         self.driver.stop()
-    
+
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         return self._exprmapper.list_connections(show_passthrough)
-        
+
     @rbac(('owner', 'user'))
     def update_inputs(self, compname, exprs):
         """Transfer input data to input expressions on the specified component.
@@ -677,7 +678,7 @@ class Assembly (Component):
         parent = self.parent
         expr_info = []
         invalids = []
-        
+
         if compname is not None:
             pred = self._exprmapper._exprgraph.pred
             if exprs:
@@ -695,7 +696,7 @@ class Assembly (Component):
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 invalids.extend(srcexpr.invalid_refs())
                 expr_info.append((srcexpr, self._exprmapper.get_expr(expr)))
-            
+
         # if source exprs reference invalid vars, request an update
         if invalids:
             for cname, vnames in partition_names_by_comp(invalids).items():
@@ -705,14 +706,14 @@ class Assembly (Component):
                 else:
                     getattr(self, cname).update_outputs(vnames)
                     #self.set_valid(vnames, True)
-            
+
         for srcexpr, destexpr in expr_info:
             try:
                 destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
             except Exception as err:
-                self.raise_exception("cannot set '%s' from '%s': %s" % 
+                self.raise_exception("cannot set '%s' from '%s': %s" %
                                      (destexpr.text, srcexpr.text, str(err)), type(err))
-        
+
     def update_outputs(self, outnames):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
@@ -723,7 +724,7 @@ class Assembly (Component):
             else:
                 getattr(self, cname).update_outputs(vnames)
                 self.set_valid(vnames, True)
-        
+
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
         variables are valid (True) or invalid (False). Entries in names may
@@ -732,7 +733,7 @@ class Assembly (Component):
 
         ret = [None]*len(names)
         posdict = dict([(name,i) for i,name in enumerate(names)])
-        
+
         for compname, varnames in partition_names_by_comp(names).items():
             if compname is None:
                 vals = super(Assembly, self).get_valid(varnames)
@@ -754,7 +755,7 @@ class Assembly (Component):
             outs = self.invalidate_deps(varnames=set([name]))
             if ((outs is None) or outs) and self.parent:
                 self.parent.child_invalidated(self.name, outs)
-            
+
     def child_invalidated(self, childname, outs=None, force=False):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
@@ -763,21 +764,21 @@ class Assembly (Component):
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
-                    
+
     def invalidate_deps(self, varnames=None, force=False):
-        """Mark all Variables invalid that depend on varnames. 
+        """Mark all Variables invalid that depend on varnames.
         Returns a list of our newly invalidated boundary outputs.
-        
+
         varnames: iter of str (optional)
             An iterator of names of destination variables.
-            
+
         force: bool (optional)
-            If True, force the invalidation to proceed beyond the 
+            If True, force the invalidation to proceed beyond the
             boundary even if all outputs were already invalid.
         """
         valids = self._valid_dict
         conn_ins = set(self.list_inputs(connected=True))
-        
+
         # If varnames is None, we're being called from a parent Assembly
         # as part of a higher level invalidation, so we only need to look
         # at our connected inputs
@@ -785,7 +786,7 @@ class Assembly (Component):
             names = conn_ins
         else:
             names = varnames
-        
+
         # We only care about inputs that are changing from valid to invalid.
         # If they're already invalid, then we've already done what we needed to do,
         # unless force is True, in which case we continue with the invalidation.
@@ -800,7 +801,7 @@ class Assembly (Component):
                 return []
 
         self._set_exec_state('INVALID')
-        
+
         if varnames is None:
             self.set_valid(invalidated_ins, False)
         else: # only invalidate *connected* inputs, because unconnected inputs
@@ -811,29 +812,29 @@ class Assembly (Component):
 
         if outs:
             self.set_valid(outs, False)
-            
+
         return outs
-    
+
     def exec_counts(self, compnames):
         return [getattr(self,c).exec_count for c in compnames]
-    
+
     def calc_derivatives(self, first=False, second=False):
         """ Overides the component's version of this function. An assembly
         must initiate the call of calc_derivatives on all components in its
         driver's workflow."""
-        
+
         self.driver.calc_derivatives(first, second)
-        
+
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each
         element in its workflow. Note that an assembly signifies a change of
         scope, so the driver input and output lists are pared down."""
-        
+
         # Put the driver connection lists into our local scope by removing
         # the assembly name from the dotted path.
         for j, item in enumerate(driver_inputs):
             if isinstance(item, tuple):
-                
+
                 tuple_list = []
                 for tup_item in item:
                     names = tup_item.split('.',1)
@@ -841,13 +842,13 @@ class Assembly (Component):
                         tuple_list.append(names[1])
                     else:
                         tuple_list.append(tup_item)
-                        
+
                 driver_inputs[j] = tuple(tuple_list)
-            else:        
+            else:
                 names = item.split('.',1)
                 if names[0] == self.name:
                     driver_inputs[j] = names[1]
-        
+
         for j, item in enumerate(driver_outputs):
             if isinstance(item, tuple):
 
@@ -858,13 +859,13 @@ class Assembly (Component):
                         tuple_list.append(names[1])
                     else:
                         tuple_list.append(tup_item)
-                        
+
                 driver_inputs[j] = tuple(tuple_list)
             else:
                 names = item.split('.',1)
                 if names[0] == self.name:
                     driver_outputs[j] = names[1]
-        
+
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def get_dataflow(self):
@@ -908,7 +909,7 @@ class Assembly (Component):
             for name in sorted_names:
                     comp = self.get(name)
                     if is_instance(comp, Component):
-                        inames = [cls.__name__ 
+                        inames = [cls.__name__
                                   for cls in list(implementedBy(comp.__class__))]
                         components.append({'name': comp.name,
                                            'pathname': comp.get_pathname(),

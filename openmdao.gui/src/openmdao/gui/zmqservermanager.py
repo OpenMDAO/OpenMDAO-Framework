@@ -1,9 +1,9 @@
 import os
 import sys
 import traceback
+import socket
 
 from openmdao.main.zmqrpc import ZMQ_RPC
-from openmdao.main.publisher import Publisher, publish
 from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.zmqserver import ZMQServer
 from openmdao.gui.zmqstreamserver import ZMQStreamServer
@@ -13,16 +13,21 @@ debug = True
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> ZMQServerManager --', msg
+        print '<<<' + str(os.getpid()) + '>>> ZMQServerManager --', msg
 
 
 class ZMQServerManager(object):
     ''' creates and keeps track of ZMQ servers for the given class
     '''
 
-    def __init__(self, classpath):
+    def __init__(self, classpath, external=False):
         self.server_dict = {}
         self.classpath = classpath
+        self.external = external
+        if (external):
+            self.address = socket.gethostbyaddr(socket.gethostname())[0]
+        else:
+            self.address = 'localhost'
 
     def server(self, server_id):
         ''' get server associated with an id, create one if none exists
@@ -49,7 +54,7 @@ class ZMQServerManager(object):
                 return proxy
         except Exception, err:
             print 'Error getting server', server_id
-            print str(err.__class__.__name__),":", err
+            print str(err.__class__.__name__), ":", err
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             traceback.print_tb(exc_traceback, limit=30)
@@ -107,8 +112,9 @@ class ZMQServerManager(object):
             return server_info['pub_server_url']
         else:
             ws_port = get_unused_ip_port()
-            ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-            server_info['pub_server'] = ZMQStreamServer.spawn_process(server_info['pub_url'], ws_port, ws_url)
+            ws_addr = 'ws://%s:%d%s' % (self.address, ws_port, ws_url)
+            server_info['pub_server'] = ZMQStreamServer.spawn_process(server_info['pub_url'], 
+                                            ws_port, ws_url, self.external)
             server_info['pub_server_url'] = ws_addr
             return ws_addr
 
@@ -121,8 +127,9 @@ class ZMQServerManager(object):
             return server_info['out_server_url']
         else:
             ws_port = get_unused_ip_port()
-            ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-            server_info['out_server'] = ZMQStreamServer.spawn_process(server_info['out_url'], ws_port, ws_url)
+            ws_addr = 'ws://%s:%d%s' % (self.address, ws_port, ws_url)
+            server_info['out_server'] = ZMQStreamServer.spawn_process(server_info['out_url'],
+                                            ws_port, ws_url, self.external)
             server_info['out_server_url'] = ws_addr
             return ws_addr
 
