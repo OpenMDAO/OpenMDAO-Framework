@@ -47,21 +47,18 @@ class ConnectionsPage(DialogPage):
     def components_pane(self):
         """ Component selector pane. """
         children = self.root.find_elements_by_xpath('./div')
-        print 'child0', children[0]
         return children[0]
 
     @property
     def connections_pane(self):
         """ Connections pane. """
         children = self.root.find_elements_by_xpath('./div')
-        print 'child1', children[1]
         return children[1]
 
     @property
     def variables_pane(self):
         """ Variable selector pane. """
         children = self.root.find_elements_by_xpath('./div')
-        print 'child2', children[2]
         return children[2]
 
     def show_all_variables(self):
@@ -107,7 +104,7 @@ class ConnectionsPage(DialogPage):
         return self.browser.find_elements_by_class_name('variable-figure')
 
     def get_variable_names(self):
-        """ Return names of variables. """
+        """ Return names of variable figures. """
         # shameful copy/paste from workspace.get_dataflow_component_names()
         names = []
 
@@ -130,6 +127,47 @@ class ConnectionsPage(DialogPage):
             for retry in range(10):  # This has had issues...
                 try:
                     names.append(self.browser.find_elements_by_class_name('variable-name')[i].text)
+                except StaleElementReferenceException:
+                    logging.warning('get_variable_names:'
+                                    ' StaleElementReferenceException')
+                except IndexError:
+                    logging.warning('get_variable_names:'
+                                    ' IndexError for i=%s, headers=%s',
+                                    i, len(variable_names))
+                else:
+                    break
+
+        if len(names) != len(variable_names):
+            logging.error('get_variable_names:'
+                          ' expecting %d names, got %s',
+                          len(variable_names), names)
+        return names
+
+    def find_variable_name(self, name):
+        """ Return the variable name elements containing the name `name`. """
+        names = []
+
+        # Assume there should be at least 1, wait for number to not change.
+        n_found = 0
+        for retry in range(10):
+            variable_names = \
+                self.browser.find_elements_by_class_name('variable-name')
+            if variable_names:
+                n_names = len(variable_names)
+                if n_found:
+                    if n_names == n_found:
+                        break
+                n_found = n_names
+        else:
+            logging.error('find_variable_name: n_found %s', n_found)
+            return names
+
+        for i in range(len(variable_names)):
+            for retry in range(10):  # This has had issues...
+                try:
+                    elm = self.browser.find_elements_by_class_name('variable-name')[i]
+                    if elm.text == name:
+                        names.append(elm)
                 except StaleElementReferenceException:
                     logging.warning('get_variable_names:'
                                     ' StaleElementReferenceException')

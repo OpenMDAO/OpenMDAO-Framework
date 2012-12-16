@@ -8,9 +8,10 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
+from selenium.webdriver.common.action_chains import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout
+                 startup, closeout, release
 from pageobjects.util import ArgsPrompt, NotifierPage
 
 
@@ -197,21 +198,18 @@ def _test_connections(browser):
 
     # no connections between assembly vars
     conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
-
-    conn_page.move(-50, -100)
-
     eq(conn_page.count_variable_connections(), 0)
-
-    conn_page.show_connected_variables()
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
+    eq(conn_page.count_variable_figures(), 20)
+    eq(conn_page.count_variable_connections(), 2)
+    conn_page.show_connected_variables()
     eq(conn_page.count_variable_figures(), 4)
     eq(conn_page.count_variable_connections(), 2)
     eq(sorted(conn_page.get_variable_names()),
@@ -220,8 +218,6 @@ def _test_connections(browser):
     # one connection between transmission and engine (RPM)
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
     eq(conn_page.count_variable_figures(), 2)
     eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
@@ -253,10 +249,19 @@ def _test_connections(browser):
     eq(conn_page.count_variable_figures(), 0)
     eq(conn_page.count_variable_connections(), 0)
 
-    # reconnect transmission torque to chassis torque
-    conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
-    eq(conn_page.count_variable_figures(), 2)
+    # reconnect transmission torque to chassis torque by dragging
+    # conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
+    conn_page.show_all_variables()
+    torque_vars = conn_page.find_variable_name('torque_ratio')
+    eq(len(torque_vars), 2)
+    chain = ActionChains(browser)
+    chain.click_and_hold(torque_vars[0])
+    chain.move_to_element(torque_vars[1])  #.perform()
+    release(chain)
+    time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
+    conn_page.show_connected_variables()
+    eq(conn_page.count_variable_figures(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['torque_ratio', 'torque_ratio'])
 
@@ -290,13 +295,16 @@ def _test_connections(browser):
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
     conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
+
     eq(conn_page.count_variable_connections(), 0)
 
-    # connect component variable to assembly variable
-    conn_page.move(-50, -100)
+    # test invalid variable
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
     message = NotifierPage.wait(workspace_page)
     eq(message, "Invalid source variable")
+
+    # connect component variable to assembly variable
     conn_page.set_source_component('chassis')
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
     eq(conn_page.count_variable_connections(), 1)
