@@ -165,7 +165,7 @@ def _test_connect(browser):
          'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
-        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates.', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
@@ -256,7 +256,7 @@ def _test_connections(browser):
     eq(len(torque_vars), 2)
     chain = ActionChains(browser)
     chain.click_and_hold(torque_vars[0])
-    chain.move_to_element(torque_vars[1])  #.perform()
+    chain.move_to_element(torque_vars[1])
     release(chain)
     time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
