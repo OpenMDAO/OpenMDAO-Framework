@@ -10,14 +10,16 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import rgba
 
+
 def _row_sorter(row_element):
     '''Sort rows by the Style attribute, which for slickgrids should
     be something like: "top: 30px"'''
-    
+
     style = row_element.get_attribute('style')
     style = style.replace('top: ', '')
     style = style.replace('px;', '')
     return int(style)
+
 
 class Grid(object):
     """
@@ -33,9 +35,9 @@ class Grid(object):
     @property
     def rows(self):
         '''Grid contains a list of GridRow objects. Note, they are not
-        always sorted correctly in the DOM, so we must sort them based 
+        always sorted correctly in the DOM, so we must sort them based
         on the value of "top" in the style attribute.'''
-        
+
         if self._rows is None:
             rows = self._root.find_elements(By.CLASS_NAME, 'slick-row')
             rows_sort = sorted(rows, key=_row_sorter)
@@ -51,9 +53,9 @@ class Grid(object):
         return len(self.rows)
 
     def __getitem__(self, index):
-        for retry in range(5):    	
+        for retry in range(5):
             try:
-        	       item = self.rows[index]
+                item = self.rows[index]
             except StaleElementReferenceException:
                 if retry < 4:
                     logging.warning('Grid.__getitem__: StaleElementReferenceException')
@@ -88,7 +90,7 @@ class GridRow(object):
                 else:
                     break
             self._cells = [GridCell(self._browser, cell) for cell in cells]
-            
+
         return self._cells
 
     @property
@@ -126,10 +128,10 @@ class GridCell(object):
     @property
     def value(self):
         return self._root.text
-    
+
     def click(self):
         chain = ActionChains(self._browser)
-        chain.click(self._root).perform()        
+        chain.click(self._root).perform()
 
     @value.setter
     def value(self, value):
@@ -143,7 +145,7 @@ class GridCell(object):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(value+Keys.RETURN)
+        element.send_keys(value + Keys.RETURN)
 
     @property
     def color(self):
@@ -158,4 +160,3 @@ class GridCell(object):
     def value_of_css_property(self, name):
         """ Return value for the the CSS property `name`. """
         return self._root.value_of_css_property(name)
-
