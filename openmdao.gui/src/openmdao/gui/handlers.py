@@ -62,8 +62,8 @@ class LoginHandler(ReqHandler):
 
 
 class LogoutHandler(ReqHandler):
-    ''' lets users log out of the application simply by deleting the
-        nickname cookie
+    ''' Lets users log out of the application simply by deleting the
+        nickname cookie.
     '''
 
     def get(self):
@@ -76,7 +76,7 @@ class LogoutHandler(ReqHandler):
 
 
 class ExitHandler(ReqHandler):
-    ''' shut it down, try to close the browser window
+    ''' Shut it down; try to close the browser window.
     '''
 
     def get(self):

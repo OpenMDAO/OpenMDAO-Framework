@@ -14,7 +14,7 @@ import atexit
 
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
-    with the option --with-fail-summary to activate it.
+    with the option ``--with-fail-summary`` to activate it.
     """
 
     name = 'fail-summary'
@@ -35,7 +35,7 @@ class TestFailureSummary(Plugin):
         pass
 
     def report(self, stream):
-        """Report the test failures"""
+        """Report the test failures."""
         if not self.enabled:
             return
         if self._failed_tests:

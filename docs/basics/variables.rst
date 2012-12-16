@@ -132,7 +132,7 @@ the default value for the variable named *z*.
 The *dtype* parameter defines the type of variable that is in the array. For
 example, using a string (*str*) for a dtype would give an array of strings. Any
 of Python's standard types and NumPy's additional types should be valid for the
-dtype parameter. The alternate *typecode* specification is also supported for 
+dtype parameter. The alternative *typecode* specification is also supported for 
 non-NumPy arrays (e.g., ``typecode='I'`` for unsigned integers.)
 
 The *shape* parameter is not a required attribute; the Array will default to

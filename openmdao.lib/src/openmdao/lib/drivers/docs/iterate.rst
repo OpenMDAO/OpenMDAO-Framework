@@ -74,9 +74,9 @@ single-output method, so it is only valid to specify one constraint and one para
     1.4142...
 
 Two additional parameters control the FixedPointIterator. The
-parameter ``tolerance`` sets the convergence tolerance for the comparison
+parameter `tolerance` sets the convergence tolerance for the comparison
 between value of ``x_out`` at the current iteration and the previous iteration.
-The default value for ``tolerance`` is 0.001. The parameter ``max_iteration``
+The default value for `tolerance` is 0.001. The parameter ``max_iteration``
 specifies the number of iterations to run. The default value for
 ``max_iterations`` is 25.
 

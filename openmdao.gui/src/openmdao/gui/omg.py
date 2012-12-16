@@ -48,8 +48,8 @@ def get_user_dir():
 
 
 class App(web.Application):
-    ''' openmdao web application
-        extends tornado web app with URL mappings, settings and server manager
+    ''' Openmdao web application.
+        Extends tornado web app with URL mappings, settings and server manager.
     '''
 
     def __init__(self, secret=None, external=False):
@@ -112,8 +112,8 @@ class App(web.Application):
 
 
 class AppServer(object):
-    ''' openmdao web application server
-        wraps tornado web app, runs http server and opens browser
+    ''' Openmdao web application server.
+        Wraps tornado web app, runs http server, and opens browser.
     '''
 
     def __init__(self, options):
@@ -146,8 +146,8 @@ class AppServer(object):
         self.app = App(secret, options.external)
 
     def serve(self):
-        ''' start server listening on port, launch browser if requested
-            and start the ioloop
+        ''' Start server listening on port, launch browser if requested,
+            and start the ioloop.
         '''
         self.http_server = httpserver.HTTPServer(self.app)
         if self.options.external:
@@ -196,13 +196,13 @@ class AppServer(object):
 
 
 def get_argument_parser():
-    ''' shortcut to AppServer argument parser
+    ''' Shortcut to AppServer argument parser.
     '''
     return AppServer.get_argument_parser()
 
 
 def run(parser=None, options=None, args=None):
-    ''' launch the gui with specified options
+    ''' Launch the GUI with specified options.
     '''
 
     # install zmq ioloop before creating any tornado objects
@@ -214,7 +214,7 @@ def run(parser=None, options=None, args=None):
 
 
 def main():
-    ''' process command line arguments and run
+    ''' Process command line arguments and run.
     '''
     enable_console()
     parser = AppServer.get_argument_parser()

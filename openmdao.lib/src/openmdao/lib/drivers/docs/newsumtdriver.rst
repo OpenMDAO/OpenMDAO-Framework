@@ -40,8 +40,8 @@ The OpenMDAO NEWSUMT driver can be imported from ``openmdao.lib.drivers.api``.
 
     from openmdao.lib.drivers.api import NEWSUMTdriver
 
-Typically, NEWSUMT will be used as a driver in the top level assembly, though it
-can be also used in a subassembly as part of a nested driver scheme. Using the
+Typically, NEWSUMT will be used as a driver in the top level assembly, although it
+can also be used in a subassembly as part of a nested driver scheme. Using the
 OpenMDAO script interface, a simple optimization problem can be set up as
 follows:
 
@@ -116,7 +116,7 @@ set the ``fd_step`` attribute.
 
 When using NEWSUMT, if you have any linear constraints, it may be
 advantageous to specify them as such so that NEWSUMT can treat them
-differently. Use the integer array ``ilin`` to designate whether a constraint
+differently. Use the integer array `ilin` to designate whether a constraint
 is linear. A value of 0 indicates that that constraint is non-linear, while a
 value of 1 indicates that that the constraint is linear. This parameter is
 optional, and when it is omitted, all constraints are assumed to be nonlinear.
@@ -137,7 +137,7 @@ nonlinear objective function.
 
         self.driver.lobj = 0
 
-The ``iprint`` parameter can be used to display diagnostic
+The `iprint` parameter can be used to display diagnostic
 messages. These messages are currently sent to the standard
 output.
 
@@ -145,7 +145,7 @@ output.
 
         self.driver.iprint = 0
 
-Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized below.
+Higher positive values of `iprint` turn on the display of more levels of output, as summarized below.
 
 ===============  ========================================================
 Value            Result
@@ -167,7 +167,7 @@ Value            Result
 
 NEWSUMT provides a variety of parameters to control the convergence criteria for an optimization.
 
-The maximum number of iterations is specified by setting the ``itmax`` parameter.
+The maximum number of iterations is specified by setting the `itmax` parameter.
 The default value is 10.
 
 .. testsetup:: NEWSUMT_show

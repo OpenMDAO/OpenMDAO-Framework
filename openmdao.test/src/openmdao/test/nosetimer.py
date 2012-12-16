@@ -41,7 +41,7 @@ from nose.plugins.base import Plugin
 
 
 class TestTimer(Plugin):
-    """This plugin provides test timings
+    """This plugin provides test timings.
 
     """
 
@@ -73,7 +73,7 @@ class TestTimer(Plugin):
         self._timer = time()
 
     def report(self, stream):
-        """Report the test times"""
+        """Report the test times."""
         if not self.enabled:
             return
         d = sorted(self._timed_tests.iteritems(), key=operator.itemgetter(1))

@@ -26,12 +26,12 @@ def diff_1st_fwrdbwrd(fp, fm, eps):
     return (fp - fm)/eps
 
 def diff_2nd_xx(fp, f0, fm, eps):
-    """Evaluates an on-diagonal 2nd derivative term"""
+    """Evaluates an on-diagonal 2nd derivative term."""
     
     return (fp - 2.0*f0 + fm)/eps**2
 
 def diff_2nd_xy(fpp, fpm, fmp, fmm, eps1, eps2):
-    """Evaluates an off-diagonal 2nd derivative term"""
+    """Evaluates an off-diagonal 2nd derivative term."""
     
     return (fpp - fpm - fmp + fmm)/(4.0*eps1*eps2)
 
@@ -45,7 +45,7 @@ class FiniteDifference(Container):
     
     # pylint: disable-msg=E1101
     form = Enum("central", ["central", "forward", "backward"], iotype='in', \
-                desc="Finite difference form (central, forward, backward)")
+                desc="Finite difference form (central, forward, backward).")
     
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')

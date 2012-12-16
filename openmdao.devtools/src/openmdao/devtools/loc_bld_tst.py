@@ -186,7 +186,7 @@ def install_release(url):
     
     retcode = _run_gofile(startdir, os.path.join(startdir, gofile), args)
     
-    newfiles = set(os.listdir('.')) - dirfiles - set(['build.out'])
+    newfiles = set(os.listdir('.')) - dirfiles - set(['build.out', 'openmdao_log.txt'])
     if len(newfiles) != 1:
         raise RuntimeError("didn't expect %s in build directory" % 
                            list(newfiles))
