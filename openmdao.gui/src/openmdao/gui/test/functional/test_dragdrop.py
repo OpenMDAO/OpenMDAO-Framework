@@ -3,7 +3,6 @@ Tests of overall workspace functions.
 """
 
 import pkg_resources
-import sys
 import time
 
 from nose.tools import eq_ as eq
@@ -22,6 +21,7 @@ from util import slot_drop, slot_reset, \
 
 from pageobjects.component import NameInstanceDialog
 from pageobjects.util import ArgsPrompt
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -490,7 +490,7 @@ def _test_library_to_workflow(browser):
     top = workspace_page.get_workflow_figure('top.driver')
     paraboloid = workspace_page.find_library_button('Paraboloid')
     chain = drag_element_to(browser, paraboloid, top.flow, True)
-    chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2])/3, 1).perform()
+    chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2]) / 3, 1).perform()
     assert top.highlighted
     release(chain)
     #deal with the modal dialog
@@ -542,7 +542,7 @@ def _test_component_to_complex_workflow(browser):
     ############################################################################
     workspace_page.expand_object(sim_name)
     paraboloid_component = workspace_page.find_object_button(paraboloid_pathname)
-    sim_workflow_figure = workspace_page.get_workflow_figure(sim_name+'.driver')
+    sim_workflow_figure = workspace_page.get_workflow_figure(sim_name + '.driver')
     chain = drag_element_to(browser, paraboloid_component,
                             sim_workflow_figure.components[0], True)
     assert sim_workflow_figure.highlighted
