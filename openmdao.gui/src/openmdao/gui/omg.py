@@ -40,7 +40,7 @@ debug = True
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> OMG --', msg
+        print '<<<' + str(os.getpid()) + '>>> OMG --', msg
         sys.stdout.flush()
 
 
@@ -50,33 +50,29 @@ def get_user_dir():
     ensure_dir(user_dir)
     return user_dir
 
+
 class App(web.Application):
     ''' Openmdao web application.
         Extends tornado web app with URL mappings, settings and server manager.
     '''
 
-    def __init__(self, secret=None):
+    def __init__(self, secret=None, external=False):
         # locate the docs, so that the /docs url will point to the appropriate
         # docs, either for the current release or the current development build
         if is_dev_build():
-            idxpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
+            docpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
                                    '_build', 'html')
         else:
             import openmdao.main
-            idxpath = os.path.join(os.path.dirname(openmdao.main.__file__), 'docs')
+            docpath = os.path.join(os.path.dirname(openmdao.main.__file__), 'docs')
 
-        doc_handler = web.StaticFileHandler
-        doc_handler_options = { 'path': idxpath,
-                                'default_filename': 'index.html' }
         handlers = [
+            web.url(r'/',       web.RedirectHandler, {'url': '/projects', 'permanent': False}),
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
-            web.url(r'/docs/plugins/(.*)', PluginDocsHandler,
-                                           { 'route': '/docs/plugins/' }),
-            web.url(r'/docs/(.*)',  doc_handler, doc_handler_options ),
-            web.url(r'/',       web.RedirectHandler,
-                                { 'url':'/projects', 'permanent':False })
+            web.url(r'/docs/plugins/(.*)', PluginDocsHandler, {'route': '/docs/plugins/'}),
+            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'})
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
@@ -102,7 +98,7 @@ class App(web.Application):
         ensure_dir(session_dir)
 
         self.session_manager = TornadoSessionManager(secret, session_dir)
-        self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
+        self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer', external)
 
         # External termination normally only used during GUI testing.
         if sys.platform == 'win32':
@@ -131,7 +127,7 @@ class App(web.Application):
         """ On Linux/OS X, handle SIGTERM signal. """
         DEBUG('Received SIGTERM, shutting down....\n')
         self._shutdown()
-        
+
     def exit(self):
         """ Shutdown. """
         DEBUG('Exit requested, shutting down....\n')
@@ -143,7 +139,7 @@ class App(web.Application):
     def _shutdown(self):
         """ Stop all subprocesses and exit. """
         self.server_manager.cleanup()
-        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
+        ioloop.IOLoop.instance().add_timeout(time.time() + 5, sys.exit)
 
 
 class AppServer(object):
@@ -178,17 +174,33 @@ class AppServer(object):
         else:
             secret = os.urandom(1024)
             open(secret_file, 'wb').write(secret)
-        self.app = App(secret)
+        self.app = App(secret, options.external)
 
     def serve(self):
         ''' Start server listening on port, launch browser if requested,
             and start the ioloop.
         '''
         self.http_server = httpserver.HTTPServer(self.app)
-        self.http_server.listen(self.options.port, address="localhost")
+        if self.options.external:
+            self.http_server.listen(self.options.port)
+        else:
+            self.http_server.listen(self.options.port, address='localhost')
 
         if not self.options.serveronly:
             launch_browser(self.options.port, self.options.browser)
+
+        if self.options.external:
+            print '***********************************************************'
+            print '** WARNING: You have exposed the server to the external  **'
+            print '**          network.  THIS IS NOT SAFE!!  Clients will   **'
+            print '**          have access to a command prompt on the host  **'
+            print '**          computer with the identity and privileges of **'
+            print '**          the userid under which the server was run.   **'
+            print '**                                                       **'
+            print '**    This is very dangerous and you should NOT do it.   **'
+            print '**      You exercise this option at your own risk!!!     **'
+            print '**              (Ctrl-C to terminate server)             **'
+            print '***********************************************************'
 
         DEBUG('Serving on port %d' % self.options.port)
         try:
@@ -200,17 +212,17 @@ class AppServer(object):
     def get_argument_parser():
         ''' create a parser for command line arguments
         '''
-        parser = ArgumentParser(description = "launch the graphical user interface")
-        parser.add_argument("-p", "--port", type=int, dest="port", default=0,
-                          help="port to run server on (defaults to any available port)")
-        parser.add_argument("-b", "--browser", dest="browser", default="chrome",
-                          help="preferred browser")
-        parser.add_argument("-s", "--server", action="store_true", dest="serveronly",
+        parser = ArgumentParser(description='launch the graphical user interface')
+        parser.add_argument('-p', '--port', type=int, dest='port', default=0,
+                          help='port to run server on (defaults to any available port)')
+        parser.add_argument('-b', '--browser', dest='browser', default='chrome',
+                          help='preferred browser')
+        parser.add_argument('-s', '--server', action='store_true', dest='serveronly',
                           help="don't launch browser, just run server")
-        parser.add_argument("-r", "--reset", action="store_true", dest="reset",
-                          help="reset project database")
-        parser.add_argument("-d", "--dev", action="store_true", dest="development",
-                          help="enable development options")
+        parser.add_argument('-r', '--reset', action='store_true', dest='reset',
+                          help='reset project database')
+        parser.add_argument('-x', '--external', action='store_true', dest='external',
+                          help='allow access to server from external clients (WARNING: Not Safe or Secure!!)')
         return parser
 
 

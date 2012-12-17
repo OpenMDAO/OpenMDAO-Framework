@@ -117,6 +117,9 @@ openmdao.BaseFrame.prototype.popup = function (title) {
                 panel.find('.slickgrid').trigger('resizeCanvas');
             });
         });
+
+        // trigger any dialog specific resizing of contents
+        dlg.trigger('resize_contents');
     }
 
     dlg.bind('dialogresizestop', function(event, ui) {

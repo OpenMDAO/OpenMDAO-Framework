@@ -25,6 +25,12 @@ class DialogPage(BasePageObject):
 
     def close(self):
         """ Close dialog. """
+        # Ensure close button is on screen.
+        width = self.browser.get_window_size()['width']
+        x = self('close_button').location['x']
+        shift = width - x
+        if shift < 0:
+            self.move(shift, 0)
         self('close_button').click()
 
     def move(self, delta_x, delta_y):

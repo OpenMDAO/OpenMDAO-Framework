@@ -9,6 +9,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement
 
+
 class WorkflowFigure(BasePageObject):
     """ Represents elements within a workflow figure. """
 
@@ -196,6 +197,7 @@ class WorkflowComponentFigure(BasePageObject):
         time.sleep(0.5)
         self('run_button').click()
 
+
 def find_workflow_component_figures(page):
     """ Returns workflow component figure elements in `page`. """
     time.sleep(0.5)  # Pause for stable display.
@@ -204,7 +206,7 @@ def find_workflow_component_figures(page):
 
 
 def find_workflow_component_figure(page, name, prefix=None, retries=5):
-    """ Return :class:`WorkflowComponentFigure` for `name`. """
+    """ Returns :class:`WorkflowComponentFigure` for `name`. """
     root = page.root or page.browser
     for retry in range(retries):
         time.sleep(0.5)  # Pause for stable display.

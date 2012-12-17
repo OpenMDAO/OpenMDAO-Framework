@@ -3,7 +3,6 @@ Functional testing of the tutorial problems in the GUI.
 """
 
 import pkg_resources
-import sys
 from unittest import TestCase
 
 from nose.tools import eq_ as eq
@@ -11,6 +10,7 @@ from nose.tools import with_setup
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -47,6 +47,7 @@ def _test_MDAO_MDF(browser):
     dis1 = workspace_page.get_dataflow_figure('dis1', 'top')
     dis2 = workspace_page.get_dataflow_figure('dis2', 'top')
     conn_page = workspace_page.connect(dis1, dis2)
+    conn_page.move(-100, -100)
     conn_page.connect_vars('dis1.y1', 'dis2.y1')
     conn_page.close()
 
@@ -67,6 +68,7 @@ def _test_MDAO_MDF(browser):
     # Configure Solver
     driver = workspace_page.get_dataflow_figure('solver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, -100)
 
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
@@ -84,6 +86,7 @@ def _test_MDAO_MDF(browser):
     # Configure Optimizer
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, -100)
 
     editor('parameters_tab').click()
     dialog = editor.new_parameter()

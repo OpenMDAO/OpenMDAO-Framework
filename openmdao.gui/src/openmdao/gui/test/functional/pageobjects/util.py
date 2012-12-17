@@ -192,6 +192,10 @@ class SafeElement(SafeBase):
         return self._invoke('getattr', (self._delegate, 'id'), {})
 
     @property
+    def location(self):
+        return self._invoke('getattr', (self._delegate, 'location'), {})
+
+    @property
     def text(self):
         return self._invoke('getattr', (self._delegate, 'text'), {})
 
@@ -250,6 +254,9 @@ class SafeDriver(SafeBase):
 
     def get(self, *args, **kwargs):
         return self._invoke('get', args, kwargs)
+
+    def get_window_size(self, *args, **kwargs):
+        return self._invoke('get_window_size', args, kwargs)
 
     def implicitly_wait(self, *args, **kwargs):
         return self._invoke('implicitly_wait', args, kwargs)
