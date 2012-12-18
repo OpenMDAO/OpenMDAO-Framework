@@ -62,7 +62,7 @@ class ConnectionsPage(DialogPage):
         return children[2]
 
     def show_all_variables(self):
-        """ Show only the connected variables. """
+        """ Show all variables. """
         chain = ActionChains(self.browser)
         chain.move_to_element_with_offset(self.connections_pane, 5, 5)
         chain.context_click(None)

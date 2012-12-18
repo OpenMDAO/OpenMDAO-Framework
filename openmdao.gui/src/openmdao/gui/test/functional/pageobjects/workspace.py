@@ -6,6 +6,7 @@ from nose.tools import eq_ as eq
 
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import StaleElementReferenceException
@@ -448,7 +449,7 @@ class WorkspacePage(BasePageObject):
         """ Set the search filter text. """
         for retry in range(3):  # This has had issues...
             try:
-                self.library_search = filter + '\n'
+                self.library_search = filter + Keys.RETURN  #'\n'
             except StaleElementReferenceException:
                 logging.warning('set_library_filter:'
                                 ' StaleElementReferenceException')
