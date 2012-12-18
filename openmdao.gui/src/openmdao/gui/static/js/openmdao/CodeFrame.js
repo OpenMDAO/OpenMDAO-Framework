@@ -280,7 +280,8 @@ openmdao.CodeFrame = function(id,model) {
             mode = findMode(filepath);
         }
         var newSession = new EditSession(contents); // new code session for ace
-        newSession.setUseSoftTabs();
+        newSession.setUseSoftTabs(true);
+        newSession.setTabSize(4);
         newSession.setUndoManager(new UndoManager());
         newSession.setMode(mode);
         newSession.on('change', function(evt) {
@@ -294,7 +295,7 @@ openmdao.CodeFrame = function(id,model) {
             }
         });
         editor.setSession(newSession);
-
+        
         // store session for efficent switching
         sessions[tabName] = {
             'editSession': newSession,
