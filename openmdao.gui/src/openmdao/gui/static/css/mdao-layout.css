@@ -97,7 +97,7 @@ nav ul ul a {
 nav2 {
   width: 100%;
   display:block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   margin:0 auto;
   position:relative;
   z-index: 1000;
@@ -109,7 +109,7 @@ nav2 ul {
 nav2 ul:after {
   content: ".";
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   height: 0;
   clear: both;
   visibility: hidden;
@@ -121,12 +121,12 @@ nav2 li {
 }
 nav2 li a {
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   padding: 5px 10px;
 }
 nav2 a span {
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   float: right;
   margin-left: 5px;
 }
@@ -193,5 +193,3 @@ nav2 ul ul a {
 .ui-draggable-dragging {
   z-index: 9999 !important;
 }
-
-

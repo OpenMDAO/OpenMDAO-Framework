@@ -39,6 +39,7 @@ class _BaseElement(object):
         else:
             return WebDriverWait(self._browser, TMO).until(
                        lambda browser: self._root.find_element(*self._locator))
+
     @property
     def color(self):
         """ Return RGBA values for ``color`` property. """
@@ -265,28 +266,32 @@ class ButtonElement(BaseElement):
     def __init__(self, locator):
         super(ButtonElement, self).__init__(_ButtonElement, locator)
 
+
 class CheckboxElement(BaseElement):
     """ The `value` of this is the selection state. """
     def __init__(self, locator):
         super(CheckboxElement, self).__init__(_CheckboxElement, locator)
+
 
 class GridElement(BaseElement):
     """ The `value` of this is a :class:`Grid`. """
     def __init__(self, locator):
         super(GridElement, self).__init__(_GridElement, locator)
 
+
 class InputElement(BaseElement):
     """ A text input field. """
     def __init__(self, locator):
         super(InputElement, self).__init__(_InputElement, locator)
+
 
 class TextElement(BaseElement):
     """ Just some text on the page. """
     def __init__(self, locator):
         super(TextElement, self).__init__(_TextElement, locator)
 
+
 class GenericElement(BaseElement):
     """A Generic Element for objects not of the above types"""
     def __init__(self, locator):
         super(GenericElement, self).__init__(_GenericElement, locator)
-
