@@ -29,7 +29,7 @@ from enthought.traits.api import HasTraits, Missing, Python, \
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none
+from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
@@ -794,20 +794,27 @@ class Container(SafeHasTraits):
         variables = []
         slots = []
         #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union( \
-            set(self._added_traits.keys()) ):
+        for name in set(self.list_vars()).union(
+                                 self._alltraits(type=Slot).keys()):
+         
+            trait = self.get_trait(name)
+            ttype = trait.trait_type
             
+            if ttype.iotype is None:
+                if not isinstance(ttype, Slot):
+                    logger.error("continuing for %s" % name)
+                    continue
+
             attr = {}
             
-            var = self.get(name)
-            trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
-            ttype = trait.trait_type
             
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                        
+            
+            attr['id'] = name
+            
             # Container variables are not connectable
             attr['connected'] = ''
                     
@@ -818,10 +825,11 @@ class Container(SafeHasTraits):
 
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
-                    
                     slots.append(slot_attr)
             
         attrs["Inputs"] = variables
+        if slots:
+            attrs['Slots'] = slots
         return attrs
 
     

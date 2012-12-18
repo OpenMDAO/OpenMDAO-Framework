@@ -135,7 +135,7 @@ class PkgResourcesFactory(Factory):
                 dists.append(dist)
         
         typ_dict = self._entry_map_info(dists)
-        dset = self._get_meta_info(ret, groups, typ_dict)
+        #dset = self._get_meta_info(ret, groups, typ_dict)
         
         return ret
 

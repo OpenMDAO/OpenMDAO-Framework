@@ -1775,7 +1775,7 @@ class Component(Container):
         return attrs
 
 
-def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
+def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
