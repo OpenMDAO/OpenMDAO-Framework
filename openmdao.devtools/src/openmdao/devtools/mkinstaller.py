@@ -136,7 +136,7 @@ def main(args=None):
         offline_ = ["'-zmaxd'", "'-zmaxd'", ", 'pkg'", "os.mkdir('pkg')", "['-f', url]", "['-f', openmdao_url]"]
         f_prefix = "gather-"
     elif options.offline == "installer":
-        offline_ = ["'-Z'", "'-NZ'", '','', "['-H', 'None', '-f', 'pkg']", "['-H', 'None', '-f', 'pkg']"]
+        offline_ = ["'-Z'", "'-NZ'", '','', "['-H', 'None', '-f', options.findlinks]", "['-H', 'None', '-f', options.findlinks]"]
         f_prefix = "offline-"
     else:
         offline_ = ["'-Z'", "'-NZ'", '','', "['-f', url]", "['-f', openmdao_url]"]
