@@ -1,7 +1,26 @@
+/**
+ *  ConnectionsFrame: a frame for viewing/editing connections in an assembly
+ *
+ *  Source and destination components are selected via input boxes at the top
+ *  of the frame. Source (output) and destination (input) variables are
+ *  rendered as SVG figures with curves between them representing connections.
+ *  Source and destination variables can be selected via input boxes at the
+ *  bottom of the frame and connected by clicking on the 'connect' button.
+ *  Alternatively, dragging from one variable figure to another will connect
+ *  them if they are eligible to be connected. Input variables can be
+ *  disconnected by right clicking on them and choosing 'Disconnect' from the
+ *  context menu.
+ *
+ *  Arguments:
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the assembly
+ *      src_comp: (optional) the source component to select initially
+ *      dst_comp: (optional) the destination component to select initially
+ **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
+openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname));
@@ -17,165 +36,187 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                        +        '<tr><td>Source Component:</td>'
                        +            '<td>Target Component:</td>'
                        +        '</tr>'
-                       +        '<tr><td><input id="src_cmp_list" /></td>'
-                       +            '<td><input id="dst_cmp_list" /></td>'
+                       +        '<tr><td><select id="src_cmp_list" /></td>'
+                       +            '<td><select id="dst_cmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
             .appendTo(self.elm),
-        src_cmp_selector = componentsDiv.find('#src_cmp_list'),
-        dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
+        src_cmp_selector = componentsDiv.find('#src_cmp_list').combobox(),
+        dst_cmp_selector = componentsDiv.find('#dst_cmp_list').combobox(),
+        src_cmp_input = src_cmp_selector.siblings('.ui-autocomplete-input').attr('id','src_cmp_input'),
+        dst_cmp_input = dst_cmp_selector.siblings('.ui-autocomplete-input').attr('id','dst_cmp_input'),
         component_list = [],
-        // dataflow diagram
-        connectionsCSS = 'background:grey; position:static; width:100%;',
-        connectionsDiv = jQuery('<div style="'+connectionsCSS+'">')
+        // connections diagram
+        connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
+        connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
             .appendTo(self.elm),
-        dataflowID  = id + '-dataflow',
-        dataflowDiv = jQuery('<div id='+dataflowID+' style="'+connectionsCSS+'">')
-            .appendTo(connectionsDiv),
-        dataflow = new draw2d.Workflow(dataflowID),
+        r = Raphael(connectionsDiv.attr('id')),
         // variable selectors and connect button
-        variablesHTML = '<div style="'+connectionsCSS+'"><table>'
+        variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
+                variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
-                      +        '<tr><td><input  id="src_var_list" /></td>'
-                      +        '    <td><input  id="dst_var_list" /></td>'
+                      +        '<tr><td><select id="src_var_list" /></td>'
+                      +        '    <td><select id="dst_var_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
                       + '</table></div>',
         variablesDiv = jQuery(variablesHTML)
             .appendTo(self.elm),
-        src_var_selector = variablesDiv.find('#src_var_list'),
-        dst_var_selector = variablesDiv.find('#dst_var_list'),
+        src_var_selector = variablesDiv.find('#src_var_list').combobox(),
+        dst_var_selector = variablesDiv.find('#dst_var_list').combobox(),
+        src_var_input = src_var_selector.siblings('.ui-autocomplete-input').attr('id','src_var_input'),
+        dst_var_input = dst_var_selector.siblings('.ui-autocomplete-input').attr('id','dst_var_input'),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
-                            var src = src_var_selector.val();
-                            var dst = dst_var_selector.val();
-                            model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
-                            src_var_selector.val('');
-                            dst_var_selector.val('');
+                            var src = src_var_input.val(),
+                                dst = dst_var_input.val();
+                            if (src === '') {
+                                openmdao.Util.notify('Invalid source variable');
+                            }
+                            else if (dst === '') {
+                                openmdao.Util.notify('Invalid target variable');
+                            }
+                            else {
+                                model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
+                                src_var_selector.val('');
+                                dst_var_selector.val('');
+                            }
                         }),
-        assemblyKey = '<Assembly>',
+        assemblyKey = '-- Assembly --',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
-        normalCSS = {'font-style':'normal', 'opacity':'1.0'},
-        showAllVariables = false;  // only show connected variables by default
+        normalCSS   = {'font-style':'normal', 'opacity':'1.0'},
+        // context menu
+        contextMenu = jQuery("<ul class='context-menu'>")
+            .appendTo(connectionsDiv),
+        busyCSS = 'position:absolute;left:150px;top:25px;color:black;background-color:DarkGray;border:1px solid black;',
+        busyDiv = jQuery('<div class="busy" style="'+busyCSS+'">&nbsp;&nbsp;Updating... Please wait&nbsp;&nbsp;</div>')
+            .appendTo(connectionsDiv).hide(),
+        showAllVariables = true;  // show all vars vs only connected vars
 
+    self.elm.css({'position':'relative', 'height':'100%',
+                  'overflow':'hidden', 'max-height': 0.8*jQuery(window).height()});
     self.pathname = null;
 
-    // plain background, non-selectable
-    dataflow.setBackgroundImage(null);
-    dataflowDiv.css({'background-color':'transparent','position':'absolute','width':'100%'});
-    dataflowDiv.on('selectstart dragstart',function(evt){ evt.preventDefault(); return false; });
+    // set the connections pane height to dynamically fill the space between the
+    // component and variable selectors
+    function resize_contents() {
+        connectionsDiv.height(self.elm.innerHeight()
+                            - componentsDiv.outerHeight()
+                            - variablesDiv.outerHeight());
+    }
+
+    // resize contents when told to do so (e.g. by BaseFrame when dialog is resized)
+    self.elm.on('resize_contents', function(e) {
+        resize_contents();
+    });
+
+    // disallow annoying text selection in the connections div
+    connectionsDiv.on('selectstart',false);
 
     // create context menu for toggling the showAllVariables option
-    dataflow.getContextMenu=function(){
-        var menu=new draw2d.Menu();
+    contextMenu.uniqueId();
+    contextMenu.append(jQuery('<li>Show Connected Variables Only</li>').click(function(e) {
+        showAllVariables = !showAllVariables;
         if (showAllVariables) {
-            menu.appendMenuItem(new draw2d.MenuItem("Show Connections Only",null,
-                function(){
-                    showAllVariables = false;
-                    showConnections();
-                })
-            );
+            jQuery(this).text('Show Connected Variables Only');
         }
         else {
-            menu.appendMenuItem(new draw2d.MenuItem("Show All Variables",null,
-                function(){
-                    showAllVariables = true;
-                    showConnections();
-                })
-            );
+            jQuery(this).text('Show All Variables');
         }
-        return menu;
-    };
+        showConnections();
+    }));
+    ContextMenu.set(contextMenu.attr('id'), connectionsDiv.attr('id'));
 
+    /** set up a component selector */
     function setupSelector(selector) {
-        // if selector gains focus with assemblyKey then clear it
-        selector.focus(function() {
-            selector = jQuery(this);
-            if (selector.val() === assemblyKey) {
-                selector.val('').css(normalCSS);
-            }
+        // get a reference to the INPUT element, which is a sibling to the SELECT
+        selector.input = selector.siblings('.ui-autocomplete-input');
+
+        // when input gains focus, clear it
+        selector.input.focus(function(e) {
+            selector.input.val('').css(normalCSS);
         });
 
-        // process new selector value when selector loses focus
-        selector.bind('blur', function(e) {
+        // process new selector value on change
+        selector.change(function(e) {
+            var src_prev = self.src_comp,
+                dst_prev = self.dst_comp;
 
-            selector.autocomplete('close');
-
-            if (e.target.value === '' || e.target.value === assemblyKey) {
-                selector.val(assemblyKey);
-                selector.css(assemblyCSS);
+            // make sure the input field shows the proper value with the proper style
+            if (this.value === assemblyKey) {
+                selector.input.val(assemblyKey);
+                selector.input.css(assemblyCSS);
+            }
+            else {
+                selector.input.val(this.value);
+                selector.input.css(normalCSS);
             }
 
+            // set active source/destination component to current selection if valid
             if (selector.attr('id') === src_cmp_selector.attr('id')) {
-                if (e.target.value === assemblyKey) {
+                if (this.value === assemblyKey) {
                     self.src_comp = '';
                 }
                 else {
-                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
-                        self.src_comp = e.target.value;
+                    if (jQuery.inArray(this.value, component_list) >= 0) {
+                        self.src_comp = this.value;
                     }
                     else {
-                        selector.val(self.src_comp);
+                        selector.input.val(self.src_comp);
                     }
                 }
             }
             else {
-                if (e.target.value === assemblyKey) {
+                if (this.value === assemblyKey) {
                     self.dst_comp = '';
                 }
                 else {
-                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
-                        self.dst_comp = e.target.value;
+                    if (jQuery.inArray(this.value, component_list) >= 0) {
+                        self.dst_comp = this.value;
                     }
                     else {
-                        selector.val(self.dst_comp);
+                        selector.input.val(self.dst_comp);
                     }
                 }
             }
 
-            if (e.target.value === '' || e.target.value === assemblyKey) {
-                selector.val(assemblyKey);
-                selector.css(assemblyCSS);
+            // if the selection has changed, re-render the connections
+            if (self.src_comp !== src_prev || self.dst_comp !== dst_prev) {
+                showConnections();
             }
-
-            showConnections();
         });
 
-        // set autocomplete to trigger blur (remove focus)
-        selector.autocomplete({
-            select: function(event, ui) {
-                if (ui.item.value === '') {
-                    selector.val(assemblyKey);
-                    selector.css(assemblyCSS);
-                }
-                else {
-                    selector.val(ui.item.value);
-                    selector.css(normalCSS);
-                }
-                selector.blur();
-            },
-            delay: 0,
-            minLength: 0
+        // trigger selector change event when input loses focus,
+        // if input field is empty, then select the assembly
+        selector.input.blur(function(e) {
+            if (this.value === '') {
+                this.value = assemblyKey;
+                selector.val(assemblyKey);
+            }
+            selector.change();
         });
 
-        // set enter key to trigger blur (remove focus)
-        selector.bind('keypress.enterkey', function(e) {
+        // trigger selector change event when enter key is pressed in input field
+        selector.input.on('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                selector.blur();
+                this.blur();
             }
         });
     }
 
+    // set up source and destination component selector behaviors
     setupSelector(src_cmp_selector);
     setupSelector(dst_cmp_selector);
 
-    function loadData(data) {
+    /** populate component selectors from dataflow data and show connections */
+    function loadComponentData(data) {
         if (!data || !data.Dataflow || !data.Dataflow.components
                   || !data.Dataflow.components.length) {
             // don't have what we need, probably something got deleted
+            debug.warn('ConnectionFrame.loadComponentData(): Invalid data',data);
             self.close();
         }
         else {
@@ -185,39 +226,46 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             // update the output & input selectors with component list
             src_cmp_selector.html('');
-            src_cmp_selector.autocomplete({source: component_list});
-
             dst_cmp_selector.html('');
-            dst_cmp_selector.autocomplete({source: component_list});
-        }
+            jQuery.each(component_list, function(idx, comp_name) {
+                src_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
+                dst_cmp_selector.append('<option value="'+comp_name+'">'+comp_name+'</option>');
+            });
 
-        if (self.src_comp) {
-            src_cmp_selector.val(self.src_comp);
-            src_cmp_selector.css(normalCSS);
+            if (self.src_comp) {
+                src_cmp_selector.val(self.src_comp);
+                src_cmp_selector.input.val(self.src_comp);
+                src_cmp_selector.input.css(normalCSS);
+            }
+            else {
+                src_cmp_selector.val(assemblyKey);
+                src_cmp_selector.input.val(assemblyKey);
+                src_cmp_selector.input.css(assemblyCSS);
+            }
+            if (self.dst_comp) {
+                dst_cmp_selector.val(self.dst_comp);
+                dst_cmp_selector.input.val(self.dst_comp);
+                dst_cmp_selector.input.css(normalCSS);
+            }
+            else {
+                dst_cmp_selector.val(assemblyKey);
+                dst_cmp_selector.input.val(assemblyKey);
+                dst_cmp_selector.input.css(assemblyCSS);
+            }
+
+            showConnections();
         }
-        else {
-            src_cmp_selector.val(assemblyKey);
-            src_cmp_selector.css(assemblyCSS);
-        }
-        if (self.dst_comp) {
-            dst_cmp_selector.val(self.dst_comp);
-            dst_cmp_selector.css(normalCSS);
-        }
-        else {
-            dst_cmp_selector.val(assemblyKey);
-            dst_cmp_selector.css(assemblyCSS);
-        }
-        showConnections();
     }
 
+    /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
-        
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
+            debug.warn('ConnectionFrame.loadConnectionData(): Invalid data',data);
             self.close();
         }
         else {
-            dataflow.clear();
+            r.clear();
             figures = {};
             var i = 0,
                 x = 15,
@@ -240,35 +288,27 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             jQuery.each(data.sources, function(idx,srcvar) {
                 if (showAllVariables || conn_list.contains(srcvar.name)) {
-                    var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
-                        src_path = self.pathname+'.'+src_name,
-                        fig = new openmdao.VariableFigure(model,src_path,srcvar,'output');
-                    dataflow.addFigure(fig);
-                    fig.setPosition(x,y);
-                    figures[src_name] = fig;
-                    y = y + fig.height + 10;
+                    var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
+                    figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
+                    y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             });
             var end_outputs = y;
 
-            x = 220;
+            x = (componentsDiv.width() - connect_button.width())/2;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
                 if (showAllVariables || conn_list.contains(dstvar.name)) {
-                    var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name,
-                        dst_path = self.pathname+'.'+dst_name,
-                        fig = new openmdao.VariableFigure(model,dst_path,dstvar,'input');
-                    dataflow.addFigure(fig);
-                    fig.setPosition(x,y);
-                    figures[dst_name] = fig;
-                    y = y + fig.height + 10;
+                    var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
+                    figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
+                    y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             });
             var end_inputs = y;
 
-            var height = Math.max(end_inputs, end_outputs, 25) + 'px';
-            dataflowDiv.height(height);
-            connectionsDiv.height(height);
+            var height = Math.max(end_inputs, end_outputs, 25);
+            r.setSize(connectionsDiv.width(), height);
+
             connectionsDiv.show();
             variablesDiv.show();
 
@@ -277,42 +317,145 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     dst_name = conn[1],
                     src_fig = figures[src_name],
                     dst_fig = figures[dst_name],
-                    src_port = src_fig.getPort("output"),
-                    dst_port = dst_fig.getPort("input");
-                c = new draw2d.Connection();
-                c.setSource(src_port);
-                c.setTarget(dst_port);
-                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
-                c.setRouter(new draw2d.BezierConnectionRouter());
-                c.setCoronaWidth(10);
-                c.getContextMenu=function(){
-                    var menu=new draw2d.Menu();
-                    var oThis=this;
-                    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                            var asm = self.pathname,
-                                cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
-                            model.issueCommand(cmd);
-                        })
-                    );
-                    return menu;
-                };
-                dataflow.addFigure(c);
-                src_port.setBackgroundColor(new draw2d.Color(0,0,0));
-                dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
+                    c = r.connection(src_fig, dst_fig, "#000", "#fff")
+                        .line.node.className.baseVal += ' variable-connection';
             });
 
             // update the output & input selectors to current outputs & inputs
+            src_var_input.val('');
             src_var_selector.html('');
-            src_var_selector.autocomplete({ source: src_list ,minLength:0});
+            jQuery.each(src_list, function(idx, var_name) {
+                src_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
+            });
 
+            dst_var_input.val('');
             dst_var_selector.html('');
-            dst_var_selector.autocomplete({ source: dst_list ,minLength:0});
+            jQuery.each(dst_list, function(idx, var_name) {
+                dst_var_selector.append('<option value="'+var_name+'">'+var_name+'</option>');
+            });
+
+            busyDiv.hide();
         }
     }
 
-    /** edit connections between the source and destination objects in the assembly */
+    /** draw a line on the connections div */
+    function drawLine(startX, startY, endX, endY) {
+        var start = {
+            x: startX,
+            y: startY
+        };
+        var end = {
+            x: endX,
+            y: endY
+        };
+        var getPath = function() {
+            return "M" + start.x + " " + start.y + " L" + end.x + " " + end.y;
+        };
+        var redraw = function() {
+            line.attr("path", getPath());
+        };
+
+        var line = r.path(getPath());
+        return {
+            element: line,
+            updateStart: function(x, y) {
+                start.x = x;
+                start.y = y;
+                redraw();
+                return this;
+            },
+            updateEnd: function(x, y) {
+                end.x = x;
+                end.y = y;
+                redraw();
+                return this;
+            }
+        };
+    }
+
+    // configure mouse handlers to connect source and dest variables when a
+    // line is drawn from one to the other and to add a 'disconnect' option
+    // to the context menu when right clicking on a connected input variable
+    connectionsDiv.on('mousedown', function(e) {
+        var offset = connectionsDiv.offset(),
+            x = e.clientX - offset.left,
+            y = e.clientY - offset.top,
+            source = r.getElementByPoint(e.clientX, e.clientY),
+            target,
+            line;
+
+        if (source !== null) {
+            if (e.button === 2) {
+                // context menu option to disconnect the variable
+                if (source.data('input') && source.data('connected')) {
+                    var src_name = source.data('name'),
+                        menuItem = jQuery('<li>Disconnect '+openmdao.Util.getName(src_name)+'</li>')
+                            .click(function(e) {
+                                cmd = self.pathname+'.disconnect("'+src_name+'")';
+                                model.issueCommand(cmd);
+                            });
+                        removeItem = function() {
+                            menuItem.remove();
+                            ContextMenu._removeEvent(document,"click", this);
+                        };
+                    contextMenu.append(menuItem);
+                    ContextMenu._addEvent(document,'click', removeItem);
+                }
+            }
+            else {
+                line = drawLine(x, y + connectionsDiv.scrollTop(),
+                                x, y + connectionsDiv.scrollTop());
+                connectionsDiv.on({
+                    'mousemove': function(e) {
+                        x = e.clientX - offset.left;
+                        y = e.clientY - offset.top + connectionsDiv.scrollTop();
+                        line.updateEnd(x, y);
+                    },
+                    'mouseup': function(e) {
+                        connectionsDiv.off('mousemove mouseup');
+                        line.element.remove();
+                        target = r.getElementByPoint(e.clientX, e.clientY);
+                        if (target !== null && target !== source) {
+                            var cmd = self.pathname + '.connect("',
+                                src_name = source.data('name'),
+                                tgt_name = target.data('name');
+                            if (src_name && tgt_name) {
+                                if (!source.data('input') && target.data('input')) {
+                                    if (target.data('connected')) {
+                                        openmdao.Util.notify('Input variable ('+
+                                            tgt_name+') is already connected to something!');
+                                    }
+                                    else {
+                                        cmd = cmd+src_name+'","'+tgt_name+'")';
+                                        model.issueCommand(cmd);
+                                    }
+                                }
+                                else if (source.data('input') && !target.data('input')) {
+                                    if (source.data('connected')) {
+                                        openmdao.Util.notify('Input variable ('+
+                                            src_name+') is already connected to something!');
+                                    }
+                                    else {
+                                        cmd = cmd+tgt_name+'","'+src_name+'")';
+                                        model.issueCommand(cmd);
+                                    }
+                                }
+                            }
+                            else {
+                                //debug.warn('ConnectionsFrame: Invalid source or target',
+                                //           src_name, source, tgt_name, target);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    /** show connections between the source and destination components */
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
+            busyDiv.show();
             model.getConnections(self.pathname, self.src_comp, self.dst_comp,
                 loadConnectionData,
                 function(jqXHR, textStatus, errorThrown) {
@@ -327,14 +470,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         }
     }
 
-    /** handle message about the assembly */
+    /** handle message containing the assembly connection data (dataflow) */
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {
             debug.warn('Invalid component data for:',self.pathname,message);
             debug.warn('message length',message.length,'topic',message[0]);
         }
         else {
-            loadData(message[1]);
+            loadComponentData(message[1]);
         }
     }
 
@@ -344,7 +487,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        if (self.pathname && self.pathname.length>0) {
+        if (self.pathname && self.pathname.length > 0) {
             self.editAssembly(self.pathname,self.src_comp,self.dst_comp);
         }
     };
@@ -362,7 +505,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        model.getComponent(path, loadData,
+        model.getComponent(path, loadComponentData,
             function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',
                             jqXHR, textStatus, errorThrown);

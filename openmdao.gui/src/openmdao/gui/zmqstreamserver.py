@@ -123,7 +123,10 @@ class ZMQStreamServer(object):
     def serve(self):
         ''' Start server listening on port & start the ioloop.
         '''
-        self.http_server.listen(self.options.port, address="localhost")
+        if (self.options.external):
+            self.http_server.listen(self.options.port)
+        else:
+            self.http_server.listen(self.options.port, address='localhost')
 
         try:
             ioloop.IOLoop.instance().start()
@@ -144,11 +147,14 @@ class ZMQStreamServer(object):
         parser.add_option("-u", "--url",
                           dest="url",
                           help="the url to expose for the websocket")
+        parser.add_option("-x", "--external",
+                          dest="external", action="store_true",
+                          help="allow access to the server from external clients")
         return parser
 
     @staticmethod
-    def spawn_process(zmq_url, ws_port, ws_url='/'):
-        ''' Run zmqstreamserver in its own process, mapping a zmq
+    def spawn_process(zmq_url, ws_port, ws_url='/', external=False):
+        ''' run zmqstreamserver in it's own process, mapping a zmq
             stream to a websocket.
 
             args:
@@ -161,6 +167,8 @@ class ZMQStreamServer(object):
                '-z', str(zmq_url),
                '-p', str(ws_port),
                '-u', str(ws_url)]
+        if external:
+            cmd.append('-x')
         return subprocess.Popen(cmd)
 
 
