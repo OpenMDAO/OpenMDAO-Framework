@@ -12,8 +12,8 @@ Code Development
    working
    issues
    testing
-   git
    offline
+   git
    
 
 
