@@ -115,6 +115,7 @@ openmdao.Model=function(listeners_ready) {
         // tell server there's a new subscriber to the topic
         if (topic !== 'outstream' && topic.length > 0 &&
             ! /.exec_state$/.test(topic) && topic.charAt(0) !== '@') {
+            debug.info('registering subscriber for '+topic);
             jQuery.ajax({
                 type: 'GET',
                 url:  'publish',
@@ -135,6 +136,7 @@ openmdao.Model=function(listeners_ready) {
             // tell server there's one less subscriber to the topic
             if (topic.length > 0 && ! /.exec_state$/.test(topic) &&
                 topic.charAt(0) !== '@') {
+                debug.info('removing subscriber for '+topic);
                 jQuery.ajax({
                     type: 'GET',
                     url:  'publish',
@@ -287,6 +289,7 @@ openmdao.Model=function(listeners_ready) {
             return;
         }
         else {
+            debug.info('getting components');
             jQuery.ajax({
                 type: 'GET',
                 url:  'components',

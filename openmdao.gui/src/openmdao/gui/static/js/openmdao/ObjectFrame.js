@@ -146,6 +146,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     }
 
     function loadData(ifaces) {
+        debug.info('loadData called');
         var nIfaces = 0;
         jQuery.each(ifaces,function (name,props) {
             ++nIfaces;
@@ -178,6 +179,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
+        debug.info('update called for ObjectFrame');
         // TODO: should just update existing panes rather than recreate them
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);
@@ -187,6 +189,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
         var callback = loadData;
+        debug.info('editObject called for ObjectFrame');
         if (self.pathname !== path) {
            if (self.pathname) {
                 model.removeListener(self.pathname, handleMessage);
