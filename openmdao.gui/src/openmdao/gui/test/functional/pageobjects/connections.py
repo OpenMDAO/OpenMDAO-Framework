@@ -169,17 +169,13 @@ class ConnectionsPage(DialogPage):
                     if elm.text == name:
                         names.append(elm)
                 except StaleElementReferenceException:
-                    logging.warning('get_variable_names:'
+                    logging.warning('find_variable_name:'
                                     ' StaleElementReferenceException')
                 except IndexError:
-                    logging.warning('get_variable_names:'
+                    logging.warning('find_variable_name:'
                                     ' IndexError for i=%s, headers=%s',
                                     i, len(variable_names))
                 else:
                     break
 
-        if len(names) != len(variable_names):
-            logging.error('get_variable_names:'
-                          ' expecting %d names, got %s',
-                          len(variable_names), names)
         return names

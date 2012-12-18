@@ -86,11 +86,15 @@ class ZMQServerManager(object):
         ''' Terminate process `name` in `server_info`. '''
         proc = server_info.get(name)
         if proc is not None:
+            DEBUG('terminating %s' % name)
             try:
                 proc.terminate()
                 proc.wait()
+                DEBUG('    terminated')
             except Exception as exc:
                 print 'Error terminating', name, exc
+        else:
+            DEBUG("Can't terminate %s, no process" % name)
 
     def get_pub_socket_url(self, server_id):
         ''' get the url of the publisher socket for the server associated with

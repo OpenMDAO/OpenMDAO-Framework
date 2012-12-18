@@ -119,18 +119,18 @@ class App(web.Application):
         while not self._exit_requested:
             time.sleep(1)
             if os.path.exists(sigfile):
-                DEBUG('Detected SIGTERM, shutting down....\n')
+                DEBUG('Detected SIGTERM, shutting down...')
                 self._shutdown()
                 break
 
     def _sigterm_handler(self, signum, frame):
         """ On Linux/OS X, handle SIGTERM signal. """
-        DEBUG('Received SIGTERM, shutting down....\n')
+        DEBUG('Received SIGTERM, shutting down...')
         self._shutdown()
 
     def exit(self):
         """ Shutdown. """
-        DEBUG('Exit requested, shutting down....\n')
+        DEBUG('Exit requested, shutting down...')
         if sys.platform == 'win32':
             self._exit_requested = True
             self._poller.join(3)
