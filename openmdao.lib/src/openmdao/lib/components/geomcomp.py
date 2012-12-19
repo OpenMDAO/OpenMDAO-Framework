@@ -88,7 +88,7 @@ class GeomComponent(Component):
         removed_ins = old_in - new_in
         
         for name in removed_ins:
-            self._remove_input(name)
+            self._remove_var(name)
         for name in added_ins:
             self._add_input(name)
             
