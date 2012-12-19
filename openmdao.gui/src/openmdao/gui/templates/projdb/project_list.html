@@ -5,31 +5,58 @@
 {% end %}
 
 {% block head %}
-    <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
+    <!--<link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">-->
+    <link href="/static/bootstrap/css/DT_bootstrap.css" rel="stylesheet" media="screen">
     <style type="text/css">
         .dataTables_length { float: left }
         .dataTables_filter { float: right; padding-right: 6px; }
         .DataTables_sort_icon { float: right; }
     </style>
     <script src="/static/js/jquery-1.7.1.min.js"></script>
-    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
+    <!-- <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script> -->
     <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/bootstrap/js/DT_bootstrap.js"></script>
     <script>
         $(document).ready(function() {
             $('#project_table').dataTable({
-                "bJQueryUI": true,
-                "bStateSave": true
+                "bJQueryUI": false,
+                "bStateSave": true,
+                "sDom": "<'row'<'span6'i><'span6'f>r>t<'row'<'span6'l><'span6'p>>"
             });
         });
+
+        /* $(document).ready(function() {
+            $('#project_table').dataTable({
+            });
+        });
+        */
+
     </script>
 {% end %}
 
+    {% block breadcrumbs %}
+      <ul class="breadcrumb">
+         <li><a href="/">Projects</a> <span class="divider">/</span></li>
+      </ul>
+    {% end %}
+
+
 {% block content %}
-    <h1>Welcome to OpenMDAO ver. {{version}}</h1>
-    <h2>Your OpenMDAO Projects:</h2>
+    <div class='alert alert-info fade in' data-alert='alert'>
+      <h3>
+
+        <strong>
+          Welcome to OpenMDAO
+        </strong>
+      </h3>
+    </div>
+
+    <a class="btn" href='/projects/new/'>Create</a> &nbsp &nbsp <a class="btn" href='/projects/add/'>Import</a>
+    
+    <hr/>
 
     {% if project_list %}
-        <table id='project_table' border="1" width="100%">
+        <table class="table table-hover" id='project_table' border="0" width="100%">
         <thead>
             <th>Name</td>
             <th>Description</td>
@@ -49,7 +76,7 @@
             <td>{{ project['file_modified'] }}</td>
             <td width="20" style="padding-right: 6px;">
                 <form action="/projects/{{ project['id'] }}" method="GET">
-                    <input type="submit" value="Details" class="button"/>
+                    <input type="submit" value="Details" class="btn btn-link"/>
                 </form>
             </td>
         </tr>
@@ -60,5 +87,4 @@
     {% end %}
 
     <p>
-    <a href='/projects/new/'>Start new project</a> &nbsp &nbsp <a href='/projects/add/'>Import a project</a>
 {% end %}

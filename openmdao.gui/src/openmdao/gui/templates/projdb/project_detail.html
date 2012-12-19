@@ -1,54 +1,99 @@
 {% extends "base.html" %}
 
 {% block title %}
-    Project: {{ project['projectname'] }}
+    OpenMDAO Project: {{ project['projectname'] }}
 {% end %}
+
+    {% block breadcrumbs %}
+      <ul class="breadcrumb">
+         <li><a href="/">Projects</a> <span class="divider">/</span></li>
+        {% if project['projpath'] %}
+          <li class="active">{{ project['projectname'] }}</li>
+        {% else %}
+          <li class="active">New Project</li>
+        {% end %}
+      </ul>
+    {% end %}
+
 
 {% block content %}
 
-    <h2>{{ project['projectname'] }}</h2>
 
-    <form action="/projects/{{ project['id'] }}/" method="POST">
-        <table>
-            <tr><th><label for="id_projectname">Project Name:</label></th><td><input type="text" name="projectname" value="{{ project['projectname'] }}" id="id_projectname" /></td></tr>
-            <tr><th><label for="id_description">Description:</label></th><td><input type="text" name="description" value="{{ project['description'] }}" id="id_description" /></td></tr>
-            <tr><th><label for="id_version">Version:</label></th><td><input id="id_version" type="text" name="version" value="{{ project['version'] }}" maxlength="5" /></td></tr>
-        </table>
-    <br>
-    {% if project['projpath'] %}
-    <input type="submit" value="Update Project Details" />
-    {% else %}
-    <input type="submit" value="Create Project" />
-    {% end %}
+    <div class='alert alert-info fade in' data-alert='alert'>
+      <h3>
+
+        <strong>
+        {% if project['projpath'] %}
+          {{ project['projectname'] }}
+        {% else %}
+          New Project
+        {% end %}
+        </strong>
+    </h3>
+
+      {% if project['projpath'] %}
+        <small>
+          <p class="help-block">Project created: {{ project['created'] }}</p>
+          <p class="help-block">Metadata Last Modified: {{ project['modified'] }}</p>
+        </small>
+      {% end %}
+
+      {% if not project['projpath'] %}
+      <p>Use this form to create a new project in OpenMDAO. A project is...[ need 
+           a definition of a project here ]</p>
+      {% end %}
+
+    </div>
+
+    <form action="/projects/{{ project['id'] }}/" method="POST" accept-charset="UTF-8" 
+          class="simple_form form-horizontal"  novalidate="novalidate">
+
+      <legend>Project Metadata <small>( * indicates a required field )</small></legend>
+
+      <!-- Name -->
+      <div class="control-group string required">
+        <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
+        <div class="controls">
+          <input class="string required span6" id="id_project_name" name="projectname" size="50" type="text" 
+                 value="{{ project['projectname'] }}" />
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="control-group text optional">
+        <label class="text optional control-label" for="id_description">Description:</label>
+        <div class="controls">
+          <textarea class="text optional span6" cols="40" id="id_description" 
+                    name="description" rows="10">
+                     {{ project['description'] }}
+          </textarea>
+        </div>
+      </div>
+
+      <!-- Version -->
+      <div class="control-group string">
+        <label class="string control-label" for="id_version">Version:</label>
+        <div class="controls">
+          <input class="string span6" id="id_version" name="version" size="5" type="text"
+                  value="{{ project['version'] }}" maxlength="5" />
+          <p class="help-block">Version format is user defined</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        {% if project['projpath'] %}
+        <input class="btn btn-primary" name="commit" type="submit" 
+               value="Update Project Details" />
+        {% else %}
+        <input class="btn btn-primary" name="commit" type="submit" value="Create Project" />
+        {% end %}
+
+        <a class="btn" href="/projects/">Cancel</a>
+
+
+      </div>
+
     </form>
-
-    {% if delete %}
-    <form action="/projects/delete/{{ project['id'] }}/" method="POST">
-        <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
-        <input type="submit" value="Delete this project" />
-    </form>
-    {% end %}
-
-    <p>
-    <b>Project Created: </b> {{ project['created'] }}
-    <p>
-    <b>Metadata Last Modified: </b> {{ project['modified'] }}
-    <p>
-
-    {% if project['projpath'] %}
-    <form action="/workspace/project/" method="GET">
-        <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
-        <input type="submit" value="Load this project into Workspace" />
-    </form>
-
-    <form action="/projects/download/{{ project['id'] }}/" method="GET">
-        <input type="submit" value="Export this project" />
-    </form>
-    {% end %}
-    <br>
-
-    <p>
-    <a href="/projects/">Back to Projects</a>
 
 {% end %}
 
