@@ -29,7 +29,6 @@ class GeomComponent(Component):
     def _parametric_geometry_changed(self, old, new):
         """Called whenever the parametric geometry is set.
         """
-        logger.error("_parametric_geometry_changed")
         self._update_iovar_set()
         
         if new is not None:
@@ -43,7 +42,6 @@ class GeomComponent(Component):
         the list of parameters changes, so that we can update our list
         of inputs and outputs.
         """
-        logger.error("model_updated")
         self._update_iovar_set()
 
     def execute(self):
@@ -57,11 +55,9 @@ class GeomComponent(Component):
         """Set the values of the component outputs based on their
         corresponding values in the geometry.
         """
-        logger.error("output_var_names = %s" % self._output_var_names)
         if self._output_var_names is not None:
             for name in self._output_var_names:
                 out = self.parametric_geometry.getParameter(name)
-                logger.error("%s = %s" % (name, out))
                 setattr(self, name, out)
 
     def _update_iovar_set(self):
