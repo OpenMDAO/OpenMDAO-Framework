@@ -4,7 +4,7 @@
 import sys
 import os
 import os.path
-from os.path import isfile, isdir, exists, join, getsize, split
+from os.path import isdir, exists, join, getsize, split
 import webbrowser
 import json
 

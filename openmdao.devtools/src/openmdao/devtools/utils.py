@@ -17,7 +17,7 @@ except ImportError as err:
     connections = {}
     logging.warn("In %s: %r", __file__, err)
 
-from openmdao.util.fileutil import find_up, cleanup
+from openmdao.util.fileutil import find_up
 from openmdao.util.decorators import stub_if_missing_deps
 
 class VersionError(RuntimeError):

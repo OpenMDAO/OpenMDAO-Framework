@@ -65,4 +65,3 @@ class NotifyDialog(DialogPage):
         """ Close dialog. """
         self('okButton').click() 
 
-

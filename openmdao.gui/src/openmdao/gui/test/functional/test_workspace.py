@@ -2,7 +2,6 @@
 Tests of overall workspace functions.
 """
 
-import sys
 import time
 
 import pkg_resources

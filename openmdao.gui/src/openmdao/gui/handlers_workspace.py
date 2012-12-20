@@ -7,11 +7,11 @@ import jsonpickle
 
 from tornado import web
 
-from openmdao.gui.handlers import ReqHandler as RequestHandler
+from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
 
 
-class AddOnsHandler(RequestHandler):
+class AddOnsHandler(BaseHandler):
     ''' Addon installation utility.
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
@@ -31,7 +31,7 @@ class AddOnsHandler(RequestHandler):
         self.render('workspace/addons.html')
 
 
-class ReqHandler(RequestHandler):
+class ReqHandler(BaseHandler):
     ''' Render the base template.
     '''
 

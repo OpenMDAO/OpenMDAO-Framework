@@ -449,7 +449,7 @@ class WorkspacePage(BasePageObject):
         """ Set the search filter text. """
         for retry in range(3):  # This has had issues...
             try:
-                self.library_search = filter + Keys.RETURN  #'\n'
+                self.library_search = filter + Keys.RETURN
             except StaleElementReferenceException:
                 logging.warning('set_library_filter:'
                                 ' StaleElementReferenceException')
@@ -482,8 +482,20 @@ class WorkspacePage(BasePageObject):
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: library_item.is_displayed())
+        for retry in range(3):
+            try:
+                WebDriverWait(self.browser, TMO).until(
+                    lambda browser: library_item.is_displayed())
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('get_library_item:'
+                                    ' StaleElementReferenceException')
+                    library_item = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element_by_xpath(xpath))
+                else:
+                    raise
+            else:
+                break
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,

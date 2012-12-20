@@ -26,7 +26,6 @@ def _test_basic(browser):
     workspace_page.add_file(filename)
 
     # Add a NestedSimulation.
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.NestedSimulation',
                                                 'nested', offset=(300, 300))
     # Verify full workflow shown.
