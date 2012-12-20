@@ -519,7 +519,6 @@ def _test_component_to_complex_workflow(browser):
     workspace_page.add_file(file2_path)
 
     # create an instance of VehicleSim2
-    workspace_page.set_library_filter('In Project')
     sim_name = put_element_on_grid(workspace_page, "VehicleSim2")
 
     # Drag paraboloid element into sim dataflow figure
@@ -605,7 +604,6 @@ def _test_drop_onto_layered_div(browser):
     workspace_page.add_file(file2_path)
 
     # add VehicleSim2 to the globals
-    workspace_page.set_library_filter('In Project')
     sim_name = put_element_on_grid(workspace_page, 'VehicleSim2')
 
     # add Paraboloid to VehicleSim dataflow assembly

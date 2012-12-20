@@ -260,6 +260,7 @@ class WorkspacePage(BasePageObject):
 
         self.file_chooser = file_path
         self.find_file(os.path.basename(file_path))  # Verify added.
+        time.sleep(1)  # Some extra time for the library update.
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -502,20 +503,34 @@ class WorkspacePage(BasePageObject):
                                      check=True, offset=None, prefix=None,
                                      args=None):
         """ Add component `item_name`, with name `instance_name`. """
-        library_item = self.get_library_item(item_name)
-
-        target = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
-
         offset = offset or (90, 90)
-        chain = ActionChains(self.browser)
-        if False:
-            chain.drag_and_drop(library_item, target)
-        else:
-            chain.click_and_hold(library_item)
-            chain.move_to_element_with_offset(target, offset[0], offset[1])
-            chain.release(None)
-        chain.perform()
+        xpath = "//*[@id='-dataflow']"
+        library_item = self.get_library_item(item_name)
+        target = WebDriverWait(self.browser, TMO).until(
+                           lambda browser: browser.find_element_by_xpath(xpath))
+
+        for retry in range(3):
+            try:
+                chain = ActionChains(self.browser)
+                if False:
+                    chain.drag_and_drop(library_item, target)
+                else:
+                    chain.click_and_hold(library_item)
+                    chain.move_to_element_with_offset(target,
+                                                      offset[0], offset[1])
+                    chain.release(None)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('add_library_item_to_dataflow:'
+                                    ' StaleElementReferenceException')
+                    library_item = self.get_library_item(item_name)
+                    target = WebDriverWait(self.browser, TMO).until(
+                           lambda browser: browser.find_element_by_xpath(xpath))
+                else:
+                    raise
+            else:
+                break
 
         page = ArgsPrompt(self.browser, self.port)
         page.set_name(instance_name)
