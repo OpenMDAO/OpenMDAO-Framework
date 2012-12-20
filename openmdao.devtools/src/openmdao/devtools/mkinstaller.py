@@ -90,6 +90,8 @@ def main(args=None):
                       help="if present, a development script will be generated instead of a release script")
     parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
+    parser.add_option("--offline", action="store", type="string", dest='offline', 
+                      help="make offline gathering script", default='')    
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       default='http://openmdao.org/dists',
@@ -129,10 +131,24 @@ def main(args=None):
         """ % pkgstr
     else:  # making a release installer
         make_dev_eggs = ''
-
+        
+    if options.offline == "gather":
+        offline_ = ["'-zmaxd'", "'-zmaxd'", ", 'pkg'", "os.mkdir('pkg')", "['-f', url]", "['-f', openmdao_url]"]
+        f_prefix = "gather-"
+    elif options.offline == "installer":
+        offline_ = ["'-Z'", "'-NZ'", '','', "['-H', 'None', '-f', options.findlinks]", "['-H', 'None', '-f', options.findlinks]"]
+        f_prefix = "offline-"
+    else:
+        offline_ = ["'-Z'", "'-NZ'", '','', "['-f', url]", "['-f', openmdao_url]"]
+        f_prefix = ""
+        
+         
+        
     script_str = """
 
 openmdao_prereqs = %(openmdao_prereqs)s
+
+%(mkdir_pkg)s
 
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
@@ -188,10 +204,10 @@ def _get_mingw_dlls():
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
-        extarg = '-Z'
+        extarg = %(extarg1)s
     else:
-        extarg = '-NZ'
-    cmdline = [join(bin_dir, 'easy_install'), extarg] + cmds + [req]
+        extarg = %(extarg2)s
+    cmdline = [join(bin_dir, 'easy_install'), extarg %(dldir)s] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
@@ -301,8 +317,8 @@ def after_install(options, home_dir):
             print "To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__
             sys.exit(-1)
     
-    cmds = ['-f', url]
-    openmdao_cmds = ['-f', openmdao_url]
+    cmds = %(cmds_str)s
+    openmdao_cmds = %(openmdao_cmds_str)s
     try:
         allreqs = reqs[:]
         failures = []
@@ -424,6 +440,12 @@ def after_install(options, home_dir):
     guitestreqs = list(guitestreqs)
     
     optdict = { 
+        'mkdir_pkg' : offline_[3],
+        'extarg1' : offline_[0],
+        'extarg2' : offline_[1],
+        'dldir' : offline_[2],
+        'cmds_str':offline_[4],
+        'openmdao_cmds_str':offline_[5],
         'reqs': reqs, 
         'guireqs': guireqs,
         'guitestreqs': guitestreqs,
@@ -436,9 +458,10 @@ def after_install(options, home_dir):
     
     dest = os.path.abspath(options.dest)
     if options.dev:
-        scriptname = os.path.join(dest,'go-openmdao-dev.py')
+        scriptname = os.path.join(dest, f_prefix + 'go-openmdao-dev.py')
     else:
-        scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
+        scriptname = os.path.join(dest, f_prefix + 'go-openmdao-%s.py' % version)
+        
     if os.path.isfile(scriptname):
         shutil.copyfile(scriptname, scriptname+'.old'
                         )
