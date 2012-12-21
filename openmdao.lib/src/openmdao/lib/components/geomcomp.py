@@ -43,6 +43,7 @@ class GeomComponent(Component):
         of inputs and outputs.
         """
         self._update_iovar_set()
+        self._update_comp_outputs()
 
     def execute(self):
         """Rebuild the geometry using the current set of parameters.
