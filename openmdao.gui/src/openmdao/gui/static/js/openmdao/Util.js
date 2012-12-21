@@ -607,7 +607,6 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
-                    debug.info('websocket '+addr+' onopen '+socket.readyState);
                     defrd.resolve(socket);
                     //debug.info('websocket opened '+socket.readyState,socket,e);
                     //displaySockets();

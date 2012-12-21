@@ -113,8 +113,8 @@ def ssh_test(host, port=22, timeout=3):
         transport = paramiko.Transport((host, port))
         transport.close()
         return True
-    except:
-        pass
+    except Exception as exc:
+        print '    caught exception:', exc
     finally:
         socket.setdefaulttimeout(original_timeout)
     return False

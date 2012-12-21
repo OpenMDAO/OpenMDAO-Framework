@@ -185,6 +185,9 @@ def launch_browser(port, preferred_browser=None):
     # open new browser window (may open in a tab depending on user preferences, etc.)
     if browser:
         browser.open(url, 1, True)
-        print "Opened in", browser.name
+        try:
+            print "Opened in", browser.name
+        except AttributeError:
+            pass  # Happens with safari.
     else:
         print "Couldn't launch browser: " + str(browser)

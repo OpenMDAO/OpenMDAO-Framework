@@ -230,6 +230,7 @@ def _test_connections(browser):
     tranny.disconnect()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
     conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
     conn_page.show_connected_variables()
 
     # now there are no connections between transmission and engine
