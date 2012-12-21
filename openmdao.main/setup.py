@@ -63,7 +63,7 @@ setup(name='openmdao.main',
       idle=idlelib.PyShell:main
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
-      update_libpath=openmdao.main.plugin:update_libpath
+      get_full_libpath=openmdao.main.plugin:get_full_libpath
       openmdao=openmdao.main.cli:openmdao
       
       [openmdao.component]

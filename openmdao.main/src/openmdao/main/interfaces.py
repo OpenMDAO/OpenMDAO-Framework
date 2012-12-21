@@ -732,6 +732,26 @@ class IRepository(Interface):
         """
         
         
+class IParametricGeometry(Interface):
+    """An Interface to a parametric geometry model"""
+
+    def regenModel():
+        """Rebuild the model based on current parameter values."""
+
+    def listParameters():
+        """Return a list of input and output parameters."""
+
+    def setParameter(name, val):
+        """Set new value for an input parameter."""
+
+    def getParameter(name):
+        """Get info about a Parameter in a Model"""
+    
+    def register_param_list_changedCB(callback):
+        """Register a function to be called when the list of parameters
+        changes, e.g., when a new model is loaded.
+        """
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""

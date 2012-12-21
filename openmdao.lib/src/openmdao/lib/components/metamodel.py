@@ -251,7 +251,6 @@ class MetaModel(Component):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 
-        new_model_traitnames = set()
         self.reset_training_data = True
 
         self._update_surrogate_list()
