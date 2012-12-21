@@ -68,7 +68,6 @@ openmdao.Model=function(listeners_ready) {
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
-                debug.error("message",message)
                 self.publish(message);
             }
             catch(err) {
@@ -289,7 +288,6 @@ openmdao.Model=function(listeners_ready) {
             return;
         }
         else {
-            debug.info('getting components');
             jQuery.ajax({
                 type: 'GET',
                 url:  'components',
