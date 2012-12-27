@@ -29,7 +29,7 @@ from enthought.traits.api import HasTraits, Missing, Python, \
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none
+from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
@@ -41,7 +41,7 @@ from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer
+                                     IContainer, IParametricGeometry
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
@@ -794,20 +794,21 @@ class Container(SafeHasTraits):
         variables = []
         slots = []
         #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union( \
-            set(self._added_traits.keys()) ):
+        for name in set(self.list_vars()).union(
+                                 self._added_traits.keys(),
+                                     self._alltraits(type=Slot).keys()):
+         
+            trait = self.get_trait(name)
+            ttype = trait.trait_type
             
             attr = {}
             
-            var = self.get(name)
-            trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
-            ttype = trait.trait_type
             
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                        
+            
             # Container variables are not connectable
             attr['connected'] = ''
                     
@@ -818,10 +819,11 @@ class Container(SafeHasTraits):
 
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
-                    
                     slots.append(slot_attr)
             
         attrs["Inputs"] = variables
+        if slots:
+            attrs['Slots'] = slots
         return attrs
 
     
@@ -1498,12 +1500,13 @@ def _get_entry_group(obj):
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (Variable,           'openmdao.variable'),
-            (Driver,             'openmdao.driver'),
-            (ICaseIterator,      'openmdao.case_iterator'),
-            (IResourceAllocator, 'openmdao.resource_allocator'),
-            (Component,          'openmdao.component'),
-            (Container,          'openmdao.container'),
+            (Variable,             'openmdao.variable'),
+            (IParametricGeometry,  'openmdao.parametric_geometry'),
+            (Driver,               'openmdao.driver'),
+            (ICaseIterator,        'openmdao.case_iterator'),
+            (IResourceAllocator,   'openmdao.resource_allocator'),
+            (Component,            'openmdao.component'),
+            (Container,            'openmdao.container'),
         ]
 
     for cls, group in _get_entry_group.group_map:

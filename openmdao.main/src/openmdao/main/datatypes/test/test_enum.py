@@ -103,7 +103,7 @@ class IntTestCase(unittest.TestCase):
                            'value_types' : ['str', 'str', 'int'],
                            'value' : 'red',
                            'connected' : '',
-                           'type' : 'enum'} in attr)            
+                           'type' : 'enum'} in attr)
 
     def enum_typecheck(self):
         

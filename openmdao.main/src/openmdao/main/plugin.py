@@ -697,10 +697,6 @@ def plugin_install(parser, options, args=None, capture=None):
             sys.stderr.write("\nERROR: command '%s' returned error code: %s\n"
                              % (cmd,retcode))
             return -1
-            
-    if not sys.platform.startswith('win'):
-        # make sure LD_LIBRARY_PATH is updated if necessary in activate script
-        update_libpath(options)
     
     return 0
 
@@ -748,80 +744,70 @@ def _github_install(dist_name, findLinks):
     print url
     build_docs_and_install(name, version, findLinks)
 
-        
-def update_libpath(options=None):
-    """Find all of the shared libraries in the current virtual environment and
-    modify the activate script to put their directories in LD_LIBRARY_PATH
-    (or its equivalent).
-    """
-    ldict = {
-        'linux2': 'LD_LIBRARY_PATH',
-        'linux': 'LD_LIBRARY_PATH',
-        'darwin': 'DYLD_LIBRARY_PATH',
-        }
-    libpathvname = ldict.get(sys.platform)
-    
-    if options is None:
-        parser = ArgumentParser(description="adds any shared library paths"
-                                " found in the current python environment to"
-                                " %s" % libpathvname)
-        parser.usage = "update_libpath [options]"
-        options = parser.parse_args()
-   
-    if libpathvname:
-        topdir = os.path.dirname(os.path.dirname(sys.executable))
-        bindir = os.path.join(topdir, 'bin')
-        pkgdir = os.path.join(topdir, 'lib',
-                              'python%s.%s' % sys.version_info[:2], 
-                              'site-packages')
-        sofiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.so')]
-        if sys.platform == 'darwin':
-            sofiles.extend([os.path.abspath(x) for x in find_files(pkgdir, '*.dylib')])
-                      
-        final = set()
-        for fname in sofiles:
-            pyf = os.path.splitext(fname)[0]+'.py'
-            if not os.path.exists(pyf):
-                final.add(os.path.dirname(fname))
-                
-        subdict = { 'libpath': libpathvname,
-                    'add_on': os.pathsep.join(final)
-                    }
-                    
-        if len(final) > 0:
-            activate_lines = [
-            '# BEGIN MODIFICATION\n',
-            'if [ -z "$%(libpath)s" ] ; then\n',
-            '   %(libpath)s=""\n',
-            'fi\n',
-            '\n',
-            '%(libpath)s=$%(libpath)s:%(add_on)s\n',
-            'export %(libpath)s\n',
-            '# END MODIFICATION\n',
-            '\n',
-            ]
-            absbin = os.path.abspath(bindir)
-            activate_fname = os.path.join(absbin, 'activate')
-            with open(activate_fname, 'r') as inp:
-                lines = inp.readlines()
-                try:
-                    idx = lines.index(activate_lines[0])
-                    del lines[idx:idx+len(activate_lines)]
-                except ValueError:
-                    pass
-                
-                idx = lines.index('export PATH\n')
-                lines[idx+2:idx+2] = activate_lines
-                
-            content = ''.join(lines)
-            
-            with open(activate_fname, 'w') as out:
-                out.write(content % subdict)
+_lpdict = {
+    'linux2': 'LD_LIBRARY_PATH',
+    'linux': 'LD_LIBRARY_PATH',
+    'darwin': 'DYLD_LIBRARY_PATH',
+    'win32': 'PATH',
+    }
 
-            print "\nThe 'activate' file has been updated with new values" \
-                  " added to %s" % libpathvname
-            print "You must deactivate and reactivate your virtual environment"
-            print "for the changes to take effect\n"
+def get_full_libpath():
+    """Find all of the shared libraries in the current virtual environment and
+    print the required LD_LIBRARY_PATH string (or equivalent) necessary
+    to find them.
+    """
+    libpathvname = _lpdict.get(sys.platform)
+    
+    if libpathvname:
+        lpcontents = os.environ.get(libpathvname) or ''
+        libpaths = [lib for lib in lpcontents.split(os.pathsep) if lib.strip()]
+        topdir = os.path.dirname(os.path.dirname(sys.executable))
+        if sys.platform.startswith('win'):
+            pkgdir = os.path.join(topdir, 'Lib',
+                                  'site-packages')
+            libfiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.dll')]
+        else:
+            pkgdir = os.path.join(topdir, 'lib',
+                                  'python%s.%s' % sys.version_info[:2], 
+                                  'site-packages')
+            libfiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.so')]
+            if sys.platform == 'darwin':
+                libfiles.extend([os.path.abspath(x) for x in find_files(pkgdir, '*.dylib')])
+
+        # if the same library appears multiple times under the same subdir parent, remove 
+        # it from the libpath. 
+        # Better to fail due to missing lib than to use one with the wrong bitsize...
+        # TODO: add some smarts to figure out desired bitsize and keep the correct lib
+        #       in the libpath
+        bases = {}
+        for fname in libfiles:
+            bases.setdefault(os.path.basename(fname), []).append(fname)
+        if len(bases) != len(libfiles):
+            for base, paths in bases.items():
+                if len(paths) > 1:
+                    pardirs = [os.path.dirname(os.path.dirname(p)) for p in paths]
+                    for d,p in zip(pardirs, paths):
+                        if pardirs.count(d) > 1:
+                            libfiles.remove(p)
+
+        added = []
+        exts = ['.py', '.pyc', '.pyo']
+        for fname in libfiles:
+            for ext in exts:
+                if os.path.exists(os.path.splitext(fname)[0]+ext):
+                    break
+            else:
+                added.append(os.path.dirname(fname))
+
+        final = []
+        seen = set()
+        for p in added + libpaths:
+            if p not in seen:
+                seen.add(p)
+                final.append(p)
+                
+        print os.pathsep.join(final)
+
 
     
 # This requires Internet connectivity to github.

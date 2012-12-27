@@ -75,4 +75,38 @@ title. When your pull request gets merged into the main repository, the issue wi
 marked as closed. If, however, you just want your change to be associated with an issue without
 closing it, just omit the "closes" part.
 
+Tracking Bug/Feature Development in Pivotal Tracker
+====================================================
+
+While GitHub allows you to submit and then close an issue you worked on, it does not show you which
+features are currently being worked on by the OpenMDAO dev team or how the project is progressing.
+OpenMDAO uses Pivotal Tracker, a project management tool designed for agile software development, to
+track all code development. As users you do not have direct access to the OpenMDAO-Framework project
+in Pivotal Tracker; however, since the project is public, you can view project information to see the
+status of features being developed.
  
+
+In Pivotal Tracker code changes are submitted as `stories`. A story can be a bug fix, a new feature,
+or a chore affecting project management. It might even be an user-submitted issue entered into Pivotal
+Tracker by one of the OpenMDAO devs. As you can see in the example below, stories in the first column
+are DONE. Releases also show up in this column. The middle column, CURRENT, shows stories currently
+being worked on by the dev team, and the last column, BACKLOG, lists stories waiting to be worked on.
+Stories in this column have been discussed and prioritized, so if a developer finishes a story, he can
+select one from the BACKLOG. When he clicks on the `Start` button, the story is assigned to him and
+moves to the CURRENT column.  
+
+.. figure:: pivotal_tracker.png
+   :align: center
+ 
+   Example of OpenMDAO Story Tracking in Pivotal Tracker
+
+When you go to the OpenMDAO-Framework project in Pivotal Tracker, what you see will probably be
+different from the above example. For instance, you might see just the BACKLOG and the ICEBOX columns.
+(The ICEBOX is a list of all stories in the system that have not yet been prioritized. These stories
+will eventually move to the BACKLOG.) To see completed stories, select the MORE tab at the top of the
+page (under the project name) and click *Done* on the drop-down menu. The DONE column will then
+appear showing you the list of completed stories.
+
+So, if you wish to check the status of code development in OpenMDAO, just follow this link to
+the OpenMDAO-Framework project in Pivotal Tracker:  https://www.pivotaltracker.com/projects/470293. 
+
