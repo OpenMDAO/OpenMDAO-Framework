@@ -136,14 +136,17 @@ def setup_server(virtual_display=True):
     server_dir = 'gui-server'
 
     # Try to clean up old server dir. If this fails (looking at you Windows),
-    # then just go with it.
+    # then use another directory.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
         except WindowsError as exc:
             print >> sys.stderr, 'Could not delete %s: %s' % (server_dir, exc)
-    if not os.path.exists(server_dir):
-        os.mkdir(server_dir)
+            nxt = 1
+            while os.path.exists(server_dir):
+                nxt += 1
+                server_dir = 'gui-server-%s' % nxt
+    os.mkdir(server_dir)
 
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
