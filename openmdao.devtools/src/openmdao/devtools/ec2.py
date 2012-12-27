@@ -83,10 +83,10 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
         # even though the instance is running, it takes a while before
         # sshd is running, so we have to wait a bit longer
         # In addition, sometimes the initial success is a fluke and the
-        # next connection fails, so we wait for two successes in a row.
+        # next connection fails, so we wait for three successes in a row.
         if ssh_test(inst.public_dns_name):
             successes += 1
-            if successes > 1:
+            if successes > 2:
                 break
         else:
             successes = 0
