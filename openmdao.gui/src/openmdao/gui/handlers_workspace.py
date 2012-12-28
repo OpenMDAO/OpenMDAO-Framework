@@ -282,7 +282,8 @@ class ComponentsHandler(ReqHandler):
             self.write(json)
         except AssertionError as exc:
             # Have had issues with `json` not being unicode somehow.
-            print "Can't write %r: %s" % (json, exc)
+            print "ComponentsHandler: Can't write %r: %s" \
+                  % (json, str(exc) or repr(exc))
             raise
 
 
@@ -320,7 +321,8 @@ class DataflowHandler(ReqHandler):
             self.write(json)
         except AssertionError as exc:
             # Have had issues with `json` not being unicode somehow.
-            print "Can't write %r: %s" % (json, exc)
+            print "DataflowHandler: Can't write %r: %s" \
+                  % (json, str(exc) or repr(exc))
             raise
 
 
@@ -632,7 +634,8 @@ class WorkflowHandler(ReqHandler):
             self.write(json)
         except AssertionError as exc:
             # Have had issues with `json` not being unicode somehow.
-            print "Can't write %r: %s" % (json, exc)
+            print "WorkflowHandler: Can't write %r: %s" \
+                  % (json, str(exc) or repr(exc))
             raise
 
 

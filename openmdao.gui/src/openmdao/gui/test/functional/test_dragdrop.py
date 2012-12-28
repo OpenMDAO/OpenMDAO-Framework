@@ -216,7 +216,6 @@ def _test_slots(browser):
 
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(workspace_page)
 
-    workspace_page.set_library_filter('ExecComp')
     execcomp = workspace_page.find_library_button('ExecComp')
 
     ##################################################

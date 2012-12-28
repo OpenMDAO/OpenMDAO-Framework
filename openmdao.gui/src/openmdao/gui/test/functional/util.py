@@ -526,7 +526,7 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
-    editor.move(-100, 0)
+    editor.move(-250, 0)
     editor.show_slots()
 
     #resize_editor(workspace_page, editor)
