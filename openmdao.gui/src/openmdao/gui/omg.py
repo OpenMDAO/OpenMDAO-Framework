@@ -164,6 +164,7 @@ class AppServer(object):
             pdb = Projects(database)
             pdb.create()
 
+        options.orig_port = options.port
         if (options.port < 1):
             options.port = get_unused_ip_port()
 
@@ -181,10 +182,20 @@ class AppServer(object):
             and start the ioloop.
         '''
         self.http_server = httpserver.HTTPServer(self.app)
-        if self.options.external:
-            self.http_server.listen(self.options.port)
-        else:
-            self.http_server.listen(self.options.port, address='localhost')
+        for retry in range(3):
+            try:
+                if self.options.external:
+                    self.http_server.listen(self.options.port)
+                else:
+                    self.http_server.listen(self.options.port, address='localhost')
+            except socket.error:
+                # Possibly 'Address already in use', try finding another port.
+                if self.options.orig_port < 1 and retry < 2:
+                    self.options.port = get_unused_ip_port()
+                else:
+                    raise
+            else:
+                break
 
         if not self.options.serveronly:
             launch_browser(self.options.port, self.options.browser)
