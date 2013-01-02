@@ -9,6 +9,7 @@ for WebSockets is required.
 
 import os
 import signal
+import socket
 import sys
 import threading
 import time

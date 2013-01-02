@@ -276,15 +276,17 @@ class ComponentsHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
-        json = cserver.get_components()
         self.content_type = 'application/javascript'
-        try:
-            self.write(json)
-        except AssertionError as exc:
-            # Have had issues with `json` not being unicode somehow.
-            print "ComponentsHandler: Can't write %r: %s" \
-                  % (json, str(exc) or repr(exc))
-            raise
+        for retry in range(3):
+            json = cserver.get_components()
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "ComponentsHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
 
 
 class ConnectionsHandler(ReqHandler):
@@ -315,15 +317,17 @@ class DataflowHandler(ReqHandler):
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_dataflow(name)
         self.content_type = 'application/javascript'
-        try:
-            self.write(json)
-        except AssertionError as exc:
-            # Have had issues with `json` not being unicode somehow.
-            print "DataflowHandler: Can't write %r: %s" \
-                  % (json, str(exc) or repr(exc))
-            raise
+        for retry in range(3):
+            json = cserver.get_dataflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "DataflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
 
 
 class EditorHandler(ReqHandler):
@@ -628,15 +632,17 @@ class WorkflowHandler(ReqHandler):
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_workflow(name)
         self.content_type = 'application/javascript'
-        try:
-            self.write(json)
-        except AssertionError as exc:
-            # Have had issues with `json` not being unicode somehow.
-            print "WorkflowHandler: Can't write %r: %s" \
-                  % (json, str(exc) or repr(exc))
-            raise
+        for retry in range(3):
+            json = cserver.get_workflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "WorkflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
 
 
 class WorkspaceHandler(ReqHandler):
