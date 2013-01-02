@@ -304,7 +304,6 @@ def _test_list_slot(browser):
         "generator slot is showing as filled when it should not be")
 
     # drop a FullFactorial onto the generator slot
-    workspace_page.set_library_filter('DOEgenerator')
     generator = workspace_page.find_library_button('FullFactorial')
     slot_drop(browser, generator, generator_slot, True, 'generator')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
