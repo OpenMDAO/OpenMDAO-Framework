@@ -146,10 +146,15 @@ class ZMQStreamServer(object):
         ''' Start server listening on port & start the ioloop.
         '''
         DEBUG('serve %s' % self.options.port)
-        if (self.options.external):
-            self.http_server.listen(self.options.port)
-        else:
-            self.http_server.listen(self.options.port, address='localhost')
+        try:
+            if (self.options.external):
+                self.http_server.listen(self.options.port)
+            else:
+                self.http_server.listen(self.options.port, address='localhost')
+        except Exception as exc:
+            print '<<<%s>>> ZMQStreamServer -- listen on %s failed: %s' \
+                  % (os.getpid(), self.options.port, exc)
+            sys.exit(1)
 
         try:
             ioloop.IOLoop.instance().start()
