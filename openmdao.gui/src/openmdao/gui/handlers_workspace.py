@@ -287,6 +287,8 @@ class ComponentsHandler(ReqHandler):
                       % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
+            else:
+                break
 
 
 class ConnectionsHandler(ReqHandler):
@@ -328,6 +330,8 @@ class DataflowHandler(ReqHandler):
                       % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
+            else:
+                break
 
 
 class EditorHandler(ReqHandler):
@@ -643,6 +647,8 @@ class WorkflowHandler(ReqHandler):
                       % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
+            else:
+                break
 
 
 class WorkspaceHandler(ReqHandler):
