@@ -266,6 +266,7 @@ def _test_connections(browser):
     time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
     conn_page.show_connected_variables()
+    time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['torque_ratio', 'torque_ratio'])
