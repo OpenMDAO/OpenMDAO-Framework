@@ -211,6 +211,7 @@ def _test_connections(browser):
     eq(conn_page.count_variable_figures(), 20)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
+    time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 4)
     eq(conn_page.count_variable_connections(), 2)
     eq(sorted(conn_page.get_variable_names()),
