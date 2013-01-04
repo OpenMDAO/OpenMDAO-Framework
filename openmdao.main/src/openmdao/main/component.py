@@ -723,7 +723,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._output_names
-        ret = [n for n in ret if valids[n] == valid and "[" not in n]
+        ret = [n for n in ret if valids[n] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_outputs]
