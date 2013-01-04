@@ -161,7 +161,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
-        
+        debug.log('loading data  ', name)
         if (properties) {
             // Sort by name
             properties.sort(function(a, b) {
@@ -218,13 +218,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 
             });
 
-                
-            // We need to recreate the table if we reuse this pane for another
-            // component (which is what the properties panel does.)
-            // The data view manages the data otherwise.
-            if (!meta) {
-                SetupTable()
-            }
+            // Turns out we have to rebuild the table each time. This
+            // could be a performance problem if we have lots of fast
+            // updates.
+            SetupTable()
             
             dataView.beginUpdate();
             dataView.setItems(properties);

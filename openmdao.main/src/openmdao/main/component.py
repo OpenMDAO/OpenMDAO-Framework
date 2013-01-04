@@ -1652,7 +1652,6 @@ class Component(Container):
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
-        attrs['Slots'] = slots
         
         # Find any event traits
         
@@ -1690,7 +1689,7 @@ class Component(Container):
                     if 'hidden' not in meta or meta['hidden'] == False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         if slot_attr is not None:
-                            attrs['Slots'].append(slot_attr)
+                            slots.append(slot_attr)
 
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
@@ -1772,6 +1771,10 @@ class Component(Container):
             if has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                    for path in self.get_events()]
+                
+        if len(slots) > 0:
+            attrs['Slots'] = slots
+                
         return attrs
 
 
