@@ -671,8 +671,7 @@ class Component(Container):
             nset = set([k for k, v in self.items(iotype='in')])
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
-            self._input_names = list(nset)
-            
+            self._input_names = list(nset)      
         self._input_names = [name_ for name_ in self._input_names if "[" not in name_]
 
         if valid is None:
@@ -710,7 +709,6 @@ class Component(Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
-        
         self._output_names = [name_ for name_ in self._output_names if "[" not in name_]
         
         if valid is None:
@@ -1588,7 +1586,6 @@ class Component(Container):
 
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
-
         for name in io_list:
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
