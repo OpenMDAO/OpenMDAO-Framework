@@ -263,7 +263,20 @@ def run_openmdao_suite(argv=None):
         options, argz = parser.parse_known_args(argv) 
         plugin_install(parser, options, argz)
 
-    # skip GUI functional tests
+    # The default action is to run the GUI functional tests.
+    # The 'win32' test here is to allow easily changing the default for Windows
+    # where testing has had problems in the past.
+    if sys.platform == 'win32':
+        do_gui_tests = True
+    else:
+        do_gui_tests = True
+
+    # run GUI functional tests, overriding default action
+    if '--gui' in args:
+        args.remove('--gui')
+        do_gui_tests = True
+
+    # skip GUI functional tests, overriding default action
     if '--skip-gui' in args:
         args.remove('--skip-gui')
         os.environ['OPENMDAO_SKIP_GUI'] = '1'
