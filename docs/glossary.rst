@@ -289,7 +289,7 @@ Glossary
       
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
-        http://numpy.scipy.org/ 
+        http://www.numpy.org/ 
 
       
       **ObjServer**
