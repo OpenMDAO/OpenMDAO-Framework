@@ -263,11 +263,11 @@ def run_openmdao_suite(argv=None):
         options, argz = parser.parse_known_args(argv) 
         plugin_install(parser, options, argz)
 
-    # The default action is to run the GUI functional tests.
+    # The default action should be to run the GUI functional tests.
     # The 'win32' test here is to allow easily changing the default for Windows
-    # where testing has had problems in the past.
+    # where testing still has occasional problems not terminating on EC2.
     if sys.platform == 'win32':
-        do_gui_tests = True
+        do_gui_tests = False
     else:
         do_gui_tests = True
 
@@ -279,6 +279,9 @@ def run_openmdao_suite(argv=None):
     # skip GUI functional tests, overriding default action
     if '--skip-gui' in args:
         args.remove('--skip-gui')
+        do_gui_tests = False
+
+    if not do_gui_tests:
         os.environ['OPENMDAO_SKIP_GUI'] = '1'
 
     # some libs we use call multiprocessing.cpu_count() on import, which can
