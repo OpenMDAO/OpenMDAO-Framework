@@ -115,6 +115,18 @@ class SafeBase(object):
         self._delegate = delegate
         self._invoker = invoker
 
+    def _invoke(self, what, args, kwargs):
+        """ Send request to worker and wait (with timeout) for results. """
+        if what == 'getattr':
+            return self._invoker.invoke(getattr, args, kwargs)
+        else:
+            method = getattr(self._delegate, what)
+            return self._invoker.invoke(method, args, kwargs)
+
+
+class SafeElementBase(SafeBase):
+    """ Wrap a WebDriver element or driver to handle driver hangs. """
+
     def find_element(self, *args, **kwargs):
         return self._wrap(
             self._invoke('find_element', args, kwargs))
@@ -166,14 +178,6 @@ class SafeBase(object):
         return self._wrap(
             self._invoke('find_elements_by_xpath', args, kwargs))
 
-    def _invoke(self, what, args, kwargs):
-        """ Send request to worker and wait (with timeout) for results. """
-        if what == 'getattr':
-            return self._invoker.invoke(getattr, args, kwargs)
-        else:
-            method = getattr(self._delegate, what)
-            return self._invoker.invoke(method, args, kwargs)
-
     def _wrap(self, element):
         """ Wrap `element` as :class:`SafeElement`. """
         if element is not None:
@@ -184,7 +188,7 @@ class SafeBase(object):
         return element
 
 
-class SafeElement(SafeBase):
+class SafeElement(SafeElementBase):
     """ Wrap a WebDriver element to handle driver hangs. """
 
     @property
@@ -224,7 +228,24 @@ class SafeElement(SafeBase):
         return self._invoke('value_of_css_property', args, kwargs)
 
 
-class SafeDriver(SafeBase):
+class SafeAlert(SafeBase):
+    """ Wrap a WebDriver :class:`Alert` to handle driver hangs. """
+
+    @property
+    def text(self):
+        return self._invoke('getattr', (self._delegate, 'text'), {})
+
+    def dismiss(self, *args, **kwargs):
+        return self._invoke('dismiss', args, kwargs)
+
+    def accept(self, *args, **kwargs):
+        return self._invoke('accept', args, kwargs)
+
+    def send_keys(self, *args, **kwargs):
+        return self._invoke('send_keys', args, kwargs)
+
+
+class SafeDriver(SafeElementBase):
     """ Wrap :class:`WebDriver` to handle driver hangs. """
 
     def __init__(self, driver):
@@ -269,7 +290,10 @@ class SafeDriver(SafeBase):
         return self._invoke('save_screenshot', args, kwargs)
 
     def switch_to_alert(self, *args, **kwargs):
-        return self._invoke('switch_to_alert', args, kwargs)
+        alert = self._invoke('switch_to_alert', args, kwargs)
+        if alert is not None:
+            alert = SafeAlert(alert, self._invoker)
+        return alert
 
     def switch_to_window(self, *args, **kwargs):
         return self._invoke('switch_to_window', args, kwargs)

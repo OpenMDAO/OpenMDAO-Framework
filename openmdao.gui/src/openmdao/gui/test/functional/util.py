@@ -196,8 +196,6 @@ def teardown_server():
     if server is None:
         return
 
-    print >> sys.stderr, 'teardown_server, failed tests:', TEST_CONFIG['failed']
-
     # Shut down virtual framebuffer.
     if _display is not None:
         _display.stop()
@@ -207,17 +205,15 @@ def teardown_server():
     # Shut down server.
     if sys.platform == 'win32':
         # First try to have all subprocesses go down cleanly.
-        print >> sys.stderr, 'Signalling via %s' % TEST_CONFIG['sigfile']
         with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
             sigfile.write('Shutdown now\n')
         for i in range(10):
             time.sleep(1)
             if server.poll() is not None:
-                print >> sys.stderr, 'Server exited'
                 break
         else:
             # No luck, at least terminate the server.
-            print >> sys.stderr, 'Killing server'
+            print >> sys.stderr, 'teardown_server: Killing server'
             server.terminate()
     else:
         server.terminate()
@@ -237,22 +233,22 @@ def teardown_server():
             try:
                 os.rename(logfile, '%s-log.txt' % modname)
             except Exception as exc:
-                print >> sys.stderr, '%s rename failed: %s' % (logfile, exc)
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (logfile, exc)
         stdout = os.path.join(server_dir, 'stdout')
         if os.path.exists(stdout):
             try:
                 os.rename(stdout, '%s-stdout.txt' % modname)
             except Exception as exc:
-                print >> sys.stderr, '%s rename failed: %s' % (stdout, exc)
-
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (stdout, exc)
     # Clean up.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
         except Exception as exc:
-            print >> sys.stderr, '%s cleanup failed: %s' % (server_dir, exc)
-
-    print >> sys.stderr, 'teardown_server done'
+            print >> sys.stderr, 'teardown_server: %s cleanup failed: %s' \
+                                 % (server_dir, exc)
 
 
 def generate(modname):
