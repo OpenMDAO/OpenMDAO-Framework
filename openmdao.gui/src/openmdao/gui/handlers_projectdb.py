@@ -62,6 +62,19 @@ class DeleteHandler(ReqHandler):
 
     @web.authenticated
     def get(self, project_id):
+        pdb = Projects()
+        project = pdb.get(project_id)
+
+        if project['projpath']:
+            dirname = str(project['projpath'])
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname, onerror=onerror)
+
+        pdb.remove(project_id)
+        self.redirect('/')
+
+    @web.authenticated
+    def getqqq(self, project_id):
         self.redirect('/')
 
 
@@ -142,7 +155,9 @@ class DetailHandler(ReqHandler):
             info[key] = project[key]
         proj.set_info(info)
 
-        self.redirect(self.request.uri)
+        self.redirect('/')
+        #self.redirect(self.request.uri)
+        #self.redirect( "/workspace/project?projpath=project['projpath']" )
 
     @web.authenticated
     def get(self, project_id):
@@ -220,7 +235,7 @@ class NewHandler(ReqHandler):
                     delete=False)
 
 
-class AddHandler(ReqHandler):
+class AddHandler_old(ReqHandler):
     ''' Add a project to the project database. This extracts the project file
     into a directory under the user's projects directory.
     '''
@@ -274,12 +289,92 @@ class AddHandler(ReqHandler):
     def get(self):
         self.render('projdb/add_project.html')
 
+class AddHandler(ReqHandler):
+    ''' Add a project to the project database. This extracts the project file
+    into a directory under the user's projects directory.
+    '''
+
+    @web.authenticated
+    def post(self):
+
+
+        forms = {}
+        for field in ['projectname', 'description', 'version']:
+            if field in self.request.arguments.keys():
+                forms[field] = self.request.arguments[field][0]
+
+
+        print 'forms', forms
+
+        sourcefile = self.request.files['myfile'][0]
+        if sourcefile:
+            filename = sourcefile['filename']
+            if len(filename) > 0:
+
+                unique = _get_unique_name(self.get_project_dir(),
+                                          parse_archive_name(filename))
+                
+                pdb = Projects()
+
+                project = {}
+                project['id'] = pdb.predict_next_rowid()
+                project['version'] = forms['version']
+                project['description'] = forms['description']
+                project['active'] = 1
+                project['projectname'] = forms[ 'projectname' ]
+                #project['projectname'] = parse_archive_name(unique)
+                project['projpath'] = unique
+
+
+                print "project", project
+
+                os.mkdir(unique)
+                
+                buff = StringIO.StringIO(sourcefile['body'])
+                
+                archive = tarfile.open(fileobj=buff, mode='r:gz')
+                archive.extractall(path=unique)
+                
+                vcslist = find_vcs()
+                if vcslist:
+                    vcs = vcslist[0](unique)
+                else:
+                    vcs = DumbVCS(unique)
+                vcs.init_repo()
+                
+                # Update project dict with info section of config file.
+                proj = Project(unique)
+                print "proj.get_info()", proj.get_info()
+                #project.update(proj.get_info())
+
+                pdb.new(project)
+
+                # Update project settings.
+                # proj = Project(project['projpath'])
+                # dummy = proj.get_info()  # Just to get required keys.
+                # info = {}
+                # for key in dummy:
+                #     info[key] = project[key]
+                # proj.set_info(info)
+
+                # print "info", info
+
+                #self.redirect('/projects/'+str(project['id']))
+                self.redirect('/')
+                
+        self.redirect('')
+
+    @web.authenticated
+    def get(self):
+        self.render('projdb/add_project.html')
+
 
 handlers = [
     web.url(r'/projects/?',                              IndexHandler),
     web.url(r'/projects/(?P<project_id>\d+)/?',          DetailHandler),
     web.url(r'/projects/new/$',                          NewHandler),
     web.url(r'/projects/add/$',                          AddHandler),
+    #web.url(r'/projects/add/$',                          AddHandler_old),
     web.url(r'/projects/delete/(?P<project_id>\d+)/?',   DeleteHandler),
     web.url(r'/projects/download/(?P<project_id>\d+)/?', DownloadHandler),
 ]

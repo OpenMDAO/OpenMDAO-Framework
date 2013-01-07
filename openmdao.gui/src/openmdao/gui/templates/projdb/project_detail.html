@@ -1,54 +1,7 @@
-{% extends "base.html" %}
 
-{% block title %}
-    OpenMDAO Project: {{ project['projectname'] }}
-{% end %}
-
-    {% block breadcrumbs %}
-      <ul class="breadcrumb">
-         <li><a href="/">Projects</a> <span class="divider">/</span></li>
-        {% if project['projpath'] %}
-          <li class="active">{{ project['projectname'] }}</li>
-        {% else %}
-          <li class="active">New Project</li>
-        {% end %}
-      </ul>
-    {% end %}
-
-
-{% block content %}
-
-
-    <div class='alert alert-info fade in' data-alert='alert'>
-      <h3>
-
-        <strong>
-        {% if project['projpath'] %}
-          {{ project['projectname'] }}
-        {% else %}
-          New Project
-        {% end %}
-        </strong>
-    </h3>
-
-      {% if project['projpath'] %}
-        <small>
-          <p class="help-block">Project created: {{ project['created'] }}</p>
-          <p class="help-block">Metadata Last Modified: {{ project['modified'] }}</p>
-        </small>
-      {% end %}
-
-      {% if not project['projpath'] %}
-      <p>Use this form to create a new project in OpenMDAO. A project is...[ need 
-           a definition of a project here ]</p>
-      {% end %}
-
-    </div>
-
-    <form action="/projects/{{ project['id'] }}/" method="POST" accept-charset="UTF-8" 
+    <form action="/projects/{{ project['id'] }}/" method="POST" accept-charset="UTF-8"
           class="simple_form form-horizontal"  novalidate="novalidate">
 
-      <legend>Project Metadata <small>( * indicates a required field )</small></legend>
 
       <!-- Name -->
       <div class="control-group string required">
@@ -95,6 +48,5 @@
 
     </form>
 
-{% end %}
 
 

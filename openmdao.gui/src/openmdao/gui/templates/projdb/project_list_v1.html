@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Projects
+{% end %}
+
+{% block head %}
+    <!--<link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">-->
+    <link href="/static/bootstrap/css/DT_bootstrap.css" rel="stylesheet" media="screen">
+    <style type="text/css">
+        .dataTables_length { float: left }
+        .dataTables_filter { float: right; padding-right: 6px; }
+        .DataTables_sort_icon { float: right; }
+
+        #createProjectModal {
+          width:50%;
+          height:50%;
+          margin-left:-40%;
+        }
+
+    </style>
+    <script src="/static/js/jquery-1.7.1.min.js"></script>
+    <!-- <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script> -->
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script src="/static/bootstrap/js/DT_bootstrap.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script>
+        /* fnDrawCallback turns off the pagination if there is only one page */
+        $(document).ready(function() {
+            $('#project_table').dataTable({
+                "bJQueryUI": false,
+                "bStateSave": true,
+                "bSortable": true,
+                "bPaginate": true,
+                "sDom": "<'row'<'span6'i><'span6'f>r>t<'row'<'span6'l><'span6'p>>",
+                "fnDrawCallback": function() {
+                if (Math.ceil((this.fnSettings().fnRecordsDisplay()) / this.fnSettings()._iDisplayLength) > 1)  {
+                    $('.dataTables_paginate').css("display", "block");
+                } else {
+                    $('.dataTables_paginate').css("display", "none");
+                }
+            }
+
+
+
+            });
+        });
+
+        /* $(document).ready(function() {
+            $('#project_table').dataTable({
+            });
+        });
+        */
+
+    </script>
+{% end %}
+
+    {% block breadcrumbs %}
+    <!--
+      <ul class="breadcrumb">
+         <li><a href="/">Projects</a> <span class="divider">/</span></li>
+      </ul>
+    -->
+    {% end %}
+
+
+{% block content %}
+    <div class='alert alert-info fade in' data-alert='alert'>
+      <h3>
+
+        <strong>
+          Welcome to OpenMDAO
+        </strong>
+      </h3>
+    </div>
+
+    <a class="btn" href='/projects/new/'>Create</a> &nbsp &nbsp <a class="btn" href='/projects/add/'>Import</a>
+
+
+
+
+
+<!-- Button to trigger create modal -->
+<a href="#createProjectModal" role="button" class="btn" data-toggle="modal">Create (Modal)</a>
+ 
+<!-- Modal -->
+<div id="createProjectModal" class="modal hide fade bigModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" data-remote="/projects/new/">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Create Project</h3>
+  </div>
+
+
+    <form action="/projects/521" method="POST" accept-charset="UTF-8" 
+          class="modal_form form-horizontal"  novalidate="novalidate">
+
+  <div class="modal-body">
+      <legend>Project Metadata <small>( * indicates a required field )</small></legend>
+
+      <!-- Name -->
+      <div class="control-group string required">
+        <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
+        <div class="controls">
+          <input class="string required span6" id="id_project_name" name="projectname" size="50" type="text" 
+                 value="" />
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="control-group text optional">
+        <label class="text optional control-label" for="id_description">Description:</label>
+        <div class="controls">
+          <textarea class="text optional span6" cols="40" id="id_description" 
+                    name="description" rows="4">
+                     
+          </textarea>
+        </div>
+      </div>
+
+      <!-- Version -->
+      <div class="control-group string">
+        <label class="string control-label" for="id_version">Version:</label>
+        <div class="controls">
+          <input class="string span6" id="id_version" name="version" size="5" type="text"
+                  value="" maxlength="5" />
+          <p class="help-block">Version format is user defined</p>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <!--
+    <input type="submit" value="Add Project" class="btn btn-primary" />
+    <input name="cancel" class="btn" type="submit" value="Cancel"/>
+    -->
+    <div class="form-actions">
+      <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+      <button class="btn btn-primary">Create</button>
+    </div>
+  </div>
+  </form>
+</div>
+
+
+<!-- Button to trigger import modal -->
+<a href="#importProjectModal" role="button" class="btn" data-toggle="modal">Import Project Modal</a>
+ 
+<!-- Modal -->
+<div id="importProjectModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Import Project</h3>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" action="/projects/add/">
+  <div class="modal-body">
+    <p class="help-block">Select an OpenMDAO project file to import</p>
+    <input type="file" name="myfile" class='button' />
+  </div>
+  <div class="modal-footer">
+    <!--
+    <input type="submit" value="Add Project" class="btn btn-primary" />
+    <input name="cancel" class="btn" type="submit" value="Cancel"/>
+    -->
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+    <button class="btn btn-primary">Add Project</button>
+  </div>
+  </form>
+</div>
+
+
+
+
+    
+    <hr/>
+
+    {% if project_list %}
+        <table class="table  table-sortable dataTable" id='project_table' border="0" width="100%">
+        <thead>
+            <th>Name</th>
+            <th>Description&nbsp;&nbsp;</th>
+            <th>Version&nbsp;&nbsp;</th>
+            <th>Created</th>
+            <th>Last Saved</th>
+            <th>Actions</th>
+        </thead>
+        {% for project in project_list %}
+        <tr>
+            <td>
+                <a style="white-space:nowrap;" href="/workspace/project?projpath={{ project['projpath'] }}">{{ project['projectname'] }}</a>
+            </td>
+            <td>{{ project['description'] }}</td>
+            <td>{{ project['version'] }}</td>
+            <td style="white-space:nowrap;">{{ project['created'][:-10] }}</td>
+            <td style="white-space:nowrap;">{{ project['file_modified'][:-3] }}</td>
+            <td style="white-space:nowrap;" width="140" style="padding-right: 0px;">
+                <form action="/projects/{{ project['id'] }}" method="GET" style="display:inline">
+                    <!-- <input type="submit" value="Details" class="btn btn-link"/> -->
+                    <button type="submit" value="Details" class="btn" style="display:inline">
+                      <i class="icon-pencil"></i>
+                    </button>
+                </form>
+
+                <form action="/projects/delete/{{ project['id'] }}/" method="POST" style="display:inline">
+                  <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
+                  <button type="submit" value="Delete this project" class="btn" style="display:inline">
+                    <i class="icon-trash"></i>
+                  </button>
+                  <!-- <input type="submit" value="Delete this project" /> -->
+                </form>
+
+                <form action="/projects/download/{{ project['id'] }}/" method="GET" style="display:inline">
+                  <button type="submit" value="Delete this project" class="btn" style="display:inline">
+                    <i class="icon-download-alt"></i>
+                  </button>
+                  <!-- <input type="submit" value="Export this project" /> -->
+                </form>
+
+            </td>
+        </tr>
+        {% end %}
+        </table>
+    {% else %}
+        <p>No projects are available.</p>
+    {% end %}
+
+    <p>
+{% end %}
