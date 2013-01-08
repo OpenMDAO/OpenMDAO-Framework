@@ -11,6 +11,7 @@ class DialogPage(BasePageObject):
 
     dialog_title = TextElement((By.XPATH, '../div/span'))
     close_button = ButtonElement((By.XPATH, '../div/a'))
+    dialog_resize = ButtonElement((By.XPATH, '../div[contains(@class, "ui-resizable-se")]'))
 
     def __init__(self, browser, port, locator):
         root = WebDriverWait(browser, TMO).until(
@@ -24,6 +25,12 @@ class DialogPage(BasePageObject):
 
     def close(self):
         """ Close dialog. """
+        # Ensure close button is on screen.
+        width = self.browser.get_window_size()['width']
+        x = self('close_button').location['x']
+        shift = width - x
+        if shift < 0:
+            self.move(shift, 0)
         self('close_button').click()
 
     def move(self, delta_x, delta_y):
@@ -33,6 +40,15 @@ class DialogPage(BasePageObject):
         chain.move_by_offset(delta_x, delta_y)
         chain.release(None)
         chain.perform()
+
+# Does not work on Windows :-(
+#    def resize(self, delta_x, delta_y):
+#        """ Resize dialog. """
+#        chain = ActionChains(self.browser)
+#        chain.click_and_hold(self('dialog_resize').element)
+#        chain.move_by_offset(delta_x, delta_y).perform()
+#        chain.click()  # Not clear why click is needed here.
+#        chain.release(None).perform()
 
 
 class NotifyDialog(DialogPage): 
@@ -48,5 +64,4 @@ class NotifyDialog(DialogPage):
     def close(self):
         """ Close dialog. """
         self('okButton').click() 
-
 

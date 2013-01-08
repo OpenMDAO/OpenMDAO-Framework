@@ -110,6 +110,7 @@ openmdao.LibraryFrame = function(id,model) {
 
         input_obj.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
+                input_obj.autocomplete('close');
                 dtable.fnFilter(e.target.value);
                 dtable.width('100%');
                 var found = jQuery('#objtypetable > tbody > tr > td');
@@ -119,7 +120,6 @@ openmdao.LibraryFrame = function(id,model) {
                         selections.push(e.target.value);
                     }
                 }
-                input_obj.autocomplete('close');
             }
         });
 

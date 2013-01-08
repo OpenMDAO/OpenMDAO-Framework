@@ -290,6 +290,7 @@ b = Float(0.0, iotype='out')
 
     # Add some Foo instances.
     workspace_page.show_dataflow('top')
+    time.sleep(1)  # Wait for it to get registered.
     workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
@@ -344,7 +345,8 @@ b = Float(0.0, iotype='out')
     try:  # We expect 2 notifiers: command complete and error.
         NotifierPage.wait(workspace_page, base_id='command')
     except WebDriverException as exc:
-        if 'Element is not clickable' in str(exc):
+        err = str(exc)
+        if 'Element is not clickable' in err:
             err = NotifierPage.wait(workspace_page)
             NotifierPage.wait(workspace_page, base_id='command')
     else:
@@ -574,10 +576,9 @@ def execute(self)
 """, check=False)
 
     message = NotifierPage.wait(editor_page, base_id='file-error')
-    eq(message, 'invalid syntax (bug.py, line 6)')
-
     browser.close()
     browser.switch_to_window(workspace_window)
+    eq(message, 'invalid syntax (bug.py, line 6)\n    def execute(self)')
 
     # Load file with instantiation error.
     workspace_window = browser.current_window_handle
@@ -611,6 +612,7 @@ def _test_driver_config(browser):
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
 
     # Add a (nonsense) named parameter.
     editor('parameters_tab').click()
@@ -718,10 +720,13 @@ def _test_remove(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
+    # Lots of futzing here to handle short screens (EC2 Windows).
     workspace_page.select_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(-100, 100)  # Move it away from context menu.
+    editor.move(100, 200)
     connections = top.connections_page()
     properties = top.properties_page()
 

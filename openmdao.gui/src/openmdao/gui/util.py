@@ -4,7 +4,7 @@
 import sys
 import os
 import os.path
-from os.path import isfile, isdir, exists, join, getsize, split
+from os.path import isdir, exists, join, getsize, split
 import webbrowser
 import json
 
@@ -130,6 +130,8 @@ def find_chrome():
     """ Find the chrome executable. """
     path = '/Applications/Google Chrome.app/Contents/MacOS' \
          + os.pathsep \
+         + "C:\Program Files\Google\Chrome\Application" \
+         + os.pathsep \
          + "C:\Program Files (x86)\Google\Chrome\Application" \
          + os.pathsep \
          + os.environ['PATH']
@@ -183,6 +185,9 @@ def launch_browser(port, preferred_browser=None):
     # open new browser window (may open in a tab depending on user preferences, etc.)
     if browser:
         browser.open(url, 1, True)
-        print "Opened in", browser.name
+        try:
+            print "Opened in", browser.name
+        except AttributeError:
+            pass  # Happens with safari.
     else:
         print "Couldn't launch browser: " + str(browser)

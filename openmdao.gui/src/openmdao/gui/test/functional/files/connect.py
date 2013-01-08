@@ -30,7 +30,7 @@ class Connectable(Component):
 
 class Conn_Bounds(Connectable):
     
-    x = Float(3.3, iotype='in', low=-100, high=299)
+    x = Float(3.3, iotype='in', low=0, high=299)
 
 class Conn_Assy(Assembly):
 

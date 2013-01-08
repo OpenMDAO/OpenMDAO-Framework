@@ -142,10 +142,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         
                         lowlimit = null;
                         highlimit = null;
-                        if (input.low) {
+                        if (input.low !== null) {
                             lowlimit = input.low;
                         };
-                        if (input.high) {
+                        if (input.high !== null) {
                             highlimit = input.high;
                         };
                         fullpath = comppath + '.' + input.name
@@ -196,10 +196,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         selector.val(ui.item.value);
                         selector.blur();
                         limit = limits[ui.item.value];
-                        if (limit[0]) {
+                        if (limit[0] !== null) {
                             low.val(limit[0]);
                         }
-                        if (limit[1]) {
+                        if (limit[1] !== null) {
                             high.val(limit[1]);
                         }
                     },
@@ -216,10 +216,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         // still add the limits from that variable.
                         if (candidates.indexOf(selector.val()) >= 0) {
                             limit = limits[selector.val()];
-                            if (limit[0]) {
+                            if (limit[0] !== null) {
                                 low.val(limit[0]);
                             }
-                            if (limit[1]) {
+                            if (limit[1] !== null) {
                                 high.val(limit[1]);
                             }
                         }
