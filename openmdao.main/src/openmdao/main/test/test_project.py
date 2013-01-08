@@ -8,6 +8,7 @@ from openmdao.util.fileutil import build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
                                   filter_macro, ProjFinder, _match_insts
+from openmdao.main.factorymanager import get_signature
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -173,7 +174,8 @@ class MyClass(Component):
                           'pkgfile2.py': """
 from openmdao.main.api import Component
 class PkgClass2(Component):
-    pass
+    def __init__(self, somearg=8, anotherarg=False):
+        super(PkgClass2, self).__init__()
 """,
                         }
                  },
@@ -199,6 +201,8 @@ p = PkgClass2()
             matches = _match_insts([expected_classname])
             self.assertEqual(matches, set())
             
+            sig = get_signature('pkgdir.pkgdir2.pkgfile2.PkgClass2')
+            self.assertEqual(sig['args'], [['somearg', '8'], ['anotherarg', 'False']])
             inst = getattr(mod, 'PkgClass2')() # create an inst of PkgClass2
             matches = _match_insts([expected_classname])
             self.assertEqual(matches, set([expected_classname]))
