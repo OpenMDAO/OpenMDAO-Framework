@@ -65,35 +65,35 @@ def _run_exitfuncs():
     last in, first out.
     """
     pid = os.getpid()
-    print >>sys.__stderr__, '\n[%s] run_exitfuncs %s' \
+    print >> sys.__stderr__, '\n[%s] run_exitfuncs %s' \
           % (pid, len(atexit._exithandlers))
     sys.__stderr__.flush()
     exc_info = None
     while atexit._exithandlers:
         func, targs, kargs = atexit._exithandlers.pop()
-        print >>sys.__stderr__, '[%s]    %s %s %s' \
+        print >> sys.__stderr__, '[%s]    %s %s %s' \
               % (pid, func, targs, kargs)
-        print >>sys.__stderr__, '[%s]    %s %s' \
+        print >> sys.__stderr__, '[%s]    %s %s' \
               % (pid, func.func_code.co_filename, func.func_code.co_firstlineno)
         sys.__stderr__.flush()
         try:
             func(*targs, **kargs)
         except SystemExit:
-            print >>sys.__stderr__, '[%s]    SystemExit' % pid
+            print >> sys.__stderr__, '[%s]    SystemExit' % pid
             sys.__stderr__.flush()
             exc_info = sys.exc_info()
         except:
-            print >>sys.__stderr__, '[%s]    exception' % pid
+            print >> sys.__stderr__, '[%s]    exception' % pid
             sys.__stderr__.flush()
             import traceback
-            print >>sys.__stderr__, '[%s] Error in atexit._run_exitfuncs: %s' \
+            print >> sys.__stderr__, '[%s] Error in atexit._run_exitfuncs: %s' \
                   % (pid, traceback.format_exc())
             exc_info = sys.exc_info()
-        print >>sys.__stderr__, '[%s]    handler done, nleft %s' \
+        print >> sys.__stderr__, '[%s]    handler done, nleft %s' \
               % (pid, len(atexit._exithandlers))
         sys.__stderr__.flush()
 
-    print >>sys.__stderr__, '[%s] run_exitfuncs done, exc_info %s' \
+    print >> sys.__stderr__, '[%s] run_exitfuncs done, exc_info %s' \
           % (pid, exc_info)
     sys.__stderr__.flush()
     if exc_info is not None:
@@ -104,7 +104,7 @@ def _trace_atexit():
     This code can be used to display atexit handlers as they are executed during
     Python shutdown.
     """
-    print >>sys.__stderr__, '\n[%s] _trace_atexit' % os.getpid()
+    print >> sys.__stderr__, '\n[%s] _trace_atexit' % os.getpid()
     sys.__stderr__.flush()
     atexit._run_exitfuncs = _run_exitfuncs
     sys.exitfunc = _run_exitfuncs
@@ -210,7 +210,8 @@ def run_openmdao_suite(argv=None):
         if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
     else:  # no non '-' args, so assume they want to run the default test suite
-        if not is_dev_install() or '--small' in args: # in a release install, default is the set of tests specified in release_tests.cfg
+        # in a release install, default is the set of tests specified in release_tests.cfg
+        if not is_dev_install() or '--small' in args:
             if '--small' in args:
                 args.remove('--small')
             args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
@@ -262,9 +263,9 @@ def run_openmdao_suite(argv=None):
         options, argz = parser.parse_known_args(argv) 
         plugin_install(parser, options, argz)
 
-    # the default action is to run the GUI functional tests unless we're on Windows.
-    # we do not want to run them on Windows due to the likelihood of errors and hung processes.
-    # (hung processes are bad for users and cause hung EC2 instances, which could be costly).
+    # The default action should be to run the GUI functional tests.
+    # The 'win32' test here is to allow easily changing the default for Windows
+    # where testing still has occasional problems not terminating on EC2.
     if sys.platform == 'win32':
         do_gui_tests = False
     else:

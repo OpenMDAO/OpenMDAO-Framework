@@ -18,14 +18,15 @@ def main():
     if options.nonose:
         args.append('--nonose')
 
-    stop = 'STOP'
-    if os.path.exists(stop):
-        os.remove(stop)
+    for stop in ('STOP', 'STOP.txt'):
+        if os.path.exists(stop):
+            os.remove(stop)
     logfile = open('stressit.log', 'w')
 
     for trial in range(options.trials):
-        if os.path.exists(stop):
-            break
+        for stop in ('STOP', 'STOP.txt'):
+            if os.path.exists(stop):
+                break
     
         if sys.platform == 'win32':
             msg = 'Trial %s:' % (trial+1)
