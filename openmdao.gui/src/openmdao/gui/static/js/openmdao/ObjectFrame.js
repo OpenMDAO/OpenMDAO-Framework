@@ -123,11 +123,9 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            if (val.length) {
-                panes[name] = new openmdao.SlotsPane(contentPane,model,
-                                    self.pathname,name,false);
-                panes[name].loadData(val);
-            }
+            panes[name] = new openmdao.SlotsPane(contentPane,model,
+                                self.pathname,name,false);
+            panes[name].loadData(val);
         }
         else if (name === 'Triggers') {
             panes[name] = new openmdao.TriggersPane(contentPane, model,
@@ -186,7 +184,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
-        var callback = loadData;
+        var callback = loadTabs;
         if (self.pathname !== path) {
            if (self.pathname) {
                 model.removeListener(self.pathname, handleMessage);
