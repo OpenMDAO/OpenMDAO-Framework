@@ -104,7 +104,7 @@ def _get_openmdao_parser():
                             help='args to be passed to openmdao test')
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='display test progress')
-        parser.add_argument('--gui', action='store_true',
+        parser.add_argument('--gui', action='store_true', dest='gui',
                             help='do GUI functional tests, regardless of default')
         parser.add_argument('--skip-gui', action='store_true', dest='skip_gui',
                             help='skip GUI functional tests, regardless of default')
