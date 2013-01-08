@@ -161,7 +161,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
-        
         if (properties) {
             // Sort by name
             properties.sort(function(a, b) {
@@ -218,18 +217,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 
             });
 
-                
-            // We need to recreate the table if we reuse this pane for another
-            // component (which is what the properties panel does.)
-            // The data view manages the data otherwise.
-            if (!meta) {
-                SetupTable()
-            }
-            
             dataView.beginUpdate();
             dataView.setItems(properties);
             dataView.setFilter(this.filter);
             dataView.endUpdate();
+            props.invalidate()
 
         }
         else {
