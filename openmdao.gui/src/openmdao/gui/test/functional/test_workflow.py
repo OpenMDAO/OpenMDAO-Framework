@@ -132,7 +132,7 @@ def _test_parameter_auto(browser):
     dialog('ok').click()
     
     parameters = editor.get_parameters()
-    expected = [['', 'comp.x', '-100', '299', '', '', '', 'comp.x']]
+    expected = [['', 'comp.x', '0', '299', '', '', '', 'comp.x']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
