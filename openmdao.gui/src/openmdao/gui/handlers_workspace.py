@@ -7,11 +7,11 @@ import jsonpickle
 
 from tornado import web
 
-from openmdao.gui.handlers import ReqHandler
+from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
 
 
-class AddOnsHandler(ReqHandler):
+class AddOnsHandler(BaseHandler):
     ''' Addon installation utility.
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
@@ -31,7 +31,7 @@ class AddOnsHandler(ReqHandler):
         self.render('workspace/addons.html')
 
 
-class ReqHandler(ReqHandler):
+class ReqHandler(BaseHandler):
     ''' Render the base template.
     '''
 
@@ -50,7 +50,6 @@ class ReqHandler(ReqHandler):
     @web.authenticated
     def get(self):
         attributes = {}
-        print 'self.request.arguments:', self.request.arguments
         for field in ['head_script']:
             if field in self.request.arguments.keys():
                 s = self.request.arguments[field][0]
@@ -95,8 +94,8 @@ class CommandHandler(ReqHandler):
             try:
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
@@ -132,8 +131,8 @@ class VariableHandler(ReqHandler):
             try:
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
@@ -166,9 +165,9 @@ class ComponentHandler(ReqHandler):
         try:
             cserver = self.get_server()
             cserver.add_component(name, type, parent, args)
-        except Exception, e:
-            result = sys.exc_info()
-            cserver._error(e, result)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -178,9 +177,9 @@ class ComponentHandler(ReqHandler):
         result = ''
         try:
             result = cserver.onecmd('del ' + name)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -190,11 +189,12 @@ class ComponentHandler(ReqHandler):
         attr = {}
         try:
             attr = cserver.get_attributes(name)
-        except Exception, err:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print 'Error getting attributes on', name, ':', err
+        except Exception as exc:
+            print 'Error getting attributes on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
+
 
 class AvailableEventsHandler(ReqHandler):
     ''' Get a list of events that are available to a driver.
@@ -206,11 +206,12 @@ class AvailableEventsHandler(ReqHandler):
         attr = {}
         try:
             attr = cserver.get_available_events(name)
-        except Exception, err:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print 'Error getting attributes on', name, ':', err
+        except Exception as exc:
+            print 'Error getting events on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
+
 
 class ObjectHandler(ReqHandler):
     ''' Get the data for a slotable object (including components).
@@ -222,9 +223,9 @@ class ObjectHandler(ReqHandler):
         attr = {}
         try:
             attr = cserver.get_attributes(name)
-        except Exception, err:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print 'Error getting attributes on', name, ':', err
+        except Exception as exc:
+            print 'Error getting attributes on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
 
@@ -241,9 +242,9 @@ class RenameHandler(ReqHandler):
         try:
             cserver = self.get_server()
             cserver.rename_file(oldpath, newname)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -263,9 +264,9 @@ class ReplaceHandler(ReqHandler):
         try:
             cserver = self.get_server()
             cserver.replace_component(pathname, type, args)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -275,9 +276,19 @@ class ComponentsHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
-        json = cserver.get_components()
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_components()
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "ComponentsHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class ConnectionsHandler(ReqHandler):
@@ -292,8 +303,9 @@ class ConnectionsHandler(ReqHandler):
             src_name = self.get_argument('src_name', default=None)
             dst_name = self.get_argument('dst_name', default=None)
             connects = cserver.get_connections(pathname, src_name, dst_name)
-        except Exception, e:
-            print e
+        except Exception as exc:
+            print exc
+            connects = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(connects)
 
@@ -307,9 +319,19 @@ class DataflowHandler(ReqHandler):
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_dataflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_dataflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "DataflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class EditorHandler(ReqHandler):
@@ -335,15 +357,15 @@ class ExecHandler(ReqHandler):
         if filename:
             try:
                 result = cserver.execfile(filename)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = result + str(sys.exc_info()) + '\n'
         else:
             pathname = self.get_argument('pathname', default='')
             try:
                 cserver.run(pathname)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = result + str(sys.exc_info()) + '\n'
         if result:
             self.content_type = 'text/html'
@@ -371,8 +393,14 @@ class FileHandler(ReqHandler):
                 try:
                     # parse it looking for syntax errors
                     ast.parse(text, filename=filename, mode='exec')
-                except Exception as err:
-                    cserver.send_pub_msg(str(err), 'file_errors')
+                except Exception as exc:
+                    if isinstance(exc, SyntaxError):
+                        # Drop leading '/' on filename, show actual line.
+                        err_str = 'invalid syntax (%s, line %s)\n%s' \
+                                % (exc.filename[1:], exc.lineno, exc.text)
+                    else:
+                        err_str = str(exc)
+                    cserver.send_pub_msg(err_str, 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
@@ -457,6 +485,7 @@ class ProjectLoadHandler(ReqHandler):
         else:
             self.redirect('/')
             
+
 class ProjectRevertHandler(ReqHandler):
     ''' POST:  revert back to the most recent commit of the project.
     '''
@@ -607,9 +636,19 @@ class WorkflowHandler(ReqHandler):
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_workflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_workflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "WorkflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class WorkspaceHandler(ReqHandler):

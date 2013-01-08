@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import traceback
 
 from optparse import OptionParser
 
@@ -16,6 +17,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<' + str(os.getpid()) + '>>> ZMQServer --', msg
+        sys.stdout.flush()
 
 
 class ZMQServer(object):
@@ -37,23 +39,33 @@ class ZMQServer(object):
     def serve(self):
         DEBUG(self.options.classpath)
         # redirect stdout/stderr to a ZMQ socket
+        self.sysout = sys.stdout
+        self.syserr = sys.stderr
         try:
             context = zmq.Context()
             socket = context.socket(zmq.PUB)
             DEBUG('binding output to ' + self.options.out_url)
             socket.bind(self.options.out_url)
-            self.sysout = sys.stdout
-            self.syserr = sys.stderr
             sys.stdout = OutStream(socket, 'stdout')
             sys.stderr = sys.stdout
-        except Exception, err:
-            print err, sys.exc_info()
+        except Exception:
+            print >> self.sysout, \
+                  '<<<%s>>> ZMQServer -- setup on %s failed:' \
+                  % (os.getpid(), self.options.out_url)
+            traceback.print_exc(file=self.sysout)
+            sys.exit(1)
 
-        self.obj = self.ctor()
-        DEBUG('obj=' + str(self.obj))
-        ZmqCompWrapper.serve(self.obj,
-                             rep_url=self.options.rep_url,
-                             pub_url=self.options.pub_url)
+        try:
+            self.obj = self.ctor()
+            DEBUG('obj=' + str(self.obj))
+            ZmqCompWrapper.serve(self.obj,
+                                 rep_url=self.options.rep_url,
+                                 pub_url=self.options.pub_url)
+        except Exception:
+            print >> self.sysout, \
+                  '<<<%s>>> ZMQServer -- wrapper failed:' % os.getpid()
+            traceback.print_exc(file=self.sysout)
+            sys.exit(1)
 
     @staticmethod
     def get_options_parser():

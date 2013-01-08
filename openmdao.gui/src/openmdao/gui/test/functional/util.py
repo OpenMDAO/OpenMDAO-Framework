@@ -135,27 +135,36 @@ def setup_server(virtual_display=True):
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
 
-    # Try to clean up old server dir. If this fails (looking at you Windows), then just go with it.
+    # Try to clean up old server dir. If this fails (looking at you Windows),
+    # then use another directory.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
         except WindowsError as exc:
-            print 'Could not delete %s: %s' % (server_dir, exc)
-    if not os.path.exists(server_dir):
-        os.mkdir(server_dir)
+            print >> sys.stderr, 'Could not delete %s: %s' % (server_dir, exc)
+            nxt = 1
+            while os.path.exists(server_dir):
+                nxt += 1
+                server_dir = 'gui-server-%s' % nxt
+    os.mkdir(server_dir)
 
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
     os.chdir(server_dir)
-    stdout = open('stdout', 'w')
-    TEST_CONFIG['stdout'] = stdout
     try:
+        stdout = open('stdout', 'w')
+        TEST_CONFIG['stdout'] = stdout
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM.txt')
+        if os.path.exists(sigfile):
+            os.remove(sigfile)
+        TEST_CONFIG['sigfile'] = sigfile
         server = subprocess.Popen(('python', '-m', 'openmdao.gui.omg',
                                    '--server', '--port', str(port)),
                                    stdout=stdout, stderr=subprocess.STDOUT)
     finally:
         os.chdir(orig)
     TEST_CONFIG['server'] = server
+    TEST_CONFIG['failed'] = []
 
     # Wait for server port to open.
     for i in range(200):  # ~20 sec.
@@ -181,9 +190,10 @@ def setup_server(virtual_display=True):
 def teardown_server():
     """ This function gets called once after all of the tests are run. """
     global _display, _display_set
+    server = TEST_CONFIG['server']
 
     # Do nothing if the server isn't started.
-    if TEST_CONFIG['server'] is None:
+    if server is None:
         return
 
     # Shut down virtual framebuffer.
@@ -193,17 +203,52 @@ def teardown_server():
     _display_set = False
 
     # Shut down server.
-    TEST_CONFIG['server'].terminate()
-    TEST_CONFIG['server'].wait()
+    if sys.platform == 'win32':
+        # First try to have all subprocesses go down cleanly.
+        with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
+            sigfile.write('Shutdown now\n')
+        for i in range(10):
+            time.sleep(1)
+            if server.poll() is not None:
+                break
+        else:
+            # No luck, at least terminate the server.
+            print >> sys.stderr, 'teardown_server: Killing server'
+            server.terminate()
+    else:
+        server.terminate()
+        server.wait()
     TEST_CONFIG['stdout'].close()
 
-    # Clean up.
     server_dir = TEST_CONFIG['server_dir']
+
+    if TEST_CONFIG['failed']:
+        # Save server log & stdout for post-mortem.
+        modname = TEST_CONFIG['modname']
+        if '.' in modname:
+            prefix, dot, modname = modname.rpartition('.')
+        time.sleep(5)  # Wait for Windows...
+        logfile = os.path.join(server_dir, 'openmdao_log.txt')
+        if os.path.exists(logfile):
+            try:
+                os.rename(logfile, '%s-log.txt' % modname)
+            except Exception as exc:
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (logfile, exc)
+        stdout = os.path.join(server_dir, 'stdout')
+        if os.path.exists(stdout):
+            try:
+                os.rename(stdout, '%s-stdout.txt' % modname)
+            except Exception as exc:
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (stdout, exc)
+    # Clean up.
     if os.path.exists(server_dir):
         try:
             shutil.rmtree(server_dir, onerror=onerror)
         except Exception as exc:
-            print '%s cleanup failed: %s' % (server_dir, exc)
+            print >> sys.stderr, 'teardown_server: %s cleanup failed: %s' \
+                                 % (server_dir, exc)
 
 
 def generate(modname):
@@ -211,8 +256,7 @@ def generate(modname):
     global _display_set
 
     # Check if functional tests are to be skipped.
-    skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
-    if skip:
+    if int(os.environ.get('OPENMDAO_SKIP_GUI', '0')):
         return
 
     # Search for tests to run.
@@ -236,6 +280,7 @@ def generate(modname):
     # Due to the way nose handles generator functions, setup_server()
     # won't be called until *after* we yield a test, which is too late.
     if not _display_set:
+        TEST_CONFIG['modname'] = modname
         setup_server()
 
     for name in available_browsers:
@@ -271,12 +316,26 @@ def generate(modname):
             logging.critical('Aborting tests, skipping browser close')
         else:
             try:
-                browser.quit()
-            except WindowsError:
-                # if it already died, calling kill on a defunct process
-                # raises a WindowsError: Access Denied
-                pass
-            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
+                browser.close()
+            except Exception as exc:
+                print 'browser.close failed:', exc
+        try:
+            browser.quit()
+        except Exception as exc:
+            # if it already died, calling kill on a defunct process
+            # raises a WindowsError: Access Denied
+            print 'browser.quit failed:', exc
+        if name == 'Chrome':
+            if sys.platform == 'win32':
+                time.sleep(2)
+                # Kill any stubborn chromedriver processes.
+                proc = subprocess.Popen(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'],
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                stdout, stderr = proc.communicate()
+                stdout = stdout.strip()
+                if stdout != 'ERROR: The process "chromedriver.exe" not found.':
+                    print 'taskkill output: %r' % stdout
+            if cleanup and os.path.exists('chromedriver.log'):
                 try:
                     os.remove('chromedriver.log')
                 except Exception as exc:
@@ -285,7 +344,7 @@ def generate(modname):
 
 class _Runner(object):
     """
-    Used to get better descriptions on tests.
+    Used to get better descriptions on tests and post-mortem screenshots.
     If `browser` is an exception, raise it rather than running the test.
     """
 
@@ -300,6 +359,7 @@ class _Runner(object):
     def __call__(self, browser):
         if isinstance(browser, Exception):
             raise browser  # Likely a hung webdriver.
+        base_window = browser.current_window_handle
         try:
             self.test(browser)
         except Exception as exc:
@@ -308,23 +368,53 @@ class _Runner(object):
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
+            TEST_CONFIG['failed'].append(testname)
+
             # Don't try screenshot if webdriver is hung.
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
                 print 'Attempting to take screenshot...'
-                try:
-                    browser.save_screenshot(filename)
-                except Exception as err:
-                    msg = 'Screenshot failed: %s' % err
-                    print msg
-                    logging.critical(msg)
-                else:
+                if _save_screenshot(browser, filename):
                     msg = 'Screenshot in %s' % filename
                     print msg
                     logging.critical(msg)
+
+                # Close all extra windows.
+                try:
+                    for window in browser.window_handles:
+                        if window == base_window:
+                            continue
+                        elif window != browser.current_window_handle:
+                            browser.switch_to_window(window)
+                        browser.close()
+                    if browser.current_window_handle != base_window:
+                        browser.switch_to_window(base_window)
+                except Exception as exc:
+                    logging.exception('window closing failed')
+
             sys.stdout.flush()
             sys.stderr.flush()
             raise saved_exc[0], saved_exc[1], saved_exc[2]
+
+def _save_screenshot(browser, filename, retry=True):
+    """ Attempt to take a screenshot. """
+    try:
+        browser.save_screenshot(filename)
+    except Exception as exc:
+        msg = 'Screenshot failed: %s' % exc
+        print msg
+        logging.critical(msg)
+        if 'An open modal dialog blocked the operation' in msg and retry:
+            alert = browser.switch_to_alert()
+            msg = 'alert text: %s' % alert.text
+            print msg
+            logging.critical(msg)
+            alert.dismiss()
+            print 'Retrying...'
+            return _save_screenshot(browser, filename, False)
+        else:
+            return False
+    return True
 
 
 def startup(browser):
@@ -432,7 +522,7 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
-    editor.move(-100, 0)
+    editor.move(-250, 0)
     editor.show_slots()
 
     #resize_editor(workspace_page, editor)
@@ -448,14 +538,19 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
 
 
 def resize_editor(workspace_page, editor):
-    '''ensure that the editor is not covering the library (or else we cannot drag things from it!)'''
+    '''ensure that the editor is not covering the library
+    (or else we cannot drag things from it!)'''
     browser = workspace_page.browser
 
     page_width = browser.get_window_size()['width']
-    lib_width    = workspace_page('library_tab').find_element_by_xpath('..').size['width']
-    lib_position = workspace_page('library_tab').find_element_by_xpath('..').location['x']
-    dialog_width    = editor('dialog_title').find_element_by_xpath('../..').size['width']
-    dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+
+    lib_tab      = workspace_page('library_tab').find_element_by_xpath('..')
+    lib_width    = lib_tab.size['width']
+    lib_position = lib_tab.location['x']
+
+    dialog_title    = editor('dialog_title').find_element_by_xpath('../..')
+    dialog_width    = dialog_title.size['width']
+    dialog_position = dialog_title.location['x']
 
     # how much overlap do we have?
     overlap = lib_position - (dialog_position + dialog_width)
@@ -466,7 +561,7 @@ def resize_editor(workspace_page, editor):
             # not enough, need to rezize the editor
 
             # look for the resize handle
-            sibblings = editor('dialog_title').find_elements_by_xpath('../../div')
+            sibblings = dialog_title.find_elements_by_xpath('../../div')
             handle = None
             for sib in sibblings:
                 if "ui-resizable-se" in sib.get_attribute('class'):
@@ -475,25 +570,30 @@ def resize_editor(workspace_page, editor):
             # do the resizing
             chain = ActionChains(browser)
             chain.click_and_hold(handle)
-            chain.move_by_offset(450 - dialog_width, 0).perform()  # we can resize editor down to 425px, any less and we cover drop targets
-            chain.click().perform()  # must click because release is not working. why? I do not know.
+            # we can resize editor down to 425px, any less and we cover drop targets
+            chain.move_by_offset(450 - dialog_width, 0).perform()
+            # must click because release is not working. why? I do not know.
+            chain.click().perform()
             chain.release(None).perform()
 
             # recalculate the overlap
-            dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
-            dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+            dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+            dialog_width = dialog_title.size['width']
+            dialog_position = dialog_title.location['x']
             overlap = lib_position - (dialog_position + dialog_width)
 
         # We are good, move out!
         chain = ActionChains(browser)
         chain.click_and_hold(editor('dialog_title').element)
         chain.move_by_offset(overlap, 0).perform()
-        chain.click().perform()  # must click because release is not working. why? I do not know.
+        # must click because release is not working. why? I do not know.
+        chain.click().perform()
         chain.release(None).perform()
 
         # recalculate the overlap
-        dialog_width = editor('dialog_title').find_element_by_xpath('../..').size['width']
-        dialog_position = editor('dialog_title').find_element_by_xpath('../..').location['x']
+        dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+        dialog_width = dialog_title.size['width']
+        dialog_position = dialog_title.location['x']
         overlap = lib_position - (dialog_position + dialog_width)
 
         if overlap < 0:
@@ -514,8 +614,8 @@ def get_slot_target(labels, element_str):
 
 def get_dataflow_fig_in_assembly_editor(workspace_page, name):
     '''Find the named dataflow fig in the assembly editor'''
-    allFigs = workspace_page.get_dataflow_figures()
-    for fig in allFigs:
+    all_figs = workspace_page.get_dataflow_figures()
+    for fig in all_figs:
         location = fig.find_element_by_xpath("..").get_attribute('id')
         if location == "top-dataflow":
             return DataflowFigure(workspace_page.browser, workspace_page.port, fig)
@@ -591,24 +691,26 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 def drag_element_to(browser, element, drag_to, centerx):
     '''Drag one element over to another element'''
     chain = ActionChains(browser)
-    chain.move_to_element(element).perform()
+    chain.move_to_element(element)
     chain.click_and_hold(element)
-    chain.move_to_element(drag_to).perform()
+    chain.move_to_element(drag_to)
     if centerx:
         offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
-        chain.move_by_offset(offset, 1).perform()
+        chain.move_by_offset(offset, 1)
     else:
-        chain.move_by_offset(2, 1).perform()
+        chain.move_by_offset(5, 1)
+    chain.perform()
     return chain
 
 
 def release(chain):
     '''The drop part of the ActionChain when doing drag and drop'''
     chain.release(on_element=None).perform()
+    time.sleep(0.5)  # Pacing for diagram update.
 
 
 def check_highlighting(element, should_highlight=True, message='Element'):
-    '''check to see that the background-color of the element is rgb(207, 214, 254)'''
+    '''check to see that the background-color of the element is highlighted'''
     if 'SlotFigure' in element.get_attribute('class'):
         # a slot figure is a div containing a ul element (the context menu) and
         # one or more svg elements, each of which contains a rect and two texts
@@ -679,6 +781,7 @@ def main(args=None):
             tests = [func for name, func in functions
                         if name.startswith('_test_')]
 
+        TEST_CONFIG['modname'] = '__main__'
         setup_server(virtual_display=False)
         browser = SafeDriver(setup_chrome())
         try:
@@ -699,3 +802,4 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
+

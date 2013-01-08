@@ -76,6 +76,11 @@ class _BaseElement(object):
                 StaleElementReferenceException):
             return False
 
+    @property
+    def location(self):
+        """ Return dict containing x and y coords. """
+        return self.element.location
+
     def find_element_by_xpath(self, xpath):
         """ Convenience routine. """
         return self.element.find_element_by_xpath(xpath)

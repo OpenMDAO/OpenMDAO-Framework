@@ -119,6 +119,7 @@ def _test_connect(browser):
     # Set inputs (re-fetch required after updating).
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
+    props.move(0, -120)  # Move up for short displays.
     eq(props.header, 'Connectable: top.comp1')
     props.move(-100, -100)
     inputs = props.inputs
@@ -210,6 +211,7 @@ def _test_connections(browser):
     eq(conn_page.count_variable_figures(), 20)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
+    time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 4)
     eq(conn_page.count_variable_connections(), 2)
     eq(sorted(conn_page.get_variable_names()),
@@ -224,9 +226,13 @@ def _test_connections(browser):
        ['RPM', 'RPM'])
 
     # disconnect transmission
+    conn_page.close()  # Sometimes obscures dataflow.
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
-    time.sleep(1.0)
+    vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+    conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
+    conn_page.show_connected_variables()
 
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
@@ -237,7 +243,7 @@ def _test_connections(browser):
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_figures(), 2)
     eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
@@ -261,6 +267,7 @@ def _test_connections(browser):
     time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
     conn_page.show_connected_variables()
+    time.sleep(0.5)
     eq(conn_page.count_variable_figures(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['torque_ratio', 'torque_ratio'])

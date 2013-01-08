@@ -19,6 +19,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
+        sys.stdout.flush()
 
 
 def make_unicode(content):
@@ -36,6 +37,27 @@ def make_unicode(content):
 class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
+
+    def __init__(self, application, request, **kwargs):
+        addr = kwargs.get('addr')
+        version = request.headers.get('Sec-Websocket-Version')
+        msg = 'Warning: %s WebSocket protocol version %s from %s'
+        if version is None:
+            print msg % ('unknown', '', addr)
+        else:
+            try:
+                version = int(version)
+            except ValueError:
+                print msg % ('invalid', version, addr)
+            else:
+                if version < 13:
+                    print msg % ('obsolete', version, addr)
+        sys.stdout.flush()
+        super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
+
+    def allow_draft76(self):
+        ''' Not recommended, but enabled so we can display in __init__(). '''
+        return True
 
     def initialize(self, addr):
         self.addr = addr
@@ -93,7 +115,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
         pass
 
     def on_close(self):
-        DEBUG('zmqstream connection closed')
+        pass
 
 
 class ZMQStreamApp(web.Application):
@@ -123,10 +145,16 @@ class ZMQStreamServer(object):
     def serve(self):
         ''' Start server listening on port & start the ioloop.
         '''
-        if (self.options.external):
-            self.http_server.listen(self.options.port)
-        else:
-            self.http_server.listen(self.options.port, address='localhost')
+        DEBUG('serve %s' % self.options.port)
+        try:
+            if (self.options.external):
+                self.http_server.listen(self.options.port)
+            else:
+                self.http_server.listen(self.options.port, address='localhost')
+        except Exception as exc:
+            print '<<<%s>>> ZMQStreamServer -- listen on %s failed: %s' \
+                  % (os.getpid(), self.options.port, exc)
+            sys.exit(1)
 
         try:
             ioloop.IOLoop.instance().start()
