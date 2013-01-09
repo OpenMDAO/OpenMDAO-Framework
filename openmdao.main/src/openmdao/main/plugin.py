@@ -482,11 +482,7 @@ def plugin_makedist(parser, options, args=None, capture=None):
         print_sub_help(parser, 'makedist')
         return -1
 
-    if options.dist_dir_path:
-        dist_dir = options.dist_dir_path
-    else:
-        dist_dir = '.'
-    dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(dist_dir)))
+    dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
     _verify_dist_dir(dist_dir)
 
     startdir = os.getcwd()
