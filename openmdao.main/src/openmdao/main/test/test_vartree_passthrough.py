@@ -58,7 +58,32 @@ class VarTreePassthroughTestCase(unittest.TestCase):
         self.assertEqual(blah.comp.dummy_data.dummy1, 5.0)
         self.assertEqual(blah.dummy_data.dummy1, 5.0)
         self.assertEqual(blah.dummy1_out.dummy1, 5.0)
-    
+        
+    def test_get_attributes(self):
+        
+        # Tests the attributres dictionary for passthrough trees
+        
+        blah = TstAssembly2()
+        attrs = blah.get_attributes(True)
+        self.assertTrue({'indent': 0, 
+                         'name': 'dummy_data', 
+                         'vt': 'vt', 
+                         'implicit': '', 
+                         'valid': True, 
+                         'connected': '', 
+                         'ttype': 'slot', 
+                         'type': 'TstContainer', 
+                         'id': 'dummy_data'} in attrs['Inputs'])
+        self.assertTrue({'indent': 1, 
+                         'name': 'dummy1', 
+                         'parent': 'dummy_data', 
+                         'value': 1.0, 
+                         'high': None, 
+                         'valid': True, 
+                         'connected': '', 
+                         'low': None, 
+                         'type': 'float', 
+                         'id': 'dummy_data_dummy1'} in attrs['Inputs'])
         
 if __name__ == "__main__":
     unittest.main()
