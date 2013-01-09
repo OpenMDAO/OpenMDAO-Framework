@@ -74,7 +74,7 @@ class DeleteHandler(ReqHandler):
         self.redirect('/')
 
     @web.authenticated
-    def getqqq(self, project_id):
+    def get(self, project_id):
         self.redirect('/')
 
 
@@ -155,7 +155,8 @@ class DetailHandler(ReqHandler):
             info[key] = project[key]
         proj.set_info(info)
 
-        self.redirect('/')
+        self.redirect("/workspace/project?projpath=" + project['projpath'])
+        #self.redirect('/')
         #self.redirect(self.request.uri)
         #self.redirect( "/workspace/project?projpath=project['projpath']" )
 
@@ -359,8 +360,9 @@ class AddHandler(ReqHandler):
 
                 # print "info", info
 
+                self.redirect("/workspace/project?projpath=" + project['projpath'])
                 #self.redirect('/projects/'+str(project['id']))
-                self.redirect('/')
+                #self.redirect('/')
                 
         self.redirect('')
 
@@ -368,11 +370,57 @@ class AddHandler(ReqHandler):
     def get(self):
         self.render('projdb/add_project.html')
 
+class New2Handler(ReqHandler):
+    ''' Add a project to the project database. This extracts the project file
+    into a directory under the projects directory of user.
+    '''
+
+    @web.authenticated
+    def post(self):
+
+        pdb = Projects()
+
+        forms = {}
+        for field in ['projectname', 'description', 'version']:
+            if field in self.request.arguments.keys():
+                forms[field] = self.request.arguments[field][0]
+
+        project = {}
+        project['projectname'] = forms['projectname'].strip()
+        project['description'] = forms['description'].strip()
+        project['version'] = forms['version'].strip()
+        project['id'] = pdb.predict_next_rowid()
+        project['active'] = 1
+
+        # figure out a unique directory name for the project using
+        #   the project name and version string
+        directory = self.get_project_dir()
+        version = project['version']
+        pname = project['projectname']
+        if len(version):
+            filename = clean_filename('%s-%s' % (pname, version))
+        else:
+            filename = clean_filename(pname)
+
+        unique = filename
+        i = 1
+        while os.path.exists(os.path.join(directory, unique)):
+            unique = '%s_%s' % (filename, str(i))
+            i = i+1
+
+        project['projpath'] = os.path.join(directory, unique)
+
+        pdb.new(project)
+        os.mkdir(project['projpath'])
+                
+        self.redirect("/workspace/project?projpath=" + project['projpath'])
+
 
 handlers = [
     web.url(r'/projects/?',                              IndexHandler),
     web.url(r'/projects/(?P<project_id>\d+)/?',          DetailHandler),
     web.url(r'/projects/new/$',                          NewHandler),
+    web.url(r'/projects/new2/$',                          New2Handler),
     web.url(r'/projects/add/$',                          AddHandler),
     #web.url(r'/projects/add/$',                          AddHandler_old),
     web.url(r'/projects/delete/(?P<project_id>\d+)/?',   DeleteHandler),

@@ -33,7 +33,11 @@
         </div>
       </div>
 
+      <div class="modal-footer">
       <div class="form-actions">
+
+        <a class="btn" href="/projects/">Cancel</a>
+
         {% if project['projpath'] %}
         <input class="btn btn-primary" name="commit" type="submit" 
                value="Update Project Details" />
@@ -41,9 +45,7 @@
         <input class="btn btn-primary" name="commit" type="submit" value="Create Project" />
         {% end %}
 
-        <a class="btn" href="/projects/">Cancel</a>
-
-
+      </div>
       </div>
 
     </form>
