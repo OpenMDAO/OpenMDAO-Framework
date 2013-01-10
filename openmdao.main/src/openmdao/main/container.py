@@ -572,7 +572,15 @@ class Container(SafeHasTraits):
         if index is None:
             # copy value if 'copy' found in metadata
             if ttype.copy:
-                val = _copydict[ttype.copy](val)
+                if isinstance(val, Container):
+                    old_parent = val.parent
+                    val.parent = None
+                    val_copy = _copydict[ttype.copy](val)
+                    val.parent = old_parent
+                    val_copy.parent = self
+                    val = val_copy
+                else:
+                    val = _copydict[ttype.copy](val)
                 
         if getwrapper is not None:
             return getwrapper(val, index)

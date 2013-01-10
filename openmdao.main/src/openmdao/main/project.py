@@ -86,10 +86,10 @@ class CtorInstrumenter(ast.NodeTransformer):
 
     def visit_ClassDef(self, node):
         text = None
+        reg = "_register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))"
         for stmt in node.body:
             if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
-                # __init__ was found - rename it to __orig_init__
-                stmt.name = '__%s_orig_init__' % node.name
+                stmt.body = [text_to_node(reg, stmt.lineno)]+stmt.body
                 break
         else:  # no __init__ found, make one
             text = """
@@ -97,14 +97,7 @@ def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     super(%s, self).__init__(*args, **kwargs)
 """ % node.name
-        if text is None:
-            # class has its own __init__ (name has been changed to __orig_init__)
-            text = """
-def __init__(self, *args, **kwargs):
-    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
-    self.__%s_orig_init__(*args, **kwargs)
-""" % node.name
-        node.body = [text_to_node(text, node.lineno)] + node.body
+            node.body = [text_to_node(text, node.lineno)] + node.body
         return node
 
 

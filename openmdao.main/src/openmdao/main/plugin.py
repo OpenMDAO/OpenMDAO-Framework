@@ -478,15 +478,11 @@ def plugin_makedist(parser, options, args=None, capture=None):
     usage: plugin makedist [dist_dir_path]
     
     """
-    if args is not None and len(args) > 1:
+    if args:
         print_sub_help(parser, 'makedist')
         return -1
 
-    if args:
-        dist_dir = args[0]
-    else:
-        dist_dir = '.'
-    dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(dist_dir)))
+    dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
     _verify_dist_dir(dist_dir)
 
     startdir = os.getcwd()
