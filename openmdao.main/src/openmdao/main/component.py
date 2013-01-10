@@ -1592,6 +1592,11 @@ class Component(Container):
             value = getattr(self, name)
             ttype = trait.trait_type
 
+            # If this is a passthrough, reach in to get the trait
+            if 'validation_trait' in meta:
+                trait = meta['validation_trait']
+                ttype = trait.trait_type
+                
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
             
