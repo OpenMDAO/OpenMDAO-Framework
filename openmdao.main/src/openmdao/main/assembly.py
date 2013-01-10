@@ -20,7 +20,7 @@ from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitectu
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import find_trait_and_value, _copydict
-from openmdao.main.component import Component
+from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.api import Slot
 from openmdao.main.driver import Driver, Run_Once
@@ -500,8 +500,21 @@ class Assembly (Component):
         val = self.get(pathname)
         ttype = trait.trait_type
         if ttype.copy:
-            val = _copydict[ttype.copy](val)
+            
+            # Variable trees need to point to a new parent.
+            # Also, let's not deepcopy the outside universe
+            if isinstance(val, Container):
+                old_parent = val.parent
+                val.parent = None
+                val_copy = _copydict[ttype.copy](val)
+                val.parent = old_parent
+                val_copy.parent = self
+                val = val_copy
+            else:
+                val = _copydict[ttype.copy](val)
+            
         setattr(self, newname, val)
+        
 
         if iotype == 'in':
             self.connect(newname, pathname)

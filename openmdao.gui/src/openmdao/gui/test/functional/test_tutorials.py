@@ -127,11 +127,13 @@ def _test_MDAO_MDF(browser):
     editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
     eq(outputs.value[3][:3], ['y1', 'float', '0'])
+    editor.close()
 
     # Run the model
     workspace_page.run()
 
     # Verify implicitly connected output has been updated with valid result.
+    editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
     eq(outputs.value[3][:2], ['y1', 'float'])
     dis1_y1 = float(outputs.value[3][2])
