@@ -129,8 +129,16 @@ def main(args=None):
         finally:
             os.chdir(startdir)
         """ % pkgstr
+        make_docs = """
+        if options.docs:
+            if(os.system('%s %s && openmdao build_docs && deactivate' % (source_command, activate)) != 0):
+                print "Failed to build the docs."
+            else:
+                print "\\nSkipping build of OpenMDAO docs.\\n"
+        """
     else:  # making a release installer
         make_dev_eggs = ''
+        make_docs = ''
         
     if options.offline == "gather":
         offline_ = ["'-zmaxd'", "'-zmaxd'", ", 'pkg'", "os.mkdir('pkg')", "['-f', url]", "['-f', openmdao_url]"]
@@ -342,12 +350,7 @@ def after_install(options, home_dir):
         deactivate = os.path.join(bin_dir, 'deactivate')
         source_command = "." if not sys.platform.startswith("win") else ""
         
-        if options.docs:
-            if(os.system('%%s %%s && openmdao build_docs && deactivate' %% (source_command, activate)) != 0):
-                print "Failed to build the docs."
-        else:
-            print "\\nSkipping build of OpenMDAO docs.\\n"
-
+%(make_docs)s
         if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls()
@@ -452,6 +455,7 @@ def after_install(options, home_dir):
         'version': version, 
         'url': options.findlinks,
         'make_dev_eggs': make_dev_eggs,
+        'make_docs': make_docs,
         'adjust_options': _get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,
     }
