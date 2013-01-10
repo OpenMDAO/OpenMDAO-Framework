@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import traceback
 import socket
 
@@ -73,11 +74,16 @@ class ZMQServerManager(object):
             self._terminate(server_info, 'out_server')
             self._terminate(server_info, 'pub_server')
 
+            # Call proxy.cleanup() in a separate thread so we can
+            # recover if it hangs (happens sometimes on Windows/EC2).
             proxy = server_info['proxy']
-            try:
-                proxy.cleanup()
-            except Exception as exc:
-                print 'Error cleaning up proxy', exc
+            cleaner = threading.Thread(target=self._cleanup_proxy,
+                                       args=(proxy,), name='Proxy Cleaner')
+            cleaner.daemon = True
+            cleaner.start()
+            cleaner.join(10)
+            if cleaner.is_alive():
+                print 'Timeout waiting for proxy cleaner'
 
             self._terminate(server_info, 'server')
 
@@ -95,6 +101,14 @@ class ZMQServerManager(object):
                 print 'Error terminating', name, exc
         else:
             DEBUG("Can't terminate %s, no process" % name)
+
+    @staticmethod
+    def _cleanup_proxy(proxy):
+        ''' Try to invoke proxy.cleanup(). This hangs sometimes on Windows. '''
+        try:
+            proxy.cleanup()
+        except Exception as exc:
+            print 'Error cleaning up proxy', exc
 
     def get_pub_socket_url(self, server_id):
         ''' get the url of the publisher socket for the server associated with

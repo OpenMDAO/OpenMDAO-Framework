@@ -1482,6 +1482,20 @@ class Container(SafeHasTraits):
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 
+    def build_trait(self, ref_name, iotype=None, trait=None):
+        """Build a trait referring to `ref_name`.
+        This is called by :meth:`create_io_traits`.
+        This must be overridden.
+
+        iotype: str or dict
+            If `iotype` is a string it specifies the trait's iotype.
+            If it's a dictionary, it provides metadata.
+
+        trait: Trait
+            If `trait` is not None, use that trait rather than building one.
+        """
+        self.raise_exception('build_trait()', NotImplementedError)
+
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
 CLASSES_TO_PROXY.append(FileRef)
@@ -1600,24 +1614,50 @@ def find_trait_and_value(obj, pathname):
 
 def create_io_traits(cont, obj_info, iotype='in'):
     """Create io trait(s) specified by the contents of `obj_info`. Calls
-    `build_trait()` on the scoping object, which can be overridden by 
-    subclasses, to create each trait.
+    :meth:`build_trait` on :class:`Container` `cont`, which can be overridden
+    by subclasses, to create each trait.  One use of this is to provide traits
+    mapping to variables inside a :class:`Component` implemented as a Python
+    extension module.
     
     `obj_info` is assumed to be either a string, a tuple, or a list
-    that contains strings and/or tuples. Tuples must contain a name and an
-    "internal" name and may optionally contain an iotype and a validation trait.
-    The first name is the one that will be used to access the trait's attribute
-    in the Container, while the second name represents some alternative naming 
-    scheme within the Container.
-    
-    For example, the following are valid calls:
+    that contains strings and/or tuples.  The information is used to specify
+    the "internal" and "external" names of the variable.
+    The "internal" name uses the naming scheme within the Container.
+    The "external name is the one that will be used to access the trait
+    from outside the Container, it must not contain any '.' characters.
 
-    create_io_traits(obj, 'foo')
-    create_io_traits(obj, ['foo','bar','baz'])
-    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait), 'bar')
-    create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    A string specifies the "internal" name for the variable.  The "external"
+    name will be the "internal" name with any '.' characters replaced by '_'.
+
+    Tuples must contain the "internal" name followed by the "external" name,
+    and may optionally contain an iotype and a validation trait. If the iotype
+    is a dictionary rather than a string it is used for trait metadata (it may
+    include the ``iotype`` key, but does not have to).
     
+    `iotype` is the default I/O type to be used.
+
     The newly created traits are added to the specified Container.
+
+    For example, the following are valid calls::
+
+        # Create an input trait 'foo' referring to 'foo' on 'obj'.
+        create_io_traits(obj, 'foo')
+
+        # Create an input trait 'inputs_foo' referring to 'inputs.foo'.
+        create_io_traits(obj, 'inputs.foo')
+
+        # Create outputs 'foo', 'bar', and 'baz'.
+        create_io_traits(obj, ['foo','bar','baz'], iotype='out')
+
+        # Use Bool trait named 'foo_alias' to refer to 'foo', and create 'bar'.
+        create_io_traits(obj, ('foo', 'foo_alias', 'in', Bool()), 'bar')
+
+        # Create inputs 'fooa' and 'bazz', and output 'barb'.
+        # 'fooa' will have the specified metadata.
+        create_io_traits(obj, [('foo', 'fooa', {low=-1, high=10}),
+                               ('bar', 'barb', 'out'),
+                               ('baz', 'bazz')])
+    
     """
     if isinstance(obj_info, (basestring, tuple)):
         it = [obj_info]
@@ -1629,18 +1669,33 @@ def create_io_traits(cont, obj_info, iotype='in'):
         trait = None
         
         if isinstance(entry, basestring):
-            name = entry
-            ref_name = name
+            ref_name = entry
+            name = entry.replace('.', '_')
         elif isinstance(entry, tuple):
-            name = entry[0]  # wrapper name
-            ref_name = entry[1] or name # internal name
+            ref_name = entry[0]  # internal name
+            name = entry[1] or ref_name.replace('.', '_') # wrapper name
             try:
-                iostat = entry[2] # optional iotype
+                iostat = entry[2] # optional iotype/metadata
                 trait = entry[3]  # optional validation trait
             except IndexError:
                 pass
         else:
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  RuntimeError)
+
+        if '.' in name:
+            cont.raise_exception("Can't create '%s' because it's a"
+                                 " dotted pathname" % name, NameError)
+
+        newtrait = cont.get_trait(name)
+        if newtrait is not None:
+            cont.raise_exception(
+                "Can't create '%s' because it already exists." % name,
+                RuntimeError)
+        
+        if not cont.contains(ref_name):
+            cont.raise_exception("Can't create trait for '%s' because it wasn't"
+                                 " found" % ref_name, AttributeError)
+
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))
 
