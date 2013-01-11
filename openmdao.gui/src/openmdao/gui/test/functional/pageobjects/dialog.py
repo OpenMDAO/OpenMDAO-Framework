@@ -10,7 +10,7 @@ class DialogPage(BasePageObject):
     """ Base for various dialog pages. """
 
     dialog_title = TextElement((By.XPATH, '../div/span'))
-    close_button = ButtonElement((By.XPATH, '../div/a'))
+    close_button = ButtonElement((By.XPATH, '../div/a/span'))
     dialog_resize = ButtonElement((By.XPATH, '../div[contains(@class, "ui-resizable-se")]'))
 
     def __init__(self, browser, port, locator):
