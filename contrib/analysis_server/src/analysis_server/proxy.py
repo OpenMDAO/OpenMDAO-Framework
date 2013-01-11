@@ -965,8 +965,8 @@ class ObjProxy(VarTreeMixin, VariableTree):
 
     def __init__(self, iotype, client, rpath):
         VarTreeMixin.__init__(self, iotype, client, rpath)
-        desc = client.get(rpath+'.description')
-        VariableTree.__init__(self, doc=desc, iotype=iotype)
+        VariableTree.__init__(self, iotype=iotype)
+        self.__doc__ = client.get(rpath+'.description')
         xml = client.get(rpath)
         populate_from_xml(self, xml)
         self._dirty = False
