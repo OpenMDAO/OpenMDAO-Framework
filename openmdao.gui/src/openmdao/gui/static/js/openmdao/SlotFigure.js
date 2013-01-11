@@ -117,6 +117,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
 
+            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
             openmdao.model.getSignature(droppedPath, function(signature) {
                 if (signature.args.length) {
                     var prompt = 'Enter arguments for new '+droppedName;
@@ -130,7 +131,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                             cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                         }
                         model.issueCommand(cmd);
-                        openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                     }, true);
                 }
                 else {
@@ -143,7 +143,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                         cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                     }
                     model.issueCommand(cmd);
-                    openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                 }
             });
         }
