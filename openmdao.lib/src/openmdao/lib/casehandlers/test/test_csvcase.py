@@ -309,6 +309,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         # Make sure outputs are sorted
             
         rec = CSVCaseRecorder(filename=self.filename)
+        rec.num_backups = 0
         rec.startup()
         rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
         rec.close()
