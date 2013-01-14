@@ -304,7 +304,25 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 break
         else:
             self.fail("couldn't find the expected Case")
+
+    def test_sorting(self):
+        # Make sure outputs are sorted
             
+        rec = CSVCaseRecorder(filename=self.filename)
+        rec.num_backups = 0
+        rec.startup()
+        rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
+        rec.close()
+        
+        outfile = open(self.filename, 'r')
+        csv_data = outfile.readlines()
+        outfile.close()
+
+        line = '"label","/INPUTS","comp1.x","comp1.y","comp2.x","/OUTPUTS","/METADATA","retries","max_retries","parent_uuid","msg"\r\n'
+        self.assertEqual(csv_data[0], line)
+        line = '"","",2.0,4.3,1.9,"","","","","",""\r\n'
+        self.assertEqual(csv_data[1], line)
+
     def test_flatten(self):
         # create some Cases
         outputs = ['comp1.a_array', 'comp1.vt']
