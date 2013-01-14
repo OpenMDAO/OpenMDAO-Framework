@@ -213,7 +213,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     try:
                         self.read_config(path, _LOGGER)
                     except Exception as exc:
-                        _LOGGER.error(str(exc))
+                        _LOGGER.error(str(exc) or repr(exc))
                         self._config_errors += 1
 
     def read_config(self, path, logger):
@@ -270,9 +270,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         name, dash, version = cfg_name.partition('-')
         if not version:
             name = name[:-4]  # Drop '.cfg'
-            if cfg_version:
-                version = cfg_version
-            else:
+            if not cfg_version:
                 raise ValueError('No version in .cfg file or .cfg filename')
         else:
             version = version[:-4]  # Drop '.cfg'
@@ -287,8 +285,10 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             logger.warning('      to %r', new_path)
             os.rename(path, new_path)
             path = new_path
+            version = cfg_version
 
         cwd = os.getcwd()
+        cleanup = not os.path.exists(name)
         try:
             # This will be exercised by test_client.py:test_publish().
             if config.has_option('Python', 'egg'):  # pragma no cover
@@ -340,18 +340,25 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     except AttributeError as exc:
                         raise RuntimeError("Can't get class %r in %r: %r"
                                            % (classname, modname, exc))
+
+                    simroot = SimulationRoot.get_root()
+                    SimulationRoot.chroot(dirname)
                     try:
-                        obj = cls()
-                        if obj._call_cpath_updated == True:
-                            set_as_top(obj)
-                    except Exception as exc:
-                        logger.error(traceback.format_exc())
-                        raise RuntimeError("Can't instantiate %s.%s: %r"
-                                           % (modname, classname, exc))
-                    # Save to egg.
-                    egg_info = obj.save_to_egg(name, version)
-                    egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
-                                [name for name, pth in egg_info[2]])
+                        try:
+                            obj = set_as_top(cls())
+                        except Exception as exc:
+                            logger.error(traceback.format_exc())
+                            raise RuntimeError("Can't instantiate %s.%s: %r"
+                                               % (modname, classname, exc))
+                        # Save to egg.
+                        egg_info = obj.save_to_egg(name, version)
+                        egg_filename = os.path.join(cwd, egg_info[0])
+                        if dirname != cwd:
+                            os.rename(egg_info[0], egg_filename)
+                        egg_info = (egg_filename, egg_info[1],
+                                    [name for name, pth in egg_info[2]])
+                    finally:
+                        SimulationRoot.chroot(simroot)
 
             # Create wrapper configuration object.
             cfg_path = os.path.join(cwd, os.path.basename(path))
@@ -371,7 +378,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             del obj
 
         finally:
-            if os.path.exists(name):
+            if cleanup and os.path.exists(name):
                 shutil.rmtree(name)
 
     @staticmethod
@@ -2137,6 +2144,8 @@ def main():  # pragma no cover
         if not allowed_hosts:
             print 'No allowed hosts!?.'
             sys.exit(1)
+    elif options.address == 'localhost':
+        allowed_hosts = ['127.0.0.1']
     else:
         print 'Allowed hosts file %r does not exist.' % options.hosts
         sys.exit(1)
