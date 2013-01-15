@@ -118,7 +118,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         
             var candidates = [];
             var limits = {};
-            console.log(wjson)
+            
             // Loop through components in workflow to gather all our param candidates
             jQuery.each(wjson.components, function(idx, comp) {
             
