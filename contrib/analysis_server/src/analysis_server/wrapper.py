@@ -16,6 +16,8 @@ import time
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape, quoteattr
 
+from enthought.traits.trait_handlers import TraitCoerceType
+
 try:
     import resource
 except ImportError:  # pragma no cover
@@ -1032,15 +1034,22 @@ class ListWrapper(ArrayBase):
                 typ = int
             elif isinstance(inner_type, Str):
                 typ = str
+            elif isinstance(inner_type, TraitCoerceType):
+                if inner_type.aType in (float, int, str):
+                    typ = inner_type.aType
+                else:
+                    raise TypeError('%s.%s: unsupported List element type (1) %r'
+                                     % (container.get_pathname(), name, inner_type.aType))
+
             else:
-                raise TypeError('%s.%s: unsupported List element type (1) %r'
+                raise TypeError('%s.%s: unsupported List element type (2) %r'
                                 % (container.get_pathname(), name, inner_type))
         else:
             value = container.get(name)
             if value:
                 typ = type(value[0])
                 if typ not in (float, int, str):
-                    raise TypeError('%s.%s: unsupported List element type (2) %r'
+                    raise TypeError('%s.%s: unsupported List element type (3) %r'
                                     % (container.get_pathname(), name, typ))
             else:
                 raise TypeError('%s.%s: undefined List element type'
