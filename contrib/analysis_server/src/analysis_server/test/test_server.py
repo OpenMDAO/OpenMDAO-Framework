@@ -187,8 +187,9 @@ class TestCase(unittest.TestCase):
         assert_raises(self, code, globals(), locals(), ValueError,
                       "No version in .cfg file or .cfg filename")
 
-        config.set('Description', 'version', '0.1')
-        config.set('Python', 'filename', 'no-such-dir/no-such-file.py')
+        code = "self.server._process_config(config, 'test_invalid-0.1.cfg'," \
+                                          " self.handler._logger)"
+        config.set('Python', 'filename', 'no-such-file.py')
         config.set('Python', 'classname', 'no-such-class')
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't import 'no-such-file'")
