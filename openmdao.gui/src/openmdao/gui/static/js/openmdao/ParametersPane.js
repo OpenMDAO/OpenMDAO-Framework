@@ -113,13 +113,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     function promptForParameter(callback, model) {
     
         // Figure out all of our candidates for parameter addition.
-        model.getWorkflow(pathname, function findComps(wjson) {
+        var parentpath = pathname.split('.').slice(0, -1)[0];
+        model.getDataflow(parentpath, function findComps(wjson) {
         
             var candidates = [];
             var limits = {};
-            
+            console.log(wjson)
             // Loop through components in workflow to gather all our param candidates
-            jQuery.each(wjson[0].workflow, function(idx, comp) {
+            jQuery.each(wjson.components, function(idx, comp) {
             
                 var comppath = comp.pathname.split('.').slice(-1)[0];
                 
