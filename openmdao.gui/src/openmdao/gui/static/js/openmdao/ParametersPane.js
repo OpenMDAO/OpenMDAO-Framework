@@ -113,7 +113,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     function promptForParameter(callback, model) {
     
         // Figure out all of our candidates for parameter addition.
-        var parentpath = pathname.split('.').slice(0, -1)[0];
+        var parentpath = pathname.split('.').slice(0, -1).join('.');
         model.getDataflow(parentpath, function findComps(wjson) {
         
             var candidates = [];
