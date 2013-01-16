@@ -12,15 +12,6 @@
         .dataTables_filter { float: right; padding-right: 6px; }
         .DataTables_sort_icon { float: right; }
 
-        #editProjectModal {
-          width:700px;
-          left:20%;
-          margin: auto auto auto auto; /* place center */
-        }
-        #editProjectModal .modal-body{
-          max-height:550px;
-        }
-
         #newProjectModal {
           width:45%;
           left:20%;
@@ -30,31 +21,27 @@
           max-height:550px;
         }
 
-        #createProjectModal {
-          width:60%;
+        #editProjectModal {
+          width:700px;
           left:20%;
           margin: auto auto auto auto; /* place center */
         }
-
-        #createProjectModal .modal-body{
-          max-height:500px;
+        #editProjectModal .modal-body{
+          max-height:550px;
         }
-        
-        #createProjectModal .form-actions{
+        #editProjectModal .form-actions{
           padding-top:0px;
           margin-top:0px;
           margin-bottom:0px;
           border-top:0px;
         }
-        
-        #createProjectModal form{
+        #editProjectModal form{
           margin-bottom: 0px ;
         }
 
-        div#importProjectModal .modal-body{
+        #importProjectModal .modal-body{
           max-height:600px;
         }
-
         #importProjectModal{
           width:50%;
           left:25%;
@@ -62,33 +49,13 @@
           max-height:900px;
         }
 
-        #editProjectModal .form-actions{
-          padding-top:0px;
-          margin-top:0px;
-          margin-bottom:0px;
-          border-top:0px;
-        }
-        
-        #editProjectModal form{
-          margin-bottom: 0px ;
-        }
-
-
     </style>
+
     <script src="/static/js/jquery-1.7.1.min.js"></script>
-    <!-- <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script> -->
     <script src="/static/js/jquery.dataTables.min.js"></script>
     <script src="/static/bootstrap/js/DT_bootstrap.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
-
-
-    <script src="https://raw.github.com/makeusabrew/bootbox/v3.0.0/bootbox.min.js"></script>
-
-
-    <!--<script src="http://damien.antipa.at/wp-content/uploads/2011/10/jquery.bootstrap.confirm.popover.js"></script>-->
-
-    <!--<script src="https://gist.github.com/raw/1336443/0c1a8a409dabadb4afc7b5f16eb684881c025eb6/jquery.bootstrap.confirm.popover.js"></script>-->
-    <!--<script src="/static/js/jquery.bootstrap.confirm.popover.js"></script> -->
+    <script src="/static/js/bootbox.min.js"></script>
 
     <script>
         /* fnDrawCallback turns off the pagination if there is only one page */
@@ -108,72 +75,96 @@
                  }
                 }) ;
 
-
+            /* confirmation dialog for project deletion */
             jQuery('.deleteProject').submit(function() {
                 var currentForm = this;
-                bootbox.confirm("Are you sure you want to delete this project?", function(result) {
+                bootbox.confirm(
+                    "Are you sure you want to delete the project, " + 
+                    this.querySelector( "input[name='projectname']").getAttribute("value") + 
+                    " ?", 
+                    function(result) {
                     if (result) {
                         currentForm.submit();
                     }
                 });
-
                 return false;
             });
+          
+            /* controls what happens when the Cancel button in the import dialog is clicked */
+            $("#importProjectModal #import-cancel").click(function(event) {
+                $("#import-metadata-inputs").empty() ;
+                $("#import-file-input").show() ;
+                return true;
+             });
 
+            $("#importForm").submit(function(event) {
+               /* The import form is a two step process. The
+                   first step is just to let the user select the project.
+                  The second step is to let the user edit the metadata
+                   before actually importing the project.
+                  This initial if statement checks to see if we are at 
+                   the second stage by looking for the Import Project 
+                   button. If yes, then just submit the form normally.
+               */
+               if ( $(this).find("#import-project").is(":visible") ) {
+                  return true;
+               }
 
+               /* 
+                  If at the first step, just get the metadata of the 
+                    project selected and fill in the metadata fields.
+                  Use Ajax for this.
+               */
+               var formData = new FormData($(this)[0]);
+
+               /* stop form from submitting normally */
+               event.preventDefault();
+
+               /* Get the data using post and put the results in a div on the form */
+               $.ajax({
+                        url: "/projects/import/",
+                        type: 'POST',
+                        data: formData,
+                        async: true,
+                        success: function (data) {
+                                   $("#import-file-input").hide() ;
+                                   $("#import-metadata-fields").html(data);
+                                 },
+                        cache: false,
+                        contentType: false,
+                        processData: false
+                });
+
+                /* In moving to the second step, show the 
+                    Import button and hide the Load button */
+                $("#load-project").hide() ;
+                $("#import-project").show() ;
+
+                return false ;
+ 
+             }); // End of submit call
         }
-        ) ;
-
+        ) ; // End of ready call
 
     </script>
 {% end %}
 
-    {% block breadcrumbs %}
-    <!--
-      <ul class="breadcrumb">
-         <li><a href="/">Projects</a> <span class="divider">/</span></li>
-      </ul>
-    -->
-    {% end %}
-
+{% block breadcrumbs %}
+{% end %}
 
 {% block content %}
     <div class='alert alert-info fade in' data-alert='alert'>
       <h3>
-
         <strong>
           Welcome to OpenMDAO
         </strong>
       </h3>
     </div>
 
-<!--    <a class="btn" href='/projects/new/'>Create</a> &nbsp &nbsp <a class="btn" href='/projects/add/'>Import</a>
--->
-
-<!-- Button to trigger create modal -->
-<!-- <a href="#createProjectModal" role="button" class="btn" data-toggle="modal">New Project</a> -->
 <a href="#newProjectModal" role="button" class="btn" data-toggle="modal">New Project</a>
-<!-- Button to trigger import modal -->
-<!-- <a href="#importProjectModal" role="button" class="btn" data-toggle="modal">Import Project</a> -->
 <a href="#importProjectModal" role="button" class="btn" data-toggle="modal">Import Project</a>
-
 <a class="btn pull-right" href='/exit'>Exit</a>
  
- 
-<!-- Modal -->
-<div id="createProjectModal" class="modal hide fade bigModal" tabindex="-1" 
-     role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" 
-     data-remote="/projects/new/">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-    <h3 id="myModalLabel">New Project<small> ( * indicates a required field )</small></h3>
-  </div>
-
-  <div class="modal-body">
-  </div>
-</div>
- 
-<!-- Modal -->
 <div id="editProjectModal" class="modal hide fade bigModal" tabindex="-1" 
      role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" 
      >
@@ -186,110 +177,53 @@
   </div>
 </div>
 
-
-<!-- Modal -->
-<div id="importProjectModal_old" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div id="importProjectModal" class="modal hide fade" tabindex="-1" 
+     role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
     <h3 id="myModalLabel">Import Project</h3>
   </div>
 
-  <form method="POST" enctype="multipart/form-data" action="/projects/add/">
-  <div class="modal-body">
-    <p class="help-block">Select an OpenMDAO project file to import</p>
-    <input type="file" name="myfile" class='button' />
-
-
-
-  </div>
-  <div class="modal-footer">
-    <!--
-    <input type="submit" value="Add Project" class="btn btn-primary" />
-    <input name="cancel" class="btn" type="submit" value="Cancel"/>
-    -->
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
-    <button class="btn btn-primary">Import Project</button>
-  </div>
-  </form>
-</div>
-
-<!-- Modal -->
-<div id="importProjectModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-    <h3 id="myModalLabel">Import Project</h3>
-  </div>
-
-  <form method="POST" enctype="multipart/form-data" action="/projects/add/">
+  <form id="importForm" method="POST" enctype="multipart/form-data" action="/projects/import/">
   <div class="modal-body">
 
-      <div class="control-group required">
+      <div id="import-file-input" class="control-group required">
         <label class="control-label" for="id_myfile">
           <abbr title="required">*</abbr>  
           Select an OpenMDAO project file to import:
         </label>
-        <input type="file" name="myfile" id="id_myfile" class='button' />
+        <input type="file" name="myfile" id="id_myfile4" class='button' />
       </div>
 
-      <!-- Name -->
-      <div class="control-group string required">
-        <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
-        <div class="controls">
-          <input class="string required span6" id="id_project_name" name="projectname" size="50" type="text" 
-                 value="" />
-        </div>
+      <div id="import-metadata-fields">
       </div>
 
-      <!-- Description -->
-      <div class="control-group text optional">
-        <label class="text optional control-label" for="id_description">Description:</label>
-        <div class="controls">
-          <textarea class="text optional span6" cols="40" id="id_description" 
-                    name="description" rows="10">
-          </textarea>
-        </div>
-      </div>
+  </div> <!-- end of modal body -->
 
-      <!-- Version -->
-      <div class="control-group string">
-        <label class="string control-label" for="id_version">Version:</label>
-        <div class="controls">
-          <input class="string span6" id="id_version" name="version" size="5" type="text"
-                  value="" maxlength="5" />
-          <p class="help-block">Version format is user defined</p>
-        </div>
-      </div>
-
-
-
-  </div>
   <div class="modal-footer">
-    <!--
-    <input type="submit" value="Add Project" class="btn btn-primary" />
-    <input name="cancel" class="btn" type="submit" value="Cancel"/>
-    -->
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
-    <button class="btn btn-primary">Import Project</button>
+    <button id="import-cancel" class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+    <button id="load-project" class="btn btn-primary">Load Project</button>
+    <button id="import-project" class="hide btn btn-primary">Import Project</button>
   </div>
+
   </form>
 </div>
 
-<!-- Modal -->
 <div id="newProjectModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
     <h3 id="myModalLabel">New Project</h3>
   </div>
 
-  <form method="POST" enctype="multipart/form-data" action="/projects/new2/">
+  <form method="POST" enctype="multipart/form-data" action="/projects/new/">
   <div class="modal-body">
 
       <!-- Name -->
       <div class="control-group string required">
         <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
         <div class="controls">
-          <input class="string required span6" id="id_project_name" name="projectname" size="50" type="text" 
-                 value="" />
+          <input class="string required span6" id="id_project_name" name="projectname" 
+                 size="50" type="text" value="" />
         </div>
       </div>
 
@@ -312,17 +246,14 @@
           <p class="help-block">Version format is user defined</p>
         </div>
       </div>
-
-
-
   </div>
+
   <div class="modal-footer">
     <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
     <button class="btn btn-primary">New Project</button>
   </div>
   </form>
 </div>
-
     
     <hr/>
 
@@ -346,37 +277,32 @@
             <td style="white-space:nowrap;">{{ project['created'][:-10] }}</td>
             <td style="white-space:nowrap;">{{ project['file_modified'][:-3] }}</td>
             <td style="white-space:nowrap;" width="140" style="padding-right: 0px;">
-
-
-<!-- Button to trigger edit modal -->
-<a href="/projects/{{ project['id'] }}" role="button" class="btn btn-link" data-toggle="modal" 
-   data-target="#editProjectModal"><i class="icon-pencil"></i></a>
-
-
-                <!-- <form action="/projects/{{ project['id'] }}" method="GET" style="display:inline"> -->
-                <!--     <\!-- <input type="submit" value="Details" class="btn btn-link"/> -\-> -->
-                <!--     <button type="submit" value="Details" class="btn btn-link" style="display:inline"> -->
-                <!--       <i class="icon-pencil"></i> -->
-                <!--     </button> -->
-                <!-- </form> -->
-                <form class="deleteProject" action="/projects/delete/{{ project['id'] }}/" method="POST" style="display:inline">
+              <!-- Button to trigger edit modal -->
+              <a href="/projects/{{ project['id'] }}" role="button" 
+                 class="btn btn-link" data-toggle="modal" 
+                 data-target="#editProjectModal" title="Edit"><i class="icon-pencil"></i>
+              </a>
+              <!-- delete project button -->
+              <form class="deleteProject" 
+                    action="/projects/delete/{{ project['id'] }}/" 
+                    method="POST" style="display:inline">
                   <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
-                  <button type="submit" value="Delete this project" class="btn btn-link" style="display:inline">
+                  <input type="hidden" name="projectname" value="{{ project['projectname'] }}" />
+                  <button type="submit" title="Delete" value="Delete this project" class="btn btn-link" style="display:inline">
                     <i class="icon-trash"></i>
                   </button>
-                </form>
+              </form>
 
-                <!--
-                <a class="delete" href="/projects/delete/{{ project['id'] }}/?projpath={{ project['projpath'] }}"><i class="icon-trash"></i></a>
-                -->
-                <!--<a href="/projects/delete/{{ project['id'] }}/?projpath={{ project['projpath'] }}"><i class="icon-trash"></i> Home</a>-->
-
-                <form action="/projects/download/{{ project['id'] }}/" method="GET" style="display:inline">
-                  <button type="submit" value="Export this project" class="btn btn-link" style="display:inline">
+              <!-- export button -->
+              <form action="/projects/download/{{ project['id'] }}/" 
+                    method="GET" style="display:inline">
+                  <button type="submit" title="Export" 
+                          value="Export this project" 
+                          class="btn btn-link" style="display:inline">
                     <i class="icon-download-alt"></i>
                   </button>
                   <!-- <input type="submit" value="Export this project" /> -->
-                </form>
+              </form>
 
             </td>
         </tr>
