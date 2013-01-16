@@ -118,22 +118,22 @@ html_theme = "default"
 # using these theme options will make the docs share a consistent
 # look with the OpenMDAO docs
 html_theme_options = {
-     "headtextcolor": "darkred",
-     "headbgcolor": "gainsboro",
+     "headtextcolor": "#000099",
+     "headbgcolor": "#e2b530",
      "headfont": "Arial",
-     "relbarbgcolor": "black",
+     "relbarbgcolor": "#000099",
      "relbartextcolor": "white",
      "relbarlinkcolor": "white",
-     "sidebarbgcolor": "gainsboro",
-     "sidebartextcolor": "darkred",
-     "sidebarlinkcolor": "black",
-     "footerbgcolor": "gainsboro",
-     "footertextcolor": "darkred",
+     "sidebarbgcolor": "#c7c7c7",
+     "sidebartextcolor": "black",
+     "sidebarlinkcolor": "#000099",
+     "footerbgcolor": "white",
+     "footertextcolor": "#000099",
      "textcolor": "black",
-     "codebgcolor": "#FFFFCC",
-     "linkcolor": "darkred",
-     "codebgcolor": "#ffffcc",
+     "codebgcolor": "#ffffa7",
+     "linkcolor": "#005ce6",
     }
+
 
 todo_include_todos = True
 
@@ -141,3 +141,4 @@ todo_include_todos = True
 intersphinx_mapping = {'http://docs.python.org/dev': None}
 
 autodoc_member_order = 'groupwise'
+
