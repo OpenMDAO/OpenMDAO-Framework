@@ -5,7 +5,6 @@
 {% end %}
 
 {% block head %}
-    <!--<link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">-->
     <link href="/static/bootstrap/css/DT_bootstrap.css" rel="stylesheet" media="screen">
     <style type="text/css">
         .dataTables_length { float: left }
@@ -13,18 +12,16 @@
         .DataTables_sort_icon { float: right; }
 
         #newProjectModal {
-          width:45%;
-          left:20%;
-          margin: auto auto auto auto; /* place center */
+           width: 500px;
+           margin: -50px 0 0 -250px; 
         }
         #newProjectModal .modal-body{
           max-height:550px;
         }
 
         #editProjectModal {
-          width:700px;
-          left:20%;
-          margin: auto auto auto auto; /* place center */
+           width: 500px;
+           margin: -50px 0 0 -250px; 
         }
         #editProjectModal .modal-body{
           max-height:550px;
@@ -39,23 +36,23 @@
           margin-bottom: 0px ;
         }
 
-        #importProjectModal .modal-body{
-          max-height:600px;
+        #importProjectModal {
+           width: 500px;
+           margin: -50px 0 0 -250px; 
         }
-        #importProjectModal{
-          width:50%;
-          left:25%;
-          margin: auto auto auto auto; /* place center */
-          max-height:900px;
+        #importProjectModal .modal-body{
+          max-height:550px;
         }
 
     </style>
 
     <script src="/static/js/jquery-1.7.1.min.js"></script>
+    <script src="/static/js/jquery.validate.js"></script>
     <script src="/static/js/jquery.dataTables.min.js"></script>
     <script src="/static/bootstrap/js/DT_bootstrap.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script src="/static/js/bootbox.min.js"></script>
+
 
     <script>
         /* fnDrawCallback turns off the pagination if there is only one page */
@@ -92,12 +89,15 @@
           
             /* controls what happens when the Cancel button in the import dialog is clicked */
             $("#importProjectModal #import-cancel").click(function(event) {
-                $("#import-metadata-inputs").empty() ;
+                $("#load-project").show() ;
+                $("#import-project").hide() ;
+                $("#import-metadata-fields").empty() ;
                 $("#import-file-input").show() ;
+                $("#id_projectfile").val("") ;
                 return true;
              });
 
-            $("#importForm").submit(function(event) {
+            $("#importProjectModalForm").submit(function(event) {
                /* The import form is a two step process. The
                    first step is just to let the user select the project.
                   The second step is to let the user edit the metadata
@@ -108,6 +108,11 @@
                */
                if ( $(this).find("#import-project").is(":visible") ) {
                   return true;
+               }
+          
+               if ( ! $("#id_projectfile").val() ) {
+                   bootbox.alert("Please select an OpenMDAO project file!");
+                   return false;
                }
 
                /* 
@@ -143,6 +148,54 @@
                 return false ;
  
              }); // End of submit call
+
+
+      <!-- Validation -->
+      $("#newProjectModalForm").validate({
+          rules:{
+                 id_project_name:{required:true,maxlength:40},
+                 },
+          messages:{
+                 id_project_name:{required:"Enter a project name"},
+                 },
+          errorClass: "help-inline",
+          errorElement: "span",
+          highlight:function(element, errorClass, validClass)
+                    {
+                      $(element).parents('.control-group').addClass('error');
+                    },
+          unhighlight: function(element, errorClass, validClass)
+                    {
+                      $(element).parents('.control-group').removeClass('error');
+                      $(element).parents('.control-group').addClass('success');
+                    }
+         });
+
+      $("#importProjectModalForm").validate({
+          rules:{
+                 id_projectfile:{required:true},
+                 id_project_name:{required:true,maxlength:40}
+                 },
+          messages:{
+                 id_projectfile:{required:"Must load an existing OpenMDAO project file"},
+                 id_project_name:{required:"Enter a project name"},
+                 },
+          errorClass: "help-inline",
+          errorElement: "span",
+          highlight:function(element, errorClass, validClass)
+                    {
+                      $(element).parents('.control-group').addClass('error');
+                    },
+          unhighlight: function(element, errorClass, validClass)
+                    {
+                      $(element).parents('.control-group').removeClass('error');
+                      $(element).parents('.control-group').addClass('success');
+                    }
+         });
+
+
+
+
         }
         ) ; // End of ready call
 
@@ -166,11 +219,10 @@
 <a class="btn pull-right" href='/exit'>Exit</a>
  
 <div id="editProjectModal" class="modal hide fade bigModal" tabindex="-1" 
-     role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" 
-     >
+     role="dialog" >
   <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-    <h3 id="myModalLabel">Edit Project Details<small> ( * indicates a required field )</small></h3>
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Edit Project<small> ( * indicates a required field )</small></h3>
   </div>
 
   <div class="modal-body">
@@ -178,21 +230,22 @@
 </div>
 
 <div id="importProjectModal" class="modal hide fade" tabindex="-1" 
-     role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+     role="dialog">
   <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-    <h3 id="myModalLabel">Import Project</h3>
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Import Project</h3>
   </div>
 
-  <form id="importForm" method="POST" enctype="multipart/form-data" action="/projects/import/">
+  <form id="importProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/import/">
   <div class="modal-body">
 
       <div id="import-file-input" class="control-group required">
-        <label class="control-label" for="id_myfile">
+        <label class="control-label" for="id_projectfile">
           <abbr title="required">*</abbr>  
           Select an OpenMDAO project file to import:
         </label>
-        <input type="file" name="myfile" id="id_myfile4" class='button' />
+        <input type="file" name="projectfile" id="id_projectfile" 
+               class='button' />
       </div>
 
       <div id="import-metadata-fields">
@@ -201,7 +254,7 @@
   </div> <!-- end of modal body -->
 
   <div class="modal-footer">
-    <button id="import-cancel" class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+    <button id="import-cancel" class="btn" data-dismiss="modal">Cancel</button>
     <button id="load-project" class="btn btn-primary">Load Project</button>
     <button id="import-project" class="hide btn btn-primary">Import Project</button>
   </div>
@@ -209,21 +262,23 @@
   </form>
 </div>
 
-<div id="newProjectModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div id="newProjectModal" class="modal hide fade" tabindex="-1" 
+     role="dialog">
   <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-    <h3 id="myModalLabel">New Project</h3>
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>New Project</h3>
   </div>
 
-  <form method="POST" enctype="multipart/form-data" action="/projects/new/">
+  <form id="newProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/new/">
   <div class="modal-body">
 
       <!-- Name -->
       <div class="control-group string required">
         <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
         <div class="controls">
-          <input class="string required span6" id="id_project_name" name="projectname" 
-                 size="50" type="text" value="" />
+          <input class="string required span6" 
+                 id="id_project_name" name="projectname" 
+                 size="40" type="text" maxlength="40" value="" />
         </div>
       </div>
 
@@ -232,7 +287,7 @@
         <label class="text optional control-label" for="id_description">Description:</label>
         <div class="controls">
           <textarea class="text optional span6" cols="40" id="id_description" 
-                    name="description" rows="10">
+                    name="description" rows="10" maxlength="200">
           </textarea>
         </div>
       </div>
@@ -241,15 +296,15 @@
       <div class="control-group string">
         <label class="string control-label" for="id_version">Version:</label>
         <div class="controls">
-          <input class="string span6" id="id_version" name="version" size="5" type="text"
-                  value="" maxlength="5" />
+          <input class="string span6" id="id_version" name="version" 
+                 type="text" value="" maxlength="40" />
           <p class="help-block">Version format is user defined</p>
         </div>
       </div>
   </div>
 
   <div class="modal-footer">
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+    <button class="btn" data-dismiss="modal">Cancel</button>
     <button class="btn btn-primary">New Project</button>
   </div>
   </form>

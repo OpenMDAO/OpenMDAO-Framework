@@ -1,6 +1,6 @@
 
     <form action="/projects/{{ project['id'] }}/" method="POST" accept-charset="UTF-8"
-          class="simple_form form-horizontal"  novalidate="novalidate">
+          class="simple_form">
 
 
       <!-- Name -->
@@ -36,7 +36,7 @@
       <div class="modal-footer">
       <div class="form-actions">
 
-        <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+        <button class="btn" data-dismiss="modal">Cancel</button>
         <!-- <a class="btn" href="/projects/">Cancel</a> -->
 
         {% if project['projpath'] %}

@@ -290,7 +290,7 @@ class ImportHandler(ReqHandler):
             # Go through the process of creating a new project directory
             #   so we can read the name, description and version from the
             #   settings file.
-            sourcefile = self.request.files['myfile'][0]
+            sourcefile = self.request.files['projectfile'][0]
             if sourcefile:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
@@ -326,7 +326,7 @@ class ImportHandler(ReqHandler):
                     forms[field] = self.request.arguments[field][0]
 
 
-            sourcefile = self.request.files['myfile'][0]
+            sourcefile = self.request.files['projectfile'][0]
             if sourcefile:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
