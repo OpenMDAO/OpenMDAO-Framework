@@ -126,6 +126,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
+    item.setAttribute('pathname', this.pathname);
 
     if (this.pathname !== '') {
         var circleIMG;
@@ -236,7 +237,12 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.data('pathname', this.pathname);
         elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };
         elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
+        
+        // Boxes can be dragged into workflow list.
+        elm.draggable({ helper: 'clone', 
+                        appendTo: 'body' } ) ;
 
+        // Component names can be dropped into the diagram.
         elm.droppable ({
             accept: '.IComponent',
             greedy: true,
