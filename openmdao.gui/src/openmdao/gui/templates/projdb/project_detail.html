@@ -1,11 +1,13 @@
 
-    <form action="/projects/{{ project['id'] }}/" method="POST" accept-charset="UTF-8"
+    <form action="/projects/{{ project['id'] }}/" method="POST" \
+          accept-charset="UTF-8"
+          id="editProjectModalForm"
           class="simple_form">
 
 
       <!-- Name -->
       <div class="control-group string required">
-        <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
+        <label class="string required control-label" for="id_project_name"><abbr title="required">*</abbr>  Project Name:</label>
         <div class="controls">
           <input class="string required span6" id="id_project_name" name="projectname" size="50" type="text" 
                  value="{{ project['projectname'] }}" />
