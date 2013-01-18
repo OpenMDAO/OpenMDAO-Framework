@@ -239,7 +239,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
         
         // Boxes can be dragged into workflow list.
-        var name = this.name;
         elm.draggable({ appendTo: 'body',
                         helper: 'clone',
                         opacity: 0.15
