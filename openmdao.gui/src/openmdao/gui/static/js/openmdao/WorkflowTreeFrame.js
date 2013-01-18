@@ -29,15 +29,19 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
             if (item.workflow) {
                 interfaces = ['IDriver'];
             }
+            else if (item.driver) {
+                interfaces = ['IAssembly'];
+                name = name + '.driver';
+            }
             else {
                 interfaces = ['IComponent'];
             }
             
             // if my name is just 'driver', qualify with parent (assembly) name
             if (name === 'driver') {
+                interfaces = ['IAssembly'];
                 parent_assy = openmdao.Util.getPath(pathname);
                 name = openmdao.Util.getName(parent_assy) + '.driver';
-                interfaces = ['IAssembly'];
             }            
             
             interfaces = JSON.stringify(interfaces);
@@ -53,7 +57,8 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                                             openNodes);
             }
             else if (item.driver) {
-                node.children = convertJSON(item.driver.workflow, pathname,
+                node.children = convertJSON(item.driver.workflow,
+                                            pathname + '.driver',
                                             openNodes);
             }
             
@@ -68,7 +73,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 
     /** update the tree with JSON model data */
     function updateTree(json) {
-        
+        console.log(json);
         // Grab paths of currently open nodes.
         var openNodes = [];
         self.elm.find("li.jstree-open").each(function () {
@@ -112,36 +117,32 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         })
         .bind("loaded.jstree", function (e, data) {
             jQuery('#'+id+' li').each(function() {
-                jQuery(this).droppable({
+                jQuery(this.children[1]).droppable({
                     accept: '.DataflowFigure',
                     greedy: true,
-                    out: function(ev,ui){
-                        var droppedObject = jQuery(ui.draggable).clone(),
-                            source_path = droppedObject.attr('pathname'),
-                            target_path = this.getAttribute('path');
+                    tolerance: 'pointer',
+                    out: function(ev, ui){
+                        this.removeClass('jstree-hovered');
                     },
-                    over: function(ev,ui){
-                        var droppedObject = jQuery(ui.draggable).clone(),
-                            source_path = droppedObject.attr('pathname'),
-                            target_path = this.getAttribute('path');
+                    over: function(ev, ui){
+                        this.addClass('jstree-hovered');
                     },
                     drop: function(ev, ui) {
                         
                         var droppedObject = jQuery(ui.draggable).clone(),
                             source_path = droppedObject.attr('pathname'),
-                            target_path = this.getAttribute('path'),
-                            target_iface = this.getAttribute('interfaces');
+                            target_iface = this.parentElement.getAttribute('interfaces');
                         
                         // If we dropped on a driver, add to its workflow.
                         // Otherwise, add to the parent driver's workflow.
                         if (target_iface.indexOf("IComponent") >= 0) {
-                            target_path = this.getAttribute('parent');
+                            target_path = this.parentElement.getAttribute('parent');
                         }
                         else {
-                            target_path = this.getAttribute('path');
+                            target_path = this.parentElement.getAttribute('path');
                         }
                         console.log(target_iface);
-                        console.log(this.getAttribute('path'), '--', this.getAttribute('parent'));
+                        console.log(this.parentElement.getAttribute('path'), '--', this.parentElement.getAttribute('parent'));
                         console.log(target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '")');
                         cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '")';
                         model.issueCommand(cmd);                        
@@ -182,7 +183,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             new openmdao.PropertiesFrame(id, model).editObject(path);
                         }
         };
-        if (jQuery.inArray('IAssembly',interfaces) >= 0) {
+        /*if (jQuery.inArray('IAssembly',interfaces) >= 0) {
             menu.show_dataflow = {
                 "label"  : 'Show Dataflow',
                 "action" :  function(node) {
@@ -196,7 +197,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                                 workflow_fn(path+'.driver');
                             }
             };
-        }
+        }*/
         if (jQuery.inArray('IDriver',interfaces) >= 0) {
             menu.show_workflow = {
                 "label"  : 'Show Workflow',
