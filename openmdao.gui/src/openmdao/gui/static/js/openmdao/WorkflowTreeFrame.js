@@ -115,6 +115,16 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 jQuery(this).droppable({
                     accept: '.DataflowFigure',
                     greedy: true,
+                    out: function(ev,ui){
+                        var droppedObject = jQuery(ui.draggable).clone(),
+                            source_path = droppedObject.attr('pathname'),
+                            target_path = this.getAttribute('path');
+                    },
+                    over: function(ev,ui){
+                        var droppedObject = jQuery(ui.draggable).clone(),
+                            source_path = droppedObject.attr('pathname'),
+                            target_path = this.getAttribute('path');
+                    },
                     drop: function(ev, ui) {
                         
                         var droppedObject = jQuery(ui.draggable).clone(),

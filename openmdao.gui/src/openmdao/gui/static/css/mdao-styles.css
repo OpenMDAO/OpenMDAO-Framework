@@ -292,14 +292,14 @@ nav ul ul a.omg-disabled:hover {
     background-image:url("/static/images/icons.png"); 
     background-repeat:no-repeat; 
     background-color:transparent; 
-    background-position:-16px 0px;
+    background-position:-16px 0px !important;
 }
 
 .jstree-openmdao a > ins.jstree-component {
     background-image:url("/static/images/icons.png"); 
     background-repeat:no-repeat; 
     background-color:transparent; 
-    background-position:0px 0px;
+    background-position:0px 0px !important;
 }
 
 /* specific icons for the items in the file editor tree */
