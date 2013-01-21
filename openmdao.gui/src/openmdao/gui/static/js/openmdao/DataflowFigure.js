@@ -52,6 +52,7 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
     // do not allow moving or resizing
     this.setCanDrag(false);
     this.setResizeable(false);
+    //this.draggable = new draw2d.Draggable(this.html, draw2d.Draggable.DRAG_X | draw2d.Draggable.DRAG_Y);
 
     this.inputsFigure = null;
     this.outputsFigure = null;
@@ -125,6 +126,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
+    item.setAttribute('pathname', this.pathname);
 
     if (this.pathname !== '') {
         var circleIMG;
@@ -235,7 +237,14 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.data('pathname', this.pathname);
         elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };
         elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
+        
+        // Boxes can be dragged into workflow list.
+        elm.draggable({ appendTo: 'body',
+                        helper: 'clone',
+                        opacity: 0.15
+                      });
 
+        // Component names can be dropped into the diagram.
         elm.droppable ({
             accept: '.IComponent',
             greedy: true,
