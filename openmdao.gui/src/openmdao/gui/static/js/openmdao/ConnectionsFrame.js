@@ -54,7 +54,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         r = Raphael(connectionsDiv.attr('id')),
         // variable selectors and connect button
         variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
-                variablesHTML = '<div style="'+variablesCSS+'"><table>'
+        variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
@@ -257,6 +257,24 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         }
     }
 
+    /** get the base name of the variable, removing the parent component name and array index */
+    function getVarBaseName(var_name) {
+        var tokens;
+        if (var_name.indexOf('.') >= 0) {
+            tokens = var_name.split('.');
+            if (jQuery.inArray(tokens[0],component_list)) {
+                var_name = tokens[1];   // first token is component name
+            }
+            else {
+                var_name = tokens[0];   // first token is vartree name
+            }
+        }
+        if (var_name.indexOf('[') >= 0) {
+            var_name = var_name.split('[')[0];  // first token is array var name
+        }
+        return var_name;
+    }
+
     /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
         if (!data || !data.sources || !data.destinations) {
@@ -270,7 +288,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             var i = 0,
                 x = 15,
                 y = 10,
-                conn_list = jQuery.map(data.connections, function(n) {
+                var_list = jQuery.map(data.connections, function(n) {
                     return n;
                 }),
                 src_list  = jQuery.map(data.sources, function(n) {
@@ -280,14 +298,13 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                     return self.dst_comp ? self.dst_comp+'.'+n.name : n.name;
                 });
 
-            for (i = 0; i <conn_list.length; i++) {
-                if (conn_list[i].indexOf('.') >= 0) {
-                    conn_list[i]=conn_list[i].split('.')[1];
-                }
-            }
+            // reduce var names to their roots (for filtering)
+            var_list = jQuery.map(var_list, function(n) {
+                return getVarBaseName(n);
+            }),
 
             jQuery.each(data.sources, function(idx,srcvar) {
-                if (showAllVariables || conn_list.contains(srcvar.name)) {
+                if (showAllVariables || var_list.contains(srcvar.name)) {
                     var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
                     figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
@@ -298,7 +315,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             x = (componentsDiv.width() - connect_button.width())/2;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
-                if (showAllVariables || conn_list.contains(dstvar.name)) {
+                if (showAllVariables || var_list.contains(dstvar.name)) {
                     var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
                     figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
@@ -313,12 +330,20 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             variablesDiv.show();
 
             jQuery.each(data.connections,function(idx,conn) {
-                var src_name = conn[0],
-                    dst_name = conn[1],
+                var src_name = self.src_comp ? self.src_comp+'.'+getVarBaseName(conn[0])
+                                             : getVarBaseName(conn[0]),
+                    dst_name = self.dst_comp ? self.dst_comp+'.'+getVarBaseName(conn[1])
+                                             : getVarBaseName(conn[1]),
                     src_fig = figures[src_name],
-                    dst_fig = figures[dst_name],
-                    c = r.connection(src_fig, dst_fig, "#000", "#fff")
+                    dst_fig = figures[dst_name];
+
+                if (src_fig && dst_fig) {
+                    r.connection(src_fig, dst_fig, "#000", "#fff")
                         .line.node.className.baseVal += ' variable-connection';
+                }
+                else {
+                    debug.error('Cannot draw connection between '+src_name+' and '+dst_name);
+                }
             });
 
             // update the output & input selectors to current outputs & inputs
