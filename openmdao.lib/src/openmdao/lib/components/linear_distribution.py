@@ -6,9 +6,11 @@ from openmdao.lib.datatypes.api import Float, Array
 
 class LinearDistribution(Component): 
     """takes two Float inputs, and provides n Float outputs with a linear 
-    variation between them. Units can be optionally provided """ 
+    variation between them. Units can be optionally provided. If use_array is 
+    True (default) then the output is an array. Otherwise, the output will 
+    be a set of separate variables""" 
 
-    def __init__(self, n=3, units=None): 
+    def __init__(self, n=3, units=None, use_array=True): 
         super(LinearDistribution, self).__init__()
         
         self._n = n
@@ -22,10 +24,15 @@ class LinearDistribution(Component):
 
         self.add('delta', Float(iotype='out', 
             desc='step size for each of the %d levels'%n, units=units))
-        self.add('output', Array(iotype='out', 
-            desc='linearly spaced values from start to end inclusive of the bounds', 
-                          default_value=np.ones(n), shape=(n,), 
-                          dtype=Float, units=units))
+
+        if use_array: 
+            self.add('output', Array(iotype='out', 
+                desc='linearly spaced values from start to end inclusive of the bounds', 
+                default_value=np.ones(n), shape=(n,), 
+                dtype=Float, units=units))
+        else: 
+            for i in range(0, n): 
+                self.add('output_%d'%i, Float(1, iotype="out", desc="linearaly spaced output %d"%i, units=units))    
         
     def execute(self): 
         
