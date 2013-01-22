@@ -124,28 +124,22 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                     greedy: true,
                     tolerance: 'pointer',
                     out: function(ev, ui){
-                        /*target_iface = this.parentElement.getAttribute('interfaces');
+                        target_iface = this.parentElement.getAttribute('interfaces');
                         if (target_iface.indexOf("IComponent") >= 0) {
-                            this.parentElement.parentElement.parentElement.children[1].removeClass('jstree-hovered');
-                            console.log('parent off');
+                            //this.parentElement.parentElement.parentElement.children[1].removeClass('jstree-hovered');
                         }
                         else {
                             this.removeClass('jstree-hovered');
-                            console.log('self off');
-                        }*/
-                        this.removeClass('jstree-hovered');
+                        }
                     },
                     over: function(ev, ui){
-                        /*target_iface = this.parentElement.getAttribute('interfaces');
+                        target_iface = this.parentElement.getAttribute('interfaces');
                         if (target_iface.indexOf("IComponent") >= 0) {
-                            this.parentElement.parentElement.parentElement.children[1].addClass('jstree-hovered');
-                            console.log('parent on');
+                            //this.parentElement.parentElement.parentElement.children[1].addClass('jstree-hovered');
                         }
                         else {
                             this.addClass('jstree-hovered');
-                            console.log('self on');
-                        }*/
-                        this.addClass('jstree-hovered');
+                        }
                     },
                     drop: function(ev, ui) {
                         
