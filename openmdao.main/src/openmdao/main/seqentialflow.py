@@ -37,7 +37,7 @@ class SequentialWorkflow(Workflow):
         """Return a list of component names in this workflow."""
         return self._names[:]
     
-    def add(self, compnames, index=None):
+    def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the end of the workflow by name. """
         if isinstance(compnames, basestring):
             nodes = [compnames]
@@ -47,8 +47,48 @@ class SequentialWorkflow(Workflow):
             nodeit = iter(nodes)
         except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
+        
         for node in nodes:
             if isinstance(node, basestring):
+                
+                # If we are calling from the GUI, we need to check whether 
+                # each node is valid so that we can send a useful error
+                # message.
+                if check:
+                    
+                    self._parent._logger.warning("hey")
+                    name = self._parent.parent.name
+                    if not name:
+                        name = "the top assembly."
+                        
+                    # Components in subassys are never allowed.
+                    if '.' in node:
+                        msg = "Component '%s' is not" % node + \
+                              " in the scope of %s" % name
+                        raise AttributeError(msg)
+                        
+                    # Does the component really exist?
+                    try:
+                        target = self._parent.parent.get(node)
+                    except AttributeError:
+                        msg = "Component '%s'" % node + \
+                              " does not exist in %s" % name
+                        raise AttributeError(msg)
+                    
+                    # Don't add yourself to your own workflow
+                    self._parent._logger.warning(target)
+                    self._parent._logger.warning(self._parent)
+                    if target == self._parent:
+                        msg = "You cannot add a driver to its own workflow"
+                        raise AttributeError(msg)
+                    
+                    # Check for circular dependency in driver workflow
+                    if hasattr(target, 'iteration_set'):
+                        iterset = target.iteration_set()
+                        if self._parent in iterset:
+                            msg = "Driver recursion loop detected"
+                            raise AttributeError(msg)
+                    
                 if index is None:
                     self._names.append(node)
                 else:

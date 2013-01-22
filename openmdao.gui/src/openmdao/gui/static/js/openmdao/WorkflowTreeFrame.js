@@ -52,10 +52,12 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                  'interfaces' : interfaces,
                  'parent' : path
             };
+            // Driver recursion
             if (item.workflow) {
                 node.children = convertJSON(item.workflow, pathname,
                                             openNodes);
             }
+            // Assembly recursion
             else if (item.driver) {
                 node.children = convertJSON(item.driver.workflow,
                                             pathname + '.driver',
@@ -73,7 +75,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 
     /** update the tree with JSON model data */
     function updateTree(json) {
-        console.log(json);
+    
         // Grab paths of currently open nodes.
         var openNodes = [];
         self.elm.find("li.jstree-open").each(function () {
@@ -122,9 +124,27 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                     greedy: true,
                     tolerance: 'pointer',
                     out: function(ev, ui){
+                        /*target_iface = this.parentElement.getAttribute('interfaces');
+                        if (target_iface.indexOf("IComponent") >= 0) {
+                            this.parentElement.parentElement.parentElement.children[1].removeClass('jstree-hovered');
+                            console.log('parent off');
+                        }
+                        else {
+                            this.removeClass('jstree-hovered');
+                            console.log('self off');
+                        }*/
                         this.removeClass('jstree-hovered');
                     },
                     over: function(ev, ui){
+                        /*target_iface = this.parentElement.getAttribute('interfaces');
+                        if (target_iface.indexOf("IComponent") >= 0) {
+                            this.parentElement.parentElement.parentElement.children[1].addClass('jstree-hovered');
+                            console.log('parent on');
+                        }
+                        else {
+                            this.addClass('jstree-hovered');
+                            console.log('self on');
+                        }*/
                         this.addClass('jstree-hovered');
                     },
                     drop: function(ev, ui) {
@@ -141,10 +161,9 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                         else {
                             target_path = this.parentElement.getAttribute('path');
                         }
-                        console.log(target_iface);
                         console.log(this.parentElement.getAttribute('path'), '--', this.parentElement.getAttribute('parent'));
-                        console.log(target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '")');
-                        cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '")';
+                        cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
+                        console.log(cmd);
                         model.issueCommand(cmd);                        
                     }
                 });

@@ -843,7 +843,8 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
-                setattr(self, name, getattr(target, name))
+                #setattr(self, name, getattr(target, name))
+                self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.
         target_lists = [n for n, v in target.traits().items()

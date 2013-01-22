@@ -52,7 +52,6 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
     // do not allow moving or resizing
     this.setCanDrag(false);
     this.setResizeable(false);
-    //this.draggable = new draw2d.Draggable(this.html, draw2d.Draggable.DRAG_X | draw2d.Draggable.DRAG_Y);
 
     this.inputsFigure = null;
     this.outputsFigure = null;
