@@ -263,7 +263,7 @@ class CSVCaseRecorder(object):
         Field i+j+6  - retries
         Field i+j+7  - max_retries
         Field i+j+8  - parent_uuid
-        Field i+j+9 - msg
+        Field i+j+9  - msg
         """
         
         sorted_input_keys = []
