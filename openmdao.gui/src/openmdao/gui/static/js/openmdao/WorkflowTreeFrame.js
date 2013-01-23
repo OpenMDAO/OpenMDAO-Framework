@@ -104,12 +104,12 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             }
                           }
         })
-        .bind("select_node.jstree", function(e, data) {
+        /*.bind("select_node.jstree", function(e, data) {
             if (typeof select_fn === 'function') {
                 var path = data.rslt.obj.attr("path");
                 select_fn(path);
             }
-        })
+        })*/
         .bind("dblclick.jstree", function (e, data) {
             if (typeof dblclick_fn === 'function') {
                 var node = jQuery(e.target).closest("li"),

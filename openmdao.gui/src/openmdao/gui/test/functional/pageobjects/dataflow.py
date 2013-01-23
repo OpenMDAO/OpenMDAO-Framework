@@ -198,7 +198,7 @@ def find_dataflow_figure(page, name, prefix=None, retries=5):
                 if len(header) == 0:
                     # the outermost figure (globals) has no header or name
                     if name == '' and prefix is None:
-                        fig = DataflowFigure(page.browser, page.port, figure)
+                        fig = DataflowFigure(page.browser, page.port, '', figure)
                         return fig
                     else:
                         continue
@@ -208,7 +208,7 @@ def find_dataflow_figure(page, name, prefix=None, retries=5):
                                 ' StaleElementReferenceException')
             else:
                 if fig_name == name:
-                    fig = DataflowFigure(page.browser, page.port, figure)
+                    fig = DataflowFigure(page.browser, page.port, '', figure)
                     if prefix is not None:
                         if prefix:
                             fig.pathname = '%s.%s' % (prefix, name)

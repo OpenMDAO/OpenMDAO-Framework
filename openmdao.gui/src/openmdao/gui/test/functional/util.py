@@ -618,7 +618,7 @@ def get_dataflow_fig_in_assembly_editor(workspace_page, name):
     for fig in all_figs:
         location = fig.find_element_by_xpath("..").get_attribute('id')
         if location == "top-dataflow":
-            return DataflowFigure(workspace_page.browser, workspace_page.port, fig)
+            return DataflowFigure(workspace_page.browser, workspace_page.port, '', fig)
 
     return None
 

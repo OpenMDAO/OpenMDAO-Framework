@@ -1,12 +1,13 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
+openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfaces) {
     this.openmdao_model = model;
     this.pathname = pathname;
+    this.prop_fn = prop_fn;
     this.name = openmdao.Util.getName(pathname);
     this.type = type || '';
     this.valid = valid;
-
+    
     if (arguments.length < 5) { // Refresh doesn't pass all arguments.
         this.baseType = pathname === '' ? 'Component' : 'Assembly';
     }
@@ -52,6 +53,9 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
     // do not allow moving or resizing
     this.setCanDrag(false);
     this.setResizeable(false);
+
+    // allow selection?
+    this.setSelectable(true);
 
     this.inputsFigure = null;
     this.outputsFigure = null;
@@ -420,6 +424,10 @@ openmdao.DataflowFigure.prototype.onDragstart=function(x,y){
         return false;
     }
     else {
+        // Display properties for this item in the properties tab.
+        if (this.prop_fn) {
+            this.prop_fn(this.pathname);
+        }
         return dragStarted;
     }
 };
@@ -721,8 +729,8 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             else {
                 figname = name;
             }
-            fig = new openmdao.DataflowFigure(self.openmdao_model,
-                                              figname, type, valid, interfaces);
+            fig = new openmdao.DataflowFigure(self.openmdao_model, figname, self.prop_fn,
+                                              type, valid, interfaces);
             fig.pythonID = comp.python_id;
             fig.precedence = precedence;
             self.figures[name] = fig;
