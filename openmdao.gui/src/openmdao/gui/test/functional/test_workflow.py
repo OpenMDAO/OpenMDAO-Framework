@@ -66,7 +66,7 @@ def _test_update(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Create model with CONMIN and ExecComp.
-    workspace_page.show_dataflow('top')
+    #workspace_page.show_dataflow('top')
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
     workspace_page.add_library_item_to_dataflow(

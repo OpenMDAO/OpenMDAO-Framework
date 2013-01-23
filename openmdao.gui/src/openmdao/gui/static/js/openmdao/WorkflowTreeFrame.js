@@ -56,7 +56,6 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                  'interfaces' : interfaces,
                  'parent' : parent
             };
-            console.log(node.attr);
             
             // Driver recursion
             if (item.workflow) {
@@ -166,7 +165,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
                         }
                         if (cmd) {
-                            console.log(cmd);
+                            //console.log(cmd);
                             model.issueCommand(cmd);
                         }
                     }
@@ -206,7 +205,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             new openmdao.PropertiesFrame(id, model).editObject(path);
                         }
         };
-        /*if (jQuery.inArray('IAssembly',interfaces) >= 0) {
+        if (jQuery.inArray('IAssembly',interfaces) >= 0) {
             menu.show_dataflow = {
                 "label"  : 'Show Dataflow',
                 "action" :  function(node) {
@@ -214,13 +213,13 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             }
             };
             // shortcut to driver workflow
-            menu.show_workflow = {
+            /*menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) {
                                 workflow_fn(path+'.driver');
                             }
-            };
-        }*/
+            };*/
+        }
         if (jQuery.inArray('IDriver',interfaces) >= 0) {
             menu.show_workflow = {
                 "label"  : 'Show Workflow',
@@ -240,7 +239,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 "label"  : 'Remove from Workflow',
                 "action" :  function(node) {
                                 var cmd = parent +".workflow.remove('" + name + "')";
-                                console.log(cmd);
+                                //console.log(cmd);
                                 model.issueCommand(cmd);
                             }
             };

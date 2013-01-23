@@ -60,7 +60,8 @@ class WorkspacePage(BasePageObject):
     about_button      = ButtonElement((By.ID, 'about-item'))
 
     # Left side.
-    objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    #objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    workflowtree_tab = ButtonElement((By.ID, 'wtree_tab'))
     files_tab   = ButtonElement((By.ID, 'ftree_tab'))
 
     # Object context menu.
@@ -118,8 +119,10 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = \
-            (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        #self.locators["objects"] = \
+        #    (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        self.locators["workflowtree"] = \
+            (By.XPATH, "//div[@id='wtree_pane']//li[@path]")
         self.locators["files"] = \
             (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
@@ -164,7 +167,8 @@ class WorkspacePage(BasePageObject):
         return element
 
     def find_object_button(self, name, delay=0):
-        path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
+        #path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
+        path = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
                 element = WebDriverWait(self.browser, TMO).until(
@@ -348,8 +352,10 @@ class WorkspacePage(BasePageObject):
 
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
+        #WebDriverWait(self.browser, TMO).until(
+            #lambda browser: browser.find_element(By.ID, 'otree_pane'))
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'otree_pane'))
+            lambda browser: browser.find_element(By.ID, 'wtree_pane'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
@@ -359,16 +365,18 @@ class WorkspacePage(BasePageObject):
 
     def select_object(self, component_name):
         """ Select `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
 
     def expand_object(self, component_name):
         """ Expands `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//ins" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -376,8 +384,9 @@ class WorkspacePage(BasePageObject):
 
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -393,24 +402,24 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
-    def show_workflow(self, component_name):
-        """ Show workflow of `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
-        element = WebDriverWait(self.browser, TMO).until(
-                      lambda browser: browser.find_element_by_xpath(xpath))
-        element.click()
-        time.sleep(0.5)
-        # Try to recover from context menu not getting displayed.
-        for retry in range(3):
-            chain = ActionChains(self.browser)
-            chain.context_click(element).perform()
-            try:
-                self('obj_workflow').click()
-                break
-            except TimeoutException:
-                if retry >= 2:
-                    raise
+    #def show_workflow(self, component_name):
+        #""" Show workflow of `component_name`. """
+        #self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        #element = WebDriverWait(self.browser, TMO).until(
+                      #lambda browser: browser.find_element_by_xpath(xpath))
+        #element.click()
+        #time.sleep(0.5)
+        ## Try to recover from context menu not getting displayed.
+        #for retry in range(3):
+            #chain = ActionChains(self.browser)
+            #chain.context_click(element).perform()
+            #try:
+                #self('obj_workflow').click()
+                #break
+            #except TimeoutException:
+                #if retry >= 2:
+                    #raise
 
     def show_properties(self):
         """ Display properties. """
