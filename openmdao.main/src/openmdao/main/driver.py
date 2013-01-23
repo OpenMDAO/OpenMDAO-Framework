@@ -36,7 +36,7 @@ class Driver(Component):
     recorders = List(Slot(ICaseRecorder, required=False),
                      desc='Case recorders for iteration data.')
 
-    # Extra variables for printing
+    # Extra variables for adding to CaseRecorders
     printvars = List(Str, iotype='in', 
                      desc='List of extra variables to output in the recorders.')
 
@@ -388,6 +388,9 @@ class Driver(Component):
                 val = con.evaluate(self.parent)
                 case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
 
+        # Pull iteration coord from workflow
+        case_output.append(["iteration", self.workflow._iterbase('')])
+
         # Additional user-requested variables
         for printvar in self.printvars:
 
@@ -408,11 +411,7 @@ class Driver(Component):
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
-        # Pull iteration coord from workflow
-        coord = self.workflow._iterbase('')
-
-        case = Case(case_input, case_output, label=coord,
-                    parent_uuid=self._case_id)
+        case = Case(case_input, case_output, parent_uuid=self._case_id)
 
         for recorder in self.recorders:
             recorder.record(case)

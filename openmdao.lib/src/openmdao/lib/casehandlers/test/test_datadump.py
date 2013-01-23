@@ -68,7 +68,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.driver.printvars = ['*']
         self.top.run()
         expected = [
-            'Case: 1',
+            'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      driver.directory: ',
@@ -100,6 +100,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.derivative_exec_count: 0',
             '      driver.exec_count: 1',
             '      driver.itername: ',
+            '      iteration: 1',
             '      nested.comp1.derivative_exec_count: 0',
             '      nested.comp1.exec_count: 1',
             '      nested.comp1.itername: 1-1.1-1',
@@ -152,7 +153,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.driver.printvars = ['*comp1*']
         self.top.run()
         expected = [
-            'Case: 1',
+            'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      nested.comp1.directory: ',
@@ -162,6 +163,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      nested.doublenest.comp1.force_execute: False',
             '      nested.doublenest.comp1.x1: 0.0',
             '   outputs:',
+            '      iteration: 1',
             '      nested.comp1.derivative_exec_count: 0',
             '      nested.comp1.exec_count: 1',
             '      nested.comp1.itername: 1-1.1-1',
@@ -189,7 +191,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.driver.printvars = ['*']
         self.top.run()
         expected = [
-            'Case: 1',
+            'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.directory: ',
@@ -203,6 +205,10 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      comp1.exec_count: 1',
             '      comp1.itername: 1-1',
             '      comp1.string: Testing',
+            '      driver.derivative_exec_count: 0',
+            '      driver.exec_count: 1',
+            '      driver.itername: ',
+            '      iteration: 1',
             ]
         lines = sout.getvalue().split('\n')
         
