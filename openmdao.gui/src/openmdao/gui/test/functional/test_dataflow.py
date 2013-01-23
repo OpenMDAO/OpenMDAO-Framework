@@ -120,6 +120,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
     props.move(0, -120)  # Move up for short displays.
+    time.sleep(0.5)      # Wait for header update.
     eq(props.header, 'Connectable: top.comp1')
     props.move(-100, -100)
     inputs = props.inputs
