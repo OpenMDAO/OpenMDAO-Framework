@@ -365,7 +365,7 @@ class ConsoleServer(cmd.Cmd):
                                    })
                     if isinstance(var, VariableTree):
                         for var_name in var.list_vars():
-                            vt_var = var.get_trait(var_name)
+                            vt_var = var.get(var_name)
                             units = ''
                             meta = var.get_metadata(var_name)
                             if meta and 'units' in meta:
@@ -403,7 +403,7 @@ class ConsoleServer(cmd.Cmd):
                                        })
                         if isinstance(var, VariableTree):
                             for var_name in var.list_vars():
-                                vt_var = var.get_trait(var_name)
+                                vt_var = var.get(var_name)
                                 units = ''
                                 meta = var.get_metadata(var_name)
                                 if meta and 'units' in meta:
@@ -450,7 +450,7 @@ class ConsoleServer(cmd.Cmd):
                                 })
                     if isinstance(var, VariableTree):
                         for var_name in var.list_vars():
-                            vt_var = var.get_trait(var_name)
+                            vt_var = var.get(var_name)
                             units = ''
                             meta = var.get_metadata(var_name)
                             if meta and 'units' in meta:
@@ -491,7 +491,7 @@ class ConsoleServer(cmd.Cmd):
                                      })
                         if isinstance(var, VariableTree):
                             for var_name in var.list_vars():
-                                vt_var = var.get_trait(var_name)
+                                vt_var = var.get(var_name)
                                 units = ''
                                 meta = var.get_metadata(var_name)
                                 if meta and 'units' in meta:
