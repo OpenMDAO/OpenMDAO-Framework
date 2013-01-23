@@ -89,6 +89,10 @@ class ProjectsPage(BasePageObject):
         element.click()
 
         delete_dialog = DeleteDialog(self.browser, self.port, (By.XPATH, "/html/body/div[2]"))
+
+
+        import time; time.sleep(5)
+        
         delete_dialog.submit()
 
     def delete_all_test_projects(self, verbose=False):
@@ -209,6 +213,7 @@ class DeleteDialog(DialogPage):
 
     def __init__(self, browser, port, locator):
         super(DeleteDialog, self).__init__(browser, port, locator)
+        print "in init for deletedialog"
 
     def submit(self):
         """Clicks the 'delete' button"""

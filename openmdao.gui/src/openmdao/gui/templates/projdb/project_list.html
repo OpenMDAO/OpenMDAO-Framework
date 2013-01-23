@@ -55,6 +55,22 @@
 
 
     <script>
+          function confirm_delete(currentForm, projectname) {
+                bootbox.confirm(
+                    "Are you sure you want to delete the project, " + 
+                    projectname +
+                    " ?", 
+                    function(result) {
+                    if (result) {
+                        currentForm.submit();
+                    }
+                });
+                return false;
+            }
+    </script>
+
+
+    <script>
         /* fnDrawCallback turns off the pagination if there is only one page */
         $(document).ready(function() {
             $('#project_table').dataTable({
@@ -72,20 +88,6 @@
                  }
                 }) ;
 
-            /* confirmation dialog for project deletion */
-            jQuery('.deleteProject').submit(function() {
-                var currentForm = this;
-                bootbox.confirm(
-                    "Are you sure you want to delete the project, " + 
-                    this.querySelector( "input[name='projectname']").getAttribute("value") + 
-                    " ?", 
-                    function(result) {
-                    if (result) {
-                        currentForm.submit();
-                    }
-                });
-                return false;
-            });
           
             /* controls what happens when the Cancel button in the import dialog is clicked */
             $("#importProjectModal #import-cancel").click(function(event) {
@@ -274,9 +276,9 @@
   </div> <!-- end of modal body -->
 
   <div class="modal-footer">
-    <button id="import-cancel" class="btn" data-dismiss="modal">Cancel</button>
-    <button id="load-project" class="btn btn-primary">Load Project</button>
-    <button id="import-project" class="hide btn btn-primary">Import Project</button>
+    <button type="button" id="import-cancel" class="btn" data-dismiss="modal">Cancel</button>
+    <button type="submit" id="load-project" class="btn btn-primary">Load Project</button>
+    <button type="submit" id="import-project" class="hide btn btn-primary">Import Project</button>
   </div>
 
   </form>
@@ -324,7 +326,7 @@
   </div>
 
   <div class="modal-footer">
-    <button class="btn" data-dismiss="modal">Cancel</button>
+    <button class="btn" type="button" data-dismiss="modal">Cancel</button>
     <button class="btn btn-primary">New Project</button>
   </div>
   </form>
@@ -358,7 +360,7 @@
                  data-target="#editProjectModal" title="Edit"><i class="icon-pencil"></i>
               </a>
               <!-- delete project button -->
-              <form class="deleteProject" 
+              <form class="deleteProject" onsubmit='return confirm_delete(this, "{{ project['projectname'] }}" )'
                     action="/projects/delete/{{ project['id'] }}/" 
                     method="POST" style="display:inline">
                   <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
