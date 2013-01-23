@@ -56,7 +56,6 @@ class SequentialWorkflow(Workflow):
                 # message.
                 if check:
                     
-                    self._parent._logger.warning("hey")
                     name = self._parent.parent.name
                     if not name:
                         name = "the top assembly."
@@ -76,8 +75,6 @@ class SequentialWorkflow(Workflow):
                         raise AttributeError(msg)
                     
                     # Don't add yourself to your own workflow
-                    self._parent._logger.warning(target)
-                    self._parent._logger.warning(self._parent)
                     if target == self._parent:
                         msg = "You cannot add a driver to its own workflow"
                         raise AttributeError(msg)

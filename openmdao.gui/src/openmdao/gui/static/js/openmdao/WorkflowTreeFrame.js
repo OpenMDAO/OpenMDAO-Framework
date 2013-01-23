@@ -17,9 +17,9 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
     self.pathname = false;
 
     /** convert model.json to structure required for jstree */
-    function convertJSON(json, path, openNodes) {
+    function convertJSON(json, parent, openNodes) {
         var data = [];
-        jQuery.each(json, function(idx,item) {
+        jQuery.each(json, function(idx, item) {
             var pathname   = item.pathname,
                 type       = item.type,
                 interfaces = item.interfaces,
@@ -28,21 +28,25 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
             // Figure out what type we are (lacking interfaces)
             if (item.workflow) {
                 interfaces = ['IDriver'];
+                subpath = pathname;
+                
+                // Exception: top is always an assembly
+                if (name === 'driver') {
+                    interfaces = ['IAssembly'];
+                    pathname = openmdao.Util.getPath(pathname);
+                    name = openmdao.Util.getName(pathname) + '.driver';
+                    parent = name;
+                    subpath = pathname + '.driver';
+                }
             }
             else if (item.driver) {
                 interfaces = ['IAssembly'];
                 name = name + '.driver';
+                subpath = pathname + '.driver';
             }
             else {
                 interfaces = ['IComponent'];
             }
-            
-            // if my name is just 'driver', qualify with parent (assembly) name
-            if (name === 'driver') {
-                interfaces = ['IAssembly'];
-                parent_assy = openmdao.Util.getPath(pathname);
-                name = openmdao.Util.getName(parent_assy) + '.driver';
-            }            
             
             interfaces = JSON.stringify(interfaces);
             var node = { 'data': name  };
@@ -50,18 +54,19 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                  'type'  : type,
                  'path'  : pathname,
                  'interfaces' : interfaces,
-                 'parent' : path
+                 'parent' : parent
             };
+            console.log(node.attr);
+            
             // Driver recursion
             if (item.workflow) {
-                node.children = convertJSON(item.workflow, pathname,
+                node.children = convertJSON(item.workflow, subpath,
                                             openNodes);
             }
             // Assembly recursion
             else if (item.driver) {
                 node.children = convertJSON(item.driver.workflow,
-                                            pathname + '.driver',
-                                            openNodes);
+                                            subpath, openNodes);
             }
             
             if (openNodes.indexOf(pathname) >= 0) {
@@ -147,16 +152,23 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             source_path = droppedObject.attr('pathname'),
                             target_iface = this.parentElement.getAttribute('interfaces');
                         
-                        // If we dropped on a driver, add to its workflow.
-                        // Otherwise, add to the parent driver's workflow.
                         if (target_iface.indexOf("IComponent") >= 0) {
-                            target_path = this.parentElement.getAttribute('parent');
+                            // Don't do anything if we drop on a component.
+                            cmd='';
+                        }
+                        if (target_iface.indexOf("IAssembly") >= 0) {
+                            // Assemblies require some extra care.
+                            target_path = this.parentElement.getAttribute('path');
+                            cmd = target_path + '.driver.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
                         }
                         else {
                             target_path = this.parentElement.getAttribute('path');
+                            cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
                         }
-                        cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
-                        model.issueCommand(cmd);                        
+                        if (cmd) {
+                            console.log(cmd);
+                            model.issueCommand(cmd);
+                        }
                     }
                 });
             });
@@ -228,6 +240,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 "label"  : 'Remove from Workflow',
                 "action" :  function(node) {
                                 var cmd = parent +".workflow.remove('" + name + "')";
+                                console.log(cmd);
                                 model.issueCommand(cmd);
                             }
             };
