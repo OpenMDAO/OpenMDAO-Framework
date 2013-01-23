@@ -155,9 +155,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                         else {
                             target_path = this.parentElement.getAttribute('path');
                         }
-                        console.log(this.parentElement.getAttribute('path'), '--', this.parentElement.getAttribute('parent'));
                         cmd = target_path + '.workflow.add("' + openmdao.Util.getName(source_path) + '", check=True)';
-                        console.log(cmd);
                         model.issueCommand(cmd);                        
                     }
                 });
