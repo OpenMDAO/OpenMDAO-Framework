@@ -519,10 +519,15 @@ class ConsoleServer(cmd.Cmd):
                 # connections
                 connections = []
                 conntuples = asm.list_connections(show_passthrough=True)
-                for src, dst in conntuples:
-                    if (src_name and src.startswith(src_name + ".") or (not src_name)) \
-                    and (dst_name and dst.startswith(dst_name + ".") or (not dst_name)):
-                        connections.append([src, dst])
+                comp_names = asm.list_components()
+                for src_var, dst_var in conntuples:
+                    src_root = src_var.split('.')[0]
+                    dst_root = dst_var.split('.')[0]
+                    if (src_name and src_root == src_name) or \
+                       (not src_name and src_root not in comp_names) \
+                    and (dst_name and dst_root == dst_name) or \
+                        (not dst_name and dst_root not in comp_names):
+                        connections.append([src_var, dst_var])
                 conns['connections'] = connections
             except Exception as err:
                 self._error(err, sys.exc_info())

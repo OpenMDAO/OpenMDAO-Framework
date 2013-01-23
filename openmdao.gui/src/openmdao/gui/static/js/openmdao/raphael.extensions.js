@@ -111,7 +111,6 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     }
 
     if (attr.name.indexOf('.') > 0 || attr.name.indexOf('[') > 0) {
-        debug.info('name:',attr.name,'offset:',20);
         offset = 20;
         angleObj = paper.path('M '+ (x+5) +' '+ y + ' l 0 15 l 15 0')
             .attr({'stroke':'#666666', 'stroke-width': 1});;
