@@ -315,7 +315,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                         .line.node.className.baseVal += ' variable-connection';
                 }
                 else {
-                    debug.error('Cannot draw connection between '+src_name+' and '+dst_name);
+                    debug.error('Cannot draw connection between '+conn[0]+' and '+conn[1]);
                 }
             });
 

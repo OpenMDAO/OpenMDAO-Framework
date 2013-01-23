@@ -94,7 +94,9 @@ Raphael.fn.connection = function (obj1, obj2, line, bg) {
 Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     var typeStr = attr.type.split('.'),
         border = '#0b93d5',  // default border color: blue
-        rectObj, nameObj, typeObj, setObj;
+        offset = 0,
+        path = '',
+        rectObj, nameObj, typeObj, angleObj, setObj;
 
     if (typeStr.length > 1) {
         typeStr = attr.units + ' (' + typeStr[typeStr.length-1] + ')';
@@ -108,13 +110,25 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
         border = '#666666';
     }
 
-    rectObj = paper.rect(x, y, 150, 30, 10, 10)
-        .attr({'stroke':border, 'fill':'#999999', 'stroke-width': 2}),
-    nameObj = paper.text(x+75, y+10, attr.name)
-        .attr({'text-anchor':'middle', 'font-size':'12pt'}),
-    typeObj = paper.text(x+75, y+20, typeStr)
+    if (attr.name.indexOf('.') > 0 || attr.name.indexOf('[') > 0) {
+        debug.info('name:',attr.name,'offset:',20);
+        offset = 20;
+        angleObj = paper.path('M '+ (x+5) +' '+ y + ' l 0 15 l 15 0')
+            .attr({'stroke':'#666666', 'stroke-width': 1});;
+    }
+    rectObj = paper.rect(x+offset, y, 150-offset, 30, 10, 10)
+        .attr({'stroke':border, 'fill':'#999999', 'stroke-width': 2});
+    nameObj = paper.text(x+75+offset/2, y+10, attr.name)
+        .attr({'text-anchor':'middle', 'font-size':'12pt'});
+    typeObj = paper.text(x+75+offset/2, y+20, typeStr)
         .attr({'text-anchor':'middle', 'font-size':'10pt'});
-    setObj = paper.set(rectObj, nameObj, typeObj);
+
+    if (angleObj) {
+        setObj = paper.set(angleObj, rectObj, nameObj, typeObj);
+    }
+    else {
+        setObj = paper.set(rectObj, nameObj, typeObj);
+    }
 
     setObj.data('input',input);
     setObj.data('name',name);
