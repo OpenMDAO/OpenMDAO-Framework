@@ -100,7 +100,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.derivative_exec_count: 0',
             '      driver.exec_count: 1',
             '      driver.itername: ',
-            '      iteration: 1',
+            '      driver.workflow.itername: 1',
             '      nested.comp1.derivative_exec_count: 0',
             '      nested.comp1.exec_count: 1',
             '      nested.comp1.itername: 1-1.1-1',
@@ -163,7 +163,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      nested.doublenest.comp1.force_execute: False',
             '      nested.doublenest.comp1.x1: 0.0',
             '   outputs:',
-            '      iteration: 1',
+            '      driver.workflow.itername: 1',
             '      nested.comp1.derivative_exec_count: 0',
             '      nested.comp1.exec_count: 1',
             '      nested.comp1.itername: 1-1.1-1',
@@ -208,7 +208,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.derivative_exec_count: 0',
             '      driver.exec_count: 1',
             '      driver.itername: ',
-            '      iteration: 1',
+            '      driver.workflow.itername: 1',
             ]
         lines = sout.getvalue().split('\n')
         

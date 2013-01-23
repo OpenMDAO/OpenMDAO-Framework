@@ -58,6 +58,10 @@ class Workflow(object):
         self._scope = scope
         self.config_changed()
 
+    @property
+    def itername(self):
+        return self._iterbase('')
+        
     def set_initial_count(self, count):
         """
         Set initial value for execution count.  Only needed if the iteration

@@ -360,6 +360,7 @@ class Driver(Component):
 
         case_input = []
         case_output = []
+        iotypes = {}
 
         # Parameters
         if hasattr(self, 'get_parameters'):
@@ -367,6 +368,7 @@ class Driver(Component):
                 if isinstance(name, tuple):
                     name = name[0]
                 case_input.append([name, param.evaluate(self.parent)])
+                iotypes[name] = 'in'
 
         # Objectives
         if hasattr(self, 'eval_objective'):
@@ -388,11 +390,12 @@ class Driver(Component):
                 val = con.evaluate(self.parent)
                 case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
 
-        # Pull iteration coord from workflow
-        case_output.append(["iteration", self.workflow._iterbase('')])
-
+        tmp_printvars = self.printvars[:]
+        tmp_printvars.append('%s.workflow.itername' % self.name)
+        iotypes[tmp_printvars[-1]] = 'out'
+        
         # Additional user-requested variables
-        for printvar in self.printvars:
+        for printvar in tmp_printvars:
 
             if  '*' in printvar:
                 printvars = self._get_all_varpaths(printvar)
@@ -400,7 +403,10 @@ class Driver(Component):
                 printvars = [printvar]
 
             for var in printvars:
-                iotype = self.parent.get_metadata(var, 'iotype')
+                iotype = iotypes.get(var)
+                if iotype is None:
+                    iotype = self.parent.get_metadata(var, 'iotype')
+                    iotypes[var] = iotype
                 if iotype == 'in':
                     val = ExprEvaluator(var, scope=self.parent).evaluate()
                     case_input.append([var, val])
