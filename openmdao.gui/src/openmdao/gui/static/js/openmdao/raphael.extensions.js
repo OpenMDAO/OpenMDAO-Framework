@@ -110,7 +110,7 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
 
     rectObj = paper.rect(x, y, 150, 30, 10, 10)
         .attr({'stroke':border, 'fill':'#999999', 'stroke-width': 2}),
-    nameObj = paper.text(x+75, y+10, openmdao.Util.getName(name))
+    nameObj = paper.text(x+75, y+10, attr.name)
         .attr({'text-anchor':'middle', 'font-size':'12pt'}),
     typeObj = paper.text(x+75, y+20, typeStr)
         .attr({'text-anchor':'middle', 'font-size':'10pt'});

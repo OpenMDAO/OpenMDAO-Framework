@@ -134,7 +134,6 @@ openmdao.Model=function(listeners_ready) {
             // tell server there's one less subscriber to the topic
             if (topic.length > 0 && ! /.exec_state$/.test(topic) &&
                 topic.charAt(0) !== '@') {
-                debug.info('removing subscriber for '+topic);
                 jQuery.ajax({
                     type: 'GET',
                     url:  'publish',

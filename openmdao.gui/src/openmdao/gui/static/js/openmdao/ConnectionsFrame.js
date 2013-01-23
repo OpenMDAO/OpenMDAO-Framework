@@ -257,24 +257,6 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         }
     }
 
-    /** get the base name of the variable, removing the parent component name and array index */
-    function getVarBaseName(var_name) {
-        var tokens;
-        if (var_name.indexOf('.') >= 0) {
-            tokens = var_name.split('.');
-            if (jQuery.inArray(tokens[0],component_list)) {
-                var_name = tokens[1];   // first token is component name
-            }
-            else {
-                var_name = tokens[0];   // first token is vartree name
-            }
-        }
-        if (var_name.indexOf('[') >= 0) {
-            var_name = var_name.split('[')[0];  // first token is array var name
-        }
-        return var_name;
-    }
-
     /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
         if (!data || !data.sources || !data.destinations) {
@@ -297,11 +279,6 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 dst_list   = jQuery.map(data.destinations, function(n) {
                     return self.dst_comp ? self.dst_comp+'.'+n.name : n.name;
                 });
-
-            // reduce var names to their roots (for filtering)
-            var_list = jQuery.map(var_list, function(n) {
-                return getVarBaseName(n);
-            }),
 
             jQuery.each(data.sources, function(idx,srcvar) {
                 if (showAllVariables || var_list.contains(srcvar.name)) {
@@ -330,12 +307,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             variablesDiv.show();
 
             jQuery.each(data.connections,function(idx,conn) {
-                var src_name = self.src_comp ? self.src_comp+'.'+getVarBaseName(conn[0])
-                                             : getVarBaseName(conn[0]),
-                    dst_name = self.dst_comp ? self.dst_comp+'.'+getVarBaseName(conn[1])
-                                             : getVarBaseName(conn[1]),
-                    src_fig = figures[src_name],
-                    dst_fig = figures[dst_name];
+                var src_fig = figures[conn[0]],
+                    dst_fig = figures[conn[1]];
 
                 if (src_fig && dst_fig) {
                     r.connection(src_fig, dst_fig, "#000", "#fff")
