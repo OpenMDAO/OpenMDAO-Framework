@@ -23,7 +23,7 @@ def test_generator():
 
 def _test_maxmin(browser):
     # Toggles maxmimize/minimize button on assemblies.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
@@ -85,11 +85,11 @@ def _test_maxmin(browser):
        ['driver', 'top'])
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_connect(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import connect.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -173,12 +173,12 @@ def _test_connect(browser):
     editor.close()
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_connections(browser):
     # Check connection frame functionality.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                'vehicle_singlesim.py')
@@ -315,12 +315,12 @@ def _test_connections(browser):
     conn_page.close()
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_driverflows(browser):
     # Excercises display of driver flows (parameters, constraints, objectives).
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
@@ -366,12 +366,12 @@ def _test_driverflows(browser):
     time.sleep(0.5)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_replace(browser):
     # Replaces various connected components.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
@@ -518,12 +518,12 @@ def _test_replace(browser):
     assert background.find('circle-plus.png') >= 0
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_ordering(browser):
     # Verify that adding parameter to driver moves it ahead of target.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode and SLSQP.
     workspace_page.show_dataflow('top')
@@ -553,7 +553,7 @@ def _test_ordering(browser):
     assert ext.coords[0] > opt.coords[0]
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':

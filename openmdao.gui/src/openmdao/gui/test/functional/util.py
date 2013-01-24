@@ -336,10 +336,6 @@ def startup(browser):
     projects_page = begin(browser)
     workspace_page, project_dict = new_project(projects_page.new_project(), load_workspace=True)
     return project_dict, workspace_page
-    # projects_page = begin(browser)
-    # project_info_page, project_dict = new_project(projects_page.new_project())
-    # workspace_page = project_info_page.load_project()
-    # return projects_page, project_info_page, project_dict, workspace_page
 
 
 def closeout(project_dict, workspace_page):
@@ -392,7 +388,9 @@ def new_project(new_project_modal, verify=False, load_workspace=False):
     Creates a randomly-named new project.
     Returns ``(projects_page, info_dict)``
     """
-    assert new_project_modal.modal_title.startswith('New Project')
+
+    import time; time.sleep(2) # Otherwise, intermittent failure of next assert
+    eq( new_project_modal.modal_title[:11], 'New Project')
 
     if verify:
         data = dict(name=new_project_modal.get_random_project_name(),

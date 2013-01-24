@@ -19,7 +19,7 @@ def test_generator():
 
 
 def _test_basic(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
@@ -59,12 +59,12 @@ def _test_basic(browser):
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_update(browser):
     # Adding a parameter to a driver should update the driver's workflow.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Create model with CONMIN and ExecComp.
     workspace_page.show_dataflow('top')
@@ -90,12 +90,12 @@ def _test_update(browser):
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_duplicates(browser):
     # Duplicate unconnected components are legal in a workflow.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Create model with multiple ExecComps.
     workspace_page.show_dataflow('top')
@@ -109,11 +109,11 @@ def _test_duplicates(browser):
     eq(len(workspace_page.get_workflow_component_figures()), 3)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 def _test_parameter_auto(browser):
     # Test auto-filling the min and max for a parameter.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
@@ -138,6 +138,8 @@ def _test_parameter_auto(browser):
         eq(row, expected[i])
     
     editor.close()
+
+    closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':
     main()

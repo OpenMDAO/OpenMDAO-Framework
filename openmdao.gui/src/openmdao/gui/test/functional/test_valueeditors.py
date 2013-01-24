@@ -20,7 +20,7 @@ def test_generator():
 
 def _test_value_editors(browser):
     # Creates a file in the GUI.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -126,11 +126,11 @@ def _test_value_editors(browser):
     eq(output[-1], " [ 9 16]]")
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_vartrees(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -241,6 +241,9 @@ def _test_vartrees(browser):
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':
     main()

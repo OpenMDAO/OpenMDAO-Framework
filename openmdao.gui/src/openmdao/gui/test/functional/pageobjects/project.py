@@ -143,23 +143,11 @@ class NewDialog(MetadataModal):
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='New Project']"))
     cancel_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Cancel']"))
 
-    #project_name = InputElement((By.ID, 'id_project_name'))
-    #description = InputElement((By.ID, 'id_description'))
-    #version = InputElement((By.ID, 'id_version'))
-
     create_button = submit_button
 
     def __init__(self, browser, port, locator):
         super(NewDialog, self).__init__(browser, port, locator)
     
-    #def submit(self):
-    #    """Clicks the 'create' button"""
-    #    self('create_button').click()
-
-    #def cancel(self):
-    #    """Clicks the 'cancel' button"""
-    #    self('cancel_button').click()
-
     @staticmethod
     def get_random_project_name(size=6, chars=None):
         """ Return a random project name. """
@@ -167,44 +155,14 @@ class NewDialog(MetadataModal):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-   # def create_project(self, project_name, description=None, version=None):
-   #     """ Creates a project. """
-   #     self.project_name = project_name
-   #     if description is not None:
-   #         self.description = description
-   #     if version is not None:
-   #         self.version = version
-   #     self.submit()
         
 class EditDialog(MetadataModal):
     """ Dialog for exporting a project """
-    #update_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
     submit_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
     cancel_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/button"))
 
-    #project_name = InputElement((By.ID, 'id_project_name'))
-    #description = InputElement((By.ID, 'id_description'))
-    #version = InputElement((By.ID, 'id_version'))
-
     def __init__(self, browser, port, locator):
         super(EditDialog, self).__init__(browser, port, locator)
-
-    #def submit(self):
-    #    """Clicks the 'update' button"""
-    #    self('update_button').click()
-
-    #def cancel(self):
-    #    """Clicks the 'cancel' button"""
-    #    self('cancel_button').click()
-
-    #def update_project(self, project_name, description=None, version=None):
-    #    """ Updates a project. """
-    #    self.project_name = project_name
-    #    if description is not None:
-    #        self.description = description
-    #    if version is not None:
-    #        self.version = version
-    #    self.submit()
 
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
@@ -213,7 +171,6 @@ class DeleteDialog(DialogPage):
 
     def __init__(self, browser, port, locator):
         super(DeleteDialog, self).__init__(browser, port, locator)
-        print "in init for deletedialog"
 
     def submit(self):
         """Clicks the 'delete' button"""
@@ -226,7 +183,6 @@ class DeleteDialog(DialogPage):
 class ImportDialog(MetadataModal):
     """ Dialog for importing a project """
 
-    #import_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Import Project']"))
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Import Project']"))
     cancel_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Cancel']"))
     load_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Load Project']"))
@@ -235,10 +191,6 @@ class ImportDialog(MetadataModal):
     #####      self.input_element = "" # path to project file
     projectfile_input = InputElement((By.ID, 'id_projectfile'))
 
-
-    #project_name = InputElement((By.ID, 'id_project_name'))
-    #description = InputElement((By.ID, 'id_description'))
-    #version = InputElement((By.ID, 'id_version'))
 
     def __init__(self, browser, port, locator):
         super(ImportDialog, self).__init__(browser, port, locator)
@@ -257,20 +209,3 @@ class ImportDialog(MetadataModal):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-
-
-    #def submit(self):
-    #    """Clicks the 'import' button"""
-    #    self('import_button').click()
-    #
-    #def cancel(self):
-    #    """Clicks the 'cancel' button"""
-    #    self('cancel_button').click()
-
-    #def import_project(self, project_name, description=None, version=None):
-    #    self.project_name = project_name
-    #    if description is not None:
-    #        self.description = description
-    #    if version is not None:
-    #        self.version = version
-    #    self.submit()
