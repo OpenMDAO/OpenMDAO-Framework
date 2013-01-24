@@ -281,8 +281,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 });
 
             jQuery.each(data.sources, function(idx,srcvar) {
-                if (showAllVariables || var_list.contains(srcvar.name)) {
-                    var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
+                var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
+                if (showAllVariables || var_list.contains(src_name)) {
                     figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
@@ -292,8 +292,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             x = (componentsDiv.width() - connect_button.width())/2;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
-                if (showAllVariables || var_list.contains(dstvar.name)) {
-                    var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
+                var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
+                if (showAllVariables || var_list.contains(dst_name)) {
                     figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
@@ -490,7 +490,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         }
     };
 
-    /** get the specified assembly from model */
+    /** populate frame with connection data for the specified assembly */
     this.editAssembly = function(path, src_comp, dst_comp) {
         if (self.pathname !== path) {
            if (self.pathname !== null) {

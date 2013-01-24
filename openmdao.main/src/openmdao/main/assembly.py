@@ -880,8 +880,8 @@ class Assembly(Component):
     def list_components(self):
         ''' list the components in the assembly
         '''
-        names = [name for name in self.__dict__.keys()
-                     if is_instance(self.__dict__[name], Component)]
+        names = [name for name in self.list_containers()
+                     if isinstance(self.get(name), Component)]
         return names
 
     def get_dataflow(self):
