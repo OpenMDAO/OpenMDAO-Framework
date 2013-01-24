@@ -22,7 +22,7 @@ def test_generator():
 
 def _test_editfile(browser):
     # Check ability to open code editor by double clicking on file in workspace.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # create a couple of files
     file1 = 'test1.py'
@@ -54,11 +54,11 @@ def _test_editfile(browser):
     browser.switch_to_window(workspace_window)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_multitab(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Open code editor.
     workspace_window = browser.current_window_handle
@@ -104,12 +104,12 @@ return x**2"""
     # Clean up.
     browser.close()
     browser.switch_to_window(workspace_window)
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_newfile(browser):
     # Creates a file in the GUI.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Open code editor.
     workspace_window = browser.current_window_handle
@@ -161,7 +161,7 @@ f_x = Float(0.0, iotype='out')
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':
