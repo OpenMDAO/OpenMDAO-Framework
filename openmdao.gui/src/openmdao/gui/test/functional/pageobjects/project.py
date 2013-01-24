@@ -5,13 +5,16 @@ Pages related to project management.
 import random
 import string
 import sys
+import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 from dialog import DialogPage, BootstrapModal
+
 
 class ProjectsPage(BasePageObject):
     """ Displays list of projects. """
@@ -48,10 +51,21 @@ class ProjectsPage(BasePageObject):
         from login import LoginPage
         return LoginPage.verify(self.browser, self.port)
 
-    def contains(self, project_name):
+    def contains(self, project_name, expected=True):
         """ Returns True if `project_name` is in the list of projects. """
-        self.search_input = project_name
-        return len(self.browser.find_elements_by_link_text(project_name)) > 0
+        if expected:
+            self.search_input = project_name
+            elements = self.browser.find_elements_by_link_text(project_name)
+        else:
+            self.browser.implicitly_wait(1)  # Not expecting to find anything.
+            try:
+                self.search_input = project_name  # No search input if no projects.
+                elements = self.browser.find_elements_by_link_text(project_name)
+            except TimeoutException:
+                elements = []
+            finally:
+                self.browser.implicitly_wait(TMO)
+        return len(elements) > 0
 
     def open_project(self, project_name):
         """ Clicks the named link. Returns :class:`WorkspacePage`. """
@@ -89,10 +103,7 @@ class ProjectsPage(BasePageObject):
         element.click()
 
         delete_dialog = DeleteDialog(self.browser, self.port, (By.XPATH, "/html/body/div[2]"))
-
-
-        import time; time.sleep(5)
-        
+        time.sleep(1)
         delete_dialog.submit()
 
     def delete_all_test_projects(self, verbose=False):

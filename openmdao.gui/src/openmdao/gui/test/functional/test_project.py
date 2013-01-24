@@ -62,7 +62,7 @@ def _test_new_project(browser):
     projects_page.delete_project(project_dict['name'])
 
     # Make sure the project was deleted
-    assert not projects_page.contains(project_dict['name'])
+    assert not projects_page.contains(project_dict['name'], False)
 
     #Import the project and give it a new name
     projects_page, project_dict = import_project(projects_page.import_project(), project_path,
