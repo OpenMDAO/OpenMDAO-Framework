@@ -20,8 +20,8 @@ class LoginPage(BasePageObject):
         self.username = username
         self.password = password
         self.submit()
-        from project import ProjectsListPage
-        return ProjectsListPage(self.browser, self.port)
+        from project import ProjectsPage
+        return ProjectsPage(self.browser, self.port)
 
     def login_unsuccessfully(self, username, password):
         """ Login using invalid parameters. """
