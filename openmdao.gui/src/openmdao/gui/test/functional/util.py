@@ -399,6 +399,7 @@ class _Runner(object):
             sys.stderr.flush()
             raise saved_exc[0], saved_exc[1], saved_exc[2]
 
+
 def _save_screenshot(browser, filename, retry=True):
     """ Attempt to take a screenshot. """
     try:
@@ -445,11 +446,11 @@ def begin(browser):
     return projects_page
 
 
-def get_browser_download_location_path( browser ):
+def get_browser_download_location_path(browser):
     '''Get the location of the browser download directory.
         This leaves the browser window open
     '''
-    
+
     browser.get("chrome://settings-frame/settings")
 
     element = WebDriverWait(browser, TMO).until(
@@ -473,14 +474,15 @@ def submit_metadata(metadata_modal, name, description=None, version=None, load_w
 
     return workspace_page
 
+
 def new_project(new_project_modal, verify=False, load_workspace=False):
     """
     Creates a randomly-named new project.
     Returns ``(projects_page, info_dict)``
     """
 
-    import time; time.sleep(2) # Otherwise, intermittent failure of next assert
-    eq( new_project_modal.modal_title[:11], 'New Project')
+    time.sleep(2)  # Otherwise, intermittent failure of next assert
+    eq(new_project_modal.modal_title[:11], 'New Project')
 
     if verify:
         data = dict(name=new_project_modal.get_random_project_name(),
@@ -492,6 +494,7 @@ def new_project(new_project_modal, verify=False, load_workspace=False):
         page = submit_metadata(new_project_modal, data['name'], load_workspace=load_workspace)
 
     return (page, data)
+
 
 def edit_project(edit_project_modal, name, description=None, version=None, load_workspace=False):
     """
@@ -508,10 +511,11 @@ def import_project(import_project_modal, projectfile_path, name=None, descriptio
     Creates a randomly-named imported new project.
     Returns ``(projects_page, info_dict)``
     """
+    print import_project_modal.modal_title
     assert import_project_modal.modal_title.startswith('Import Project')
 
     # load project
-    import_project_modal.load_project( projectfile_path )
+    import_project_modal.load_project(projectfile_path)
 
     # submit the rest of the metadata
     if verify:
@@ -524,7 +528,8 @@ def import_project(import_project_modal, projectfile_path, name=None, descriptio
         page = submit_metadata(import_project_modal, data['name'], verify=verify, load_workspace=load_workspace)
 
     return (page, data)
-        
+
+
 def parse_test_args(args=None):
     """ parse test options from command line args
     """
@@ -857,4 +862,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

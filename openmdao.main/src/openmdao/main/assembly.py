@@ -11,15 +11,12 @@ import re
 from zope.interface import implementedBy
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Missing
 import networkx as nx
-from networkx.algorithms.dag import is_directed_acyclic_graph
-from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
-from openmdao.main.container import find_trait_and_value, _copydict
+from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.api import Slot
@@ -30,11 +27,10 @@ from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.printexpr import eliminate_expr_ws, ExprNameTransformer
+from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.util.nameutil import partition_names_by_comp
-from openmdao.main.depgraph import DependencyGraph
 
-_iodict = { 'out': 'output', 'in': 'input' }
+_iodict = {'out': 'output', 'in': 'input'}
 
 
 __has_top__ = False
@@ -177,10 +173,11 @@ class ExprMapper(object):
                     if ttype.validate:
                         ttype.validate(destcomp, destvarname, srcval)
                     else:
-                        pass  # no validate function on destination trait. Most likely
-                              # it's a property trait.  No way to validate without
-                              # unknown side effects. Have to wait until later when data actually
-                              # gets passed via the connection.
+                        # no validate function on destination trait. Most likely
+                        # it's a property trait.  No way to validate without
+                        # unknown side effects. Have to wait until later when
+                        # data actually gets passed via the connection.
+                        pass
 
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
@@ -241,7 +238,7 @@ class ExprMapper(object):
         destcomps = destexpr.get_referenced_compnames()
 
         if destcomps and destcomps.pop() in srccomps:
-            raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
+            raise RuntimeError("'%s' and '%s' refer to the same component." % (src, dest))
         return srcexpr, destexpr
 
 
@@ -252,7 +249,8 @@ def _find_common_interface(obj1, obj2):
             return iface
     return None
 
-class Assembly (Component):
+
+class Assembly(Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
     Driver called 'driver'.
@@ -273,7 +271,7 @@ class Assembly (Component):
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
 
-        set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
+        set_as_top(self, first_only=True)  # we're the top Assembly only if we're the first instantiated
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -310,7 +308,7 @@ class Assembly (Component):
         to either in the source or the destination.
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u,v) for u,v in self.list_connections(show_passthrough=True)
+        return [(u, v) for u, v in self.list_connections(show_passthrough=True)
                                                 if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
@@ -333,14 +331,14 @@ class Assembly (Component):
             old_rgx = re.compile(r'(\W?)%s.' % name)
             par_rgx = re.compile(r'(\W?)parent.')
 
-            for u,v in self._depgraph.list_autopassthroughs():
+            for u, v in self._depgraph.list_autopassthroughs():
                 newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
                 newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
                 if newu != u or newv != v:
-                    old_autos.append((u,v))
+                    old_autos.append((u, v))
                     u = re.sub(par_rgx, r'\g<1>', newu)
                     v = re.sub(par_rgx, r'\g<1>', newv)
-                    self.parent.disconnect(u,v)
+                    self.parent.disconnect(u, v)
         return old_autos
 
     def rename(self, oldname, newname):
@@ -363,18 +361,18 @@ class Assembly (Component):
         par_rgx = re.compile(r'(\W?)parent.')
 
         # recreate all of the broken connections after translating oldname to newname
-        for u,v in conns:
+        for u, v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
                          re.sub(old_rgx, r'\g<1>%s.' % newname, v))
 
         # recreate autopassthroughs
         if self.parent:
-            for u,v in old_autos:
+            for u, v in old_autos:
                 u = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), u)
                 v = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), v)
                 u = re.sub(par_rgx, r'\g<1>', u)
                 v = re.sub(par_rgx, r'\g<1>', v)
-                self.parent.connect(u,v)
+                self.parent.connect(u, v)
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the inputs and connections
@@ -389,11 +387,11 @@ class Assembly (Component):
                 if obj is not tobj and is_instance(obj, Driver):
                     refs[obj] = obj.get_references(target_name)
 
-        if has_interface(newobj, IComponent): # remove any existing connections to replacement object
+        if has_interface(newobj, IComponent):  # remove any existing connections to replacement object
             self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
             try:
-                newobj.mimic(tobj) # this should copy inputs, delegates and set name
+                newobj.mimic(tobj)  # this should copy inputs, delegates and set name
             except Exception:
                 self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
                                        % (target_name, type(tobj).__name__,
@@ -401,19 +399,19 @@ class Assembly (Component):
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
         target_rgx = re.compile(r'(\W?)%s.' % target_name)
-        conns.extend([(u,v) for u,v in self._depgraph.list_autopassthroughs() if
+        conns.extend([(u, v) for u, v in self._depgraph.list_autopassthroughs() if
                                  re.search(target_rgx, u) is not None or
                                  re.search(target_rgx, v) is not None])
 
-        self.add(target_name, newobj) # this will remove the old object (and any connections to it)
+        self.add(target_name, newobj)  # this will remove the old object (and any connections to it)
 
         # recreate old connections
-        for u,v in conns:
-            self.connect(u,v)
+        for u, v in conns:
+            self.connect(u, v)
 
         # add new object (if it's a Component) to any workflows where target was
         if has_interface(newobj, IComponent):
-            for wflow,idx in wflows:
+            for wflow, idx in wflows:
                 wflow.add(target_name, idx)
 
         # Restore driver references.
@@ -504,7 +502,7 @@ class Assembly (Component):
         val = self.get(pathname)
         ttype = trait.trait_type
         if ttype.copy:
-            
+
             # Variable trees need to point to a new parent.
             # Also, let's not deepcopy the outside universe
             if isinstance(val, Container):
@@ -516,9 +514,8 @@ class Assembly (Component):
                 val = val_copy
             else:
                 val = _copydict[ttype.copy](val)
-            
+
         setattr(self, newname, val)
-        
 
         if iotype == 'in':
             self.connect(newname, pathname)
@@ -608,7 +605,6 @@ class Assembly (Component):
                 if (outs is None) or outs:
                     bouts = self.child_invalidated(destcompname, outs, force=True)
 
-
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
@@ -619,19 +615,19 @@ class Assembly (Component):
         """
         to_remove = []
         if varpath2 is None:
-            if self.parent and '.' not in varpath: # boundary var. make sure it's disconnected in parent
+            if self.parent and '.' not in varpath:  # boundary var. make sure it's disconnected in parent
                 self.parent.disconnect('.'.join([self.name, varpath]))
             graph = self._exprmapper._exprgraph
             to_remove = set()
             for expr in self._exprmapper.find_referring_exprs(varpath):
-                for u,v in graph.edges(expr):
-                    to_remove.add((u,v))
-                for u,v in graph.in_edges(expr):
-                    to_remove.add((u,v))
+                for u, v in graph.edges(expr):
+                    to_remove.add((u, v))
+                for u, v in graph.in_edges(expr):
+                    to_remove.add((u, v))
         else:
             to_remove = [(varpath, varpath2)]
 
-        for u,v in to_remove:
+        for u, v in to_remove:
             super(Assembly, self).disconnect(u, v)
 
         self._exprmapper.disconnect(varpath, varpath2)
@@ -647,7 +643,7 @@ class Assembly (Component):
         if self.driver is not None:
             self.driver.config_changed(update_parent=False)
 
-    def execute (self):
+    def execute(self):
         """Runs driver and updates our boundary variables."""
         self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
@@ -735,8 +731,8 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        for cname,vnames in partition_names_by_comp(outnames).items():
-            if cname is None: #boundary outputs
+        for cname, vnames in partition_names_by_comp(outnames).items():
+            if cname is None:  # boundary outputs
                 self.update_inputs(None, vnames)
             else:
                 getattr(self, cname).update_outputs(vnames)
@@ -748,13 +744,13 @@ class Assembly (Component):
         specify either direct traits of self or those of children.
         """
 
-        ret = [None]*len(names)
-        posdict = dict([(name,i) for i,name in enumerate(names)])
+        ret = [None] * len(names)
+        posdict = dict([(name, i) for i, name in enumerate(names)])
 
         for compname, varnames in partition_names_by_comp(names).items():
             if compname is None:
                 vals = super(Assembly, self).get_valid(varnames)
-                for i,val in enumerate(vals):
+                for i, val in enumerate(vals):
                     ret[posdict[varnames[i]]] = val
             else:
                 comp = getattr(self, compname)
@@ -762,8 +758,8 @@ class Assembly (Component):
                     vals = comp.get_valid(varnames)
                 else:
                     vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]
-                for i,val in enumerate(vals):
-                    full = '.'.join([compname,varnames[i]])
+                for i, val in enumerate(vals):
+                    full = '.'.join([compname, varnames[i]])
                     ret[posdict[full]] = val
         return ret
 
@@ -821,8 +817,8 @@ class Assembly (Component):
 
         if varnames is None:
             self.set_valid(invalidated_ins, False)
-        else: # only invalidate *connected* inputs, because unconnected inputs
-              # are always valid
+        else:  # only invalidate *connected* inputs, because unconnected inputs
+               # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
         outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
@@ -833,7 +829,7 @@ class Assembly (Component):
         return outs
 
     def exec_counts(self, compnames):
-        return [getattr(self,c).exec_count for c in compnames]
+        return [getattr(self, c).exec_count for c in compnames]
 
     def calc_derivatives(self, first=False, second=False):
         """ Overides the component's version of this function. An assembly
@@ -854,7 +850,7 @@ class Assembly (Component):
 
                 tuple_list = []
                 for tup_item in item:
-                    names = tup_item.split('.',1)
+                    names = tup_item.split('.', 1)
                     if names[0] == self.name:
                         tuple_list.append(names[1])
                     else:
@@ -862,7 +858,7 @@ class Assembly (Component):
 
                 driver_inputs[j] = tuple(tuple_list)
             else:
-                names = item.split('.',1)
+                names = item.split('.', 1)
                 if names[0] == self.name:
                     driver_inputs[j] = names[1]
 
@@ -871,7 +867,7 @@ class Assembly (Component):
 
                 tuple_list = []
                 for tup_item in item:
-                    names = tup_item.split('.',1)
+                    names = tup_item.split('.', 1)
                     if names[0] == self.name:
                         tuple_list.append(names[1])
                     else:
@@ -879,11 +875,18 @@ class Assembly (Component):
 
                 driver_inputs[j] = tuple(tuple_list)
             else:
-                names = item.split('.',1)
+                names = item.split('.', 1)
                 if names[0] == self.name:
                     driver_outputs[j] = names[1]
 
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
+
+    def list_components(self):
+        ''' list the components in the assembly
+        '''
+        names = [name for name in self.list_containers()
+                     if isinstance(self.get(name), Component)]
+        return names
 
     def get_dataflow(self):
         ''' Get a dictionary of components and the connections between them
@@ -943,10 +946,10 @@ class Assembly (Component):
                                 if isinstance(inst, HasParameters):
                                     for name, param in inst.get_parameters().items():
                                         if isinstance(param, ParameterGroup):
-                                            for n,p in zip(name,tuple(param.targets)):
-                                                parameters.append([comp.name+'.'+n, p])
+                                            for n, p in zip(name, tuple(param.targets)):
+                                                parameters.append([comp.name + '.' + n, p])
                                         else:
-                                            parameters.append([comp.name+'.'+name,
+                                            parameters.append([comp.name + '.' + name,
                                                                param.target])
                                 elif isinstance(inst, (HasConstraints,
                                                        HasEqConstraints,
@@ -954,13 +957,13 @@ class Assembly (Component):
                                     for path in inst.get_referenced_varpaths():
                                         name, dot, rest = path.partition('.')
                                         constraints.append([path,
-                                                            comp.name+'.'+rest])
+                                                            comp.name + '.' + rest])
                                 elif isinstance(inst, (HasObjective,
                                                        HasObjectives)):
                                     for path in inst.get_referenced_varpaths():
                                         name, dot, rest = path.partition('.')
                                         objectives.append([path,
-                                                           comp.name+'.'+name])
+                                                           comp.name + '.' + name])
 
             # list of connections (convert tuples to lists)
             conntuples = self.list_connections(show_passthrough=True)
@@ -980,21 +983,21 @@ def dump_iteration_tree(obj):
     """
     def _dump_iteration_tree(obj, f, tablevel):
         if is_instance(obj, Driver):
-            f.write(' '*tablevel)
+            f.write(' ' * tablevel)
             f.write(obj.get_pathname())
             f.write('\n')
             for comp in obj.workflow:
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
-                    _dump_iteration_tree(comp, f, tablevel+3)
+                    _dump_iteration_tree(comp, f, tablevel + 3)
                 else:
-                    f.write(' '*(tablevel+3))
+                    f.write(' ' * (tablevel + 3))
                     f.write(comp.get_pathname())
                     f.write('\n')
         elif is_instance(obj, Assembly):
-            f.write(' '*tablevel)
+            f.write(' ' * tablevel)
             f.write(obj.get_pathname())
             f.write('\n')
-            _dump_iteration_tree(obj.driver, f, tablevel+3)
+            _dump_iteration_tree(obj.driver, f, tablevel + 3)
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()

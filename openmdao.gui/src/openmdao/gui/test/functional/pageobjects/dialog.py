@@ -11,7 +11,6 @@ class BootstrapModal(BasePageObject):
     modal_title = TextElement((By.XPATH, "div[@class='modal-header']/h3"))
     close_button = TextElement((By.XPATH, "div[@class='modal-header']/button"))
 
-
     """ Base for Twitter Bootstrap modals """
     def __init__(self, browser, port, locator):
         root = WebDriverWait(browser, TMO).until(
@@ -26,6 +25,7 @@ class BootstrapModal(BasePageObject):
     def close(self):
         """ Close modal. """
         self('close_button').click()
+
 
 class DialogPage(BasePageObject):
     """ Base for various dialog pages. """
@@ -72,17 +72,16 @@ class DialogPage(BasePageObject):
 #        chain.release(None).perform()
 
 
-class NotifyDialog(DialogPage): 
-    """The dialog that appears when there is an error""" 
+class NotifyDialog(DialogPage):
+    """The dialog that appears when there is an error"""
 
-    okButton = ButtonElement((By.ID, 'notify-ok')) 
-     
-    def __init__(self, browser, port): 
+    okButton = ButtonElement((By.ID, 'notify-ok'))
+
+    def __init__(self, browser, port):
         # The div that contains the actual message has a div of notify-msg.
         #   The div for the dialog is the parent of that div
-        super(NotifyDialog, self).__init__(browser, port, (By.XPATH, '//div[@id="notify-msg"]/..')) 
-  
+        super(NotifyDialog, self).__init__(browser, port, (By.XPATH, '//div[@id="notify-msg"]/..'))
+
     def close(self):
         """ Close dialog. """
-        self('okButton').click() 
-
+        self('okButton').click()
