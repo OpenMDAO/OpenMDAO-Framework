@@ -30,12 +30,16 @@ class ProjectsPage(BasePageObject):
     def new_project(self):
         """ Clicks the 'new' button. Returns :class:`NewDialog`. """
         self('new_button').click()
-        return NewDialog(self.browser, self.port, (By.ID, "newProjectModal"))
+        page = NewDialog(self.browser, self.port, (By.ID, "newProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def import_project(self):
         """ Clicks the 'import' button. Returns :class:`ImportDialog`. """
         self('import_button').click()
-        return ImportDialog(self.browser, self.port, (By.ID, "importProjectModal"))
+        page = ImportDialog(self.browser, self.port, (By.ID, "importProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def logout(self):
         """
@@ -84,8 +88,9 @@ class ProjectsPage(BasePageObject):
         element = element.find_element_by_xpath('../../td[6]/a')
         element.click()
 
-        edit_dialog = EditDialog(self.browser, self.port, (By.ID, "editProjectModal"))
-        return edit_dialog 
+        page = EditDialog(self.browser, self.port, (By.ID, "editProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def export_project(self, project_name):
         """ Clicks the 'export' button. Returns :class:`ExportDialog`. """
@@ -103,8 +108,9 @@ class ProjectsPage(BasePageObject):
         element.click()
 
         delete_dialog = DeleteDialog(self.browser, self.port, (By.XPATH, "/html/body/div[2]"))
-        time.sleep(1)
+        time.sleep(1)  # Wait for silly fade-in.
         delete_dialog.submit()
+        time.sleep(1)  # Wait for silly fade-out.
 
     def delete_all_test_projects(self, verbose=False):
         """ Removes all projects with 'test project' in the name. """
@@ -121,6 +127,7 @@ class ProjectsPage(BasePageObject):
             # there may be more that were previously hidden due to the row limit
             elements = self.browser.find_elements_by_partial_link_text('testing project')
 
+
 class MetadataModal(BootstrapModal):
     submit_button = None
     cancel_button = None
@@ -128,9 +135,6 @@ class MetadataModal(BootstrapModal):
     project_name = InputElement((By.ID, 'id_project_name'))
     description = InputElement((By.ID, 'id_description'))
     version = InputElement((By.ID, 'id_version'))
-
-    def __init__(self, browser, port, locator):
-        super(MetadataModal, self).__init__(browser, port, locator)
 
     def cancel(self):
         """ Clicks the 'cancel' button """
@@ -149,6 +153,7 @@ class MetadataModal(BootstrapModal):
             self.version = version
         self.submit()
 
+
 class NewDialog(MetadataModal):
     """ Modal for creating a new project """
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='New Project']"))
@@ -156,9 +161,6 @@ class NewDialog(MetadataModal):
 
     create_button = submit_button
 
-    def __init__(self, browser, port, locator):
-        super(NewDialog, self).__init__(browser, port, locator)
-    
     @staticmethod
     def get_random_project_name(size=6, chars=None):
         """ Return a random project name. """
@@ -172,16 +174,11 @@ class EditDialog(MetadataModal):
     submit_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
     cancel_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/button"))
 
-    def __init__(self, browser, port, locator):
-        super(EditDialog, self).__init__(browser, port, locator)
 
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
     delete_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='OK']"))
     cancel_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='Cancel']"))
-
-    def __init__(self, browser, port, locator):
-        super(DeleteDialog, self).__init__(browser, port, locator)
 
     def submit(self):
         """Clicks the 'delete' button"""
@@ -190,6 +187,7 @@ class DeleteDialog(DialogPage):
     def cancel(self):
         """Clicks the 'cancel' button"""
         self('cancel_button').click()
+
 
 class ImportDialog(MetadataModal):
     """ Dialog for importing a project """
@@ -201,10 +199,6 @@ class ImportDialog(MetadataModal):
     ##### need to add input element for file input
     #####      self.input_element = "" # path to project file
     projectfile_input = InputElement((By.ID, 'id_projectfile'))
-
-
-    def __init__(self, browser, port, locator):
-        super(ImportDialog, self).__init__(browser, port, locator)
 
     def load_project(self, projectfile_path ):
         '''Just load the project using the dialog. This
