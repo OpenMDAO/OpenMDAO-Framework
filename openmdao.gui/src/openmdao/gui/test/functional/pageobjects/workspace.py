@@ -69,7 +69,7 @@ class WorkspacePage(BasePageObject):
     obj_dataflow   = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
     obj_workflow   = ButtonElement((By.XPATH, "//a[(@rel='show_workflow')]"))
     obj_run        = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
-    obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+    #obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
     obj_remove     = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
 
     # File menu
@@ -121,7 +121,7 @@ class WorkspacePage(BasePageObject):
         self.locators = {}
         #self.locators["objects"] = \
         #    (By.XPATH, "//div[@id='otree_pane']//li[@path]")
-        self.locators["workflowtree"] = \
+        self.locators["objects"] = \
             (By.XPATH, "//div[@id='wtree_pane']//li[@path]")
         self.locators["files"] = \
             (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
@@ -402,24 +402,25 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
-    #def show_workflow(self, component_name):
-        #""" Show workflow of `component_name`. """
-        #self('workflowtree_tab').click()
+    def show_workflow(self, component_name):
+        """ Show workflow of `component_name`. """
+        self('workflowtree_tab').click()
         #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
-        #element = WebDriverWait(self.browser, TMO).until(
-                      #lambda browser: browser.find_element_by_xpath(xpath))
-        #element.click()
-        #time.sleep(0.5)
-        ## Try to recover from context menu not getting displayed.
-        #for retry in range(3):
-            #chain = ActionChains(self.browser)
-            #chain.context_click(element).perform()
-            #try:
-                #self('obj_workflow').click()
-                #break
-            #except TimeoutException:
-                #if retry >= 2:
-                    #raise
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_workflow').click()
+                break
+            except TimeoutException:
+                if retry >= 2:
+                    raise
 
     def show_properties(self):
         """ Display properties. """
@@ -608,18 +609,21 @@ class WorkspacePage(BasePageObject):
         else:
             dialog.click_cancel()
 
-    def add_object_to_workflow(self, obj, target_name):
+    def add_object_to_workflow(self, obj_path, target_name):
         """ Add `obj_path` object to `target_name` in workflow. """
         for retry in range(3):
             try:
+                items = obj_path.split('.')
+                parent = items[:-1]
+                comp = items[-1]
+                obj = self.get_dataflow_figure(comp, parent)
+                
                 target = self.find_object_button(target_name)
+                
                 chain = ActionChains(self.browser)
                 chain.drag_and_drop(obj.root, target)
-                #chain.move_to_element(obj('header'))
-                #chain.click_and_hold(obj('header'))
-                #chain.move_to_element(target)
-                #chain.release(None)
                 chain.perform()
+                
                 #obj = self.find_object_button(obj_path)
                 #workflow = self.get_workflow_figure(target_name)
                 #flow_fig = workflow.flow

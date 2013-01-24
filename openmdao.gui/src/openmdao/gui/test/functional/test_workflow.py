@@ -66,7 +66,7 @@ def _test_update(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Create model with CONMIN and ExecComp.
-    #workspace_page.show_dataflow('top')
+    workspace_page.show_dataflow('top')
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
     workspace_page.add_library_item_to_dataflow(
@@ -100,10 +100,10 @@ def _test_duplicates(browser):
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.test.execcomp.ExecComp', 'exe', args=["('z = x * y',)"])
-    workspace_page('workflow_tab').click()
     workspace_page.expand_object('top')
-    workspace_page.add_object_to_workflow('top.exe', 'top.driver')
-    workspace_page.add_object_to_workflow('top.exe', 'top.driver')
+    workspace_page.add_object_to_workflow('top.exe', 'top')
+    workspace_page.add_object_to_workflow('top.exe', 'top')
+    workspace_page('workflow_tab').click()
     eq(len(workspace_page.get_workflow_figures()), 1)
     eq(len(workspace_page.get_workflow_component_figures()), 3)
 

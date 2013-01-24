@@ -201,8 +201,14 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) {
-                            var id = (path+'-properties').replace(/\./g,'-');
-                            new openmdao.PropertiesFrame(id, model).editObject(path);
+                            if (jQuery.inArray('IAssembly',interfaces) >= 0) {
+                                subpath = path + '.driver';
+                            }
+                            else {
+                                subpath = path;
+                            }
+                            var id = (subpath+'-properties').replace(/\./g,'-');
+                            new openmdao.PropertiesFrame(id, model).editObject(subpath);
                         }
         };
         if (jQuery.inArray('IAssembly',interfaces) >= 0) {
@@ -213,12 +219,12 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                             }
             };
             // shortcut to driver workflow
-            /*menu.show_workflow = {
+            menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) {
                                 workflow_fn(path+'.driver');
                             }
-            };*/
+            };
         }
         if (jQuery.inArray('IDriver',interfaces) >= 0) {
             menu.show_workflow = {
@@ -291,4 +297,3 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 /** set prototype */
 openmdao.WorkflowTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.WorkflowTreeFrame.prototype.constructor = openmdao.WorkflowTreeFrame;
-
