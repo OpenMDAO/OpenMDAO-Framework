@@ -19,7 +19,7 @@ def test_generator():
 
 
 def _test_passthrough_editor(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -56,7 +56,7 @@ def _test_passthrough_editor(browser):
     eq("('y', 'p1.y')" in output, False)  # verify removed passthrough
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':
