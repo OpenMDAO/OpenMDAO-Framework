@@ -93,6 +93,10 @@ class SequentialWorkflow(Workflow):
                     index += 1
             else:
                 raise TypeError("Components must be added by name to a workflow.")
+            
+        # We seem to need this so that our get_attributes is correct for the GUI.
+        if check:
+            self.config_changed()
         
     def remove(self, compname):
         """Remove a component from the workflow by name. Do not report an
