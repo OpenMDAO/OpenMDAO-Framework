@@ -171,6 +171,17 @@ def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
             for pdir in projdirs:
                 os.chdir(pdir)
                 _build_dist('bdist_egg', destdir)
+            if sys.platform == 'darwin':
+                # a dirty HACK to get easy_install to download these binaries on
+                # later versions of OS X. By default, (when built on an intel mac),
+                # the packages will be named *-macosx-intel.egg, and to get easy_install
+                # to actually download them, we need to rename them to *-macosx-fat.egg.
+                # The binaries we build contain both i386 and x86_64 architectures in 
+                # them, but they don't contain any PPC stuff.  
+                for fname in os.listdir(destdir):
+                    if fname.endswith('-intel.egg'):
+                        newname = fname.replace('-intel.', '-fat.')
+                        os.rename(fname, newname)
             
         os.chdir(startdir)
         if hostlist:
