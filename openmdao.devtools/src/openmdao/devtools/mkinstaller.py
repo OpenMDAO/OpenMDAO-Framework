@@ -133,8 +133,8 @@ def main(args=None):
         if options.docs:
             if(os.system('%s %s && openmdao build_docs && deactivate' % (source_command, activate)) != 0):
                 print "Failed to build the docs."
-            else:
-                print "\\nSkipping build of OpenMDAO docs.\\n"
+        else:
+            print "\\nSkipping build of OpenMDAO docs.\\n"
         """
     else:  # making a release installer
         make_dev_eggs = ''
@@ -173,8 +173,8 @@ def extend_parser(parser):
     parser.add_option("--testurl", action="store", type="string", dest='testurl', 
                       help="specify url where openmdao.* distribs are located (used for release testing only)")
                       
-    # hack to force use of setuptools for now because using 'distribute' causes issues
-    os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
+    # go back to old behavior that includes system site packages by default
+    parser.set_defaults(system_site_packages=True)
 
 %(adjust_options)s
 
