@@ -26,7 +26,6 @@ def _test_basic(browser):
     workspace_page.add_file(filename)
 
     # Add a NestedSimulation.
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.NestedSimulation',
                                                 'nested', offset=(300, 300))
     # Verify full workflow shown.
@@ -132,7 +131,7 @@ def _test_parameter_auto(browser):
     dialog('ok').click()
     
     parameters = editor.get_parameters()
-    expected = [['', 'comp.x', '-100', '299', '', '', '', 'comp.x']]
+    expected = [['', 'comp.x', '0', '299', '', '', '', 'comp.x']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])

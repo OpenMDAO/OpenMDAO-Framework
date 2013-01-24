@@ -16,7 +16,8 @@ from openmdao.main.expreval import _expr_dict
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
          
-gui_excludes = ['type', 'vartypename', 'iotype', 'copy']
+gui_excludes = ['type', 'vartypename', 'iotype', 'copy', 
+                'validation_trait']
             
 def is_legal_name(name):
     '''Verifies a Pythonic legal name for use as an OpenMDAO object.'''

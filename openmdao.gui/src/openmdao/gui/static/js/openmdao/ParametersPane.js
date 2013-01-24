@@ -113,13 +113,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     function promptForParameter(callback, model) {
     
         // Figure out all of our candidates for parameter addition.
-        model.getWorkflow(pathname, function findComps(wjson) {
+        var parentpath = pathname.split('.').slice(0, -1).join('.');
+        model.getDataflow(parentpath, function findComps(wjson) {
         
             var candidates = [];
             var limits = {};
             
             // Loop through components in workflow to gather all our param candidates
-            jQuery.each(wjson[0].workflow, function(idx, comp) {
+            jQuery.each(wjson.components, function(idx, comp) {
             
                 var comppath = comp.pathname.split('.').slice(-1)[0];
                 
@@ -142,10 +143,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         
                         lowlimit = null;
                         highlimit = null;
-                        if (input.low) {
+                        if (input.low !== null) {
                             lowlimit = input.low;
                         };
-                        if (input.high) {
+                        if (input.high !== null) {
                             highlimit = input.high;
                         };
                         fullpath = comppath + '.' + input.name
@@ -196,10 +197,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         selector.val(ui.item.value);
                         selector.blur();
                         limit = limits[ui.item.value];
-                        if (limit[0]) {
+                        if (limit[0] !== null) {
                             low.val(limit[0]);
                         }
-                        if (limit[1]) {
+                        if (limit[1] !== null) {
                             high.val(limit[1]);
                         }
                     },
@@ -216,10 +217,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         // still add the limits from that variable.
                         if (candidates.indexOf(selector.val()) >= 0) {
                             limit = limits[selector.val()];
-                            if (limit[0]) {
+                            if (limit[0] !== null) {
                                 low.val(limit[0]);
                             }
-                            if (limit[1]) {
+                            if (limit[1] !== null) {
                                 high.val(limit[1]);
                             }
                         }

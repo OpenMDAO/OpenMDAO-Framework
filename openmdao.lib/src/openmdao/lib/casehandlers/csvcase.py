@@ -266,6 +266,24 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
+        sorted_input_keys = []
+        sorted_input_values = []
+        sorted_output_keys = []
+        sorted_output_values = []
+        
+        input_keys = case.keys(iotype='in', flatten=True)
+        input_values = case.values(iotype='in', flatten=True)
+        output_keys = case.keys(iotype='out', flatten=True)
+        output_values = case.values(iotype='out', flatten=True)
+        
+        if len(input_keys) > 0:
+            sorted_input_keys, sorted_input_values = \
+                (list(item) for item in zip(*sorted(zip(input_keys, 
+                                                        input_values))))
+        if len(output_keys) > 0:
+            sorted_output_keys, sorted_output_values = \
+                (list(item) for item in zip(*sorted(zip(output_keys, 
+                                                        output_values))))
         if self.outfile is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
@@ -273,11 +291,11 @@ class CSVCaseRecorder(object):
             
             headers = ['label', '/INPUTS']
             
-            headers.extend(case.keys(iotype='in', flatten=True))
+            headers.extend(sorted_input_keys)
                 
             headers.append('/OUTPUTS')
             
-            headers.extend(case.keys(iotype='out', flatten=True))
+            headers.extend(sorted_output_keys)
                 
             headers.extend(['/METADATA', 'retries', 'max_retries', 'parent_uuid',
                             'msg'])
@@ -288,9 +306,10 @@ class CSVCaseRecorder(object):
             
         data = [case.label]
                 
-        for iotype in ['in', 'out']:
-            data.append('')
-            data.extend(case.values(iotype=iotype, flatten=True))
+        data.append('')
+        data.extend(sorted_input_values)
+        data.append('')
+        data.extend(sorted_output_values)
             
         data.extend(['', case.retries, case.max_retries, 
                      case.parent_uuid, case.msg])

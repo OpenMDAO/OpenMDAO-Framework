@@ -13,8 +13,9 @@ import threading
 from pkg_resources import parse_version
 
 from openmdao.main.importfactory import ImportFactory
-from openmdao.main.pkg_res_factory import PkgResourcesFactory, plugin_groups
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
 from openmdao.util.log import logger
+from openmdao.util.dep import plugin_groups
 
 _factories = []
 _factory_lock = threading.Lock()
@@ -68,8 +69,10 @@ def remove_class_factory(factory):
 def _cmp(tup1, tup2):
     s1 = tup1[0].lower()
     s2 = tup2[0].lower()
-    if s1 < s2: return -1
-    elif s1 > s2: return 1
+    if s1 < s2: 
+        return -1
+    elif s1 > s2: 
+        return 1
     else: # s1 == s2
         return cmp(parse_version(tup1[1].get('version','')), 
                    parse_version(tup2[1].get('version','')))

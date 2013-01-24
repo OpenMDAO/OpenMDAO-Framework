@@ -33,6 +33,7 @@ def _test_value_editors(browser):
 
     paraboloid = workspace_page.get_dataflow_figure('p1', 'top')
     props = paraboloid.properties_page()
+    props.move(-100, -100)  # Ensure Project menu fully visible.
     inputs = props.inputs
 
     #edit dictionary - remove 'e', add 'phi', round down 'pi'

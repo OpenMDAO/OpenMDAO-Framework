@@ -216,7 +216,6 @@ def _test_slots(browser):
 
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(workspace_page)
 
-    workspace_page.set_library_filter('ExecComp')
     execcomp = workspace_page.find_library_button('ExecComp')
 
     ##################################################
@@ -305,7 +304,6 @@ def _test_list_slot(browser):
         "generator slot is showing as filled when it should not be")
 
     # drop a FullFactorial onto the generator slot
-    workspace_page.set_library_filter('DOEgenerator')
     generator = workspace_page.find_library_button('FullFactorial')
     slot_drop(browser, generator, generator_slot, True, 'generator')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
@@ -331,7 +329,6 @@ def _test_list_slot(browser):
     workspace_page('workflow_tab').click()
 
     # drop a DumpCaseRecorder onto the recorders slot
-    workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
@@ -519,7 +516,6 @@ def _test_component_to_complex_workflow(browser):
     workspace_page.add_file(file2_path)
 
     # create an instance of VehicleSim2
-    workspace_page.set_library_filter('In Project')
     sim_name = put_element_on_grid(workspace_page, "VehicleSim2")
 
     # Drag paraboloid element into sim dataflow figure
@@ -605,7 +601,6 @@ def _test_drop_onto_layered_div(browser):
     workspace_page.add_file(file2_path)
 
     # add VehicleSim2 to the globals
-    workspace_page.set_library_filter('In Project')
     sim_name = put_element_on_grid(workspace_page, 'VehicleSim2')
 
     # add Paraboloid to VehicleSim dataflow assembly

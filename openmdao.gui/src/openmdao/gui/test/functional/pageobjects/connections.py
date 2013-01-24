@@ -62,7 +62,7 @@ class ConnectionsPage(DialogPage):
         return children[2]
 
     def show_all_variables(self):
-        """ Show only the connected variables. """
+        """ Show all variables. """
         chain = ActionChains(self.browser)
         chain.move_to_element_with_offset(self.connections_pane, 5, 5)
         chain.context_click(None)
@@ -169,17 +169,13 @@ class ConnectionsPage(DialogPage):
                     if elm.text == name:
                         names.append(elm)
                 except StaleElementReferenceException:
-                    logging.warning('get_variable_names:'
+                    logging.warning('find_variable_name:'
                                     ' StaleElementReferenceException')
                 except IndexError:
-                    logging.warning('get_variable_names:'
+                    logging.warning('find_variable_name:'
                                     ' IndexError for i=%s, headers=%s',
                                     i, len(variable_names))
                 else:
                     break
 
-        if len(names) != len(variable_names):
-            logging.error('get_variable_names:'
-                          ' expecting %d names, got %s',
-                          len(variable_names), names)
         return names

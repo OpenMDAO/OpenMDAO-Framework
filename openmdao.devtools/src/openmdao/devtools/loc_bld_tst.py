@@ -1,5 +1,6 @@
 import codecs
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -124,6 +125,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     os.chdir(workdir)
     
     print 'building...'
+    sys.stdout.flush()
     
     try:
         if build_type == 'release':
@@ -134,6 +136,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
         os.chdir(workdir)
 
     print "build return code =", retcode
+    sys.stdout.flush()
     if retcode != 0:
         sys.exit(retcode)
         
@@ -146,10 +149,13 @@ def build_and_test(fname=None, workdir='.', keep=False,
                 testargs.append('--all') # otherwise release test runs small set by default
     
     print '\ntesting  (testargs=%s) ...' % testargs
+    sys.stdout.flush()
 
     try:
         retcode = activate_and_test(envdir, testargs)
+        print "test return code =", retcode
     finally:
+        sys.stdout.flush()
         os.chdir(startdir)
     
     return retcode
@@ -308,9 +314,22 @@ if __name__ == '__main__':
                       dest='testargs', default='',
                       help="args to pass to openmdao test")
 
-    (options, args) = parser.parse_args(sys.argv[1:])
+    # Handle quoting problem that happens on Windows (at least).
+    # (--testargs="-v --gui" gets split into: '--testargs="-v', '--gui', '"')
+    args = []
+    i = 1
+    while i < len(sys.argv):
+        arg = sys.argv[i]
+        i += 1
+        while arg.count('"') == 1 and i < len(sys.argv):
+            next_arg = sys.argv[i]
+            i += 1
+            arg += ' '+next_arg
+        args.append(arg)
+        
+    (options, args) = parser.parse_args(args)
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
                             branch=options.branch,
-                            testargs=options.testargs.split()))
+                            testargs=shlex.split(options.testargs)))
     

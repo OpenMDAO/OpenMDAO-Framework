@@ -671,7 +671,8 @@ class Component(Container):
             nset = set([k for k, v in self.items(iotype='in')])
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
-            self._input_names = list(nset)
+            self._input_names = list(nset)      
+        self._input_names = [name_ for name_ in self._input_names if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -708,7 +709,8 @@ class Component(Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
-
+        self._output_names = [name_ for name_ in self._output_names if "[" not in name_]
+        
         if valid is None:
             if connected is None:
                 return self._output_names
@@ -1590,6 +1592,11 @@ class Component(Container):
             value = getattr(self, name)
             ttype = trait.trait_type
 
+            # If this is a passthrough, reach in to get the trait
+            if 'validation_trait' in meta:
+                trait = meta['validation_trait']
+                ttype = trait.trait_type
+                
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
             
@@ -1652,7 +1659,6 @@ class Component(Container):
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
-        attrs['Slots'] = slots
         
         # Find any event traits
         
@@ -1690,7 +1696,7 @@ class Component(Container):
                     if 'hidden' not in meta or meta['hidden'] == False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         if slot_attr is not None:
-                            attrs['Slots'].append(slot_attr)
+                            slots.append(slot_attr)
 
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
@@ -1772,10 +1778,14 @@ class Component(Container):
             if has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                    for path in self.get_events()]
+                
+        if len(slots) > 0:
+            attrs['Slots'] = slots
+                
         return attrs
 
 
-def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
+def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
