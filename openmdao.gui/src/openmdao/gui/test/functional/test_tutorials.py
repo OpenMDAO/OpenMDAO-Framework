@@ -51,12 +51,13 @@ def _test_MDAO_MDF(browser):
     conn_page.connect_vars('dis1.y1', 'dis2.y1')
     conn_page.close()
 
-    workspace_page('workflow_tab').click()
-    workspace_page.show_workflow('top')
+    #workspace_page('workflow_tab').click()
+    #workspace_page.show_workflow('top')
 
     # Add solver to optimizer workflow
     workspace_page.expand_object('top')
-    workspace_page.add_object_to_workflow('top.solver', 'top.driver')
+    solver = workspace_page.get_dataflow_figure('solver', 'top')
+    workspace_page.add_object_to_workflow(solver, 'top')
 
     # Add disciplines to solver workflow
     workspace_page.expand_object('top.solver')

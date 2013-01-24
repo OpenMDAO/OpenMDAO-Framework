@@ -608,20 +608,28 @@ class WorkspacePage(BasePageObject):
         else:
             dialog.click_cancel()
 
-    def add_object_to_workflow(self, obj_path, target_name):
+    def add_object_to_workflow(self, obj, target_name):
         """ Add `obj_path` object to `target_name` in workflow. """
         for retry in range(3):
             try:
-                obj = self.find_object_button(obj_path)
-                workflow = self.get_workflow_figure(target_name)
-                flow_fig = workflow.flow
+                target = self.find_object_button(target_name)
                 chain = ActionChains(self.browser)
-                chain.move_to_element(obj)
-                chain.click_and_hold(obj)
-                chain.move_to_element(flow_fig)
-                chain.move_by_offset(2, 1)
-                chain.release(None)
+                chain.drag_and_drop(obj.root, target)
+                #chain.move_to_element(obj('header'))
+                #chain.click_and_hold(obj('header'))
+                #chain.move_to_element(target)
+                #chain.release(None)
                 chain.perform()
+                #obj = self.find_object_button(obj_path)
+                #workflow = self.get_workflow_figure(target_name)
+                #flow_fig = workflow.flow
+                #chain = ActionChains(self.browser)
+                #chain.move_to_element(obj)
+                #chain.click_and_hold(obj)
+                #chain.move_to_element(flow_fig)
+                #chain.move_by_offset(2, 1)
+                #chain.release(None)
+                #chain.perform()
             except StaleElementReferenceException:
                 if retry < 2:
                     logging.warning('add_object_to_workflow:'
