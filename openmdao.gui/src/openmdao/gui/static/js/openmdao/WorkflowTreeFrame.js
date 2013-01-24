@@ -117,7 +117,11 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         .bind("dblclick.jstree", function (e, data) {
             if (typeof dblclick_fn === 'function') {
                 var node = jQuery(e.target).closest("li"),
-                    path = node.attr("path");
+                    path = node.attr("path"),
+                    iface = node.attr('interfaces');
+                if (iface.indexOf("IAssembly") >= 0) {
+                    path = path + '.driver';
+                }
                 dblclick_fn(path);
             }
         })

@@ -11,6 +11,7 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, \
@@ -413,7 +414,11 @@ def _test_properties(browser):
     project_dict, workspace_page = startup(browser)
 
     # Check default 'top.driver'.
-    workspace_page.select_object('top.driver')
+    workspace_page('properties_tab').click()
+    obj = workspace_page.get_dataflow_figure('top')
+    chain = ActionChains(browser)
+    chain.click(obj.root)
+    chain.perform()    
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs

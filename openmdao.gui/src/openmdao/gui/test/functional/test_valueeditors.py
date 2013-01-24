@@ -8,6 +8,7 @@ import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
+from selenium.webdriver import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
@@ -130,7 +131,7 @@ def _test_value_editors(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_vartrees(browser):
+def _test_Avartrees(browser):
     project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
@@ -202,10 +203,11 @@ def _test_vartrees(browser):
     editor.close()
 
     # Now, do it all again on the Properties Pane
-    workspace_page.select_object('top')
-    workspace_page.expand_object('top')
-    workspace_page.select_object('top.p1')
-    workspace_page.show_properties()
+    workspace_page('properties_tab').click()
+    obj = workspace_page.get_dataflow_figure('p1', 'top')
+    chain = ActionChains(browser)
+    chain.click(obj.root)
+    chain.perform()    
     inputs = workspace_page.props_inputs
     expected = [
         [' cont_in',      ''],
