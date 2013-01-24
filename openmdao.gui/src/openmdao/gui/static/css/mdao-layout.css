@@ -149,7 +149,7 @@ nav2 ul ul a {
   overflow: auto;
 }
 
-#otree_pane, #properties_pane, #palette_pane {
+#otree_pane, #wtree_pane, #properties_pane, #palette_pane {
   height: 100%;
   width: 100%;
 }
