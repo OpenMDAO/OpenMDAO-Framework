@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Event
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -671,7 +671,7 @@ class Component(Container):
             nset = set([k for k, v in self.items(iotype='in')])
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
-            self._input_names = list(nset)      
+            self._input_names = list(nset)
         self._input_names = [name_ for name_ in self._input_names if "[" not in name_]
 
         if valid is None:
@@ -710,7 +710,7 @@ class Component(Container):
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
         self._output_names = [name_ for name_ in self._output_names if "[" not in name_]
-        
+
         if valid is None:
             if connected is None:
                 return self._output_names
@@ -1596,13 +1596,13 @@ class Component(Container):
             if 'validation_trait' in meta:
                 trait = meta['validation_trait']
                 ttype = trait.trait_type
-                
+
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            
+
             io_attr['id'] = name
             io_attr['indent'] = 0
-            
+
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
 
@@ -1637,21 +1637,21 @@ class Component(Container):
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
-                
+
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
                     slots.append(slot_attr)
-                    
+
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in io_attr:
-                
+
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
-                                                   parent=name, 
+                                                   parent=name,
                                                    valid=io_attr['valid'])
-                
+
                 if name in self.list_inputs():
                     inputs += vt_attrs['Inputs']
                 else:
@@ -1659,26 +1659,26 @@ class Component(Container):
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
-        
+
         # Find any event traits
-        
+
         tset1 = set(self._alltraits(events=True))
         tset2 = set(self._alltraits(events=False))
         event_set = tset1.difference(tset2)
         # Remove the Enthought events common to all has_traits objects
         event_set.remove('trait_added')
         event_set.remove('trait_modified')
-        
+
         events = []
         for name in event_set:
-            
+
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             ttype = trait.trait_type
-            
+
             event_attr = ttype.get_attribute(name, meta)
             events.append(event_attr)
-            
+
         if len(events) > 0:
             attrs['Events'] = events
 
@@ -1729,12 +1729,12 @@ class Component(Container):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     attr = {}
-                    
+
                     if isinstance(parm, ParameterGroup):
                         attr['target'] = str(tuple(parm.targets))
                     else:
                         attr['target'] = parm.target
-                        
+
                     attr['name']    = str(key)
                     attr['low']     = parm.low
                     attr['high']    = parm.high
@@ -1743,7 +1743,7 @@ class Component(Container):
                     attr['fd_step'] = parm.fd_step
                     #attr['scope']   = parm.scope.name
                     parameters.append(attr)
-                    
+
                 attrs['Parameters'] = parameters
 
             constraints = []
@@ -1778,10 +1778,10 @@ class Component(Container):
             if has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                    for path in self.get_events()]
-                
+
         if len(slots) > 0:
             attrs['Slots'] = slots
-                
+
         return attrs
 
 

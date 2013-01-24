@@ -5,13 +5,15 @@ Pages related to project management.
 import random
 import string
 import sys
+import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement, TextElement
+from elements import ButtonElement, InputElement
 from dialog import DialogPage, BootstrapModal
+
 
 class ProjectsPage(BasePageObject):
     """ Displays list of projects. """
@@ -61,7 +63,7 @@ class ProjectsPage(BasePageObject):
         element.click()
         from workspace import WorkspacePage
         return WorkspacePage.verify(self.browser, self.port)
-    
+
     def edit_project(self, project_name):
         """ Clicks the 'edit' button. Returns :class:`EditDialog`. """
         self.search_input = project_name
@@ -71,7 +73,7 @@ class ProjectsPage(BasePageObject):
         element.click()
 
         edit_dialog = EditDialog(self.browser, self.port, (By.ID, "editProjectModal"))
-        return edit_dialog 
+        return edit_dialog
 
     def export_project(self, project_name):
         """ Clicks the 'export' button. Returns :class:`ExportDialog`. """
@@ -90,9 +92,8 @@ class ProjectsPage(BasePageObject):
 
         delete_dialog = DeleteDialog(self.browser, self.port, (By.XPATH, "/html/body/div[2]"))
 
+        time.sleep(5)
 
-        import time; time.sleep(5)
-        
         delete_dialog.submit()
 
     def delete_all_test_projects(self, verbose=False):
@@ -109,6 +110,7 @@ class ProjectsPage(BasePageObject):
                     print >>sys.stderr, 'Deleted', project_name
             # there may be more that were previously hidden due to the row limit
             elements = self.browser.find_elements_by_partial_link_text('testing project')
+
 
 class MetadataModal(BootstrapModal):
     submit_button = None
@@ -138,6 +140,7 @@ class MetadataModal(BootstrapModal):
             self.version = version
         self.submit()
 
+
 class NewDialog(MetadataModal):
     """ Modal for creating a new project """
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='New Project']"))
@@ -147,7 +150,7 @@ class NewDialog(MetadataModal):
 
     def __init__(self, browser, port, locator):
         super(NewDialog, self).__init__(browser, port, locator)
-    
+
     @staticmethod
     def get_random_project_name(size=6, chars=None):
         """ Return a random project name. """
@@ -155,7 +158,7 @@ class NewDialog(MetadataModal):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-        
+
 class EditDialog(MetadataModal):
     """ Dialog for exporting a project """
     submit_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
@@ -163,6 +166,7 @@ class EditDialog(MetadataModal):
 
     def __init__(self, browser, port, locator):
         super(EditDialog, self).__init__(browser, port, locator)
+
 
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
@@ -180,6 +184,7 @@ class DeleteDialog(DialogPage):
         """Clicks the 'cancel' button"""
         self('cancel_button').click()
 
+
 class ImportDialog(MetadataModal):
     """ Dialog for importing a project """
 
@@ -191,11 +196,10 @@ class ImportDialog(MetadataModal):
     #####      self.input_element = "" # path to project file
     projectfile_input = InputElement((By.ID, 'id_projectfile'))
 
-
     def __init__(self, browser, port, locator):
         super(ImportDialog, self).__init__(browser, port, locator)
 
-    def load_project(self, projectfile_path ):
+    def load_project(self, projectfile_path):
         '''Just load the project using the dialog. This
            does not complete the import. That is a separate step
         '''
@@ -208,4 +212,3 @@ class ImportDialog(MetadataModal):
         chars = chars or string.ascii_uppercase + string.digits
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
-

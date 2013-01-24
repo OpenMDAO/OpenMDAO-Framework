@@ -751,10 +751,24 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
     var displayFlow = function(conn, type, tabName) {
         var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
             dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
-            con_name = src_name+'-'+dst_name,
             src_fig = self.figures[src_name],
             dst_fig = self.figures[dst_name],
-            con = self.connections[con_name];
+            con_name, con;
+
+        if (!src_fig && conn[0].indexOf('.')>0) {
+            // src_name is not a component, so the dotted path must indicate a vartree
+            src_name = '';
+            src_fig = self.figures[src_name];
+        }
+
+        if (!dst_fig && conn[1].indexOf('.')>0) {
+            // dst_name is not a component, so the dotted path must indicate a vartree
+            dst_name = '';
+            dst_fig = self.figures[dst_name];
+        }
+
+        con_name = src_name+'-'+dst_name;
+        con = self.connections[con_name];
 
         if (!con) {
             con = new draw2d.Connection();
@@ -763,12 +777,18 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             con.setColor(flow_colors[type]);
 
             if (src_name.length > 0) {
-                if (type === 'data' || type === 'parameter') {
-                    con.setSource(src_fig.getPort("output"));
-                } else {
-                    con.setSource(src_fig.getPort("fbOutput"));
+                if (src_fig) {
+                    if (type === 'data' || type === 'parameter') {
+                        con.setSource(src_fig.getPort("output"));
+                    } else {
+                        con.setSource(src_fig.getPort("fbOutput"));
+                    }
+                    con.setZOrder(self.getZOrder()+2);
                 }
-                con.setZOrder(self.getZOrder()+2);
+                else {
+                    debug.error('DataflowFigure.displayFlow()',self.pathname,'cannot find source component:',src_name);
+                    return;
+                }
             }
             else {
                 src_port = new draw2d.OutputPort();
@@ -783,13 +803,19 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             }
 
             if (dst_name.length > 0) {
-                if (type === 'data' || type === 'parameter') {
-                    con.setTarget(dst_fig.getPort("input"));
-                } else {
-                    con.setTarget(dst_fig.getPort("fbInput"));
+                if (dst_fig) {
+                    if (type === 'data' || type === 'parameter') {
+                        con.setTarget(dst_fig.getPort("input"));
+                    } else {
+                        con.setTarget(dst_fig.getPort("fbInput"));
+                    }
+                    con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+                    con.setZOrder(self.getZOrder()+2);
                 }
-                con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
-                con.setZOrder(self.getZOrder()+2);
+                else {
+                    debug.error('DataflowFigure.displayFlow()',self.pathname,'cannot find destination component:',dst_name);
+                    return;
+                }
             }
             else {
                 dst_port = new draw2d.InputPort();
