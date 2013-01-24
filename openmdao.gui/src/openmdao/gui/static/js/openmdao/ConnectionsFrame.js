@@ -54,7 +54,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         r = Raphael(connectionsDiv.attr('id')),
         // variable selectors and connect button
         variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
-                variablesHTML = '<div style="'+variablesCSS+'"><table>'
+        variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
@@ -270,7 +270,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             var i = 0,
                 x = 15,
                 y = 10,
-                conn_list = jQuery.map(data.connections, function(n) {
+                var_list = jQuery.map(data.connections, function(n) {
                     return n;
                 }),
                 src_list  = jQuery.map(data.sources, function(n) {
@@ -280,15 +280,9 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                     return self.dst_comp ? self.dst_comp+'.'+n.name : n.name;
                 });
 
-            for (i = 0; i <conn_list.length; i++) {
-                if (conn_list[i].indexOf('.') >= 0) {
-                    conn_list[i]=conn_list[i].split('.')[1];
-                }
-            }
-
             jQuery.each(data.sources, function(idx,srcvar) {
-                if (showAllVariables || conn_list.contains(srcvar.name)) {
-                    var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
+                var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name;
+                if (showAllVariables || var_list.contains(src_name)) {
                     figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
@@ -298,8 +292,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             x = (componentsDiv.width() - connect_button.width())/2;
             y = 10;
             jQuery.each(data.destinations, function(idx,dstvar) {
-                if (showAllVariables || conn_list.contains(dstvar.name)) {
-                    var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
+                var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name;
+                if (showAllVariables || var_list.contains(dst_name)) {
                     figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
@@ -313,12 +307,16 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
             variablesDiv.show();
 
             jQuery.each(data.connections,function(idx,conn) {
-                var src_name = conn[0],
-                    dst_name = conn[1],
-                    src_fig = figures[src_name],
-                    dst_fig = figures[dst_name],
-                    c = r.connection(src_fig, dst_fig, "#000", "#fff")
+                var src_fig = figures[conn[0]],
+                    dst_fig = figures[conn[1]];
+
+                if (src_fig && dst_fig) {
+                    r.connection(src_fig, dst_fig, "#000", "#fff")
                         .line.node.className.baseVal += ' variable-connection';
+                }
+                else {
+                    debug.error('Cannot draw connection between '+conn[0]+' and '+conn[1]);
+                }
             });
 
             // update the output & input selectors to current outputs & inputs
@@ -492,7 +490,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         }
     };
 
-    /** get the specified assembly from model */
+    /** populate frame with connection data for the specified assembly */
     this.editAssembly = function(path, src_comp, dst_comp) {
         if (self.pathname !== path) {
            if (self.pathname !== null) {
