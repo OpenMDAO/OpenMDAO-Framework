@@ -30,7 +30,7 @@ def test_generator():
 
 
 def _test_drop_on_driver(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # replace the 'top' assembly driver with a CONMINdriver
     replace_driver(workspace_page, 'top', 'CONMINdriver')
@@ -40,11 +40,11 @@ def _test_drop_on_driver(browser):
     eq(driver_element('content_area').find_element_by_xpath('center/i').text,
         'CONMINdriver', "Dropping CONMINdriver onto existing driver did not replace it")
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_workspace_dragdrop(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
     assembly = workspace_page.find_library_button('Assembly')
@@ -80,20 +80,20 @@ def _test_workspace_dragdrop(browser):
         eq(path in pathnames, True, "An element did not drop into 'top' when "
            "dragged onto one of its drop areas.\nIt was created somewhere else")
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_drop_on_grid(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     #other tests also need to put an assembly on the grid, so put in seperate method
     put_assembly_on_grid(workspace_page)
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_drop_on_existing_assembly(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     assembly = workspace_page.find_library_button('Assembly')
 
@@ -134,11 +134,11 @@ def _test_drop_on_existing_assembly(browser):
     ensure_names_in_workspace(workspace_page, [outer_name, middle_name, inner_name],
         "Dragging Assembly onto Assembly did not create a new instance on page")
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_drop_on_component_editor(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
@@ -182,11 +182,11 @@ def _test_drop_on_component_editor(browser):
            "An element did not drop into 'top' (in component editor) when "
            "dragged onto one of its drop areas.\nIt was created somewhere else")
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_drop_on_component_editor_grid(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
@@ -208,11 +208,11 @@ def _test_drop_on_component_editor_grid(browser):
     # don't bother checking to see if it appeared,
     # the UI box will appear and screw the test if it did
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_slots(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(workspace_page)
 
@@ -279,11 +279,11 @@ def _test_slots(browser):
         editor, metamodel, caseiter, caserec, comp = slot_reset(workspace_page, editor, metamodel, True)
     """
 
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_list_slot(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # replace the 'top' assembly driver with a DOEdriver
     # (this additionally verifies that an issue with DOEdriver slots is fixed)
@@ -419,11 +419,11 @@ def _test_list_slot(browser):
     eq(len(rects), 3)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_simple_component_to_workflow(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Get file paths
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -461,11 +461,11 @@ def _test_simple_component_to_workflow(browser):
     assert paraboloid_name in top.component_names
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_library_to_workflow(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Get file paths
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -501,11 +501,11 @@ def _test_library_to_workflow(browser):
     assert paraboloid_name in top.component_names
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_component_to_complex_workflow(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Add paraboloid and vehicle_threesim files
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -586,11 +586,11 @@ def _test_component_to_complex_workflow(browser):
     assert paraboloid_name not in vehicle_workflow_figure.component_names
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_drop_onto_layered_div(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Add paraboloid and vehicle_threesim files
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -659,7 +659,7 @@ def _test_drop_onto_layered_div(browser):
     assert paraboloid_name not in vehicle_workflow_figure.component_names
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':

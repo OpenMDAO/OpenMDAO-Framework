@@ -193,7 +193,7 @@ class WorkspacePage(BasePageObject):
             NotifierPage.wait(self, timeout, base_id='command')
 
     def close_workspace(self, commit=False):
-        """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+        """ Close the workspace page. Returns :class:`ProjectsPage`. """
         if commit:
             self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
@@ -201,11 +201,11 @@ class WorkspacePage(BasePageObject):
         self('project_menu').click()
         self('close_button').click()
 
-        from project import ProjectsListPage
-        return ProjectsListPage.verify(self.browser, self.port)
+        from project import ProjectsPage
+        return ProjectsPage.verify(self.browser, self.port)
 
     def attempt_to_close_workspace(self, expectDialog, confirm):
-        """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+        """ Close the workspace page. Returns :class:`ProjectsPage`. """
         self('project_menu').click()
         self('close_button').click()
 
@@ -216,13 +216,13 @@ class WorkspacePage(BasePageObject):
                 self.browser.execute_script('openmdao.Util.closeWebSockets();')
                 NotifierPage.wait(self)
                 dialog.click_ok()
-                from project import ProjectsListPage
-                return ProjectsListPage.verify(self.browser, self.port)
+                from project import ProjectsPage
+                return ProjectsPage.verify(self.browser, self.port)
             else:  #return to the project, intact.
                 dialog.click_cancel()
         else:      #no unsaved changes
-            from project import ProjectsListPage
-            return ProjectsListPage.verify(self.browser, self.port)
+            from project import ProjectsPage
+            return ProjectsPage.verify(self.browser, self.port)
 
     def open_editor(self):
         """ Open code editor.  Returns :class:`EditorPage`. """
