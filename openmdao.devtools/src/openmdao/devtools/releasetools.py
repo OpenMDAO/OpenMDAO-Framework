@@ -179,9 +179,10 @@ def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
                 # The binaries we build contain both i386 and x86_64 architectures in 
                 # them, but they don't contain any PPC stuff.  
                 for fname in os.listdir(destdir):
+                    fname = os.path.join(destdir, fname)
                     if fname.endswith('-intel.egg'):
                         newname = fname.replace('-intel.', '-fat.')
-                        os.rename(fname, newname)
+                        os.rename(fname, os.path.join(destdir,newname))
             
         os.chdir(startdir)
         if hostlist:
