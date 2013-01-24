@@ -146,7 +146,7 @@ class Workflow(object):
             comp.stop()
         self._stop = True
 
-    def add(self, compnames, index=None):
+    def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the workflow by name."""
         raise NotImplementedError("This Workflow has no 'add' function")
     

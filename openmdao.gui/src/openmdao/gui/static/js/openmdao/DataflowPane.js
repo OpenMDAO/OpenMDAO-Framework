@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowPane = function(elm,model,pathname,name) {
+openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
 
     /***********************************************************************
      *  private
@@ -94,7 +94,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             dataflow.clear();
             dataflowFig.destroy();
         }
-        dataflowFig = new openmdao.DataflowFigure(model, self.pathname);
+        dataflowFig = new openmdao.DataflowFigure(model, self.pathname, prop_fn);
         dataflow.addFigure(dataflowFig,20,20);
         dataflowFig.maximize();
     };
