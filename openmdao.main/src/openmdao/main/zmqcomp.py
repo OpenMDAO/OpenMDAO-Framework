@@ -72,8 +72,7 @@ class ZmqCompWrapper(object):
             funct = deep_getattr(self._comp, parts[0])
             ret = funct(*parts[1], **parts[2])
         except Exception as err:
-            logging.exception('%s handle_req %s %s %s',
-                              self._comp.get_pathname(),
+            logging.exception('handle_req %s %s %s',
                               parts[0], parts[1], parts[2])
             exc_type, exc_value, exc_traceback = sys.exc_info()
             ret = traceback.format_exc(exc_traceback)
