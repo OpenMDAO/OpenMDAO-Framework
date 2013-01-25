@@ -52,6 +52,10 @@ class ProjectsPage(BasePageObject):
 
     def contains(self, project_name):
         """ Returns True if `project_name` is in the list of projects. """
+        elements = self.browser.find_elements(By.TAG_NAME, 'tr')
+        if len(elements) == 0:
+            return False
+
         self.search_input = project_name
         return len(self.browser.find_elements_by_link_text(project_name)) > 0
 
