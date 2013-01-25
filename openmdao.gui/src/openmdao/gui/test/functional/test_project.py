@@ -71,6 +71,8 @@ def _test_new_project(browser):
     # Go back to projects page to see if it is on the list.
     assert projects_page.contains(project_dict['name'])
 
+    # remove the downloaded file
+    os.remove(project_path[0])
 
 if __name__ == '__main__':
     main()
