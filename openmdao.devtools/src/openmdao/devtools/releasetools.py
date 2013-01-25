@@ -171,6 +171,18 @@ def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
             for pdir in projdirs:
                 os.chdir(pdir)
                 _build_dist('bdist_egg', destdir)
+            if sys.platform == 'darwin':
+                # a dirty HACK to get easy_install to download these binaries on
+                # later versions of OS X. By default, (when built on an intel mac),
+                # the packages will be named *-macosx-intel.egg, and to get easy_install
+                # to actually download them, we need to rename them to *-macosx-fat.egg.
+                # The binaries we build contain both i386 and x86_64 architectures in 
+                # them, but they don't contain any PPC stuff.  
+                for fname in os.listdir(destdir):
+                    fname = os.path.join(destdir, fname)
+                    if fname.endswith('-intel.egg'):
+                        newname = fname.replace('-intel.', '-fat.')
+                        os.rename(fname, os.path.join(destdir,newname))
             
         os.chdir(startdir)
         if hostlist:
@@ -328,7 +340,7 @@ def build_release(parser, options):
     hostlist, config = read_config(options)
     required_binaries = set([('windows', 'python2.6'), 
                              ('windows', 'python2.7')])
-    binary_hosts = []
+    binary_hosts = set()
     if options.binaries:
         for host in hostlist:
             if config.has_section(host):
@@ -337,7 +349,18 @@ def build_release(parser, options):
                     py = _get_cfg_val(config, host, 'py')
                     if (platform, py) in required_binaries:
                         required_binaries.remove((platform, py))
-                        binary_hosts.append(host)
+                        binary_hosts.add(host)
+                        
+        if sys.platform == 'darwin':  # build osx binaries if we're on a mac
+            binary_hosts.add('localhost')
+        elif required_binaries and sys.platform.startswith('win'):
+            try:
+                required_binaries.remove(('windows', 'python%d.%d' % (sys.version_info[0:2])))
+            except:
+                pass
+            else:
+                binary_hosts.add('localhost')
+
     if required_binaries:
         print "WARNING: binary distributions are required for the following and no hosts were specified: %s" % list(required_binaries)
         if not options.test:
@@ -399,8 +422,12 @@ def build_release(parser, options):
         
         if not os.path.isfile(idxpath) or not options.nodocbuild:
             build_docs(parser, options)
+
         shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
                     os.path.join(destdir,'docs'))
+    
+        shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
+                    os.path.join(topdir,'openmdao.main', 'src', 'openmdao', 'main', 'docs'))
 
         if not options.test:
             # commit the changes to the release branch
@@ -423,7 +450,7 @@ def build_release(parser, options):
                 proj_dirs.append(pdir)
                 
         os.chdir(startdir)
-        _build_bdist_eggs(proj_dirs, destdir, binary_hosts, cfgpath)
+        _build_bdist_eggs(proj_dirs, destdir, list(binary_hosts), cfgpath)
             
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),
@@ -449,6 +476,8 @@ def build_release(parser, options):
     finally:
         if options.test:
             _rollback_releaseinfo_files()
+        #Cleanup
+        shutil.rmtree(os.path.join(topdir, "openmdao.main", 'src', 'openmdao', 'main', "docs"))
         os.chdir(startdir)
     
         

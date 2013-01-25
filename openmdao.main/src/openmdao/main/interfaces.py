@@ -7,8 +7,8 @@ Interfaces for the OpenMDAO project.
 
 from zope.interface import implements, Attribute, Interface
 
-from openmdao.main.workflow import Workflow
 from openmdao.main.constants import SAVE_CPICKLE
+
 
 class IArchitecture(Interface):
     
@@ -22,9 +22,7 @@ class IArchitecture(Interface):
     num_allowed_objectives = Attribute("number of objectives supported.")
     has_coupling_vars = Attribute("True if coupling variables are required.")
     has_global_des_vars = Attribute("True if the architecture requires a problem " 
-                                         "formulation with global design variables in it")
-    
-    
+                                    "formulation with global design variables in it")
     
     def configure(): 
         """sets up drivers,workflows, and data connections in 
@@ -32,8 +30,8 @@ class IArchitecture(Interface):
         """
    
     def clear(): 
-        """removes all the drivers, workflows, and data connections in the assembly, 
-        leaving the assembly cleaned up. 
+        """removes all the drivers, workflows, and data connections in the
+        assembly, leaving the assembly cleaned up. 
         """
 
 class IContainer(Interface):
@@ -295,7 +293,8 @@ class IDriver(IComponent):
     """An interface for objects that manage the iteration of workflows. 
     """
     
-    workflow = Attribute("object that knows how to run a single iteration over this Driver's iteration set")
+    workflow = Attribute("object that knows how to run a single iteration over"
+                         " this Driver's iteration set")
     
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
@@ -323,10 +322,12 @@ class IAssembly(IComponent):
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
 
-    def create (typ):
-        """Create an object of the specified type and return it, or a proxy
-        to it if it resides in another process. Should return None if this
-        factory is unable to create the specified type.
+    def create(self, typname, version=None, server=None,
+               res_desc=None, **ctor_args):
+        """Return an object of type *typname,* (or a proxy to it if it resides
+        in another process) using the specified package version, server
+        location, and resource description. Returns None if this factory is
+        unable to create the specified type.
         """
 
     def get_available_types(self, groups=None):
@@ -336,12 +337,28 @@ class IFactory (Interface):
         be returned.
         """
 
+    def get_signature(self, typname, version=None):
+        """Return constructor argument signature for *typname,* using the
+        specified package version. The return value is a dictionary:
+
+        args: list
+            List of 1 or 2-element lists. The first element is the argument
+            name, the second element is the default value.
+
+        varargs: string
+            The name of the '*' argument.
+
+        kwargs: string
+            The name of the '**' argument.
+        """
+
     def cleanup(self):
         """This function is optional, but if present it will be called by
         the FactoryManager prior to the factory being removed from the
         list of active factories.
         """
     
+
 class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
@@ -385,6 +402,9 @@ class ICaseIterator(Interface):
 class ICaseRecorder(Interface):
     """A recorder of Cases."""
     
+    def startup():
+        """Perform any operations required to start-up this recorder."""
+        
     def record(case):
         """Record the given Case."""
         
@@ -442,7 +462,7 @@ class IHasCouplingVars(Interface):
     """An interface to support the declaration of coupling variables
     """
     
-    def add_coupling_var(self,indep,dep):
+    def add_coupling_var(self, indep, dep):
         """adds a new pair (indep/dep) of coupling variables
         
         indep: str
@@ -453,7 +473,7 @@ class IHasCouplingVars(Interface):
             needs to be forced to be consistent with the independent    
         """
 
-    def remove_coupling_var(self,couple):
+    def remove_coupling_var(self, couple):
         """removes the pair (indep/dep) of coupling variables. 
         
         couple: tuple of str 
@@ -528,7 +548,7 @@ class ISurrogate(Interface):
     
 class IHasParameters(Interface):
     
-    def add_parameter(param_name,low=None,high=None):
+    def add_parameter(param_name, low=None, high=None):
         """Adds a parameter to the driver.
         
         param_name: str 
@@ -712,6 +732,26 @@ class IRepository(Interface):
         """
         
         
+class IParametricGeometry(Interface):
+    """An Interface to a parametric geometry model"""
+
+    def regenModel():
+        """Rebuild the model based on current parameter values."""
+
+    def listParameters():
+        """Return a list of input and output parameters."""
+
+    def setParameter(name, val):
+        """Set new value for an input parameter."""
+
+    def getParameter(name):
+        """Get info about a Parameter in a Model"""
+    
+    def register_param_list_changedCB(callback):
+        """Register a function to be called when the list of parameters
+        changes, e.g., when a new model is loaded.
+        """
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
@@ -719,4 +759,4 @@ def obj_has_interface(obj, *ifaces):
         if issubclass(iface, Interface) and iface.providedBy(obj):
             return True
     return False
-    
+

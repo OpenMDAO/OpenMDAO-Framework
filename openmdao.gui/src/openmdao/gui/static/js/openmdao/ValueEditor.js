@@ -23,7 +23,7 @@ openmdao.ValueEditor = (function(){
     constructorFn.overridesEnabled = false
     constructorFn.defaultEditorEnabled = true;
     constructorFn.promptEnabled = false;
-    constructorFn.defaultEditor = TextCellEditor;
+    constructorFn.defaultEditor = Slick.Editors.Text;
 
     /*
      * Make the constructor of ValueEditor inherit CellEditor
@@ -35,7 +35,7 @@ openmdao.ValueEditor = (function(){
     * args. This makes the parameter accessible to the rest of 
     * overriden functions. The correct data type editor is also
     * set. If the editor is not in editors, ValueEditor defaults
-    * to using TextCellEditor.
+    * to using TextEditor.
     */
     constructorFn.prototype.init = function(args){
 
@@ -119,11 +119,7 @@ openmdao.ValueEditor = (function(){
 
 openmdao.ValueEditor.prototype.destroy = function(){
     if(!this.mumps){
-        debug.error("Editor is being destroyed")
         this.editor.destroy()    
-    }
-    else{
-        debug.error("Editor no longer exists ")
     }
 }
 

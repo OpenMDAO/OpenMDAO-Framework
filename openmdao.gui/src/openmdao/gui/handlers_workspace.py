@@ -7,13 +7,12 @@ import jsonpickle
 
 from tornado import web
 
-from openmdao.gui.handlers import ReqHandler
+from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
-from openmdao.main.publisher import publish
-from openmdao.util.log import logger
 
-class AddOnsHandler(ReqHandler):
-    ''' addon installation utility
+
+class AddOnsHandler(BaseHandler):
+    ''' Addon installation utility.
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
     '''
@@ -21,24 +20,24 @@ class AddOnsHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        ''' easy_install the POSTed addon
+        ''' Easy_install the POSTed addon.
         '''
         pass
 
     @web.authenticated
     def get(self):
-        ''' show available plugins, prompt for plugin to be installed
+        ''' Show available plugins; prompt for plugin to be installed.
         '''
         self.render('workspace/addons.html')
 
 
-class ReqHandler(ReqHandler):
-    ''' render the base template
+class ReqHandler(BaseHandler):
+    ''' Render the base template.
     '''
 
     @web.authenticated
     def post(self):
-        ''' render the base template with the posted content
+        ''' Render the base template with the posted content.
         '''
         attributes = {}
         for field in ['head']:
@@ -51,7 +50,6 @@ class ReqHandler(ReqHandler):
     @web.authenticated
     def get(self):
         attributes = {}
-        print 'self.request.arguments:', self.request.arguments
         for field in ['head_script']:
             if field in self.request.arguments.keys():
                 s = self.request.arguments[field][0]
@@ -82,7 +80,7 @@ class CloseHandler(ReqHandler):
 
 
 class CommandHandler(ReqHandler):
-    ''' get the command, send it to the cserver, return response
+    ''' Get the command, send it to the cserver, and return response.
     '''
 
     @web.authenticated
@@ -96,8 +94,8 @@ class CommandHandler(ReqHandler):
             try:
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
@@ -112,7 +110,7 @@ class CommandHandler(ReqHandler):
 
 
 class VariableHandler(ReqHandler):
-    ''' get a command to set a variable, send it to the cserver, return response
+    ''' Get a command to set a variable, send it to the cserver, and return response.
     '''
 
     @web.authenticated
@@ -133,8 +131,8 @@ class VariableHandler(ReqHandler):
             try:
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
@@ -149,7 +147,7 @@ class VariableHandler(ReqHandler):
 
 
 class ComponentHandler(ReqHandler):
-    ''' add, get, or remove a component
+    ''' Add, get, or remove a component.
     '''
 
     @web.authenticated
@@ -159,13 +157,17 @@ class ComponentHandler(ReqHandler):
             parent = self.get_argument('parent')
         else:
             parent = ''
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.add_component(name, type, parent)
-        except Exception, e:
-            result = sys.exc_info()
-            cserver._error(e, result)
+            cserver.add_component(name, type, parent, args)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -175,9 +177,9 @@ class ComponentHandler(ReqHandler):
         result = ''
         try:
             result = cserver.onecmd('del ' + name)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -187,15 +189,32 @@ class ComponentHandler(ReqHandler):
         attr = {}
         try:
             attr = cserver.get_attributes(name)
-        except Exception, err:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print 'Error getting attributes on', name, ':', err
+        except Exception as exc:
+            print 'Error getting attributes on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
+        self.content_type = 'application/javascript'
+        self.write(attr)
+
+
+class AvailableEventsHandler(ReqHandler):
+    ''' Get a list of events that are available to a driver.
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_available_events(name)
+        except Exception as exc:
+            print 'Error getting events on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
 
 
 class ObjectHandler(ReqHandler):
-    ''' get the data for a slotable object (including components)
+    ''' Get the data for a slotable object (including components).
     '''
 
     @web.authenticated
@@ -204,27 +223,50 @@ class ObjectHandler(ReqHandler):
         attr = {}
         try:
             attr = cserver.get_attributes(name)
-        except Exception, err:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            print 'Error getting attributes on', name, ':', err
+        except Exception as exc:
+            print 'Error getting attributes on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
 
 
+class RenameHandler(ReqHandler):
+    ''' Rename a file.
+    '''
+
+    @web.authenticated
+    def post(self):
+        oldpath = self.get_argument('old')
+        newname = self.get_argument('new')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.rename_file(oldpath, newname)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
+        self.content_type = 'text/html'
+        self.write(result)
+
+
 class ReplaceHandler(ReqHandler):
-    ''' replace a component
+    ''' Replace a component.
     '''
 
     @web.authenticated
     def post(self, pathname):
         type = self.get_argument('type')
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
         result = ''
         try:
             cserver = self.get_server()
-            cserver.replace_component(pathname, type)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
+            cserver.replace_component(pathname, type, args)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
 
@@ -234,13 +276,23 @@ class ComponentsHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
-        json = cserver.get_components()
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_components()
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "ComponentsHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class ConnectionsHandler(ReqHandler):
-    ''' get connections between two components in an assembly
+    ''' Get connections between two components in an assembly.
     '''
 
     @web.authenticated
@@ -251,24 +303,35 @@ class ConnectionsHandler(ReqHandler):
             src_name = self.get_argument('src_name', default=None)
             dst_name = self.get_argument('dst_name', default=None)
             connects = cserver.get_connections(pathname, src_name, dst_name)
-        except Exception, e:
-            print e
+        except Exception as exc:
+            print exc
+            connects = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(connects)
 
 
 class DataflowHandler(ReqHandler):
-    ''' get the structure of the specified assembly, or of the global
-        namespace if no pathname is specified, consisting of the list of
-        components and the connections between them (i.e. the dataflow)
+    ''' Get the structure of the specified assembly or of the global
+        namespace if no pathname is specified; consists of the list of
+        components and the connections between them (i.e., the dataflow).
     '''
 
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_dataflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_dataflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "DataflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class EditorHandler(ReqHandler):
@@ -282,8 +345,8 @@ class EditorHandler(ReqHandler):
 
 
 class ExecHandler(ReqHandler):
-    ''' if a filename is POSTed, have the cserver execute the file
-        otherwise just run() the project
+    ''' If a filename is POSTed, have the cserver execute the file;
+        otherwise, just run() the project.
     '''
 
     @web.authenticated
@@ -294,15 +357,15 @@ class ExecHandler(ReqHandler):
         if filename:
             try:
                 result = cserver.execfile(filename)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = result + str(sys.exc_info()) + '\n'
         else:
             pathname = self.get_argument('pathname', default='')
             try:
                 cserver.run(pathname)
-            except Exception, e:
-                print e
+            except Exception as exc:
+                print exc
                 result = result + str(sys.exc_info()) + '\n'
         if result:
             self.content_type = 'text/html'
@@ -310,7 +373,7 @@ class ExecHandler(ReqHandler):
 
 
 class FileHandler(ReqHandler):
-    ''' get/set the specified file/folder
+    ''' Get/set the specified file/folder.
     '''
 
     @web.authenticated
@@ -322,21 +385,29 @@ class FileHandler(ReqHandler):
         else:
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py'):
+            if filename.endswith('.py') or cserver.is_macro(filename):
                 if not contents.endswith('\n'):
                     text = contents + '\n' # to make ast.parse happy
                 else:
                     text = contents
                 try:
+                    # parse it looking for syntax errors
                     ast.parse(text, filename=filename, mode='exec')
-                except Exception as err:
-                    cserver.send_pub_msg(str(err), 'file_errors')
+                except Exception as exc:
+                    if isinstance(exc, SyntaxError):
+                        # Drop leading '/' on filename, show actual line.
+                        err_str = 'invalid syntax (%s, line %s)\n%s' \
+                                % (exc.filename[1:], exc.lineno, exc.text)
+                    else:
+                        err_str = str(exc)
+                    cserver.send_pub_msg(err_str, 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
-                    ret = cserver.file_has_instances(filename)
+                    ret = cserver.file_forces_reload(filename)
                     if ret:
-                        self.send_error(409)  # user will be prompted to overwrite classes
+                        # user will be prompted to overwrite file and reload project
+                        self.send_error(409)
                         return
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -354,7 +425,7 @@ class FileHandler(ReqHandler):
 
 
 class FilesHandler(ReqHandler):
-    ''' get a list of the users files in JSON format
+    ''' Get a list of the user's files in JSON format.
     '''
 
     @web.authenticated
@@ -367,8 +438,8 @@ class FilesHandler(ReqHandler):
 
 
 class ModelHandler(ReqHandler):
-    ''' POST: get a new model (delete existing console server)
-        GET:  get JSON representation of the model
+    ''' POST: get a new model (delete existing console server).
+        GET:  get JSON representation of the model.
     '''
 
     @web.authenticated
@@ -385,7 +456,7 @@ class ModelHandler(ReqHandler):
 
 
 class OutstreamHandler(ReqHandler):
-    ''' return the url of the zmq outstream server,
+    ''' Return the url of the zmq outstream server.
     '''
 
     @web.authenticated
@@ -396,8 +467,8 @@ class OutstreamHandler(ReqHandler):
 
 
 class ProjectLoadHandler(ReqHandler):
-    ''' GET:  load model fom the given project archive,
-              or reload remembered project for session if no file given
+    ''' GET:  load model from the given project archive,
+              or reload remembered project for session if no file given.
     '''
     @web.authenticated
     def get(self):
@@ -414,8 +485,9 @@ class ProjectLoadHandler(ReqHandler):
         else:
             self.redirect('/')
             
+
 class ProjectRevertHandler(ReqHandler):
-    ''' POST:  revert back to the most recent commit of the project
+    ''' POST:  revert back to the most recent commit of the project.
     '''
     @web.authenticated
     def post(self):
@@ -431,7 +503,7 @@ class ProjectRevertHandler(ReqHandler):
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: commit the current project
+        POST: commit the current project.
     '''
 
     @web.authenticated
@@ -460,8 +532,8 @@ class ProjectHandler(ReqHandler):
 
 
 class PlotHandler(ReqHandler):
-    ''' GET: open a websocket server to supply updated valaues for the
-             specified variable
+    ''' GET: open a websocket server to supply updated values for the
+             specified variable.
     '''
 
     @web.authenticated
@@ -472,7 +544,7 @@ class PlotHandler(ReqHandler):
 
 
 class PublishHandler(ReqHandler):
-    ''' GET: tell the server to publish the specified topic/variable
+    ''' GET: tell the server to publish the specified topic/variable.
     '''
 
     @web.authenticated
@@ -485,7 +557,7 @@ class PublishHandler(ReqHandler):
 
 
 class PubstreamHandler(ReqHandler):
-    ''' return the url of the zmq publisher server
+    ''' Return the url of the zmq publisher server.
     '''
 
     @web.authenticated
@@ -496,7 +568,7 @@ class PubstreamHandler(ReqHandler):
 
 
 class TypesHandler(ReqHandler):
-    ''' get hierarchy of package/types to populate the Palette
+    ''' Get hierarchy of package/types to populate the Palette.
     '''
 
     @web.authenticated
@@ -507,8 +579,21 @@ class TypesHandler(ReqHandler):
         self.write(jsonpickle.encode(types))
 
 
+class SignatureHandler(ReqHandler):
+    ''' Get type constructor signature.
+    '''
+
+    @web.authenticated
+    def get(self):
+        typename = self.get_argument('type')
+        cserver = self.get_server()
+        signature = cserver.get_signature(typename)
+        self.content_type = 'application/javascript'
+        self.write(jsonpickle.encode(signature))
+
+
 class UploadHandler(ReqHandler):
-    ''' file upload utility
+    ''' File upload utility
     '''
 
     @web.authenticated
@@ -534,7 +619,7 @@ class UploadHandler(ReqHandler):
 
 
 class ValueHandler(ReqHandler):
-    ''' GET: get a value for the given pathname
+    ''' GET: get a value for the given pathname.
         TODO: combine with ComponentHandler? handle Containers as well?
     '''
 
@@ -551,9 +636,19 @@ class WorkflowHandler(ReqHandler):
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
-        json = cserver.get_workflow(name)
         self.content_type = 'application/javascript'
-        self.write(json)
+        for retry in range(3):
+            json = cserver.get_workflow(name)
+            try:
+                self.write(json)
+            except AssertionError as exc:
+                # Have had issues with `json` not being unicode somehow.
+                print "WorkflowHandler: Can't write %r: %s" \
+                      % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class WorkspaceHandler(ReqHandler):
@@ -568,7 +663,7 @@ class WorkspaceHandler(ReqHandler):
 
 
 class TestHandler(ReqHandler):
-    ''' initialize the server manager &  render the workspace
+    ''' Initialize the server manager & render the workspace.
     '''
 
     @web.authenticated
@@ -587,6 +682,7 @@ handlers = [
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
     web.url(r'/workspace/dataflow/(.*)/?',  DataflowHandler),
+    web.url(r'/workspace/events/(.*)',      AvailableEventsHandler),
     web.url(r'/workspace/editor/?',         EditorHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
@@ -601,7 +697,9 @@ handlers = [
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/rename',           RenameHandler),
     web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
+    web.url(r'/workspace/signature/?',      SignatureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),

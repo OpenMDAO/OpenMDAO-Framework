@@ -97,7 +97,7 @@ nav ul ul a {
 nav2 {
   width: 100%;
   display:block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   margin:0 auto;
   position:relative;
   z-index: 1000;
@@ -109,7 +109,7 @@ nav2 ul {
 nav2 ul:after {
   content: ".";
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   height: 0;
   clear: both;
   visibility: hidden;
@@ -121,12 +121,12 @@ nav2 li {
 }
 nav2 li a {
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   padding: 5px 10px;
 }
 nav2 a span {
   display: block;
-  background-color:#6a6a6a; 
+  background-color:#6a6a6a;
   float: right;
   margin-left: 5px;
 }
@@ -149,7 +149,7 @@ nav2 ul ul a {
   overflow: auto;
 }
 
-#otree_pane, #properties_pane, #palette_pane {
+#otree_pane, #wtree_pane, #properties_pane, #palette_pane {
   height: 100%;
   width: 100%;
 }
@@ -173,7 +173,7 @@ nav2 ul ul a {
   left: 3px;
   clear: both;
 }
-#command {
+#cmdline {
   width: 89.5%;
   float: left;
 }
@@ -186,11 +186,10 @@ nav2 ul ul a {
 .context-menu {
   visibility: hidden; /* No, you cannot use display:none; */
   position: absolute;
+  z-index: 9999 !important;
 }
 
 /* draggables */
 .ui-draggable-dragging {
-  z-index: 9999;
+  z-index: 9999 !important;
 }
-
-

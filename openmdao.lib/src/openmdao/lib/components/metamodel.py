@@ -51,12 +51,13 @@ class MetaModel(Component):
                     desc='Records training cases')
 
     # when fired, the next execution will train the metamodel
-    train_next = Event()
+    train_next = Event(desc='Train metamodel on next execution')
+    
     #when fired, the next execution will reset all training data
-    reset_training_data = Event()
+    reset_training_data = Event(desc='Reset training data on next execution')
 
-    def __init__(self, *args, **kwargs):
-        super(MetaModel, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MetaModel, self).__init__()
         self._surrogate_input_names = None
         self._surrogate_output_names = None
         self._surrogate_overrides = set() # keeps track of which sur_<name> slots are full
@@ -131,10 +132,10 @@ class MetaModel(Component):
         predict outputs.
         """
 
+        if self.model is None:
+            self.raise_exception("MetaModel object must have a model!",
+                                 RuntimeError)
         if self._train:
-            if self.model is None:
-                self.raise_exception("MetaModel object must have a model!",
-                                     RuntimeError)
             try:
                 inputs = self.update_model_inputs()
 
@@ -250,7 +251,6 @@ class MetaModel(Component):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 
-        new_model_traitnames = set()
         self.reset_training_data = True
 
         self._update_surrogate_list()
@@ -456,12 +456,15 @@ class MetaModel(Component):
         if new_obj:
             new_obj.on_trait_change(self._def_surrogate_trait_modified)
             
-        for name in self.surrogate_output_names():
-            surname = __surrogate_prefix__+name
-            if surname not in self._surrogate_overrides:
-                surrogate = deepcopy(self.default_surrogate)
-                self._default_surrogate_copies[surname] = surrogate
-                self._add_var_for_surrogate(surrogate, name)
+            #due to the way "add" works, container will always remove the old 
+            #  before it adds the new one. So you actually get this method called 
+            #  twice on a replace. You only do this update when the new one gets set
+            for name in self.surrogate_output_names():
+                surname = __surrogate_prefix__+name
+                if surname not in self._surrogate_overrides:
+                    surrogate = deepcopy(self.default_surrogate)
+                    self._default_surrogate_copies[surname] = surrogate
+                    self._add_var_for_surrogate(surrogate, name)
                 
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
         # a trait inside of the default_surrogate was changed, so we need to

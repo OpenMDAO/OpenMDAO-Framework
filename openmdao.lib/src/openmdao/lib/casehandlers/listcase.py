@@ -18,7 +18,7 @@ class ListCaseIterator(list):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -38,6 +38,10 @@ class ListCaseRecorder(object):
     def __len__(self):
         return len(self.cases)
 
+    def startup(self):
+        """ Nothing needed for a list case."""
+        pass
+        
     def record(self, case):
         """Store the case in our internal list."""
         self.cases.append(case)
@@ -52,7 +56,7 @@ class ListCaseRecorder(object):
     
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}

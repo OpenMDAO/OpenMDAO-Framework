@@ -25,9 +25,22 @@ if sys.platform != 'win32':
 from optparse import OptionParser
 
 from openmdao.util.network import get_unused_ip_port
+from openmdao.util.fileutil import onerror
+from openmdao.gui.util import find_chrome
 
-from pageobjects.project import ProjectsListPage
+from pageobjects.project import ProjectsPage
 from pageobjects.util import SafeDriver, abort
+
+from pageobjects.workspace import WorkspacePage
+from pageobjects.component import NameInstanceDialog
+from pageobjects.dataflow import DataflowFigure
+from pageobjects.util import ConfirmationPage
+
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from pageobjects.basepageobject import TMO
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import StaleElementReferenceException
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -38,13 +51,10 @@ _display = None
 
 
 def check_for_chrome():
-    """ Determine if Chrome is available. """
-    if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
+    if find_chrome() is not None:
         return True
-    for exe in ('google-chrome', 'chrome', 'chromium-browser'):
-        if find_executable(exe):
-            return True
-    return False
+    else:
+        return False
 
 
 def setup_chrome():
@@ -54,14 +64,11 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-#        version = '19.0.1068.0'
-#        version = '21.0.1180.4'
         version = '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-#            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -130,21 +137,37 @@ def setup_server(virtual_display=True):
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
+
+    # Try to clean up old server dir. If this fails (looking at you Windows),
+    # then use another directory.
     if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
+        try:
+            shutil.rmtree(server_dir, onerror=onerror)
+        except WindowsError as exc:
+            print >> sys.stderr, 'Could not delete %s: %s' % (server_dir, exc)
+            nxt = 1
+            while os.path.exists(server_dir):
+                nxt += 1
+                server_dir = 'gui-server-%s' % nxt
     os.mkdir(server_dir)
+
     TEST_CONFIG['server_dir'] = server_dir
     orig = os.getcwd()
     os.chdir(server_dir)
-    stdout = open('stdout', 'w')
-    TEST_CONFIG['stdout'] = stdout
     try:
+        stdout = open('stdout', 'w')
+        TEST_CONFIG['stdout'] = stdout
+        sigfile = os.path.join(os.getcwd(), 'SIGTERM.txt')
+        if os.path.exists(sigfile):
+            os.remove(sigfile)
+        TEST_CONFIG['sigfile'] = sigfile
         server = subprocess.Popen(('python', '-m', 'openmdao.gui.omg',
                                    '--server', '--port', str(port)),
                                    stdout=stdout, stderr=subprocess.STDOUT)
     finally:
         os.chdir(orig)
     TEST_CONFIG['server'] = server
+    TEST_CONFIG['failed'] = []
 
     # Wait for server port to open.
     for i in range(200):  # ~20 sec.
@@ -161,7 +184,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if virtual_display:
+    if sys.platform != 'win32' and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
@@ -170,9 +193,10 @@ def setup_server(virtual_display=True):
 def teardown_server():
     """ This function gets called once after all of the tests are run. """
     global _display, _display_set
+    server = TEST_CONFIG['server']
 
     # Do nothing if the server isn't started.
-    if TEST_CONFIG['server'] is None:
+    if server is None:
         return
 
     # Shut down virtual framebuffer.
@@ -182,31 +206,60 @@ def teardown_server():
     _display_set = False
 
     # Shut down server.
-    TEST_CONFIG['server'].terminate()
-    TEST_CONFIG['server'].wait()
+    if sys.platform == 'win32':
+        # First try to have all subprocesses go down cleanly.
+        with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
+            sigfile.write('Shutdown now\n')
+        for i in range(10):
+            time.sleep(1)
+            if server.poll() is not None:
+                break
+        else:
+            # No luck, at least terminate the server.
+            print >> sys.stderr, 'teardown_server: Killing server'
+            server.terminate()
+    else:
+        server.terminate()
+        server.wait()
     TEST_CONFIG['stdout'].close()
 
-    # Clean up.
     server_dir = TEST_CONFIG['server_dir']
+
+    if TEST_CONFIG['failed']:
+        # Save server log & stdout for post-mortem.
+        modname = TEST_CONFIG['modname']
+        if '.' in modname:
+            prefix, dot, modname = modname.rpartition('.')
+        time.sleep(5)  # Wait for Windows...
+        logfile = os.path.join(server_dir, 'openmdao_log.txt')
+        if os.path.exists(logfile):
+            try:
+                os.rename(logfile, '%s-log.txt' % modname)
+            except Exception as exc:
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (logfile, exc)
+        stdout = os.path.join(server_dir, 'stdout')
+        if os.path.exists(stdout):
+            try:
+                os.rename(stdout, '%s-stdout.txt' % modname)
+            except Exception as exc:
+                print >> sys.stderr, 'teardown_server: %s rename failed: %s' \
+                                     % (stdout, exc)
+    # Clean up.
     if os.path.exists(server_dir):
         try:
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         except Exception as exc:
-            print '%s cleanup failed: %s' % (server_dir, exc)
+            print >> sys.stderr, 'teardown_server: %s cleanup failed: %s' \
+                                 % (server_dir, exc)
 
 
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
     global _display_set
 
-    # Because Xvfb does not exist on Windows, it's difficult to do
-    # headless (EC2) testing on Windows. So for now we don't test there.
-    if sys.platform == 'win32':
-        return
-
     # Check if functional tests are to be skipped.
-    skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
-    if skip:
+    if int(os.environ.get('OPENMDAO_SKIP_GUI', '0')):
         return
 
     # Search for tests to run.
@@ -230,6 +283,7 @@ def generate(modname):
     # Due to the way nose handles generator functions, setup_server()
     # won't be called until *after* we yield a test, which is too late.
     if not _display_set:
+        TEST_CONFIG['modname'] = modname
         setup_server()
 
     for name in available_browsers:
@@ -264,14 +318,36 @@ def generate(modname):
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
+            try:
+                browser.close()
+            except Exception as exc:
+                print 'browser.close failed:', exc
+        try:
             browser.quit()
-            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
-                os.remove('chromedriver.log')
+        except Exception as exc:
+            # if it already died, calling kill on a defunct process
+            # raises a WindowsError: Access Denied
+            print 'browser.quit failed:', exc
+        if name == 'Chrome':
+            if sys.platform == 'win32':
+                time.sleep(2)
+                # Kill any stubborn chromedriver processes.
+                proc = subprocess.Popen(['taskkill', '/f', '/t', '/im', 'chromedriver.exe'],
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                stdout, stderr = proc.communicate()
+                stdout = stdout.strip()
+                if stdout != 'ERROR: The process "chromedriver.exe" not found.':
+                    print 'taskkill output: %r' % stdout
+            if cleanup and os.path.exists('chromedriver.log'):
+                try:
+                    os.remove('chromedriver.log')
+                except Exception as exc:
+                    print 'Could not delete chromedriver.log: %s' % exc
 
 
 class _Runner(object):
     """
-    Used to get better descriptions on tests.
+    Used to get better descriptions on tests and post-mortem screenshots.
     If `browser` is an exception, raise it rather than running the test.
     """
 
@@ -286,6 +362,7 @@ class _Runner(object):
     def __call__(self, browser):
         if isinstance(browser, Exception):
             raise browser  # Likely a hung webdriver.
+        base_window = browser.current_window_handle
         try:
             self.test(browser)
         except Exception as exc:
@@ -294,39 +371,68 @@ class _Runner(object):
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
+            TEST_CONFIG['failed'].append(testname)
+
             # Don't try screenshot if webdriver is hung.
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
                 print 'Attempting to take screenshot...'
-                try:
-                    browser.save_screenshot(filename)
-                except Exception as err:
-                    msg = 'Screenshot failed: %s' % err
-                    print msg
-                    logging.critical(msg)
-                else:
+                if _save_screenshot(browser, filename):
                     msg = 'Screenshot in %s' % filename
                     print msg
                     logging.critical(msg)
+
+                # Close all extra windows.
+                try:
+                    for window in browser.window_handles:
+                        if window == base_window:
+                            continue
+                        elif window != browser.current_window_handle:
+                            browser.switch_to_window(window)
+                        browser.close()
+                    if browser.current_window_handle != base_window:
+                        browser.switch_to_window(base_window)
+                except Exception as exc:
+                    logging.exception('window closing failed')
+
             sys.stdout.flush()
             sys.stderr.flush()
             raise saved_exc[0], saved_exc[1], saved_exc[2]
+
+
+def _save_screenshot(browser, filename, retry=True):
+    """ Attempt to take a screenshot. """
+    try:
+        browser.save_screenshot(filename)
+    except Exception as exc:
+        msg = 'Screenshot failed: %s' % exc
+        print msg
+        logging.critical(msg)
+        if 'An open modal dialog blocked the operation' in msg and retry:
+            alert = browser.switch_to_alert()
+            msg = 'alert text: %s' % alert.text
+            print msg
+            logging.critical(msg)
+            alert.dismiss()
+            print 'Retrying...'
+            return _save_screenshot(browser, filename, False)
+        else:
+            return False
+    return True
 
 
 def startup(browser):
     """ Create a project and enter workspace. """
     print 'running %s...' % inspect.stack()[1][3]
     projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
-    return projects_page, project_info_page, project_dict, workspace_page
+    workspace_page, project_dict = new_project(projects_page.new_project(), load_workspace=True)
+    return project_dict, workspace_page
 
 
-def closeout(projects_page, project_info_page, project_dict, workspace_page):
+def closeout(project_dict, workspace_page):
     """ Clean up after a test. """
     projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
+    projects_page.delete_project(project_dict['name'])
     print '%s complete.' % inspect.stack()[1][3]
 
 
@@ -334,36 +440,94 @@ def begin(browser):
     """
     Load the projects page and return its page object.
     """
-    projects_page = ProjectsListPage(browser, TEST_CONFIG['port'])
+    projects_page = ProjectsPage(browser, TEST_CONFIG['port'])
     projects_page.go_to()
     eq('Projects', projects_page.page_title)
     return projects_page
 
 
-def new_project(new_project_page, verify=False):
+def get_browser_download_location_path(browser):
+    '''Get the location of the browser download directory.
+        This leaves the browser window open
+    '''
+
+    browser.get("chrome://settings-frame/settings")
+
+    element = WebDriverWait(browser, TMO).until(
+        lambda browser: browser.find_element(By.ID, 'downloadLocationPath'))
+    download_location_path = element.get_attribute('value')
+
+    return download_location_path
+
+
+def submit_metadata(metadata_modal, name, description=None, version=None, load_workspace=False):
+    """
+    Submits metadata for a project
+    Returns ``(projects_page, data)``
+    """
+
+    metadata_modal.submit_metadata(name, description, version)
+    workspace_page = WorkspacePage.verify(metadata_modal.browser, TEST_CONFIG['port'])
+
+    if not load_workspace:
+        return workspace_page.close_workspace()
+
+    return workspace_page
+
+
+def new_project(new_project_modal, verify=False, load_workspace=False):
     """
     Creates a randomly-named new project.
-    Returns ``(info_page, info_dict)``
+    Returns ``(projects_page, info_dict)``
     """
-    assert new_project_page.page_title.startswith('Project: New Project')
+
+    time.sleep(2)  # Otherwise, intermittent failure of next assert
+    eq(new_project_modal.modal_title[:11], 'New Project')
 
     if verify:
-        data = dict(name=new_project_page.get_random_project_name(),
+        data = dict(name=new_project_modal.get_random_project_name(),
                     description='Just a project generated by a test script',
                     version='12345678')
-
-        project_info_page = \
-            new_project_page.create_project(data['name'], data['description'],
-                                            data['version'])
-
-        eq('Project: ' + data['name'], project_info_page.page_title)
+        page = submit_metadata(new_project_modal, data['name'], data['description'], data['version'], load_workspace=load_workspace)
     else:
-        # Slightly quicker since we typically don't care about the
-        # description and version fields.
-        data = dict(name=new_project_page.get_random_project_name())
-        project_info_page = new_project_page.create_project(data['name'])
+        data = dict(name=new_project_modal.get_random_project_name())
+        page = submit_metadata(new_project_modal, data['name'], load_workspace=load_workspace)
 
-    return (project_info_page, data)
+    return (page, data)
+
+
+def edit_project(edit_project_modal, name, description=None, version=None, load_workspace=False):
+    """
+    Creates a randomly-named new project.
+    Returns ``(projects_page, info_dict)``
+    """
+    assert edit_project_modal.modal_title.startswith('Edit Project')
+    return submit_metadata(edit_project_modal, name, description, version)
+
+
+def import_project(import_project_modal, projectfile_path, name=None, description=None,
+                   version=None, verify=False, load_workspace=False):
+    """
+    Creates a randomly-named imported new project.
+    Returns ``(projects_page, info_dict)``
+    """
+    print import_project_modal.modal_title
+    assert import_project_modal.modal_title.startswith('Import Project')
+
+    # load project
+    import_project_modal.load_project(projectfile_path)
+
+    # submit the rest of the metadata
+    if verify:
+        data = dict(name=import_project_modal.get_random_project_name(),
+                    description='An imported project from a test script',
+                    version='87654321')
+        page = submit_metadata(import_project_modal, data['name'], data['description'], data['version'], load_workspace)
+    else:
+        data = dict(name=import_project_modal.get_random_project_name())
+        page = submit_metadata(import_project_modal, data['name'], verify=verify, load_workspace=load_workspace)
+
+    return (page, data)
 
 
 def parse_test_args(args=None):
@@ -392,6 +556,269 @@ def parse_test_args(args=None):
     return options
 
 
+def slot_drop(browser, element, slot, should_drop, message='Slot'):
+    '''Drop an element on a slot'''
+    chain = drag_element_to(browser, element, slot, True)
+    chain.move_by_offset(25, 0).perform()
+    time.sleep(1.0)  # give it a second to update the figure
+    check_highlighting(slot, should_highlight=should_drop, message=message)
+    release(chain)
+
+
+def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
+    '''every successfull drop permanently fills the slot. because of this,
+    we need to make a new metamodel (with empty slots) every successfull drop'''
+
+    if remove_old:
+        # first, close out the dialog box we have open
+        editor.close()
+        # remove the current metamodel
+        metamodel.remove()
+
+    #drop 'metamodel' onto the grid
+    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    #find it on the page
+    metamodel = workspace_page.get_dataflow_figure(meta_name)
+
+    #open the 'edit' dialog on metamodel
+    editor = metamodel.editor_page(False)
+    editor.move(-250, 0)
+    editor.show_slots()
+
+    #resize_editor(workspace_page, editor)
+
+    #find the slots (this is both the drop target and highlight area)
+    browser = workspace_page.browser
+    slot_id = 'SlotFigure-' + meta_name + '-%s'
+    caseiter = browser.find_element(By.ID, slot_id % 'warm_start_data')
+    caserec  = browser.find_element(By.ID, slot_id % 'recorder')
+    model    = browser.find_element(By.ID, slot_id % 'model')
+
+    return editor, metamodel, caseiter, caserec, model, meta_name
+
+
+def resize_editor(workspace_page, editor):
+    '''ensure that the editor is not covering the library
+    (or else we cannot drag things from it!)'''
+    browser = workspace_page.browser
+
+    page_width = browser.get_window_size()['width']
+
+    lib_tab      = workspace_page('library_tab').find_element_by_xpath('..')
+    lib_width    = lib_tab.size['width']
+    lib_position = lib_tab.location['x']
+
+    dialog_title    = editor('dialog_title').find_element_by_xpath('../..')
+    dialog_width    = dialog_title.size['width']
+    dialog_position = dialog_title.location['x']
+
+    # how much overlap do we have?
+    overlap = lib_position - (dialog_position + dialog_width)
+
+    if overlap < 0:  # we are overlapping
+        # check to see if we have enough room to move out of the way
+        if page_width < dialog_width + lib_width:
+            # not enough, need to rezize the editor
+
+            # look for the resize handle
+            sibblings = dialog_title.find_elements_by_xpath('../../div')
+            handle = None
+            for sib in sibblings:
+                if "ui-resizable-se" in sib.get_attribute('class'):
+                    handle = sib
+
+            # do the resizing
+            chain = ActionChains(browser)
+            chain.click_and_hold(handle)
+            # we can resize editor down to 425px, any less and we cover drop targets
+            chain.move_by_offset(450 - dialog_width, 0).perform()
+            # must click because release is not working. why? I do not know.
+            chain.click().perform()
+            chain.release(None).perform()
+
+            # recalculate the overlap
+            dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+            dialog_width = dialog_title.size['width']
+            dialog_position = dialog_title.location['x']
+            overlap = lib_position - (dialog_position + dialog_width)
+
+        # We are good, move out!
+        chain = ActionChains(browser)
+        chain.click_and_hold(editor('dialog_title').element)
+        chain.move_by_offset(overlap, 0).perform()
+        # must click because release is not working. why? I do not know.
+        chain.click().perform()
+        chain.release(None).perform()
+
+        # recalculate the overlap
+        dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+        dialog_width = dialog_title.size['width']
+        dialog_position = dialog_title.location['x']
+        overlap = lib_position - (dialog_position + dialog_width)
+
+        if overlap < 0:
+            # we still have a problem.
+            eq(True, False,
+                "Could not move or rezise the editor dialog so it is not " \
+                "overlapping the library. The browser window is too small")
+
+
+def get_slot_target(labels, element_str):
+    '''Return the element with the given label string'''
+    for label in labels:
+        if element_str in label.text:
+            return label.find_element_by_xpath("..")
+
+    return None
+
+
+def get_dataflow_fig_in_assembly_editor(workspace_page, name):
+    '''Find the named dataflow fig in the assembly editor'''
+    all_figs = workspace_page.get_dataflow_figures()
+    for fig in all_figs:
+        location = fig.find_element_by_xpath("..").get_attribute('id')
+        if location == "top-dataflow":
+            return DataflowFigure(workspace_page.browser, workspace_page.port, fig)
+
+    return None
+
+
+def put_assembly_on_grid(workspace_page):
+    '''Drop an Assembly on a grid'''
+    return put_element_on_grid(workspace_page, 'Assembly')
+
+
+def put_element_on_grid(workspace_page, element_str):
+    '''find and get the 'assembly', and the div for the grid object'''
+    browser = workspace_page.browser
+
+    for retry in range(3):
+        try:
+            assembly = workspace_page.find_library_button(element_str)
+            chain = ActionChains(browser)
+            chain.click_and_hold(assembly)
+            chain.move_by_offset(-100, 0).perform()
+        except StaleElementReferenceException:
+            if retry < 2:
+                logging.warning('put_element_on_grid %s:'
+                                ' StaleElementReferenceException', element_str)
+            else:
+                raise
+        else:
+            break
+
+    grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
+    check_highlighting(grid, True, "Grid")
+    release(chain)
+
+    # deal with the modal dialog
+    name = NameInstanceDialog(workspace_page).create_and_dismiss()
+
+    # make sure it is on the grid
+    ensure_names_in_workspace(workspace_page, [name],
+        "Dragging '" + element_str + "' to grid did not produce a new element on page")
+
+    return name
+
+
+def get_pathname(browser, fig):
+    '''Get the OpenMDAO pathname for a figure'''
+    figid = fig.get_attribute('id')  # get the ID of the element here
+    script = "return jQuery('#" + figid + "').data('pathname')"
+    return browser.execute_script(script)
+
+
+def ensure_names_in_workspace(workspace_page, names, message=None):
+    """ensures the list of element names in included in the workspace"""
+
+    allnames = workspace_page.get_dataflow_component_names()
+
+    # sometimes does not load all of the names for some reason.
+    # Reloading seems to fix the problem
+    try_reload = False
+    for name in names:
+        if not name in allnames:
+            try_reload = True
+    if try_reload:
+        time.sleep(.1)
+        allnames = workspace_page.get_dataflow_component_names()
+
+    # now we will assert that the elements that we added appear on the page
+    for name in names:
+        eq(name in allnames, True, '%s: %s' % (message, name))
+
+
+def drag_element_to(browser, element, drag_to, centerx):
+    '''Drag one element over to another element'''
+    chain = ActionChains(browser)
+    chain.move_to_element(element)
+    chain.click_and_hold(element)
+    chain.move_to_element(drag_to)
+    if centerx:
+        offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
+        chain.move_by_offset(offset, 1)
+    else:
+        chain.move_by_offset(5, 1)
+    chain.perform()
+    return chain
+
+
+def release(chain):
+    '''The drop part of the ActionChain when doing drag and drop'''
+    chain.release(on_element=None).perform()
+    time.sleep(0.5)  # Pacing for diagram update.
+
+
+def check_highlighting(element, should_highlight=True, message='Element'):
+    '''check to see that the background-color of the element is highlighted'''
+    if 'SlotFigure' in element.get_attribute('class'):
+        # a slot figure is a div containing a ul element (the context menu) and
+        # one or more svg elements, each of which contains a rect and two texts
+        # the last rect fill style is what we need to check for highlighting
+        rect = element.find_elements_by_css_selector('svg rect')[-1]
+        style = rect.get_attribute('style')
+    else:
+        style = element.get_attribute('style')
+    highlighted = ('background-color: rgb(207, 214, 254)' in style) \
+                or ('highlighted.png' in style) \
+                or ('fill: #cfd6fe' in style)
+    eq(highlighted, should_highlight, message +
+        (' did not highlight (and should have) ' if should_highlight else
+         ' highlighed (and should not have) ')
+         + 'when dragging a dropable element to it')
+
+
+def getDropableElements(dataflow_figure):
+    '''Dataflow figures are made of many subelements. This function
+    returns a list of them so that we can try dropping on any one
+    of the elements
+    '''
+    # return [dataflow_figure(area).element for area in \
+    #        ['top_left','header','top_right', 'content_area',
+    #         'bottom_left', 'footer', 'bottom_right']]
+
+    # add back 'top_left' 'bottom_left' at some point. right now that test fails
+    arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
+    return [dataflow_figure(area).element for area in arr]
+
+
+def replace_driver(workspace_page, assembly_name, driver_type):
+    #find and get the 'comnindriver', 'top', and 'driver' objects
+    newdriver = workspace_page.find_library_button(driver_type)
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    driver_element = workspace_page.get_dataflow_figure('driver')
+
+    div = getDropableElements(driver_element)[0]
+    chain = drag_element_to(workspace_page.browser, newdriver, div, True)
+    check_highlighting(driver_element('content_area').element, True,
+                       "Driver's content_area")
+    release(chain)
+
+    # brings up a confirm dialog for replacing the existing driver.
+    dialog = ConfirmationPage(assembly)
+    dialog.click_ok()
+
+
 def main(args=None):
     """ run tests for module
     """
@@ -414,6 +841,7 @@ def main(args=None):
             tests = [func for name, func in functions
                         if name.startswith('_test_')]
 
+        TEST_CONFIG['modname'] = '__main__'
         setup_server(virtual_display=False)
         browser = SafeDriver(setup_chrome())
         try:
@@ -421,7 +849,12 @@ def main(args=None):
                 test(browser)
         finally:
             if not options.noclose:
-                browser.quit()
+                try:
+                    browser.quit()
+                except WindowsError:
+                    # if it already died, calling kill on a defunct process
+                    # raises a WindowsError: Access Denied
+                    pass
                 teardown_server()
     else:
         # Run under nose.
@@ -429,4 +862,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

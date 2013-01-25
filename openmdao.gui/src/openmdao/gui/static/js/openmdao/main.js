@@ -10,10 +10,10 @@ jQuery(function() {
     openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
     // register value editors for supported OpenMDAO data types
-    openmdao.ValueEditor.registerEditor("str", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("str", Slick.Editors.Text);
     openmdao.ValueEditor.registerEditor("bool", BoolEditor);
-    openmdao.ValueEditor.registerEditor("float", TextCellEditor);
-    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor);
+    openmdao.ValueEditor.registerEditor("float", Slick.Editors.Text);
+    openmdao.ValueEditor.registerEditor("int", Slick.Editors.Integer);
     openmdao.ValueEditor.registerEditor("enum", EnumEditor);
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
@@ -53,9 +53,11 @@ jQuery(function() {
         var model = openmdao.model;
         new openmdao.ConsoleFrame("console",  model);
 
-        var data = new openmdao.DataflowFrame("dataflow_pane",model,''),
-            work = new openmdao.WorkflowFrame("workflow_pane",model,''),
-            prop = new openmdao.PropertiesFrame("properties_pane",model);
+        var prop = new openmdao.PropertiesFrame("properties_pane", model);
+        function prop_fn(path) { prop.editObject(path); }
+        
+        var data = new openmdao.DataflowFrame("dataflow_pane", model,'', prop_fn),
+            work = new openmdao.WorkflowFrame("workflow_pane", model,'');
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -63,8 +65,14 @@ jQuery(function() {
             dataflow_tab  = jQuery('#dataflow_tab a'),
             workflow_tab  = jQuery('#workflow_tab a');
 
-        dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
-        workflow_tab.click(function(e) { central_label.text(work.getPathname()); });
+        dataflow_tab.click(function(e) {
+            central_label.text(data.getPathname());
+        });
+        workflow_tab.click(function(e) {
+            central_label.text(work.getPathname());
+            // unfortunately, can't compute background until element is visible
+            jQuery('.WorkflowFigure').trigger('setBackground');
+        });
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
@@ -80,23 +88,16 @@ jQuery(function() {
         }
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); }
 
-        new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
+        //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.WorkflowTreeFrame("wtree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
-        
+
         listeners_ready.resolve();
     }());
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
-    
-    //jQuery(window).bind('beforeunload', function(e) {
-    //    // Don't check when testing -- it can cause a cascade of errors.
-    //    if (openmdao.model.getModified() &&
-    //        (typeof openmdao_test_mode === 'undefined')) {
-    //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
-    //    }
-    //});
 });
 
 

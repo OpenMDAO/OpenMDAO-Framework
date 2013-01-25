@@ -48,7 +48,8 @@ class Sleeper(ExternalCode):
     outfile = File(iotype='out', path='output')
 
     def __init__(self):
-        super(Sleeper, self).__init__(directory=DIRECTORY)
+        super(Sleeper, self).__init__()
+        self.directory = DIRECTORY
         self.external_files = [
             FileMetadata(path='sleep.py', input=True, constant=True),
         ]

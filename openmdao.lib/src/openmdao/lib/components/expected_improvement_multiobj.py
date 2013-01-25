@@ -50,10 +50,10 @@ class MultiObjExpectedImprovement(Component):
 
     EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case.")
 
-    reset_y_star = Event()
+    reset_y_star = Event(desc='Reset Y* on next execution')
 
-    def __init__(self, *args, **kwargs):
-        super(MultiObjExpectedImprovement, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MultiObjExpectedImprovement, self).__init__()
         self.y_star = None
 
     def _reset_y_star_fired(self):

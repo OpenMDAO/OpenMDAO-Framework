@@ -9,8 +9,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 
-from openmdao.util.log import logger
-
 # Set this True on fatal driver errors.
 _ABORT = False
 
@@ -37,6 +35,32 @@ class ValuePrompt(BasePageObject):
 
     def set_text(self, text):
         self.value = text
+
+    def click_ok(self):
+        self('ok_button').click()
+
+    def click_cancel(self):
+        self('cancel_button').click()
+
+
+class ArgsPrompt(BasePageObject):
+    """ Dialog displayed by ``openmdao.Util.promptForArgs()``. """
+
+    prompt = TextElement((By.ID, 'get-args-prompt'))
+    name = InputElement((By.ID, 'get-args-name'))
+    ok_button = ButtonElement((By.ID, 'get-args-ok'))
+    cancel_button = ButtonElement((By.ID, 'get-args-cancel'))
+
+    def set_name(self, value):
+        self.name = value + Keys.RETURN
+
+    def set_text(self, text):
+        self.name = text
+
+    def set_argument(self, index, text):
+        table = self.browser.find_element(By.ID, 'get-args-tbl')
+        arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
+        arg_inputs[index].send_keys(text)
 
     def click_ok(self):
         self('ok_button').click()
@@ -91,64 +115,71 @@ class SafeBase(object):
         self._delegate = delegate
         self._invoker = invoker
 
+    def _invoke(self, what, args, kwargs):
+        """ Send request to worker and wait (with timeout) for results. """
+        if what == 'getattr':
+            return self._invoker.invoke(getattr, args, kwargs)
+        else:
+            method = getattr(self._delegate, what)
+            return self._invoker.invoke(method, args, kwargs)
+
+
+class SafeElementBase(SafeBase):
+    """ Wrap a WebDriver element or driver to handle driver hangs. """
+
     def find_element(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element', *args, **kwargs))
+            self._invoke('find_element', args, kwargs))
 
     def find_elements(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_elements', *args, **kwargs))
+            self._invoke('find_elements', args, kwargs))
 
     def find_element_by_class_name(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_class_name', *args, **kwargs))
+            self._invoke('find_element_by_class_name', args, kwargs))
 
     def find_elements_by_class_name(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_elements_by_class_name', *args, **kwargs))
+            self._invoke('find_elements_by_class_name', args, kwargs))
 
     def find_element_by_css_selector(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_css_selector', *args, **kwargs))
+            self._invoke('find_element_by_css_selector', args, kwargs))
 
     def find_elements_by_css_selector(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_elements_by_css_selector', *args, **kwargs))
+            self._invoke('find_elements_by_css_selector', args, kwargs))
 
     def find_element_by_id(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_id', *args, **kwargs))
+            self._invoke('find_element_by_id', args, kwargs))
 
     def find_element_by_link_text(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_link_text', *args, **kwargs))
+            self._invoke('find_element_by_link_text', args, kwargs))
 
     def find_elements_by_link_text(self, *args, **kwargs):
-        return self._wrap(self._invoke('find_elements_by_link_text', *args, **kwargs))
+        return self._wrap(self._invoke('find_elements_by_link_text', args, kwargs))
 
     def find_element_by_partial_link_text(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_partial_link_text', *args, **kwargs))
+            self._invoke('find_element_by_partial_link_text', args, kwargs))
 
     def find_elements_by_partial_link_text(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_elements_by_partial_link_text', *args, **kwargs))
+            self._invoke('find_elements_by_partial_link_text', args, kwargs))
 
     def find_element_by_xpath(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_element_by_xpath', *args, **kwargs))
+            self._invoke('find_element_by_xpath', args, kwargs))
 
     def find_elements_by_xpath(self, *args, **kwargs):
         return self._wrap(
-            self._invoke('find_elements_by_xpath', *args, **kwargs))
-
-    def _invoke(self, what, *args, **kwargs):
-        """ Send request to worker and wait (with timeout) for results. """
-        method = getattr(self._delegate, what)
-        return self._invoker.invoke(method, *args, **kwargs)
+            self._invoke('find_elements_by_xpath', args, kwargs))
 
     def _wrap(self, element):
-        """ Wrap `delegate` as :class:`SafeElement`. """
+        """ Wrap `element` as :class:`SafeElement`. """
         if element is not None:
             if isinstance(element, list):
                 element = [SafeElement(item, self._invoker) for item in element]
@@ -157,43 +188,64 @@ class SafeBase(object):
         return element
 
 
-class SafeElement(SafeBase):
+class SafeElement(SafeElementBase):
     """ Wrap a WebDriver element to handle driver hangs. """
 
     @property
     def id(self):
-        return self._delegate.id
+        return self._invoke('getattr', (self._delegate, 'id'), {})
+
+    @property
+    def location(self):
+        return self._invoke('getattr', (self._delegate, 'location'), {})
 
     @property
     def text(self):
-        return self._delegate.text
+        return self._invoke('getattr', (self._delegate, 'text'), {})
 
     def clear(self, *args, **kwargs):
-        return self._invoke('clear', *args, **kwargs)
+        return self._invoke('clear', args, kwargs)
 
     def click(self, *args, **kwargs):
-        return self._invoke('click', *args, **kwargs)
+        return self._invoke('click', args, kwargs)
 
     def get_attribute(self, *args, **kwargs):
-        return self._invoke('get_attribute', *args, **kwargs)
+        return self._invoke('get_attribute', args, kwargs)
 
     def is_displayed(self, *args, **kwargs):
-        return self._invoke('is_displayed', *args, **kwargs)
+        return self._invoke('is_displayed', args, kwargs)
 
     def is_enabled(self, *args, **kwargs):
-        return self._invoke('is_enabled', *args, **kwargs)
+        return self._invoke('is_enabled', args, kwargs)
 
     def is_selected(self, *args, **kwargs):
-        return self._invoke('is_selected', *args, **kwargs)
+        return self._invoke('is_selected', args, kwargs)
 
     def send_keys(self, *args, **kwargs):
-        return self._invoke('send_keys', *args, **kwargs)
+        return self._invoke('send_keys', args, kwargs)
 
     def value_of_css_property(self, *args, **kwargs):
-        return self._invoke('value_of_css_property', *args, **kwargs)
+        return self._invoke('value_of_css_property', args, kwargs)
 
 
-class SafeDriver(SafeBase):
+class SafeAlert(SafeBase):
+    """ Wrap a WebDriver :class:`Alert` to handle driver hangs. """
+
+    @property
+    def text(self):
+        return self._invoke('getattr', (self._delegate, 'text'), {})
+
+    def dismiss(self, *args, **kwargs):
+        return self._invoke('dismiss', args, kwargs)
+
+    def accept(self, *args, **kwargs):
+        return self._invoke('accept', args, kwargs)
+
+    def send_keys(self, *args, **kwargs):
+        return self._invoke('send_keys', args, kwargs)
+
+
+class SafeDriver(SafeElementBase):
     """ Wrap :class:`WebDriver` to handle driver hangs. """
 
     def __init__(self, driver):
@@ -202,36 +254,49 @@ class SafeDriver(SafeBase):
 
     @property
     def current_window_handle(self):
-        return self._delegate.current_window_handle
+        return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
+
+    @property
+    def window_handles(self):
+        return self._invoke('getattr', (self._delegate, 'window_handles'), {})
 
     @property
     def title(self):
-        return self._delegate.title
+        return self._invoke('getattr', (self._delegate, 'title'), {})
 
     def close(self, *args, **kwargs):
-        return self._invoke('close', *args, **kwargs)
+        return self._invoke('close', args, kwargs)
 
     def execute(self, *args, **kwargs):
-        return self._invoke('execute', *args, **kwargs)
+        return self._invoke('execute', args, kwargs)
 
     def execute_script(self, *args, **kwargs):
-        return self._invoke('execute_script', *args, **kwargs)
+        return self._invoke('execute_script', args, kwargs)
 
     def get(self, *args, **kwargs):
-        return self._invoke('get', *args, **kwargs)
+        return self._invoke('get', args, kwargs)
+
+    def get_window_size(self, *args, **kwargs):
+        return self._invoke('get_window_size', args, kwargs)
 
     def implicitly_wait(self, *args, **kwargs):
-        return self._invoke('implicitly_wait', *args, **kwargs)
+        return self._invoke('implicitly_wait', args, kwargs)
 
     def quit(self, *args, **kwargs):
-        self._invoke('quit', *args, **kwargs)
+        self._invoke('quit', args, kwargs)
         self._invoker.shutdown()
 
     def save_screenshot(self, *args, **kwargs):
-        return self._invoke('save_screenshot', *args, **kwargs)
+        return self._invoke('save_screenshot', args, kwargs)
+
+    def switch_to_alert(self, *args, **kwargs):
+        alert = self._invoke('switch_to_alert', args, kwargs)
+        if alert is not None:
+            alert = SafeAlert(alert, self._invoker)
+        return alert
 
     def switch_to_window(self, *args, **kwargs):
-        return self._invoke('switch_to_window', *args, **kwargs)
+        return self._invoke('switch_to_window', args, kwargs)
 
 
 class SafeInvoker(object):
@@ -244,11 +309,11 @@ class SafeInvoker(object):
         self._worker.daemon = True
         self._worker.start()
 
-    def invoke(self, method, *args, **kwargs):
+    def invoke(self, method, args, kwargs):
         """ Send request to worker and wait (with timeout) for results. """
         self._request_q.put((method, args, kwargs))
         try:
-            retval, exc = self._reply_q.get(timeout=3*60)
+            retval, exc = self._reply_q.get(timeout=2*60)
         except Queue.Empty:
             self._request_q.put((None, None, None))  # In case it finishes.
             abort(True)

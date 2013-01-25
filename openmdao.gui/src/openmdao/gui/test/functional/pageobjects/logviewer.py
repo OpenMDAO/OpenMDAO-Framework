@@ -36,6 +36,10 @@ class LogViewer(DialogPage):
         """ Pause/resume display. """
         return self._context_click('pause_button')
 
+    def popout(self):
+        """ Pop-out display to separate window. """
+        return self._context_click('popout_button')
+
     def _context_click(self, name):
         """ Display context menu. """
         chain = ActionChains(self.browser)

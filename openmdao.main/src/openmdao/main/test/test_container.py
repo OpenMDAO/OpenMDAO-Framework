@@ -35,24 +35,34 @@ class DumbTrait(Variable):
 class MyContainer(Container):
     uncertain = Slot(NormalDistribution, iotype="out")
 
-    def __init__(self, *args, **kwargs):
-        super(MyContainer, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MyContainer, self).__init__()
         self.uncertain = NormalDistribution()
         self.add('dyntrait', Float(9., desc='some desc'))
 
 
 class MyBuilderContainer(Container):
+
+    def contains(self, path):
+        return path != 'does_not_exist'
+
     def build_trait(self, ref_name, iotype=None, trait=None):
         if iotype is None:
             iostat = 'in'
         else:
             iostat = iotype
 
+        if isinstance(iostat, dict):
+            metadata = iostat
+        else:
+            metadata = dict(iotype=iostat)
+        metadata['ref_name'] = ref_name
+
         if trait is None:
             if ref_name.startswith('f'):
-                trait = Float(0.0, iotype=iostat, ref_name=ref_name)
+                trait = Float(0.0, **metadata)
             elif ref_name.startswith('i'):
-                trait = Int(0, iotype=iostat, ref_name=ref_name)
+                trait = Int(0, **metadata)
             else:
                 self.raise_exception("can't determine type of variable '%s'"
                                          % ref_name, RuntimeError)
@@ -98,9 +108,10 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_build_trait(self):
         mbc = MyBuilderContainer()
-        obj_info = ['f_in', ('f_out', 'f_out_internal', 'out'),
+        obj_info = ['f_in', ('f_out_internal', 'f_out', 'out'),
                     'i_in', 'i_out',
-                    ('b_out', 'b_out_internal', 'out', Bool())
+                    ('b_out_internal', 'b_out', 'out', Bool()),
+                    ('i_has_metadata', '', dict(iotype='in', low=-1, high=9))
             ]
         create_io_traits(mbc, obj_info)
         create_io_traits(mbc, 'foobar')
@@ -111,6 +122,32 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(mbc.get_trait('f_in').iotype, 'in')
         self.assertTrue(mbc.get_trait('foobar').is_trait_type(Float))
         self.assertEqual(mbc.get_trait('foobar').iotype, 'in')
+        self.assertTrue(mbc.get_trait('i_has_metadata').is_trait_type(Int))
+        self.assertEqual(mbc.get_trait('i_has_metadata').iotype, 'in')
+        self.assertEqual(mbc.get_trait('i_has_metadata').low, -1)
+        self.assertEqual(mbc.get_trait('i_has_metadata').high, 9)
+
+        code = "create_io_traits(mbc, [{}])"
+        msg = ": create_io_traits cannot add trait {}"
+        assert_raises(self, code, globals(), locals(), RuntimeError, msg)
+
+        code = "create_io_traits(mbc, ('f_in', 'f.in'))"
+        msg = ": Can't create 'f.in' because it's a dotted pathname"
+        assert_raises(self, code, globals(), locals(), NameError, msg)
+
+        code = "create_io_traits(mbc, ('f2_in', 'f_in'))"
+        msg = ": Can't create 'f_in' because it already exists"
+        assert_raises(self, code, globals(), locals(), RuntimeError, msg)
+
+        code = "create_io_traits(mbc, 'does_not_exist')"
+        msg = ": Can't create trait for 'does_not_exist' because it wasn't found"
+        assert_raises(self, code, globals(), locals(), AttributeError, msg)
+
+        cont = Container()
+        cont.contains = lambda name: True
+        code = "create_io_traits(cont, 'xyzzy')"
+        msg = ": build_trait()"
+        assert_raises(self, code, globals(), locals(), NotImplementedError, msg)
 
     def test_connect(self):
         cont = MyContainer()
@@ -209,6 +246,16 @@ class ContainerTestCase(unittest.TestCase):
         self.root.add('foo', Container())
         self.root.foo.add('foochild', Container())
         self.assertEqual(self.root.foo.foochild.get_pathname(), 'foo.foochild')
+
+    def test_add_bad_name(self):
+        bad_names = ['parent', 'self', 'for', 'if', 'while', 'sin', 'cos', 'tan']
+        for bad in bad_names:
+            try:
+                self.root.add(bad, Container())
+            except Exception as err:
+                self.assertEqual(str(err), ": '%s' is a reserved or invalid name" % bad)
+            else:
+                self.fail("name '%s' should be illegal" % bad)
 
     def test_get(self):
         obj = self.root.get('c2.c21')
@@ -439,6 +486,6 @@ class ContainerTestCase(unittest.TestCase):
 if __name__ == "__main__":
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()

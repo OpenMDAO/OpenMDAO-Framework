@@ -1,7 +1,7 @@
 """A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
-import csv
+import csv, datetime, glob, os, shutil
 import cStringIO, StringIO
 
 # pylint: disable-msg=E0611,F0401
@@ -168,7 +168,7 @@ class CSVCaseIterator(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -209,6 +209,7 @@ class CSVCaseRecorder(object):
         self.append = append
         self.outfile = None
         self.csv_writer = None
+        self.num_backups = 5
         self._header_size = 0
         
         #Open output file
@@ -227,6 +228,9 @@ class CSVCaseRecorder(object):
         
         self._filename = name
         
+    def startup(self):
+        """ Opens the CSV file for recording."""
+        
         if self.append:
             self.outfile = open(self.filename, 'a')
         else:
@@ -236,10 +240,10 @@ class CSVCaseRecorder(object):
             # of headers. These won't be available until the first
             # case is passed to self.record.
             self._write_headers = True
-            
-        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
-                                     quotechar=self.quotechar,
-                                     quoting=csv.QUOTE_NONNUMERIC)
+
+            self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                         quotechar=self.quotechar,
+                                         quoting=csv.QUOTE_NONNUMERIC)
 
 
     def record(self, case):
@@ -262,6 +266,24 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
+        sorted_input_keys = []
+        sorted_input_values = []
+        sorted_output_keys = []
+        sorted_output_values = []
+        
+        input_keys = case.keys(iotype='in', flatten=True)
+        input_values = case.values(iotype='in', flatten=True)
+        output_keys = case.keys(iotype='out', flatten=True)
+        output_values = case.values(iotype='out', flatten=True)
+        
+        if len(input_keys) > 0:
+            sorted_input_keys, sorted_input_values = \
+                (list(item) for item in zip(*sorted(zip(input_keys, 
+                                                        input_values))))
+        if len(output_keys) > 0:
+            sorted_output_keys, sorted_output_values = \
+                (list(item) for item in zip(*sorted(zip(output_keys, 
+                                                        output_values))))
         if self.outfile is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
@@ -269,11 +291,11 @@ class CSVCaseRecorder(object):
             
             headers = ['label', '/INPUTS']
             
-            headers.extend(case.keys(iotype='in', flatten=True))
+            headers.extend(sorted_input_keys)
                 
             headers.append('/OUTPUTS')
             
-            headers.extend(case.keys(iotype='out', flatten=True))
+            headers.extend(sorted_output_keys)
                 
             headers.extend(['/METADATA', 'retries', 'max_retries', 'parent_uuid',
                             'msg'])
@@ -284,9 +306,10 @@ class CSVCaseRecorder(object):
             
         data = [case.label]
                 
-        for iotype in ['in', 'out']:
-            data.append('')
-            data.extend(case.values(iotype=iotype, flatten=True))
+        data.append('')
+        data.extend(sorted_input_values)
+        data.append('')
+        data.extend(sorted_output_values)
             
         data.extend(['', case.retries, case.max_retries, 
                      case.parent_uuid, case.msg])
@@ -306,9 +329,32 @@ class CSVCaseRecorder(object):
                 self.outfile.close()
             self.outfile = None
             self.csv_writer = None
-
+            
+        # Save off a backup copy if requested.
+        if self.num_backups > 0:
+            
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            parts = self.filename.split('.')
+            if len(parts) > 1:
+                name = ''.join(parts[:-1])
+                extension = parts[-1]
+                backup_name = '%s_%s.%s' % (name, timestamp, extension)
+                globname = name
+            else:
+                backup_name = '%s_%s' % (self.filename, timestamp)
+                globname = self.filename
+                
+            shutil.copyfile(self.filename, backup_name)
+            
+            # Clean up old backups if we exceed our max
+            backups = glob.glob(globname + '_*')
+            if len(backups) > self.num_backups:
+                sortbackups = sorted(backups)
+                for item in sortbackups[:len(backups) - self.num_backups]:
+                    os.remove(item)
+        
     def get_iterator(self):
-        '''Return CSVCaseIterator that points to our current file'''
+        '''Return CSVCaseIterator that points to our current file.'''
         
         # I think we can safely close the oufile if someone is
         # requesting the iterator
@@ -318,7 +364,7 @@ class CSVCaseRecorder(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -327,6 +373,7 @@ class CSVCaseRecorder(object):
         
         attr = {}
         attr['name'] = "filename"
+        attr['id'] = attr['name']
         attr['type'] = type(self.filename).__name__
         attr['value'] = str(self.filename)
         attr['connected'] = ''
@@ -335,6 +382,7 @@ class CSVCaseRecorder(object):
             
         attr = {}
         attr['name'] = "append"
+        attr['id'] = attr['name']
         attr['type'] = type(self.append).__name__
         attr['value'] = str(self.append)
         attr['connected'] = ''
@@ -343,10 +391,20 @@ class CSVCaseRecorder(object):
             
         attr = {}
         attr['name'] = "delimiter"
+        attr['id'] = attr['name']
         attr['type'] = type(self.delimiter).__name__
         attr['value'] = str(self.delimiter)
         attr['connected'] = ''
         attr['desc'] = 'CSV delimiter. Default is ",".'
+        variables.append(attr)
+            
+        attr = {}
+        attr['name'] = "num_backups"
+        attr['id'] = attr['name']
+        attr['type'] = "int"
+        attr['value'] = str(self.num_backups)
+        attr['connected'] = ''
+        attr['desc'] = 'Number of csv files to keep from previous runs.'
         variables.append(attr)
             
         attrs["Inputs"] = variables

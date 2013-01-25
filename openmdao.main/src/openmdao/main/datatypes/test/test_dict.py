@@ -21,6 +21,8 @@ class DictTestCase(unittest.TestCase):
         attr = attrs['Inputs']
         self.assertTrue( { 'key_type' : 'Int',
                            'name' : 'arr',
+                           'id' : 'arr',
+                           'indent' : 0,
                            'value' : {1:2.0},
                            'value_type' : 'Float',
                            'valid' : True,

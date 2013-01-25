@@ -54,14 +54,14 @@ class Analytic(ChainRule):
     
     # pylint: disable-msg=E1101
     mode = Enum('direct', ['direct', 'adjoint'], iotype = 'in',
-                 desc='Choose forward or adjoint mode')
+                 desc='Choose forward or adjoint mode.')
     
     approach = Enum('functional', ['functional', 'residual', 'hybrid'],
-                     iotype = 'in', desc = 'approach for assembling the ' + \
+                     iotype = 'in', desc = 'Approach for assembling the ' + \
                      'problem.\n' + \
-                     'functional - convert all comps to functional form' + \
-                     'residual - convert all comps to residual form' + \
-                     'hybrid - no conversion, each comps uses what it has')
+                     'functional - convert all comps to functional form; ' + \
+                     'residual - convert all comps to residual form; ' + \
+                     'hybrid - no conversion, each comps uses what it has.')
                      
     sparse = Bool(False, iotype = 'in', desc='Set to True for sparse ' + \
                   'storage of matrices.')
@@ -115,7 +115,7 @@ class Analytic(ChainRule):
         
         
     def setup(self):
-        """ Determine problem dimension and allocate arrays. (unless sparse)
+        """ Determine problem dimension and allocate arrays (unless sparse).
         """
         
         # Parent class method assembles all of our driver connections

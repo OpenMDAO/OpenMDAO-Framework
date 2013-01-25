@@ -131,7 +131,18 @@ class HasParametersTestCase(unittest.TestCase):
             #self.top.driver.set_parameters([-1., 3.])
         #except ValueError as err:
             #self.assertEqual(str(err), "parameter value (-1.0) is outside of allowed range [0.0 to 1e+99]")
-            
+
+    def test_add_connected_param(self):
+        self.top.create_passthrough('comp.x')
+        try:
+            self.top.driver.add_parameter('comp.x', 0., 1.e99) 
+        except Exception, err:
+            msg = 'driver: Cannot add target parameter "comp.x" - incoming connection exists'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Exception Expected')
+        self.top.remove("x")
+     
     def test_set_param_by_name(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99, name='abc') 
         self.top.driver.add_parameter('comp.y', 0., 1.e99, name='def')
@@ -306,6 +317,31 @@ class HasParametersTestCase(unittest.TestCase):
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         pg = ParameterGroup([p,p2])
         self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
+
+    def test_connected_input_as_parameter(self):
+        self.top.add('comp2', ExecComp(exprs=['c=x+y','d=x-y']))
+        self.top.driver.add_parameter('comp2.x', low=-99.0, high=99.9)
+        
+        try:
+            self.top.connect('comp.c', 'comp2.x')
+        except RuntimeError as err:
+            msg = "Can't connect 'comp.c' to 'comp2.x' because" + \
+                  " the target is a Parameter in driver 'driver'."
+        else:
+            self.fail("Exception expected")
+            
+        # try with parameter group
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter(('comp2.x', 'comp2.y'),
+                                       low=-99.0, high=99.9)
+        
+        try:
+            self.top.connect('comp.c', 'comp2.x')
+        except RuntimeError as err:
+            msg = "Can't connect 'comp.c' to 'comp2.x' because" + \
+                  " the target is a Parameter in driver 'driver'."
+        else:
+            self.fail("Exception expected")
 
 class ParametersTestCase(unittest.TestCase):
     def setUp(self):

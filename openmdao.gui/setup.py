@@ -54,7 +54,8 @@ setup(name='openmdao.gui',
                                      'templates/projdb/*',
                                      'templates/workspace/*',
                                      'test/*.proj',
-                                     'test/functional/manaual/*',
+                                     'test/functional/manual/*',
+                                     'test/functional/files/*',
                                      'test/js_unit_tests/*.js']},
       include_package_data=True,
       test_suite='nose.collector',
@@ -62,7 +63,6 @@ setup(name='openmdao.gui',
       install_requires=[
           'pyzmq-static>=2.1.11.1',
           'tornado>=2.2',
-          'jsonpickle',
           'watchdog'
       ],
       extras_require = {

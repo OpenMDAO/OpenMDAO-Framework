@@ -50,6 +50,26 @@ class HasEvents(object):
         """Return the list of event variables to be set by this driver."""
         return self._events
     
+    def list_available_events(self):
+        """Return a list of all available events in the driver's workflow."""
+
+        events = []
+        for comp in self._parent.workflow.__iter__():
+            
+            tset1 = set(comp._alltraits(events=True))
+            tset2 = set(comp._alltraits(events=False))
+            event_set = tset1.difference(tset2)
+            # Remove the Enthought events common to all has_traits objects
+            event_set.remove('trait_added')
+            event_set.remove('trait_modified')
+            
+            for item in event_set:
+                name = '%s.%s' % (comp.name, item)
+                if name not in self._events:
+                    events.append(name)
+            
+        return events
+    
     def clear_events(self):
         """Remove all event variables from the driver's list."""
         self._events = []

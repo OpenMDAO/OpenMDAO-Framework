@@ -3,7 +3,7 @@
 
     In case anyone's interested, here's my sessions.py that I use for doing a
     pickle-based session (stored as a file in a directory of your choosing) in
-    Tornado.  Feel free to use it however you please.   If I write something
+    Tornado.  Feel free to use it however you please.  If I write something
     more scalable one day, I'll post it too.
 
     Usage:
@@ -22,11 +22,11 @@
 
     etc.
 
-    the basic session mechanism is this:
-    * take some data, pickle it, store it somewhere.
-    * assign an id to it. run that id through a HMAC (NOT just a hash function) to prevent tampering.
-    * put the id and HMAC output in a cookie.
-    * when you get a request, load the id, verify the HMAC. if it matches, load the data from wherever you put it and depickle it.
+    The basic session mechanism is this:
+    * Take some data, pickle it, store it somewhere.
+    * Assign an id to it. Run that id through a HMAC (NOT just a hash function) to prevent tampering.
+    * Put the id and HMAC output in a cookie.
+    * When you get a request, load the id, verify the HMAC. If it matches, load the data from wherever you put it and depickle it.
 
 """
 
@@ -38,7 +38,7 @@ import uuid
 
 
 class Session(dict):
-    """ A Session is basically a dict with a session_id and an hmac_digest string to verify access rights
+    """ A Session is basically a dict with a session_id and an hmac_digest string to verify access rights.
     """
 
     def __init__(self, session_id, hmac_digest):
@@ -47,7 +47,7 @@ class Session(dict):
 
 
 class SessionManager(object):
-    """ SessionManager handles the cookie and file read/writes for a Session
+    """ SessionManager handles the cookie and file read/writes for a Session,
     """
 
     def __init__(self, secret, session_dir = ''):
@@ -115,7 +115,7 @@ class SessionManager(object):
 
 class TornadoSessionManager(SessionManager):
     """ A TornadoSessionManager is a SessionManager that is specifically for
-        use in Tornado, using Tornado's cookies
+        use in Tornado and uses Tornado's cookies.
     """
 
     def get(self, requestHandler = None):
@@ -137,7 +137,7 @@ class TornadoSessionManager(SessionManager):
 
 
 class TornadoSession(Session):
-    """ A TornadoSession is a Session object for use in Tornado
+    """ A TornadoSession is a Session object for use in Tornado.
     """
 
     def __init__(self, tornado_session_manager, request_handler):

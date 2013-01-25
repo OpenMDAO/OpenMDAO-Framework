@@ -24,7 +24,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     ICaseIterator, ICaseRecorder
+                                     IHasEvents, ICaseIterator, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -35,6 +35,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
+from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -128,7 +129,14 @@ class Component(Container):
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, desc='Number of times this Component has been executed.')
+    exec_count = Int(0, iotype='out',
+                     desc='Number of times this Component has been executed.')
+
+    derivative_exec_count = Int(0, iotype='out',
+                     desc="Number of times this Component's derivative " + \
+                          "function has been executed.")
+
+    itername = Str('', iotype='out', desc='Iteration coordinates.')
 
     create_instance_dir = Bool(False)
 
@@ -173,6 +181,7 @@ class Component(Container):
 
         self.exec_count = 0
         self.derivative_exec_count = 0
+        self.itername = ''
         self.create_instance_dir = False
         if directory:
             self.directory = directory
@@ -184,8 +193,6 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
-
-        self._itername = ''
 
     @property
     def dir_context(self):
@@ -204,7 +211,7 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
-        return self._itername
+        return self.itername
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername):
@@ -214,7 +221,7 @@ class Component(Container):
         itername: string
             Iteration coordinates.
         """
-        self._itername = itername
+        self.itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -406,9 +413,9 @@ class Component(Container):
 
     def calc_derivatives(self, first=False, second=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives, and saving the current state as the baseline. The user
-        must supply calculate_first_derivatives() and/or
-        calculate_second_derivatives() in the component.
+        derivatives and saving the current state as the baseline. The user
+        must supply *calculate_first_derivatives()* and/or
+        *calculate_second_derivatives()* in the component.
 
         This function is overridden by ComponentWithDerivatives
 
@@ -425,7 +432,7 @@ class Component(Container):
         """ComponentsWithDerivatives overloads this function to check for
         missing derivatives.
 
-        This function is overridden by ComponentWithDerivatives
+        This function is overridden by ComponentWithDerivatives.
         """
 
         pass
@@ -551,9 +558,10 @@ class Component(Container):
         Returns the added Container object.
         """
         self.config_changed()
+        super(Component, self).add(name, obj)
         if is_instance(obj, Container) and not is_instance(obj, Component):
             self._depgraph.add(name)
-        return super(Component, self).add(name, obj)
+        return obj
 
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
@@ -566,7 +574,7 @@ class Component(Container):
         return obj
 
     def add_trait(self, name, trait):
-        """Overrides base definition of add_trait in order to
+        """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
@@ -590,7 +598,7 @@ class Component(Container):
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
 
     def remove_trait(self, name):
-        """Overrides base definition of add_trait in order to
+        """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
@@ -664,6 +672,7 @@ class Component(Container):
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
             self._input_names = list(nset)
+        self._input_names = [name_ for name_ in self._input_names if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -700,6 +709,7 @@ class Component(Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
+        self._output_names = [name_ for name_ in self._output_names if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -833,7 +843,8 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
-                setattr(self, name, getattr(target, name))
+                #setattr(self, name, getattr(target, name))
+                self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.
         target_lists = [n for n, v in target.traits().items()
@@ -1526,8 +1537,8 @@ class Component(Container):
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
-        """ get attributes of component. includes inputs and ouputs and, if
-        io_only is not true, a dictionary of attributes for each interface
+        """ Get attributes of component. Includes inputs and ouputs and, if
+        *io_only* is not true, a dictionary of attributes for each interface
         implemented by the component.  Used by the GUI.
 
         io_only: Bool
@@ -1582,8 +1593,16 @@ class Component(Container):
             value = getattr(self, name)
             ttype = trait.trait_type
 
+            # If this is a passthrough, reach in to get the trait
+            if 'validation_trait' in meta:
+                trait = meta['validation_trait']
+                ttype = trait.trait_type
+
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+
+            io_attr['id'] = name
+            io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
@@ -1608,6 +1627,13 @@ class Component(Container):
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
 
+            # Let the GUI know that this var is the top element of a
+            # variable tree
+            if slot_attr is not None:
+                vartable = self.get(name)
+                if isinstance(vartable, VariableTree):
+                    io_attr['vt'] = 'vt'
+
             if name in self.list_inputs():
                 inputs.append(io_attr)
             else:
@@ -1619,9 +1645,43 @@ class Component(Container):
                 if 'hidden' not in meta or meta['hidden'] == False:
                     slots.append(slot_attr)
 
+            # For variables trees only: recursively add the inputs and outputs
+            # into this variable list
+            if 'vt' in io_attr:
+
+                vt_attrs = vartable.get_attributes(io_only, indent=1,
+                                                   parent=name,
+                                                   valid=io_attr['valid'])
+
+                if name in self.list_inputs():
+                    inputs += vt_attrs['Inputs']
+                else:
+                    outputs += vt_attrs['Outputs']
+
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
-        attrs['Slots'] = slots
+
+        # Find any event traits
+
+        tset1 = set(self._alltraits(events=True))
+        tset2 = set(self._alltraits(events=False))
+        event_set = tset1.difference(tset2)
+        # Remove the Enthought events common to all has_traits objects
+        event_set.remove('trait_added')
+        event_set.remove('trait_modified')
+
+        events = []
+        for name in event_set:
+
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            ttype = trait.trait_type
+
+            event_attr = ttype.get_attribute(name, meta)
+            events.append(event_attr)
+
+        if len(events) > 0:
+            attrs['Events'] = events
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.
@@ -1637,7 +1697,7 @@ class Component(Container):
                     if 'hidden' not in meta or meta['hidden'] == False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         if slot_attr is not None:
-                            attrs['Slots'].append(slot_attr)
+                            slots.append(slot_attr)
 
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
@@ -1670,12 +1730,12 @@ class Component(Container):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     attr = {}
-                    
+
                     if isinstance(parm, ParameterGroup):
                         attr['target'] = str(tuple(parm.targets))
                     else:
                         attr['target'] = parm.target
-                        
+
                     attr['name']    = str(key)
                     attr['low']     = parm.low
                     attr['high']    = parm.high
@@ -1684,7 +1744,7 @@ class Component(Container):
                     attr['fd_step'] = parm.fd_step
                     #attr['scope']   = parm.scope.name
                     parameters.append(attr)
-                    
+
                 attrs['Parameters'] = parameters
 
             constraints = []
@@ -1716,11 +1776,18 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
+            if has_interface(self, IHasEvents):
+                attrs['Triggers'] = [dict(target=path)
+                                   for path in self.get_events()]
+
+        if len(slots) > 0:
+            attrs['Slots'] = slots
+
         return attrs
 
 
-def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
-    """prints out validity status of all input and output traits
+def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
+    """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
     """

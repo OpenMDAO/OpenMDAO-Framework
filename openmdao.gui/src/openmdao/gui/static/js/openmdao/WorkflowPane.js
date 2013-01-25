@@ -9,104 +9,20 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
 
     // initialize private variables
     var self = this,
-        workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
-        workflowCSS = 'height:'+(screen.height-100)+'px;'+
-                      'width:'+(screen.width-100)+'px;'+
-                      'position:relative;',
-        workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
-                      .appendTo(elm),
-        workflow = new draw2d.Workflow(workflowID),
-        comp_figs = {},
-        flow_figs = {},
-        roots = [];  // Tracks order for consistent redraw.
+        workflowID = pathname.replace(/\./g,'-')+'-workflow',
+        workflowCSS = 'min-height:'+screen.height+'px;'+
+                      'min-width:'+screen.width+'px;'+
+                      'position:relative;' +
+                      'border: 0px',
+        workflow = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
+            .appendTo(elm),
+        flows = {},
+        flow_order = [];  // Tracks order for consistent redraw.
 
     this.pathname = pathname;
 
-    workflow.setBackgroundImage( "/static/images/grid_10.png", true);
     elm.css({ 'overflow':'auto' });
-    workflow.setViewPort(elm.attr('id'));
-
-    /** expand workflow (container) figures to contain all their children */
-    function resizeFlowFigures() {
-        var xmax = 0;
-        jQuery.each(flow_figs, function (flowpath,flowfig) {
-            flowfig.resize();
-            xmax = Math.max(xmax, flowfig.getAbsoluteX()+flowfig.getWidth());
-        });
-        return xmax;
-    }
-
-    /** update workflow from JSON workflow data
-     */
-    function updateFigures(flow_name, json, offset) {
-        var path  = json.pathname,
-            type  = json.type,
-            valid = json.valid,
-            drvr  = json.driver,
-            flow  = json.workflow,
-            asm   = openmdao.Util.getPath(path),
-            comp_key = flow_name+':'+path,
-            comp_fig, flow_fig, flowpath, newflow_fig, count, x, y;
-
-        if (flow) {
-            // add driver figure
-            if (comp_figs.hasOwnProperty(comp_key)) {
-                comp_fig = comp_figs[comp_key];
-            }
-            else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
-                comp_figs[comp_key] = comp_fig;
-            }
-
-            flow_fig = flow_figs[flow_name];
-            if (flow_fig) {
-                flow_fig.addComponentFigure(comp_fig);
-            }
-            else {
-                workflow.addFigure(comp_fig, offset+50, 50);
-            }
-
-            // add workflow compartment figure for this flow
-            // (overlap bottom right of driver figure)
-            flowpath = flow_name+'.'+path;
-            newflow_fig = new openmdao.WorkflowFigure(model,flowpath,path,comp_fig);
-            x = comp_fig.getAbsoluteX()+comp_fig.getWidth()-20;
-            y = comp_fig.getAbsoluteY()+comp_fig.getHeight()-10;
-            workflow.addFigure(newflow_fig,x,y);
-            if (flow_fig) {
-                newflow_fig.horizontal = !flow_fig.horizontal;
-                flow_fig.addChild(newflow_fig);
-            }
-            flow_figs[flowpath] = newflow_fig;
-
-            jQuery.each(flow, function(idx, comp) {
-                updateFigures(flowpath, comp, offset);
-            });
-        }
-        else if (drvr) {
-            // don't add a figure for an assembly,
-            // it will be represented by it's driver
-            updateFigures(flow_name, drvr, offset);
-        }
-        else {
-            // add component figure
-            if (comp_figs.hasOwnProperty(comp_key)) {
-                comp_fig = comp_figs[comp_key];
-            }
-            else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
-                comp_figs[comp_key] = comp_fig;
-            }
-
-            flow_fig = flow_figs[flow_name];
-            if (flow_fig) {
-                flow_fig.addComponentFigure(comp_fig);
-            }
-            else {
-                workflow.addFigure(comp_fig, offset+50, 50);
-            }
-        }
-    }
+    workflow.css({ 'background-image': 'url("/static/images/grid_10.png")' });
 
     /***********************************************************************
      *  privileged
@@ -125,39 +41,53 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
 
     /** update workflow diagram */
     this.loadData = function(json) {
-        // Where does non-Array come from? Occurs during drag-n-drop test.
+        var drawnFlows = [],
+            updated_flows = [],
+            deleted_flows = [];
+
+        // We may get a single workflow object or a list of workflow objects
+        // if we get a single workflow, stick it in a list for consistency
         if (!jQuery.isArray(json)) {
             json = [json];
         }
-        workflow.clear();
-        comp_figs = {};
-        flow_figs = {};
-        var offset = 0,
-            drawnFlows = [];
-            draw = function(flow, offset) {
-                       updateFigures('', flow, offset);
-                       xmax = resizeFlowFigures();
-                       drawnFlows.push(flow.pathname);
-                       return xmax;
-                   };
 
-        // Redraw existing flows in same order.
-        jQuery.each(roots, function(idx, name) {
-            jQuery.each(json, function(idx, flow) {
-                if (flow.pathname === name) {
-                    offset = draw(flow, offset);
-                }
-            });
-        });
-
-        // Draw new flows.
+        // build lists of updated and deleted flows
         jQuery.each(json, function(idx, flow) {
-            if (drawnFlows.indexOf(flow.pathname) < 0) {
-                offset = draw(flow, offset);
+            if (flow_order.indexOf(flow.pathname) >= 0) {
+                updated_flows.push(flow.pathname);
+            }
+        });
+        jQuery.each(flow_order, function(idx, name) {
+            if (updated_flows.indexOf(name) < 0) {
+                deleted_flows.push(name);
             }
         });
 
-        roots = drawnFlows;
+        // redraw updated flows in same order, remove deleted flows
+        jQuery.each(flow_order, function(idx, name) {
+            if (updated_flows.indexOf(name) >= 0) {
+                jQuery.each(json, function(idx, flow) {
+                    if (flow.pathname === name) {
+                        flows[name].update(flow);
+                        drawnFlows.push(name);
+                    }
+                });
+            }
+            else {
+                flows[name].destroy();
+                delete flows[name];
+            }
+        });
+
+        // draw new flows
+        jQuery.each(json, function(idx, flow) {
+            if (drawnFlows.indexOf(flow.pathname) < 0) {
+                flows[flow.pathname] = new openmdao.WorkflowFigure(workflow, model, '', flow);
+                drawnFlows.push(flow.pathname);
+            }
+        });
+
+        flow_order = drawnFlows;
     };
 
 };

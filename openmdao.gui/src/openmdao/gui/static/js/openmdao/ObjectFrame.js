@@ -65,8 +65,15 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
         });
 
         self.elm.height(400);
-        self.elm.width(625);
-        jQuery('#'+self.id).tabs({selected: selected});
+        self.elm.width(640);
+
+        self.elm.tabs({selected: selected})
+            .on('tabsshow', function(event, ui) {
+                if (ui.tab.text === 'Workflow') {
+                    self.elm.find('.WorkflowFigure').trigger('setBackground');
+                }
+            });
+
         if (typeof openmdao_test_mode !== 'undefined') {
             openmdao.Util.notify(self.pathname+' loaded');
         }
@@ -116,11 +123,19 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            if (val.length) {
-                panes[name] = new openmdao.SlotsPane(contentPane,model,
-                                    self.pathname,name,false);
-                panes[name].loadData(val);
-            }
+            panes[name] = new openmdao.SlotsPane(contentPane,model,
+                                self.pathname,name,false);
+            panes[name].loadData(val);
+        }
+        else if (name === 'Triggers') {
+            panes[name] = new openmdao.TriggersPane(contentPane, model,
+                                                  self.pathname, name);
+            panes[name].loadData(val);
+        }
+        else if (name === 'Events') {
+            panes[name] = new openmdao.EventsPane(contentPane, model,
+                                                  self.pathname, name);
+            panes[name].loadData(val);
         }
         else {
             debug.warn("ObjectFrame.getContent: Unexpected object",
@@ -136,7 +151,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 panes[name].loadData(props);
             }
             else if (name !== 'type' && props) {
-                debug.warn("ObjectFrame.loadData: Unexpected object",
+                debug.warn("ObjectFrame.loadData: Unexpected interface",
                            self.pathname, name, props);
             }
         });
@@ -169,7 +184,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
-        var callback = loadData;
+        var callback = loadTabs;
         if (self.pathname !== path) {
            if (self.pathname) {
                 model.removeListener(self.pathname, handleMessage);

@@ -249,7 +249,7 @@ class rbac(object):  #pragma no cover
 def rbac_decorate(method, roles, proxy_role='', proxy_types=None):
     """
     Post-definition decorator for specifying RBAC roles for a method.
-    Not typically used, but needed if `proxy_types` must include the
+    Not typically used but needed if `proxy_types` must include the
     class currently being defined, since the normal decorator won't see
     the class yet.
 
@@ -327,7 +327,7 @@ class AccessController(object):
     Responsible for mapping :class:`Credentials` to roles and optionally
     getting different credentials for executing a method.
 
-    Also reponsible for determining which attributes and classes require
+    Also responsible for determining which attributes and classes require
     a proxy to be returned rather than the value.
     """
 

@@ -15,7 +15,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Python (2.6.x or 2.7.x)
 
-  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python
+  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternative Python
     builds, such as Enthought, ActiveState Python or Python(x,y) are not officially supported at this time,
     though some may work with OpenMDAO.  
 
@@ -118,7 +118,7 @@ use it, you must have compilers (C and Fortran) on your system.
    fix.
  - `NumPy <http://sourceforge.net/projects/numpy/files/>`_ 
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
- - `gfortran <http://r.research.att.com/gfortran-42-5646.pkg>`_ -- This version goes with Xcode. 
+ - `gfortran-42-5646.pkg <http://r.research.att.com/tools/>`_ -- This version goes with Xcode. 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
 

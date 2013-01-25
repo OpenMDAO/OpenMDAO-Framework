@@ -1,7 +1,7 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
-import os
+import glob, os, time
 import StringIO
 import unittest
 
@@ -57,6 +57,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         #being run for the second time.
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         # now use the CSV recorder as source of Cases
@@ -97,21 +98,25 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename, delimiter=';', \
                                                      quotechar="'")]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
 
         attrs = self.top.driver.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'filename',
+                         'id': 'filename',
                          'type': 'str',
                          'connected': '',
                          'value': 'openmdao_test_csv_case_iterator.csv',
                          'desc': 'Name of the CSV file to be output.'} in attrs['Inputs'])
         self.assertTrue({'name': 'append',
+                         'id': 'append',
                          'type': 'bool',
                          'connected': '',
                          'value': 'False',
                          'desc': 'Set to True to append to the existing CSV file.'} in attrs['Inputs'])
         self.assertTrue({'name': 'delimiter',
+                         'id': 'delimiter',
                          'type': 'str',
                          'connected': '',
                          'value': ';',
@@ -273,6 +278,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.iterator = ListCaseIterator(cases)
             
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
 
         # now use the CSV recorder as source of Cases
@@ -298,13 +304,32 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 break
         else:
             self.fail("couldn't find the expected Case")
+
+    def test_sorting(self):
+        # Make sure outputs are sorted
             
+        rec = CSVCaseRecorder(filename=self.filename)
+        rec.num_backups = 0
+        rec.startup()
+        rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
+        rec.close()
+        
+        outfile = open(self.filename, 'r')
+        csv_data = outfile.readlines()
+        outfile.close()
+
+        line = '"label","/INPUTS","comp1.x","comp1.y","comp2.x","/OUTPUTS","/METADATA","retries","max_retries","parent_uuid","msg"\r\n'
+        self.assertEqual(csv_data[0], line)
+        line = '"","",2.0,4.3,1.9,"","","","","",""\r\n'
+        self.assertEqual(csv_data[1], line)
+
     def test_flatten(self):
         # create some Cases
         outputs = ['comp1.a_array', 'comp1.vt']
         inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
         self.top.driver.iterator = ListCaseIterator([Case(inputs=inputs, outputs=outputs, label='case1')])
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         # now use the CSV recorder as source of Cases
@@ -346,6 +371,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
+        rec.startup()
         rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
         try:
             rec.record(Case(inputs=[('comp1.x',2.0),('comp2.x',1.9)]))
@@ -376,12 +402,43 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
     def test_close(self):
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         case = Case(inputs=[('comp2.a_slot', None)])
         assert_raises(self, 'self.top.driver.recorders[0].record(case)',
                       globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
+        
+    def test_csvbackup(self):
+        
+        # Cleanup from any past failures
+        parts = self.filename.split('.')
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        for item in backups:
+            os.remove(item)
+        
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
 
+        # Run twice, two backups.
+        self.top.driver.recorders[0].num_backups = 2
+        self.top.run()
+        # Granularity on timestamp is 1 second.
+        time.sleep(1)
+        self.top.run()
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        self.assertEqual(len(backups), 2)
+
+        # Set backups to 1 and rerun. Should delete down to 1 backup.
+        self.top.driver.recorders[0].num_backups = 1
+        self.top.run()
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        self.assertEqual(len(backups), 1)
+        
+        for item in backups:
+            os.remove(item)
+        backups = glob.glob(''.join(parts[:-1]) + '_*')
+        
+        self.top.driver.recorders[0].num_backups = 0
 
 if __name__ == '__main__':
     unittest.main()

@@ -20,7 +20,8 @@ from multiprocessing import current_process
 from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
 from openmdao.main.factory import Factory
-from openmdao.main.factorymanager import create, get_available_types
+from openmdao.main.factorymanager import create, get_available_types, \
+                                         get_signature
 from openmdao.main.filevar import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
@@ -187,6 +188,23 @@ class ObjServerFactory(Factory):
         return types
 
     @rbac(('owner', 'user'))
+    def get_signature(self, typname, version=None):
+        """Return constructor argument signature for *typname,* using the
+        specified package version. The return value is a dictionary.
+
+        typname: string
+            Type of object to constructor to inspect.
+
+        version: string or None
+            Version of `typname` to create.
+        """
+        self._logger.debug('get_signature typname %s version %s',
+                           typname, version)
+        signature = get_signature(typname, version)
+        self._logger.log(LOG_DEBUG2, '    %s', signature)
+        return signature
+
+    @rbac(('owner', 'user'))
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
@@ -195,7 +213,7 @@ class ObjServerFactory(Factory):
         Starts servers in a subdirectory of the current directory.
 
         typname: string
-            Type of object to create. If null then a proxy for the new
+            Type of object to create. If null, then a proxy for the new
             :class:`ObjServer` is returned.
 
         version: string or None

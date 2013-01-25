@@ -60,8 +60,8 @@ class DrivenComponent(Component):
     sum_y = Float(0., iotype='out')
     extra = Float(1.5, iotype='out')
 
-    def __init__(self, *args, **kwargs):
-        super(DrivenComponent, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(DrivenComponent, self).__init__()
 
     def execute(self):
         """ Compute results from input vector. """

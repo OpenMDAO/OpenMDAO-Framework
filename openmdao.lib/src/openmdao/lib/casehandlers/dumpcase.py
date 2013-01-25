@@ -13,6 +13,10 @@ class DumpCaseRecorder(object):
     def __init__(self, out=sys.stdout):
         self.out = out
 
+    def startup(self):
+        """ Nothing needed for a dumpcase."""
+        pass
+        
     def record(self, case):
         """Dump the given Case in a "pretty" form."""
         if self.out:  # if self.out is None, just do nothing
@@ -31,7 +35,7 @@ class DumpCaseRecorder(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}

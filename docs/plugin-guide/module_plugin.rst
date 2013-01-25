@@ -121,7 +121,7 @@ following files found in our distribution directory:
     possible to add some unit tests for our plugin.
     
 
-.. __: http://docs.python.org/distutils/sourcedist.html#the-manifest-in-template
+.. __: http://docs.python.org/2/distutils/sourcedist.html#the-manifest-in-template
 
 
 The following sections describe how to edit these files in more detail.
@@ -294,7 +294,7 @@ your plugin.
 
 More descriptions of the various metadata values can be found `here`__.
 
-.. __: http://distutils2.readthedocs.org/en/latest/setupcfg.html
+.. __: http://alexis.notmyidea.org/distutils2/setupcfg.html
 
 
 The values in the *metadata* section are specified by **PEP 345** and 

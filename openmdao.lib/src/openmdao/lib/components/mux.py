@@ -10,14 +10,14 @@ class Mux(Component):
     with the data. It is a logical multiplexer.
     """
     
-    n = Int(2,low=2,iotype="in",desc="number of inputs to be multiplexed")
+    n = Int(2, low=2, iotype="in",desc="number of inputs to be multiplexed")
     output = List(iotype="out")
     
-    def __init__(self,n=2,*args,**kwargs): 
-        super(Mux,self).__init__(*args,**kwargs)
+    def __init__(self, n=2): 
+        super(Mux,self).__init__()
         self._inputs = []
         self.n = n
-        self._n_changed(n,n) #just to initialize it
+        self._n_changed(n, n) #just to initialize it
         
     def _n_changed(self,old,new):
         for name in self._inputs: 
@@ -39,12 +39,12 @@ class DeMux(Component):
     """ Takes one List input and splits it into *n* indvidual outputs. This is a 
     logical demultiplexer. """
 
-    n = Int(2,low=2,iotype="in",desc="number of items in the array to be \
+    n = Int(2, low=2, iotype="in", desc="number of items in the array to be \
     demultiplexed")
     inputs = List(iotype="in")
     
-    def __init__(self,n=2,*args,**kwargs): 
-        super(DeMux,self).__init__(*args,**kwargs)
+    def __init__(self, n=2): 
+        super(DeMux,self).__init__()
         self.n = n
         self._outputs = []
         self._n_changed(n,n)

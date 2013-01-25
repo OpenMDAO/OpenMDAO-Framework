@@ -251,16 +251,16 @@ class Projects(object):
         return matched_projects
 
     def set(self, project_id, field, value):
-        ''' Set a single field in the project db
+        ''' Set a single field in the project db.
 
         project_id: int
-            unique id for requested project.
+            Unique id for requested project.
 
         field: str
-            Name of field to set
+            Name of field to set.
 
         value: various
-            Value of field to set
+            Value of field to set.
         '''
 
         con = self._get_connection()
@@ -286,7 +286,7 @@ class Projects(object):
         ''' Remove a project from the database
 
         project_id: int
-            unique id for requested project.
+            Unique id for requested project.
         '''
 
         con = self._get_connection()

@@ -12,8 +12,6 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-import zope.interface
-
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.util.decorators import stub_if_missing_deps
@@ -22,10 +20,12 @@ from openmdao.main.datatypes.api import Float
 
 @stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(Container): 
+    """Surrogate Modeling method based on the simple Kriging interpolation. Predictions are returned
+    as a NormalDistribution instance."""
     
     implements(ISurrogate)
     
-    def __init__(self,X=None,Y=None):
+    def __init__(self):
         super(KrigingSurrogate, self).__init__()
         
         self.m = None #number of independent
@@ -38,13 +38,7 @@ class KrigingSurrogate(Container):
         self.mu = None
         self.sig2 = None
         self.log_likelihood = None
-
-        self.X = X
-        self.Y = Y
-        
-        if X is not None and Y is not None: 
-            self.train(X,Y)
-            
+                    
     def get_uncertain_value(self,value): 
         """Returns a NormalDistribution centered around the value, with a 
         standard deviation of 0."""
@@ -101,7 +95,8 @@ class KrigingSurrogate(Container):
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
-        return NormalDistribution(f, RMSE)
+        dist = NormalDistribution(f, RMSE)
+        return dist
         
 
     def train(self,X,Y):
@@ -160,3 +155,19 @@ class KrigingSurrogate(Container):
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))
             #print self.log_likelihood
+
+
+class FloatKrigingSurrogate(KrigingSurrogate):
+    """Surrogate model based on the simple Kriging interpolation. Predictions are returned as floats,
+    which are the mean of the NormalDistribution predicted by the model."""
+
+    def predict(self,new_x): 
+        dist = super(FloatKrigingSurrogate,self).predict(new_x)
+        return dist.mu
+
+    def get_uncertain_value(self,value): 
+        """Returns a float"""
+        return float(value)   
+
+
+

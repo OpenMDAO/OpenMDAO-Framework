@@ -35,13 +35,15 @@ setup(name='openmdao.main',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'openmdao.main.test': ['src/doubler.py']
+          'openmdao.main.test': ['src/doubler.py'],
+          'openmdao.main': ['src/openmdao/main/docs/*'] 
       },
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           'argparse',
           'decorator',
+          'jsonpickle',
           'networkx==1.3',
           'openmdao.units',
           'openmdao.util',
@@ -61,7 +63,7 @@ setup(name='openmdao.main',
       idle=idlelib.PyShell:main
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
-      update_libpath=openmdao.main.plugin:update_libpath
+      get_full_libpath=openmdao.main.plugin:get_full_libpath
       openmdao=openmdao.main.cli:openmdao
       
       [openmdao.component]
@@ -75,6 +77,7 @@ setup(name='openmdao.main',
       
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
       openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float

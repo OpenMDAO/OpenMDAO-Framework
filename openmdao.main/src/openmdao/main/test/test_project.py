@@ -4,10 +4,11 @@ import unittest
 import tempfile
 import shutil
 
-from openmdao.util.fileutil import find_files, build_directory
+from openmdao.util.fileutil import build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
                                   filter_macro, ProjFinder, _match_insts
+from openmdao.main.factorymanager import get_signature
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -52,6 +53,10 @@ class ProjectTestCase(unittest.TestCase):
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
+        self.assertEqual(proj.config.items('info'),
+                         [('version', '0'), ('description', '')])
+        new_info = [('version', 'stinky'), ('description', 'Frobozz rulz!')]
+        proj.set_info(dict(new_info))
         proj.activate()
         self._fill_project(proj)
         
@@ -64,6 +69,7 @@ class ProjectTestCase(unittest.TestCase):
                                        dest_dir=self.tdir)
 
         self.assertEqual(newproj.path, os.path.join(self.tdir, 'proj2'))
+        self.assertEqual(newproj.config.items('info'), new_info)
     
         try:
             newproj = project_from_archive(os.path.join(self.tdir,
@@ -168,7 +174,8 @@ class MyClass(Component):
                           'pkgfile2.py': """
 from openmdao.main.api import Component
 class PkgClass2(Component):
-    pass
+    def __init__(self, somearg=8, anotherarg=False):
+        super(PkgClass2, self).__init__()
 """,
                         }
                  },
@@ -194,6 +201,8 @@ p = PkgClass2()
             matches = _match_insts([expected_classname])
             self.assertEqual(matches, set())
             
+            sig = get_signature('pkgdir.pkgdir2.pkgfile2.PkgClass2')
+            self.assertEqual(sig['args'], [['somearg', '8'], ['anotherarg', 'False']])
             inst = getattr(mod, 'PkgClass2')() # create an inst of PkgClass2
             matches = _match_insts([expected_classname])
             self.assertEqual(matches, set([expected_classname]))
