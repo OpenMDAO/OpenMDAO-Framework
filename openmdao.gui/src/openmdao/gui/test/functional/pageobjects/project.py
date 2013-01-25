@@ -12,7 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement, TextElement
+from elements import ButtonElement, InputElement
 from dialog import DialogPage, BootstrapModal
 
 
@@ -79,7 +79,7 @@ class ProjectsPage(BasePageObject):
         element.click()
         from workspace import WorkspacePage
         return WorkspacePage.verify(self.browser, self.port)
-    
+
     def edit_project(self, project_name):
         """ Clicks the 'edit' button. Returns :class:`EditDialog`. """
         self.search_input = project_name
@@ -129,6 +129,7 @@ class ProjectsPage(BasePageObject):
 
 
 class MetadataModal(BootstrapModal):
+
     submit_button = None
     cancel_button = None
 
@@ -156,6 +157,7 @@ class MetadataModal(BootstrapModal):
 
 class NewDialog(MetadataModal):
     """ Modal for creating a new project """
+
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='New Project']"))
     cancel_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Cancel']"))
 
@@ -168,15 +170,18 @@ class NewDialog(MetadataModal):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-        
+
 class EditDialog(MetadataModal):
     """ Dialog for exporting a project """
+
     submit_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
     cancel_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/button"))
 
 
+
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
+
     delete_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='OK']"))
     cancel_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='Cancel']"))
 
@@ -200,7 +205,7 @@ class ImportDialog(MetadataModal):
     #####      self.input_element = "" # path to project file
     projectfile_input = InputElement((By.ID, 'id_projectfile'))
 
-    def load_project(self, projectfile_path ):
+    def load_project(self, projectfile_path):
         '''Just load the project using the dialog. This
            does not complete the import. That is a separate step
         '''

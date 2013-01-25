@@ -4,7 +4,7 @@ Test run/step/stop aspects of a simple workflow.
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Int, Bool
 
@@ -179,6 +179,49 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc), '')
         else:
             self.fail('Expected StopIteration')
+            
+    def test_checks(self):
+        # Tests out the validity checks.
+        
+        # Test 1, add a driver to its own workflow
+        try:
+            self.model.driver.workflow.add('driver', check=True)
+        except AttributeError, err:
+            msg = 'You cannot add a driver to its own workflow'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected AttributeError')
+            
+        # Test 2, add a comp that is out of scope.
+        self.model.add('sub', Assembly())
+        self.model.sub.add('comp', Component())
+        try:
+            self.model.driver.workflow.add('sub.comp', check=True)
+        except AttributeError, err:
+            msg = "Component 'sub.comp' is not in the scope of the top assembly."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected AttributeError')
+            
+        # Test 3, add a comp that does not exist
+        try:
+            self.model.driver.workflow.add('stuff', check=True)
+        except AttributeError, err:
+            msg = "Component 'stuff' does not exist in the top assembly."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected AttributeError')
+            
+        # Test 4, create a driver recursion loop
+        self.model.add('driver2', Driver())
+        self.model.driver.workflow.add('driver2', check=True)
+        try:
+            self.model.driver2.workflow.add('driver', check=True)
+        except AttributeError, err:
+            msg = "Driver recursion loop detected"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected AttributeError')
 
 
 if __name__ == '__main__':

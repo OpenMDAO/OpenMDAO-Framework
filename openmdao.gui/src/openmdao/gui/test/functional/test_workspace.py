@@ -11,6 +11,7 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, \
@@ -412,17 +413,12 @@ def _test_properties(browser):
     #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
-    # Check default 'top'.
-    workspace_page.select_object('top')
-    workspace_page.show_properties()
-    eq(workspace_page.props_header, 'Assembly: top')
-    inputs = workspace_page.props_inputs
-    eq(inputs.value, [['directory',     ''],
-                      ['force_execute', 'False']])
-
     # Check default 'top.driver'.
-    workspace_page.expand_object('top')
-    workspace_page.select_object('top.driver')
+    workspace_page('properties_tab').click()
+    obj = workspace_page.get_dataflow_figure('top')
+    chain = ActionChains(browser)
+    chain.click(obj.root)
+    chain.perform()    
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
@@ -433,43 +429,43 @@ def _test_properties(browser):
     #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
+# This test no longer needed because there is no longer a component panel that
+# tracks the minimize/maximize behavior of the dataflow. The collapse/expand
+# behavior is alrady tested in test_dataflow. -- KTM
 
-def _test_objtree(browser):
-    # Toggles maxmimize/minimize button on assemblies.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-    project_dict, workspace_page = startup(browser)
+#def _test_objtree(browser):
+    ## Toggles maxmimize/minimize button on assemblies.
+    #project_dict, workspace_page = startup(browser)
 
-    # Add maxmin.py to project
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/maxmin.py')
-    workspace_page.add_file(file_path)
+    ## Add maxmin.py to project
+    #file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                #'files/maxmin.py')
+    #workspace_page.add_file(file_path)
 
-    # Add MaxMin to 'top'.
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+    ## Add MaxMin to 'top'.
+    #workspace_page.show_dataflow('top')
+    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
-    # Maximize 'top' and 'top.maxmin'
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top'])
-    workspace_page.expand_object('top')
-    time.sleep(0.5)
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin'])
-    workspace_page.expand_object('top.maxmin')
-    time.sleep(0.5)
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 'top.maxmin.driver', 'top.maxmin.sub'])
+    ## Maximize 'top' and 'top.maxmin'
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top'])
+    #workspace_page.expand_object('top')
+    #time.sleep(0.5)
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    #workspace_page.expand_object('top.maxmin')
+    #time.sleep(0.5)
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 #'top.maxmin.driver', 'top.maxmin.sub'])
 
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 #'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
 
-    # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
-    closeout(project_dict, workspace_page)
-
+    ## Clean up.
+    #closeout(project_dict, workspace_page)
 
 def _test_editable_inputs(browser):
     def test_color(actual, expected, alpha=False):

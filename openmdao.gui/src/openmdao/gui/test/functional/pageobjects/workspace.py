@@ -60,7 +60,8 @@ class WorkspacePage(BasePageObject):
     about_button      = ButtonElement((By.ID, 'about-item'))
 
     # Left side.
-    objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    #objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    workflowtree_tab = ButtonElement((By.ID, 'wtree_tab'))
     files_tab   = ButtonElement((By.ID, 'ftree_tab'))
 
     # Object context menu.
@@ -68,7 +69,7 @@ class WorkspacePage(BasePageObject):
     obj_dataflow   = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
     obj_workflow   = ButtonElement((By.XPATH, "//a[(@rel='show_workflow')]"))
     obj_run        = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
-    obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+    #obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
     obj_remove     = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
 
     # File menu
@@ -118,8 +119,10 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
+        #self.locators["objects"] = \
+        #    (By.XPATH, "//div[@id='otree_pane']//li[@path]")
         self.locators["objects"] = \
-            (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+            (By.XPATH, "//div[@id='wtree_pane']//li[@path]")
         self.locators["files"] = \
             (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
@@ -164,7 +167,8 @@ class WorkspacePage(BasePageObject):
         return element
 
     def find_object_button(self, name, delay=0):
-        path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
+        #path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
+        path = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
                 element = WebDriverWait(self.browser, TMO).until(
@@ -348,8 +352,10 @@ class WorkspacePage(BasePageObject):
 
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
+        #WebDriverWait(self.browser, TMO).until(
+            #lambda browser: browser.find_element(By.ID, 'otree_pane'))
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'otree_pane'))
+            lambda browser: browser.find_element(By.ID, 'wtree_pane'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
@@ -359,16 +365,18 @@ class WorkspacePage(BasePageObject):
 
     def select_object(self, component_name):
         """ Select `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
 
     def expand_object(self, component_name):
         """ Expands `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//ins" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -376,8 +384,9 @@ class WorkspacePage(BasePageObject):
 
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -395,8 +404,9 @@ class WorkspacePage(BasePageObject):
 
     def show_workflow(self, component_name):
         """ Show workflow of `component_name`. """
-        self('objects_tab').click()
-        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        self('workflowtree_tab').click()
+        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -603,16 +613,27 @@ class WorkspacePage(BasePageObject):
         """ Add `obj_path` object to `target_name` in workflow. """
         for retry in range(3):
             try:
-                obj = self.find_object_button(obj_path)
-                workflow = self.get_workflow_figure(target_name)
-                flow_fig = workflow.flow
+                items = obj_path.split('.')
+                parent = items[:-1]
+                comp = items[-1]
+                obj = self.get_dataflow_figure(comp, parent)
+                
+                target = self.find_object_button(target_name)
+                
                 chain = ActionChains(self.browser)
-                chain.move_to_element(obj)
-                chain.click_and_hold(obj)
-                chain.move_to_element(flow_fig)
-                chain.move_by_offset(2, 1)
-                chain.release(None)
+                chain.drag_and_drop(obj.root, target)
                 chain.perform()
+                
+                #obj = self.find_object_button(obj_path)
+                #workflow = self.get_workflow_figure(target_name)
+                #flow_fig = workflow.flow
+                #chain = ActionChains(self.browser)
+                #chain.move_to_element(obj)
+                #chain.click_and_hold(obj)
+                #chain.move_to_element(flow_fig)
+                #chain.move_by_offset(2, 1)
+                #chain.release(None)
+                #chain.perform()
             except StaleElementReferenceException:
                 if retry < 2:
                     logging.warning('add_object_to_workflow:'
