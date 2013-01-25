@@ -94,6 +94,10 @@ class Driver(Component):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
+        self._update_workflow()
+        
+    def _update_workflow(self):
+        """Updates workflow contents based on driver dependencies."""
         # if workflow is not defined, or if it contains only Drivers, try to
         # use parameters, objectives and/or constraint expressions to
         # determine the necessary workflow members
@@ -101,21 +105,12 @@ class Driver(Component):
             iterset = set(c.name for c in self.iteration_set())
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
-            #reqcomps = self._get_required_compnames()
             if len(self.workflow) == 0:
-                #self.workflow.add(reqcomps)
                 pass
             elif alldrivers is True:
                 reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-            #else:
-                #diff = reqcomps - iterset
-                #if len(diff) > 0:
-                    ##raise RuntimeError("Expressions in this Driver require the following "
-                    ##                   "Components that are not part of the "
-                    ##                   "workflow: %s" % list(diff))
-                    #pass
             # calling get_components() here just makes sure that all of the
             # components can be resolved
             comps = self.workflow.get_components()
@@ -123,7 +118,7 @@ class Driver(Component):
             self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow(s), and
+        """Return a set of all Components in our workflow(s) and
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
@@ -248,6 +243,10 @@ class Driver(Component):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+        
+        for recorder in self.recorders:
+            recorder.startup()
+            
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
@@ -257,7 +256,7 @@ class Driver(Component):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
         *post_iteration*, etc., just override this function. As a result, none
-        of the <start/pre/post/continue>_iteration() functions will be called.
+        of the ``<start/pre/post/continue>_iteration()`` functions will be called.
         """
         self._iter = None
         self.start_iteration()
@@ -455,8 +454,8 @@ class Driver(Component):
         return matched_vars
 
     def get_workflow(self):
-        """ get the driver info and the list of components that make up the
-            driver's workflow, recurse on nested drivers
+        """ Get the driver info and the list of components that make up the
+            driver's workflow; recurse on nested drivers.
         """
         from openmdao.main.assembly import Assembly
         ret = {}
@@ -487,7 +486,7 @@ class Driver(Component):
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow
     a single time. The only difference between this and the Driver base class
-    is that record_case is called at the conclusion of the workflow execution.
+    is that `record_case` is called at the conclusion of the workflow execution.
     """
 
     def execute(self):

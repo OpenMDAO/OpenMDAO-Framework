@@ -14,7 +14,7 @@ openmdao.DrawingFrame = function(id,model,pathname) {
         css = 'height:100%; width:100%;', //position:relative;',
         drawing = jQuery('<div style="'+css+'";>')
            .appendTo(this.elm),
-       contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
 
     /** update the Drawing with SVG data */
     function updateDrawing(svgdata) {

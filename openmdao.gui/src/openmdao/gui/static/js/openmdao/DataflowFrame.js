@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFrame = function(id,model,pathname) {
+openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
     openmdao.DataflowFrame.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
 
     /***********************************************************************
@@ -10,7 +10,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     // initialize private variables
     var self = this,
-        pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Dataflow');
+        pane = new openmdao.DataflowPane(jQuery('#'+id), model, pathname, 'Dataflow', prop_fn);
 
     self.pathname = false;
 

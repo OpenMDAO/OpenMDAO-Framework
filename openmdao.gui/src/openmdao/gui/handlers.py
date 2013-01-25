@@ -1,15 +1,17 @@
 from tornado.web import RequestHandler, StaticFileHandler
 from openmdao.gui.session import TornadoSession
 import threading
-import os, sys
-import pprint
+import os
+import sys
 
+import openmdao.main
 from openmdao.main.rbac import Credentials
 from openmdao.main.plugin import find_docs_url
 from openmdao.util.fileutil import get_ancestor_dir
 
+
 class ReqHandler(RequestHandler):
-    ''' override the get_current_user() method in your request handlers to
+    ''' override the get_current_user() method in request handlers to
         determine the current user based on the value of a cookie.
     '''
 
@@ -33,8 +35,8 @@ class ReqHandler(RequestHandler):
 
 
 class LoginHandler(ReqHandler):
-    ''' lets users log into the application simply by specifying a nickname,
-        which is then saved in a cookie.
+    ''' Currently we support a single user, the current user.
+        This hook is for potential future development using Credentials.
     '''
 
     def get(self):
@@ -60,8 +62,8 @@ class LoginHandler(ReqHandler):
 
 
 class LogoutHandler(ReqHandler):
-    ''' lets users log out of the application simply by deleting the
-        nickname cookie
+    ''' Lets users log out of the application simply by deleting the
+        nickname cookie.
     '''
 
     def get(self):
@@ -74,25 +76,26 @@ class LogoutHandler(ReqHandler):
 
 
 class ExitHandler(ReqHandler):
-    ''' shut it down, try to close the browser window
+    ''' Shut it down; try to close the browser window.
     '''
 
     def get(self):
         self.application.exit()
         self.render('closewindow.html')
 
+
 class PluginDocsHandler(StaticFileHandler):
     ''' retrieve docs for a plugin '''
     _plugin_map = {}
     _plugin_lock = threading.Lock()
-    
+
     def _cname_valid(self, name):
         # TODO: use regex to check form of cname (must be dotted module path)
         return True
-    
+
     def initialize(self, route):
         rpath = self.request.path[len(route):].strip('/')
-        parts = rpath.split('/',1)
+        parts = rpath.split('/', 1)
         self.cname = parts[0] + os.sep
         self.added = ''
         if len(parts) == 1:
@@ -100,26 +103,30 @@ class PluginDocsHandler(StaticFileHandler):
                 if self._cname_valid(parts[0]) and parts[0] not in self._plugin_map:
                     url = find_docs_url(parts[0], build_if_needed=False)
                     if self.cname.startswith('openmdao.'):
-                        root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
+                        if(url.endswith("egg")):
+                            # url points to docs in a release version, so use docs packaged with openmdao.main
+                            root = os.path.join(os.path.dirname(openmdao.main.__file__), "docs")
+                        else:  # url points to docs in a developer version, so use locally built docs
+                            root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
                                             '_build', 'html')
                         if url.startswith('file://'):
                             url = url[7:]
-                            self.added = os.path.dirname(url)[len(root)+1:]
+                            self.added = os.path.dirname(url)[len(root) + 1:]
                     else:
                         root = os.path.dirname(url)
                     default = os.path.basename(url)
                     self._plugin_map[parts[0]] = (root, default, self.added)
 
         root, default, self.added = self._plugin_map[parts[0]]
-        
+
         super(PluginDocsHandler, self).initialize(root, default)
-    
+
     def get(self, path, include_body=True):
-        if path+os.sep == self.cname:
-            self.redirect(os.path.join('/docs','plugins',self.cname, self.default_filename))
+        path = os.path.normcase(path)
+        if path + os.sep == self.cname:
+            self.redirect(os.path.join('/docs', 'plugins', self.cname, self.default_filename))
         elif path.startswith(self.cname):
-            super(PluginDocsHandler, self).get(os.path.join(self.added, path[len(self.cname):]), 
+            super(PluginDocsHandler, self).get(os.path.join(self.added, path[len(self.cname):]),
                                                include_body)
         else:
             super(PluginDocsHandler, self).get(path, include_body)
-    

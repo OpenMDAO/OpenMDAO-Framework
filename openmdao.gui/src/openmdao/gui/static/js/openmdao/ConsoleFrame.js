@@ -13,36 +13,39 @@ openmdao.ConsoleFrame = function(id,model) {
         historyBox = jQuery('<div id="historybox">').appendTo(this.elm),
         history    = jQuery('<div id="history">').appendTo(historyBox),
         cmdform    = jQuery('<form id="cmdform" nostyle="display:none;"  method="post">'
-                          + '  <input type="text" id="command" />'
+                          + '  <input type="text" id="cmdline" />'
                           + '  <input type="submit" value="Submit" class="button" id="command-button"/>'
-                          + '</form>').appendTo(this.elm),
+                          + '</form>')
+            .appendTo(this.elm),
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-                      .appendTo(historyBox);
+            .appendTo(historyBox);
 
-    var num_commands = 0, 
-        i_command_current = 0 ;
+    var cmdline = cmdform.find('#cmdline'),
+        num_commands = 0,
+        i_command_current = 0;
 
-    // Need to capture keystrokes on the element with id of "command"
-    jQuery("#command").keydown(function(e){
-        if (e.keyCode == 38) { // up arrow
-            if ( i_command_current > 1 ) {
-                i_command_current -= 1 ;
-                cmd = localStorage.getItem( "cmd" + i_command_current );
-                jQuery("#command").val( cmd ) ;
-                if ( i_command_current < 1 ) i_command_current = 1 ;
+    // Need to capture keystrokes on the element with id of "cmdline"
+    cmdline.keydown(function(e){
+        if (e.keyCode === 38) { // up arrow
+            if (i_command_current > 1) {
+                i_command_current -= 1;
+                cmd = localStorage.getItem("cmd" + i_command_current);
+                cmdline.val(cmd);
+                if (i_command_current < 1) {
+                    i_command_current = 1;
+                }
             }
             return false;
         }
-        if (e.keyCode == 40) { // down arrow
-            if ( i_command_current < num_commands ) {
-                i_command_current += 1 ;
-                cmd = localStorage.getItem( "cmd" + i_command_current );
-                jQuery("#command").val( cmd ) ;
+        if (e.keyCode === 40) { // down arrow
+            if (i_command_current < num_commands ) {
+                i_command_current += 1;
+                cmd = localStorage.getItem("cmd" + i_command_current);
+                cmdline.val(cmd);
             }
             return false;
         }
     });
-
 
     // create context menu for history
     contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
@@ -62,15 +65,14 @@ openmdao.ConsoleFrame = function(id,model) {
 
     // submit a command
     cmdform.submit(function() {
-        var command = cmdform.children('#command');
-        var cmd = command.val();
+        var cmd = cmdline.val();
         if (cmd.length > 0) {
-            command.val("");
+            cmdline.val("");
             updateHistory('\n>>> '+cmd+'\n');
-            
-            num_commands += 1 ;
-            i_command_current = num_commands + 1 ;
-            localStorage.setItem( "cmd" + num_commands, cmd );
+
+            num_commands += 1;
+            i_command_current = num_commands + 1;
+            localStorage.setItem("cmd" + num_commands, cmd);
 
             model.issueCommand(cmd,
                 // success, record any response in history & clear the command
@@ -116,7 +118,7 @@ openmdao.ConsoleFrame = function(id,model) {
     function consoleError(msg) {
         text = msg[1];
         updateHistory(text+'\n');
-        openmdao.Util.notify(text, 'Console Error');
+        openmdao.Util.notify(text, 'Error');
     }
 
     // ask model for an update whenever something changes

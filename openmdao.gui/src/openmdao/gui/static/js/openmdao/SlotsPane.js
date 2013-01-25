@@ -22,6 +22,19 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
+
+        // Sort slots by name
+        json.sort(function(a, b){
+            var nameA=a.name.toLowerCase(), nameB=b.name.toLowerCase() ;
+            if (nameA < nameB) {  //sort string ascending
+                return -1;
+            }
+            if (nameA > nameB) {
+                return 1;
+            }
+            return 0;
+        }) ;
+
         jQuery.each(json, function(idx,slot) {
             if (figures[slot.name]) {
                 // update existing slot figure

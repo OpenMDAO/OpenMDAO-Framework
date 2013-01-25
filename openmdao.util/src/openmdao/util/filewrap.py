@@ -579,11 +579,11 @@ class FileParser(object):
         --- If the delimiter is "columns" ---
         
         row: integer
-            number of lines offset from anchor line (0 is anchor line).
+            Number of lines offset from anchor line (0 is anchor line).
             This can be negative.
         
         field: integer
-            character position to start
+            Character position to start.
         
         fieldend: integer (optional)
             Position of last character to return. If omitted, the end of
@@ -668,10 +668,10 @@ class FileParser(object):
         """Grabs an array of variables relative to the current anchor.
         
         rowstart: integer
-            Row number to start, relative to the current anchor
+            Row number to start, relative to the current anchor.
         
         fieldstart: integer
-            Field number to start
+            Field number to start.
         
         rowend: integer (optional)
             Row number to end. If not set, then only one row is grabbed.
@@ -733,7 +733,7 @@ class FileParser(object):
         line of data is placed in a separate row.
 
         rowstart: integer
-            Row number to start, relative to the current anchor
+            Row number to start, relative to the current anchor.
         
         fieldstart: integer
             Field number to start. 

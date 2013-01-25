@@ -58,8 +58,8 @@ class VarFi(MidFidelity):
     z2 = Float(0., iotype='out',
                desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         
-    def __init__(self, *args, **kwargs):
-        super(VarFi, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(VarFi, self).__init__()
 
         # Inputs.
         self.rs_type = 'rbf'

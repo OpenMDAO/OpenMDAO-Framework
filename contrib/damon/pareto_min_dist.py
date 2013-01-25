@@ -38,8 +38,8 @@ class Pareto_Min_Dist(Component):
     
     reset_pareto = Event()
     
-    def __init__(self,*args,**kwargs):
-        super(Pareto_Min_Dist, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(Pareto_Min_Dist, self).__init__()
         self.y_star_other = None
         
     def _reset_pareto_fired(self):

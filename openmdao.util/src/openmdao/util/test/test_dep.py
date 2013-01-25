@@ -22,12 +22,13 @@ class DepTestCase(unittest.TestCase):
                           os.path.dirname(openmdao.lib.__file__)]
         
     def test_PythonSourceTreeAnalyser(self):
+       
+        def exclude(pname):
+            keywords = set(['test', 'docs', 'examples', 'optproblems'])
+            parts = set(pname.split(os.sep))
+            return keywords.intersection(parts)
         
-        def exclude_tests(pname):
-            parts = pname.split(os.sep)
-            return 'test' in parts
-        
-        psta = PythonSourceTreeAnalyser(self.startdirs, exclude_tests)
+        psta = PythonSourceTreeAnalyser(self.startdirs, exclude)
         
         self.assertTrue('openmdao.main.component.Component' in 
                         psta.graph['openmdao.main.container.Container'])
@@ -44,7 +45,8 @@ class DepTestCase(unittest.TestCase):
         
         comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
-        comps = [x.rsplit('.',1)[1] for x in comps if '.examples.' not in x and '.optproblems.' not in x]
+        comps = [x.rsplit('.',1)[1] for x in comps] 
+        #comps = [x.rsplit('.',1)[1] for x in comps if '.examples.' not in x and '.optproblems.' not in x]
         cset = set(comps)
         excludes = set([
             'Driver',

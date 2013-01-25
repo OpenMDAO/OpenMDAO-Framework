@@ -36,9 +36,9 @@ def register_metric(name, cls, integrate, geometry='any'):
         and :meth:`dimensionalize`. Constructor arguments are
         `(zone, zone_name, reference_state)`.
         :meth:`calculate` will be called with `(loc, geom)`.
-        `loc` contains indices into the zone variable arrays and `geom` is
+        `loc` contains indices into the zone variable arrays, and `geom` is
         either the cell volume, a non-dimensional vector normal
-        to the cell face with magnitude equal to its area, or the edge length;
+        to the cell face with magnitude equal to its area, or the edge length,
         depending upon the type of region (volume, surface, or curve).
         :meth:`dimensionalize` is called with the accumulated value.
         It should return a :class:`PhysicalQuantity` for the dimensionalized

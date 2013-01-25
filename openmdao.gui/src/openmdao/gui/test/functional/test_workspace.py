@@ -2,9 +2,7 @@
 Tests of overall workspace functions.
 """
 
-import sys
 import time
-import logging
 
 import pkg_resources
 
@@ -13,25 +11,50 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from selenium.common.exceptions import WebDriverException
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
-    from pageobjects.basepageobject import TMO
-    from pageobjects.util import NotifierPage
-    from pageobjects.workspace import WorkspacePage
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.common.keys import Keys
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException, \
+                                       WebDriverException
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout, put_element_on_grid
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+from pageobjects.basepageobject import TMO
+from pageobjects.slot import SlotFigure
+from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.workspace import WorkspacePage
+
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
+
+
+def _test_slots_sorted_by_name(browser):
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    #drop 'metamodel' onto the grid
+    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    #find it on the page
+    metamodel = workspace_page.get_dataflow_figure(meta_name)
+
+    #open the 'edit' dialog on metamodel
+    editor = metamodel.editor_page(False)
+
+    # see if the slot names are sorted
+    slot_name_elements = editor.root.find_elements_by_css_selector('text#name')
+    slot_names = [s.text for s in slot_name_elements]
+    eq(slot_names, sorted(slot_names))
+
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_console(browser):
     # Check basic console functionality.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     workspace_page.do_command("print 'blah'")
     expected = ">>> print 'blah'\nblah"
@@ -39,67 +62,68 @@ def _test_console(browser):
 
     # Check that browser title contains project name.
     title = browser.title
-    expected = 'OpenMDAO: '+project_dict['name']+' - '
+    expected = 'OpenMDAO: ' + project_dict['name'] + ' - '
     eq(title[:len(expected)], expected)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_console_history(browser):
     # Check up and down arrow navigation through the command history
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
-    command_elem = browser.find_element(By.ID, "command")
+    command_elem = browser.find_element(By.ID, "cmdline")
 
     # Fill up the command history
     workspace_page.do_command("import sys")
     workspace_page.do_command("import os")
     workspace_page.do_command("import time")
-    
+
     # Try out the up and down arrows
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import time")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import os")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import sys")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import sys")
 
-    command_elem.send_keys( Keys.ARROW_DOWN )
+    command_elem.send_keys(Keys.ARROW_DOWN)
     eq(workspace_page.command, "import os")
 
-    command_elem.send_keys( Keys.ARROW_DOWN )
+    command_elem.send_keys(Keys.ARROW_DOWN)
     eq(workspace_page.command, "import time")
 
-    command_elem.send_keys( Keys.ARROW_DOWN )
+    command_elem.send_keys(Keys.ARROW_DOWN)
     eq(workspace_page.command, "import time")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import os")
 
     workspace_page.do_command("import traceback")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import traceback")
 
-    command_elem.send_keys( Keys.ARROW_UP )
+    command_elem.send_keys(Keys.ARROW_UP)
     eq(workspace_page.command, "import time")
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
+
 
 def _test_palette_update(browser):
     # Import some files and add components from them.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    # View the Workflow Pane.
-    workspace_page('workflow_tab').click()
-    time.sleep(0.5)  # Just so we can see it.
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # View dataflow.
     workspace_page('dataflow_tab').click()
@@ -109,6 +133,7 @@ def _test_palette_update(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'optimization_unconstrained.py')
+
     # add first file from workspace
     workspace_page.add_file(file1_path)
 
@@ -148,6 +173,7 @@ def _test_palette_update(browser):
     paraboloid_name = 'parab'
     workspace_page.add_library_item_to_dataflow('paraboloid.Paraboloid',
                                                 paraboloid_name)
+
     # Now there should be three.
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
@@ -162,8 +188,8 @@ def _test_palette_update(browser):
     projects_page = workspace_page.close_workspace()
 
     # Now try to re-open that project to see if items are still there.
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    workspace_page = project_info_page.load_project()
+    #project_info_page = projects_page.edit_project(project_dict['name'])
+    workspace_page = projects_page.open_project(project_dict['name'])
 
     # Check to see that the added files are still there.
     workspace_window = browser.current_window_handle
@@ -177,17 +203,64 @@ def _test_palette_update(browser):
     browser.switch_to_window(workspace_window)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
+def _test_loading_docs(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # Check that the docs are viewable
+    workspace_page('help_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('doc_button').get_attribute('id'), 'help-doc')
+    
+    workspace_window = browser.current_window_handle
+    current_windows = set(browser.window_handles)
+    workspace_page('doc_button').click()
+    new_windows = set(browser.window_handles) - current_windows
+    docs_window = list(new_windows)[0]
+    browser.switch_to_window(docs_window)
+    time.sleep(0.5)
+    eq("OpenMDAO User Guide" in browser.title, True)
+    eq("OpenMDAO Documentation" in browser.title, True)
+   
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 def _test_menu(browser):
-    # Just click on various main menu buttons.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    # Check enable/disable of commit/revert.
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
+
+    workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), '')
+    eq(workspace_page('revert_button').get_attribute('class'), '')
+    workspace_page('project_menu').click()
+
+    workspace_page.commit_project()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
 
     # Project-Run.
     workspace_page.run()
-    expected = 'Executing...\nExecution complete.'
-    eq(workspace_page.history, expected)
+    expected = ['Executing...', 'Execution complete.']
+    eq(workspace_page.history.split('\n')[-2:], expected)
     top_figure = workspace_page.get_dataflow_figure('top')
     eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
@@ -200,11 +273,10 @@ def _test_menu(browser):
         time.sleep(0.5)  # Just so we can see it.
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
-
+    closeout(project_dict, workspace_page)
 
 def _test_macro(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Open code editor.
     workspace_window = browser.current_window_handle
@@ -223,9 +295,10 @@ b = Float(0.0, iotype='out')
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
-    
+
     # Add some Foo instances.
     workspace_page.show_dataflow('top')
+    time.sleep(1)  # Wait for it to get registered.
     workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
@@ -241,13 +314,13 @@ b = Float(0.0, iotype='out')
     editor_page = workspace_page.open_editor()
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
-    
+
     # forces a save and reload of project
     editor_page.save_document(overwrite=True, check=False)
     browser.switch_to_window(workspace_window)
     port = workspace_page.port
     workspace_page = WorkspacePage.verify(browser, port)
-    
+
     workspace_page.show_dataflow('top')
     time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -278,11 +351,12 @@ b = Float(0.0, iotype='out')
     # These will likely overlap in a manner that 'Ok' is found but
     # later is hidden by the second notifier.
     try:  # We expect 2 notifiers: command complete and error.
-        msg = NotifierPage.wait(workspace_page, base_id='command')
+        NotifierPage.wait(workspace_page, base_id='command')
     except WebDriverException as exc:
-        if 'Element is not clickable' in str(exc):
+        err = str(exc)
+        if 'Element is not clickable' in err:
             err = NotifierPage.wait(workspace_page)
-            msg = NotifierPage.wait(workspace_page, base_id='command')
+            NotifierPage.wait(workspace_page, base_id='command')
     else:
         err = NotifierPage.wait(workspace_page)
     if err != "NameError: name 'xyzzy' is not defined":
@@ -297,12 +371,14 @@ b = Float(0.0, iotype='out')
             raise AssertionError(line)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_addfiles(browser):
     # Adds multiple files to the project.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Get path to  paraboloid file.
     paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -328,68 +404,68 @@ def _test_addfiles(browser):
             % (expected_file_names, file_names))
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_properties(browser):
     # Checks right-hand side properties display.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    # Check default 'top'.
-    workspace_page.select_object('top')
-    workspace_page.show_properties()
-    eq(workspace_page.props_header, 'Assembly: top')
-    inputs = workspace_page.props_inputs
-    eq(inputs.value, [['directory',     ''],
-                      ['force_execute', 'False']])
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Check default 'top.driver'.
-    workspace_page.expand_object('top')
-    workspace_page.select_object('top.driver')
+    workspace_page('properties_tab').click()
+    obj = workspace_page.get_dataflow_figure('top')
+    chain = ActionChains(browser)
+    chain.click(obj.root)
+    chain.perform()    
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
     eq(inputs.value, [['directory',     ''],
                       ['force_execute', 'True'],
-                      ['printvars',     '']]) # FIXME: printvars is really an empty list...
+                      ['printvars',     '']])  # FIXME: printvars is really an empty list...
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
+# This test no longer needed because there is no longer a component panel that
+# tracks the minimize/maximize behavior of the dataflow. The collapse/expand
+# behavior is alrady tested in test_dataflow. -- KTM
 
-def _test_objtree(browser):
-    # Toggles maxmimize/minimize button on assemblies.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+#def _test_objtree(browser):
+    ## Toggles maxmimize/minimize button on assemblies.
+    #project_dict, workspace_page = startup(browser)
 
-    # Add maxmin.py to project
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
-    workspace_page.add_file(file_path)
+    ## Add maxmin.py to project
+    #file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                #'files/maxmin.py')
+    #workspace_page.add_file(file_path)
 
-    # Add MaxMin to 'top'.
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+    ## Add MaxMin to 'top'.
+    #workspace_page.show_dataflow('top')
+    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
-    # Maximize 'top' and 'top.maxmin'
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top'])
-    workspace_page.expand_object('top')
-    time.sleep(0.5)
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin'])
-    workspace_page.expand_object('top.maxmin')
-    time.sleep(0.5)
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 'top.maxmin.driver', 'top.maxmin.sub'])
+    ## Maximize 'top' and 'top.maxmin'
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top'])
+    #workspace_page.expand_object('top')
+    #time.sleep(0.5)
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    #workspace_page.expand_object('top.maxmin')
+    #time.sleep(0.5)
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 #'top.maxmin.driver', 'top.maxmin.sub'])
 
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
-    visible = workspace_page.get_objects_attribute('path', True)
-    eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    #visible = workspace_page.get_objects_attribute('path', True)
+    #eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 #'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
 
-    # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
-
+    ## Clean up.
+    #closeout(project_dict, workspace_page)
 
 def _test_editable_inputs(browser):
     def test_color(actual, expected, alpha=False):
@@ -400,8 +476,8 @@ def _test_editable_inputs(browser):
 
     def test_inputs(inputs):
         for i, row in enumerate(inputs):
-            connected_to_cell = row.cells[len(row.cells)-2]
-            implicit_cell = row.cells[len(row.cells)-1]
+            connected_to_cell = row.cells[len(row.cells) - 2]
+            implicit_cell = row.cells[len(row.cells) - 1]
             name_cell = row.cells[0]
             value_cell = row.cells[2]
 
@@ -420,8 +496,7 @@ def _test_editable_inputs(browser):
 
     def test_outputs(outputs):
         for i, row in enumerate(outputs):
-            connected_to_cell = row.cells[len(row.cells)-2]
-            implicit_cell = row.cells[len(row.cells)-1]
+            implicit_cell = row.cells[len(row.cells) - 1]
             name_cell = row.cells[0]
             value_cell = row.cells[2]
 
@@ -431,14 +506,15 @@ def _test_editable_inputs(browser):
             else:
                 test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [255, 255, 255, 1])
-            
+
             test_color(value_cell.background_color, [0, 0, 0, 1])
 
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import vehicle_singlesim
     file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                    'basic_model.py')
+                                                    'files/basic_model.py')
     file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                     'vehicle_singlesim.py')
     workspace_page.add_file(file_path_one)
@@ -454,9 +530,9 @@ def _test_editable_inputs(browser):
 
     #Test highlighting for implicit connections
     component_editor = paraboloid.editor_page()
-    test_inputs(component_editor.get_inputs()) 
+    test_inputs(component_editor.get_inputs())
     test_outputs(component_editor.get_outputs())
-    
+
     component_editor.close()
 
     #Remove sim from the dataflow
@@ -466,31 +542,34 @@ def _test_editable_inputs(browser):
     #Add VehicleSim to the dataflow
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 assembly_name)
-    
+
     # Get component editor for transmission.
     workspace_page.expand_object(assembly_name)
-    workspace_page.show_dataflow(assembly_name+ ".vehicle")
+    workspace_page.show_dataflow(assembly_name + ".vehicle")
     transmission = workspace_page.get_dataflow_figure('transmission',
                                                       assembly_name + '.vehicle')
-   
+
     #Test highlighting for explicit connections
     component_editor = transmission.editor_page()
-    test_inputs(component_editor.get_inputs()) 
+    test_inputs(component_editor.get_inputs())
     test_outputs(component_editor.get_outputs())
 
     component_editor.close()
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_console_errors(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
+    inputs.rows[2].cells[1].click()
     inputs[2][2] = '42'  # printvars
     message = NotifierPage.wait(editor)
     eq(message, "TraitError: The 'printvars' trait of a "
@@ -510,10 +589,9 @@ def execute(self)
 """, check=False)
 
     message = NotifierPage.wait(editor_page, base_id='file-error')
-    eq(message, 'invalid syntax (bug.py, line 6)')
-
     browser.close()
     browser.switch_to_window(workspace_window)
+    eq(message, 'invalid syntax (bug.py, line 6)\n    def execute(self)')
 
     # Load file with instantiation error.
     workspace_window = browser.current_window_handle
@@ -531,31 +609,40 @@ raise RuntimeError("__init__ failed")
     eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_driver_config(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    # Add MetaModel so we can test events.
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
 
     # Replace default driver with CONMIN and edit.
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.conmindriver.CONMINdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
 
     # Add a (nonsense) named parameter.
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
-    dialog.target = 'driver.force_execute'
+    dialog.target = 'mm.force_execute'
     dialog.low = '0'
     dialog.high = '1'
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['', 'driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    expected = [['', 'mm.force_execute', '0', '1', '', '', '', 'nonsense']]
+    eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
-        
+
     # Delete the parameter
     delbutton = editor('parameters').find_elements_by_css_selector('.ui-icon-trash')
     delbutton[0].click()
@@ -571,11 +658,12 @@ def _test_driver_config(browser):
     # Add a (nonsense) named objective.
     editor('objectives_tab').click()
     dialog = editor.new_objective()
-    dialog.expr = 'driver.force_execute'
+    dialog.expr = 'mm.force_execute'
     dialog.name = 'nonsense'
     dialog('ok').click()
     objectives = editor.get_objectives()
-    expected = [['', 'driver.force_execute', 'nonsense']]
+    expected = [['', 'mm.force_execute', 'nonsense']]
+    eq(len(objectives.value), len(expected))
     for i, row in enumerate(objectives.value):
         eq(row, expected[i])
 
@@ -594,14 +682,15 @@ def _test_driver_config(browser):
     # Add a (nonsense) named constraint.
     editor('constraints_tab').click()
     dialog = editor.new_constraint()
-    dialog.expr = 'driver.force_execute > 0'
+    dialog.expr = 'mm.force_execute > 0'
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['', 'driver.force_execute > 0', '1', '0', 'nonsense']]
+    expected = [['', 'mm.force_execute > 0', '1', '0', 'nonsense']]
+    eq(len(constraints.value), len(expected))
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
-        
+
     # Delete the constraint
     delbutton = editor('constraints').find_elements_by_css_selector('.ui-icon-trash')
     delbutton[0].click()
@@ -614,19 +703,47 @@ def _test_driver_config(browser):
     finally:
         browser.implicitly_wait(TMO)
 
+    # Add the 'train_next' event'
+    editor('triggers_tab').click()
+    dialog = editor.new_trigger()
+    dialog.target = 'mm.train_next'
+    dialog('ok').click()
+    events = editor.get_triggers()
+    expected = [['', 'mm.train_next']]
+    eq(len(events.value), len(expected))
+    for i, row in enumerate(events.value):
+        eq(row, expected[i])
+
+    # Delete the event.
+    delbutton = editor('triggers').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    events = editor.get_triggers()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(events.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
+
     # Clean up.
     editor.close()
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_remove(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
+    # Lots of futzing here to handle short screens (EC2 Windows).
     workspace_page.select_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
-    editor.move(-100, 100)  # Move it away from context menu.
+    editor.move(100, 200)
     connections = top.connections_page()
     properties = top.properties_page()
 
@@ -643,11 +760,13 @@ def _test_remove(browser):
     eq(properties.is_visible, False)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    # closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_noslots(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode to assembly.
     workspace_page.show_dataflow('top')
@@ -663,53 +782,17 @@ def _test_noslots(browser):
     eq(editor('outputs_tab').is_present, True)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-# without the dialog to prompt for saving, the following 2 tests aren't really
-# useful any more
-#def _test_savechanges(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    ## Add ExternalCode to assembly.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
-    
-    ##first try to close without saving changes, but click CANCEL and stay 
-    #workspace_page.attempt_to_close_workspace(True, False)
-
-    ## add another object to the model to be sure it didn't close
-    #eq(len(workspace_page.get_dataflow_figures()), 3)
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext2')
-    #eq(len(workspace_page.get_dataflow_figures()), 4)
-    
-    ## Clean up.
     #closeout(projects_page, project_info_page, project_dict, workspace_page)
-
-
-#def _test_dontsavechanges(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    ## Add ExternalCode to assembly.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow(
-        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
-    
-    ##Try to close without saving changes, but click OK and leave. 
-    #workspace_page.attempt_to_close_workspace(True, True)
-
-    ## Clean up.
-    #project_info_page = projects_page.edit_project(project_dict['name'])
-    #project_info_page.delete_project()
-    #print "_test_dontsavechanges complete."
+    closeout(project_dict, workspace_page)
 
 
 def _test_logviewer(browser):
     # Verify log viewer functionality.
     # Note that by default the logging level is set to WARNING.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
     viewer = workspace_page.show_log()
+    viewer.move(0, -200)  # Sometimes get a lot of 'send event' messages...
 
     # Incremental display.
     workspace_page.do_command("import logging")
@@ -733,9 +816,12 @@ def _test_logviewer(browser):
     msgs = viewer.get_messages()
     eq(msgs, [''])
 
+    # move log viewer away from file tree pane
+    viewer.move(300, 0)
+
     # Exercise filtering.
     logger = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                             'logger.py')
+                                             'files/logger.py')
     workspace_page.add_file(logger)
     msgs = viewer.get_messages()
     # Remove any spurious errors and drop timestamp.
@@ -767,14 +853,34 @@ def _test_logviewer(browser):
         'W root: warning 3',
         'C root: critical 3'])
 
+    # Pop-out to separate window.
+    workspace_window = browser.current_window_handle
+    viewer.popout()
+    time.sleep(1)
+    for handle in browser.window_handles:
+        if handle != workspace_window:
+            browser.switch_to_window(handle)
+            browser.close()
+            break
+    browser.switch_to_window(workspace_window)
+
+    # Verify that viewer was closed.
+    try:
+        viewer.get_messages()
+    except StaleElementReferenceException:
+        pass
+    else:
+        raise RuntimeError('Expected StaleElementReferenceException')
+
     # Clean up.
-    viewer.close()
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_libsearch(browser):
     # Verify library search functionality.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Get default objects.
     def_objects = workspace_page.get_object_types()
@@ -792,7 +898,7 @@ def _test_libsearch(browser):
         'OptLatinHypercube',
         'Uniform'])
     doe_searches = workspace_page.get_library_searches()
-    eq(doe_searches, def_searches+['doe'])
+    eq(doe_searches, def_searches + ['doe'])
 
     # Clear search, now back to default objects.
     workspace_page.clear_library_filter()
@@ -807,9 +913,97 @@ def _test_libsearch(browser):
     eq(searches, doe_searches)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
+
+
+def _test_arguments(browser):
+    # Check that objects requiring constructor arguments are handled.
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+    mm_figure = workspace_page.get_dataflow_figure('mm', 'top')
+    mm_editor = mm_figure.editor_page()
+    mm_editor.show_slots()
+    mm_editor.move(-200, 0)
+
+    # Plug ListCaseIterator into warm_start_data.
+    slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
+    slot.fill_from_library('ListCaseIterator')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, '[]')
+    args_page.click_ok()
+
+    # Plug ListCaseRecorder into recorder.
+    slot = SlotFigure(workspace_page, 'top.mm.recorder')
+    slot.fill_from_library('ListCaseRecorder')
+
+    # Plug ExecComp into model.
+    slot = SlotFigure(workspace_page, 'top.mm.model')
+    slot.fill_from_library('ExecComp')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.set_argument(0, "('z = x * y',)")
+    args_page.click_ok()
+
+    # Check that inputs were created from expression.
+    exe_editor = slot.editor_page()
+    exe_editor.move(-100, 0)
+    inputs = exe_editor.get_inputs()
+    expected = [
+        ['directory',     'str',   '',      '',  'true',
+         'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool',  'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x',             'float', '0',     '',  'true', '', '', ''],
+        ['y',             'float', '0',     '',  'true', '', '', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    exe_editor.close()
+    mm_editor.close()
+
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
+
+
+def _test_casefilters(browser):
+    # Verify that CaseFilter objects are listed in the library.
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    for classname in ('ExprCaseFilter', 'IteratorCaseFilter',
+                      'SequenceCaseFilter', 'SliceCaseFilter'):
+        workspace_page.find_library_button(classname)
+
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
+
+
+def _test_rename_file(browser):
+    # Rename a file in the project.
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
+
+    # Add paraboloid.py
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                     'paraboloid.py')
+    workspace_page.add_file(paraboloidPath)
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    eq(file_names, ['paraboloid.py'])
+
+    workspace_page.rename_file('paraboloid.py', 'xyzzy.py')
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    eq(file_names, ['xyzzy.py'])
+
+    # Clean up.
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':
     main()
-

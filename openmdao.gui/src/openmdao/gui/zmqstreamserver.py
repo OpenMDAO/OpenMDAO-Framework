@@ -19,6 +19,7 @@ debug = True
 def DEBUG(msg):
     if debug:
         print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
+        sys.stdout.flush()
 
 
 def make_unicode(content):
@@ -34,8 +35,29 @@ def make_unicode(content):
 
 
 class ZMQStreamHandler(websocket.WebSocketHandler):
-    ''' a handler that forwards output from a ZMQStream to a WebSocket
+    ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
+
+    def __init__(self, application, request, **kwargs):
+        addr = kwargs.get('addr')
+        version = request.headers.get('Sec-Websocket-Version')
+        msg = 'Warning: %s WebSocket protocol version %s from %s'
+        if version is None:
+            print msg % ('unknown', '', addr)
+        else:
+            try:
+                version = int(version)
+            except ValueError:
+                print msg % ('invalid', version, addr)
+            else:
+                if version < 13:
+                    print msg % ('obsolete', version, addr)
+        sys.stdout.flush()
+        super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
+
+    def allow_draft76(self):
+        ''' Not recommended, but enabled so we can display in __init__(). '''
+        return True
 
     def initialize(self, addr):
         self.addr = addr
@@ -93,11 +115,11 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
         pass
 
     def on_close(self):
-        DEBUG('zmqstream connection closed')
+        pass
 
 
 class ZMQStreamApp(web.Application):
-    ''' a web application that serves a ZMQStream over a WebSocket
+    ''' A web application that serves a ZMQStream over a WebSocket.
     '''
 
     def __init__(self, zmqstream_addr, websocket_url):
@@ -112,7 +134,7 @@ class ZMQStreamApp(web.Application):
 
 
 class ZMQStreamServer(object):
-    ''' runs an http server that serves a ZMQStream over a WebSocket
+    ''' Runs an http server that serves a ZMQStream over a WebSocket.
     '''
 
     def __init__(self, options):
@@ -121,9 +143,18 @@ class ZMQStreamServer(object):
         self.http_server = httpserver.HTTPServer(self.web_app)
 
     def serve(self):
-        ''' start server listening on port & start the ioloop
+        ''' Start server listening on port & start the ioloop.
         '''
-        self.http_server.listen(self.options.port, address="localhost")
+        DEBUG('serve %s' % self.options.port)
+        try:
+            if (self.options.external):
+                self.http_server.listen(self.options.port)
+            else:
+                self.http_server.listen(self.options.port, address='localhost')
+        except Exception as exc:
+            print '<<<%s>>> ZMQStreamServer -- listen on %s failed: %s' \
+                  % (os.getpid(), self.options.port, exc)
+            sys.exit(1)
 
         try:
             ioloop.IOLoop.instance().start()
@@ -144,12 +175,15 @@ class ZMQStreamServer(object):
         parser.add_option("-u", "--url",
                           dest="url",
                           help="the url to expose for the websocket")
+        parser.add_option("-x", "--external",
+                          dest="external", action="store_true",
+                          help="allow access to the server from external clients")
         return parser
 
     @staticmethod
-    def spawn_process(zmq_url, ws_port, ws_url='/'):
+    def spawn_process(zmq_url, ws_port, ws_url='/', external=False):
         ''' run zmqstreamserver in it's own process, mapping a zmq
-            stream to a websocket
+            stream to a websocket.
 
             args:
             zmq_url     the url of the ZMQStream
@@ -161,11 +195,13 @@ class ZMQStreamServer(object):
                '-z', str(zmq_url),
                '-p', str(ws_port),
                '-u', str(ws_url)]
+        if external:
+            cmd.append('-x')
         return subprocess.Popen(cmd)
 
 
 def main():
-    ''' process command line arguments, create server and start it up
+    ''' Process command line arguments, create server, and start it up.
     '''
     # make sure to install zmq ioloop before creating any tornado objects
     ioloop.install()

@@ -62,7 +62,7 @@ class PluginsTestCase(unittest.TestCase):
         logdata = ''
         os.chdir(os.path.join(self.tdir, 'foobar'))
         try:
-            argv = ['makedist', 'foobar']
+            argv = ['makedist']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
             retval = plugin_makedist(parser, options, args, capture='makedist.out')
@@ -93,7 +93,7 @@ class PluginsTestCase(unittest.TestCase):
         sys.stderr = cStringIO.StringIO()
         os.chdir(os.path.join(self.tdir, 'foobar'))
         try:
-            argv = ['makedist', 'foobar']
+            argv = ['makedist']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
             retval = plugin_makedist(parser, options, args, capture='makedist.out')
@@ -112,6 +112,7 @@ class PluginsTestCase(unittest.TestCase):
             logging.debug(captured_stderr)
             logging.debug('captured subprocess output:')
             logging.debug(logdata)
+        self.assertTrue('already exists' in captured_stderr)
 
         # Install
         logging.debug('')
@@ -252,7 +253,7 @@ class PluginsTestCase(unittest.TestCase):
         retval = plugin_makedist(parser, options, args)
         self.assertEqual(retval, -1)
 
-        argv = ['makedist', 'foobar', 'no-such-directory']
+        argv = ['makedist', 'no-such-directory']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
         code = 'plugin_makedist(parser, options, args)'
@@ -426,8 +427,10 @@ class MyCont(Container):
                                        'openmdao.main.container.Container']),
         }
         plugins = find_all_plugins(self.tdir)
-        self.assertEqual(expected.keys(), plugins.keys())
-        self.assertEqual(expected.values(), plugins.values())
+        self.assertEqual(sorted(expected.keys()), sorted(plugins.keys()))
+        for key, value in expected.items():
+            self.assertEqual(plugins[key], value)
+
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')

@@ -3,13 +3,7 @@ Routines analyzing dependencies (class and module) in Python source.
 """
 
 import os
-from os import makedirs
 import sys
-import shutil
-import fnmatch
-from os.path import islink, isdir, join
-from os.path import normpath, dirname, exists, isfile, abspath
-from token import NAME, OP
 import ast
 import time
 import __builtin__
@@ -17,7 +11,7 @@ import cPickle
 
 import networkx as nx
 
-from openmdao.util.fileutil import find_files, get_module_path, find_module, get_ancestor_dir
+from openmdao.util.fileutil import find_files, get_module_path, find_module
 from openmdao.util.log import logger
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
@@ -28,11 +22,13 @@ plugin_groups = { 'openmdao.container': ['IContainer'],
                   'openmdao.variable': ['IVariable'], 
                   'openmdao.surrogatemodel': ['ISurrogate'],
                   'openmdao.doegenerator': ['IDOEgenerator'], 
+                  'openmdao.casefilter': ['ICaseFilter'], 
                   'openmdao.caseiterator': ['ICaseIterator'], 
                   'openmdao.caserecorder': ['ICaseRecorder'], 
                   'openmdao.architecture': ['IArchitecture'], 
                   'openmdao.optproblem': ['IOptProblem','IAssembly','IComponent','IContainer'], 
                   'openmdao.differentiator': ['IDifferentiator'],
+                  'openmdao.parametric_geometry': ['IParametricGeometry'],
                   }
 
 iface_set = set()
@@ -374,6 +370,7 @@ class PythonSourceTreeAnalyser(object):
         return paths.keys()
 
     def get_interfaces(self, classname):
+        ''' Returns a set of interfaces for a given class.'''
         ifaces = set()
         klass = self.find_classinfo(classname)
         if klass:

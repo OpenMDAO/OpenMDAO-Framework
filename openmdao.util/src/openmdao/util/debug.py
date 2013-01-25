@@ -8,6 +8,9 @@ import re
 import linecache
 import StringIO
 
+from openmdao.util.log import logger, LOG_DEBUG
+
+
 def traceit(frame, event, arg):
     """A function useful for tracing Python execution. Wherever you want the 
     tracing to start, insert a call to sys.settrace(traceit)."""
@@ -51,12 +54,17 @@ def dumpit(obj, stream=sys.stdout, recurse=True, ignore_address=True):
 
     _dumpit(obj, stream, recurse, 0, set(), ignore_address)
 
-    
-class _objdiff(object):
-    def __init__(self, o1names, o2names, diffdict):
-        self.o1names = o1names
-        self.o2names = o2names
-        self.diffdict = diffdict
+
+debug = os.environ.get('OPENMDAO_DEBUG', '').strip()
+if debug and debug.lower() not in ['0', 'false']:
+    logger.setLevel(LOG_DEBUG)
+    DEBUG = logger.debug
+    debug = True
+else:
+    debug = False
+    def DEBUG(msg):
+        pass
+
 
 def print_funct_call(funct, *args, **kwargs):
     def quote_if_str(obj):

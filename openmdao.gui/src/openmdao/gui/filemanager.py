@@ -1,36 +1,61 @@
-import os
 import os.path
 import shutil
-import tempfile
 import traceback
 import zipfile
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, PatternMatchingEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 from openmdao.util.log import logger
 
 
+# FIXME: The pattern matching bit seems to be causing random errors
+#        See Pivotal story # 39063129
+#        It has been disabled until the error can be investigated and fixed
+
+#class FilesPublisher(PatternMatchingEventHandler):
+#    ''' publishes file collection when ANY file system event occurs
+#    '''
+
+#    def __init__(self, files):
+#        super(FilesPublisher, self).__init__(
+#                ignore_patterns=[
+#                    "*/_macros/*",
+#                    "*.pyc", "*.pyd"])
+
+#        self.files = files
+#
+#    def on_any_event(self, event):
+#        ''' publishes file collection when ANY file system event occurs
+#        '''
+
+#        try:
+#            self.files.publish_files()
+#        except Exception:
+#            traceback.print_exc()
+
+
 class FilesPublisher(FileSystemEventHandler):
-    ''' publishes file collection when ANY file system event occurs
+    ''' Publishes file collection when ANY file system event occurs.
     '''
 
     def __init__(self, files):
         self.files = files
 
     def dispatch(self, event):
-        ''' just publish the updated file collection
+        ''' Just publish the updated file collection.
         '''
         try:
             self.files.publish_files()
         except Exception:
             traceback.print_exc()
 
+
 class FileManager(object):
-    ''' Object that keeps track of a collection of files (i.e. a directory)
-        and optionally publishes an update when the collection is modified
+    ''' Object that keeps track of a collection of files (i.e., a directory)
+        and optionally publishes an update when the collection is modified.
     '''
 
     def __init__(self, name, path, publish_updates=False):
@@ -53,7 +78,7 @@ class FileManager(object):
             self.observer = None
 
     def publish_files(self):
-        ''' publish the current file collection
+        ''' Publish the current file collection.
         '''
         if not self.publisher:
             try:
@@ -75,7 +100,7 @@ class FileManager(object):
         os.chdir(self.orig_dir)
 
     def get_files(self, root=None):
-        ''' get a nested dictionary of files in the working directory
+        ''' Get a nested dictionary of files in the working directory.
         '''
         if root is None:
             cwd = self.root_dir
@@ -84,24 +109,24 @@ class FileManager(object):
         return filedict(cwd)
 
     def _get_abs_path(self, name):
-        '''return the absolute pathname of the given file/dir
+        '''Return the absolute pathname of the given file/dir.
         '''
         return os.path.join(self.root_dir, str(name).lstrip('/'))
 
     def get_file(self, filename):
-        ''' get contents of file in working directory
-            returns None if file was not found
+        ''' Get contents of file in working directory.
+            Returns None if file was not found.
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
-            contents=open(filepath, 'rb').read()
+            contents = open(filepath, 'rb').read()
             return contents
         else:
             return None
 
     def ensure_dir(self, dirname):
-        ''' create directory in working directory
-            (does nothing if directory already exists)
+        ''' Create directory in working directory.
+            (Does nothing if directory already exists.)
         '''
         try:
             dirpath = self._get_abs_path(dirname)
@@ -112,7 +137,7 @@ class FileManager(object):
             return str(err)
 
     def write_file(self, filename, contents):
-        ''' write contents to file in working directory
+        ''' Write contents to file in working directory.
         '''
         try:
             filename = str(filename)
@@ -120,9 +145,9 @@ class FileManager(object):
             if filename.endswith('.py'):
                 initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
                 files = os.listdir(os.path.dirname(fpath))
-                # FIXME: This is a bit of a kludge, but for now we only create an __init__.py
-                # file if it's the very first file in the directory where a new
-                # file is being added.
+                # FIXME: This is a bit of a kludge, but for now we only create
+                # an __init__.py file if it's the very first file in the
+                # directory where a new file is being added.
                 if not files and not os.path.isfile(initpath):
                     with open(initpath, 'w') as f:
                         f.write(' ')
@@ -134,8 +159,8 @@ class FileManager(object):
             return err
 
     def add_file(self, filename, contents):
-        ''' add file to working directory
-            if it's a zip file, unzip it
+        ''' Add file to working directory.
+            If it's a zip file, unzip it.
         '''
         self.write_file(filename, contents)
         fpath = self._get_abs_path(filename)
@@ -145,13 +170,13 @@ class FileManager(object):
             zfile.printdir()
             for fname in zfile.namelist():
                 if fname.endswith('/'):
-                    dirname = userdir+'/'+fname
+                    dirname = userdir + '/' + fname
                     if not os.path.exists(dirname):
                         os.makedirs(dirname)
             for fname in zfile.namelist():
                 if not fname.endswith('/'):
                     data = zfile.read(fname)
-                    fname = userdir+'/'+fname
+                    fname = userdir + '/' + fname
                     fname = fname.replace('\\', '/')
                     fout = open(fname, "wb")
                     fout.write(data)
@@ -160,8 +185,8 @@ class FileManager(object):
             os.remove(fpath)
 
     def delete_file(self, filename):
-        ''' delete file in working directory
-            returns False if file was not found, otherwise returns True
+        ''' Delete file in working directory.
+            Returns False if file was not found; otherwise, returns True.
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
@@ -172,3 +197,15 @@ class FileManager(object):
             return True
         else:
             return False
+
+    def rename_file(self, oldpath, newname):
+        ''' Rename last component of `oldpath` to `newname`.
+        '''
+        filepath = self._get_abs_path(oldpath)
+        if os.path.exists(filepath):
+            newpath = os.path.join(os.path.dirname(filepath), newname)
+            os.rename(filepath, newpath)
+            return True
+        else:
+            return False
+

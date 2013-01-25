@@ -3,27 +3,27 @@ Tests of dataflow functions.
 """
 
 import pkg_resources
-import sys
 import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
+from selenium.webdriver.common.action_chains import ActionChains
 
-if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import main, setup_server, teardown_server, generate, \
-                     startup, closeout
-    from pageobjects.util import NotifierPage
+from util import main, setup_server, teardown_server, generate, \
+                 startup, closeout, release
+from pageobjects.util import ArgsPrompt, NotifierPage
 
-    @with_setup(setup_server, teardown_server)
-    def test_generator():
-        for _test, browser in generate(__name__):
-            yield _test, browser
+
+@with_setup(setup_server, teardown_server)
+def test_generator():
+    for _test, browser in generate(__name__):
+        yield _test, browser
 
 
 def _test_maxmin(browser):
     # Toggles maxmimize/minimize button on assemblies.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
@@ -32,7 +32,7 @@ def _test_maxmin(browser):
 
     # Add maxmin.py to project
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
+                                                'files/maxmin.py')
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
@@ -85,15 +85,15 @@ def _test_maxmin(browser):
        ['driver', 'top'])
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_connect(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import connect.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'connect.py')
+                                                'files/connect.py')
     workspace_page.add_file(file_path)
 
     # Replace 'top' with connect.py's top.
@@ -106,6 +106,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
+    conn_page.move(-100, -100)
     eq(conn_page.dialog_title, 'Connections: top')
     eq(conn_page.source_component, 'comp1')
     eq(conn_page.target_component, 'comp2')
@@ -118,31 +119,33 @@ def _test_connect(browser):
     # Set inputs (re-fetch required after updating).
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
+    props.move(0, -120)  # Move up for short displays.
     eq(props.header, 'Connectable: top.comp1')
+    props.move(-100, -100)
+    inputs = props.inputs
+    eq(inputs[6].value, ['s_in', ''])
+    inputs[6][1] = 'xyzzy'
     inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
-    inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "xyzzy"
-    
+
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
     inputs.rows[0].cells[1].click()
     browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
     #inputs.rows[0].cells[0].click()
     #inputs[0][1] = 'True'
-    
+
     inputs = props.inputs
     eq(inputs[2].value, ['e_in', '1'])
     inputs.rows[2].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
     #inputs.rows[2].cells[0].click()
-    #inputs[2][1] = '3'    
-    
+    #inputs[2][1] = '3'
+
     props.close()
 
     # Run the simulation.
@@ -156,9 +159,14 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['derivative_exec_count', 'int', '0', '', 'true',
+         "Number of times this Component's derivative function has been executed.", '', ''],
         ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
+        ['exec_count', 'int', '1', '', 'true',
+         'Number of times this Component has been executed.', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates.', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
@@ -166,12 +174,12 @@ def _test_connect(browser):
     editor.close()
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_connections(browser):
     # Check connection frame functionality.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                'vehicle_singlesim.py')
@@ -186,59 +194,81 @@ def _test_connections(browser):
     # show dataflow for vehicle
     workspace_page.expand_object('sim')
     workspace_page.show_dataflow('sim.vehicle')
+    workspace_page.hide_left()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
     # no connections between assembly vars
     conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
     eq(conn_page.dialog_title, 'Connections: vehicle')
-    eq(conn_page.source_component, '<Assembly>')
-    eq(conn_page.target_component, '<Assembly>')
-    eq(conn_page.check_variable_figures(), 0)
+    eq(conn_page.source_component, '-- Assembly --')
+    eq(conn_page.target_component, '-- Assembly --')
+    eq(conn_page.count_variable_connections(), 0)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 4)
+    eq(conn_page.count_variable_figures(), 20)
+    eq(conn_page.count_variable_connections(), 2)
+    conn_page.show_connected_variables()
+    time.sleep(0.5)
+    eq(conn_page.count_variable_figures(), 4)
+    eq(conn_page.count_variable_connections(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
     # one connection between transmission and engine (RPM)
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
 
     # disconnect transmission
+    conn_page.close()  # Sometimes obscures dataflow.
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
-    time.sleep(0.5)
+    vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+    conn_page = vehicle.connections_page()
+    conn_page.move(-50, -100)
+    conn_page.show_connected_variables()
 
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
     time.sleep(0.5)
-    eq(conn_page.check_variable_figures(), 0)
+    eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
-    time.sleep(0.5)
-    eq(len(conn_page.get_variable_figures()), 2)
+    time.sleep(1)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
 
     # no connections between transmission and chassis
     conn_page.set_target_component('chassis')
     time.sleep(0.5)
-    eq(conn_page.check_variable_figures(), 0)
+    eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
-    # reconnect transmission torque to chassis torque
-    conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
-    eq(len(conn_page.get_variable_figures()), 2)
+    # reconnect transmission torque to chassis torque by dragging
+    # conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
+    conn_page.show_all_variables()
+    torque_vars = conn_page.find_variable_name('torque_ratio')
+    eq(len(torque_vars), 2)
+    chain = ActionChains(browser)
+    chain.click_and_hold(torque_vars[0])
+    chain.move_to_element(torque_vars[1])
+    release(chain)
+    time.sleep(1.0)
+    eq(conn_page.count_variable_connections(), 1)
+    conn_page.show_connected_variables()
+    time.sleep(0.5)
+    eq(conn_page.count_variable_figures(), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['torque_ratio', 'torque_ratio'])
 
@@ -246,48 +276,61 @@ def _test_connections(browser):
     conn_page.set_source_component('')
     conn_page.set_target_component('transmission')
     time.sleep(0.5)
-    eq(conn_page.check_variable_figures(), 0)
+    eq(conn_page.count_variable_figures(), 0)
+    eq(conn_page.count_variable_connections(), 0)
 
     # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['current_gear', 'current_gear'])
 
     # one connection from chassis component to vehicle assembly
     conn_page.set_source_component('chassis')
     conn_page.set_target_component('')
-    eq(len(conn_page.get_variable_figures()), 2)
+    eq(conn_page.count_variable_figures(), 2)
+    eq(conn_page.count_variable_connections(), 1)
     eq(sorted(conn_page.get_variable_names()),
        ['acceleration', 'acceleration'])
 
-    # disconnect chassis
     conn_page.close()
+
+    # disconnect chassis
     chassis = workspace_page.get_dataflow_figure('chassis', 'sim.vehicle')
     chassis.disconnect()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+
     conn_page = vehicle.connections_page()
-    eq(conn_page.check_variable_figures(), 0)
+    conn_page.move(-50, -100)
+
+    eq(conn_page.count_variable_connections(), 0)
+
+    # test invalid variable
+    conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    message = NotifierPage.wait(workspace_page)
+    eq(message, "Invalid source variable")
 
     # connect component variable to assembly variable
-    conn_page.connect_vars('chassis.acceleration', 'acceleration')
     conn_page.set_source_component('chassis')
-    eq(len(conn_page.get_variable_figures()), 2)
+    conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    eq(conn_page.count_variable_connections(), 1)
+    conn_page.show_connected_variables()
     eq(sorted(conn_page.get_variable_names()),
        ['acceleration', 'acceleration'])
 
     conn_page.close()
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_driverflows(browser):
     # Excercises display of driver flows (parameters, constraints, objectives).
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -311,9 +354,9 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ['', 
+        ['',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
-         '-10', '99', '', '', '', 
+         '-10', '99', '', '', '',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
     for i, row in enumerate(outputs.value):
@@ -330,15 +373,15 @@ def _test_driverflows(browser):
     time.sleep(0.5)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_replace(browser):
     # Replaces various connected components.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'rosen_suzuki.py')
+                                               'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
@@ -457,6 +500,8 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
+    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
+    args_page.click_ok()
     message = NotifierPage.wait(workspace_page)
     eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
                 " 'postproc.result_in': top: Can't find 'comp.result'")
@@ -480,12 +525,12 @@ def _test_replace(browser):
     assert background.find('circle-plus.png') >= 0
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 def _test_ordering(browser):
     # Verify that adding parameter to driver moves it ahead of target.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode and SLSQP.
     workspace_page.show_dataflow('top')
@@ -515,7 +560,7 @@ def _test_ordering(browser):
     assert ext.coords[0] > opt.coords[0]
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':

@@ -32,8 +32,8 @@ class MyDriver(Driver):
     """Custom driver to retrain the MetaModel each iteration. Also records each 
     retrain case"""
     
-    def __init__(self,doc=None):
-        super(MyDriver,self).__init__(doc)
+    def __init__(self):
+        super(MyDriver,self).__init__()
         
         self.ins = ['spiral_meta_model.x','spiral_meta_model.y']
         self.outs = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']  

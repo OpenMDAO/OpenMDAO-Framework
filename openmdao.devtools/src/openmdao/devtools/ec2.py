@@ -70,14 +70,26 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     if debug:
         print "instance at address '%s' is running" % inst.public_dns_name
         
+    if platform == 'windows':
+        # Extremely slow startup, don't even try for a minute.
+        print 'pausing for lethargic windows...'
+        time.sleep(60)
+
+    successes = 0
     for i in range(max_tries):
         time.sleep(sleep)
         if debug: 
             print "testing ssh connection (try #%d)" % (i+1)
         # even though the instance is running, it takes a while before
         # sshd is running, so we have to wait a bit longer
+        # In addition, sometimes the initial success is a fluke and the
+        # next connection fails, so we wait for three successes in a row.
         if ssh_test(inst.public_dns_name):
-            break
+            successes += 1
+            if successes > 2:
+                break
+        else:
+            successes = 0
     else:
         stream.write("\nssh connection to %s failed after %d attempts."
                      "  terminating...\n" % (name, max_tries))
@@ -238,11 +250,13 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                 # python actually works, so try some simple python command until it works.
                 try:
                     retval = run('%s -c "dir()"' % py)
-                except:
-                    pass
+                except Exception as exc:
+                    print '    caught exception:', exc
                 else:
-                    if retval.failed or retval.return_code != 0:
-                        continue
+                    if retval.failed:
+                        print '    failed:', retval.failed
+                    elif retval.return_code != 0:
+                        print '    return code:', retval.return_code
                     else:
                         break
             else:

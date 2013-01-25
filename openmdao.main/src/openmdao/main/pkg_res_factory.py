@@ -1,16 +1,12 @@
-
-import logging
 import copy
-import os.path
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
-import pkg_resources
-from pkg_resources import get_entry_map, get_distribution, working_set
-from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
-    
+from pkg_resources import working_set, Environment
+
 from openmdao.main.factory import Factory
-from openmdao.util.dep import plugin_groups, find_module, PythonSourceTreeAnalyser
+from openmdao.util.dep import plugin_groups, find_module, \
+                              PythonSourceTreeAnalyser
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
@@ -34,19 +30,23 @@ class PkgResourcesFactory(Factory):
         """
         if server is not None or res_desc is not None:
             return None
+        klass = self._load(typ, version)
+        if klass is None:
+            return None
+        else:
+            return klass(**ctor_args)
 
+    def _load(self, typ, version):
+        """Return class for *typ* and *version*."""
         classes = self._get_type_dict()
-            
         try:
             lst = classes[typ]
             dist = lst[0]
             groups = lst[1]
             klass = dist.load_entry_point(groups[0], typ)
-            
             if version is not None and dist.version != version:
                 return None
-            
-            return klass(**ctor_args)
+            return klass
         except KeyError:
             if self._search_path is None:
                 return None
@@ -61,7 +61,7 @@ class PkgResourcesFactory(Factory):
                             dist.activate()
                             klass = ep.load(require=True, env=self.env)
                             self._have_new_types = True
-                            return klass(**ctor_args)
+                            return klass
                         if version is None:
                             # newest version didn't have entry point, so skip to next project
                             break
@@ -101,7 +101,7 @@ class PkgResourcesFactory(Factory):
                 fpath = find_module(modname)
                 if fpath is not None:
                     fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
-                    meta['ifaces'].update(self.tree_analyser.get_interfaces(name))
+                    meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
                     
             meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
@@ -135,7 +135,17 @@ class PkgResourcesFactory(Factory):
                 dists.append(dist)
         
         typ_dict = self._entry_map_info(dists)
-        dset = self._get_meta_info(ret, groups, typ_dict)
+        #dset = self._get_meta_info(ret, groups, typ_dict)
         
         return ret
+
+    def get_signature(self, typname, version=None):
+        """Return constructor argument signature for *typname,* using the
+        specified package version. The return value is a dictionary.
+        """
+        cls = self._load(typname, version)
+        if cls is None:
+            return None
+        else:
+            return self.form_signature(cls)
 

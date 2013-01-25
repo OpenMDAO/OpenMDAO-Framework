@@ -24,8 +24,8 @@ class SimpleCaseIterDriver(Driver):
     # pylint: disable-msg=E1101
     iterator = Slot(ICaseIterator, desc='Source of Cases.', required=True)
     
-    def __init__(self, *args, **kwargs):
-        super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(SimpleCaseIterDriver, self).__init__()
         self._iter = None  # Set to None when iterator is empty.
         self.on_trait_change(self._iterator_modified, 'iterator')
 

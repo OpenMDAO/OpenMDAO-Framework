@@ -18,7 +18,7 @@ class ComponentWithDerivatives (Component):
     def _execute_ffd(self, ffd_order):
         """During Fake Finite Difference, instead of executing, a component
         can use the available derivatives to calculate the output efficiently.
-        Before FFD can execute, calc_derivatives must be called to save the
+        Before FFD can execute, *calc_derivatives* must be called to save the
         baseline state and the derivatives at that baseline point.
         
         This method approximates the output using a Taylor series expansion
@@ -36,8 +36,8 @@ class ComponentWithDerivatives (Component):
     def calc_derivatives(self, first=False, second=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline. The user
-        must supply calculate_first_derivatives() and/or
-        calculate_second_derivatives() in the component.
+        must supply *calculate_first_derivatives()* and/or
+        *calculate_second_derivatives()* in the component.
         
         This function should not be overriden.
         

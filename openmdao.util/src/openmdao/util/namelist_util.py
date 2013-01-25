@@ -366,7 +366,8 @@ class Namelist(object):
         card_token = Group(fieldval("name") + \
                            Optional(index_token("index")) + \
                            Suppress('=') + \
-                           data_token("value") +
+                           Optional(num_int("dimension") + Suppress('*')) + \
+                           data_token("value") + \
                            Optional(Suppress('*') + num_int("dimension")))
         multi_card_token = (card_token + ZeroOrMore(Suppress(',') + card_token))
         array_continuation_token = numstr_token.setResultsName("value")
@@ -506,7 +507,7 @@ class Namelist(object):
         
         single_group: integer (optional)
              Group id number to use for processing one single namelist group. Useful
-             if extra processing is needed, or if multiple groups have the same name.
+             if extra processing is needed or if multiple groups have the same name.
         
              Returns a tuple containing the following values:
              (empty_groups, unlisted_groups, unlinked_vars). These need to be

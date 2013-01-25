@@ -34,7 +34,7 @@ class DOEdriver(CaseIterDriverBase):
 
     doe_filename = Str('', iotype='in',
                        desc='Name of CSV file to record to'
-                            ' (default is <driver-name>.csv)')
+                            ' (default is <driver-name>.csv).')
 
     case_outputs = List(Str, iotype='in', 
                         desc='A list of outputs to be saved with each case.')

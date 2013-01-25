@@ -199,12 +199,6 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                        }
         };
 
-        // TODO: implement rename()
-        //menu.renameFile = {
-        //    "label"  : 'Rename',
-        //    "action" : function(node) { alert("Rename is not implemented yet, sorry :("); }
-        //};
-
         // if it's not a folder, 
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
@@ -233,6 +227,18 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             }
         }
 
+        menu.renameFile = {
+            "label"  : 'Rename',
+            "action" : function(node) {
+                           var old = path.split('/'),
+                               old = old[old.length-1];
+                           openmdao.Util.promptForValue('New name for '+old,
+                                                        function(name) {
+                               model.renameFile(path, name);
+                           });
+                       }
+        };
+
         // delete only files and empty folders
         if (!isFolder) {
             menu.deleteFile = {
@@ -255,11 +261,12 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         return menu;
     }
 
-    /** update the tree from JSON file structure */
-    function updateFiles(files) {
+    function highlightFiles(files){
         tree.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
-
+    }
+    /** update the tree from JSON file structure */
+    function updateFiles(files) {
         // generate HTML for the file tree
         var html = "<ul>";
         jQuery.each(files,function(path,val) {
@@ -351,6 +358,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         }
         else {
             files = message[1];
+            highlightFiles()
             updateFiles(files);
         }
     }

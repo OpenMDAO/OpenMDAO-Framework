@@ -40,7 +40,7 @@ def expand_path(path):
     return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
 
 def cleanup(*fnames, **kwargs):
-    """delete the given files or directories if they exists"""
+    """Delete the given files or directories if they exists."""
     for fname in fnames:
         if os.path.isfile(fname):
             os.remove(fname)
@@ -71,7 +71,7 @@ def find_in_dir_list(fname, dirlist, exts=('',)):
 def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
     """Search for a given file in all of the directories given
     in the pathvar string. Return the absolute path to the file
-    if found; None otherwise.
+    if found, or None otherwise.
     
     fname: str
         Base name of file.
@@ -156,10 +156,10 @@ def find_up(name, path=None):
     """Search upward from the starting path (or the current directory)
     until the given file or directory is found. The given name is
     assumed to be a basename, not a path.  Returns the absolute path
-    of the file or directory if found, None otherwise.
+    of the file or directory if found, or None otherwise.
     
     name: str
-        Base name of the file or directory being searched for
+        Base name of the file or directory being searched for.
         
     path: str (optional)
         Starting directory.  If not supplied, current directory is used.
@@ -194,10 +194,10 @@ def get_module_path(fpath):
     return '.'.join(pnames[::-1])
 
 def find_module(name, path=None, py=True):
-    """Return the pathname of the python file corresponding to the
+    """Return the pathname of the Python file corresponding to the
     given module name, or None if it can't be found. If path is set, search in
     path for the file; otherwise search in sys.path. If py is True, the
-    file must be an uncompiled python (.py) file.
+    file must be an uncompiled Python (.py) file.
     """
     if path is None:
         path = sys.path
@@ -290,7 +290,7 @@ def get_cfg_file():
     
 def clean_filename(name):
     ''' Removes special characters from a proposed filename and replaces them
-    with underscores. To be safest, we allow only a limited set of chars.'''
+    with underscores. To be safe, we allow only a limited set of chars.'''
     
     valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c if c in valid_chars else '_' for c in name)
@@ -312,3 +312,22 @@ def file_md5(fpath):
         return m.hexdigest()
     finally:
         f.close()
+
+def onerror(func, path, exc_info):
+    """
+    Error handler for ``shutil.rmtree``.
+
+    If the error is due to an access error (read only file),
+    it attempts to add write permission and then retries.
+
+    If the error is for another reason, it re-raises the error.
+
+    Usage : ``shutil.rmtree(path, onerror=onerror)``
+    """
+    import stat
+    if not os.access(path, os.W_OK):
+        # Is the error an access error ?
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise

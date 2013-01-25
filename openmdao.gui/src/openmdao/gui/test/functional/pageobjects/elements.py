@@ -39,6 +39,7 @@ class _BaseElement(object):
         else:
             return WebDriverWait(self._browser, TMO).until(
                        lambda browser: self._root.find_element(*self._locator))
+
     @property
     def color(self):
         """ Return RGBA values for ``color`` property. """
@@ -75,6 +76,11 @@ class _BaseElement(object):
                 StaleElementReferenceException):
             return False
 
+    @property
+    def location(self):
+        """ Return dict containing x and y coords. """
+        return self.element.location
+
     def find_element_by_xpath(self, xpath):
         """ Convenience routine. """
         return self.element.find_element_by_xpath(xpath)
@@ -86,6 +92,10 @@ class _BaseElement(object):
     def find_elements_by_css_selector(self, xpath):
         """ Convenience routine. """
         return self.element.find_elements_by_css_selector(xpath)
+
+    def get_attribute(self, name):
+        """ Return value for the attribute `name`. """
+        return self.element.get_attribute(name)
 
     def value_of_css_property(self, name):
         """ Return value for the the CSS property `name`. """
@@ -162,15 +172,15 @@ class _InputElement(_BaseElement):
     @value.setter
     def value(self, new_value):
         element = self.element
-        WebDriverWait(self._browser, TMO).until(
-            lambda browser: element.is_displayed())
-        WebDriverWait(self._browser, TMO).until(
-            lambda browser: element.is_enabled())
-        if element.get_attribute('value'):
-            element.clear()
-        time.sleep(0.1)  # Just some pacing.
         for retry in range(3):
             try:
+                WebDriverWait(self._browser, TMO).until(
+                    lambda browser: element.is_displayed())
+                WebDriverWait(self._browser, TMO).until(
+                    lambda browser: element.is_enabled())
+                if element.get_attribute('value'):
+                    element.clear()
+                time.sleep(0.1)  # Just some pacing.
                 element.send_keys(new_value)
                 return
             except StaleElementReferenceException:
@@ -261,28 +271,32 @@ class ButtonElement(BaseElement):
     def __init__(self, locator):
         super(ButtonElement, self).__init__(_ButtonElement, locator)
 
+
 class CheckboxElement(BaseElement):
     """ The `value` of this is the selection state. """
     def __init__(self, locator):
         super(CheckboxElement, self).__init__(_CheckboxElement, locator)
+
 
 class GridElement(BaseElement):
     """ The `value` of this is a :class:`Grid`. """
     def __init__(self, locator):
         super(GridElement, self).__init__(_GridElement, locator)
 
+
 class InputElement(BaseElement):
     """ A text input field. """
     def __init__(self, locator):
         super(InputElement, self).__init__(_InputElement, locator)
+
 
 class TextElement(BaseElement):
     """ Just some text on the page. """
     def __init__(self, locator):
         super(TextElement, self).__init__(_TextElement, locator)
 
+
 class GenericElement(BaseElement):
     """A Generic Element for objects not of the above types"""
     def __init__(self, locator):
         super(GenericElement, self).__init__(_GenericElement, locator)
-

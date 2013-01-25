@@ -8,7 +8,7 @@ class HierarchyTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = Container()
-        self.h1 = Container(doc="a hierarchy member")
+        self.h1 = Container()
         self.top.add('h1', self.h1)
         self.h11 = Container()    
         self.h12 = Container()
@@ -26,9 +26,6 @@ class HierarchyTestCase(unittest.TestCase):
         self.assertEqual(self.h121.get_pathname(), 'h1.h12.h121')
         self.assertEqual(self.h122.get_pathname(), 'h1.h12.h122')
     
-    def test_doc(self):
-        self.assertEqual(self.h1.__doc__ , "a hierarchy member")
-        
     def test_error_handling(self):
         try:
             self.h121.raise_exception("bad value", ValueError)

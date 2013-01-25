@@ -112,7 +112,7 @@ class DBCaseIterator(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -191,6 +191,10 @@ class DBCaseRecorder(object):
         self._connection = sqlite3.connect(value)
         self._iter_conn = sqlite3.connect(value)
     
+    def startup(self):
+        """ Opens the database for recordering."""
+        pass
+        
     def record(self, case):
         """Record the given Case."""
         if self._connection is None:
@@ -236,7 +240,7 @@ class DBCaseRecorder(object):
 
     def get_attributes(self, io_only=True):
         """ We need a custom get_attributes because we aren't using Traits to
-        manage our changeable settings. This is unfortunate, and should be
+        manage our changeable settings. This is unfortunate and should be
         changed to something that automates this somehow."""
         
         attrs = {}
@@ -245,6 +249,7 @@ class DBCaseRecorder(object):
         
         attr = {}
         attr['name'] = "dbfile"
+        attr['id'] = attr['name']
         attr['type'] = type(self.dbfile).__name__
         attr['value'] = str(self.dbfile)
         attr['connected'] = ''

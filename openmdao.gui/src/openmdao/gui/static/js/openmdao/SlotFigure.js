@@ -94,6 +94,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     // set up as drop target
     fig.droppable ({
         accept: '.'+slot.klass,
+        greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
@@ -106,14 +107,44 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             drop_function(ev, ui);
         },
         actualDropHandler: function(ev,ui) {
+            // could get same event multiple times if drop triggers for sibling targets
+            if (this.dropEvent && this.dropEvent === ev.originalEvent) {
+                return;  // already handled this drop event
+            }
+            this.dropEvent = ev.originalEvent;
+
             var droppedObject = jQuery(ui.draggable).clone(),
-                droppedPath = droppedObject.attr("modpath"),
-                slotParent = openmdao.Util.getPath(pathname),
-                cmd = (slot.containertype === 'list' ?
-                    pathname + '.append(create("'+droppedPath+'"))' :
-                    slotParent + '.add("'+slot.name+'", create("'+droppedPath+'"))');
-            model.issueCommand(cmd);
+                droppedName = droppedObject.text(),
+                droppedPath = droppedObject.attr("modpath");
+
             openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            openmdao.model.getSignature(droppedPath, function(signature) {
+                if (signature.args.length) {
+                    var prompt = 'Enter arguments for new '+droppedName;
+                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                        var cmd = 'create("'+droppedPath+'"'+args+')';
+                        if (slot.containertype === 'list') {
+                            cmd = pathname+'.append('+cmd+')';
+                        }
+                        else {
+                            var slotParent = openmdao.Util.getPath(pathname);
+                            cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                        }
+                        model.issueCommand(cmd);
+                    }, true);
+                }
+                else {
+                    var cmd = 'create("'+droppedPath+'")';
+                    if (slot.containertype === 'list') {
+                        cmd = pathname+'.append('+cmd+')';
+                    }
+                    else {
+                        var slotParent = openmdao.Util.getPath(pathname);
+                        cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                    }
+                    model.issueCommand(cmd);
+                }
+            });
         }
     });
 
