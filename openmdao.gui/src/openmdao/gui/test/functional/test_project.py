@@ -54,7 +54,7 @@ def _test_new_project(browser):
 
     # Export the project
     projects_page.export_project(project_dict['name'])
-    time.sleep(1)  # give the download some time to complete
+    time.sleep(5)  # give the download some time (ok LOTS of time) to complete
     # See if the file is in the downloads directory
     project_path = glob.glob(os.path.join(browser_download_location_path + "/" + project_dict['name'].replace(" ", "_")) + "*")
     assert (len(project_path) == 1)
