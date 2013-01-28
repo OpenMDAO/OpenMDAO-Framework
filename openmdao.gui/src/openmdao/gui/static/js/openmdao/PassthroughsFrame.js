@@ -169,9 +169,9 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                         connected_to = eval(input.connected.replace("parent",pathname));
         
                         cd_array = self.check_passthrough_input(comp_path, input, connected_to, implicit_con, top_inputs);
+                        
                         checked = cd_array[0];
                         disabled = cd_array[1];
-
                         this_id = (comp_path + "-" + input.name).split(".").join("-")+'input-cb';
 
                         this_comp_id = "input-" + comp_path.split(".").join("-");
@@ -186,6 +186,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             div_input.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
                             if (checked == "checked") {
                                 jQuery.jstree._reference("#" + table_id_input+'-div').check_node("#"+this_id);
+                                }
+                            else
+                                {
+                                jQuery.jstree._reference("#" + table_id_input+'-div').uncheck_node("#"+this_id)
                                 }
                             
                             div_input.jstree("close_all", -1);
