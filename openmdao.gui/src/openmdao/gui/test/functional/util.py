@@ -205,22 +205,20 @@ def teardown_server():
         _display = None
     _display_set = False
 
-    # Shut down server.
+    # First try to have all subprocesses go down cleanly.
     if sys.platform == 'win32':
-        # First try to have all subprocesses go down cleanly.
         with open(TEST_CONFIG['sigfile'], 'w') as sigfile:
             sigfile.write('Shutdown now\n')
-        for i in range(10):
-            time.sleep(1)
-            if server.poll() is not None:
-                break
-        else:
-            # No luck, at least terminate the server.
-            print >> sys.stderr, 'teardown_server: Killing server'
-            server.terminate()
     else:
         server.terminate()
-        server.wait()
+    for i in range(10):
+        time.sleep(1)
+        if server.poll() is not None:
+            break
+    else:
+        # No luck, at least terminate the server.
+        print >> sys.stderr, 'teardown_server: Killing server'
+        server.kill()
     TEST_CONFIG['stdout'].close()
 
     server_dir = TEST_CONFIG['server_dir']
