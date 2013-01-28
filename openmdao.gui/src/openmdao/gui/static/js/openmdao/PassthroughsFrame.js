@@ -15,18 +15,27 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
      ***********************************************************************/
     
     
-    this.handleCbClick = function(e) { 
-        var this_path = e.target.name;
-        var itype = jQuery(e.target).data("itype");
-        var status = e.srcElement.checked;
-        if (status) {
+    this.handleCbClick = function(e, d) { 
+    
+        var tagName = d.args[0].tagName;
+        var refreshing = d.inst.data.core.refreshing;
+        if ((tagName == "A" || tagName == "INS") &&
+          (refreshing != true && refreshing != "undefined")) {
+        c_data = d.rslt.obj[0].innerHTML
+        cobj = jQuery('<div>').html(c_data).find('a')
+        
+        var this_path = cobj.attr('name');
+        var itype = cobj.attr('itype');
+        var status = e.type;
+        if (status == "check_node") {
             self.makePassthrough(this_path);
-        }
+            }
         else {
             self.removePassthrough(this_path, itype);
             
-        }
-    }     
+             }
+        
+        }}
 
     this.successHandler = function(e, u) {
         self.makeTables();
@@ -61,7 +70,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                 }
             }
         if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con) {
-            checked = ""; disabled = "disabled = 'disabled'";}
+            checked = ""; disabled = "disabled";}
         else {checked = ""; disabled = "";}
         return [checked, disabled]
     }
@@ -76,7 +85,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     }    
     
     var pathname = pathname;
-
+    var input_data = {};
+    var output_data = {};
 
     /** handle message about the assembly */
     function handleMessage(message) {
@@ -85,39 +95,74 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     
     
         jQuery("#"+id+'-passthroughdiv').empty().remove();
-        componentsHTML = '<div id = '+id+'-passthroughdiv style = "overflow:scroll;overflow-y:scroll;background:gray"><table><tr><td><table id = '+table_id_input+'>'
-                       +        '<tr><td><u>Input variables</u></td>'
-                       +            '<td><u>Passthrough</u></td>'
-                       +        '</tr>'
-                       //+        '<tr><td>name</td><td>check</td></tr>'
-                       + '</table></td>'
-                       +   '<td valign = "top"><table id = '+table_id_output+'>'
-                       +        '<td><u>Output variables</u></td>'
-                       +            '<td><u>Passthrough</u></td>'
-                       +        '</tr>'
-                       //+        '<tr><td>name</td><td>check</td></tr>'
-                       + '</table></td></tr></table></tr></div>'      
+
+        componentsHTML = '<div id = '+id+'-passthroughdiv style = "overflow:auto;overflow-y:auto;background:gray"><table><tr><td>INPUTS:<div id = '+table_id_input+'-div>'
+                       + '</div></td>'
+                       +   '<td valign = "top">OUTPUTS:<div id = '+table_id_output+'-div>'
+                       + '</div>'      
         componentsDiv = jQuery(componentsHTML).appendTo(self.elm);
-        table_input = jQuery("#" + table_id_input);
-        table_output = jQuery("#" + table_id_output);    
-    
-    
+        
+        div_input = jQuery("#" + table_id_input+'-div');
+        div_output = jQuery("#" + table_id_output+'-div');               
+        
+        div_input.jstree({
+            "plugins" :     [ "html_data", "sort", "themes", "types", "ui","crrm","checkbox" ],
+            "themes" :      { "theme":  "classic", "icons" : false },
+            //"checkbox": {two_state :true}, 
+            "types" : {
+                 "types": {
+                 "disabled" : { 
+                       "check_node" : false, 
+                       "uncheck_node" : false 
+                     } 
+                 }
+             }
+        })
+        div_output.jstree({
+            "plugins" :     [ "html_data", "sort", "themes", "types", "ui", "crrm","checkbox" ],
+            "themes" :      { "theme":  "classic", "icons" : false },
+            //"checkbox": {"two_state" :true}, 
+            "types" : {
+                 "types": {
+                 "disabled" : { 
+                       "check_node" : false, 
+                       "uncheck_node" : false 
+                     } 
+                 }
+             }
+        })
+        
     this.makeTables = function() {
-    
         var all_inputs = [];
         var all_outputs = []; 
         var top_inputs = [];
         var top_outputs = [];
         
+        div_input.empty()
+        div_output.empty()
         model.getComponent(pathname, function(asm,e) {
             jQuery.each(asm.Inputs, function(idx,input) {
                 top_inputs.push(pathname + "." + input.name);
             })
             jQuery.each(asm.Outputs, function(idx,output) {
                 top_outputs.push(pathname + "." + output.name);
-            }    )    
+            })    
             jQuery.each(asm.Dataflow.components, function(idx,comp) {
                 var comp_path = comp.pathname;
+                this_id = comp_path.split(".").join("-");
+
+                if (jQuery("#input-" + this_id).length == 0) {    
+                    obj = {data : {"attr" : {"id" : 'input-'+ this_id}, "title" : comp_path, state : "closed"}}; 
+                    div_input.jstree("create", -1, false,obj, false, true);
+                    div_output.jstree("set_type", "disabled", jQuery('#input-'+this_id));
+                    }
+                    
+                if (jQuery("#output-" + this_id).length == 0) {    
+                    obj = {data : {"attr" : {"id" : 'output-'+this_id}, "title" : comp_path, state : "closed"}}; 
+                    div_output.jstree("create", -1, false,obj, false, true);
+                    div_output.jstree("set_type", "disabled", jQuery('#output-'+this_id));
+                    }
+                
                 model.getComponent(comp.pathname, function (comp_data, e) {
                     jQuery.each(comp_data.Inputs, function(idx,input) {
                         implicit_con = eval(input.implicit.replace("parent",pathname));
@@ -127,20 +172,25 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                         checked = cd_array[0];
                         disabled = cd_array[1];
 
-                        this_id = (comp_path + "-" + input.name).split(".").join("-");
-                        cb = '<center><input type="checkbox" data-itype = 0 '+disabled+' id = '
-                            +this_id+'-cb name = '+comp_path + "." + input.name+' '+checked+'/></center>'
-                        this_input = "<tr id = "
-                            +this_id+"-row><td>"+comp_path + "." + input.name+"</td>  <td>"+cb+"</td></tr>";
-                        if (jQuery("#"+this_id+"-row").length == 0) {                        
-                            jQuery(this_input).appendTo(table_input);
-                            jQuery("#" + this_id+'-cb').click(self.handleCbClick);
-                            }
-                        else {
-                            jQuery("#"+this_id+"-row").replaceWith(this_input);
-                            jQuery("#" + this_id+'-cb').click(self.handleCbClick);
-                        }
+                        this_id = (comp_path + "-" + input.name).split(".").join("-")+'input-cb';
+
+                        this_comp_id = "input-" + comp_path.split(".").join("-");
+
+                        if (jQuery("#" + this_id).length == 0 && disabled != "disabled") {    
+
                             
+                            obj = {data : {"attr" : {"id" : this_id, "itype":0, 
+                                "name" : comp_path + "." + input.name},
+                                "title" : input.name, state : "closed"}}; 
+                            
+                            div_input.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
+                            if (checked == "checked") {
+                                jQuery.jstree._reference("#" + table_id_input+'-div').check_node("#"+this_id);
+                                }
+                            
+                            div_input.jstree("close_all", -1);
+                            }
+
                     })
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
@@ -155,27 +205,31 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             }
                        }
                         if (output_pass) {checked="checked"; disabled = "";} 
-                        else if (top_outputs.contains(pathname + "."+ output.name)) {checked = ""; disabled = "disabled = 'disabled'";}
+                        else if (top_outputs.contains(pathname + "."+ output.name)) {checked = ""; disabled = "disabled";}
                         else {checked = ""; disabled = "";}
-                        this_id = (comp_path + "-" + output.name).split(".").join("-");
-                        cb = '<center><input type="checkbox" data-itype = 1 '+disabled+' id = '
-                         +this_id+'-cb name = '+comp_path + "." + output.name+' '+checked+'/></center>'
-                        this_output = "<tr id = "
-                         +this_id+"-row><td>"+comp_path + "." + output.name+"</td>  <td>"+cb+"</td></tr>";
-                        if (jQuery("#"+this_id+"-row").length == 0) {                        
-                            jQuery(this_output).appendTo(table_output);
-                            jQuery("#" + this_id+'-cb').click(self.handleCbClick);
+                        this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
+                        this_comp_id = "output-" + comp_path.split(".").join("-");
+                        if (jQuery("#"+this_id).length == 0 && disabled != "disabled") {     
+                            obj = {data : {"attr" : {"id" : this_id, "itype":1, "name" : comp_path + "." + output.name}, "title" : output.name, state : "closed"}}; 
+                            
+                            div_output.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
+                            if (checked == "checked") {
+                                jQuery.jstree._reference("#" + table_id_output+'-div').check_node("#"+this_id);
+                                }
+                           div_output.jstree("close_all", -1);
                             }
-                        else {
-                            jQuery("#"+this_id+"-row").replaceWith(this_output);
-                            jQuery("#" + this_id+'-cb').click(self.handleCbClick);
-                        }
+
                     })
                 });
             });
         });
     }       
 
+
+div_input.bind("check_node.jstree", self.handleCbClick );
+div_input.bind("uncheck_node.jstree", self.handleCbClick );
+div_output.bind("check_node.jstree", self.handleCbClick );
+div_output.bind("uncheck_node.jstree", self.handleCbClick );
 
     this.destructor = function() {
         if (self.pathname && self.pathname.length>0) {
