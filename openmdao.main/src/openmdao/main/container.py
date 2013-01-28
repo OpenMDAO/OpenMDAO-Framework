@@ -33,19 +33,18 @@ from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
-from openmdao.main.variable import Variable, is_legal_name
-from openmdao.main.filevar import FileRef
-from openmdao.main.datatypes.api import List, Slot
 from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.datatypes.api import List, Slot
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.filevar import FileRef
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
+                                     IContainer, IParametricGeometry
+from openmdao.main.index import process_index_entry, get_indexed_value, \
+                                INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.index import process_index_entry, get_indexed_value, \
-                                INDEX, ATTR, SLICE
-
+from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE

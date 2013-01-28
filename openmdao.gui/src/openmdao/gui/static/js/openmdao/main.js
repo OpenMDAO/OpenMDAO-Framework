@@ -53,9 +53,11 @@ jQuery(function() {
         var model = openmdao.model;
         new openmdao.ConsoleFrame("console",  model);
 
-        var data = new openmdao.DataflowFrame("dataflow_pane",model,''),
-            work = new openmdao.WorkflowFrame("workflow_pane",model,''),
-            prop = new openmdao.PropertiesFrame("properties_pane",model);
+        var prop = new openmdao.PropertiesFrame("properties_pane", model);
+        function prop_fn(path) { prop.editObject(path); }
+        
+        var data = new openmdao.DataflowFrame("dataflow_pane", model,'', prop_fn),
+            work = new openmdao.WorkflowFrame("workflow_pane", model,'');
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -86,7 +88,8 @@ jQuery(function() {
         }
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); }
 
-        new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
+        //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.WorkflowTreeFrame("wtree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
 
