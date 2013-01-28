@@ -8,6 +8,7 @@ import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
+from selenium.webdriver import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
@@ -20,7 +21,7 @@ def test_generator():
 
 def _test_value_editors(browser):
     # Creates a file in the GUI.
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -127,11 +128,11 @@ def _test_value_editors(browser):
     eq(output[-1], " [ 9 16]]")
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
-def _test_vartrees(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+def _test_Avartrees(browser):
+    project_dict, workspace_page = startup(browser)
 
     # Import variable_editor.py
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -202,10 +203,11 @@ def _test_vartrees(browser):
     editor.close()
 
     # Now, do it all again on the Properties Pane
-    workspace_page.select_object('top')
-    workspace_page.expand_object('top')
-    workspace_page.select_object('top.p1')
-    workspace_page.show_properties()
+    workspace_page('properties_tab').click()
+    obj = workspace_page.get_dataflow_figure('p1', 'top')
+    chain = ActionChains(browser)
+    chain.click(obj.root)
+    chain.perform()    
     inputs = workspace_page.props_inputs
     expected = [
         [' cont_in',      ''],
@@ -242,6 +244,9 @@ def _test_vartrees(browser):
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':
     main()

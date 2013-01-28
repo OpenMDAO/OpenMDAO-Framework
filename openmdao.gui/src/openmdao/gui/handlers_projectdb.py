@@ -62,6 +62,19 @@ class DeleteHandler(ReqHandler):
 
     @web.authenticated
     def get(self, project_id):
+        pdb = Projects()
+        project = pdb.get(project_id)
+
+        if project['projpath']:
+            dirname = str(project['projpath'])
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname, onerror=onerror)
+
+        pdb.remove(project_id)
+        self.redirect('/')
+
+    @web.authenticated
+    def get(self, project_id):
         self.redirect('/')
 
 
@@ -142,7 +155,10 @@ class DetailHandler(ReqHandler):
             info[key] = project[key]
         proj.set_info(info)
 
-        self.redirect(self.request.uri)
+        self.redirect("/workspace/project?projpath=" + project['projpath'])
+        #self.redirect('/')
+        #self.redirect(self.request.uri)
+        #self.redirect( "/workspace/project?projpath=project['projpath']" )
 
     @web.authenticated
     def get(self, project_id):
@@ -198,88 +214,172 @@ class DownloadHandler(ReqHandler):
                                             project['projectname'], None, None)
 
 
+
 class NewHandler(ReqHandler):
-    ''' Create a new (empty) project.
-    '''
-
-    @web.authenticated
-    def get(self):
-        pdb = Projects()
-
-        project = {}
-        project['id'] = pdb.predict_next_rowid()
-        project['projectname'] = 'New Project '+strftime("%Y-%m-%d_%H%M%S")
-        project['version'] = ''
-        project['description'] = ''
-        project['created'] = 'New Project'
-        project['modified'] = 'New Project'
-        project['projpath'] = ''
-        project['active'] = ''
-
-        self.render('projdb/project_detail.html', project=project,
-                    delete=False)
-
-
-class AddHandler(ReqHandler):
     ''' Add a project to the project database. This extracts the project file
-    into a directory under the user's projects directory.
+    into a directory under the projects directory of user.
     '''
 
     @web.authenticated
     def post(self):
 
-        sourcefile = self.request.files['myfile'][0]
-        if sourcefile:
-            filename = sourcefile['filename']
-            if len(filename) > 0:
+        pdb = Projects()
 
-                unique = _get_unique_name(self.get_project_dir(),
-                                          parse_archive_name(filename))
+        forms = {}
+        for field in ['projectname', 'description', 'version']:
+            if field in self.request.arguments.keys():
+                forms[field] = self.request.arguments[field][0]
+
+        project = {}
+        project['projectname'] = forms['projectname'].strip()
+        project['description'] = forms['description'].strip()
+        project['version'] = forms['version'].strip()
+        project['id'] = pdb.predict_next_rowid()
+        project['active'] = 1
+
+        # figure out a unique directory name for the project using
+        #   the project name and version string
+        directory = self.get_project_dir()
+        version = project['version']
+        pname = project['projectname']
+        if len(version):
+            filename = clean_filename('%s-%s' % (pname, version))
+        else:
+            filename = clean_filename(pname)
+
+        unique = filename
+        i = 1
+        while os.path.exists(os.path.join(directory, unique)):
+            unique = '%s_%s' % (filename, str(i))
+            i = i+1
+
+        project['projpath'] = os.path.join(directory, unique)
+
+        pdb.new(project)
+        os.mkdir(project['projpath'])
                 
-                pdb = Projects()
+        # Update project settings.
+        proj = Project(project['projpath'])
+        dummy = proj.get_info()  # Just to get required keys.
+        info = {}
+        for key in dummy:
+            info[key] = project[key]
+        proj.set_info(info)
 
-                project = {}
-                project['id'] = pdb.predict_next_rowid()
-                project['version'] = ''
-                project['description'] = ''
-                project['active'] = 1
-                project['projectname'] = parse_archive_name(unique)
-                project['projpath'] = unique
+        self.redirect("/workspace/project?projpath=" + project['projpath'])
 
-                os.mkdir(unique)
-                
-                buff = StringIO.StringIO(sourcefile['body'])
-                
-                archive = tarfile.open(fileobj=buff, mode='r:gz')
-                archive.extractall(path=unique)
-                
-                vcslist = find_vcs()
-                if vcslist:
-                    vcs = vcslist[0](unique)
-                else:
-                    vcs = DumbVCS(unique)
-                vcs.init_repo()
-                
-                # Update project dict with info section of config file.
-                proj = Project(unique)
-                project.update(proj.get_info())
-
-                pdb.new(project)
-
-                self.redirect('/projects/'+str(project['id']))
-
-        self.redirect('')
+class ImportHandler(ReqHandler):
+    ''' Get/set project details.
+    '''
 
     @web.authenticated
     def get(self):
-        self.render('projdb/add_project.html')
+        self.render('projdb/import-metadata-fields.html',
+                    projectname='someproject'
+                    )
+
+    @web.authenticated
+    def post(self):
+
+        if not self.request.arguments.has_key( "projectname" ):
+            # First step in the import process.
+            #   Just get the name, description and version of the
+            #   project the user wants to import.
+            #   Then pass this to the form so the user can change it.
+
+            # Go through the process of creating a new project directory
+            #   so we can read the name, description and version from the
+            #   settings file.
+            sourcefile = self.request.files['projectfile'][0]
+            if sourcefile:
+                filename = sourcefile['filename']
+                if len(filename) > 0:
+                    unique = _get_unique_name(self.get_project_dir(),
+                                              parse_archive_name(filename))
+                    os.mkdir(unique)
+                    buff = StringIO.StringIO(sourcefile['body'])
+                    archive = tarfile.open(fileobj=buff, mode='r:gz')
+                    archive.extractall(path=unique)
+                    vcslist = find_vcs()
+                    if vcslist:
+                        vcs = vcslist[0](unique)
+                    else:
+                        vcs = DumbVCS(unique)
+                    vcs.init_repo()
+    
+                    # Update project dict with info section of config file.
+                    proj = Project(unique)
+                    
+                    shutil.rmtree(unique)
+    
+                    project_info = proj.get_info()
+                    self.render('projdb/import-metadata-fields.html',
+                                projectname=parse_archive_name(unique),
+                                description=project_info['description'],
+                                version=project_info['version']
+                                )
+            self.redirect("/")
+        else:
+            forms = {}
+            for field in ['projectname', 'description', 'version']:
+                if field in self.request.arguments.keys():
+                    forms[field] = self.request.arguments[field][0]
+
+
+            sourcefile = self.request.files['projectfile'][0]
+            if sourcefile:
+                filename = sourcefile['filename']
+                if len(filename) > 0:
+
+                    unique = _get_unique_name(self.get_project_dir(),
+                                              parse_archive_name(filename))
+                
+                    pdb = Projects()
+
+                    project = {}
+                    project['id'] = pdb.predict_next_rowid()
+                    project['active'] = 1
+                    project['projectname'] = forms['projectname'].strip()
+                    project['description'] = forms['description'].strip()
+                    project['version'] = forms['version'].strip()
+                    project['projpath'] = unique
+
+                    os.mkdir(unique)
+                
+                    buff = StringIO.StringIO(sourcefile['body'])
+                  
+                    archive = tarfile.open(fileobj=buff, mode='r:gz')
+                    archive.extractall(path=unique)
+
+                    vcslist = find_vcs()
+                    if vcslist:
+                        vcs = vcslist[0](unique)
+                    else:
+                        vcs = DumbVCS(unique)
+                    vcs.init_repo()
+
+                    # Update project settings.
+                    proj = Project(project['projpath'])
+                    dummy = proj.get_info()  # Just to get required keys.
+                    info = {}
+                    for key in dummy:
+                        info[key] = project[key]
+                    proj.set_info(info)
+
+                    pdb.new(project)
+
+                    self.redirect("/workspace/project?projpath=" + project['projpath'])
+
+            self.redirect("/")
+    
+
 
 
 handlers = [
     web.url(r'/projects/?',                              IndexHandler),
     web.url(r'/projects/(?P<project_id>\d+)/?',          DetailHandler),
     web.url(r'/projects/new/$',                          NewHandler),
-    web.url(r'/projects/add/$',                          AddHandler),
+    web.url(r'/projects/import/$',                       ImportHandler),
     web.url(r'/projects/delete/(?P<project_id>\d+)/?',   DeleteHandler),
     web.url(r'/projects/download/(?P<project_id>\d+)/?', DownloadHandler),
 ]

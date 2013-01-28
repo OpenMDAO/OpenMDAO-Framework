@@ -21,7 +21,7 @@ def test_generator():
 def _test_MDAO_MDF(browser):
     # Build the MDF model as per the tutorial.
 
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    project_dict, workspace_page = startup(browser)
 
     # Import the files that contain the disciplines
     file_path = pkg_resources.resource_filename('openmdao.lib.optproblems',
@@ -51,17 +51,13 @@ def _test_MDAO_MDF(browser):
     conn_page.connect_vars('dis1.y1', 'dis2.y1')
     conn_page.close()
 
-    workspace_page('workflow_tab').click()
-    workspace_page.show_workflow('top')
-
     # Add solver to optimizer workflow
-    workspace_page.expand_object('top')
-    workspace_page.add_object_to_workflow('top.solver', 'top.driver')
+    workspace_page.add_object_to_workflow('top.solver', 'top')
 
     # Add disciplines to solver workflow
-    workspace_page.expand_object('top.solver')
-    workspace_page.add_object_to_workflow('top.dis1', 'solver')
-    workspace_page.add_object_to_workflow('top.dis2', 'solver')
+    workspace_page.expand_object('top')
+    workspace_page.add_object_to_workflow('top.dis1', 'top.solver')
+    workspace_page.add_object_to_workflow('top.dis2', 'top.solver')
 
     workspace_page('dataflow_tab').click()
 
@@ -160,7 +156,7 @@ def _test_MDAO_MDF(browser):
             % output2)
 
     # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(project_dict, workspace_page)
 
 
 if __name__ == '__main__':

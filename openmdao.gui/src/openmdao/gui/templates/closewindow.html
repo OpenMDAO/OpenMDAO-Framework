@@ -1,25 +1,23 @@
-<html>
+{% extends "projdb/base.html" %}
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-	<title>Close window...</title>
-    <meta charset="utf-8">
-    <script>
-        window.close();
-        
-        // this trick may work to close main window, but probably not
-        (function() {
-            window.open('','_parent','');
-            window.close();
-        })()
-     </script>
-</head>
+{% block title %}
+    OpenMDAO
+{% end %}
 
-<body bgcolor="Grey">
-    <link rel="stylesheet" href="/static/css/mdao-styles.css">
-    <h2>Thank you for using OpenMDAO.</h2>
-    For further information, support or to participate in the OpenMDAO community, please visit <a href="http://openmdao.org">OpenMDAO.org</a>
-    <p>
-</body>
+{% block head %}
+    <script src="/static/js/jquery-1.7.1.min.js"></script>
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
 
-</html>
+{% end %}
+
+{% block breadcrumbs %}
+{% end %}
+
+
+{% block content %}
+
+    <div class='alert alert-info fade in' data-alert='alert'>
+          <h3>Thank you for using OpenMDAO</h3>
+          For further information, support or to participate in the OpenMDAO community, please visit <a href="http://openmdao.org">OpenMDAO.org</a>
+    </div>
+{% end %}
