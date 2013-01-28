@@ -7,7 +7,7 @@ import unittest
 
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
 from openmdao.lib.datatypes.api import Float, List, Str
-from openmdao.main.api import Component, Assembly, Case, set_as_top
+from openmdao.main.api import Component, Assembly, Run_Once, Case, set_as_top
 
 class Basic_Component(Component):
     ''' Basic building block'''
@@ -217,6 +217,51 @@ class Data_Dump_TestCase(unittest.TestCase):
                 self.assertTrue(line.startswith('   uuid:'))
             else:
                 self.assertEqual(line, template)
+                
+                
+    def test_workflow_itername(self):
+        # top
+        #     comp1
+        #     driverA
+        #         comp1
+        #         comp2
+        #     driverB
+        #         comp2
+        #         subassy
+        #             comp3
+        top = Assembly()
+        top.add('comp1', Basic_Component())
+        top.add('driverA', Run_Once())
+        top.add('comp2', Basic_Component())
+        top.add('driverB', Run_Once())
+
+        sub = top.add('subassy', Assembly())
+        sout = StringIO.StringIO()
+        sub.driver.recorders = [DumpCaseRecorder(sout)]
+        sub.add('comp3', Basic_Component())
+        sub.driver.workflow.add('comp3')
+
+        top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
+        top.driverA.workflow.add(('comp1', 'comp2'))
+        top.driverB.workflow.add(('comp2', 'subassy'))
+
+        top.run()
+
+        expected = [
+            'subassy.driver: 1-3.1-2',
+            'subassy.driver: 1-3.2-2',
+            'subassy.driver: 2-3.1-2',
+            'subassy.driver: 2-3.2-2',
+        ]
+        
+        lines = [l for l in sout.getvalue().split('\n') if 'itername' in l]
+        
+        for line, template in zip(lines, expected):
+            if template.startswith('   uuid:'):
+                self.assertTrue(line.startswith('   uuid:'))
+            else:
+                self.assertEqual(line, template)
+
         
 if __name__ == '__main__':
     unittest.main()

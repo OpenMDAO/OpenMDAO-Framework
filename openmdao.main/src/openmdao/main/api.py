@@ -17,7 +17,7 @@ from openmdao.main.component import Component, SimulationRoot
 from openmdao.main.component_with_derivatives import ComponentWithDerivatives
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.assembly import Assembly, set_as_top, dump_iteration_tree
-from openmdao.main.driver import Driver
+from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
