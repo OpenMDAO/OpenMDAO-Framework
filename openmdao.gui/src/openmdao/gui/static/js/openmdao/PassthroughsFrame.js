@@ -9,22 +9,21 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         'Edit passthroughs: '+openmdao.Util.getName(pathname));
     var self = this;
         // component selectors
-
+    var modified = "";
     /***********************************************************************
      *  private
      ***********************************************************************/
     
     
     this.handleCbClick = function(e, d) { 
-    
         var tagName = d.args[0].tagName;
         var refreshing = d.inst.data.core.refreshing;
         if ((tagName == "A" || tagName == "INS") &&
           (refreshing != true && refreshing != "undefined")) {
         c_data = d.rslt.obj[0].innerHTML
         cobj = jQuery('<div>').html(c_data).find('a')
-        
         var this_path = cobj.attr('name');
+        modified = cobj.attr('component');
         var itype = cobj.attr('itype');
         var status = e.type;
         if (status == "check_node") {
@@ -138,8 +137,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var top_inputs = [];
         var top_outputs = [];
         
-        div_input.empty()
-        div_output.empty()
+        //div_input.empty()
+        //div_output.empty()
         model.getComponent(pathname, function(asm,e) {
             jQuery.each(asm.Inputs, function(idx,input) {
                 top_inputs.push(pathname + "." + input.name);
@@ -180,6 +179,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
 
                             
                             obj = {data : {"attr" : {"id" : this_id, "itype":0, 
+                                "component": comp_path,
                                 "name" : comp_path + "." + input.name},
                                 "title" : input.name, state : "closed"}}; 
                             
@@ -192,9 +192,14 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                                 jQuery.jstree._reference("#" + table_id_input+'-div').uncheck_node("#"+this_id)
                                 }
                             
-                            div_input.jstree("close_all", -1);
                             }
-
+                        else if (jQuery("#"+this_id).length != 0 && disabled == "disabled") {
+                        
+                            div_input.jstree("remove", jQuery("#"+this_id));
+                        }
+                        if (modified != comp_path ) {
+                           div_input.jstree("close_node", jQuery("#"+this_comp_id));
+                           }
                     })
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
@@ -214,15 +219,24 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                         this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
                         this_comp_id = "output-" + comp_path.split(".").join("-");
                         if (jQuery("#"+this_id).length == 0 && disabled != "disabled") {     
-                            obj = {data : {"attr" : {"id" : this_id, "itype":1, "name" : comp_path + "." + output.name}, "title" : output.name, state : "closed"}}; 
+                            obj = {data : {"attr" : {"id" : this_id, "itype":1, 
+                            "component": comp_path,
+                            "name" : comp_path + "." + output.name}, 
+                            "title" : output.name, state : "closed"}}; 
                             
                             div_output.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
                             if (checked == "checked") {
                                 jQuery.jstree._reference("#" + table_id_output+'-div').check_node("#"+this_id);
                                 }
-                           div_output.jstree("close_all", -1);
+                           
                             }
-
+                        else if (jQuery("#"+this_id).length != 0 && disabled == "disabled") {
+                        
+                            div_output.jstree("remove", jQuery("#"+this_id));
+                        }
+                        if (modified != comp_path ) {
+                           div_output.jstree("close_node", jQuery("#"+this_comp_id));
+                           }
                     })
                 });
             });
