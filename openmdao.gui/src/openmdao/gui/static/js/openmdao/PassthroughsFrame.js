@@ -107,7 +107,9 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         div_input.jstree({
             "plugins" :     [ "html_data", "sort", "themes", "types", "ui","crrm","checkbox" ],
             "themes" :      { "theme":  "classic", "icons" : false },
-            //"checkbox": {two_state :true}, 
+            "checkbox": {real_checkboxes :true,
+                        real_checkboxes_names : function(n) {return [n[0].lastChild.id+"chb",1]},
+            }, 
             "types" : {
                  "types": {
                  "disabled" : { 
@@ -120,7 +122,9 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         div_output.jstree({
             "plugins" :     [ "html_data", "sort", "themes", "types", "ui", "crrm","checkbox" ],
             "themes" :      { "theme":  "classic", "icons" : false },
-            //"checkbox": {"two_state" :true}, 
+            "checkbox": {real_checkboxes :true,
+                        real_checkboxes_names : function(n) {return [n[0].lastChild.id+"chb",1]},
+            },  
             "types" : {
                  "types": {
                  "disabled" : { 
