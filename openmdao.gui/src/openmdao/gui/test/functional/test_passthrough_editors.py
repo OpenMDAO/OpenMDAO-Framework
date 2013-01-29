@@ -51,7 +51,7 @@ def _test_passthrough_editor(browser):
     time.sleep(1)
     browser.find_element_by_xpath('//*[@id="top-p1-yinput' \
                                   '-cb"]/ins[1]').click()  # remove passthrough
-    time.sleep(1)
+    time.sleep(2)
     browser.find_element_by_xpath('//*[@id="top-p1-f_xyoutput' \
                                   '-cb"]/ins[1]').click()  # create passthrough
     time.sleep(3)
