@@ -395,6 +395,18 @@ class _Runner(object):
 
             sys.stdout.flush()
             sys.stderr.flush()
+
+            # Try to copy the log (it may be rewritten in subsequent tests).
+            server_dir = TEST_CONFIG['server_dir']
+            logfile = os.path.join(server_dir, 'openmdao_log.txt')
+            if os.path.exists(logfile):
+                try:
+                    shutil.copy(logfile, '%s-log.txt' % testname)
+                except Exception as exc:
+                    print >> sys.stderr, '_Runner: %s copy failed: %s' \
+                                         % (logfile, exc)
+
+            # Finally, raise the original exception.
             raise saved_exc[0], saved_exc[1], saved_exc[2]
 
 

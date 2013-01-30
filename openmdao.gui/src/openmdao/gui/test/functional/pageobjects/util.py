@@ -252,6 +252,9 @@ class SafeDriver(SafeElementBase):
         # All elements share same invoker.
         super(SafeDriver, self).__init__(driver, SafeInvoker())
 
+    def __repr__(self):
+        return 'SafeDriver(%s)' % (self._delegate.__class__.__name__)
+
     @property
     def current_window_handle(self):
         return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
