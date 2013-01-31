@@ -395,7 +395,7 @@ that this only works for installed plugin distributions.
 
 ::
 
-   plugin docs plugin_dist_name
+   openmdao docs plugin_dist_name
    
    
 .. option:: plugin_dist_name
@@ -411,7 +411,7 @@ our docs efficiently by repeating the following sequence:
 
     ... hack, hack, hack
     plugin build_docs
-    plugin docs <plugin_dist_name>
+    openmdao docs <plugin_dist_name>
     
     
 .. index:: creation
