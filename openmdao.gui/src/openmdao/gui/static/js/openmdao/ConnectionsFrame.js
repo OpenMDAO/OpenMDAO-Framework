@@ -328,7 +328,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                     parent_fig = figures[parent_name];
                     if (parent_fig) {
                         if (expand_nodes[parent_name]) {
-                            figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, false);
+                            figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
                             y = y + 40;  // add height of fig (30 px) plus 10 px of space
                             parent_fig.expanded();
                         }
@@ -520,10 +520,6 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                                         model.issueCommand(cmd);
                                     }
                                 }
-                            }
-                            else {
-                                //debug.warn('ConnectionsFrame: Invalid source or target',
-                                //           src_name, source, tgt_name, target);
                             }
                         }
                     }
