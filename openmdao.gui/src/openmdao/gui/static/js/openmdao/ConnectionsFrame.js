@@ -358,13 +358,15 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 parent_name,
                 dot_brkt;
 
-            // if src or dst fig not found then check for collapsed parent and link to that
+            // if src or dst fig is not found then check for collapsed parent and link to that
             if (!src_fig) {
                 parent_name = self.src_comp ? conn[0].substr(self.src_comp.length+1) : conn[0];
                 dot_brkt = parent_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
-                    parent_name = self.src_comp ? self.src_comp+'.'+parent_name : parent_name;
+                    if (self.src_comp) {
+                        parent_name = self.src_comp + '.' + parent_name;
+                    }
                     src_fig = figures[parent_name];
                 }
             }
@@ -373,7 +375,9 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 dot_brkt = parent_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
-                    parent_name = self.dst_comp ? self.dst_comp+'.'+parent_name : parent_name;
+                    if (self.dst_comp) {
+                        parent_name = self.dst_comp + '.' + parent_name;
+                    }
                     dst_fig = figures[parent_name];
                 }
             }
@@ -469,7 +473,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                 // context menu option to disconnect the variable
                 if (source.data('input') && source.data('connected')) {
                     var src_name = source.data('name'),
-                        menuItem = jQuery('<li>Disconnect '+openmdao.Util.getName(src_name)+'</li>')
+                        menuItem = jQuery('<li>Disconnect '+src_name+'</li>')
                             .click(function(e) {
                                 cmd = self.pathname+'.disconnect("'+src_name+'")';
                                 model.issueCommand(cmd);
