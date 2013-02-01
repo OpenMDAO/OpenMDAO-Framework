@@ -350,81 +350,94 @@ class ConsoleServer(cmd.Cmd):
                     src = asm
                 connected = src.list_outputs(connected=True)
                 for name in src.list_outputs():
-                    var = src.get(name)
-                    vtype = type(var).__name__
-                    units = ''
-                    meta = src.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    valid = src.get_valid([name])[0]
-                    sources.append({'name': name,
-                                    'type': vtype,
-                                    'valid': valid,
-                                    'units': units,
-                                    'connected': (name in connected)
-                                   })
+                    if not '.' in name:  # vartree vars handled separately
+                        var = src.get(name)
+                        vtype = type(var).__name__
+                        units = ''
+                        meta = src.get_metadata(name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        valid = src.get_valid([name])[0]
+                        sources.append({
+                            'name': name,
+                            'type': vtype,
+                            'valid': valid,
+                            'units': units,
+                            'connected': (name in connected)
+                        })
                     if isinstance(var, VariableTree):
                         for var_name in var.list_vars():
                             vt_var = var.get(var_name)
+                            vt_var_name = name + '.' + var_name
                             units = ''
                             meta = var.get_metadata(var_name)
                             if meta and 'units' in meta:
                                 units = meta['units']
-                            sources.append({'name': name + '.' + var_name,
-                                            'type':  type(vt_var).__name__,
-                                            'valid': valid,
-                                            'units': units,
-                                            'connected': (name in connected)
-                                           })
+                            sources.append({
+                                'name': vt_var_name,
+                                'type':  type(vt_var).__name__,
+                                'valid': valid,
+                                'units': units,
+                                'connected': (vt_var_name in connected)
+                            })
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
                             vname = name + '[' + str(idx) + ']'
                             dtype = type(var[0]).__name__
                             units = ''
-                            sources.append({'name': vname,
-                                            'type': dtype,
-                                            'valid': valid,
-                                            'units': units,
-                                            'connected': (vname in connected)
-                                           })
+                            sources.append({
+                                'name': vname,
+                                'type': dtype,
+                                'valid': valid,
+                                'units': units,
+                                'connected': (vname in connected)
+                            })
 
                 # connections to assembly can be passthrough (input to input)
                 if src is asm:
                     connected = src.list_inputs(connected=True)
                     for name in src.list_inputs():
-                        var = src.get(name)
-                        vtype = type(var).__name__
-                        units = ''
-                        sources.append({'name': name,
-                                        'type': vtype,
-                                        'valid': src.get_valid([name])[0],
-                                        'units': units,
-                                        'connected': (name in connected)
-                                       })
+                        if not '.' in name:  # vartree vars handled separately
+                            var = src.get(name)
+                            vtype = type(var).__name__
+                            units = ''
+                            meta = src.get_metadata(name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
+                            sources.append({
+                                'name': name,
+                                'type': vtype,
+                                'valid': src.get_valid([name])[0],
+                                'units': units,
+                                'connected': (name in connected)
+                            })
                         if isinstance(var, VariableTree):
                             for var_name in var.list_vars():
                                 vt_var = var.get(var_name)
+                                vt_var_name = name + '.' + var_name
                                 units = ''
                                 meta = var.get_metadata(var_name)
                                 if meta and 'units' in meta:
                                     units = meta['units']
-                                sources.append({'name': name + '.' + var_name,
-                                                'type':  type(vt_var).__name__,
-                                                'valid': valid,
-                                                'units': units,
-                                                'connected': (name in connected)
-                                               })
+                                sources.append({
+                                    'name': vt_var_name,
+                                    'type':  type(vt_var).__name__,
+                                    'valid': valid,
+                                    'units': units,
+                                    'connected': (vt_var_name in connected)
+                                })
                         elif vtype == 'ndarray':
                             for idx in range(0, len(var)):
                                 vname = name + '[' + str(idx) + ']'
                                 dtype = type(var[0]).__name__
                                 units = ''
-                                sources.append({'name': vname,
-                                                'type': dtype,
-                                                'valid': valid,
-                                                'units': units,
-                                                'connected': (vname in connected)
-                                               })
+                                sources.append({
+                                    'name': vname,
+                                    'type': dtype,
+                                    'valid': valid,
+                                    'units': units,
+                                    'connected': (vname in connected)
+                                })
 
                 conns['sources'] = sorted(sources, key=lambda d: d['name'])
 
@@ -436,83 +449,93 @@ class ConsoleServer(cmd.Cmd):
                     dst = asm
                 connected = dst.list_inputs(connected=True)
                 for name in dst.list_inputs():
-                    var = dst.get(name)
-                    vtype = type(var).__name__
-                    units = ''
-                    meta = dst.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    dests.append({'name': name,
-                                  'type': vtype,
-                                  'valid': dst.get_valid([name])[0],
-                                  'units': units,
-                                  'connected': (name in connected)
-                                })
-                    if isinstance(var, VariableTree):
-                        for var_name in var.list_vars():
-                            vt_var = var.get(var_name)
-                            units = ''
-                            meta = var.get_metadata(var_name)
-                            if meta and 'units' in meta:
-                                units = meta['units']
-                            dests.append({'name': name + '.' + var_name,
-                                          'type': type(vt_var).__name__,
-                                          'valid': valid,
-                                          'units': units,
-                                          'connected': (name in connected)
-                                         })
-                    elif vtype == 'ndarray':
-                        for idx in range(0, len(var)):
-                            vname = name + '[' + str(idx) + ']'
-                            dtype = type(var[0]).__name__
-                            units = ''
-                            dests.append({'name': vname,
-                                          'type': dtype,
-                                          'valid': valid,
-                                          'units': units,
-                                          'connected': (vname in connected)
-                                         })
-
-                # connections to assembly can be passthrough (output to output)
-                if dst == asm:
-                    connected = dst.list_outputs(connected=True)
-                    for name in dst.list_outputs():
+                    if not '.' in name:  # vartree vars handled separately
                         var = dst.get(name)
                         vtype = type(var).__name__
                         units = ''
                         meta = dst.get_metadata(name)
                         if meta and 'units' in meta:
                             units = meta['units']
-                        dests.append({'name': name,
-                                      'type': type(var).__name__,
-                                      'valid': dst.get_valid([name])[0],
-                                      'units': units,
-                                      'connected': (name in connected)
-                                     })
+                        dests.append({
+                            'name': name,
+                            'type': vtype,
+                            'valid': dst.get_valid([name])[0],
+                            'units': units,
+                            'connected': (name in connected)
+                        })
+                    if isinstance(var, VariableTree):
+                        for var_name in var.list_vars():
+                            vt_var = var.get(var_name)
+                            vt_var_name = name + '.' + var_name
+                            units = ''
+                            meta = var.get_metadata(var_name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
+                            dests.append({
+                                'name': vt_var_name,
+                                'type': type(vt_var).__name__,
+                                'valid': valid,
+                                'units': units,
+                                'connected': (vt_var_name in connected)
+                            })
+                    elif vtype == 'ndarray':
+                        for idx in range(0, len(var)):
+                            vname = name + '[' + str(idx) + ']'
+                            dtype = type(var[0]).__name__
+                            units = ''
+                            dests.append({
+                                'name': vname,
+                                'type': dtype,
+                                'valid': valid,
+                                'units': units,
+                                'connected': (vname in connected)
+                            })
+
+                # connections to assembly can be passthrough (output to output)
+                if dst == asm:
+                    connected = dst.list_outputs(connected=True)
+                    for name in dst.list_outputs():
+                        if not '.' in name:  # vartree vars handled separately
+                            var = dst.get(name)
+                            vtype = type(var).__name__
+                            units = ''
+                            meta = dst.get_metadata(name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
+                            dests.append({
+                                'name': name,
+                                'type': type(var).__name__,
+                                'valid': dst.get_valid([name])[0],
+                                'units': units,
+                                'connected': (name in connected)
+                            })
                         if isinstance(var, VariableTree):
                             for var_name in var.list_vars():
                                 vt_var = var.get(var_name)
+                                vt_var_name = name + '.' + var_name
                                 units = ''
                                 meta = var.get_metadata(var_name)
                                 if meta and 'units' in meta:
                                     units = meta['units']
-                                dests.append({'name': name + '.' + var_name,
-                                              'type': type(vt_var).__name__,
-                                              'valid': valid,
-                                              'units': units,
-                                              'connected': (name in connected)
-                                             })
+                                dests.append({
+                                    'name': vt_var_name,
+                                    'type': type(vt_var).__name__,
+                                    'valid': valid,
+                                    'units': units,
+                                    'connected': (vt_var_name in connected)
+                                })
                         elif vtype == 'ndarray':
                             for idx in range(0, len(var)):
                                 vname = name + '[' + str(idx) + ']'
                                 dtype = type(var[0]).__name__
                                 units = ''
-                                dests.append({'name': vname,
-                                              'type': dtype,
-                                              'valid': valid,
-                                              'units': units,
-                                              'connected': (vname in connected)
-                                             })
+                                dests.append({
+                                    'name': vname,
+                                    'type': dtype,
+                                    'valid': valid,
+                                    'units': units,
+                                    'connected': (vname in connected)
+                                })
 
                 conns['destinations'] = sorted(dests, key=lambda d: d['name'])
 

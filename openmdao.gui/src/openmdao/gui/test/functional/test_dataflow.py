@@ -325,6 +325,105 @@ def _test_connections(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_connect_nested(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # Import bem.py
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/bem.py')
+    workspace_page.add_file(file_path)
+
+    # Replace 'top' with bem.BEM
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page.set_library_filter('In Project')
+    workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
+
+    # get connection frame
+    workspace_page.show_dataflow('top')
+    top = workspace_page.get_dataflow_figure('top')
+    conn_page = top.connections_page()
+
+    # select BE0 and perf components
+    conn_page.move(-100, -100)
+    eq(conn_page.dialog_title, 'Connections: top')
+    conn_page.set_source_component('BE0')
+    conn_page.set_target_component('perf')
+    eq(conn_page.source_component, 'BE0')
+    eq(conn_page.target_component, 'perf')
+    time.sleep(0.5)
+    connection_count = conn_page.count_variable_connections()
+
+    # check that array is not expanded
+    delta_Cts = conn_page.find_variable_name('delta_Ct[0]')
+    eq(len(delta_Cts), 0)
+
+    # expand the destination array and connect the source to array variable
+    delta_Cts = conn_page.find_variable_name('delta_Ct')
+    eq(len(delta_Cts), 2)
+    x0 = delta_Cts[0].location['x']
+    x1 = delta_Cts[1].location['x']
+    if x0 > x1:
+        perf_delta_Ct = delta_Cts[0]
+    else:
+        perf_delta_Ct = delta_Cts[1]
+    chain = ActionChains(browser)
+    chain.double_click(perf_delta_Ct).perform()
+    delta_Cts = conn_page.find_variable_name('delta_Ct[0]')
+    eq(len(delta_Cts), 1)
+    conn_page.connect_vars('BE0.delta_Ct', 'perf.delta_Ct[0]')
+    time.sleep(0.5)
+    eq(conn_page.count_variable_connections(), connection_count + 1)
+
+    # switch source component, destination array should still be expanded
+    conn_page.set_source_component('BE1')
+    eq(conn_page.source_component, 'BE1')
+    time.sleep(0.5)
+    connection_count = conn_page.count_variable_connections()
+    delta_Cts = conn_page.find_variable_name('delta_Ct[1]')
+    eq(len(delta_Cts), 1)
+    conn_page.connect_vars('BE1.delta_Ct', 'perf.delta_Ct[1]')
+    time.sleep(0.5)
+    eq(conn_page.count_variable_connections(), connection_count + 1)
+
+    # check connecting var tree to var tree
+    conn_page.set_source_component('-- Assembly --')
+    eq(conn_page.source_component, '-- Assembly --')
+    time.sleep(0.5)
+    connection_count = conn_page.count_variable_connections()
+    conn_page.connect_vars('free_stream', 'perf.free_stream')
+    time.sleep(0.5)
+    eq(conn_page.count_variable_connections(), connection_count + 1)
+
+    # collapse delta_Ct array and confirm that it worked
+    chain = ActionChains(browser)
+    delta_Cts = conn_page.find_variable_name('delta_Ct')
+    eq(len(delta_Cts), 1)
+    chain.double_click(delta_Cts[0]).perform()
+    delta_Cts = conn_page.find_variable_name('delta_Ct[0]')
+    eq(len(delta_Cts), 0)
+
+    # check connecting var tree variable to variable
+    conn_page.set_target_component('BE0')
+    eq(conn_page.target_component, 'BE0')
+    time.sleep(0.5)
+    connection_count = conn_page.count_variable_connections()
+    free_streams = conn_page.find_variable_name('free_stream')
+    eq(len(free_streams), 1)
+    chain = ActionChains(browser)
+    chain.double_click(free_streams[0]).perform()
+    free_stream_V = conn_page.find_variable_name('free_stream.V')
+    eq(len(free_stream_V), 1)
+    free_stream_rho = conn_page.find_variable_name('free_stream.rho')
+    eq(len(free_stream_rho), 1)
+    conn_page.connect_vars('free_stream.rho', 'BE0.rho')
+    time.sleep(0.5)
+    eq(conn_page.count_variable_connections(), connection_count + 1)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 def _test_driverflows(browser):
     # Excercises display of driver flows (parameters, constraints, objectives).
     project_dict, workspace_page = startup(browser)
