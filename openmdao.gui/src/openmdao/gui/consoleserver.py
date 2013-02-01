@@ -401,6 +401,9 @@ class ConsoleServer(cmd.Cmd):
                             var = src.get(name)
                             vtype = type(var).__name__
                             units = ''
+                            meta = src.get_metadata(name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
                             sources.append({
                                 'name': name,
                                 'type': vtype,
