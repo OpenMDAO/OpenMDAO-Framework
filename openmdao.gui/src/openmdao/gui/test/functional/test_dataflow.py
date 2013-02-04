@@ -337,7 +337,6 @@ def _test_connect_nested(browser):
     # Replace 'top' with bem.BEM
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
 
     # get connection frame
@@ -422,6 +421,7 @@ def _test_connect_nested(browser):
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # Clean up.
+    conn_page.close()
     closeout(project_dict, workspace_page)
 
 
