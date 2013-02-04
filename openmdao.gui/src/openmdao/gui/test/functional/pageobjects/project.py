@@ -114,9 +114,11 @@ class ProjectsPage(BasePageObject):
 
     def delete_all_test_projects(self, verbose=False):
         """ Removes all projects with 'test project' in the name. """
+        self.search_input = '\n'
         elements = self.browser.find_elements_by_partial_link_text('testing project')
         while len(elements) > 0:
             for i in range(len(elements)):
+                self.search_input = '\n'
                 element = WebDriverWait(self.browser, TMO).until(
                     lambda browser: browser.find_element_by_partial_link_text('testing project'))
 
@@ -125,6 +127,7 @@ class ProjectsPage(BasePageObject):
                 if verbose:
                     print >>sys.stderr, 'Deleted', project_name
             # there may be more that were previously hidden due to the row limit
+            self.search_input = '\n'
             elements = self.browser.find_elements_by_partial_link_text('testing project')
 
 

@@ -548,6 +548,7 @@ def _test_ordering(browser):
     # Add parameter to SLSQP.
     editor = opt.editor_page(base_type='Driver')
     editor('parameters_tab').click()
+    editor.move(-100, -100)
     dialog = editor.new_parameter()
     dialog.target = 'ext.timeout'
     dialog.low = '0'
