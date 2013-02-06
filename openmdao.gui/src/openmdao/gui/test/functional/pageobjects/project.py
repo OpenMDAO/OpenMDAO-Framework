@@ -9,6 +9,7 @@ import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
@@ -29,12 +30,16 @@ class ProjectsPage(BasePageObject):
     def new_project(self):
         """ Clicks the 'new' button. Returns :class:`NewDialog`. """
         self('new_button').click()
-        return NewDialog(self.browser, self.port, (By.ID, "newProjectModal"))
+        page = NewDialog(self.browser, self.port, (By.ID, "newProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def import_project(self):
         """ Clicks the 'import' button. Returns :class:`ImportDialog`. """
         self('import_button').click()
-        return ImportDialog(self.browser, self.port, (By.ID, "importProjectModal"))
+        page = ImportDialog(self.browser, self.port, (By.ID, "importProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def logout(self):
         """
@@ -50,14 +55,21 @@ class ProjectsPage(BasePageObject):
         from login import LoginPage
         return LoginPage.verify(self.browser, self.port)
 
-    def contains(self, project_name):
+    def contains(self, project_name, expected=True):
         """ Returns True if `project_name` is in the list of projects. """
-        elements = self.browser.find_elements(By.TAG_NAME, 'tr')
-        if len(elements) == 0:
-            return False
-
-        self.search_input = project_name
-        return len(self.browser.find_elements_by_link_text(project_name)) > 0
+        if expected:
+            self.search_input = project_name
+            elements = self.browser.find_elements_by_link_text(project_name)
+        else:
+            self.browser.implicitly_wait(1)  # Not expecting to find anything.
+            try:
+                self.search_input = project_name  # No search input if no projects.
+                elements = self.browser.find_elements_by_link_text(project_name)
+            except TimeoutException:
+                elements = []
+            finally:
+                self.browser.implicitly_wait(TMO)
+        return len(elements) > 0
 
     def open_project(self, project_name):
         """ Clicks the named link. Returns :class:`WorkspacePage`. """
@@ -76,8 +88,9 @@ class ProjectsPage(BasePageObject):
         element = element.find_element_by_xpath('../../td[6]/a')
         element.click()
 
-        edit_dialog = EditDialog(self.browser, self.port, (By.ID, "editProjectModal"))
-        return edit_dialog
+        page = EditDialog(self.browser, self.port, (By.ID, "editProjectModal"))
+        time.sleep(1)  # Wait for silly fade-in.
+        return page
 
     def export_project(self, project_name):
         """ Clicks the 'export' button. Returns :class:`ExportDialog`. """
@@ -95,16 +108,17 @@ class ProjectsPage(BasePageObject):
         element.click()
 
         delete_dialog = DeleteDialog(self.browser, self.port, (By.XPATH, "/html/body/div[2]"))
-
-        time.sleep(5)
-
+        time.sleep(1)  # Wait for silly fade-in.
         delete_dialog.submit()
+        time.sleep(1)  # Wait for silly fade-out.
 
     def delete_all_test_projects(self, verbose=False):
         """ Removes all projects with 'test project' in the name. """
+        self.search_input = '\n'
         elements = self.browser.find_elements_by_partial_link_text('testing project')
         while len(elements) > 0:
             for i in range(len(elements)):
+                self.search_input = '\n'
                 element = WebDriverWait(self.browser, TMO).until(
                     lambda browser: browser.find_element_by_partial_link_text('testing project'))
 
@@ -113,19 +127,18 @@ class ProjectsPage(BasePageObject):
                 if verbose:
                     print >>sys.stderr, 'Deleted', project_name
             # there may be more that were previously hidden due to the row limit
+            self.search_input = '\n'
             elements = self.browser.find_elements_by_partial_link_text('testing project')
 
 
 class MetadataModal(BootstrapModal):
+
     submit_button = None
     cancel_button = None
 
     project_name = InputElement((By.ID, 'id_project_name'))
     description = InputElement((By.ID, 'id_description'))
     version = InputElement((By.ID, 'id_version'))
-
-    def __init__(self, browser, port, locator):
-        super(MetadataModal, self).__init__(browser, port, locator)
 
     def cancel(self):
         """ Clicks the 'cancel' button """
@@ -147,13 +160,11 @@ class MetadataModal(BootstrapModal):
 
 class NewDialog(MetadataModal):
     """ Modal for creating a new project """
+
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='New Project']"))
     cancel_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Cancel']"))
 
     create_button = submit_button
-
-    def __init__(self, browser, port, locator):
-        super(NewDialog, self).__init__(browser, port, locator)
 
     @staticmethod
     def get_random_project_name(size=6, chars=None):
@@ -165,20 +176,17 @@ class NewDialog(MetadataModal):
 
 class EditDialog(MetadataModal):
     """ Dialog for exporting a project """
+
     submit_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/input"))
     cancel_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/button"))
 
-    def __init__(self, browser, port, locator):
-        super(EditDialog, self).__init__(browser, port, locator)
 
 
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
+
     delete_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='OK']"))
     cancel_button = ButtonElement((By.XPATH, "div[@class='modal-footer']/a[text()='Cancel']"))
-
-    def __init__(self, browser, port, locator):
-        super(DeleteDialog, self).__init__(browser, port, locator)
 
     def submit(self):
         """Clicks the 'delete' button"""
@@ -200,9 +208,6 @@ class ImportDialog(MetadataModal):
     #####      self.input_element = "" # path to project file
     projectfile_input = InputElement((By.ID, 'id_projectfile'))
 
-    def __init__(self, browser, port, locator):
-        super(ImportDialog, self).__init__(browser, port, locator)
-
     def load_project(self, projectfile_path):
         '''Just load the project using the dialog. This
            does not complete the import. That is a separate step
@@ -216,3 +221,4 @@ class ImportDialog(MetadataModal):
         chars = chars or string.ascii_uppercase + string.digits
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
+
