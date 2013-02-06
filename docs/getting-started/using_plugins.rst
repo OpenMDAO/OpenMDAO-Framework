@@ -217,8 +217,6 @@ List plugins available on GitHub      ``plugin list --github``
 Install plugin foo from GitHub        ``plugin install --github foo``
 -----------------------------------   ------------------------------------
 Install version 0.3 of plugin foo     ``plugin install --github foo==0.3``
------------------------------------   ------------------------------------
-Display docs for a plugin             ``plugin docs foo``
 ===================================   ====================================
 
 

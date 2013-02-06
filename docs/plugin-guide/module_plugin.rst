@@ -388,7 +388,7 @@ command.
    directory.
    
 
-We can view the docs for a plugin using the ``plugin docs`` command.  Note 
+We can view the docs for a plugin using the ``openmdao docs`` command.  Note 
 that this only works for installed plugin distributions.
 
 .. program:: plugin_docs
