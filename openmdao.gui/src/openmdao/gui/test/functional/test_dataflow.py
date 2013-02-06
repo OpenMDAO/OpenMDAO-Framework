@@ -120,6 +120,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
     props.move(0, -120)  # Move up for short displays.
+    time.sleep(0.5)      # Wait for header update.
     eq(props.header, 'Connectable: top.comp1')
     props.move(-100, -100)
     inputs = props.inputs
@@ -336,7 +337,6 @@ def _test_connect_nested(browser):
     # Replace 'top' with bem.BEM
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
 
     # get connection frame
@@ -421,6 +421,7 @@ def _test_connect_nested(browser):
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # Clean up.
+    conn_page.close()
     closeout(project_dict, workspace_page)
 
 
@@ -646,6 +647,7 @@ def _test_ordering(browser):
     # Add parameter to SLSQP.
     editor = opt.editor_page(base_type='Driver')
     editor('parameters_tab').click()
+    editor.move(-100, -100)
     dialog = editor.new_parameter()
     dialog.target = 'ext.timeout'
     dialog.low = '0'

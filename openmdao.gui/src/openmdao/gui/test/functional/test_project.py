@@ -6,8 +6,8 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 from util import main, setup_server, teardown_server, generate, \
-                 begin, new_project, edit_project, get_browser_download_location_path, \
-                 import_project
+                 begin, new_project, edit_project, import_project, \
+                 get_browser_download_location_path
 
 
 @with_setup(setup_server, teardown_server)
@@ -42,8 +42,7 @@ def _test_new_project(browser):
     projects_page = edit_project(edit_dialog,
                          project_dict['name'],
                          project_dict['description'],
-                         project_dict['version'],
-                         load_workspace=False)
+                         project_dict['version'])
 
     # Make sure all the new project meta data was saved correctly.
     edit_dialog = projects_page.edit_project(project_dict['name'])
@@ -54,25 +53,35 @@ def _test_new_project(browser):
 
     # Export the project
     projects_page.export_project(project_dict['name'])
-    time.sleep(5)  # give the download some time (ok LOTS of time) to complete
-    # See if the file is in the downloads directory
-    project_path = glob.glob(os.path.join(browser_download_location_path + "/" + project_dict['name'].replace(" ", "_")) + "*")
-    assert (len(project_path) == 1)
+    project_pattern = project_dict['name'].replace(' ', '_') + '-*.proj'
+    project_pattern = os.path.join(browser_download_location_path,
+                                   project_pattern)
+    for i in range(10): # Give the download time to complete.
+        time.sleep(1)
+        project_path = glob.glob(project_pattern)
+        if project_path:
+            break
+    else:
+        assert False, 'Download of %r timed-out' % project_pattern
+    assert len(project_path) == 1
+    project_path = project_path[0]
 
     # Delete the project in preparation for reimporting
     projects_page.delete_project(project_dict['name'])
 
     # Make sure the project was deleted
-    assert not projects_page.contains(project_dict['name'])
+    assert not projects_page.contains(project_dict['name'], False)
 
     # Import the project and give it a new name
-    projects_page, project_dict = import_project(projects_page.import_project(), project_path,
-                                              verify=True, load_workspace=False)
+    projects_page, project_dict = import_project(projects_page.import_project(),
+                                                 project_path, verify=True,
+                                                 load_workspace=False)
     # Go back to projects page to see if it is on the list.
     assert projects_page.contains(project_dict['name'])
 
     # remove the downloaded file
-    os.remove(project_path[0])
+    os.remove(project_path)
+
 
 if __name__ == '__main__':
     main()
