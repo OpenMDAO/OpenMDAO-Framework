@@ -18,25 +18,37 @@ class LazyComponent(Component):
     and you wish to only calculate them when they are relevant to the current simulation. 
     """
     
-    def _anytrait_changed(self, name, old, new): 
-        #note: could filter for only outputs here, but it's not necessary, so just 
-        # adds extra overhead
-        try: 
-            self._updated_traits[name] = new
-        except AttributeError:
-            self._updated_traits = {}
-            self._updated_traits[name] = new
+    def __init__(self): 
+        self._updated_traits = {}
+        self._old_traits_vals = {} 
+        #need this so I can empty the other one 
 
-        try: 
-            self._old_traits_vals[name] = new
-        except AttributeError: 
-            self._old_traits_vals = {}
-            self._old_traits_vals[name] = new
+        # register callbacks for all of our 'out' traits
+        for name, trait in self.class_traits().items():
+            if trait.iotype == 'out':
+                self.on_trait_change(self._output_modified, name)
+
+        super(LazyComponent, self).__init__()
+
+    def _output_modified(self, obj, name, old, new): 
+        self._updated_traits[name] = new
+        self._old_traits_vals[name] = new 
+
+    def add_trait(self, name, trait): 
+        super(LazyComponent, self).add_trait(name, trait)
+
+        if trait.iostatus == "out":
+            self.on_trait_change(self._output_modified, name)
+
+    def remove_trait(self, name, trait):
+        super(LazyComponent, self).remove_trait(name, trait)
+        if trait.iostatus == "out":
+            self.on_trait_change(self._output_modified, name, remove=True)
 
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
         for k in self._updated_traits.iterkeys(): 
-            self._updated_traits[k] = None
+            self._updated_traits[k] = None #only clear updated here, so I can keep track of the old values in old_traits
         self._connected_outputs = self.list_outputs(connected=True)
         
     def _post_execute(self): #probably not the most efficient, but it works
@@ -61,3 +73,4 @@ class LazyComponent(Component):
                 valids[name] = True        
             else:
                 valids[name] = False    
+
