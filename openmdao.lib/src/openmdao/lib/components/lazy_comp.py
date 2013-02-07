@@ -36,7 +36,6 @@ class LazyComponent(Component):
 
     def add_trait(self, name, trait): 
         super(LazyComponent, self).add_trait(name, trait)
-
         if trait.iostatus == "out":
             self.on_trait_change(self._output_modified, name)
 
