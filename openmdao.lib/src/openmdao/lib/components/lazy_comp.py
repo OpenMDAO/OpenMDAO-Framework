@@ -19,6 +19,8 @@ class LazyComponent(Component):
     """
     
     def __init__(self): 
+        super(LazyComponent, self).__init__()
+
         self._updated_traits = {}
         self._old_traits_vals = {} 
         #need this so I can empty the other one 
@@ -27,8 +29,6 @@ class LazyComponent(Component):
         for name, trait in self.class_traits().items():
             if trait.iotype == 'out':
                 self.on_trait_change(self._output_modified, name)
-
-        super(LazyComponent, self).__init__()
 
     def _output_modified(self, obj, name, old, new): 
         self._updated_traits[name] = new
