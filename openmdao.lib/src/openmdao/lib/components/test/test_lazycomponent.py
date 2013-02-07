@@ -147,8 +147,21 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(valids['y'], True) 
         self.assertEqual(valids['z'], False)
 
+    def test_dynamic_trait(self): 
+        self.top.connect('t.x', 's.i1')
+        self.top.connect('t.y', 's.i2')
+
+        self.top.t.add('w', Float(0.0, iotype="out"))
+        self.top.connect('t.w', 's.i3')
+
+        try:
+            self.top.run()
+        except RuntimeError as err: 
+            msg = str(err)
+            self.assertEqual(msg, "t (1-1): output 'w' is connected to something in your model, but was not calculated during execution")
+        else: 
+            self.fail("RuntimeError Expected")
 
 if __name__ == "__main__": 
     unittest.main()
 
-     

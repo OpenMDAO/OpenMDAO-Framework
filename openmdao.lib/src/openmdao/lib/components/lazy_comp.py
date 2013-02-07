@@ -36,12 +36,12 @@ class LazyComponent(Component):
 
     def add_trait(self, name, trait): 
         super(LazyComponent, self).add_trait(name, trait)
-        if trait.iostatus == "out":
+        if trait.iotype == "out":
             self.on_trait_change(self._output_modified, name)
 
     def remove_trait(self, name, trait):
         super(LazyComponent, self).remove_trait(name, trait)
-        if trait.iostatus == "out":
+        if trait.iotype == "out":
             self.on_trait_change(self._output_modified, name, remove=True)
 
     def _pre_execute(self, force=False): 
