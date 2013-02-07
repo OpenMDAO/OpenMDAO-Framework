@@ -298,7 +298,7 @@ b = Float(0.0, iotype='out')
 
     # Add some Foo instances.
     workspace_page.show_dataflow('top')
-    time.sleep(1)  # Wait for it to get registered.
+    time.sleep(2)  # Wait for it to get registered.
     workspace_page.set_library_filter('In Project')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
