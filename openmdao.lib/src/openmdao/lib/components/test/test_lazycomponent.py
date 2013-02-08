@@ -162,6 +162,25 @@ class TestLazyComponent(unittest.TestCase):
         else: 
             self.fail("RuntimeError Expected")
 
+    def test_output_stays_at_default(self): 
+        """check that validity is managed properly if outputs are calcualted, 
+        but their values stay at the initial/default setting""" 
+
+        self.top.connect('t.x', 's.i1')
+        self.top.set('t.a', -1)
+
+        self.top.run()
+
+        self.assertEqual(self.top.t.x, 0)
+        self.assertEqual(self.top.t.y, 0)
+        self.assertEqual(self.top.t.z, 0)
+
+        valids = self.top.t._valid_dict
+        self.assertEqual(valids['x'], True)
+        self.assertEqual(valids['y'], False) 
+        self.assertEqual(valids['z'], False)
+
+
 if __name__ == "__main__": 
     unittest.main()
 

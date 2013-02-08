@@ -31,7 +31,7 @@ class LazyComponent(Component):
                 self.on_trait_change(self._output_modified, name)
 
     def _output_modified(self, obj, name, old, new): 
-        self._updated_traits[name] = new
+        self._updated_traits[name] = True
         self._old_traits_vals[name] = new 
 
     def add_trait(self, name, trait): 
