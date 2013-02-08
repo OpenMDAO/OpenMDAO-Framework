@@ -68,8 +68,8 @@ class LazyComponent(Component):
             if updated and self._updated_traits[name]!=None:
                 valids[name] = True
             #updated, conncected, but unchanged so the changed trigger never fired
-            elif updated and (self._old_traits_vals[name]==self.get(name)) and (name in self._connected_outputs): 
-                valids[name] = True        
+            #elif updated and (self._old_traits_vals[name]==self.get(name)) and (name in self._connected_outputs): 
+            #    valids[name] = True        
             else:
                 valids[name] = False    
 
