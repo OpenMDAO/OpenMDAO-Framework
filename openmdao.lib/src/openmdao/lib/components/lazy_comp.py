@@ -20,29 +20,6 @@ class LazyComponent(Component):
     and you wish to only calculate them when they are relevant to the current simulation. 
     """
     
-    def __init__(self): 
-        super(LazyComponent, self).__init__()
-
-        self._updated_traits = {}
-
-        # register callbacks for all of our 'out' traits
-        for name, trait in self.class_traits().items():
-            if trait.iotype == 'out':
-                self.on_trait_change(self._output_modified, name)
-
-    def _output_modified(self, obj, name, old, new): 
-        self._updated_traits[name] = True
-
-    def add_trait(self, name, trait): 
-        super(LazyComponent, self).add_trait(name, trait)
-        if trait.iotype == "out":
-            self.on_trait_change(self._output_modified, name)
-
-    def remove_trait(self, name, trait):
-        super(LazyComponent, self).remove_trait(name, trait)
-        if trait.iotype == "out":
-            self.on_trait_change(self._output_modified, name, remove=True)
-
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
         self._updated_traits = {}
