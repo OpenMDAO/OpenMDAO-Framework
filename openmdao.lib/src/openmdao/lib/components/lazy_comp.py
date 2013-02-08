@@ -27,16 +27,6 @@ class LazyComponent(Component):
     def _post_execute(self): 
         super(LazyComponent, self)._post_execute()
 
-        #NOTE: not making this check right now
-        #check to make sure all the necessary outputs were calculated
-        #for name in self._connected_outputs: 
-        #    try: 
-        #        self._updated_traits[name]
-        #    except KeyError: 
-        #      self.raise_exception("output '%s' is connected to something in "
-        #            "your model, but was not calculated during execution"%name, RuntimeError)
-
-        # make our output Variables valid only if they are connected to something
         valids = self._valid_dict
         for name in self.list_outputs(): 
             if name in self._connected_outputs:
