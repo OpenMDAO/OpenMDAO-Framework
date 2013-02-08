@@ -36,7 +36,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_bad_recorder(self):
         try:
-            self.top.driver.recorders = DumpCaseRecorder(sys.stdout)
+            self.top.driver.recorders = DumpCaseRecorder()
         except Exception as err:
             self.assertTrue(str(err).startswith("The 'recorders' trait of a SimpleCaseIterDriver"))
             self.assertTrue(str(err).endswith(" was specified."))
