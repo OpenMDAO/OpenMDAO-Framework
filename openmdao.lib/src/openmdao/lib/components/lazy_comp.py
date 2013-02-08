@@ -22,7 +22,6 @@ class LazyComponent(Component):
     
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
-        self._updated_traits = {}
         self._connected_outputs = self.list_outputs(connected=True)
         
     def _post_execute(self): 
