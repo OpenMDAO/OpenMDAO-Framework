@@ -576,6 +576,28 @@ class DependsTestCase2(unittest.TestCase):
         top.connect('c1.length', 'c2.a')
         top.run()
         assert_rel_error(self, top.c2.a, 2., 0.0001)
+
+    def test_array_index_invalidation(self):
+        
+        class Dummy(Component): 
+        
+            x = Array([[-1, 1],[-2, 2]], iotype="in", shape=(2,2))
+            y = Array([[-1, 1],[-2, 2]], iotype="out", shape=(2,2))
+            
+            def execute(self): 
+                self.y = self.x
+
+        comp = Dummy()
+        self.assertEqual(comp.is_valid(), False)
+        comp.run()
+        self.assertEqual(comp.is_valid(), True)
+        comp.x = [[-1, 1],[-2, 3]]
+        self.assertEqual(comp.is_valid(), False)
+        comp.run()
+        self.assertEqual(comp.is_valid(), True)
+        comp.x[1] = [3, 4]
+        #comp.x[1][1] = 32.0
+        self.assertEqual(comp.is_valid(), False)
         
 
 class ArrayComp(Component):

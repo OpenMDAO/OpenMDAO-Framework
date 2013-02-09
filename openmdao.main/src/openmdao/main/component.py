@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Array
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -225,10 +225,11 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        #if name.endswith('_items'):
-            #n = name[:-6]
-            #if n in self._valid_dict:
-                #name = n
+        print name
+        if name.endswith('_items'):
+            n = name[:-6]
+            if n in self._valid_dict:
+                name = n
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -592,10 +593,16 @@ class Component(Container):
                 self._num_input_caseiters += 1
 
     def _set_input_callback(self, name, remove=False):
-        #t = self.trait(name)
-        #if t.has_items or (t.trait_type and t.trait_type.has_items):
-        #    name = name+'[]'
+
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
+        
+        # Arrays get an additional listener for access by index.
+        t = self.trait(name)
+        if t.handler.has_items:
+            print name, "has items"
+            name = name+'_items'
+            self.on_trait_change(self._input_trait_modified, name, remove=remove)
+
 
     def remove_trait(self, name):
         """Overrides base definition of *add_trait* in order to
