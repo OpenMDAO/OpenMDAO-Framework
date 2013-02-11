@@ -2,7 +2,6 @@ import cStringIO as StringIO
 import os.path
 import shutil
 import tarfile
-from ConfigParser import SafeConfigParser
 from tempfile import mkdtemp
 from time import strftime
 from urllib2 import HTTPError
@@ -11,11 +10,10 @@ from tornado import web
 
 from openmdao.main import __version__
 from openmdao.main.project import parse_archive_name, Project
-from openmdao.main.repo import find_vcs
+from openmdao.main.repo import find_vcs, DumbRepo
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename, onerror
-from openmdao.util.log import logger
 
 
 def _get_unique_name(dirname, basename):
@@ -60,23 +58,6 @@ class DeleteHandler(ReqHandler):
         pdb.remove(project_id)
         self.redirect('/')
 
-    @web.authenticated
-    def get(self, project_id):
-        pdb = Projects()
-        project = pdb.get(project_id)
-
-        if project['projpath']:
-            dirname = str(project['projpath'])
-            if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=onerror)
-
-        pdb.remove(project_id)
-        self.redirect('/')
-
-    @web.authenticated
-    def get(self, project_id):
-        self.redirect('/')
-
 
 class DetailHandler(ReqHandler):
     ''' Get/set project details.
@@ -117,7 +98,7 @@ class DetailHandler(ReqHandler):
             project['version'] = forms['version'].strip()
         else:
             project['version'] = ''
-            
+
         directory = forms.get('directory', self.get_project_dir())
 
         # if there's no proj dir yet, create an empty one
@@ -135,7 +116,7 @@ class DetailHandler(ReqHandler):
             i = 1
             while os.path.exists(os.path.join(directory, unique)):
                 unique = '%s_%s' % (filename, str(i))
-                i = i+1
+                i = i + 1
 
             project['projpath'] = os.path.join(directory, unique)
 
@@ -162,7 +143,6 @@ class DetailHandler(ReqHandler):
 
     @web.authenticated
     def get(self, project_id):
-
         pdb = Projects()
         project = pdb.get(project_id)
         self.render('projdb/project_detail.html', project=project,
@@ -196,7 +176,7 @@ class DownloadHandler(ReqHandler):
                     self.set_header('Content-Disposition',
                                     'attachment; filename=%s-%s-%s.proj' %
                                     (form_proj, form_ver, form_date))
-    
+
                     try:
                         self.write(proj_file.read())
                     finally:
@@ -212,7 +192,6 @@ class DownloadHandler(ReqHandler):
         else:
             raise HTTPError(filename, 403, "no file found for %s" % \
                                             project['projectname'], None, None)
-
 
 
 class NewHandler(ReqHandler):
@@ -251,13 +230,13 @@ class NewHandler(ReqHandler):
         i = 1
         while os.path.exists(os.path.join(directory, unique)):
             unique = '%s_%s' % (filename, str(i))
-            i = i+1
+            i = i + 1
 
         project['projpath'] = os.path.join(directory, unique)
 
         pdb.new(project)
         os.mkdir(project['projpath'])
-                
+
         # Update project settings.
         proj = Project(project['projpath'])
         dummy = proj.get_info()  # Just to get required keys.
@@ -268,6 +247,7 @@ class NewHandler(ReqHandler):
 
         self.redirect("/workspace/project?projpath=" + project['projpath'])
 
+
 class ImportHandler(ReqHandler):
     ''' Get/set project details.
     '''
@@ -275,13 +255,11 @@ class ImportHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.render('projdb/import-metadata-fields.html',
-                    projectname='someproject'
-                    )
+                    projectname='someproject')
 
     @web.authenticated
     def post(self):
-
-        if not self.request.arguments.has_key( "projectname" ):
+        if not "projectname" in self.request.arguments:
             # First step in the import process.
             #   Just get the name, description and version of the
             #   project the user wants to import.
@@ -304,14 +282,14 @@ class ImportHandler(ReqHandler):
                     if vcslist:
                         vcs = vcslist[0](unique)
                     else:
-                        vcs = DumbVCS(unique)
+                        vcs = DumbRepo(unique)
                     vcs.init_repo()
-    
+
                     # Update project dict with info section of config file.
                     proj = Project(unique)
-                    
+
                     shutil.rmtree(unique)
-    
+
                     project_info = proj.get_info()
                     self.render('projdb/import-metadata-fields.html',
                                 projectname=parse_archive_name(unique),
@@ -325,7 +303,6 @@ class ImportHandler(ReqHandler):
                 if field in self.request.arguments.keys():
                     forms[field] = self.request.arguments[field][0]
 
-
             sourcefile = self.request.files['projectfile'][0]
             if sourcefile:
                 filename = sourcefile['filename']
@@ -333,7 +310,7 @@ class ImportHandler(ReqHandler):
 
                     unique = _get_unique_name(self.get_project_dir(),
                                               parse_archive_name(filename))
-                
+
                     pdb = Projects()
 
                     project = {}
@@ -345,9 +322,9 @@ class ImportHandler(ReqHandler):
                     project['projpath'] = unique
 
                     os.mkdir(unique)
-                
+
                     buff = StringIO.StringIO(sourcefile['body'])
-                  
+
                     archive = tarfile.open(fileobj=buff, mode='r:gz')
                     archive.extractall(path=unique)
 
@@ -355,7 +332,7 @@ class ImportHandler(ReqHandler):
                     if vcslist:
                         vcs = vcslist[0](unique)
                     else:
-                        vcs = DumbVCS(unique)
+                        vcs = DumbRepo(unique)
                     vcs.init_repo()
 
                     # Update project settings.
@@ -371,8 +348,6 @@ class ImportHandler(ReqHandler):
                     self.redirect("/workspace/project?projpath=" + project['projpath'])
 
             self.redirect("/")
-    
-
 
 
 handlers = [
