@@ -107,7 +107,7 @@ class Array(TraitArray):
             
         super(Array, self).__init__(dtype=dtype, value=default_value,
                                     **metadata)
-
+        
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -224,7 +224,7 @@ class Array(TraitArray):
                 attr[field] = meta[field]
         
         return attr, None
-
+    
             
 # register a flattener for Cases
 from openmdao.main.case import flatteners
