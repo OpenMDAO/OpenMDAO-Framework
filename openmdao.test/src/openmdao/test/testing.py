@@ -7,8 +7,6 @@ import nose
 from nose.plugins.base import Plugin
 from pkg_resources import working_set, to_filename
 
-from openmdao.main.resource import ResourceAllocationManager
-
 import atexit
 
 
@@ -229,7 +227,7 @@ def run_openmdao_suite(argv=None):
             os.remove(path)
 
     # Avoid having any user-defined resources causing problems during testing.
-    ResourceAllocationManager.configure('')
+    os.environ['OPENMDAO_RAMFILE'] = ''
 
     if '--with-coverage' in args:
         args.append('--cover-erase')
