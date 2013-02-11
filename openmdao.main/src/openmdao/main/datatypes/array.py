@@ -8,8 +8,6 @@ __all__ = ["Array"]
 import logging
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Event
-
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
@@ -49,29 +47,12 @@ else:
     from enthought.traits.api import Array as TraitArray
 
 
-class TraitArrayEvent(object):
-
-    def __init__ (changed = None):
-        """
-        Parameters
-        ----------
-        changed : array
-            Updated elements of an array
-        """
-        
-        if changed is None:
-            changed = {}
-        self.changed = changed
-
-
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
     The unit applies to the entire array."""
     
     implements(IVariable)
 
-    _items_event = None
-    
     def __init__(self, default_value=None, dtype = None, shape = None,
                  iotype=None, desc=None, units=None, **metadata):
         
@@ -127,8 +108,6 @@ class Array(TraitArray):
         super(Array, self).__init__(dtype=dtype, value=default_value,
                                     **metadata)
         
-        self.has_items = True
-
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -246,16 +225,6 @@ class Array(TraitArray):
         
         return attr, None
     
-    def items_event ( self ):
-        ''' Need _items handling for the array element listener.'''
-        
-        cls = self.__class__
-        if cls._items_event is None:
-            cls._items_event = \
-                Event( TraitArrayEvent, is_base = False ).as_ctrait()
-
-        return cls._items_event    
-
             
 # register a flattener for Cases
 from openmdao.main.case import flatteners

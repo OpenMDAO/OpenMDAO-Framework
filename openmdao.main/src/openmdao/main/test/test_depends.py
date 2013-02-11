@@ -6,7 +6,7 @@ import math
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Float, Int, Array
+from openmdao.lib.datatypes.api import Float, Int, Array, List, Dict
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -577,12 +577,13 @@ class DependsTestCase2(unittest.TestCase):
         top.run()
         assert_rel_error(self, top.c2.a, 2., 0.0001)
 
-    def test_array_index_invalidation(self):
+    def test_index_invalidation(self):
         
         class Dummy(Component): 
         
-            x = Array([[-1, 1],[-2, 2]], iotype="in", shape=(2,2))
-            y = Array([[-1, 1],[-2, 2]], iotype="out", shape=(2,2))
+            x = Array([[-1, 1],[-2, 2]], iotype='in', shape=(2,2))
+            xlist = List([1,2], iotype='in')
+            xdict = Dict({'a' : 'b'}, iotype='in')
             
             def execute(self): 
                 self.y = self.x
@@ -591,13 +592,22 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(comp.is_valid(), False)
         comp.run()
         self.assertEqual(comp.is_valid(), True)
-        comp.x = [[-1, 1],[-2, 3]]
+
+        comp.xlist.append(3)
         self.assertEqual(comp.is_valid(), False)
         comp.run()
         self.assertEqual(comp.is_valid(), True)
-        comp.x[1] = [3, 4]
-        #comp.x[1][1] = 32.0
+        
+        comp.xdict['d'] = 'e'
         self.assertEqual(comp.is_valid(), False)
+        comp.run()
+        self.assertEqual(comp.is_valid(), True)
+        
+        # Array invalidation not supported yet
+        #comp.x[1][1] = 32.0
+        #self.assertEqual(comp.is_valid(), False)
+        #comp.run()
+        #self.assertEqual(comp.is_valid(), True)
         
 
 class ArrayComp(Component):

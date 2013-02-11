@@ -225,11 +225,12 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        print name
+        
         if name.endswith('_items'):
             n = name[:-6]
             if n in self._valid_dict:
                 name = n
+                
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -596,12 +597,15 @@ class Component(Container):
 
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
         
-        # Arrays get an additional listener for access by index.
+        # Certain containers get an additional listener for access by index.
+        # Currently, List and Dict are supported, as well as any other 
+        # Enthought or user-defined trait whose handler supports it.
+        # Array is not supported yet.
         t = self.trait(name)
         if t.handler.has_items:
-            print name, "has items"
-            name = name+'_items'
-            self.on_trait_change(self._input_trait_modified, name, remove=remove)
+            name = name + '_items'
+            self.on_trait_change(self._input_trait_modified, name, 
+                                 remove=remove)
 
 
     def remove_trait(self, name):
