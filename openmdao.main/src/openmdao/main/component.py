@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Array
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
