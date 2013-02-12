@@ -526,7 +526,6 @@ def import_project(import_project_modal, projectfile_path, verify=False,
     Creates a randomly-named imported new project.
     Returns ``(projects_page, info_dict)``
     """
-    print import_project_modal.modal_title, projectfile_path
     assert import_project_modal.modal_title.startswith('Import Project')
 
     # load project
