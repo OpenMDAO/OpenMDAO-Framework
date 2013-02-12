@@ -241,23 +241,9 @@ def find_dataflow_component_names(page):
         logging.error('get_dataflow_component_names: n_found %s', n_found)
         return names
 
-    #for i in range(len(dataflow_component_headers)):
-        #for retry in range(10):  # This has had issues...
-            #try:
-                #names.append(root.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-            #except StaleElementReferenceException:
-                #logging.warning('get_dataflow_component_names:'
-                                #' StaleElementReferenceException')
-            #except IndexError:
-                #logging.warning('get_dataflow_component_names:'
-                                #' IndexError for i=%s, headers=%s',
-                                #i, len(dataflow_component_headers))
-            #else:
-                #break
 
-    #if len(names) != len(dataflow_component_headers):
-        #logging.error('get_dataflow_component_names:'
-                      #' expecting %d names, got %s',
-                      #len(dataflow_component_headers), names)
-    #return names
-
+def get_pathname(fig):
+    '''Get the OpenMDAO pathname for a figure'''
+    figid = fig.get_attribute('id')  # get the ID of the element here
+    script = "return jQuery('#" + figid + "').data('pathname')"
+    return browser.execute_script(script)

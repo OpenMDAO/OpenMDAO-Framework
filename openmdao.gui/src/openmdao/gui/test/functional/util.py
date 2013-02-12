@@ -493,7 +493,7 @@ def new_project(new_project_modal, verify=False, load_workspace=False):
     Returns ``(projects_page, info_dict)``
     """
 
-    time.sleep(2)  # Otherwise, intermittent failure of next assert
+    time.sleep(4)  # Otherwise, intermittent failure of next assert
     eq(new_project_modal.modal_title[:11], 'New Project')
 
     if verify:

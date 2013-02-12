@@ -15,11 +15,12 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from util import slot_drop, slot_reset, \
                  get_dataflow_fig_in_assembly_editor, put_assembly_on_grid, \
-                 put_element_on_grid, get_pathname, ensure_names_in_workspace, \
+                 put_element_on_grid, ensure_names_in_workspace, \
                  drag_element_to, release, check_highlighting, getDropableElements, \
                  replace_driver
 
 from pageobjects.component import NameInstanceDialog
+from pageobjects.dataflow import get_pathname
 from pageobjects.util import ArgsPrompt
 
 
@@ -460,7 +461,7 @@ def _test_component_to_complex_workflow(browser):
     ############################################################################
     workspace_page('dataflow_tab').click()
     workspace_page.expand_object(sim_name)
-    workspace_page.add_object_to_workflow(paraboloid_pathname, sim_name)    
+    workspace_page.add_object_to_workflow(paraboloid_pathname, sim_name)
 
     # Confirm that there is one more workflow component figure
     workspace_page('workflow_tab').click()
@@ -476,7 +477,7 @@ def _test_component_to_complex_workflow(browser):
     workspace_page('dataflow_tab').click()
     simsim_name = sim_name + '.sim_acc'
     workspace_page.add_object_to_workflow(paraboloid_pathname, simsim_name)
-    
+
     # Confirm that there is one more workflow component figure
     workspace_page('workflow_tab').click()
     eq(len(workspace_page.get_workflow_component_figures()), 18)
@@ -489,17 +490,17 @@ def _test_component_to_complex_workflow(browser):
     # Drop paraboloid component onto the vehicle workflow under sim_acc
     # This should NOT work since the paraboloid is not in the vehicle assembly
     ############################################################################
-    
+
     # These error messages are tested in SequentialFlow, though we may want
     # to have one test that makes sure that the error dialog makes it through.
-    
+
     #workspace_page('dataflow_tab').click()
     #workspace_page.expand_object(simsim_name)
     #simsimsim_name = simsim_name + '.vehicle'
     #workspace_page.add_object_to_workflow(paraboloid_pathname, simsimsim_name)
     #message = NotifierPage.wait(workspace_page)
     #eq(message, "x")
-    
+
     # Confirm that there is NOT a new workflow component figure
     #workspace_page('workflow_tab').click()
     #eq(len(workspace_page.get_workflow_component_figures()), 18)
@@ -550,7 +551,7 @@ def _test_drop_onto_layered_div(browser):
     #workspace_page.expand_object(sim_name)
     #simsim_name = sim_name + '.' + 'sim_EPA_city'
     #workspace_page.add_object_to_workflow(paraboloid_pathname, simsim_name)
-    
+
     ## Confirm there is one more workflow component figure in the editor
     #workspace_page('workflow_tab').click()
     #eq(len(driver_editor.get_workflow_component_figures()), 6)
@@ -560,11 +561,11 @@ def _test_drop_onto_layered_div(browser):
 
     ## Confirm that the paraboloid has been added to the sim_EPA_city workflow
     ## by trying to access it.
-    #obj = workspace_page.find_object_button(simsim_name + "." + paraboloid_name)    
+    #obj = workspace_page.find_object_button(simsim_name + "." + paraboloid_name)
 
-    # Don't see the reason to verfiy again that you can't add something to an 
+    # Don't see the reason to verfiy again that you can't add something to an
     # out-of-scope workflow. -- KTM
-    
+
     ## Try dragging paraboloid component into vehicle workflow under sim_EPA_city
     ## should NOT add to the list of workflow component figures
     #workspace_page.expand_object(sim_name)
