@@ -17,11 +17,11 @@ from openmdao.util.fileutil import clean_filename, onerror
 
 
 def _get_unique_name(dirname, basename):
-    """Returns a unique pathname for a file with the given basename
+    """Returns a unique 'clean' pathname with the given basename
     in the specified directory.
     """
     i = 1
-    name = basename
+    name = clean_filename(basename)
     while os.path.exists(os.path.join(dirname, name)):
         name = '%s_%d' % (basename, i)
         i += 1
@@ -99,26 +99,11 @@ class DetailHandler(ReqHandler):
         else:
             project['version'] = ''
 
-        directory = forms.get('directory', self.get_project_dir())
-
         # if there's no proj dir yet, create an empty one
         if not project['projpath']:
-
-            version = project['version']
+            directory = self.get_project_dir()
             pname = project['projectname']
-
-            if len(version):
-                filename = clean_filename('%s-%s' % (pname, version))
-            else:
-                filename = clean_filename(pname)
-
-            unique = filename
-            i = 1
-            while os.path.exists(os.path.join(directory, unique)):
-                unique = '%s_%s' % (filename, str(i))
-                i = i + 1
-
-            project['projpath'] = os.path.join(directory, unique)
+            project['projpath'] = _get_unique_name(directory, pname)
 
         if project_is_new:
             pdb.new(project)

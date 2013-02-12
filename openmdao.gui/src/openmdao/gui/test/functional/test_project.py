@@ -79,6 +79,9 @@ def _test_new_project(browser):
     # Go back to projects page to see if it is on the list.
     assert projects_page.contains(project_dict['name'])
 
+    # Delete the project that was just imported
+    projects_page.delete_project(project_dict['name'])
+
     # remove the downloaded file
     os.remove(project_path)
 
