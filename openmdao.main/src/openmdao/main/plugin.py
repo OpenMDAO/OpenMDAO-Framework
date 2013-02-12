@@ -1079,14 +1079,14 @@ def _get_plugin_parser():
     parser.set_defaults(func=plugin_build_docs)
 
     
-    parser = subparsers.add_parser('docs', 
-                                   help="display docs for a plugin")
-    parser.usage = "plugin docs <plugin_dist_name>"
+    #parser = subparsers.add_parser('docs', 
+    #                               help="display docs for a plugin")
+    #parser.usage = "plugin docs <plugin_dist_name>"
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str, 
                         dest='browser', choices=webbrowser._browsers.keys(),
                         help="browser name")
-    parser.set_defaults(func=plugin_docs)
+    #parser.set_defaults(func=plugin_docs)
     
     
     parser = subparsers.add_parser('quickstart',
