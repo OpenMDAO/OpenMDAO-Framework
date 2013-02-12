@@ -242,7 +242,7 @@ def find_dataflow_component_names(page):
         return names
 
 
-def get_pathname(fig):
+def get_pathname(browser, fig):
     '''Get the OpenMDAO pathname for a figure'''
     figid = fig.get_attribute('id')  # get the ID of the element here
     script = "return jQuery('#" + figid + "').data('pathname')"
