@@ -259,15 +259,12 @@ class ImportHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        if not "projectname" in self.request.arguments:
-            # First step in the import process.
-            #   Just get the name, description and version of the
-            #   project the user wants to import.
-            #   Then pass this to the form so the user can change it.
-
-            # Go through the process of creating a new project directory
-            #   so we can read the name, description and version from the
-            #   settings file.
+        # The project file is uploaded once to extract the metadata.
+        # It is then deleted and the metadata is used to populate another
+        # import dialog, giving the user an opportunity to edit the
+        # info before importing or cancel the import.
+        if not 'projectname' in self.request.arguments:
+            # First upload
             sourcefile = self.request.files['projectfile'][0]
             if sourcefile:
                 filename = sourcefile['filename']
@@ -278,26 +275,17 @@ class ImportHandler(ReqHandler):
                     buff = StringIO.StringIO(sourcefile['body'])
                     archive = tarfile.open(fileobj=buff, mode='r:gz')
                     archive.extractall(path=unique)
-                    vcslist = find_vcs()
-                    if vcslist:
-                        vcs = vcslist[0](unique)
-                    else:
-                        vcs = DumbRepo(unique)
-                    vcs.init_repo()
-
-                    # Update project dict with info section of config file.
                     proj = Project(unique)
+                    project_info = proj.get_info()
 
                     shutil.rmtree(unique)
 
-                    project_info = proj.get_info()
                     self.render('projdb/import-metadata-fields.html',
                                 projectname=parse_archive_name(unique),
                                 description=project_info['description'],
-                                version=project_info['version']
-                                )
-            self.redirect("/")
+                                version=project_info['version'])
         else:
+            # second upload
             forms = {}
             for field in ['projectname', 'description', 'version']:
                 if field in self.request.arguments.keys():
@@ -347,7 +335,7 @@ class ImportHandler(ReqHandler):
 
                     self.redirect("/workspace/project?projpath=" + project['projpath'])
 
-            self.redirect("/")
+        self.redirect("/")
 
 
 handlers = [
