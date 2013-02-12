@@ -8,13 +8,15 @@ import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
+from enthought.traits.trait_handlers import TraitListObject, TraitDictObject
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id','uuid','parent','label','msg','retries', \
-                        'model_id','timeEnter'])
-_vartable_attrs = set(['var_id','name','case_id','sense','value'])
+_casetable_attrs = set(['id', 'uuid', 'parent', 'label', 'msg', 'retries', \
+                        'model_id', 'timeEnter'])
+_vartable_attrs = set(['var_id', 'name', 'case_id', 'sense', 'value'])
 
 def _query_split(query):
     """Return a tuple of lhs, relation, rhs after splitting on 
@@ -215,14 +217,24 @@ class DBCaseRecorder(object):
             if isinstance(value, (float,int,str)):
                 v = (None, name, case_id, 'i', value)
             else:
-                v = (None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+                if isinstance(value, TraitDictObject):
+                    value = dict(value)
+                elif isinstance(value, TraitListObject):
+                    value = list(value)
+                v = (None, name, case_id, 'i', 
+                     sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
             cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
                         v)
         for name,value in case.items(iotype='out'):
             if isinstance(value, (float,int,str)):
                 v = (None, name, case_id, 'o', value)
             else:
-                v = (None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+                if isinstance(value, TraitDictObject):
+                    value = dict(value)
+                elif isinstance(value, TraitListObject):
+                    value = list(value)
+                v = (None, name, case_id, 'o', 
+                     sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
             cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
                         v)
         self._connection.commit()
