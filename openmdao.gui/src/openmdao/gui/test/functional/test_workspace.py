@@ -24,6 +24,7 @@ from pageobjects.slot import SlotFigure
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.workspace import WorkspacePage
 
+
 @with_setup(setup_server, teardown_server)
 def test_generator():
     for _test, browser in generate(__name__):
@@ -205,6 +206,7 @@ def _test_palette_update(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 def _test_loading_docs(browser):
     project_dict, workspace_page = startup(browser)
 
@@ -212,7 +214,7 @@ def _test_loading_docs(browser):
     workspace_page('help_menu').click()
     time.sleep(0.5)
     eq(workspace_page('doc_button').get_attribute('id'), 'help-doc')
-    
+
     workspace_window = browser.current_window_handle
     current_windows = set(browser.window_handles)
     workspace_page('doc_button').click()
@@ -222,12 +224,13 @@ def _test_loading_docs(browser):
     time.sleep(0.5)
     eq("OpenMDAO User Guide" in browser.title, True)
     eq("OpenMDAO Documentation" in browser.title, True)
-   
+
     browser.close()
     browser.switch_to_window(workspace_window)
 
     # Clean up.
     closeout(project_dict, workspace_page)
+
 
 def _test_menu(browser):
     project_dict, workspace_page = startup(browser)
@@ -274,6 +277,7 @@ def _test_menu(browser):
 
     # Clean up.
     closeout(project_dict, workspace_page)
+
 
 def _test_macro(browser):
     project_dict, workspace_page = startup(browser)
@@ -418,7 +422,7 @@ def _test_properties(browser):
     obj = workspace_page.get_dataflow_figure('top')
     chain = ActionChains(browser)
     chain.click(obj.root)
-    chain.perform()    
+    chain.perform()
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
@@ -466,6 +470,7 @@ def _test_properties(browser):
 
     ## Clean up.
     #closeout(project_dict, workspace_page)
+
 
 def _test_editable_inputs(browser):
     def test_color(actual, expected, alpha=False):

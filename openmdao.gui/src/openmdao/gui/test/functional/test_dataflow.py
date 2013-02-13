@@ -661,6 +661,7 @@ def _test_ordering(browser):
     assert ext.coords[0] > opt.coords[0]
 
     # Clean up.
+    editor.close()
     closeout(project_dict, workspace_page)
 
 
