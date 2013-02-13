@@ -13,7 +13,7 @@ from openmdao.main.driver import Driver
 class DriverUsesDerivatives(Driver): 
     """This class provides an implementation of the derivatives delegates."""
 
-    differentiator = Slot(IDifferentiator, iotype='in',
+    differentiator = Slot(IDifferentiator, 
                           desc = "Slot for a differentiator")
     
     def __init__(self):
