@@ -110,6 +110,9 @@ class WorkspacePage(BasePageObject):
     library_search = InputElement((By.ID, 'objtt-select'))
     library_clear  = ButtonElement((By.ID, 'objtt-clear'))
 
+    library_item_docs = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[1]"))
+    library_item_metadata = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[2]"))
+
     # Bottom.
     history = TextElement((By.ID, 'history'))
     command = InputElement((By.ID, 'cmdline'))
@@ -508,6 +511,19 @@ class WorkspacePage(BasePageObject):
             else:
                 break
         return library_item
+
+    def view_library_item_docs(self, item_name):
+        chain = ActionChains(self.browser)
+        current_windows = set(self.browser.window_handles)
+        self.show_library()
+        item = self.get_library_item(item_name)
+        chain.context_click(item).perform()
+        self("library_item_docs").click()
+        new_windows = set(self.browser.window_handles) - current_windows
+        docs_window = list(new_windows)[0]
+
+        return docs_window
+
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
                                      check=True, offset=None, prefix=None,
