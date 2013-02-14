@@ -4,7 +4,7 @@ from openmdao.main.container import Container
 from openmdao.main.interfaces import IParametricGeometry
 from openmdao.main.datatypes.api import Slot
 from openmdao.util.log import logger
-from openmdao.main.datatypes.api import Float, Int, Str, Python
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List
 
 _ttdict = {
     float: Float,
@@ -12,6 +12,7 @@ _ttdict = {
     long: Int,
     str: Str,
     unicode: Str,
+    list: List,
 }
 
 class GeomComponent(Component):
@@ -58,7 +59,7 @@ class GeomComponent(Component):
         """
         if self._output_var_names is not None:
             for name in self._output_var_names:
-                out = self.parametric_geometry.getParameter(name)
+                out = self.parametric_geometry.getParameter(name)['value']
                 setattr(self, name, out)
 
     def _update_iovar_set(self):
@@ -96,7 +97,8 @@ class GeomComponent(Component):
 
     def _add_input(self, name):
         """Adds the specified input variable."""
-        val = self.parametric_geometry.getParameter(name)
+        param = self.parametric_geometry.getParameter(name)
+        val = param['value']
         typ = _ttdict.get(type(val))
         if typ is None:
             typ = Python   # FIXME
