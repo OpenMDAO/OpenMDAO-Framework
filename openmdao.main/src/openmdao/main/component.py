@@ -568,7 +568,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
