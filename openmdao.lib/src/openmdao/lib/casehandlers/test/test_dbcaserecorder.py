@@ -19,6 +19,7 @@ from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator, \
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, \
                                      CaseIteratorDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.main.datatypes.api import List, Dict
 from openmdao.util.testutil import assert_raises
 
 from openmdao.main.caseiter import caseiter_to_dict
@@ -30,6 +31,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         driver = top.add('driver', SimpleCaseIterDriver())
         top.add('comp1', ExecComp(exprs=['z=x+y']))
         top.add('comp2', ExecComp(exprs=['z=x+1']))
+        top.comp1.add('a_dict', Dict({}, iotype='in'))
+        top.comp1.add('a_list', List([], iotype='in'))
         top.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
         
@@ -37,7 +40,9 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
-            inputs = [('comp1.x', i), ('comp1.y', i*2)]
+            inputs = [('comp1.x', i), ('comp1.y', i*2), 
+                      ('comp1.a_dict', {'a' : 'b'}),
+                      ('comp1.a_list', ['a', 'b'])]
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 
@@ -73,6 +78,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
+            "      comp1.a_dict: {'a': 'b'}",
+            "      comp1.a_list: ['a', 'b']",
             '      comp1.x: 8',
             '      comp1.y: 16',
             '   outputs:',
