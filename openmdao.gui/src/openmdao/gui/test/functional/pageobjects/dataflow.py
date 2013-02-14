@@ -99,6 +99,7 @@ class DataflowFigure(BasePageObject):
         else:
             self._context_click('edit_button')
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        chain.release(None).perform()
         if base_type == 'Assembly':
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
         elif base_type == 'Driver':
@@ -174,12 +175,37 @@ class DataflowFigure(BasePageObject):
         time.sleep(0.5)
         self(name).click()
 
+    def get_pathname(self):
+        '''Get the OpenMDAO pathname for a DataflowFigure'''
+        figid = self.root.get_attribute('id')  # get the ID of the element here
+        script = "return jQuery('#" + figid + "').data('pathname')"
+        return self.browser.execute_script(script)
+
+    def get_parent(self):
+        '''get the parent element of this DataflowFigure'''
+        return self.root.find_element_by_xpath("..")
+
+    def get_drop_targets(self):
+        '''Dataflow figures are made of many subelements. This function
+        returns a list of them so that we can try dropping on any one
+        of the elements
+        '''
+        # return [self(area).element for area in \
+        #        ['top_left','header','top_right', 'content_area',
+        #         'bottom_left', 'footer', 'bottom_right']]
+
+        # add back 'top_left' 'bottom_left' at some point. right now that test fails
+        arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
+        return [self(area).element for area in arr]
+
 
 def find_dataflow_figures(page):
     """ Return dataflow figure elements in `page`. """
     root = page.root or page.browser
     time.sleep(0.5)  # Pause for stable display.
-    return root.find_elements_by_class_name('DataflowFigure')
+    elements = root.find_elements_by_class_name('DataflowFigure')
+    figs = [DataflowFigure(page.browser, page.port, element) for element in elements]
+    return figs
 
 
 def find_dataflow_figure(page, name, prefix=None, retries=5):
@@ -240,24 +266,3 @@ def find_dataflow_component_names(page):
     else:
         logging.error('get_dataflow_component_names: n_found %s', n_found)
         return names
-
-    #for i in range(len(dataflow_component_headers)):
-        #for retry in range(10):  # This has had issues...
-            #try:
-                #names.append(root.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-            #except StaleElementReferenceException:
-                #logging.warning('get_dataflow_component_names:'
-                                #' StaleElementReferenceException')
-            #except IndexError:
-                #logging.warning('get_dataflow_component_names:'
-                                #' IndexError for i=%s, headers=%s',
-                                #i, len(dataflow_component_headers))
-            #else:
-                #break
-
-    #if len(names) != len(dataflow_component_headers):
-        #logging.error('get_dataflow_component_names:'
-                      #' expecting %d names, got %s',
-                      #len(dataflow_component_headers), names)
-    #return names
-

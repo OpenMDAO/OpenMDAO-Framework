@@ -9,13 +9,14 @@ from openmdao.gui.consoleserver import ConsoleServer
 from openmdao.main.publisher import Publisher
 from openmdao.main.project import project_from_archive
 
+
 class ConsoleServerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
-        Publisher.silent = True # keep quiet about Publisher not being set up
+        Publisher.silent = True  # keep quiet about Publisher not being set up
 
     def tearDown(self):
         self.cserver.cleanup()
@@ -23,15 +24,15 @@ class ConsoleServerTestCase(unittest.TestCase):
             shutil.rmtree(self.tdir)
         except:
             pass
-        
+
     def test_simple(self):
         ''' load and inspect the simple example project
         '''
 
         projfile = os.path.join(self.path, 'simple_1.proj')
-        
+
         project_from_archive(projfile, dest_dir=self.tdir)
-        
+
         # LOAD PROJECT
         self.cserver.load_project(os.path.join(self.tdir, 'simple_1'))
 
@@ -51,7 +52,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
         components = json.loads(self.cserver.get_components())
-        
+
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly',
                                    '', '')
@@ -124,7 +125,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob', '')
 
         self.assertEqual(self.cserver.file_forces_reload('/paraboloid.py'), True)
-        
+
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
 
@@ -133,14 +134,9 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(len(inputs), 4)
         found_x = found_y = False
         for item in inputs:
-            self.assertTrue('desc'  in item)
-            self.assertTrue('name'  in item)
-            self.assertTrue('type'  in item)
-            # KTM - commented this out, because none of these have units, low
-            # or high attributes.
-            #self.assertTrue('units' in item)
-            #self.assertTrue('high'  in item)
-            #self.assertTrue('low'   in item)
+            self.assertTrue('desc' in item)
+            self.assertTrue('name' in item)
+            self.assertTrue('type' in item)
             self.assertTrue('valid' in item)
             self.assertTrue('value' in item)
             if item['name'] == 'x':
@@ -159,14 +155,9 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(len(outputs), 4)
         found_f_xy = False
         for output in outputs:
-            self.assertTrue('desc'  in output)
-            self.assertTrue('name'  in output)
-            self.assertTrue('type'  in output)
-            # KTM - commented this out, because none of these have units, low
-            # or high attributes.
-            #self.assertTrue('units' in output)
-            #self.assertTrue('high'  in output)
-            #self.assertTrue('low'   in output)
+            self.assertTrue('desc' in output)
+            self.assertTrue('name' in output)
+            self.assertTrue('type' in output)
             self.assertTrue('valid' in output)
             self.assertTrue('value' in output)
             if output['name'] == 'f_xy':
@@ -186,8 +177,8 @@ class ConsoleServerTestCase(unittest.TestCase):
         found_p = found_driver = False
         for comp in components:
             self.assertTrue('pathname' in comp)
-            self.assertTrue('type'     in comp)
-            self.assertTrue('name'     in comp)
+            self.assertTrue('type' in comp)
+            self.assertTrue('name' in comp)
             if comp['name'] == 'p':
                 found_p = True
                 self.assertEqual(comp['pathname'], 'prob.p')
@@ -234,14 +225,13 @@ class ConsoleServerTestCase(unittest.TestCase):
         proj_copy = os.path.join(self.tdir, 'simple_2.proj')
         shutil.copyfile(proj_file, proj_copy)
         project_from_archive(proj_copy)
-        
+
         self.cserver.load_project(os.path.join(self.tdir, 'simple_2'))
         self.cserver.execfile('optimization_constrained.py')
         self.cserver.commit_project()
 
         self.cserver.cleanup()
         os.remove(proj_copy)
-        
 
 
 if __name__ == "__main__":

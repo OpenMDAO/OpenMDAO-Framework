@@ -132,12 +132,12 @@ class DriverPage(ComponentPage):
 class ParameterDialog(DialogPage):
     """ Dialog for adding a new parameter. """
 
-    target =  InputElement((By.ID, 'parameter-target'))
-    low    =  InputElement((By.ID, 'parameter-low'))
-    high   =  InputElement((By.ID, 'parameter-high'))
-    scaler =  InputElement((By.ID, 'parameter-scaler'))
-    adder  =  InputElement((By.ID, 'parameter-adder'))
-    name   =  InputElement((By.ID, 'parameter-name'))
+    target = InputElement((By.ID, 'parameter-target'))
+    low    = InputElement((By.ID, 'parameter-low'))
+    high   = InputElement((By.ID, 'parameter-high'))
+    scaler = InputElement((By.ID, 'parameter-scaler'))
+    adder  = InputElement((By.ID, 'parameter-adder'))
+    name   = InputElement((By.ID, 'parameter-name'))
     ok     = ButtonElement((By.ID, 'parameter-ok'))
     cancel = ButtonElement((By.ID, 'parameter-cancel'))
 
@@ -145,8 +145,8 @@ class ParameterDialog(DialogPage):
 class ObjectiveDialog(DialogPage):
     """ Dialog for adding a new objective. """
 
-    expr   =  InputElement((By.ID, 'objective-expr'))
-    name   =  InputElement((By.ID, 'objective-name'))
+    expr   = InputElement((By.ID, 'objective-expr'))
+    name   = InputElement((By.ID, 'objective-name'))
     ok     = ButtonElement((By.ID, 'objective-ok'))
     cancel = ButtonElement((By.ID, 'objective-cancel'))
 
@@ -154,10 +154,10 @@ class ObjectiveDialog(DialogPage):
 class ConstraintDialog(DialogPage):
     """ Dialog for adding a new constraint. """
 
-    expr   =  InputElement((By.ID, 'constraint-expr'))
-    scaler =  InputElement((By.ID, 'constraint-scaler'))
-    adder  =  InputElement((By.ID, 'constraint-adder'))
-    name   =  InputElement((By.ID, 'constraint-name'))
+    expr   = InputElement((By.ID, 'constraint-expr'))
+    scaler = InputElement((By.ID, 'constraint-scaler'))
+    adder  = InputElement((By.ID, 'constraint-adder'))
+    name   = InputElement((By.ID, 'constraint-name'))
     ok     = ButtonElement((By.ID, 'constraint-ok'))
     cancel = ButtonElement((By.ID, 'constraint-cancel'))
 
@@ -165,7 +165,7 @@ class ConstraintDialog(DialogPage):
 class EventDialog(DialogPage):
     """ Dialog for adding a new event. """
 
-    target =  InputElement((By.ID, 'event-target'))
+    target = InputElement((By.ID, 'event-target'))
     ok     = ButtonElement((By.ID, 'event-ok'))
     cancel = ButtonElement((By.ID, 'event-cancel'))
 
