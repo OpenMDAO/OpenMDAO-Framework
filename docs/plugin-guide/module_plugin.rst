@@ -388,14 +388,14 @@ command.
    directory.
    
 
-We can view the docs for a plugin using the ``plugin docs`` command.  Note 
+We can view the docs for a plugin using the ``openmdao docs`` command.  Note 
 that this only works for installed plugin distributions.
 
 .. program:: plugin_docs
 
 ::
 
-   plugin docs plugin_dist_name
+   openmdao docs plugin_dist_name
    
    
 .. option:: plugin_dist_name
@@ -411,7 +411,7 @@ our docs efficiently by repeating the following sequence:
 
     ... hack, hack, hack
     plugin build_docs
-    plugin docs <plugin_dist_name>
+    openmdao docs <plugin_dist_name>
     
     
 .. index:: creation

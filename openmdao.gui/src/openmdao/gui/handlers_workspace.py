@@ -282,9 +282,9 @@ class ComponentsHandler(ReqHandler):
             try:
                 self.write(json)
             except AssertionError as exc:
-                # Have had issues with `json` not being unicode somehow.
-                print "ComponentsHandler: Can't write %r: %s" \
-                      % (json, str(exc) or repr(exc))
+                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                print >>sys.stderr, "ComponentsHandler: Can't write %r: %s" \
+                                    % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
@@ -325,9 +325,9 @@ class DataflowHandler(ReqHandler):
             try:
                 self.write(json)
             except AssertionError as exc:
-                # Have had issues with `json` not being unicode somehow.
-                print "DataflowHandler: Can't write %r: %s" \
-                      % (json, str(exc) or repr(exc))
+                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                print >>sys.stderr, "DataflowHandler: Can't write %r: %s" \
+                                    % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
@@ -642,9 +642,9 @@ class WorkflowHandler(ReqHandler):
             try:
                 self.write(json)
             except AssertionError as exc:
-                # Have had issues with `json` not being unicode somehow.
-                print "WorkflowHandler: Can't write %r: %s" \
-                      % (json, str(exc) or repr(exc))
+                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                print >>sys.stderr, "WorkflowHandler: Can't write %r: %s" \
+                                    % (json, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
