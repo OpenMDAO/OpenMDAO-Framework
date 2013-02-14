@@ -212,7 +212,7 @@ def _test_loading_docs(browser):
     workspace_page('help_menu').click()
     time.sleep(0.5)
     eq(workspace_page('doc_button').get_attribute('id'), 'help-doc')
-    
+
     workspace_window = browser.current_window_handle
     current_windows = set(browser.window_handles)
     workspace_page('doc_button').click()
@@ -222,11 +222,19 @@ def _test_loading_docs(browser):
     time.sleep(0.5)
     eq("OpenMDAO User Guide" in browser.title, True)
     eq("OpenMDAO Documentation" in browser.title, True)
-   
     browser.close()
     browser.switch_to_window(workspace_window)
+    workspace_page.show_library()
+    browser.switch_to_window(workspace_page.view_library_item_docs("openmdao.main.assembly.Assembly"))
 
-    # Clean up.
+    # Just check to see if a Traceback 404 message was sent.
+    try:
+        browser.find_element((By.XPATH, "/html/head/body/pre[1]"))
+        assert False
+    except:
+        pass
+    browser.close()
+    browser.switch_to_window(workspace_window)
     closeout(project_dict, workspace_page)
 
 def _test_menu(browser):
