@@ -14,6 +14,7 @@ from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  find_all_plugins, find_docs_url
 from openmdao.util.fileutil import find_files
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import find_in_path
 
 
 class PluginsTestCase(unittest.TestCase):
@@ -175,10 +176,12 @@ class PluginsTestCase(unittest.TestCase):
             # Uninstall
             logging.debug('')
             logging.debug('uninstall')
-            with open('pip.in', 'w') as out:
+            pip_in = os.path.join(self.tdir, 'pip.in')
+            pip_out = os.path.join(self.tdir, 'pip.out')
+            with open(pip_in, 'w') as out:
                 out.write('y\n')
-            stdin = open('pip.in', 'r')
-            stdout = open('pip.out', 'w')
+            stdin = open(pip_in, 'r')
+            stdout = open(pip_out, 'w')
             # On EC2 Windows, 'pip' generates an absurdly long temp directory
             # name, apparently to allow backing-out of the uninstall.
             # The name is so long Windows can't handle it. So we try to
@@ -186,15 +189,19 @@ class PluginsTestCase(unittest.TestCase):
             env = os.environ.copy()
             env['TMP'] = os.path.expanduser('~')
             try:
-                check_call(('pip', 'uninstall', 'foobar'), env=env,
+                # the following few lines are to prevent the system level pip
+                # from being used instead of the local virtualenv version.
+                pipexe = 'pip-%d.%d' % (sys.version_info[0], sys.version_info[1])
+                pipexe = find_in_path(pipexe)
+                if pipexe is None:
+                    pipexe = 'pip'
+                check_call((pipexe, 'uninstall', 'foobar'), env=env,
                            stdin=stdin, stdout=stdout, stderr=STDOUT)
             finally:
                 stdin.close()
                 stdout.close()
-                with open('pip.out', 'r') as inp:
+                with open(pip_out, 'r') as inp:
                     captured_stdout = inp.read()
-                os.remove('pip.in')
-                os.remove('pip.out')
                 logging.debug('captured stdout:')
                 logging.debug(captured_stdout)
 
