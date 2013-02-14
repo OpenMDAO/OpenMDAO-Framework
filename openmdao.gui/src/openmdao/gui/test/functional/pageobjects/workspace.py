@@ -16,8 +16,7 @@ from basepageobject import BasePageObject, TMO
 from component import NameInstanceDialog
 
 from connections import ConnectionsPage
-from dataflow import DataflowFigure, \
-                     find_dataflow_figure, find_dataflow_figures, \
+from dataflow import find_dataflow_figure, find_dataflow_figures, \
                      find_dataflow_component_names
 from editor import EditorPage
 from elements import ButtonElement, GridElement, InputElement, TextElement
@@ -528,7 +527,6 @@ class WorkspacePage(BasePageObject):
 
         return docs_window
 
-
     def add_library_item_to_dataflow(self, item_name, instance_name,
                                      check=True, offset=None, prefix=None,
                                      args=None):
@@ -815,9 +813,9 @@ class WorkspacePage(BasePageObject):
         '''Find the named dataflow fig in the global dataflow editor'''
         all_figs = self.get_dataflow_figures()
         for fig in all_figs:
-            location = fig.find_element_by_xpath("..").get_attribute('id')
+            location = fig.get_parent().get_attribute('id')
             if location == "top-dataflow":
-                return DataflowFigure(self.browser, self.port, fig)
+                return fig
 
         return None
 

@@ -177,9 +177,13 @@ class DataflowFigure(BasePageObject):
 
     def get_pathname(self):
         '''Get the OpenMDAO pathname for a DataflowFigure'''
-        figid = self.get_attribute('id')  # get the ID of the element here
+        figid = self.root.get_attribute('id')  # get the ID of the element here
         script = "return jQuery('#" + figid + "').data('pathname')"
         return self.browser.execute_script(script)
+
+    def get_parent(self):
+        '''get the parent element of this DataflowFigure'''
+        return self.root.find_element_by_xpath("..")
 
     def get_drop_targets(self):
         '''Dataflow figures are made of many subelements. This function
@@ -199,7 +203,9 @@ def find_dataflow_figures(page):
     """ Return dataflow figure elements in `page`. """
     root = page.root or page.browser
     time.sleep(0.5)  # Pause for stable display.
-    return root.find_elements_by_class_name('DataflowFigure')
+    elements = root.find_elements_by_class_name('DataflowFigure')
+    figs = [DataflowFigure(page.browser, page.port, element) for element in elements]
+    return figs
 
 
 def find_dataflow_figure(page, name, prefix=None, retries=5):
