@@ -56,7 +56,7 @@ def _test_new_project(browser):
     project_pattern = project_dict['name'].replace(' ', '_') + '-*.proj'
     project_pattern = os.path.join(browser_download_location_path,
                                    project_pattern)
-    for i in range(10): # Give the download time to complete.
+    for i in range(10):  # Give the download time to complete.
         time.sleep(1)
         project_path = glob.glob(project_pattern)
         if project_path:
@@ -78,6 +78,9 @@ def _test_new_project(browser):
                                                  load_workspace=False)
     # Go back to projects page to see if it is on the list.
     assert projects_page.contains(project_dict['name'])
+
+    # Delete the project that was just imported
+    projects_page.delete_project(project_dict['name'])
 
     # remove the downloaded file
     os.remove(project_path)
