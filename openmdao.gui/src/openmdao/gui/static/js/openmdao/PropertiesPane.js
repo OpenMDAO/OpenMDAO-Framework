@@ -6,6 +6,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         props,
         dataView,
         searchString = "",
+        inlineFilter = undefined,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
@@ -29,11 +30,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     
     if (meta) {
         options.autoHeight = false;
-        elm.append(jQuery(" \
-            <div> \
-                <label style='width:620px;float:left;'>Filter:</label> \
-                <input type=text id='" + name + "_variableFilter' style='width:100px;'> \
-            </div> "));
+        elm.append(jQuery("<div id='inlineFilter' style=float:right;padding:10px;'>Filter <input type=text id='" + name + "_variableFilter' style='width:100px;'></div>"));
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
@@ -48,22 +45,22 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
-    jQuery("#" + name + "_variableFilter").keyup(function (e) {
-        Slick.GlobalEditorLock.cancelCurrentEdit();
-        if (e.which === 27){
-            this.value = "";
-        }
-
-        searchString = this.value;
-        updateFilter();
-    });
-
     SetupTable()
 
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: true });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-    
+
+        jQuery("#" + name + "_variableFilter").keyup(function (e) {
+            Slick.GlobalEditorLock.cancelCurrentEdit();
+            if (e.which === 27){
+                this.value = "";
+            }
+
+            searchString = this.value;
+            updateFilter();
+        });
+
         props.onBeforeEditCell.subscribe(function(row,cell) {
             if (props.getDataItem(cell.row).connected.length > 0) {
                 return false;
@@ -155,7 +152,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
         if(args !== undefined){
             if(args.searchString !== ""){
-                debug.info(item);
                 for( var field in item){
                     if(String(item[field]).toLowerCase().indexOf(args.searchString) !== -1){
                         return true;
