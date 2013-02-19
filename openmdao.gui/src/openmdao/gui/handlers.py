@@ -88,7 +88,7 @@ class PluginDocsHandler(StaticFileHandler):
     ''' retrieve docs for a plugin '''
     _plugin_map = {}
     _plugin_lock = threading.Lock()
-    regex = re.compile("site-packages/openmdao.main-\d+\.\d+\.\d+-py\d\.\d\.egg/openmdao/main")
+    regex = re.compile("site-packages/openmdao.main.+\.egg")
 
     def _cname_valid(self, name):
         # TODO: use regex to check form of cname (must be dotted module path)
