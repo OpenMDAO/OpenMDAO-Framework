@@ -19,6 +19,8 @@ class ComponentPage(DialogPage):
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
+    inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
+    outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
 
     def __init__(self, browser, port, locator):
         super(ComponentPage, self).__init__(browser, port, locator)
@@ -42,6 +44,12 @@ class ComponentPage(DialogPage):
             found.append(row[0])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
+    def filter_inputs(self, filter_text):
+        self.inputs_filter = filter_text
+
+    def filter_outputs(self, filter_text):
+        self.outputs_filter = filter_text
+
     def get_events(self):
         """ Return events grid. """
         self('events_tab').click()
@@ -51,6 +59,10 @@ class ComponentPage(DialogPage):
         """ Return outputs grid. """
         self('outputs_tab').click()
         return self.outputs
+    
+    def show_outputs(self):
+        """switch to outputs tab"""
+        self('outputs_tab').click()
 
     def show_slots(self):
         """switch to slots tab"""

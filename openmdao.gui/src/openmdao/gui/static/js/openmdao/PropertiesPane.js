@@ -5,6 +5,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
         dataView,
+        searchString = "",
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
@@ -19,16 +20,21 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         },
         _collapsed = {},
         editableInTable = {};
-
+    
     self.pathname = pathname;
     if (editable) {
         options.editable = true;
         options.autoEdit = true;
     }
-
+    
     if (meta) {
         options.autoHeight = false;
-        propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px'>"),
+        elm.append(jQuery(" \
+            <div> \
+                <label style='width:620px;float:left;'>Filter:</label> \
+                <input type=text id='" + name + "_variableFilter' style='width:100px;'> \
+            </div> "));
+        propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
             {id:"type",      name:"Type",        field:"type",      width:60 },
@@ -42,10 +48,20 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
+    jQuery("#" + name + "_variableFilter").keyup(function (e) {
+        Slick.GlobalEditorLock.cancelCurrentEdit();
+        if (e.which === 27){
+            this.value = "";
+        }
+
+        searchString = this.value;
+        updateFilter();
+    });
+
     SetupTable()
-    
+
     function SetupTable() {
-        dataView = new Slick.Data.DataView({ inlineFilters: false });
+        dataView = new Slick.Data.DataView({ inlineFilters: true });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
     
         props.onBeforeEditCell.subscribe(function(row,cell) {
@@ -92,8 +108,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView.onRowsChanged.subscribe(function (e, args) {
             props.invalidateRows(args.rows);
             props.resizeCanvas();
-        });    
-        
+        });
+
         if (editable) {
             props.onCellChange.subscribe(function(e,args) {
                 // TODO: better way to do this (e.g. model.setProperty(path,name,value)
@@ -106,6 +122,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
 
+        
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
         var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
         var idx = dataView.getIdxById(dataContext.id);
@@ -123,7 +140,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
-    this.filter = function myFilter(item) {
+    this.filter = function myFilter(item, args) {
         var idx, parent;
         if (item.parent != null) {
             idx = dataView.getIdxById(item.parent);
@@ -136,7 +153,26 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 parent = dataView.getItemByIdx(idx)
             }
         }
+        if(args !== undefined){
+            if(args.searchString !== ""){
+                debug.info(item);
+                for( var field in item){
+                    if(String(item[field]).toLowerCase().indexOf(args.searchString) !== -1){
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
         return true;
+    }
+    
+    function updateFilter(){
+        dataView.setFilterArgs({
+            searchString: searchString,
+        });
+        dataView.refresh();
     }
     
     /* Sets the CSS style for cells based on connection status, while
@@ -219,6 +255,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             dataView.beginUpdate();
             dataView.setItems(properties);
+            dataView.setFilterArgs({
+                searchString : searchString,
+            });
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate()
