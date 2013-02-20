@@ -5,6 +5,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
         dataView,
+        meta = meta,
         searchString = "",
         inlineFilter = undefined,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
@@ -50,16 +51,18 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: true });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
+        
+        /*if(meta){
+            jQuery("#" + name + "_variableFilter").keyup(function (e) {
+                Slick.GlobalEditorLock.cancelCurrentEdit();
+                if (e.which === 27){
+                    this.value = "";
+                }
 
-        jQuery("#" + name + "_variableFilter").keyup(function (e) {
-            Slick.GlobalEditorLock.cancelCurrentEdit();
-            if (e.which === 27){
-                this.value = "";
-            }
-
-            searchString = this.value;
-            updateFilter();
-        });
+                searchString = this.value;
+                updateFilter();
+            });
+        }*/
 
         props.onBeforeEditCell.subscribe(function(row,cell) {
             if (props.getDataItem(cell.row).connected.length > 0) {
@@ -150,7 +153,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 parent = dataView.getItemByIdx(idx)
             }
         }
-        if(args !== undefined){
+
+        /*if(args !== undefined){
             if(args.searchString !== ""){
                 for( var field in item){
                     if(String(item[field]).toLowerCase().indexOf(args.searchString) !== -1){
@@ -159,17 +163,17 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 return false;
             }
-        }
+        }*/
 
         return true;
     }
     
-    function updateFilter(){
+    /*function updateFilter(){
         dataView.setFilterArgs({
             searchString: searchString,
         });
         dataView.refresh();
-    }
+    }*/
     
     /* Sets the CSS style for cells based on connection status, while
     taking collapse/expand state into account. */
@@ -251,9 +255,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             dataView.beginUpdate();
             dataView.setItems(properties);
-            dataView.setFilterArgs({
-                searchString : searchString,
-            });
+            /*if(meta){
+                dataView.setFilterArgs({
+                    searchString : searchString,
+                });
+            }*/
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate()
