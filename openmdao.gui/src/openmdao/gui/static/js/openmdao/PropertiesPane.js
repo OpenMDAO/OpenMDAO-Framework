@@ -154,7 +154,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
         }
 
-        if(args !== undefined){
+        if(meta){
             if(args.searchString !== ""){
                 for( var field in item){
                     if(String(item[field]).toLowerCase().indexOf(args.searchString) !== -1){
