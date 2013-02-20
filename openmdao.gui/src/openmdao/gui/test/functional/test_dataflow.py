@@ -9,7 +9,6 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 from selenium.webdriver.common.action_chains import ActionChains
-
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, release
 from pageobjects.util import ArgsPrompt, NotifierPage
@@ -667,60 +666,95 @@ def _test_ordering(browser):
 def _test_io_filter(browser):
 
     project_dict, workspace_page = startup(browser)
-    workspace_window = browser.current_window_handle
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
-    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
-    editor = conmin.editor_page()
+    #workspace_page.show_dataflow('top')
+    #workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
+    #conmin = workspace_page.get_dataflow_figure('conmin', 'top')
+    #editor = conmin.editor_page()
 
-    #Test filtering inputs
+    ##Test filtering inputs
 
-    #filter on name='ctlmin'
-    editor.filter_inputs("ctlmin")
-    eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    ##filter on name='ctlmin'
+    #editor.filter_inputs("ctlmin")
+    #eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
+    #editor.filter_inputs("")
 
-    #filter on type='ndarray'
-    editor.filter_inputs("ndarray")
-    eq([u'cons_is_linear', u'ndarray', u'[]', u'', u'true', u'Array designating whether each constraint is linear.', u'', u''], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    ##filter on type='ndarray'
+    #editor.filter_inputs("ndarray")
+    #eq([u'cons_is_linear', u'ndarray', u'[]', u'', u'true', u'Array designating whether each constraint is linear.', u'', u''], editor.get_inputs().value[0])
+    #editor.filter_inputs("")
 
-    #filter on value='0.004'
-    editor.filter_inputs("0.004")
-    eq([u'ctmin', u'float', u'0.004', u'', u'true', u'Minimum absolute value of ct used in optimization.', u'', u''], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    ##filter on value='0.004'
+    #editor.filter_inputs("0.004")
+    #eq([u'ctmin', u'float', u'0.004', u'', u'true', u'Minimum absolute value of ct used in optimization.', u'', u''], editor.get_inputs().value[0])
+    #editor.filter_inputs("")
 
-    #filter on high='null'. High is hidden field
-    editor.filter_inputs("null")
-    eq([u'ct', u'float', u'-0.1', u'', u'true', u'Constraint thickness parameter.', u'', u''], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    ##filter on high='null'. High is hidden field
+    #editor.filter_inputs("null")
+    #eq([u'ct', u'float', u'-0.1', u'', u'true', u'Constraint thickness parameter.', u'', u''], editor.get_inputs().value[0])
+    #editor.filter_inputs("")
 
-    editor.show_outputs()
+    #editor.show_outputs()
 
-    #Test filtering outputs
+    ##Test filtering outputs
 
-    #filter on name='derivative_exec_count'
-    editor.filter_outputs("derivative_exec_count")
-    eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    ##filter on name='derivative_exec_count'
+    #editor.filter_outputs("derivative_exec_count")
+    #eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
+    #editor.filter_outputs("")
 
-    #filter on type='str'
-    editor.filter_outputs("str")
-    eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    ##filter on type='str'
+    #editor.filter_outputs("str")
+    #eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
+    #editor.filter_outputs("")
+    #
+    ##filter on description='coordinates'
+    #editor.filter_outputs("coordinates")
+    #eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
+    #editor.filter_outputs("")
+
+    ##filter on high='922'. High is a hidden field
+    #editor.filter_outputs("922")
+    #eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
+    #editor.filter_outputs("")
+
+    #editor.close()
+
+    #Test filtering variable trees
     
-    #filter on description='coordinates'
-    editor.filter_outputs("coordinates")
-    eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
 
-    #filter on high='922'. High is a hidden field
-    editor.filter_outputs("922")
-    eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    editor = comp.editor_page()
+    inputs = editor.get_inputs()
+    #editor.move(-100, 0)
+    
+    # Expand first vartree
+    inputs.rows[0].cells[0].click()
+
+    #filter when tree is expanded
+    #filter on description="vv1"
+    editor.filter_inputs("vv1")
+    eq([u'v1', u'float', u'1', u'', u'true', u'vv1', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("c")
+    time.sleep(3) 
+    # Collapse the var tree
+    inputs = editor.get_inputs()
+    inputs.rows[0].cells[0].click()
+
+    #filter when tree is collapse
+    #filter on name="cont_in"
+    #everything should be filtered out exept " cont_in"
+    editor.filter_inputs("cont_in")
+    result = editor.get_inputs().value
+    eq(1, len(result))
+    eq([u' cont_in', u'DumbVT',  u'',  u'', u'true', u'', u'', u''], result[0])
+    editor.filter_inputs("")
 
     editor.close()
     closeout(project_dict, workspace_page)
-
 if __name__ == '__main__':
     main()

@@ -2,6 +2,7 @@ import random
 import string
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
@@ -50,6 +51,12 @@ class ComponentPage(DialogPage):
     def filter_outputs(self, filter_text):
         self.outputs_filter = filter_text
 
+    def clear_inputs_filter(self):
+        self.inputs_filter = ""
+
+    def clear_outputs_filter(self):
+        self.outputs_filter = ""
+
     def get_events(self):
         """ Return events grid. """
         self('events_tab').click()
@@ -60,6 +67,10 @@ class ComponentPage(DialogPage):
         self('outputs_tab').click()
         return self.outputs
     
+    def show_inputs(self):
+        """switch to inputs tab"""
+        self('inputs_tab').click()
+
     def show_outputs(self):
         """switch to outputs tab"""
         self('outputs_tab').click()

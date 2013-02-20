@@ -55,9 +55,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         if(meta){
             jQuery("#" + name + "_variableFilter").keyup(function (e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
-                if (e.which === 27){
-                    this.value = "";
-                }
 
                 searchString = this.value;
                 updateFilter();
@@ -154,7 +151,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
         }
 
-        if(meta){
+        if(args !== undefined){
             if(args.searchString !== ""){
                 for( var field in item){
                     if(String(item[field]).toLowerCase().indexOf(args.searchString) !== -1){
