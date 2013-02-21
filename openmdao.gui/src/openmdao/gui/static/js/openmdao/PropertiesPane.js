@@ -21,6 +21,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             enableTextSelectionOnCells: true
         },
         _collapsed = {},
+        _filter = {},
         editableInTable = {};
     
     self.pathname = pathname;
@@ -134,10 +135,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             return spacer + "<span class='toggle'></span>" + value;
         }
     }
-        
-    /* Function that returns false for collapsed rows, and true for the rest.
-    Used by Slickgrid */
-    this.filter = function myFilter(item, args) {
+    
+    function matchesFilter(name, units, description, searchString){
+        return (name.indexOf(searchString) !== -1) ||
+            (units.indexOf(searchString) !==-1 )||
+            (description.indexOf(searchString)) !==-1
+    }
+
+    function expansionFilter(item, args){
         var idx, parent;
         if (item.parent != null) {
             idx = dataView.getIdxById(item.parent);
@@ -150,21 +155,52 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 parent = dataView.getItemByIdx(idx)
             }
         }
+    }
 
+    function textboxFilter(item, args){
         if(args !== undefined){
             if(args.searchString !== ""){
-                if(item["name"].toLowerCase().indexOf(args.searchString) !== -1){
-                    return true;
-                }
-                if(item["units"].toLowerCase().indexOf(args.searchString) !== -1){
-                    return true;
-                }
-                if(item["description"].toLowerCase().indexOf(args.searchString) !== -1){
-                    return true;
-                }
+                //Save current collapse/expand structure
+                //Check if filter should be applied
+                //Check if variable has a parent
+                //If so, parent needs to be made visible
+                //Repeat until a parent can no longer be found
+                //Update the dataview for each parent that is found
 
-                return false;
+                if(item.parent != null)
+                if(matchesFilter(
+                        item["name"].toLowerCase(),
+                        item["units"].toLowerCase(),
+                        item["description"].toLowerCase(),
+                        args.searchString)){
+                            if(item.parent != null){
+                                idx = dataView.getIdxById(item.parent);
+                                parent = dataView.getItemByIdx(idx);
+                                while (parent) {
+                                    if (_collapsed[parent.id]) {
+                                        _collapsed[parent.id] = false;
+                                    }
+                                    idx = dataView.getIdxById(parent.parent);
+                                    parent = dataView.getItemByIdx(idx);
+                                }
+                            }
+
+                        }
             }
+            //Restore collapse/expand structure
+            //Can do this by reapplying the filter
+        }
+    }
+
+    /* Function that returns false for collapsed rows, and true for the rest.
+    Used by Slickgrid */
+    this.filter = function myFilter(item, args) {
+        if(args.filterType === "expansion"){
+            return expansionFilter(item, args);
+        }
+
+        if(args.filterType === "textbox"){
+            return textboxFilter(item, args);
         }
 
         return true;
