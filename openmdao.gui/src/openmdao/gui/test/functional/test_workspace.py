@@ -32,7 +32,6 @@ def test_generator():
 
 
 def _test_slots_sorted_by_name(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     #drop 'metamodel' onto the grid
@@ -54,7 +53,6 @@ def _test_slots_sorted_by_name(browser):
 
 def _test_console(browser):
     # Check basic console functionality.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     workspace_page.do_command("print 'blah'")
@@ -73,7 +71,6 @@ def _test_console(browser):
 
 def _test_console_history(browser):
     # Check up and down arrow navigation through the command history
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     command_elem = browser.find_element(By.ID, "cmdline")
@@ -123,7 +120,6 @@ def _test_console_history(browser):
 
 def _test_palette_update(browser):
     # Import some files and add components from them.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # View dataflow.
@@ -131,9 +127,9 @@ def _test_palette_update(browser):
 
     # Get file paths
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
+                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'optimization_unconstrained.py')
+                                                 'optimization_unconstrained.py')
 
     # add first file from workspace
     workspace_page.add_file(file1_path)
@@ -390,7 +386,6 @@ b = Float(0.0, iotype='out')
 
 def _test_addfiles(browser):
     # Adds multiple files to the project.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Get path to  paraboloid file.
@@ -423,7 +418,6 @@ def _test_addfiles(browser):
 
 def _test_properties(browser):
     # Checks right-hand side properties display.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Check default 'top.driver'.
@@ -523,7 +517,6 @@ def _test_editable_inputs(browser):
 
             test_color(value_cell.background_color, [0, 0, 0, 1])
 
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Import vehicle_singlesim
@@ -576,7 +569,6 @@ def _test_editable_inputs(browser):
 
 
 def _test_console_errors(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
@@ -628,7 +620,6 @@ raise RuntimeError("__init__ failed")
 
 
 def _test_driver_config(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Add MetaModel so we can test events.
@@ -747,7 +738,6 @@ def _test_driver_config(browser):
 
 
 def _test_remove(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
@@ -779,7 +769,6 @@ def _test_remove(browser):
 
 
 def _test_noslots(browser):
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode to assembly.
@@ -803,7 +792,6 @@ def _test_noslots(browser):
 def _test_logviewer(browser):
     # Verify log viewer functionality.
     # Note that by default the logging level is set to WARNING.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
     viewer = workspace_page.show_log()
     viewer.move(0, -200)  # Sometimes get a lot of 'send event' messages...
@@ -893,7 +881,6 @@ def _test_logviewer(browser):
 
 def _test_libsearch(browser):
     # Verify library search functionality.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Get default objects.
@@ -933,7 +920,6 @@ def _test_libsearch(browser):
 
 def _test_arguments(browser):
     # Check that objects requiring constructor arguments are handled.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     workspace_page.show_dataflow('top')
@@ -985,7 +971,6 @@ def _test_arguments(browser):
 
 def _test_casefilters(browser):
     # Verify that CaseFilter objects are listed in the library.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     for classname in ('ExprCaseFilter', 'IteratorCaseFilter',
@@ -998,7 +983,6 @@ def _test_casefilters(browser):
 
 def _test_rename_file(browser):
     # Rename a file in the project.
-    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     project_dict, workspace_page = startup(browser)
 
     # Add paraboloid.py
