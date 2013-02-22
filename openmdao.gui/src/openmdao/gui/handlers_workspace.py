@@ -385,31 +385,12 @@ class FileHandler(ReqHandler):
         else:
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py') or cserver.is_macro(filename):
-                if not contents.endswith('\n'):
-                    text = contents + '\n'  # to make ast.parse happy
-                else:
-                    text = contents
-                try:
-                    # parse it looking for syntax errors
-                    ast.parse(text, filename=filename, mode='exec')
-                except Exception as exc:
-                    if isinstance(exc, SyntaxError):
-                        # Drop leading '/' on filename, show actual line.
-                        err_str = 'invalid syntax (%s, line %s)\n%s' \
-                                % (exc.filename[1:], exc.lineno, exc.text)
-                    else:
-                        err_str = str(exc)
-                    cserver.send_pub_msg(err_str, 'file_errors')
-                    self.send_error(400)
-                    return
-                if not force:
-                    ret = cserver.file_forces_reload(filename)
-                    if ret:
-                        # user will be prompted to overwrite file and reload project
-                        self.send_error(409)
-                        return
-            self.write(str(cserver.write_file(filename, contents)))
+            ret = self.write(str(cserver.write_file(filename, contents)))
+            if ret:
+                return ret
+            elif force or cserver.file_forces_reload(filename):
+                self.send_error(409)
+        return
 
     @web.authenticated
     def delete(self, filename):

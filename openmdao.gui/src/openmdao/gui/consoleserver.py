@@ -4,6 +4,7 @@ import logging
 import os.path
 import sys
 import traceback
+import ast
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -108,7 +109,7 @@ class ConsoleServer(cmd.Cmd):
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
-                                   if is_instance(obj, Driver)]:
+                               if is_instance(obj, Driver)]:
                     driver._update_workflow()
 
     def publish_components(self):
@@ -800,7 +801,21 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
-        return self.files.write_file(filename, contents)
+        ret = self.files.write_file(filename, contents)
+        if ret:
+            return ret
+        elif filename.endswith('.py') or self.is_macro(filename):
+            try:
+                # parse it looking for syntax errors
+                ast.parse(self.files.get_file(filename), filename=filename, mode='exec')
+            except Exception as exc:
+                if isinstance(exc, SyntaxError):
+                    # Drop leading '/' on filename, show actual line.
+                    err_str = 'invalid syntax (%s, line %s)\n%s' \
+                        % (exc.filename[1:], exc.lineno, exc.text)
+                else:
+                    err_str = str(exc)
+                self.send_pub_msg(err_str, 'file_errors')
 
     def add_file(self, filename, contents):
         ''' Add file.
@@ -917,11 +932,12 @@ class ConsoleServer(cmd.Cmd):
         if pdf:
             if self.is_macro(filename):
                 return True
-            filename = filename.lstrip('/')
-            filename = os.path.join(self.proj.path, filename)
-            info = pdf._files.get(filename)
-            if info and _match_insts(info.classes.keys()):
-                return True
+            if filename.endswith('.py'):
+                filename = filename.lstrip('/')
+                filename = os.path.join(self.proj.path, filename)
+                info = pdf._files.get(filename)
+                if info and _match_insts(info.classes.keys()):
+                    return True
         return False
 
 
