@@ -10,6 +10,8 @@ import fnmatch
 import ast
 from inspect import isclass, getmembers
 
+import traceback
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -306,6 +308,10 @@ class ProjDirFactory(Factory):
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_exception(exc_type, exc_value, exc_traceback)
+                    print err.text, err.offset, str(err)
+
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
                         self._error(msg)

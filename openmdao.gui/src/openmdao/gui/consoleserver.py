@@ -802,7 +802,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Write contents to file.
         '''
         ret = self.files.write_file(filename, contents)
-        if ret:
+        if not ret == True:
             return ret
         elif filename.endswith('.py') or self.is_macro(filename):
             try:

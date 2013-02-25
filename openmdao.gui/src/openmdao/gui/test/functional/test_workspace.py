@@ -47,7 +47,6 @@ def _test_slots_sorted_by_name(browser):
     slot_names = [s.text for s in slot_name_elements]
     eq(slot_names, sorted(slot_names))
 
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -65,7 +64,6 @@ def _test_console(browser):
     eq(title[:len(expected)], expected)
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -114,7 +112,6 @@ def _test_console_history(browser):
     eq(workspace_page.command, "import time")
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -380,7 +377,6 @@ b = Float(0.0, iotype='out')
             raise AssertionError(line)
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -412,7 +408,6 @@ def _test_addfiles(browser):
             % (expected_file_names, file_names))
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -433,7 +428,6 @@ def _test_properties(browser):
                       ['force_execute', 'True'],
                       ['printvars',     '']])  # FIXME: printvars is really an empty list...
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 # This test no longer needed because there is no longer a component panel that
@@ -564,7 +558,6 @@ def _test_editable_inputs(browser):
     component_editor.close()
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -594,6 +587,8 @@ def execute(self)
     pass
 """, check=False)
 
+    message = NotifierPage.wait(workspace_page)  # save successful
+
     message = NotifierPage.wait(editor_page, base_id='file-error')
     browser.close()
     browser.switch_to_window(workspace_window)
@@ -615,7 +610,6 @@ raise RuntimeError("__init__ failed")
     eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -733,7 +727,6 @@ def _test_driver_config(browser):
 
     # Clean up.
     editor.close()
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -764,7 +757,6 @@ def _test_remove(browser):
     eq(properties.is_visible, False)
 
     # Clean up.
-    # closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -785,7 +777,6 @@ def _test_noslots(browser):
     eq(editor('outputs_tab').is_present, True)
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -875,7 +866,6 @@ def _test_logviewer(browser):
         raise RuntimeError('Expected StaleElementReferenceException')
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -914,7 +904,6 @@ def _test_libsearch(browser):
     eq(searches, doe_searches)
 
     # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -965,7 +954,6 @@ def _test_arguments(browser):
     exe_editor.close()
     mm_editor.close()
 
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
@@ -977,7 +965,6 @@ def _test_casefilters(browser):
                       'SequenceCaseFilter', 'SliceCaseFilter'):
         workspace_page.find_library_button(classname)
 
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
 
