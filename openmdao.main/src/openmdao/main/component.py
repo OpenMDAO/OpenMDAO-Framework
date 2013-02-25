@@ -225,10 +225,12 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        #if name.endswith('_items'):
-            #n = name[:-6]
-            #if n in self._valid_dict:
-                #name = n
+        
+        if name.endswith('_items'):
+            n = name[:-6]
+            if n in self._valid_dict:
+                name = n
+                
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -568,7 +570,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -592,10 +594,19 @@ class Component(Container):
                 self._num_input_caseiters += 1
 
     def _set_input_callback(self, name, remove=False):
-        #t = self.trait(name)
-        #if t.has_items or (t.trait_type and t.trait_type.has_items):
-        #    name = name+'[]'
+
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
+        
+        # Certain containers get an additional listener for access by index.
+        # Currently, List and Dict are supported, as well as any other 
+        # Enthought or user-defined trait whose handler supports it.
+        # Array is not supported yet.
+        t = self.trait(name)
+        if t.handler.has_items:
+            name = name + '_items'
+            self.on_trait_change(self._input_trait_modified, name, 
+                                 remove=remove)
+
 
     def remove_trait(self, name):
         """Overrides base definition of *add_trait* in order to
@@ -1608,13 +1619,13 @@ class Component(Container):
             io_attr['connected'] = ''
 
             if name in connected_inputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 # there can be only one connection to an input
                 io_attr['connected'] = \
                     str([src for src, dst in connections]).replace('@xin.', '')
 
             if name in connected_outputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
 

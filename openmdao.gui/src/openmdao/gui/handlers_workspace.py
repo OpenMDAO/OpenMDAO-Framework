@@ -99,7 +99,7 @@ class CommandHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
-                
+
         self.content_type = 'text/html'
         self.write(history)
 
@@ -119,11 +119,11 @@ class VariableHandler(ReqHandler):
         lhs = self.get_argument('lhs', default=None)
         rhs = self.get_argument('rhs', default=None)
         vtype = self.get_argument('type', default=None)
-        if ( lhs and rhs and vtype ):
-            if vtype == 'str' :
-                command = '%s = "%s"' % ( lhs, rhs )
-            else :
-                command = '%s = %s' % ( lhs, rhs )
+        if (lhs and rhs and vtype):
+            if vtype == 'str':
+                command = '%s = "%s"' % (lhs, rhs)
+            else:
+                command = '%s = %s' % (lhs, rhs)
 
         # if there is a command, execute it & get the result
         if command:
@@ -136,7 +136,7 @@ class VariableHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
-                
+
         self.content_type = 'text/html'
         self.write(history)
 
@@ -387,7 +387,7 @@ class FileHandler(ReqHandler):
             force = int(self.get_argument('force', default=0))
             if filename.endswith('.py') or cserver.is_macro(filename):
                 if not contents.endswith('\n'):
-                    text = contents + '\n' # to make ast.parse happy
+                    text = contents + '\n'  # to make ast.parse happy
                 else:
                     text = contents
                 try:
@@ -484,7 +484,7 @@ class ProjectLoadHandler(ReqHandler):
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
-            
+
 
 class ProjectRevertHandler(ReqHandler):
     ''' POST:  revert back to the most recent commit of the project.
@@ -498,8 +498,8 @@ class ProjectRevertHandler(ReqHandler):
             self.send_error(500)
         else:
             self.write('Reverted.')
-            
-            
+
+
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
@@ -706,4 +706,3 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
-

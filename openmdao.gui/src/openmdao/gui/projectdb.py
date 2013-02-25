@@ -7,7 +7,7 @@ import os.path
 from datetime import datetime
 
 from openmdao.gui.util import ensure_dir, print_dict
-from openmdao.util.log import logger
+
 
 def get_user_dir():
     user_dir = os.path.expanduser("~/.openmdao/gui/")
@@ -158,8 +158,7 @@ class Projects(object):
         cur.close()
 
         if len(matched_projects) < 1:
-            print "Error project ID not found:", id
-
+            print "Error project not found:", path
         # This should never happen!
         elif len(matched_projects) > 1:
             print "Error: Non-unique project ID:"
@@ -196,7 +195,7 @@ class Projects(object):
         #cur.execute('SELECT id,projpath from projects')
 
         #to_remove = []
-        
+
         #for row in cur:
             #if not os.path.exists(row['projpath']):
                 #to_remove.append(row['id'])
@@ -206,13 +205,13 @@ class Projects(object):
             #cur = con.cursor()
             #remove_str = "%s" % to_remove
             #sql = 'DELETE from projects WHERE id IN (%s)' % remove_str[1:len(remove_str)-1]
-    
+
             #logger.error("sql = %s" % sql)
-            
+
             #cur.execute(sql)
             #con.commit()
             #cur.close()
-        
+
     def list_projects(self):
         ''' Return a list of dictionaries for all projects owned by the
         user. Each dictionary contains all fields for that project id.'''
@@ -225,7 +224,7 @@ class Projects(object):
         cur.execute(sql)
 
         matched_projects = []
-        
+
         for row in cur:
             project = {
                 'id': row['id'],
@@ -243,9 +242,9 @@ class Projects(object):
                 project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
             except Exception, err:
                 project['file_modified'] = err
-                
+
             matched_projects.append(project)
-            
+
         cur.close()
 
         return matched_projects
@@ -296,4 +295,3 @@ class Projects(object):
         cur.execute(sql, (project_id,))
         con.commit()
         cur.close()
-
