@@ -708,6 +708,3 @@ openmdao.Util = {
         childObject.prototype.superClass = parentObject.prototype;
     }
 };
-
-
-

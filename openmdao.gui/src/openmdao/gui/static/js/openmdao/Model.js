@@ -513,7 +513,6 @@ openmdao.Model=function(listeners_ready) {
         jQuery.ajax({
             type: 'GET',
             url:  'file'+filepath.replace(/\\/g,'/'),
-            dataType: 'text',
             success: callback,
             error: errorHandler
         });

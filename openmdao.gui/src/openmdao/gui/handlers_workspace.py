@@ -1,7 +1,6 @@
 import sys
 import os
 import re
-import ast
 
 import jsonpickle
 
@@ -401,7 +400,12 @@ class FileHandler(ReqHandler):
     @web.authenticated
     def get(self, filename):
         cserver = self.get_server()
-        self.content_type = 'text/html'
+        self.content_type = 'application/octet-stream'
+        download = self.get_argument('download', default=False)
+        if download:
+            self.set_header('Content-Disposition', \
+                            'attachment; filename="' + filename + '"')
+            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
         self.write(str(cserver.get_file(filename)))
 
 
