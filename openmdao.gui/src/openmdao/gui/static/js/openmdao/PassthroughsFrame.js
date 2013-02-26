@@ -68,7 +68,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                 }
             }
-        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con) {
+        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con || input.parent) {
             checked = ""; disabled = "disabled";}
         else {checked = ""; disabled = "";}
         return [checked, disabled]
@@ -80,6 +80,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var vname = parts[parts.length - 1];
 
         var cmd = "_ = " + pathname +".remove('"+vname+"')";
+        console.log(cmd);
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }    
     
@@ -175,6 +176,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                 model.getComponent(comp.pathname, function (comp_data, e) {
                     jQuery.each(comp_data.Inputs, function(idx,input) {
                         implicit_con = "";
+
                         if (input.implicit) { implicit_con = eval(input.implicit.replace("parent",pathname));}
                         connected_to = eval(input.connected.replace("parent",pathname));
         
@@ -215,10 +217,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
                        connected_to = eval(output.connected.replace("parent",pathname));
-                       console.log(comp_path);
-                       console.log(output.name);
-                       console.log(output);
-                       console.log("");
+
                        output_pass = false;
                        if (connected_to) {
                             for (var i = 0; i < connected_to.length; i++) {
@@ -229,7 +228,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             }
                        }
                         if (output_pass) {checked="checked"; disabled = "";} 
-                        else if (top_outputs.contains(pathname + "."+ output.name)) {checked = ""; disabled = "disabled";}
+                        else if (top_outputs.contains(pathname + "."+ output.name) || output.parent) 
+                            {checked = ""; disabled = "disabled";}
                         else {checked = ""; disabled = "";}
                         this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
                         this_comp_id = "output-" + comp_path.split(".").join("-");
