@@ -382,14 +382,12 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            ret = self.write(str(cserver.write_file(filename, contents)))
-            if ret:
-                return ret
-            elif force or cserver.file_forces_reload(filename):
+            if not force and cserver.file_forces_reload(filename):
                 self.send_error(409)
-        return
+            else:
+                contents = self.get_argument('contents', default='')
+                self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
     def delete(self, filename):
@@ -403,7 +401,7 @@ class FileHandler(ReqHandler):
         self.content_type = 'application/octet-stream'
         download = self.get_argument('download', default=False)
         if download:
-            self.set_header('Content-Disposition', \
+            self.set_header('Content-Disposition',
                             'attachment; filename="' + filename + '"')
             self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
         self.write(str(cserver.get_file(filename)))

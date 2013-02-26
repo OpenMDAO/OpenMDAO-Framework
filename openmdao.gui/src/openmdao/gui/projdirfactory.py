@@ -10,8 +10,6 @@ import fnmatch
 import ast
 from inspect import isclass, getmembers
 
-import traceback
-
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -295,7 +293,10 @@ class ProjDirFactory(Factory):
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
-                        msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        if err.offset:
+                            msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        else:
+                            msg = str(err)
                         self._error(msg)
                     else:
                         self._error(str(err))
@@ -309,7 +310,10 @@ class ProjDirFactory(Factory):
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
-                        msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        if err.offset:
+                            msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        else:
+                            msg = str(err)
                         self._error(msg)
                     else:
                         self._error(str(err))
@@ -346,8 +350,8 @@ class ProjDirFactory(Factory):
 
     def _error(self, msg):
         logger.error(msg)
-        print msg
         publish('console_errors', msg)
+        publish('file_errors', msg)
 
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs

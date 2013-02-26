@@ -4,7 +4,6 @@ import logging
 import os.path
 import sys
 import traceback
-import ast
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -547,10 +546,10 @@ class ConsoleServer(cmd.Cmd):
                 for src_var, dst_var in conntuples:
                     src_root = src_var.split('.')[0]
                     dst_root = dst_var.split('.')[0]
-                    if ((src_name and src_root == src_name) or \
-                       (not src_name and src_root not in comp_names)) \
-                    and ((dst_name and dst_root == dst_name) or \
-                        (not dst_name and dst_root not in comp_names)):
+                    if (((src_name and src_root == src_name) or
+                         (not src_name and src_root not in comp_names)) and
+                        ((dst_name and dst_root == dst_name) or
+                         (not dst_name and dst_root not in comp_names))):
                         connections.append([src_var, dst_var])
                 conns['connections'] = connections
             except Exception as err:
@@ -576,13 +575,14 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Component):
                     inames = [cls.__name__
                               for cls in list(implementedBy(v.__class__))]
-                    components.append({'name': k,
-                                       'pathname': k,
-                                       'type': type(v).__name__,
-                                       'valid': v.is_valid(),
-                                       'interfaces': inames,
-                                       'python_id': id(v)
-                                      })
+                    components.append({
+                        'name': k,
+                        'pathname': k,
+                        'type': type(v).__name__,
+                        'valid': v.is_valid(),
+                        'interfaces': inames,
+                        'python_id': id(v)
+                    })
             dataflow['components'] = components
             dataflow['connections'] = []
             dataflow['parameters'] = []
@@ -632,7 +632,7 @@ class ConsoleServer(cmd.Cmd):
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'driver':   comp.driver.get_workflow(),
                                 'valid':    comp.is_valid()
-                              })
+                            })
                         elif is_instance(comp, Driver):
                             flow['workflow'].append(comp.get_workflow())
                         else:
@@ -640,7 +640,7 @@ class ConsoleServer(cmd.Cmd):
                                 'pathname': pathname,
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'valid':    comp.is_valid()
-                              })
+                            })
                     flows.append(flow)
         return jsonpickle.encode(flows)
 
@@ -802,20 +802,8 @@ class ConsoleServer(cmd.Cmd):
         ''' Write contents to file.
         '''
         ret = self.files.write_file(filename, contents)
-        if not ret == True:
+        if not ret is True:
             return ret
-        elif filename.endswith('.py') or self.is_macro(filename):
-            try:
-                # parse it looking for syntax errors
-                ast.parse(self.files.get_file(filename), filename=filename, mode='exec')
-            except Exception as exc:
-                if isinstance(exc, SyntaxError):
-                    # Drop leading '/' on filename, show actual line.
-                    err_str = 'invalid syntax (%s, line %s)\n%s' \
-                        % (exc.filename[1:], exc.lineno, exc.text)
-                else:
-                    err_str = str(exc)
-                self.send_pub_msg(err_str, 'file_errors')
 
     def add_file(self, filename, contents):
         ''' Add file.
