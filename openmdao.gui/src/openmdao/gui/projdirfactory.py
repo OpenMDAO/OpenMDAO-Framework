@@ -124,7 +124,7 @@ class _ClassVisitor(ast.NodeVisitor):
         self.classes = []
 
         with open(fname, 'Ur') as f:
-            contents = f.read()
+            contents = f.read().replace('\r', '')  # py26 hates CRs
             if len(contents) > 0 and contents[-1] != '\n':
                 contents += '\n'
         self.visit(ast.parse(contents, fname))
