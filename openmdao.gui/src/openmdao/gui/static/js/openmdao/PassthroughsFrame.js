@@ -20,12 +20,20 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var refreshing = d.inst.data.core.refreshing;
         if ((tagName == "A" || tagName == "INS") &&
           (refreshing != true && refreshing != "undefined")) {
-        c_data = d.rslt.obj[0].innerHTML
-        cobj = jQuery('<div>').html(c_data).find('a')
-        var this_path = cobj.attr('name');
+        c_data = d.rslt.obj[0].innerHTML;
+        cobj = jQuery('<div>').html(c_data).find('a');
+        var name = cobj.attr('vname');
         modified = cobj.attr('component');
         var itype = cobj.attr('itype');
         var status = e.type;
+        
+        if (cobj.attr('parent') != "") {
+            var this_path = modified + "." + cobj.attr('parent') + "." + name;
+        }
+        else {
+             var this_path = modified + "." + name;
+        
+        }
         if (status == "check_node") {
             self.makePassthrough(this_path);
             }
@@ -50,10 +58,11 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     
     this.makePassthrough = function(path) {
         var parts = path.split(".");
-
         var assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]);
         var comp_path = parts.slice(assembly_idx + 1).join(".");
         var cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
+        console.log("create");
+        console.log(cmd);
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }
     
@@ -75,11 +84,13 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     }
     
     this.removePassthrough = function(path, itype) {
+        // console.log(parts);
         var parts = path.split(".");
         var assembly = parts[0];
         var vname = parts[parts.length - 1];
 
         var cmd = "_ = " + pathname +".remove('"+vname+"')";
+        console.log("remove:")
         console.log(cmd);
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }    
@@ -157,6 +168,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
             jQuery.each(asm.Outputs, function(idx,output) {
                 top_outputs.push(pathname + "." + output.name);
             })    
+            
             jQuery.each(asm.Dataflow.components, function(idx,comp) {
                 var comp_path = comp.pathname;
                 this_id = comp_path.split(".").join("-");
@@ -179,21 +191,28 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
 
                         if (input.implicit) { implicit_con = eval(input.implicit.replace("parent",pathname));}
                         connected_to = eval(input.connected.replace("parent",pathname));
-        
+                        console.log("in:"+comp_path+input.name);
                         cd_array = self.check_passthrough_input(comp_path, input, connected_to, implicit_con, top_inputs);
-                        
+
                         checked = cd_array[0];
                         disabled = cd_array[1];
                         this_id = (comp_path + "-" + input.name).split(".").join("-")+'input-cb';
-
+                        pid = "";
+                        if (input.parent) {
+                        this_comp_id = (comp_path + "-" + input.parent).split(".").join("-")+'input-cb';
+                        pid = input.parent;
+                        }
+                        else {
                         this_comp_id = "input-" + comp_path.split(".").join("-");
+                        }     
 
                         if (jQuery("#" + this_id).length == 0 && disabled != "disabled") {    
 
                             
                             obj = {data : {"attr" : {"id" : this_id, "itype":0, 
                                 "component": comp_path,
-                                "name" : comp_path + "." + input.name},
+                                "parent" : pid,
+                                "vname" : input.name},
                                 "title" : input.name, state : "closed"}}; 
                             
                             div_input.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
@@ -217,7 +236,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
                        connected_to = eval(output.connected.replace("parent",pathname));
-
+                        console.log("out:"+comp_path+output.name);
                        output_pass = false;
                        if (connected_to) {
                             for (var i = 0; i < connected_to.length; i++) {
@@ -228,15 +247,24 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             }
                        }
                         if (output_pass) {checked="checked"; disabled = "";} 
-                        else if (top_outputs.contains(pathname + "."+ output.name) || output.parent) 
+                        else if (top_outputs.contains(pathname + "."+ output.name)) 
                             {checked = ""; disabled = "disabled";}
+
                         else {checked = ""; disabled = "";}
                         this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
+                        pid = "";
+                        if (output.parent) {
+                        this_comp_id = (comp_path + "-" + output.parent).split(".").join("-")+'output-cb';
+                        pid = output.parent;
+                        }
+                        else {
                         this_comp_id = "output-" + comp_path.split(".").join("-");
+                        }             
                         if (jQuery("#"+this_id).length == 0 && disabled != "disabled") {     
                             obj = {data : {"attr" : {"id" : this_id, "itype":1, 
                             "component": comp_path,
-                            "name" : comp_path + "." + output.name}, 
+                            "parent" : pid,
+                            "vname" :  output.name}, 
                             "title" : output.name, state : "closed"}}; 
                             
                             div_output.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
