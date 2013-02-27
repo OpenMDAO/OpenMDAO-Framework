@@ -353,20 +353,9 @@ b = Float(0.0, iotype='out')
 
     # Check if command errors are recorded (they shouldn't be).
     workspace_page.do_command('print xyzzy', ack=False)
-    # We expect 2 notifiers: command complete and error.
-    # These will likely overlap in a manner that 'Ok' is found but
-    # later is hidden by the second notifier.
-    try:  # We expect 2 notifiers: command complete and error.
-        NotifierPage.wait(workspace_page, base_id='command')
-    except WebDriverException as exc:
-        err = str(exc)
-        if 'Element is not clickable' in err:
-            err = NotifierPage.wait(workspace_page)
-            NotifierPage.wait(workspace_page, base_id='command')
-    else:
-        err = NotifierPage.wait(workspace_page)
-    if err != "NameError: name 'xyzzy' is not defined":
-        raise AssertionError('Unexpected message: %r' % err)
+    NotifierPage.wait(workspace_page, base_id='command')
+    expected = "NameError: name 'xyzzy' is not defined"
+    assert workspace_page.history.endswith(expected)
 
     editor = workspace_page.edit_file('_macros/default')
     contents = editor.get_code()
@@ -570,11 +559,11 @@ def _test_console_errors(browser):
     inputs = editor.get_inputs()
     inputs.rows[2].cells[1].click()
     inputs[2][2] = '42'  # printvars
-    message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'printvars' trait of a "
-                "Run_Once instance must be a list of items "
-                "which are a legal value, but a value of 42 "
-                "<type 'int'> was specified.")
+    expected = "TraitError: The 'printvars' trait of a "     \
+               "Run_Once instance must be a list of items "  \
+               "which are a legal value, but a value of 42 " \
+               "<type 'int'> was specified."
+    eq(workspace_page.history, expected)
     editor.close()
 
     # Attempt to save file with syntax error.
@@ -587,12 +576,22 @@ def execute(self)
     pass
 """, check=False)
 
-    message = NotifierPage.wait(workspace_page)  # save successful
+    # We expect 2 notifiers: save successful and file error.
+    # These will likely overlap in a manner that 'Ok' is found but
+    # later is hidden by the second notifier.
+    try:
+        message = NotifierPage.wait(editor_page, base_id='file-error')
+    except WebDriverException as exc:
+        err = str(exc)
+        if 'Element is not clickable' in err:
+            NotifierPage.wait(editor_page)
+            message = NotifierPage.wait(editor_page)
+    else:
+        NotifierPage.wait(editor_page)
+    eq(message, 'Error in file bug.py: invalid syntax (bug.py, line 6)')
 
-    message = NotifierPage.wait(editor_page, base_id='file-error')
     browser.close()
     browser.switch_to_window(workspace_window)
-    eq(message, 'invalid syntax (bug.py, line 6)\n    def execute(self)')
 
     # Load file with instantiation error.
     workspace_window = browser.current_window_handle
@@ -605,9 +604,10 @@ raise RuntimeError("__init__ failed")
 """)
     browser.close()
     browser.switch_to_window(workspace_window)
+
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
-    message = NotifierPage.wait(workspace_page)
-    eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
+    expected = "NameError: unable to create object of type 'bug2.Bug2': __init__ failed"
+    assert workspace_page.history.endswith(expected)
 
     # Clean up.
     closeout(project_dict, workspace_page)
@@ -766,8 +766,8 @@ def _test_noslots(browser):
     # Add ExternalCode to assembly.
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
-              'openmdao.lib.components.external_code.ExternalCode', 'ext',
-              prefix='top')
+        'openmdao.lib.components.external_code.ExternalCode', 'ext',
+        prefix='top')
 
     # Display editor and check that no 'Slots' tab exists.
     editor = ext.editor_page(double_click=False)
