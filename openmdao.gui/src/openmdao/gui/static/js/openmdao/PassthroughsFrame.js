@@ -95,16 +95,19 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     
         jQuery("#"+id+'-passthroughdiv').empty().remove();
 
-        componentsHTML = '<div id = '+id+'-passthroughdiv style = "overflow:auto;overflow-y:auto;background:gray"><table><tr><td>INPUTS:<div id = '+table_id_input+'-div>'
+        componentsHTML = '<div id = '+id+'-passthroughdiv style = "overflow:auto;overflow-y:auto;background:gray"><table><tr><td valign = "top">INPUTS:<div id = '+table_id_input+'-div>'
                        + '</div></td>'
                        +   '<td valign = "top">OUTPUTS:<div id = '+table_id_output+'-div>'
-                       + '</div>'      
+                       + '</div></table>'      
         componentsDiv = jQuery(componentsHTML).appendTo(self.elm);
         
         div_input = jQuery("#" + table_id_input+'-div');
         div_output = jQuery("#" + table_id_output+'-div');               
         
         div_input.jstree({
+            "core" : { 
+                    "animation" : false 
+            }, 
             "plugins" :     [ "html_data", "sort", "themes", "types", "ui","crrm","checkbox" ],
             "themes" :      { "theme":  "classic", "icons" : false },
             "checkbox": {real_checkboxes :true,
@@ -120,6 +123,9 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
              }
         })
         div_output.jstree({
+            "core" : { 
+                    "animation" : false 
+            }, 
             "plugins" :     [ "html_data", "sort", "themes", "types", "ui", "crrm","checkbox" ],
             "themes" :      { "theme":  "classic", "icons" : false },
             "checkbox": {real_checkboxes :true,
@@ -168,7 +174,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                 
                 model.getComponent(comp.pathname, function (comp_data, e) {
                     jQuery.each(comp_data.Inputs, function(idx,input) {
-                        implicit_con = eval(input.implicit.replace("parent",pathname));
+                        implicit_con = "";
+                        if (input.implicit) { implicit_con = eval(input.implicit.replace("parent",pathname));}
                         connected_to = eval(input.connected.replace("parent",pathname));
         
                         cd_array = self.check_passthrough_input(comp_path, input, connected_to, implicit_con, top_inputs);
@@ -208,6 +215,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
                        connected_to = eval(output.connected.replace("parent",pathname));
+                       console.log(comp_path);
+                       console.log(output.name);
+                       console.log(output);
+                       console.log("");
                        output_pass = false;
                        if (connected_to) {
                             for (var i = 0; i < connected_to.length; i++) {

@@ -1619,13 +1619,13 @@ class Component(Container):
             io_attr['connected'] = ''
 
             if name in connected_inputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 # there can be only one connection to an input
                 io_attr['connected'] = \
                     str([src for src, dst in connections]).replace('@xin.', '')
 
             if name in connected_outputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
 

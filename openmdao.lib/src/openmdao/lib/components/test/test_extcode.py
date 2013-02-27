@@ -335,10 +335,12 @@ class TestCase(unittest.TestCase):
             extcode.run()
         except OSError as exc:
             if sys.platform == 'win32':
-                msg = '[Error 2] The system cannot find the file specified'
+                # Apparently XP doesn't include the explanatory text.
+                #'[Error 2] The system cannot find the file specified'
+                self.assertTrue(str(exc).startswith('[Error 2]'))
             else:
                 msg = '[Errno 2] No such file or directory'
-            self.assertEqual(str(exc), msg)
+                self.assertEqual(str(exc), msg)
             self.assertEqual(extcode.return_code, -999999)
         else:
             self.fail('Expected OSError')
