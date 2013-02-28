@@ -210,6 +210,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.append(allocator)
 
     @staticmethod
@@ -225,6 +229,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.insert(index, allocator)
 
     @staticmethod
