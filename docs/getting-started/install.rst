@@ -6,13 +6,14 @@
 Installation
 ============
 
-.. note:: On some Windows machines, during the installation process, you might get the error: "The requested
-	  operation requires elevation." This means that you need to run as an administrator during
-	  installation. Please follow this link for detailed instructions on solving this error: 
-	  http://techrena.net/fix-requested-operation-requires-elevation-error/.  
+.. note:: 
 
-To avoid version conflicts with system level Python packages, OpenMDAO is best installed using a
-bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
+  On some Windows machines, during the installation process, you might get the error: "The requested
+  operation requires elevation." This means that you need to run as an administrator during
+  installation. Please follow this link for detailed instructions on solving this error: 
+  http://techrena.net/fix-requested-operation-requires-elevation-error/.  
+
+OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
 ``go-openmdao.py``. 
 
 **Acquire and run the script**
@@ -51,6 +52,15 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    must be running at least version 2.6. After the script completes successfully, you
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
+
+
+.. note:: 
+
+  Some steps of the installation process require internet access. These steps might fail if you're behind 
+  a proxy server. If that's the case you may have to set the ``http_proxy`` environment variable on
+  your system for the installation to work. You'll need to find out what your proxy
+  address and port number are from your IT department then you can set the variable appropriately. 
+
    
 
 .. _`activate_env`:
