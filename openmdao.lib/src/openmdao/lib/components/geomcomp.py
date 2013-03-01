@@ -1,8 +1,8 @@
 
 from openmdao.main.component import Component
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IParametricGeometry
-from openmdao.main.datatypes.api import Slot
+from openmdao.main.interfaces import IParametricGeometry, IGeometry
+from openmdao.main.datatypes.api import Slot, Geom
 from openmdao.util.log import logger
 from openmdao.main.datatypes.api import Float, Int, Str, Python, List
 
@@ -21,6 +21,9 @@ class GeomComponent(Component):
     parametric_geometry = Slot(IParametricGeometry, allow_none=True,
                                desc='Slot for a parametric geometry.')
 
+    geometry_output = Geom(IGeometry, iotype='out'
+                           desc ='Geometry object')
+    
     def __init__(self):
         super(GeomComponent, self).__init__()
         self._class_names = set(self.traits().keys())
