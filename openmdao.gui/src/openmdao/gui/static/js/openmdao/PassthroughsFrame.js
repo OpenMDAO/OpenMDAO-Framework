@@ -14,6 +14,44 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
      *  private
      ***********************************************************************/
     
+    this.travel_tree = function(d, name) {
+        parent_ = d[name];
+        parents = [parent_];
+        up_ = d[parent_];
+        while (up_) {
+            parents = parents.concat(up_)
+            up_ = d[up_]
+        }
+        return parents
+        
+    }
+    
+    this.get_halfchecked = function(tree_id) {
+        checked_ids = [];
+        jQuery(tree_id).find(".jstree-undetermined").each(function(i,element){    
+            elem_id = jQuery(element).find("a").attr("id")
+            checked_ids.push(elem_id);
+        })
+        return checked_ids;
+    }
+    
+    this.disable_halfchecked = function()   {
+        halfchecked_input = self.get_halfchecked("#" + table_id_input+'-div');
+        halfchecked_output = self.get_halfchecked("#" + table_id_output+'-div');
+        halfchecked = halfchecked_input.concat(halfchecked_output);
+        
+        jQuery.each(halfchecked, function(idx,an_id) {
+            div_output.jstree("set_type", "disabled", jQuery('#'+an_id));
+            })
+        }
+    
+    this.enable_parents = function(an_id) {
+        parents = self.travel_tree(an_id);
+        jQuery.each(parents, function(idx,an_id) {
+            div_output.jstree("set_type", "default", jQuery('#'+an_id));
+            })
+        }
+    
     
     this.handleCbClick = function(e, d) { 
         var tagName = d.args[0].tagName;
@@ -22,10 +60,13 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
           (refreshing != true && refreshing != "undefined")) {
         c_data = d.rslt.obj[0].innerHTML;
         cobj = jQuery('<div>').html(c_data).find('a');
+        
+        var dom_id = cobj.attr('id');
         var name = cobj.attr('vname');
         modified = cobj.attr('component');
         var itype = cobj.attr('itype');
         var status = e.type;
+        
         
         if (cobj.attr('parent') != "") {
             var this_path = modified + "." + cobj.attr('parent') + "." + name;
@@ -36,10 +77,12 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         }
         if (status == "check_node") {
             self.makePassthrough(this_path);
+            self.disable_halfchecked();
             }
         else {
             self.removePassthrough(this_path, itype);
-            
+            self.enable_parents(dom_id);
+            self.disable_halfchecked();
              }
         
         }}
@@ -77,7 +120,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                 }
             }
-        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con || input.parent) {
+        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0 || implicit_con) {
             checked = ""; disabled = "disabled";}
         else {checked = ""; disabled = "";}
         return [checked, disabled]
@@ -98,6 +141,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     var pathname = pathname;
     var input_data = {};
     var output_data = {};
+    
+    var tree_dep = {};
 
     /** handle message about the assembly */
     function handleMessage(message) {
@@ -148,6 +193,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                  "disabled" : { 
                        "check_node" : false, 
                        "uncheck_node" : false 
+                     }, 
+                 "enabled" : { 
+                       "check_node" : true, 
+                       "uncheck_node" : true 
                      } 
                  }
              }
@@ -159,16 +208,23 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var top_inputs = [];
         var top_outputs = [];
         
-        //div_input.empty()
-        //div_output.empty()
+        var input_targets = [];
+        var output_targets = [];
+
         model.getComponent(pathname, function(asm,e) {
             jQuery.each(asm.Inputs, function(idx,input) {
                 top_inputs.push(pathname + "." + input.name);
+                if (input.target) {
+                    input_targets.push(pathname + "."+input.target);
+                }
             })
             jQuery.each(asm.Outputs, function(idx,output) {
                 top_outputs.push(pathname + "." + output.name);
+
+                if (output.target) {
+                    output_targets.push(pathname + "."+output.target);
+                }
             })    
-            
             jQuery.each(asm.Dataflow.components, function(idx,comp) {
                 var comp_path = comp.pathname;
                 this_id = comp_path.split(".").join("-");
@@ -188,25 +244,39 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                 model.getComponent(comp.pathname, function (comp_data, e) {
                     jQuery.each(comp_data.Inputs, function(idx,input) {
                         implicit_con = "";
-
                         if (input.implicit) { implicit_con = eval(input.implicit.replace("parent",pathname));}
                         connected_to = eval(input.connected.replace("parent",pathname));
-                        console.log("in:"+comp_path+input.name);
                         cd_array = self.check_passthrough_input(comp_path, input, connected_to, implicit_con, top_inputs);
-
+                        
                         checked = cd_array[0];
                         disabled = cd_array[1];
-                        this_id = (comp_path + "-" + input.name).split(".").join("-")+'input-cb';
                         pid = "";
                         if (input.parent) {
-                        this_comp_id = (comp_path + "-" + input.parent).split(".").join("-")+'input-cb';
-                        pid = input.parent;
+                            std_name = comp_path+ "." + input.parent + "." + input.name;
+                            this_id = (comp_path + "-" + input.parent + "." + input.name).split(".").join("-")+'input-cb';
+                            this_comp_id = (comp_path + "-" + input.parent).split(".").join("-")+'input-cb';
+                            pid = input.parent;
+                            console.log(std_name)
+                            console.log(input_targets)
+                        //tree_dep[comp_path + "." + input.parent + "." + input.name] = comp_path + "."+input.parent;
+                        tree_dep[this_id] = this_comp_id;
+                    
                         }
                         else {
-                        this_comp_id = "input-" + comp_path.split(".").join("-");
+                            std_name = comp_path+ "." + input.name;
+                            this_id = (comp_path + "-" + input.name).split(".").join("-")+'input-cb';
+                            this_comp_id = "input-" + comp_path.split(".").join("-");
                         }     
-
-                        if (jQuery("#" + this_id).length == 0 && disabled != "disabled") {    
+                        if (input_targets.indexOf(std_name) >= 0) { // passthrough exists?
+                                checked = "checked";
+                                disabled = "";
+                        }
+                        else if (connected_to) { // no passthrough - any other connections? if yes - disable toggle
+                                checked = "";
+                                disabled = "disabled";
+                        }
+                        else {checked = ""; disabled = "";}
+                        if (jQuery("#" + this_id).length == 0 && disabled != "disabled") {    //create node
 
                             
                             obj = {data : {"attr" : {"id" : this_id, "itype":0, 
@@ -236,30 +306,43 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     
                     jQuery.each(comp_data.Outputs, function(idx,output) {
                        connected_to = eval(output.connected.replace("parent",pathname));
-                        console.log("out:"+comp_path+output.name);
-                       output_pass = false;
-                       if (connected_to) {
-                            for (var i = 0; i < connected_to.length; i++) {
-                                if (top_outputs.contains(connected_to[i])) {
-                                    output_pass = true;
-                                    break;
-                                }
-                            }
-                       }
-                        if (output_pass) {checked="checked"; disabled = "";} 
+                       
+                        pid = "";
+                        if (output.parent) { //variable tree element - nest under parent
+                            std_name = comp_path+ "." + output.parent + "." + output.name;
+                            this_id = (comp_path + "-" + 
+                                output.parent + "." + output.name).split(".").join("-")+'output-cb';
+                            this_comp_id = (comp_path + "-" + output.parent).split(".").join("-")+'output-cb';
+                            pid = output.parent;
+                            tree_dep[this_id] = this_comp_id;
+                        }
+
+                        else { //all others
+                            std_name = comp_path+ "." + output.name;
+                            this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
+                            this_comp_id = "output-" + comp_path.split(".").join("-");
+                        }    
+                       
+                       
+                       //output_pass = false;
+                       //if (connected_to) {
+                       //     for (var i = 0; i < connected_to.length; i++) {
+                       //         if (top_outputs.contains(connected_to[i])) {
+                       //             output_pass = true;
+                       //             break;
+                       //         }
+                       //     }
+                       //}
+                       
+                        if (output_targets.indexOf(std_name) >= 0) { // passthrough exists?
+                                checked = "checked";disabled = "";
+                        }
+
                         else if (top_outputs.contains(pathname + "."+ output.name)) 
                             {checked = ""; disabled = "disabled";}
 
                         else {checked = ""; disabled = "";}
-                        this_id = (comp_path + "-" + output.name).split(".").join("-")+'output-cb';
-                        pid = "";
-                        if (output.parent) {
-                        this_comp_id = (comp_path + "-" + output.parent).split(".").join("-")+'output-cb';
-                        pid = output.parent;
-                        }
-                        else {
-                        this_comp_id = "output-" + comp_path.split(".").join("-");
-                        }             
+         
                         if (jQuery("#"+this_id).length == 0 && disabled != "disabled") {     
                             obj = {data : {"attr" : {"id" : this_id, "itype":1, 
                             "component": comp_path,

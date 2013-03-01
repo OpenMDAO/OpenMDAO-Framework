@@ -1599,6 +1599,11 @@ class Component(Container):
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
         for name in io_list:
+            
+            #for variable trees
+            if '.' in name:
+                continue
+            
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)

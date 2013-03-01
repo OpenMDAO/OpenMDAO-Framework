@@ -208,7 +208,7 @@ class VariableTree(Container):
 
             # Support for expand/collapse
             attr['indent'] = indent
-            attr['id'] = '%s_%s' % (parent, name)
+            attr['id'] = '%s.%s' % (parent, name)
             if parent:
                 attr['parent'] = parent
 
