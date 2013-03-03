@@ -22,7 +22,7 @@ from openmdao.util.fileutil import get_module_path
 from openmdao.util.log import logger
 from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
-from openmdao.main.project import PROJ_DIR_EXT
+from openmdao.main.project import PROJ_DIR_EXT, parse
 
 
 class PyWatcher(FileSystemEventHandler):
@@ -124,10 +124,8 @@ class _ClassVisitor(ast.NodeVisitor):
         self.classes = []
 
         with open(fname, 'Ur') as f:
-            contents = f.read().replace('\r', '')  # py26 hates CRs
-            if len(contents) > 0 and contents[-1] != '\n':
-                contents += '\n'
-        self.visit(ast.parse(contents, fname))
+            contents = f.read()
+        self.visit(parse(contents, fname))
 
     def visit_ClassDef(self, node):
         self.classes.append(node.name)
