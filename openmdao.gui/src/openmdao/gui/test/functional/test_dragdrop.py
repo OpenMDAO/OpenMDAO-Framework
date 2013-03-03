@@ -78,15 +78,6 @@ def _test_workspace_dragdrop(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_drop_on_grid(browser):
-    project_dict, workspace_page = startup(browser)
-
-    #other tests also need to put an assembly on the grid, so put in seperate method
-    workspace_page.put_element_on_grid('Assembly')
-
-    closeout(project_dict, workspace_page)
-
-
 def _test_drop_on_existing_assembly(browser):
     project_dict, workspace_page = startup(browser)
 
@@ -101,7 +92,7 @@ def _test_drop_on_existing_assembly(browser):
     div = outer_figure.get_drop_targets()[0]
     chain = workspace_page.drag_element_to(assembly, div, False)
     workspace_page.check_highlighting(outer_figure('content_area').element, True,
-                       "Assembly's content_area")
+                                      "Assembly's content_area")
     workspace_page.release(chain)
 
     middle_name = NameInstanceDialog(workspace_page).create_and_dismiss()
