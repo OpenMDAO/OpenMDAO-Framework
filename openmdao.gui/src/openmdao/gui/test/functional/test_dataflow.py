@@ -666,5 +666,25 @@ def _test_ordering(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_taborder(browser):
+    # Replaces various connected components.
+    project_dict, workspace_page = startup(browser)
+
+    # Replace driver with an SLSQPdriver.
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    eq(editor.get_tab_labels(),
+       ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
+        'Triggers', 'Workflow', 'Slots'])
+
+    editor.close()
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
