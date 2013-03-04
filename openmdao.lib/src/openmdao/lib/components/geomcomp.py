@@ -40,6 +40,8 @@ class GeomComponent(Component):
                 new.parent = self
                 new.name = 'parametric_geometry'
             new.register_param_list_changedCB(self._model_updated)
+            
+        self.geometry_output = new.get_geometry()
 
     def _model_updated(self):
         """Should be called by the parametric_geometry object whenever

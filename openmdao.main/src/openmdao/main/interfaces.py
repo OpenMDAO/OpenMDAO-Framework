@@ -763,8 +763,10 @@ class IGeometry(Interface):
     """
     
     def get_tessellation(*args, **kwargs):
-        """Return a list of tuples, where each tuple contains the point
-        coordinates and triangle connectivities for a solid."""
+        """Return a list of tuples, where each tuple contains two ndarrays
+        that describe the tessellation for one solid in the model. The first
+        ndarray contains the the point coordinates and the second ndarray
+        contains the triangle connectivities."""
         
         
         
