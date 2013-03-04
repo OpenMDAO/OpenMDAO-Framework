@@ -41,6 +41,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         halfchecked = halfchecked_input.concat(halfchecked_output);
         
         jQuery.each(halfchecked, function(idx,an_id) {
+            div_input.jstree("set_type", "disabled", jQuery('#'+an_id));
             div_output.jstree("set_type", "disabled", jQuery('#'+an_id));
             })
         }
@@ -48,7 +49,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     this.enable_parents = function(an_id) {
         parents = self.travel_tree(an_id);
         jQuery.each(parents, function(idx,an_id) {
-            div_output.jstree("set_type", "default", jQuery('#'+an_id));
+            div_input.jstree("set_type", "enabled", jQuery('#'+an_id));
+            div_output.jstree("set_type", "enabled", jQuery('#'+an_id));
             })
         }
     
@@ -104,8 +106,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]);
         var comp_path = parts.slice(assembly_idx + 1).join(".");
         var cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
-        console.log("create");
-        console.log(cmd);
+
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }
     
@@ -127,14 +128,13 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     }
     
     this.removePassthrough = function(path, itype) {
-        // console.log(parts);
+
         var parts = path.split(".");
         var assembly = parts[0];
         var vname = parts[parts.length - 1];
 
         var cmd = "_ = " + pathname +".remove('"+vname+"')";
-        console.log("remove:")
-        console.log(cmd);
+
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }    
     
@@ -175,6 +175,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                  "disabled" : { 
                        "check_node" : false, 
                        "uncheck_node" : false 
+                     }, 
+                 "enabled" : { 
+                       "check_node" : true, 
+                       "uncheck_node" : true 
                      } 
                  }
              }
@@ -255,9 +259,10 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             std_name = comp_path+ "." + input.parent + "." + input.name;
                             this_id = (comp_path + "-" + input.parent + "." + input.name).split(".").join("-")+'input-cb';
                             this_comp_id = (comp_path + "-" + input.parent).split(".").join("-")+'input-cb';
+                            parent_state = jQuery.jstree._reference("#" + table_id_input+'-div').is_checked ("#"+this_comp_id);
                             pid = input.parent;
-                            console.log(std_name)
-                            console.log(input_targets)
+                            if (parent_state || jQuery("#"+this_comp_id).length == 0) {connected_to = "0"}
+
                         //tree_dep[comp_path + "." + input.parent + "." + input.name] = comp_path + "."+input.parent;
                         tree_dep[this_id] = this_comp_id;
                     
@@ -268,6 +273,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             this_comp_id = "input-" + comp_path.split(".").join("-");
                         }     
                         if (input_targets.indexOf(std_name) >= 0) { // passthrough exists?
+
                                 checked = "checked";
                                 disabled = "";
                         }
@@ -287,6 +293,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             
                             div_input.jstree("create", jQuery("#"+this_comp_id), false,obj, false, true);
                             if (checked == "checked") {
+
+
                                 jQuery.jstree._reference("#" + table_id_input+'-div').check_node("#"+this_id);
                                 }
                             else
@@ -313,6 +321,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                             this_id = (comp_path + "-" + 
                                 output.parent + "." + output.name).split(".").join("-")+'output-cb';
                             this_comp_id = (comp_path + "-" + output.parent).split(".").join("-")+'output-cb';
+                            parent_state = jQuery.jstree._reference("#" + table_id_output+'-div').is_checked ("#"+this_comp_id);
+                            if (parent_state || jQuery("#"+this_comp_id).length == 0) {connected_to = "0"}
                             pid = output.parent;
                             tree_dep[this_id] = this_comp_id;
                         }
