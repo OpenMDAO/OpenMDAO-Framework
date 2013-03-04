@@ -4,12 +4,12 @@ import unittest
 
 from openmdao.main.api import Assembly, Component
 from openmdao.main.datatypes.api import Geom
-from openmdao.main.interfaces import implements, IGeometry
+from openmdao.main.interfaces import implements, IStaticGeometry
 
 
 class MyGeo(object):
     
-    implements(IGeometry)
+    implements(IStaticGeometry)
     
     def get_tessellation(self):
         """Usually tesselate"""
@@ -56,7 +56,7 @@ class GeomTestCase(unittest.TestCase):
         try:
             self.top.g2.g_extra = "hey"
         except TypeError as err:
-            msg = "g2 (1-2): g_extra must provide interface 'IGeometry'"
+            msg = "g2 (1-2): g_extra must provide interface 'IStaticGeometry'"
             self.assertEqual(str(err), msg)        
         else:
             self.fail("exception expected")

@@ -753,11 +753,11 @@ class IParametricGeometry(Interface):
         """
         
     def get_geometry():
-        """Return an object that conforms to the IGeometry interface.
+        """Return an object that conforms to the IStaticGeometry interface.
         """
         
         
-class IGeometry(Interface):
+class IStaticGeometry(Interface):
     """An interface for a geometry object that can be queried and tesselated.
     These are created by Parametric Geometry objects.
     """

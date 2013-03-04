@@ -9,13 +9,14 @@ __all__ = ["Geom"]
 # pylint: disable-msg=E0611, F0401
 from enthought.traits.api import Instance
 
-from openmdao.main.interfaces import IGeometry, Interface
+from openmdao.main.interfaces import IStaticGeometry, Interface
 from openmdao.main.variable import Variable, gui_excludes
 
 
 class Geom(Variable):
     """OpenMDAO variable type for a geometry object that can be passed between
-    components and queried. The geometry object must conform to IGeometry.
+    components and queried. The geometry object must conform to 
+    IStaticGeometry.
     """
     
     def __init__(self, default_value=None, iotype=None, **metadata):
@@ -32,8 +33,8 @@ class Geom(Variable):
         if value == None:
             return value
         
-        if not IGeometry.providedBy(value):
-            self._iface_error(obj, name, 'IGeometry')
+        if not IStaticGeometry.providedBy(value):
+            self._iface_error(obj, name, 'IStaticGeometry')
         
         return value
     
