@@ -21,7 +21,7 @@ class GeomComponent(Component):
     parametric_geometry = Slot(IParametricGeometry, allow_none=True,
                                desc='Slot for a parametric geometry.')
 
-    geometry_output = Geom(IGeometry, iotype='out'
+    geometry_output = Geom(IGeometry, iotype='out',
                            desc ='Geometry object')
     
     def __init__(self):
