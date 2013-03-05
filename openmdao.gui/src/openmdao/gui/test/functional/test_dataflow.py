@@ -663,7 +663,7 @@ def _test_ordering(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
-def _test_io_filter(browser):
+def _test_io_filter_without_vartree(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.show_dataflow('top')
@@ -731,15 +731,18 @@ def _test_io_filter(browser):
 
     eq(expected, editor.get_outputs().value)
     editor.close()
-    time.sleep(3)
+
+    closeout(project_dict, workspace_page)
+
+def _test_io_filter_with_vartree(browser):
+    project_dict, workspace_page = startup(browser)
     #Test filtering variable trees
-    
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree")
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
     workspace_page.show_dataflow("vartree")
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
