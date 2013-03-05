@@ -602,9 +602,10 @@ def _test_replace(browser):
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
-    message = NotifierPage.wait(workspace_page)
-    eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
-                " 'postproc.result_in': top: Can't find 'comp.result'")
+    expected = "RuntimeError: top: Can't connect 'comp.result' to" \
+               " 'postproc.result_in': top: Can't find 'comp.result'"
+    assert workspace_page.history.endswith(expected)
+
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
     editor.move(-100, 0)
@@ -662,6 +663,26 @@ def _test_ordering(browser):
 
     # Clean up.
     editor.close()
+    closeout(project_dict, workspace_page)
+
+
+def _test_taborder(browser):
+    # Replaces various connected components.
+    project_dict, workspace_page = startup(browser)
+
+    # Replace driver with an SLSQPdriver.
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    eq(editor.get_tab_labels(),
+       ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
+        'Triggers', 'Workflow', 'Slots'])
+
+    editor.close()
+
+    # Clean up.
     closeout(project_dict, workspace_page)
 
 

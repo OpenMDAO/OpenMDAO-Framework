@@ -57,6 +57,15 @@ def _match_insts(classes):
     return _instantiated_classes.intersection(classes)
 
 
+def parse(contents, fname, mode='exec'):
+    """Wrapper for ast.parse() that cleans the contents of CRs and ensures
+    it ends with a newline"""
+    contents = contents.replace('\r','')  # py26 barfs on CRs
+    if not contents.endswith('\n'):
+        contents += '\n'  # to make ast.parse happy :(
+    return ast.parse(contents, filename=fname, mode=mode)
+
+
 def text_to_node(text, lineno=None):
     """Given a Python source string, return the corresponding AST node.
     The outer Module node is removed so that the node corresponding to the
@@ -176,10 +185,8 @@ class ProjLoader(object):
         the instrumented version before compiling that into bytecode.
         """
         contents = self.get_source(modpath)
-        if not contents.endswith('\n'):
-            contents += '\n'  # to make ast.parse happy :(
         fname = self._get_filename(modpath)
-        root = ast.parse(contents, filename=fname, mode='exec')
+        root = parse(contents, fname, mode='exec')
         return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
@@ -458,9 +465,7 @@ description =
                            " it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
-        if contents[-1] != '\n':
-            contents += '\n'
-        node = add_init_monitors(ast.parse(contents, filename=fname, mode='exec'))
+        node = add_init_monitors(parse(contents, fname, mode='exec'))
         exec compile(node, fname, 'exec') in self._model_globals
 
         # make the recorded execfile command use the current md5 hash

@@ -209,7 +209,7 @@ openmdao.CodeFrame = function(id,model) {
                 'buttons': [
                     {
                       text: 'Save File and Reload Project',
-                      id: overwriteID,
+                      id:    overwriteID,
                       click: function() {
                                jQuery(this).dialog('close');
                                model.setFile(filepath,currentCode, 1,
@@ -221,7 +221,7 @@ openmdao.CodeFrame = function(id,model) {
                     },
                     {
                        text: 'Cancel',
-                       id: cancelID,
+                       id:    cancelID,
                        click: function() {
                                  jQuery(this).dialog('close');
                               }
@@ -295,7 +295,7 @@ openmdao.CodeFrame = function(id,model) {
             }
         });
         editor.setSession(newSession);
-        
+
         // store session for efficent switching
         sessions[tabName] = {
             'editSession': newSession,

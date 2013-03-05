@@ -14,7 +14,20 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
     // initialize private variables
     var self = this,
-        panes = {};
+        panes = {},
+        tab_order = [
+            'Inputs',
+            'Outputs',
+            'Parameters',
+            'Objectives',
+            'Constraints',
+            'CouplingVars',
+            'Triggers',
+            'Events',
+            'Dataflow',
+            'Workflow',
+            'Slots'
+        ];
 
     self.elm.css({'overflow':'hidden'});
 
@@ -26,15 +39,31 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
         }
 
         var tabbed_pane = jQuery('<div id="'+self.id+'_tabs">'),
-            tabs = jQuery('<ul>');
+            tabs = jQuery('<ul>'),
+            tabcount = 0,
+            selected = 0;
 
         self.elm.html("");
         self.elm.append(tabbed_pane);
         tabbed_pane.append(tabs);
 
-        var tabcount = 0, selected = 0;
+        // sort the properties by the desired tab order
+        var names = [];
+        for (var name in properties) {
+            if (properties.hasOwnProperty(name)) {
+                names.push(name);
+            }
+        }
+        names.sort(function(a, b){
+            tab_a = tab_order.indexOf(a);
+            tab_b = tab_order.indexOf(b);
+            return (tab_a == tab_b) ? 0 : (tab_a > tab_b) ? 1 : -1;
+        })
 
-        jQuery.each(properties,function (name,val) {
+        for (var i=0; i<names.length; i++) {
+            var name = names[i],
+                val = properties[name];
+
             if (name === 'type') {
                 if (self.elm.parent().hasClass('ui-dialog')) {
                     self.elm.dialog("option","title",val+': '+self.pathname);
@@ -62,7 +91,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 }
                 tabcount = tabcount + 1;
             }
-        });
+        };
 
         self.elm.height(400);
         self.elm.width(640);
