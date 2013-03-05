@@ -419,7 +419,7 @@ class Assembly(Component):
             for obj in self.__dict__.values():
                 if obj is not newobj and is_instance(obj, Driver):
                     obj.restore_references(refs[obj], target_name)
-                    
+
         # Workflows need a reference to their new parent driver
         if is_instance(newobj, Driver):
             newobj.workflow._parent = newobj

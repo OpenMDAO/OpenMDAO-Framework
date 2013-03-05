@@ -32,7 +32,7 @@ class Slot(Variable):
 
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
-        
+
         default_value = None
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
@@ -66,9 +66,9 @@ class Slot(Variable):
                 self._instance.default_value = default_value
             else:
                 default_value = self._instance.default_value
-                
+
         super(Slot, self).__init__(default_value, **metadata)
-        
+
     def validate(self, obj, name, value):
         ''' wrapper around Enthought validate method'''
 
@@ -147,5 +147,6 @@ class Slot(Variable):
         for field in meta:
             if field not in gui_excludes:
                 slot_attr[field] = meta[field]
+                io_attr[field] = meta[field]
 
         return io_attr, slot_attr

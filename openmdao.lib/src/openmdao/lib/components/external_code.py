@@ -173,10 +173,13 @@ class ExternalCode(ComponentWithDerivatives):
 
             elif return_code:
                 if isinstance(self.stderr, str):
-                    stderrfile = open(self.stderr, 'r')
-                    error_desc = stderrfile.read()
-                    stderrfile.close()
-                    err_fragment = "\nError Output:\n%s" % error_desc
+                    if os.path.exists(self.stderr):
+                        stderrfile = open(self.stderr, 'r')
+                        error_desc = stderrfile.read()
+                        stderrfile.close()
+                        err_fragment = "\nError Output:\n%s" % error_desc
+                    else:
+                        err_fragment = "\n[stderr %r missing]" % self.stderr
                 else:
                     err_fragment = error_msg
                     

@@ -28,6 +28,12 @@ class ComponentPage(DialogPage):
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
 
+    def get_tab_labels(self):
+        """ Return a list of the tab labels. """
+        elements = self.root.find_elements_by_class_name('ui-tabs-anchor')
+        labels = [element.text for element in elements]
+        return labels
+
     def get_inputs(self):
         """ Return inputs grid. """
         self('inputs_tab').click()
