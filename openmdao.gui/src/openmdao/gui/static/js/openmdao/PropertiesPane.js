@@ -57,8 +57,44 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             jQuery("#" + name + "_variableFilter").keyup(function (e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
 
-                searchString = this.value;
-                updateFilter();
+                searchString = this.value.toLowerCase();
+                items = dataView.getItems();
+                _filter = {};
+                debug.info(items);
+                for (i=items.length - 1; i>=0; i--){
+                    name = (items[i].name) ? items[i].name.toLowerCase() : ""
+                    units = (items[i].units) ? items[i].units.toLowerCase() : ""
+                    description = (items[i].desc) ? items[i].desc.toLowerCase() : ""
+
+                    if( searchString === ""){
+                        _filter[items[i].id] = true;
+                    }
+
+                    else if( _filter[items[i].id] === true){
+                        if( items[i].parent !== null ){
+                            _filter[items[i].parent] = true;
+                            _collapsed[items[i].parent] = false;
+                        }
+                    }
+                        
+                    else if(name.indexOf(searchString) !== -1 || units.indexOf(searchString) !== -1 || description.indexOf(searchString) !== -1) {
+                        _filter[items[i].id] = true;
+                        _collapsed[items[i].id] = false;
+                        if(items[i].parent !== null){
+                            _filter[items[i].parent] = true;
+                            _collapsed[items[i].parent] = false;
+                        }
+                    }
+                    
+                    else {
+                        _filter[items[i].id] = false;
+                        _collapsed[items[i].id] = true;
+                    }
+
+                    dataView.updateItem(items[i].id, items[i]);
+                }
+                updateFilter({ filter: textboxFilter});
+                
             });
         }
 
@@ -87,6 +123,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         _collapsed[item.id] = false;
                     }
                     // dataView needs to know to update.
+                    dataView.setFilterArgs({filter:expansionFilter});
                     dataView.updateItem(item.id, item);
                     highlightCells();
                 }
@@ -136,10 +173,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
     
-    function matchesFilter(name, units, description, searchString){
-        return (name.indexOf(searchString) !== -1) ||
-            (units.indexOf(searchString) !==-1 )||
-            (description.indexOf(searchString)) !==-1
+    function matchesFilter(item){
+        return (item.name.indexOf(searchString) !== -1) ||
+            (item.units.indexOf(searchString) !==-1 )||
+            (item.description.indexOf(searchString)) !==-1
     }
 
     function expansionFilter(item, args){
@@ -152,64 +189,27 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     return false;
                 }
                 idx = dataView.getIdxById(parent.parent);
-                parent = dataView.getItemByIdx(idx)
+                parent = dataView.getItemByIdx(idx);
             }
         }
+
+        return true;
+
     }
 
     function textboxFilter(item, args){
-        if(args !== undefined){
-            if(args.searchString !== ""){
-                //Save current collapse/expand structure
-                //Check if filter should be applied
-                //Check if variable has a parent
-                //If so, parent needs to be made visible
-                //Repeat until a parent can no longer be found
-                //Update the dataview for each parent that is found
-
-                if(item.parent != null)
-                if(matchesFilter(
-                        item["name"].toLowerCase(),
-                        item["units"].toLowerCase(),
-                        item["description"].toLowerCase(),
-                        args.searchString)){
-                            if(item.parent != null){
-                                idx = dataView.getIdxById(item.parent);
-                                parent = dataView.getItemByIdx(idx);
-                                while (parent) {
-                                    if (_collapsed[parent.id]) {
-                                        _collapsed[parent.id] = false;
-                                    }
-                                    idx = dataView.getIdxById(parent.parent);
-                                    parent = dataView.getItemByIdx(idx);
-                                }
-                            }
-
-                        }
-            }
-            //Restore collapse/expand structure
-            //Can do this by reapplying the filter
-        }
+        return _filter[item.id];
     }
 
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
     this.filter = function myFilter(item, args) {
-        if(args.filterType === "expansion"){
-            return expansionFilter(item, args);
-        }
-
-        if(args.filterType === "textbox"){
-            return textboxFilter(item, args);
-        }
-
-        return true;
+        return expansionFilter(item, args) && textboxFilter(item, args);
+        //return true;
     }
     
-    function updateFilter(){
-        dataView.setFilterArgs({
-            searchString: searchString,
-        });
+    function updateFilter(args){
+        dataView.setFilterArgs(args);
         dataView.refresh();
     }
     
@@ -252,7 +252,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             jQuery.each(properties, function(index, value) {
             
                 editableInTable[value.id] = {};
-
+                _filter[value.id] = true;
                 if (value.hasOwnProperty("parent")) {
                     if ( !_collapsed.hasOwnProperty(value.id) ) {
                         _collapsed[value.id] = true; 
@@ -293,11 +293,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             dataView.beginUpdate();
             dataView.setItems(properties);
-            if(meta){
-                dataView.setFilterArgs({
-                    searchString : searchString,
-                });
-            }
+            dataView.setFilterArgs({filter:expansionFilter});
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate()

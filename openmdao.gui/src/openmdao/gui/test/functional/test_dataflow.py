@@ -666,93 +666,139 @@ def _test_ordering(browser):
 def _test_io_filter(browser):
 
     project_dict, workspace_page = startup(browser)
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
-    #conmin = workspace_page.get_dataflow_figure('conmin', 'top')
-    #editor = conmin.editor_page()
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
+    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
+    editor = conmin.editor_page()
 
-    ##Test filtering inputs
+    #Test filtering inputs
 
-    ##filter on name='ctlmin'
-    #editor.filter_inputs("ctlmin")
-    #eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
-    #editor.filter_inputs("")
+    #filter on name='ctlmin'
+    editor.filter_inputs("ctlmin")
+    eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
 
-    ##filter on type='ndarray'
-    #editor.filter_inputs("ndarray")
-    #eq([u'cons_is_linear', u'ndarray', u'[]', u'', u'true', u'Array designating whether each constraint is linear.', u'', u''], editor.get_inputs().value[0])
-    #editor.filter_inputs("")
+    #filter on description='conjugate'
+    editor.filter_inputs("conjugate")
+    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
 
-    ##filter on value='0.004'
-    #editor.filter_inputs("0.004")
-    #eq([u'ctmin', u'float', u'0.004', u'', u'true', u'Minimum absolute value of ct used in optimization.', u'', u''], editor.get_inputs().value[0])
-    #editor.filter_inputs("")
+    #filter on description='Conjugate'
+    editor.filter_inputs("Conjugate")
+    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
 
-    ##filter on high='null'. High is hidden field
-    #editor.filter_inputs("null")
-    #eq([u'ct', u'float', u'-0.1', u'', u'true', u'Constraint thickness parameter.', u'', u''], editor.get_inputs().value[0])
-    #editor.filter_inputs("")
+    #filter on term='print'
+    #filter should match items in name and description column
+    expected = [
+            [u'iprint', u'enum', u'0', u'', u'true', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.', u'', u''],
+            [u'printvars', u'list', u'', u'', u'true', u'List of extra variables to output in the recorders.', u'', u'']
+            ]
 
-    #editor.show_outputs()
+    editor.filter_inputs("print")
+    eq(expected, editor.get_inputs().value)
+    editor.filter_inputs("")
 
-    ##Test filtering outputs
+    editor.show_outputs()
 
-    ##filter on name='derivative_exec_count'
-    #editor.filter_outputs("derivative_exec_count")
-    #eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
-    #editor.filter_outputs("")
+    #Test filtering outputs
 
-    ##filter on type='str'
-    #editor.filter_outputs("str")
-    #eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
-    #editor.filter_outputs("")
-    #
-    ##filter on description='coordinates'
-    #editor.filter_outputs("coordinates")
-    #eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
-    #editor.filter_outputs("")
+    #filter on name='derivative_exec_count'
+    editor.filter_outputs("derivative_exec_count")
+    eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
+    editor.filter_outputs("")
 
-    ##filter on high='922'. High is a hidden field
-    #editor.filter_outputs("922")
-    #eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
-    #editor.filter_outputs("")
+    #filter on description='coordinates'
+    editor.filter_outputs("coordinates")
+    eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
+    editor.filter_outputs("")
 
-    #editor.close()
+    #filter on term='time'.
+    editor.filter_outputs("time")
+    expected = [\
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
 
+    eq(expected, editor.get_outputs().value)
+
+    #filter on term='Time'.
+    editor.filter_outputs("Time")
+    expected = [\
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
+
+    eq(expected, editor.get_outputs().value)
+    editor.close()
+    time.sleep(3)
     #Test filtering variable trees
     
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-
     workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree")
+    workspace_page.show_dataflow("vartree")
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
     editor = comp.editor_page()
     inputs = editor.get_inputs()
     #editor.move(-100, 0)
     
-    # Expand first vartree
-    inputs.rows[0].cells[0].click()
-
     #filter when tree is expanded
-    #filter on description="vv1"
-    editor.filter_inputs("vv1")
-    eq([u'v1', u'float', u'1', u'', u'true', u'vv1', u'', u''], editor.get_inputs().value[0])
-    editor.filter_inputs("c")
+    #filter on name="b"
+    editor.filter_inputs("b")
+    expected = [\
+        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
+        [u'b', u'float', u'12', u'inch', u'true', u'', u'', u''],
+        [u'directory', u'str', u'', u'', u'true', u'If non-blank, the directory to execute in.', u'', u'']
+        ]
+
+    eq(expected, editor.get_inputs().value)
     time.sleep(3) 
-    # Collapse the var tree
-    inputs = editor.get_inputs()
-    inputs.rows[0].cells[0].click()
 
     #filter when tree is collapse
-    #filter on name="cont_in"
-    #everything should be filtered out exept " cont_in"
-    editor.filter_inputs("cont_in")
-    result = editor.get_inputs().value
-    eq(1, len(result))
-    eq([u' cont_in', u'DumbVT',  u'',  u'', u'true', u'', u'', u''], result[0])
-    editor.filter_inputs("")
+    #filter on units="ft"
+    editor.filter_inputs("ft")
+    expected = [\
+        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
+        [u'a', u'float', u'1', u'ft', u'true', u'', u'', u''],
+        ]
+    eq(expected, editor.get_inputs().value)
+
+    editor.show_outputs()
+
+    #filter when tree is expanded
+    #filter on name="b"
+    editor.filter_outputs("b")
+    expected = [\
+        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
+        [u'b', u'float', u'12', u'inch', u'false', u'', u'', u''],
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
+
+    eq(expected, editor.get_outputs().value)
+    time.sleep(3) 
+
+    #filter when tree is collapse
+    #filter on units="ft"
+    editor.filter_outputs("ft")
+    expected = [\
+        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
+        [u'a', u'float', u'1', u'ft', u'false', u'', u'', u''],
+        ]
+    eq(expected, editor.get_outputs().value)
 
     editor.close()
     closeout(project_dict, workspace_page)
