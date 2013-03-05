@@ -147,5 +147,6 @@ class Slot(Variable):
         for field in meta:
             if field not in gui_excludes:
                 slot_attr[field] = meta[field]
+                io_attr[field] = meta[field]
 
         return io_attr, slot_attr
