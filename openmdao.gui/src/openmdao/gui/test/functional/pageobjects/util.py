@@ -97,8 +97,8 @@ class NotifierPage(object):
         """ Wait for notification. Returns notification message. """
         time.sleep(0.5)  # Pacing.
         base_id = base_id or 'notify'
-        msg_id = base_id+'-msg'
-        ok_id  = base_id+'-ok'
+        msg_id = base_id + '-msg'
+        ok_id  = base_id + '-ok'
         msg = WebDriverWait(parent.browser, timeout).until(
                   lambda browser: browser.find_element(By.ID, msg_id))
         ok = WebDriverWait(parent.browser, timeout).until(
@@ -344,4 +344,3 @@ class SafeInvoker(object):
 
             self._request_q.task_done()
             self._reply_q.put((retval, exc))
-

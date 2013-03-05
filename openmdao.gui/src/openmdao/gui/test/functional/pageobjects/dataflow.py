@@ -130,7 +130,7 @@ class DataflowFigure(BasePageObject):
 
     def output_edit_driver(self, driver_pathname):
         """ Return :class:`DriverPage` associated with the output port. """
-# FIXME: can't get response from context click.
+        # FIXME: can't get response from context click.
         chain = ActionChains(self.browser)
         chain.context_click(self.output_port).perform()
         time.sleep(0.5)

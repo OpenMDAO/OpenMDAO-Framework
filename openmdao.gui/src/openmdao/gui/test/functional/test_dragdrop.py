@@ -78,15 +78,6 @@ def _test_workspace_dragdrop(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_drop_on_grid(browser):
-    project_dict, workspace_page = startup(browser)
-
-    #other tests also need to put an assembly on the grid, so put in seperate method
-    workspace_page.put_element_on_grid('Assembly')
-
-    closeout(project_dict, workspace_page)
-
-
 def _test_drop_on_existing_assembly(browser):
     project_dict, workspace_page = startup(browser)
 
@@ -101,7 +92,7 @@ def _test_drop_on_existing_assembly(browser):
     div = outer_figure.get_drop_targets()[0]
     chain = workspace_page.drag_element_to(assembly, div, False)
     workspace_page.check_highlighting(outer_figure('content_area').element, True,
-                       "Assembly's content_area")
+                                      "Assembly's content_area")
     workspace_page.release(chain)
 
     middle_name = NameInstanceDialog(workspace_page).create_and_dismiss()
@@ -218,37 +209,24 @@ def _test_slots(browser):
 
     execcomp = workspace_page.find_library_button('ExecComp')
 
-    ##################################################
-    # First part of test: Drag and drop ExecComp from the Library
-    # onto the recorder slot of a MetaModel. This should fail.
-    ##################################################
-    #drag one success and one failure onto slots
-    #failure:
+    # drop ExecComp onto MetaModel 'recorder' slot. This should fail.
     workspace_page.slot_drop(execcomp, caserec, False, 'Component')
 
     slot_id = 'SlotFigure-%s-%s'
 
-    #refresh
     time.sleep(1.0)  # give it a second to update the figure
     caserec = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
-
-    #check for class change
     eq(False, ("filled" in caserec.get_attribute('class')),
         "Component dropped into CaseRecorder (should not have)")
 
-    ##################################################
-    # Second part of test: Drag and drop ExecComp from the Library onto the
-    # model (IComponent) slot of a MetaModel.
-    ##################################################
+    # drop ExecComp onto the MetaModel 'model' slot. This should succeed.
     workspace_page.slot_drop(execcomp, comp, True, 'Component')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
 
-    #refresh
     time.sleep(1.0)  # give it a second to update the figure
     comp = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
-    #check for class change
     eq(True, ("filled" in comp.get_attribute('class')),
         "Component did not drop into Component slot")
 

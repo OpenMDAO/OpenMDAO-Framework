@@ -67,7 +67,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
-        // get the file name and extension 
+        // get the file name and extension
         var path = path.replace(/\\/g,'/'),
             name = path.split('/'),
             name = name[name.length-1],
@@ -113,6 +113,11 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname);
     }
 
+    /** save a copy of the file to the local file system (download) */
+    function saveCopy(pathname) {
+        jQuery.fileDownload('file'+pathname+'?download=True');
+    }
+
     /** if we have a view geometry function, then call it on the specified file */
     function viewGeometry(pathname) {
         if (typeof geom_fn === 'function') {
@@ -126,13 +131,13 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     /** toggle the hidden files filter */
     function toggleFilter() {
         filter_active = !filter_active;
-        self.update(); 
+        self.update();
     }
 
     /** get a context menu for the specified node */
     function nodeMenu(node) {
         // first let's see what was clicked on
-        var isFolder = false, 
+        var isFolder = false,
             isEmptyFolder = false;
         if (node.is('.jstree-leaf')) {
             filenode = node.find('.file');
@@ -166,7 +171,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         // if they clicked on a folder then create new files inside that folder
         menu.createFile = {
             "label"  : 'New File',
-            "action" : function(node) { 
+            "action" : function(node) {
                            if (isFolder) {
                               openmdao.FileTreeFrame.prototype.newFile(path);
                            }
@@ -199,44 +204,55 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                        }
         };
 
-        // if it's not a folder, 
+        // if it's not a folder
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
             //menu.viewFile = {
             //    "label"  : 'View File (raw)',
             //    "action" : function(node) { viewFile(path); }
             //};
+
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
                 "action" : function(node) { editFile(path); }
             };
+
             // if it's a py file, let them execute it
             if (/.py$/.test(path)) {
                 menu.execFile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path); }
                 };
-            }
+            };
+
             // if it's a geometry file, let them load it into viewer
             if (/.geom$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
                     "action" : function(node) { viewGeometry('file'+path.replace(/\\/g,'/')); }
                 };
-            }
-        }
+            };
 
-        menu.renameFile = {
-            "label"  : 'Rename',
-            "action" : function(node) {
-                           var old = path.split('/'),
-                               old = old[old.length-1];
-                           openmdao.Util.promptForValue('New name for '+old,
-                                                        function(name) {
-                               model.renameFile(path, name);
-                           });
-                       }
+            menu.renameFile = {
+                "label"  : 'Rename',
+                "action" : function(node) {
+                                var old = path.split('/'),
+                                    old = old[old.length-1];
+                                openmdao.Util.promptForValue('New name for '+old, function(name) {
+                                    model.renameFile(path, name);
+                                });
+                           }
+            };
+
+            menu.saveCopy = {
+                "label"  : 'Save a Copy',
+                "action" : function(node) {
+                                var name = path.split('/'),
+                                    name = name[name.length-1];
+                                saveCopy(path);
+                           }
+            };
         };
 
         // delete only files and empty folders
@@ -251,7 +267,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 "label"  : 'Delete Empty Folder',
                 "action" : function(node) { model.removeFile(path); }
             };
-        }
+        };
 
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
@@ -307,7 +323,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
         })
         .bind("dblclick.jstree", function (e,tree) {
-            var node = jQuery(e.target),            
+            var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
                 if (/.geom$/.test(path)) {
@@ -324,7 +340,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 debug.warn("node in file tree does not seem to be a file or a folder:",node);
             }
         });
-        
+
         // enable dragging out to desktop (only supported under chrome)
         // ref: http://www.thecssninja.com/javascript/gmail-dragout
         // FIXME: doesn't work, handlers not getting added??
