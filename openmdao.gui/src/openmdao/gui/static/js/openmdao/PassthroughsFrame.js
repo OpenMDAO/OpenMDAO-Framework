@@ -3,6 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     var id = ('PassthroughsFrame-'+pathname).replace(/\./g,'-');
     var table_id_input = id+'-passthrough-input-table';
+    var tree_dep = {};
     var pathname = pathname;
     var table_id_output = id+'-passthrough-output-table';
     openmdao.PassthroughsFrame.prototype.init.call(this, id,
@@ -15,6 +16,8 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
      ***********************************************************************/
     
     this.travel_tree = function(d, name) {
+        console.log(d)
+        console.log(name)
         parent_ = d[name];
         parents = [parent_];
         up_ = d[parent_];
@@ -46,11 +49,11 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
             })
         }
     
-    this.enable_parents = function(an_id) {
-        parents = self.travel_tree(an_id);
-        jQuery.each(parents, function(idx,an_id) {
-            div_input.jstree("set_type", "enabled", jQuery('#'+an_id));
-            div_output.jstree("set_type", "enabled", jQuery('#'+an_id));
+    this.enable_parents = function(d, an_id) {
+        parents = self.travel_tree(d, an_id);
+        jQuery.each(parents, function(idx,this_id) {
+            div_input.jstree("set_type", "enabled", jQuery('#'+this_id));
+            div_output.jstree("set_type", "enabled", jQuery('#'+this_id));
             })
         }
     
@@ -83,7 +86,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
             }
         else {
             self.removePassthrough(this_path, itype);
-            self.enable_parents(dom_id);
+            self.enable_parents(tree_dep, dom_id);
             self.disable_halfchecked();
              }
         
@@ -142,7 +145,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     var input_data = {};
     var output_data = {};
     
-    var tree_dep = {};
+    tree_dep = {};
 
     /** handle message about the assembly */
     function handleMessage(message) {
