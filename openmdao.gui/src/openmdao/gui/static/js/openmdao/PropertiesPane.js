@@ -7,8 +7,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView,
         meta = meta,
         searchString = "",
-        inlineFilter = undefined,
         current_item,
+        inlineFilter = undefined,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
@@ -24,7 +24,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         _collapsed = {},
         _filter = {},
         editableInTable = {};
-    
     self.pathname = pathname;
     if (editable) {
         options.editable = true;
@@ -33,9 +32,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     
     if (meta) {
         options.autoHeight = false;
-        toolTip = jQuery("<div id='variable_tooltip'></div>");
-        toolTip.hide();
-        elm.append(toolTip);
         elm.append(jQuery("<div id='inlineFilter' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
@@ -52,11 +48,18 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     elm.append(propsDiv);
     SetupTable();
+    
+    function getCurrentVariable(){
+        return current_item;
+    }
+
+    function setCurrentVariable(item){
+        current_item = item;
+    }
 
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-        
         if(meta){
             jQuery("#" + name + "_variableFilter").keyup(function (e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
@@ -102,12 +105,24 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             //TODO: On hover of variable icon should bring up tool tip with information for that row
         }
+        
 
         props.onMouseEnter.subscribe(function(e,args){
             var cell = args.grid.getCellFromEvent(e);
-            if(current_item !== dataView.getItem(cell.row)){
-                current_item = dataView.getItem(cell.row);
-                debug.info(current_item);
+            if(getCurrentVariable() !== dataView.getItem(cell.row)){
+                item = dataView.getItem(cell.row);
+                var str = ""
+                for(var field in item){
+                    str = str + field + ": " + item[field] + "<br />";
+                }
+                jQuery(".variable_info").tooltip({
+                    content : function(){
+                        return "<div>" + str + "</div>";
+                    },
+                    hide : false,
+                });
+
+                setCurrentVariable(item);
             }
         });
 
@@ -126,6 +141,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         });
     
         props.onClick.subscribe(function (e) {
+            getCurrentVariable();
             var cell = props.getCellFromEvent(e);
             if (cell.cell==0) {
                 var item = dataView.getItem(cell.row);
@@ -171,7 +187,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
         
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
-        var spacer = "<span class='ui-icon ui-icon-info variable_info' style='display:inline-block;'></span><span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px;'></span>";
+        var spacer = "<span class='ui-icon ui-icon-info variable_info' title='' style='display:inline-block;'></span><span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px;'></span>";
         var idx = dataView.getIdxById(dataContext.id);
         var nextline = dataView.getItemByIdx(idx+1)
         if (nextline && nextline.indent > dataContext.indent) {
