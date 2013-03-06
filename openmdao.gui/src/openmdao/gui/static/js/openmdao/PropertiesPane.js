@@ -32,6 +32,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     
     if (meta) {
         options.autoHeight = false;
+        toolTip = jQuery("<div id='variable_tooltip'></div>");
+        toolTip.hide();
+        elm.append(toolTip);
         elm.append(jQuery("<div id='inlineFilter' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
