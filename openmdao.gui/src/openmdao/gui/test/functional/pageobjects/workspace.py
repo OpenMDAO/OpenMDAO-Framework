@@ -269,6 +269,7 @@ class WorkspacePage(BasePageObject):
         self('add_button').click()
 
         self.file_chooser = file_path
+        time.sleep(1)  # Some extra time for the file tree update.
         self.find_file(os.path.basename(file_path))  # Verify added.
         time.sleep(1)  # Some extra time for the library update.
 
@@ -806,7 +807,7 @@ class WorkspacePage(BasePageObject):
             if overlap < 0:
                 # we still have a problem.
                 eq(True, False,
-                    "Could not move or rezise the editor dialog so it is not " \
+                    "Could not move or rezise the editor dialog so it is not "
                     "overlapping the library. The browser window is too small")
 
     def get_dataflow_fig_in_globals(self, name):

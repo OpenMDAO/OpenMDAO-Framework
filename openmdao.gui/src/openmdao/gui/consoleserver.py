@@ -108,7 +108,7 @@ class ConsoleServer(cmd.Cmd):
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
-                                   if is_instance(obj, Driver)]:
+                               if is_instance(obj, Driver)]:
                     driver._update_workflow()
 
     def publish_components(self):
@@ -546,10 +546,10 @@ class ConsoleServer(cmd.Cmd):
                 for src_var, dst_var in conntuples:
                     src_root = src_var.split('.')[0]
                     dst_root = dst_var.split('.')[0]
-                    if ((src_name and src_root == src_name) or \
-                       (not src_name and src_root not in comp_names)) \
-                    and ((dst_name and dst_root == dst_name) or \
-                        (not dst_name and dst_root not in comp_names)):
+                    if (((src_name and src_root == src_name) or
+                         (not src_name and src_root not in comp_names)) and
+                        ((dst_name and dst_root == dst_name) or
+                         (not dst_name and dst_root not in comp_names))):
                         connections.append([src_var, dst_var])
                 conns['connections'] = connections
             except Exception as err:
@@ -575,13 +575,14 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Component):
                     inames = [cls.__name__
                               for cls in list(implementedBy(v.__class__))]
-                    components.append({'name': k,
-                                       'pathname': k,
-                                       'type': type(v).__name__,
-                                       'valid': v.is_valid(),
-                                       'interfaces': inames,
-                                       'python_id': id(v)
-                                      })
+                    components.append({
+                        'name': k,
+                        'pathname': k,
+                        'type': type(v).__name__,
+                        'valid': v.is_valid(),
+                        'interfaces': inames,
+                        'python_id': id(v)
+                    })
             dataflow['components'] = components
             dataflow['connections'] = []
             dataflow['parameters'] = []
@@ -631,7 +632,7 @@ class ConsoleServer(cmd.Cmd):
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'driver':   comp.driver.get_workflow(),
                                 'valid':    comp.is_valid()
-                              })
+                            })
                         elif is_instance(comp, Driver):
                             flow['workflow'].append(comp.get_workflow())
                         else:
@@ -639,7 +640,7 @@ class ConsoleServer(cmd.Cmd):
                                 'pathname': pathname,
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'valid':    comp.is_valid()
-                              })
+                            })
                     flows.append(flow)
         return jsonpickle.encode(flows)
 
@@ -800,7 +801,9 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
-        return self.files.write_file(filename, contents)
+        ret = self.files.write_file(filename, contents)
+        if not ret is True:
+            return ret
 
     def add_file(self, filename, contents):
         ''' Add file.
@@ -917,11 +920,12 @@ class ConsoleServer(cmd.Cmd):
         if pdf:
             if self.is_macro(filename):
                 return True
-            filename = filename.lstrip('/')
-            filename = os.path.join(self.proj.path, filename)
-            info = pdf._files.get(filename)
-            if info and _match_insts(info.classes.keys()):
-                return True
+            if filename.endswith('.py'):
+                filename = filename.lstrip('/')
+                filename = os.path.join(self.proj.path, filename)
+                info = pdf._files.get(filename)
+                if info and _match_insts(info.classes.keys()):
+                    return True
         return False
 
 

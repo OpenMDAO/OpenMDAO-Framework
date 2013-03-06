@@ -602,9 +602,10 @@ def _test_replace(browser):
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
-    message = NotifierPage.wait(workspace_page)
-    eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
-                " 'postproc.result_in': top: Can't find 'comp.result'")
+    expected = "RuntimeError: top: Can't connect 'comp.result' to" \
+               " 'postproc.result_in': top: Can't find 'comp.result'"
+    assert workspace_page.history.endswith(expected)
+
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
     editor.move(-100, 0)
@@ -662,6 +663,168 @@ def _test_ordering(browser):
 
     # Clean up.
     editor.close()
+    closeout(project_dict, workspace_page)
+
+def _test_io_filter_without_vartree(browser):
+
+    project_dict, workspace_page = startup(browser)
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
+    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
+    editor = conmin.editor_page()
+
+    #Test filtering inputs
+
+    #filter on name='ctlmin'
+    editor.filter_inputs("ctlmin")
+    eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on description='conjugate'
+    editor.filter_inputs("conjugate")
+    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on description='Conjugate'
+    editor.filter_inputs("Conjugate")
+    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on term='print'
+    #filter should match items in name and description column
+    expected = [
+            [u'iprint', u'enum', u'0', u'', u'true', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.', u'', u''],
+            [u'printvars', u'list', u'', u'', u'true', u'List of extra variables to output in the recorders.', u'', u'']
+            ]
+
+    editor.filter_inputs("print")
+    eq(expected, editor.get_inputs().value)
+    editor.filter_inputs("")
+
+    editor.show_outputs()
+
+    #Test filtering outputs
+
+    #filter on name='derivative_exec_count'
+    editor.filter_outputs("derivative_exec_count")
+    eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
+    editor.filter_outputs("")
+
+    #filter on description='coordinates'
+    editor.filter_outputs("coordinates")
+    eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
+    editor.filter_outputs("")
+
+    #filter on term='time'.
+    editor.filter_outputs("time")
+    expected = [\
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
+
+    eq(expected, editor.get_outputs().value)
+
+    #filter on term='Time'.
+    editor.filter_outputs("Time")
+    expected = [\
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
+
+    eq(expected, editor.get_outputs().value)
+    editor.close()
+
+    closeout(project_dict, workspace_page)
+
+def _test_io_filter_with_vartree(browser):
+    project_dict, workspace_page = startup(browser)
+    #Test filtering variable trees
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.show_dataflow("vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    editor = comp.editor_page()
+    inputs = editor.get_inputs()
+    #editor.move(-100, 0)
+    
+    #filter when tree is expanded
+    #filter on name="b"
+    editor.filter_inputs("b")
+    expected = [\
+        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
+        [u'b', u'float', u'12', u'inch', u'true', u'', u'', u''],
+        [u'directory', u'str', u'', u'', u'true', u'If non-blank, the directory to execute in.', u'', u'']
+        ]
+
+    eq(expected, editor.get_inputs().value)
+    time.sleep(3) 
+
+    #filter when tree is collapse
+    #filter on units="ft"
+    editor.filter_inputs("ft")
+    expected = [\
+        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
+        [u'a', u'float', u'1', u'ft', u'true', u'', u'', u''],
+        ]
+    eq(expected, editor.get_inputs().value)
+
+    editor.show_outputs()
+
+    #filter when tree is expanded
+    #filter on name="b"
+    editor.filter_outputs("b")
+    expected = [\
+        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
+        [u'b', u'float', u'12', u'inch', u'false', u'', u'', u''],
+        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
+        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        ]
+
+    eq(expected, editor.get_outputs().value)
+    time.sleep(3) 
+
+    #filter when tree is collapse
+    #filter on units="ft"
+    editor.filter_outputs("ft")
+    expected = [\
+        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
+        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
+        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
+        [u'a', u'float', u'1', u'ft', u'false', u'', u'', u''],
+        ]
+    eq(expected, editor.get_outputs().value)
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+def _test_taborder(browser):
+    # Replaces various connected components.
+    project_dict, workspace_page = startup(browser)
+
+    # Replace driver with an SLSQPdriver.
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    eq(editor.get_tab_labels(),
+       ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
+        'Triggers', 'Workflow', 'Slots'])
+
+    editor.close()
+
+    # Clean up.
     closeout(project_dict, workspace_page)
 
 

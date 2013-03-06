@@ -53,9 +53,12 @@ class DeleteHandler(ReqHandler):
         if project['projpath']:
             dirname = str(project['projpath'])
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=onerror)
-
-        pdb.remove(project_id)
+                try:
+                    shutil.rmtree(dirname, onerror=onerror)
+                except Exception as err:
+                    raise HTTPError(dirname, 403, err, None, None)
+                else:
+                    pdb.remove(project_id)
         self.redirect('/')
 
 
@@ -168,14 +171,14 @@ class DownloadHandler(ReqHandler):
                         proj_file.close()
                 finally:
                     try:
-                        shutil.rmtree(tdir)
+                        shutil.rmtree(tdir, onerror=onerror)
                     except:
                         pass
             else:
                 raise HTTPError(dirname, 403, "%s is not a directory" % dirname,
                                 None, None)
         else:
-            raise HTTPError(filename, 403, "no file found for %s" % \
+            raise HTTPError(filename, 403, "no file found for %s" %
                                             project['projectname'], None, None)
 
 
@@ -256,14 +259,17 @@ class ImportHandler(ReqHandler):
                 if len(filename) > 0:
                     unique = _get_unique_name(self.get_project_dir(),
                                               parse_archive_name(filename))
-                    os.mkdir(unique)
+                    tdir = mkdtemp(prefix=unique)
                     buff = StringIO.StringIO(sourcefile['body'])
                     archive = tarfile.open(fileobj=buff, mode='r:gz')
-                    archive.extractall(path=unique)
-                    proj = Project(unique)
+                    archive.extractall(path=tdir)
+                    proj = Project(tdir)
                     project_info = proj.get_info()
 
-                    shutil.rmtree(unique)
+                    try:
+                        shutil.rmtree(tdir, onerror=onerror)
+                    except:
+                        pass
 
                     self.render('projdb/import-metadata-fields.html',
                                 projectname=parse_archive_name(unique),

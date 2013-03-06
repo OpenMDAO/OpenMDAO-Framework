@@ -183,7 +183,7 @@ class NamespaceTestCase(unittest.TestCase):
         attrs = self.asm.scomp1.cont_in.get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'v1',
-                         'id': '_v1',
+                         'id': '.v1',
                          'indent': 0,
                          'value': 1.0,
                          'high': None,
@@ -193,7 +193,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'type': 'float',
                          'desc': 'vv1'} in attrs['Inputs'])
         self.assertTrue({'name': 'v2',
-                         'id': '_v2',
+                         'id': '.v2',
                          'indent': 0,
                          'value': 2.0,
                          'high': None,
@@ -208,7 +208,7 @@ class NamespaceTestCase(unittest.TestCase):
         attrs = self.asm.scomp1.cont_out.get_attributes()
         self.assertTrue("Outputs" in attrs.keys())
         self.assertTrue({'name': 'v1',
-                         'id': '_v1',
+                         'id': '.v1',
                          'indent': 0,
                          'value': 2.0,
                          'high': None,
@@ -218,7 +218,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'type': 'float',
                          'desc': 'vv1'} in attrs['Outputs'])
         self.assertTrue({'name': 'v2',
-                         'id': '_v2',
+                         'id': '.v2',
                          'indent': 0,
                          'value': 3.0,
                          'high': None,
