@@ -161,7 +161,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
         
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
-        var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+        var spacer = "<span class='ui-icon ui-icon-info' style='display:inline-block;'></span><span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px;'></span>";
         var idx = dataView.getIdxById(dataContext.id);
         var nextline = dataView.getItemByIdx(idx+1)
         if (nextline && nextline.indent > dataContext.indent) {
