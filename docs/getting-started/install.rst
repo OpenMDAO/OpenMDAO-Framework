@@ -56,10 +56,10 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
 
 .. note:: 
 
-  Some steps of the installation process require internet access. These steps might fail if you're behind 
-  a proxy server. If that's the case you may have to set the ``http_proxy`` environment variable on
+  Some steps of the installation process require Internet access. These steps might fail if you're behind 
+  a proxy server. If that's the case, you may have to set the ``http_proxy`` environment variable on
   your system for the installation to work. You'll need to find out what your proxy
-  address and port number are from your IT department then you can set the variable appropriately. 
+  address and port number are from your IT department, and then you can set the variable appropriately. 
 
    
 

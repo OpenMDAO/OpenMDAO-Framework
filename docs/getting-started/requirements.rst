@@ -23,7 +23,7 @@ OpenMDAO requires that the following software be installed at the system level o
     incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
     will only lead to problems.
 
-  - Although we support python 2.6, it's the older version. Unless you have a strong reason to use 2.6, we recommend 
+  - Although we support Python 2.6, it's the older version. Unless you have a strong reason to use 2.6, we recommend 
     getting Python 2.7.
 
 
@@ -75,18 +75,18 @@ use it, you must have compilers (C and Fortran) on your system.
 
 .. note:: 
 
-  There are one click installers for numpy and scipy. You should use those unless 
+  Numpy and SciPy have one-click installers. You should use those unless 
   you have a very good reason not to. You need to pick the proper installer
   for your version of python (v2.6 or v2.7). For instance, if you had python 2.6, you want
-  a numpy version named something like *numpy-1.7.0-win32-superpack-python2.6.exe*. If you have python 2.7 then you want 
-  a scipy version called *scipy-0.11.0-win32-superpack-python2.7.exe*. The 
+  a Numpy version named something like ``numpy-1.7.0-win32-superpack-python2.6.exe``. If you have python 2.7 then you want 
+  a SciPy version called ``scipy-0.11.0-win32-superpack-python2.7.exe``. The 
   version numbers might be different than the ones here, but make sure you 
   get something with *superpack* and *.exe* in the name. 
 
-  If you go to the numpy link above, you might see "looking for the 
+  If you go to the Numpy link above, you might see "Looking for the 
   latest version? Download numpy-1.7.0.zip". You **DON'T** want to get that one. 
-  It's a source distribution, not the installer. The same goes for scipy. Click through 
-  to the lastest version and get the .exe file. 
+  It's a source distribution, not the installer. The same goes for SciPy. Click through 
+  to the latest version and get the .exe file. 
 
 Not required, but highly recommended:
 
@@ -103,8 +103,17 @@ public/private key pairs to be stored securely.
    fix.
  - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
- - `gfortran-42-5646.pkg <http://r.research.att.com/tools/>`_ -- This version goes with Xcode. 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+
+.. note:: 
+
+  We provide pre-compiled binaries for all intel OS X macs, for Snow Leopard or higher. 
+  However, if you you're running an older version of OS X or a PowerPC architecture, then 
+  you'll need to set up some compilers on your system to get OpenMDAO to install. This should 
+  be a rare situation, but if you happen to run into it then you can find the details
+  of which compilers you need in our developer docs. Get the compilers set up 
+  the way we suggest :ref:`here <developer-requirements>`, but then come back here and follow the release 
+  installation instructions from the next section of these docs.
 
 
 

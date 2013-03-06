@@ -44,18 +44,71 @@ described below.
       gcc/gfortran 4.1.2. We expect that later versions of gcc/gfortran 4.X should also
       work.
 
-      
+
   - *Mac OS X*:
    
-    - *gcc*
-      
-      Is available as part of *Xcode*, which can be found on the OS X distribution disks but typically is not 
-      installed by default.  You can also download gcc and install it from source, although
-      this is more prone to installation problems.
-        
-    - *gfortran*
-      
-      Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
+    - Xcode -- It's included on the OS X install disk, and installing it will give you access to gcc. You can
+               also download a newer version from Apple, but you'll have to fill out a (free) registration to do it.
+               If you don't want to get the whole X-Code environment, for Lion and Mountain Lion Apple offers a smaller 
+               compiler only library called *Command Line Tools for Xcode*. You can get the latest Xcode or the 
+               smaller compiler package `here <http://developer.apple.com/downloads>`_.
+
+    - gfortran -- It's sometimes hard to figure out which version of gfortran to install on your Mac. See
+                  this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
+                  of what's available.
+
+
+
+    - On **Lion (OS X 10.7):**
+
+     - Python 2.7.x (OS X Lion has 2.7.1 as its native version) - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
+     
+     - Install this `version of SciPy <http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1-py2.7-python.org-macosx10.6.dmg/download>`_
+     
+     - Make sure that Xcode version 4.3.2 or higher is installed, via the Mac App Store. When you install Xcode, it does not by default install the compilers you
+       need.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+       .. figure:: OSX_Lion_Screenshot.png
+          :align: center
+          :alt: Screenshot of XCode's Downloads screen showing options
+       
+          XCode's *Downloads* Screen
+       
+     - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_
+     
+     - `gcc 4.2 <http://web.mit.edu/mfloyd/www/computing/mac/gfortran/>`_
+
+
+                  
+    - On **Snow Leopard:**
+
+     - Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
+       will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
+       appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
+       fix.
+     - `NumPy <http://sourceforge.net/projects/numpy/files/>`_ 
+     - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
+     - `gfortran-42-5646.pkg <http://r.research.att.com/tools/>`_ -- This version goes with Xcode. 
+     - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+
+
+    - On **Leopard:**
+
+     - `Python (2.6.x or 2.7.x)`__ 
+     - `NumPy <http://sourceforge.net/projects/numpy/files/>`_
+     - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
+     - `gfortran`__  - Click on ``fortran-macosx-leopard-x86.dmg`` under
+       **Miscellaneous Downloads.**
+     - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+     
+     If you have g77 installed on Leopard, you may get build errors like:  ``ld: library not found for
+     -lcc_dynamic``. This indicates that g77, which won't work, is being used instead of `gfortran`. At the
+     moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
+     that it won't be found by ``numpy.distutils``.
+
+    .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
+
+    .. __: http://openmdao.org/downloads-2/      
 
 .. _`Windows`:
 
