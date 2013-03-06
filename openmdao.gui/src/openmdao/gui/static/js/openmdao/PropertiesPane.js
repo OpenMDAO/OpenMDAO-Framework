@@ -36,13 +36,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
-            {id:"type",      name:"Type",        field:"type",      width:60 },
+            //{id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
-            {id:"valid",     name:"Valid",       field:"valid",     width:60 },
-            {id:"desc",      name:"Description", field:"desc",      width:120 },
-            {id:"connected", name:"Connected To",   field:"connected", width:100 },
-            {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
+            //{id:"valid",     name:"Valid",       field:"valid",     width:60 },
+            //{id:"desc",      name:"Description", field:"desc",      width:120 },
+            //{id:"connected", name:"Connected To",   field:"connected", width:100 },
+            //{id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
 
@@ -60,7 +60,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 searchString = this.value.toLowerCase();
                 items = dataView.getItems();
                 _filter = {};
-                debug.info(items);
                 for (i=items.length - 1; i>=0; i--){
                     name = (items[i].name) ? items[i].name.toLowerCase() : ""
                     units = (items[i].units) ? items[i].units.toLowerCase() : ""
