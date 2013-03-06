@@ -140,9 +140,9 @@ OptimizationUnconstrained assembly at this point. If the driver uses
 gradients (or Hessians) and can take advantage of the analytical ones
 you provide, then it will do so. Below is our model, using the new 
 component with derivatives. We put this model in a file called
-:download:`optimization_constrained_derivative.py <../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
+:download:`optimization_constrained_derivative.py <../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
 
-.. literalinclude:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
+.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
 
 *Benchmarking*
 ~~~~~~~~~~~~~~

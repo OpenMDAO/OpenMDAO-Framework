@@ -9,10 +9,7 @@ Current version: |version|
    
    getting-started/index
    basics/index
-   optimization/index
-   surrogate/index
-   mdao/index
-   complex/index
+   tutorials/index
    concurrent
    srcdocs/index
    licenses/index
