@@ -115,11 +115,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 for(var field in item){
                     str = str + field + ": " + item[field] + "<br />";
                 }
+                if(jQuery(".variable_info").tooltip.widget()){
                 jQuery(".variable_info").tooltip({
                     content : function(){
                         return "<div>" + str + "</div>";
-                    },
-                    hide : false,
+                    }
+                    items : ".variable_info",
                 });
 
                 setCurrentVariable(item);
