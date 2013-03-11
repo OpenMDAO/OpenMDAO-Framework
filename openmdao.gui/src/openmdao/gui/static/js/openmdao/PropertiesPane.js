@@ -32,7 +32,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     
     if (meta) {
         options.autoHeight = false;
-        elm.append(jQuery("<div id='inlineFilter' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
+        elm.append(jQuery("<div id='inlineFilter' class='filterpanel' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
@@ -91,10 +91,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         _collapsed[items[i].id] = true;
                     }
 
-                    dataView.updateItem(items[i].id, items[i]);
                 }
-                updateFilter({ filter: textboxFilter});
-                
+                dataView.refresh();
+                highlightCells();
+                jQuery(this).trigger('dialogresizestop')
             });
         }
 
@@ -123,9 +123,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         _collapsed[item.id] = false;
                     }
                     // dataView needs to know to update.
-                    dataView.setFilterArgs({filter:expansionFilter});
                     dataView.updateItem(item.id, item);
                     highlightCells();
+                    jQuery("#" + name + "_variableFilter").trigger('dialogresizestop')
                 }
                 e.stopImmediatePropagation();
             }
