@@ -50,7 +50,7 @@ any Python function:
 
 .. _Code8: 
 
-.. literalinclude:: ../../examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engine_wrap_c.py
+.. literalinclude:: ../../../examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engine_wrap_c.py
    :start-after: engine_weight = 0.0
    :end-before: # end engine.py
    :language: python
