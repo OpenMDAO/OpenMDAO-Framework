@@ -96,12 +96,16 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             panel.height(pane_height);
             panel.width(pane_width);
 
-            // Accomodate any extra stuff after the slickgrid table. This content should
-            // be placed in a div called "post_slick"
+            // Accomodate any extra stuff before or after the slickgrid table.
+            // This content should be placed in a div called "post_slick"
             var extra_height = 0;
             extra = panel.find('.post_slick');
             if (extra.length>0) {
-                extra_height = extra.outerHeight();
+                extra_height += extra.outerHeight();
+            }
+            extra = panel.find('.filterpanel');
+            if (extra.length>0) {
+                extra_height += extra.outerHeight();
             }
 
             // resize all slickgrid viewports and use viewport for scrolling
