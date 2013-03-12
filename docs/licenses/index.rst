@@ -13,7 +13,7 @@ more information for each distribution.
 
 .. note::  
  
-   The links in the table are generated from each distribution's metadata, so in some cases, a link
+   The links in the table that follows are generated from each distribution's metadata, so in some cases, a link
    may be out of date and you might be redirected to another URL.
 
 
