@@ -249,7 +249,7 @@ have your own public server, you can put your plugin up on the
 `Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
 PyPI is the default package index for ``plugin install``, so the command
 
-.. __: http://pypi.python.org/pypi
+.. __: https://pypi.python.org/pypi
 
 
 ::
