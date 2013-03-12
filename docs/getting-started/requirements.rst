@@ -15,8 +15,8 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Python (2.6.x or 2.7.x)
 
-  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternative Python
-    builds, such as Enthought, ActiveState Python or Python(x,y) are not officially supported at this time,
+  - In general, OpenMDAO supports the specified versions of Python found at ``python.org``.  Alternative Python
+    builds, such as Enthought, ActiveState Python, or Python(x,y) are not officially supported at this time,
     though some may work with OpenMDAO.    
 
   - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the
@@ -33,7 +33,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Matplotlib
 
-- For the GUI: Chrome Web Browser (verson 20 or higher). Note: Things should work in recent versions of Firefox, but 
+- For the GUI: Chrome Web Browser (version 20 or higher). Note: Things should work in recent versions of Firefox, but 
   we're not currently testing with that browser. Things **will not** work properly in Internet Explorer. 
 
 
@@ -83,8 +83,8 @@ use it, you must have compilers (C and Fortran) on your system.
   version numbers might be different than the ones here, but make sure you 
   get something with *superpack* and *.exe* in the name. 
 
-  If you go to the Numpy link above, you might see "Looking for the 
-  latest version? Download numpy-1.7.0.zip". You **DON'T** want to get that one. 
+  If you go to the Numpy link above, you might see: "Looking for the 
+  latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one. 
   It's a source distribution, not the installer. The same goes for SciPy. Click through 
   to the latest version and get the .exe file. 
 
@@ -97,23 +97,23 @@ public/private key pairs to be stored securely.
 
 **Mac OS X**:
 
- - Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
-   will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
-   appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
-   fix.
- - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
- - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
- - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+- Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
+  will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
+  appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
+  fix.
+- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
+- `SciPy <http://sourceforge.net/projects/scipy/files/>`_
+- `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
 .. note:: 
 
-  We provide pre-compiled binaries for all intel OS X macs, for Snow Leopard or higher. 
-  However, if you you're running an older version of OS X or a PowerPC architecture, then 
-  you'll need to set up some compilers on your system to get OpenMDAO to install. This should 
-  be a rare situation, but if you happen to run into it then you can find the details
-  of which compilers you need in our developer docs. Get the compilers set up 
-  the way we suggest :ref:`here <developer-requirements>`, but then come back here and follow the release 
-  installation instructions from the next section of these docs.
+   We provide pre-compiled binaries for all Intel OS X Macs, for Snow Leopard or higher.  However,
+   if you you're running an older version of OS X or a PowerPC architecture, then  you'll need to
+   set up some compilers on your system to get OpenMDAO to install. This should  be a rare
+   situation, but if you happen to run into it, go to our developer docs for the details about
+   which compilers you need. Get the compilers set up the way we suggest :ref:`here
+   <developer-requirements>`, but then come back and follow the release installation
+   instructions from the next section of these docs.
 
 
 
