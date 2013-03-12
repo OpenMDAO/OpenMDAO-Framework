@@ -81,6 +81,7 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
+      openmdao.main.datatypes.geom.Geom = openmdao.main.datatypes.geom:Geom
       openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
       openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List

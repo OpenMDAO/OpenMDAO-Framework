@@ -1,10 +1,10 @@
 
 from openmdao.main.component import Component
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IParametricGeometry
-from openmdao.main.datatypes.api import Slot
+from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
+from openmdao.main.datatypes.api import Slot, Geom
 from openmdao.util.log import logger
-from openmdao.main.datatypes.api import Float, Int, Str, Python
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List
 
 _ttdict = {
     float: Float,
@@ -12,6 +12,7 @@ _ttdict = {
     long: Int,
     str: Str,
     unicode: Str,
+    list: List,
 }
 
 class GeomComponent(Component):
@@ -20,6 +21,9 @@ class GeomComponent(Component):
     parametric_geometry = Slot(IParametricGeometry, allow_none=True,
                                desc='Slot for a parametric geometry.')
 
+    geometry_output = Geom(IStaticGeometry, iotype='out',
+                           desc ='Geometry object')
+    
     def __init__(self):
         super(GeomComponent, self).__init__()
         self._class_names = set(self.traits().keys())
@@ -36,6 +40,8 @@ class GeomComponent(Component):
                 new.parent = self
                 new.name = 'parametric_geometry'
             new.register_param_list_changedCB(self._model_updated)
+            
+        self.geometry_output = new.get_geometry()
 
     def _model_updated(self):
         """Should be called by the parametric_geometry object whenever
@@ -58,7 +64,7 @@ class GeomComponent(Component):
         """
         if self._output_var_names is not None:
             for name in self._output_var_names:
-                out = self.parametric_geometry.getParameter(name)
+                out = self.parametric_geometry.getParameter(name)['value']
                 setattr(self, name, out)
 
     def _update_iovar_set(self):
@@ -96,7 +102,8 @@ class GeomComponent(Component):
 
     def _add_input(self, name):
         """Adds the specified input variable."""
-        val = self.parametric_geometry.getParameter(name)
+        param = self.parametric_geometry.getParameter(name)
+        val = param['value']
         typ = _ttdict.get(type(val))
         if typ is None:
             typ = Python   # FIXME

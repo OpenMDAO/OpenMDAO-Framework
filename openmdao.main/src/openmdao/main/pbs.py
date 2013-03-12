@@ -301,6 +301,8 @@ class PBS_Server(ObjServer):
         ==================== =========================
 
         Output from `qsub` itself is routed to ``qsub.out``.
+        If the job reports an error, ``qsub.out`` will be appended to either
+        `error_path`, or if that was not specified, stdout.
         """
         self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
@@ -461,17 +463,41 @@ class PBS_Server(ObjServer):
         # Add 'escape' clause.
         cmd.extend(native_specification)
 
+        with open(script_name, 'rU') as inp:
+            self._logger.debug('%s:', script_name)
+            for line in inp:
+                self._logger.debug('    %s', line.rstrip())
+
+        # Submit job.
         cmd.append(os.path.join('.', script_name))
         self._logger.info('%r', ' '.join(cmd))
         try:
             process = ShellProc(cmd, DEV_NULL, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
+            if os.path.exists('qsub.out'):
+                with open('qsub.out', 'rU') as inp:
+                    self._logger.error('qsub.out:')
+                    for line in inp:
+                        self._logger.error('    %s', line.rstrip())
             raise
 
+        # Submitted, wait for completion.
         self._logger.debug('    PID = %d', process.pid)
         return_code, error_msg = process.wait(1)
         self._logger.debug('    returning %s', (return_code, error_msg))
+        if return_code and os.path.exists('qsub.out'):
+            if join_files or err is None:
+                qsub_echo = out or '%s.stdout' % base
+            else:
+                qsub_echo = err
+            with open('qsub.out', 'rU') as inp:
+                with open(qsub_echo, 'a+') as out:
+                    self._logger.error('qsub.out:')
+                    out.write('===== qsub.out =====\n')
+                    for line in inp:
+                        self._logger.error('    %s', line.rstrip())
+                        out.write(line)
         return (return_code, error_msg)
 
     def _fix_path(self, path):

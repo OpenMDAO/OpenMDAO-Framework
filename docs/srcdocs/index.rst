@@ -33,6 +33,8 @@ Source Documentation
 
 .. _openmdao.main.datatypes.file.py:
 
+.. _openmdao.main.datatypes.geom.py:
+
 .. _openmdao.main.datatypes.float.py:
 
 .. _openmdao.main.datatypes.int.py:

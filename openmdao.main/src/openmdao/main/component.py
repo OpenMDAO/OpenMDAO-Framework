@@ -570,7 +570,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -1599,6 +1599,11 @@ class Component(Container):
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
         for name in io_list:
+            
+            #for variable trees
+            if '.' in name:
+                continue
+            
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
@@ -1619,13 +1624,13 @@ class Component(Container):
             io_attr['connected'] = ''
 
             if name in connected_inputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 # there can be only one connection to an input
                 io_attr['connected'] = \
                     str([src for src, dst in connections]).replace('@xin.', '')
 
             if name in connected_outputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
 

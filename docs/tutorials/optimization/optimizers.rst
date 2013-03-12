@@ -158,7 +158,7 @@ Derivatives) approach. So even if the optimizer is trying to do finite differenc
 use the analytic derivatives that are provided to speed up the optimization.
 
 So first, let's run :download:`demo_opt.py
-<../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`.  This first case is the
+<../../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`.  This first case is the
 constrained optimization of the paraboloid using CONMIN's internal finite difference calculation.
 
 Note that the sample results presented here are representative of what you should see, but they

@@ -2,6 +2,7 @@ import random
 import string
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
@@ -19,11 +20,19 @@ class ComponentPage(DialogPage):
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
+    inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
+    outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
 
     def __init__(self, browser, port, locator):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
+
+    def get_tab_labels(self):
+        """ Return a list of the tab labels. """
+        elements = self.root.find_elements_by_class_name('ui-tabs-anchor')
+        labels = [element.text for element in elements]
+        return labels
 
     def get_inputs(self):
         """ Return inputs grid. """
@@ -42,6 +51,18 @@ class ComponentPage(DialogPage):
             found.append(row[0])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
+    def filter_inputs(self, filter_text):
+        self.inputs_filter = filter_text
+
+    def filter_outputs(self, filter_text):
+        self.outputs_filter = filter_text
+
+    def clear_inputs_filter(self):
+        self.inputs_filter = ""
+
+    def clear_outputs_filter(self):
+        self.outputs_filter = ""
+
     def get_events(self):
         """ Return events grid. """
         self('events_tab').click()
@@ -51,6 +72,14 @@ class ComponentPage(DialogPage):
         """ Return outputs grid. """
         self('outputs_tab').click()
         return self.outputs
+    
+    def show_inputs(self):
+        """switch to inputs tab"""
+        self('inputs_tab').click()
+
+    def show_outputs(self):
+        """switch to outputs tab"""
+        self('outputs_tab').click()
 
     def show_slots(self):
         """switch to slots tab"""
@@ -132,12 +161,12 @@ class DriverPage(ComponentPage):
 class ParameterDialog(DialogPage):
     """ Dialog for adding a new parameter. """
 
-    target =  InputElement((By.ID, 'parameter-target'))
-    low    =  InputElement((By.ID, 'parameter-low'))
-    high   =  InputElement((By.ID, 'parameter-high'))
-    scaler =  InputElement((By.ID, 'parameter-scaler'))
-    adder  =  InputElement((By.ID, 'parameter-adder'))
-    name   =  InputElement((By.ID, 'parameter-name'))
+    target = InputElement((By.ID, 'parameter-target'))
+    low    = InputElement((By.ID, 'parameter-low'))
+    high   = InputElement((By.ID, 'parameter-high'))
+    scaler = InputElement((By.ID, 'parameter-scaler'))
+    adder  = InputElement((By.ID, 'parameter-adder'))
+    name   = InputElement((By.ID, 'parameter-name'))
     ok     = ButtonElement((By.ID, 'parameter-ok'))
     cancel = ButtonElement((By.ID, 'parameter-cancel'))
 
@@ -145,8 +174,8 @@ class ParameterDialog(DialogPage):
 class ObjectiveDialog(DialogPage):
     """ Dialog for adding a new objective. """
 
-    expr   =  InputElement((By.ID, 'objective-expr'))
-    name   =  InputElement((By.ID, 'objective-name'))
+    expr   = InputElement((By.ID, 'objective-expr'))
+    name   = InputElement((By.ID, 'objective-name'))
     ok     = ButtonElement((By.ID, 'objective-ok'))
     cancel = ButtonElement((By.ID, 'objective-cancel'))
 
@@ -154,10 +183,10 @@ class ObjectiveDialog(DialogPage):
 class ConstraintDialog(DialogPage):
     """ Dialog for adding a new constraint. """
 
-    expr   =  InputElement((By.ID, 'constraint-expr'))
-    scaler =  InputElement((By.ID, 'constraint-scaler'))
-    adder  =  InputElement((By.ID, 'constraint-adder'))
-    name   =  InputElement((By.ID, 'constraint-name'))
+    expr   = InputElement((By.ID, 'constraint-expr'))
+    scaler = InputElement((By.ID, 'constraint-scaler'))
+    adder  = InputElement((By.ID, 'constraint-adder'))
+    name   = InputElement((By.ID, 'constraint-name'))
     ok     = ButtonElement((By.ID, 'constraint-ok'))
     cancel = ButtonElement((By.ID, 'constraint-cancel'))
 
@@ -165,7 +194,7 @@ class ConstraintDialog(DialogPage):
 class EventDialog(DialogPage):
     """ Dialog for adding a new event. """
 
-    target =  InputElement((By.ID, 'event-target'))
+    target = InputElement((By.ID, 'event-target'))
     ok     = ButtonElement((By.ID, 'event-ok'))
     cancel = ButtonElement((By.ID, 'event-cancel'))
 

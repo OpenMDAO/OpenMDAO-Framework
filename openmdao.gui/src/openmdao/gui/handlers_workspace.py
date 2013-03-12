@@ -1,7 +1,6 @@
 import sys
 import os
 import re
-import ast
 
 import jsonpickle
 
@@ -99,7 +98,7 @@ class CommandHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
-                
+
         self.content_type = 'text/html'
         self.write(history)
 
@@ -119,11 +118,11 @@ class VariableHandler(ReqHandler):
         lhs = self.get_argument('lhs', default=None)
         rhs = self.get_argument('rhs', default=None)
         vtype = self.get_argument('type', default=None)
-        if ( lhs and rhs and vtype ):
-            if vtype == 'str' :
-                command = '%s = "%s"' % ( lhs, rhs )
-            else :
-                command = '%s = %s' % ( lhs, rhs )
+        if (lhs and rhs and vtype):
+            if vtype == 'str':
+                command = '%s = "%s"' % (lhs, rhs)
+            else:
+                command = '%s = %s' % (lhs, rhs)
 
         # if there is a command, execute it & get the result
         if command:
@@ -136,7 +135,7 @@ class VariableHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
-                
+
         self.content_type = 'text/html'
         self.write(history)
 
@@ -383,33 +382,12 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
-            if filename.endswith('.py') or cserver.is_macro(filename):
-                if not contents.endswith('\n'):
-                    text = contents + '\n' # to make ast.parse happy
-                else:
-                    text = contents
-                try:
-                    # parse it looking for syntax errors
-                    ast.parse(text, filename=filename, mode='exec')
-                except Exception as exc:
-                    if isinstance(exc, SyntaxError):
-                        # Drop leading '/' on filename, show actual line.
-                        err_str = 'invalid syntax (%s, line %s)\n%s' \
-                                % (exc.filename[1:], exc.lineno, exc.text)
-                    else:
-                        err_str = str(exc)
-                    cserver.send_pub_msg(err_str, 'file_errors')
-                    self.send_error(400)
-                    return
-                if not force:
-                    ret = cserver.file_forces_reload(filename)
-                    if ret:
-                        # user will be prompted to overwrite file and reload project
-                        self.send_error(409)
-                        return
-            self.write(str(cserver.write_file(filename, contents)))
+            if not force and cserver.file_forces_reload(filename):
+                self.send_error(409)
+            else:
+                contents = self.get_argument('contents', default='')
+                self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
     def delete(self, filename):
@@ -420,7 +398,12 @@ class FileHandler(ReqHandler):
     @web.authenticated
     def get(self, filename):
         cserver = self.get_server()
-        self.content_type = 'text/html'
+        self.content_type = 'application/octet-stream'
+        download = self.get_argument('download', default=False)
+        if download:
+            self.set_header('Content-Disposition',
+                            'attachment; filename="' + filename + '"')
+            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
         self.write(str(cserver.get_file(filename)))
 
 
@@ -484,7 +467,7 @@ class ProjectLoadHandler(ReqHandler):
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
-            
+
 
 class ProjectRevertHandler(ReqHandler):
     ''' POST:  revert back to the most recent commit of the project.
@@ -498,8 +481,8 @@ class ProjectRevertHandler(ReqHandler):
             self.send_error(500)
         else:
             self.write('Reverted.')
-            
-            
+
+
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
@@ -706,4 +689,3 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
-

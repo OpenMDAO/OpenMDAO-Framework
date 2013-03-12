@@ -34,7 +34,7 @@ PROJ_DIR_EXT = '.projdir'
 # is the reason for the existence of the custom import hook classes ProjFinder
 # and ProjLoader, as well as the CtorInstrumenter ast node transformer.
 #
-# FIXME: This doesn't keep track of when instances are deleted, so 
+# FIXME: This doesn't keep track of when instances are deleted, so
 # it's possible that the _instantiated_classes set will contain names
 # of classes that no longer have any active instances.
 _instantiated_classes = set()
@@ -42,16 +42,28 @@ _instclass_lock = RLock()
 
 _macro_lock = RLock()
 
+
 def _clear_insts():
     with _instclass_lock:
         _instantiated_classes.clear()
+
 
 def _register_inst(typname):
     with _instclass_lock:
         _instantiated_classes.add(typname)
 
+
 def _match_insts(classes):
     return _instantiated_classes.intersection(classes)
+
+
+def parse(contents, fname, mode='exec'):
+    """Wrapper for ast.parse() that cleans the contents of CRs and ensures
+    it ends with a newline"""
+    contents = contents.replace('\r','')  # py26 barfs on CRs
+    if not contents.endswith('\n'):
+        contents += '\n'  # to make ast.parse happy :(
+    return ast.parse(contents, filename=fname, mode=mode)
 
 
 def text_to_node(text, lineno=None):
@@ -89,7 +101,7 @@ class CtorInstrumenter(ast.NodeTransformer):
         reg = "_register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))"
         for stmt in node.body:
             if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
-                stmt.body = [text_to_node(reg, stmt.lineno)]+stmt.body
+                stmt.body = [text_to_node(reg, stmt.lineno)] + stmt.body
                 break
         else:  # no __init__ found, make one
             text = """
@@ -111,6 +123,7 @@ def add_init_monitors(node):
             text_to_node('from openmdao.main.project import _register_inst'), node)
         ] + node.body
     return node
+
 
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for
@@ -150,32 +163,30 @@ class ProjLoader(object):
     def __init__(self, path_entry):
         self.path_entry = path_entry
         self.projdir = os.path.splitext(path_entry)[0]
-        
+
     def _get_filename(self, modpath):
-        parts = [self.projdir]+modpath.split('.')
+        parts = [self.projdir] + modpath.split('.')
         path = os.path.join(*parts)
         if os.path.isdir(path):
             return os.path.join(path, '__init__.py')
         else:
             return path + '.py'
-                
+
     def is_package(self, modpath):
         fpath = self._get_filename(modpath)
         return os.path.basename(fpath) == '__init__.py' and os.path.isfile(fpath)
-        
+
     def get_source(self, modpath):
         with open(self._get_filename(modpath), 'r') as f:
             return f.read()
-        
+
     def get_code(self, modpath):
         """Opens the file, compiles it into an AST, and then translates it into
         the instrumented version before compiling that into bytecode.
         """
         contents = self.get_source(modpath)
-        if not contents.endswith('\n'):
-            contents += '\n' # to make ast.parse happy :(
         fname = self._get_filename(modpath)
-        root = ast.parse(contents, filename=fname, mode='exec')
+        root = parse(contents, fname, mode='exec')
         return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
@@ -187,22 +198,22 @@ class ProjLoader(object):
             mod = sys.modules[modpath]
         else:
             mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
-        
+
         mod.__file__ = self._get_filename(modpath)
         mod.__name__ = modpath
         mod.__loader__ = self
         mod.__package__ = '.'.join(modpath.split('.')[:-1])
-        
+
         if self.is_package(modpath):
-            mod.__path__ = [ self.path_entry ]
+            mod.__path__ = [self.path_entry]
         else:
             mod.__path__ = self.path_entry
-            
+
         try:
             code = self.get_code(modpath)
             exec(code, mod.__dict__)
         except Exception as err:
-            del sys.modules[modpath] # remove bad module
+            del sys.modules[modpath]  # remove bad module
             raise type(err)("Error in file %s: %s"
                             % (os.path.basename(mod.__file__), err))
         return mod
@@ -360,13 +371,15 @@ def filter_macro(lines):
 
     return filt_lines[::-1]  # reverse the result
 
+
 def add_proj_to_path(path):
     """Puts this project's directory on sys.path so that imports from it
     will be processed by our special loader.
     """
-    modeldir = path+PROJ_DIR_EXT
+    modeldir = path + PROJ_DIR_EXT
     if modeldir not in sys.path:
-        sys.path = [modeldir]+sys.path
+        sys.path = [modeldir] + sys.path
+
 
 class Project(object):
     def __init__(self, projpath):
@@ -383,14 +396,14 @@ class Project(object):
 
         self.macrodir = os.path.join(self.path, '_macros')
         self.macro = 'default'
-        
+
         if not os.path.isdir(self.macrodir):
             os.makedirs(self.macrodir)
 
         settings = os.path.join(self.path, '_settings.cfg')
         if not os.path.isfile(settings):
             self._create_config()
-            
+
         self.config = SafeConfigParser()
         self.config.optionxform = str  # Preserve case.
         files = self.config.read(settings)
@@ -409,7 +422,7 @@ description =
 """
         with open(os.path.join(self.path, '_settings.cfg'), 'wb') as f:
             f.write(settings)
-        
+
     def get_info(self):
         """ Return settings 'info' section as a dictionary. """
         return dict(self.config.items('info'))
@@ -452,9 +465,7 @@ description =
                            " it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
-        if contents[-1] != '\n':
-            contents += '\n'
-        node = add_init_monitors(ast.parse(contents, filename=fname, mode='exec'))
+        node = add_init_monitors(parse(contents, fname, mode='exec'))
         exec compile(node, fname, 'exec') in self._model_globals
 
         # make the recorded execfile command use the current md5 hash
@@ -475,16 +486,15 @@ description =
         self._recorded_cmds = []
         with open(fpath, 'r') as f:
             content = f.read()
-            
+
         # fix missing newline at end of file to avoid issues later when
         # we append to it
-        if not content.endswith('\n'): 
+        if not content.endswith('\n'):
             with open(fpath, 'a') as f:
                 f.write('\n')
 
         lines = content.split('\n')
-            
-        errors = []
+
         for i, line in enumerate(lines):
             try:
                 self.command(line, save=False)
@@ -503,9 +513,9 @@ description =
         if save:
             with open(os.path.join(self.macrodir, self.macro), 'a') as f:
                 for cmd in self._cmds_to_save:
-                    f.write(cmd+'\n')
+                    f.write(cmd + '\n')
         self._cmds_to_save = []
-        
+
     def command(self, cmd, save=True):
         err = None
         result = None
@@ -554,19 +564,19 @@ description =
         # set SimulationRoot and put our path on sys.path
         SimulationRoot.chroot(self.path)
         add_proj_to_path(self.path)
-            
+
         # set up the model
         self._init_globals()
         self._initialize()
-        
+
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir+PROJ_DIR_EXT)
+            sys.path.remove(modeldir + PROJ_DIR_EXT)
         except:
             pass
-        
+
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.
 

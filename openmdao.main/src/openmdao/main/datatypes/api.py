@@ -8,6 +8,7 @@ from openmdao.main.datatypes.enum import Enum
 from openmdao.main.datatypes.event import Event
 from openmdao.main.datatypes.float import Float
 from openmdao.main.datatypes.file import File
+from openmdao.main.datatypes.geom import Geom
 from openmdao.main.datatypes.int import Int
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
@@ -16,3 +17,4 @@ from openmdao.main.datatypes.str import Str
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later
 from enthought.traits.api import Python, on_trait_change
+
