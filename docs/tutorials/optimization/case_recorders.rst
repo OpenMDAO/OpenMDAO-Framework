@@ -55,7 +55,7 @@ like to print out the convergence history of the variables, objective, and const
 file, which we can read into Excel for some post processing. Additionally, we'd like to save an
 SQLite database for future use. The code for this should look like:
 
-.. literalinclude:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
+.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
 Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case
 recorders. The CSVCaseRecorder takes a filename as an argument, as does the DBCaseRecorder.
