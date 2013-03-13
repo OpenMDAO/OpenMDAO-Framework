@@ -7,7 +7,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView,
         meta = meta,
         searchString = "",
-        current_item,
+        current_item = {},
         inlineFilter = undefined,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
@@ -49,13 +49,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     elm.append(propsDiv);
     SetupTable();
     
-    function getCurrentVariable(){
+    this.getCurrentVariable = function(){
         return current_item;
-    }
+    };
 
-    function setCurrentVariable(item){
+    this.setCurrentVariable = function (item){
         current_item = item;
-    }
+    };
 
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
@@ -105,25 +105,38 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             //TODO: On hover of variable icon should bring up tool tip with information for that row
         }
-        
+       
+        function createToolTip(){
+            debug.info(self.getCurrentVariable());
+            //var str = ""
+            //for(var field in self.getCurrentVariable()){
+             //   str = str + field + ": " + item[field] + "<br />";
+           // }
+            //debug.info("Created object");
+            //debug.info(str);
+            //elm.append(jQuery("<div id='tooltip'>" + str + "</div>"));
+        }
 
         props.onMouseEnter.subscribe(function(e,args){
             var cell = args.grid.getCellFromEvent(e);
-            if(getCurrentVariable() !== dataView.getItem(cell.row)){
+            debug.info("Old item");
+            debug.info(current_item);
+            if(current_item !== dataView.getItem(cell.row)){
                 item = dataView.getItem(cell.row);
-                var str = ""
-                for(var field in item){
-                    str = str + field + ": " + item[field] + "<br />";
-                }
-                if(jQuery(".variable_info").tooltip.widget()){
-                jQuery(".variable_info").tooltip({
-                    content : function(){
-                        return "<div>" + str + "</div>";
-                    }
-                    items : ".variable_info",
-                });
-
-                setCurrentVariable(item);
+                //var str = ""
+                //or(var field in item){
+                //    str = str + field + ": " + item[field] + "<br />";
+                //}
+                //if(jQuery(".variable_info").tooltip.widget()){
+                //jQuery(".variable_info").tooltip({
+                 //   content : function(){
+                 //       return "<div>" + str + "</div>";
+                //    }
+                //    items : ".variable_info",
+                //});
+                debug.info("Current item");
+                debug.info(item);
+                current_item = item;
             }
         });
 
@@ -185,10 +198,22 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 e.stopImmediatePropagation();
             });
         }
+       
+        jQuery(".variableInfo").mouseenter(function(){
+            debug.info("Entering info icon. Printing current item.");
+            debug.info(current_item);
+        });
+
+        jQuery(".variableInfo").mouseleave(function(){
+            debug.info("Leaving info icon.");
+//            jQuery("#tooltip").remove();
+            
+        });
+
     }
         
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
-        var spacer = "<span class='ui-icon ui-icon-info variable_info' title='' style='display:inline-block;'></span><span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px;'></span>";
+        var spacer = "<span class='ui-icon ui-icon-info variableInfo' title='' style='display:inline-block;'></span><span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px;'></span>";
         var idx = dataView.getIdxById(dataContext.id);
         var nextline = dataView.getItemByIdx(idx+1)
         if (nextline && nextline.indent > dataContext.indent) {
