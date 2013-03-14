@@ -296,11 +296,9 @@ class Component(Container):
                 if value.is_trait_type(Slot) and value.required == True and obj is None:
                     self.raise_exception("required plugin '%s' is not present" %
                                          name, RuntimeError)
-                if id(obj) not in visited:
+                if has_interface(obj, IComponent) and id(obj) not in visited:
                     visited.add(id(obj))
-                    if has_interface(obj, IComponent):
-                        obj.check_config()
-                        obj._call_check_config = False
+                    obj.check_configuration()
 
             self._call_check_config = False
 
@@ -410,9 +408,7 @@ class Component(Container):
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
+        self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
