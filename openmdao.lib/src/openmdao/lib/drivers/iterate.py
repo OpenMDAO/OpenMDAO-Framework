@@ -117,7 +117,6 @@ class FixedPointIterator(Driver):
         
     def check_config(self):
         """Make sure the problem is set up right."""
-        super(FixedPointIterator, self).check_config()
 
         ncon = len(self.get_eq_constraints())
         
