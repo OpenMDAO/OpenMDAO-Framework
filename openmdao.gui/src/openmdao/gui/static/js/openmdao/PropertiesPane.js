@@ -199,16 +199,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             });
         }
        
-        jQuery(".variableInfo").mouseenter(function(){
-            debug.info("Entering info icon. Printing current item.");
-            debug.info(current_item);
-        });
-
-        jQuery(".variableInfo").mouseleave(function(){
-            debug.info("Leaving info icon.");
-//            jQuery("#tooltip").remove();
-            
-        });
 
     }
         
@@ -351,6 +341,16 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate()
+            jQuery(".variableInfo").mouseenter(function(){
+                debug.info("Entering info icon. Printing current item.");
+                debug.info(current_item);
+            });
+
+            jQuery(".variableInfo").mouseleave(function(){
+                debug.info("Leaving info icon.");
+    //            jQuery("#tooltip").remove();
+                
+            });
 
         }
         else {
