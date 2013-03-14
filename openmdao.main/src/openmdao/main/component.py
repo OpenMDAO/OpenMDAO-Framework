@@ -282,10 +282,17 @@ class Component(Container):
         Classes that override this function must still call the base class
         version.
         """
-        for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Slot) and getattr(self, name) is None:
+        visited = set([id(self), id(self.parent)])
+        for name, value in self.traits(type=not_event).items():
+            obj = getattr(self, name)
+            if value.is_trait_type(Slot) and value.required == True and obj is None:
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, RuntimeError)
+            if id(obj) not in visited:
+                visited.add(id(obj))
+                if has_interface(obj, IComponent) and obj._call_check_config:
+                    obj.check_config()
+                    obj._call_check_config = False
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
