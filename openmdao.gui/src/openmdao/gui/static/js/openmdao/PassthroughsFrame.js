@@ -16,8 +16,6 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
      ***********************************************************************/
     
     this.travel_tree = function(d, name) {
-        console.log(d)
-        console.log(name)
         parent_ = d[name];
         parents = [parent_];
         up_ = d[parent_];
@@ -101,7 +99,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
     }
     
     this.errorHandler = function(jqXHR, textStatus, errorThrown) {
-        //console.log(textStatus);
+
     }
     
     this.makePassthrough = function(path) {
@@ -149,7 +147,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** handle message about the assembly */
     function handleMessage(message) {
-        //console.log(message);
+
     }
     
     
