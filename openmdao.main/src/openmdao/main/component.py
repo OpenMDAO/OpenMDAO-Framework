@@ -275,6 +275,7 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
+    @rbac(('owner', 'user'))
     def check_configuration(self):
         """
         Verify that this component and all of its children are properly
