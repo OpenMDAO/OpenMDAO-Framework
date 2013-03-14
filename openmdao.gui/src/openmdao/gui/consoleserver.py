@@ -653,7 +653,62 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
-
+    
+    def _nested_put(self, cdict, vardict, parent):
+        for inp in cdict["children"]:
+            if inp["attr"]["id"] == parent:
+                inp["children"].append(vardict)
+                return cdict
+            elif inp["attr"]["id"] in parent:
+                cdict2 = self._nested_put(inp, vardict, parent)
+                if len(cdict2["children"]) > len(inp["children"]):
+                    return cdict2
+        return cdict
+    
+    def _process_input_output(self, compname, data, comp_dict):
+        for this_variable in data:
+            input_name = this_variable["name"]
+            this_id = this_variable["id"]
+            tree_d = {"data" : input_name}
+            tree_d["attr"] = {"id" : this_id,
+                               "path" : compname + '.' + this_id}
+            tree_d["children"] = []
+            
+            if "parent" in this_variable.keys():
+                parent = this_variable["parent"]
+                comp_dict = self._nested_put(comp_dict, tree_d, parent)
+            else:    
+                comp_dict["children"].append(tree_d)
+        return comp_dict
+                    
+    
+    def get_all_attributes(self, pathname):
+        asm, root = self.get_container(pathname)
+        input_tree, output_tree = [], []
+        for compname in asm.list_components():
+            comp_id = compname
+            input_comp = {"data": compname}
+            input_comp["attr"] = {"id" : comp_id}
+            input_comp["children"] = []
+            
+            output_comp = {"data": compname}
+            output_comp["attr"] = {"id" : comp_id}
+            output_comp["children"] = []
+            
+            comp, root = self.get_container(pathname +'.'+ compname)
+            if comp:
+                full_attributes = comp.get_attributes(io_only=False)
+                Inputs = full_attributes["Inputs"]
+                Outputs = full_attributes["Outputs"]
+                
+                input_comp = self._process_input_output(compname, Inputs, input_comp)
+                output_comp = self._process_input_output(compname, Outputs, output_comp)
+                        
+            input_tree.append( input_comp )
+            output_tree.append( output_comp )
+            
+        return jsonpickle.encode({"inputs" : input_tree, "outputs" : output_tree})
+    
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
         '''
