@@ -665,34 +665,62 @@ class ConsoleServer(cmd.Cmd):
                     return cdict2
         return cdict
     
-    def _process_input_output(self, compname, data, comp_dict):
+    def _hide_childleaf(self, parent_path, passthroughs):
+        for name in passthroughs:
+            if name in parent_path:
+                return False
+        return True
+        
+    
+    def _process_input_output(self, compname, data, comp_dict, 
+                              existing_passthroughs, top_names):
         for this_variable in data:
-            input_name = this_variable["name"]
+            name = this_variable["name"]
             this_id = this_variable["id"]
-            tree_d = {"data" : input_name}
+            this_path = compname + '.' + this_id
+            tree_d = {"data" : name}
             tree_d["attr"] = {"id" : this_id,
-                               "path" : compname + '.' + this_id}
+                               "path" : this_path}
             tree_d["children"] = []
+            
+            if this_path in existing_passthroughs:
+                tree_d["attr"]["class"] = "jstree-checked"
+            elif name in top_names:
+                continue            
             
             if "parent" in this_variable.keys():
                 parent = this_variable["parent"]
-                comp_dict = self._nested_put(comp_dict, tree_d, parent)
+                if self._hide_childleaf(compname + '.' + parent, 
+                                        existing_passthroughs):
+                    comp_dict = self._nested_put(comp_dict, tree_d, parent)
             else:    
                 comp_dict["children"].append(tree_d)
         return comp_dict
                     
+    def _get_existing_passthroughs(self, top_vars):
+        passthrough_ids = []
+        for var in top_vars:
+            if "target" in var.keys():
+                passthrough_ids.append(var["target"])
+        return passthrough_ids
     
     def get_all_attributes(self, pathname):
         asm, root = self.get_container(pathname)
         input_tree, output_tree = [], []
+        top_level = asm.get_attributes(io_only=False)
+        top_names = [var["name"] for var in top_level['Inputs'] + top_level['Outputs']]
+        inputs_passthroughs = self._get_existing_passthroughs(top_level['Inputs'])
+        output_passthroughs = self._get_existing_passthroughs(top_level['Outputs'])
         for compname in asm.list_components():
             comp_id = compname
             input_comp = {"data": compname}
-            input_comp["attr"] = {"id" : comp_id}
+            input_comp["attr"] = {"id" : comp_id,
+                                  "type": "disabled"}
             input_comp["children"] = []
             
             output_comp = {"data": compname}
-            output_comp["attr"] = {"id" : comp_id}
+            output_comp["attr"] = {"id" : comp_id,
+                                   "type": "disabled"}
             output_comp["children"] = []
             
             comp, root = self.get_container(pathname +'.'+ compname)
@@ -701,13 +729,16 @@ class ConsoleServer(cmd.Cmd):
                 Inputs = full_attributes["Inputs"]
                 Outputs = full_attributes["Outputs"]
                 
-                input_comp = self._process_input_output(compname, Inputs, input_comp)
-                output_comp = self._process_input_output(compname, Outputs, output_comp)
-                        
-            input_tree.append( input_comp )
-            output_tree.append( output_comp )
+                input_comp = self._process_input_output(compname, Inputs, 
+                                                        input_comp, inputs_passthroughs, top_names)
+                output_comp = self._process_input_output(compname, Outputs, 
+                                                         output_comp, output_passthroughs, top_names)
+        
+                input_tree.append( input_comp )
+                output_tree.append( output_comp )
             
-        return jsonpickle.encode({"inputs" : input_tree, "outputs" : output_tree})
+        return jsonpickle.encode({"top":top_level, "inputs" : input_tree, 
+                                  "outputs" : output_tree})
     
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
