@@ -15,38 +15,6 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
      *  private
      ***********************************************************************/
     
-    this.travel_tree = function(d, name) {
-        parent_ = d[name];
-        parents = [parent_];
-        up_ = d[parent_];
-        while (up_) {
-            parents = parents.concat(up_)
-            up_ = d[up_]
-        }
-        return parents
-        
-    }
-    
-    
-    this.disable_halfchecked = function(this_div)   {
-        halfchecked = [];
-        this_div.find(".jstree-undetermined").each(function(i,element){    
-            elem_id = jQuery(element).find("a").attr("id")
-            halfchecked.push(elem_id);
-        })
-        jQuery.each(halfchecked, function(idx,an_id) {
-            this_div.jstree("set_type", "disabled", jQuery('#'+an_id));
-            })
-        }
-    
-    this.enable_parents = function(d, an_id) {
-        parents = self.travel_tree(d, an_id);
-        jQuery.each(parents, function(idx,this_id) {
-            //div_input.jstree("set_type", "enabled", jQuery('#'+this_id));
-            //div_output.jstree("set_type", "enabled", jQuery('#'+this_id));
-            })
-        }
-    
     
     this.handleCbClick = function(e, d) { 
         var tagName = d.args[0].tagName;
@@ -55,20 +23,14 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
           (refreshing != true && refreshing != "undefined")) {
         
         cobj = jQuery(d.rslt[0])
-        //var dom_id = cobj.attr('id');
-        //var name = cobj.attr('vname');
-        //modified = cobj.attr('component');
-        //var itype = cobj.attr('itype');
         var this_path = cobj.attr("path");
-        var status = cobj.attr("class").split(' ')[1];
+        var status = cobj.attr("class").split(' ').pop();
+        
         if (status == "jstree-checked") {
             self.makePassthrough(this_path);
-            //self.disable_halfchecked();
             }
         else {
             self.removePassthrough(this_path);
-            //self.enable_parents(tree_dep, dom_id);
-            //self.disable_halfchecked();
              }
         
         
@@ -175,11 +137,11 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
             outputs = attributes.outputs
             jQuery.each(inputs, function(idx,component) {
                 makeTree(component.data + "input", div_input, component)
-                self.disable_halfchecked(div_input)
+
             })
             jQuery.each(outputs, function(idx,component) {
                 makeTree(component.data + "output", div_output, component)
-                self.disable_halfchecked(div_output)
+
             })
                 
         }); //end getComponent assembly-level call
