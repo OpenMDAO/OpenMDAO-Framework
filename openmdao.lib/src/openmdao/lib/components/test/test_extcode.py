@@ -185,18 +185,6 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError,
                       ": missing stdout file 'sleep.out'")
 
-        # Now show that existing outputs are removed before execution.
-        with open('input', 'w') as out:
-            out.write(INP_DATA)
-        sleeper.stdin  = None
-        sleeper.stdout = None
-        sleeper.stderr = None
-        sleeper.env_vars = {}
-        sleeper.env_filename = ''
-        assert_raises(self, 'sleeper.run()',
-                      globals(), locals(), RuntimeError,
-                      ": missing output file 'env-data'")
-
         # Show that non-existent expected files are detected.
         sleeper.external_files.append(
             FileMetadata(path='missing-input', input=True))
