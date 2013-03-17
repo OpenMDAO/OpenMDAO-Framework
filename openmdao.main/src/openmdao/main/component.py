@@ -275,17 +275,40 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-    def check_config(self):
-        """Verify that this component is fully configured to execute.
-        This function is called once prior to the first execution of this
-        component and may be called explicitly at other times if desired.
-        Classes that override this function must still call the base class
-        version.
+    @rbac(('owner', 'user'))
+    def check_configuration(self):
         """
-        for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Slot) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, RuntimeError)
+        Verify that this component and all of its children are properly
+        configured to execute. This function is called prior to each
+        component execution, but is a no-op unless self._call_check_config is
+        True.
+        
+        Do not override this function.
+        
+        This function calls check_config(), which may be overridden by inheriting 
+        classes to perform more specific configuration checks.
+        """
+        if self._call_check_config:
+            self.check_config()
+            
+            visited = set([id(self), id(self.parent)])
+            for name, value in self.traits(type=not_event).items():
+                obj = getattr(self, name)
+                if value.is_trait_type(Slot) and value.required == True and obj is None:
+                    self.raise_exception("required plugin '%s' is not present" %
+                                         name, RuntimeError)
+                if has_interface(obj, IComponent) and id(obj) not in visited:
+                    visited.add(id(obj))
+                    obj.check_configuration()
+
+            self._call_check_config = False
+
+    def check_config(self):
+        """
+        Override this function to perform configuration checks specific to your class.
+        Bad configurations should raise an exception.
+        """
+        pass
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -386,9 +409,7 @@ class Component(Container):
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
+        self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs

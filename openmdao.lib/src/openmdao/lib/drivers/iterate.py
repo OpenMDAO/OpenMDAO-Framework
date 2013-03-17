@@ -53,8 +53,6 @@ class FixedPointIterator(Driver):
     def execute(self):
         """Perform the iteration."""
         
-        self._check_config()
-
         nvar = len(self.get_parameters().values())
         history = zeros([self.max_iteration, nvar])
         delta = zeros(nvar)
@@ -117,17 +115,16 @@ class FixedPointIterator(Driver):
             #    break
         self.history = history[:self.current_iteration+1, :]
         
-    def _check_config(self):
+    def check_config(self):
         """Make sure the problem is set up right."""
-        
+
         ncon = len(self.get_eq_constraints())
         
         if ncon == 0:
             msg = "FixedPointIterator requires a constraint equation."
             self.raise_exception(msg, RuntimeError)
             
-        params = self.get_parameters().values()
-        nparm = len(params)
+        nparm = len(self.get_parameters())
         
         if nparm == 0:
             msg = "FixedPointIterator requires an input parameter."
