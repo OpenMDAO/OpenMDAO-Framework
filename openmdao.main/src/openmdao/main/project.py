@@ -60,7 +60,7 @@ def _match_insts(classes):
 def parse(contents, fname, mode='exec'):
     """Wrapper for ast.parse() that cleans the contents of CRs and ensures
     it ends with a newline"""
-    contents = contents.replace('\r','')  # py26 barfs on CRs
+    contents = contents.replace('\r', '')  # py26 barfs on CRs
     if not contents.endswith('\n'):
         contents += '\n'  # to make ast.parse happy :(
     return ast.parse(contents, filename=fname, mode=mode)
@@ -527,12 +527,12 @@ description =
             try:
                 exec(cmd) in self._model_globals
             except Exception as err:
-                exc_info = sys.exc_info()
+                pass
         else:
             try:
                 result = eval(code, self._model_globals)
             except Exception as err:
-                exc_info = sys.exc_info()
+                pass
 
         if err:
             raise

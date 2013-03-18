@@ -11,6 +11,7 @@ import json
 from distutils.spawn import find_executable
 from openmdao.util.fileutil import find_files
 
+
 def ensure_dir(d):
     ''' Create directory if it doesn't exist.
     '''
@@ -58,11 +59,11 @@ def makenode(doc, path):
 
 
 def filedict(path):
-    ''' Create a nested dictionary for a file structure with 
+    ''' Create a nested dictionary for a file structure with
     names relative to the starting directory.
     '''
     rootlen = len(path)
-    dirs = { path: {} }
+    dirs = {path: {}}
     for filename in find_files(path, showdirs=True):
         dirname, basename = split(filename)
         if isdir(filename):
@@ -71,7 +72,7 @@ def filedict(path):
         else:
             try:
                 dirs[dirname][filename[rootlen:]] = getsize(filename)
-            except OSError as err:
+            except OSError:
                 # during a mercurial commit we got an error during
                 # getsize() of a lock file that was no longer there,
                 # so check file existence here and only raise an exception
@@ -126,6 +127,7 @@ def get_executable_path(executable_names):
             break
     return path
 
+
 def find_chrome():
     """ Find the chrome executable. """
     path = '/Applications/Google Chrome.app/Contents/MacOS' \
@@ -143,7 +145,7 @@ def find_chrome():
              +  USERPROFILE + '\AppData\Local\Google\Chrome\Application'
 
     exe_names = ('chrome', 'chrome.exe', 'Google Chrome',
-                 'google-chrome', 'chromium-browser') 
+                 'google-chrome', 'chromium-browser')
 
     for name in exe_names:
         pathname = find_executable(name, path)
@@ -151,7 +153,8 @@ def find_chrome():
             break
 
     return pathname
-    
+
+
 def launch_browser(port, preferred_browser=None):
     ''' Launch web browser on specified port.
         Try to use preferred browser if specified; fall back to default.
