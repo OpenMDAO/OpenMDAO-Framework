@@ -185,18 +185,6 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError,
                       ": missing stdout file 'sleep.out'")
 
-        # Now show that existing outputs are removed before execution.
-        with open('input', 'w') as out:
-            out.write(INP_DATA)
-        sleeper.stdin  = None
-        sleeper.stdout = None
-        sleeper.stderr = None
-        sleeper.env_vars = {}
-        sleeper.env_filename = ''
-        assert_raises(self, 'sleeper.run()',
-                      globals(), locals(), RuntimeError,
-                      ": missing output file 'env-data'")
-
         # Show that non-existent expected files are detected.
         sleeper.external_files.append(
             FileMetadata(path='missing-input', input=True))
@@ -335,10 +323,12 @@ class TestCase(unittest.TestCase):
             extcode.run()
         except OSError as exc:
             if sys.platform == 'win32':
-                msg = '[Error 2] The system cannot find the file specified'
+                # Apparently XP doesn't include the explanatory text.
+                #'[Error 2] The system cannot find the file specified'
+                self.assertTrue(str(exc).startswith('[Error 2]'))
             else:
                 msg = '[Errno 2] No such file or directory'
-            self.assertEqual(str(exc), msg)
+                self.assertEqual(str(exc), msg)
             self.assertEqual(extcode.return_code, -999999)
         else:
             self.fail('Expected OSError')

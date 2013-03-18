@@ -16,9 +16,8 @@ System Requirements
 ===================
 
 Working with OpenMDAO as a developer means there are some additional system requirements besides
-those mentioned in the :ref:`User Guide <System-Requirements>`. These requirements are
-described below.
-
+those mentioned in the :ref:`User Guide <System-Requirements>`. Make sure that you have installed 
+all of those requirements first, and then add the other requirements described below.
 
 **Git**
   We use Git for version control.  You'll need it to access the OpenMDAO
@@ -28,10 +27,10 @@ described below.
     
 .. __: https://help.github.com
 
-**C/C++ and Fortran Compilers**
-  Certain packages used in OpenMDAO contain Python extensions, meaning that they
-  contain non-Python source code that must be compiled. Packages currently in use require
-  either C/C++ or Fortran compilers.
+**C/C++ and Fortran Compilers** 
+  Certain packages used in OpenMDAO contain Python extensions, meaning that they contain non-Python
+  source code that must be compiled. Packages currently in use require either C/C++ or Fortran
+  compilers.
 
   - *Linux*:
 
@@ -39,28 +38,60 @@ described below.
     
     - *gfortran*
       
-      If they are not already on your system, they should be easily installable using
-      your package manager. OpenMDAO currently builds and passes all tests with
-      gcc/gfortran 4.1.2. We expect that later versions of gcc/gfortran 4.X should also
-      work.
+     If these compilers are not already on your system, they should be easily installable using
+     your package manager. OpenMDAO currently builds and passes all tests with gcc/gfortran 4.1.2.
+     We expect that later versions of gcc/gfortran 4.X should also work.
 
-      
+
   - *Mac OS X*:
    
-    - *gcc*
+    - Xcode 
       
-      Is available as part of *Xcode*, which can be found on the OS X distribution disks but typically is not 
-      installed by default.  You can also download gcc and install it from source, although
-      this is more prone to installation problems.
-        
-    - *gfortran*
+      You can get the latest version from Apple, but you'll have to fill out a (free)
+      registration to do it. If you're using Lion or Mountain Lion, you can also get Xcode from the
+      App store. If you don't want to get the whole X-Code environment, for Lion and Mountain Lion 
+      Apple offers a smaller compiler-only library called *Command Line Tools for Xcode*. You can
+      get the latest Xcode or the  smaller compiler package `here <https://daw.apple.com/cgi-bin/WebObjects/DSAuthWeb.woa/wa/login?appIdKey=d4f7d769c2abecc664d0dadfed6a67f943442b5e9c87524d4587a95773750cea&path=%2F%2Fdownloads%2Findex.action>`_. 
+
+    - gfortran 
       
-      Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
+      It's sometimes hard to figure out which version of gfortran to install on your Mac. See
+      this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
+      of what's available. Alternatively, you can follow the instructions for installing a package manager 
+      called `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_,
+      which will figure out the right kind of gfortran for you. 
+
+
+    - Lion (OS X 10.7) and Mountain Lion (OS X 10.8)
+    
+      - If you want to get the full Xcode, make sure version 4.3.2 or higher is installed. You can try the 
+        Mac App Store. When you install Xcode (via the app store or not), it does not install the compilers you
+        need by default.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+        .. figure:: OSX_Lion_Screenshot.png
+           :align: center
+           :alt: Screenshot of XCode's Downloads screen showing options
+       
+           XCode's *Downloads* Screen     
+       
+      - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_, or use Homebrew 
+
+
+    - On **Leopard:**
+
+      - `gfortran`__  - Click on ``fortran-macosx-leopard-x86.dmg`` under **Miscellaneous Downloads.**
+     
+        If you have g77 installed on Leopard, you may get build errors like:  ``ld: library not found for
+        -lcc_dynamic``. This indicates that g77, which won't work, is being used instead of `gfortran`. At the
+        moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
+        that it won't be found by ``numpy.distutils``.
+
+     .. __: http://openmdao.org/downloads-2/      
 
 .. _`Windows`:
 
   - *Windows*:
-
+ 
     - *mingw32*   (for Fortran and C++)
       
      
@@ -77,7 +108,6 @@ described below.
        
       - Make sure to put the ``bin`` directory of the mingw32 install in your path.
            
-
          
     - *Visual C++ 2008 (Optional)*
       

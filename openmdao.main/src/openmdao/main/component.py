@@ -225,10 +225,12 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        #if name.endswith('_items'):
-            #n = name[:-6]
-            #if n in self._valid_dict:
-                #name = n
+        
+        if name.endswith('_items'):
+            n = name[:-6]
+            if n in self._valid_dict:
+                name = n
+                
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -273,17 +275,40 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-    def check_config(self):
-        """Verify that this component is fully configured to execute.
-        This function is called once prior to the first execution of this
-        component and may be called explicitly at other times if desired.
-        Classes that override this function must still call the base class
-        version.
+    @rbac(('owner', 'user'))
+    def check_configuration(self):
         """
-        for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Slot) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, RuntimeError)
+        Verify that this component and all of its children are properly
+        configured to execute. This function is called prior to each
+        component execution, but is a no-op unless self._call_check_config is
+        True.
+        
+        Do not override this function.
+        
+        This function calls check_config(), which may be overridden by inheriting 
+        classes to perform more specific configuration checks.
+        """
+        if self._call_check_config:
+            self.check_config()
+            
+            visited = set([id(self), id(self.parent)])
+            for name, value in self.traits(type=not_event).items():
+                obj = getattr(self, name)
+                if value.is_trait_type(Slot) and value.required == True and obj is None:
+                    self.raise_exception("required plugin '%s' is not present" %
+                                         name, RuntimeError)
+                if has_interface(obj, IComponent) and id(obj) not in visited:
+                    visited.add(id(obj))
+                    obj.check_configuration()
+
+            self._call_check_config = False
+
+    def check_config(self):
+        """
+        Override this function to perform configuration checks specific to your class.
+        Bad configurations should raise an exception.
+        """
+        pass
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -384,9 +409,7 @@ class Component(Container):
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
+        self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -568,7 +591,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -592,10 +615,19 @@ class Component(Container):
                 self._num_input_caseiters += 1
 
     def _set_input_callback(self, name, remove=False):
-        #t = self.trait(name)
-        #if t.has_items or (t.trait_type and t.trait_type.has_items):
-        #    name = name+'[]'
+
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
+        
+        # Certain containers get an additional listener for access by index.
+        # Currently, List and Dict are supported, as well as any other 
+        # Enthought or user-defined trait whose handler supports it.
+        # Array is not supported yet.
+        t = self.trait(name)
+        if t.handler.has_items:
+            name = name + '_items'
+            self.on_trait_change(self._input_trait_modified, name, 
+                                 remove=remove)
+
 
     def remove_trait(self, name):
         """Overrides base definition of *add_trait* in order to
@@ -1588,6 +1620,11 @@ class Component(Container):
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
         for name in io_list:
+            
+            #for variable trees
+            if '.' in name:
+                continue
+            
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
@@ -1608,13 +1645,13 @@ class Component(Container):
             io_attr['connected'] = ''
 
             if name in connected_inputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 # there can be only one connection to an input
                 io_attr['connected'] = \
                     str([src for src, dst in connections]).replace('@xin.', '')
 
             if name in connected_outputs:
-                connections = self._depgraph.connections_to(name)
+                connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
 

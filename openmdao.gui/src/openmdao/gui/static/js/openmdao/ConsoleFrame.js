@@ -118,11 +118,10 @@ openmdao.ConsoleFrame = function(id,model) {
     function consoleError(msg) {
         text = msg[1];
         updateHistory(text+'\n');
-        openmdao.Util.notify(text, 'Error');
     }
 
     // ask model for an update whenever something changes
-    model.addListener('outstream',updateHistory);
+    model.addListener('outstream', updateHistory);
 
     // ask model for an update whenever a console error occurs.
     model.addListener('console_errors', consoleError);

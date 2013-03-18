@@ -188,12 +188,11 @@ class IComponent(IContainer):
     its output variables based on the values of its input variables.
     """
 
-    def check_config ():
-        """Verify that this component is fully configured to execute.
-        This function is called once prior to the first execution of this
-        component and may be called explicitly at other times if desired. 
-        Classes that override this function must still call the base class
-        version.
+    def check_configuration():
+        """Verify that this component is properly configured to execute.
+        Classes inheriting from Component should not override this function,
+        but instead override check_config().
+        Bad configurations should raise an exception.
         """
     
     def run (force=False):
@@ -735,22 +734,40 @@ class IRepository(Interface):
 class IParametricGeometry(Interface):
     """An Interface to a parametric geometry model"""
 
-    def regenModel():
+    def regen_model():
         """Rebuild the model based on current parameter values."""
 
-    def listParameters():
+    def list_parameters():
         """Return a list of input and output parameters."""
 
-    def setParameter(name, val):
+    def set_parameter(name, val):
         """Set new value for an input parameter."""
 
-    def getParameter(name):
+    def get_parameter(name):
         """Get info about a Parameter in a Model"""
     
     def register_param_list_changedCB(callback):
         """Register a function to be called when the list of parameters
         changes, e.g., when a new model is loaded.
         """
+        
+    def get_geometry():
+        """Return an object that conforms to the IStaticGeometry interface.
+        """
+        
+        
+class IStaticGeometry(Interface):
+    """An interface for a geometry object that can be queried and tesselated.
+    These are created by Parametric Geometry objects.
+    """
+    
+    def get_tessellation(*args, **kwargs):
+        """Return a list of tuples, where each tuple contains two ndarrays
+        that describe the tessellation for one solid in the model. The first
+        ndarray contains the the point coordinates and the second ndarray
+        contains the triangle connectivities."""
+        
+        
         
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces

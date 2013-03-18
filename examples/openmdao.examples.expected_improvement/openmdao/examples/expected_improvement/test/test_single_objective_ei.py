@@ -16,8 +16,6 @@ from pyevolve import Selectors
 
 from openmdao.main.api import set_as_top
 from openmdao.examples.expected_improvement.single_objective_ei import Analysis
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.casehandlers.api import case_db_to_dict
 
 
 class SingleObjectiveEITest(unittest.TestCase):
@@ -28,6 +26,8 @@ class SingleObjectiveEITest(unittest.TestCase):
             os.remove('DOE_trainer.csv')
 
     def test_EI(self): 
+
+        random.seed(0)
                 
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
@@ -36,7 +36,6 @@ class SingleObjectiveEITest(unittest.TestCase):
         Selectors.GRankSelector.cacheCount = None
         Selectors.GRouletteWheel.cachePopID = None
         Selectors.GRouletteWheel.cacheWheel = None
-
 
         analysis = Analysis()
         set_as_top(analysis)
@@ -50,14 +49,15 @@ class SingleObjectiveEITest(unittest.TestCase):
         #print analysis.branin_meta_model.x
         #print analysis.branin_meta_model.y
         
-        points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
+        points = [(-pi, 12.275, .39789), (pi, 2.275, .39789), (9.42478, 2.745, .39789)]
         errors = []
-        for x,y,z in points: 
+        for x, y, z in points: 
             analysis.branin_meta_model.x = x
             analysis.branin_meta_model.y = y
             analysis.branin_meta_model.execute()
             
-            errors.append((analysis.branin_meta_model.f_xy.mu - z)/z*100)
+            errors.append(abs((analysis.branin_meta_model.f_xy.mu - z)/z*100))
+        print errors
         avg_error = sum(errors)/float(len(errors))
         logging.info('#errors %s, sum(errors) %s, avg_error %s',
                      len(errors), sum(errors), avg_error)

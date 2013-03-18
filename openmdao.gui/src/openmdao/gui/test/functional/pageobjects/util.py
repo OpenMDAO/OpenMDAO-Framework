@@ -97,8 +97,8 @@ class NotifierPage(object):
         """ Wait for notification. Returns notification message. """
         time.sleep(0.5)  # Pacing.
         base_id = base_id or 'notify'
-        msg_id = base_id+'-msg'
-        ok_id  = base_id+'-ok'
+        msg_id = base_id + '-msg'
+        ok_id  = base_id + '-ok'
         msg = WebDriverWait(parent.browser, timeout).until(
                   lambda browser: browser.find_element(By.ID, msg_id))
         ok = WebDriverWait(parent.browser, timeout).until(
@@ -252,6 +252,9 @@ class SafeDriver(SafeElementBase):
         # All elements share same invoker.
         super(SafeDriver, self).__init__(driver, SafeInvoker())
 
+    def __repr__(self):
+        return 'SafeDriver(%s)' % (self._delegate.__class__.__name__)
+
     @property
     def current_window_handle(self):
         return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
@@ -341,4 +344,3 @@ class SafeInvoker(object):
 
             self._request_q.task_done()
             self._reply_q.put((retval, exc))
-

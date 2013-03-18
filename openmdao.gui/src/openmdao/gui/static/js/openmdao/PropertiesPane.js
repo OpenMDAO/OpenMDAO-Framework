@@ -5,6 +5,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
         dataView,
+        meta = meta,
+        searchString = "",
+        inlineFilter = undefined,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
@@ -18,17 +21,19 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             enableTextSelectionOnCells: true
         },
         _collapsed = {},
+        _filter = {},
         editableInTable = {};
-
+    
     self.pathname = pathname;
     if (editable) {
         options.editable = true;
         options.autoEdit = true;
     }
-
+    
     if (meta) {
         options.autoHeight = false;
-        propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px'>"),
+        elm.append(jQuery("<div id='inlineFilter' class='filterpanel' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
+        propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
             {id:"type",      name:"Type",        field:"type",      width:60 },
@@ -42,12 +47,57 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
-    SetupTable()
-    
+    SetupTable();
+
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-    
+        
+        if(meta){
+            jQuery("#" + name + "_variableFilter").keyup(function (e) {
+                Slick.GlobalEditorLock.cancelCurrentEdit();
+
+                searchString = this.value.toLowerCase();
+                items = dataView.getItems();
+                _filter = {};
+                debug.info(items);
+                for (i=items.length - 1; i>=0; i--){
+                    name = (items[i].name) ? items[i].name.toLowerCase() : ""
+                    units = (items[i].units) ? items[i].units.toLowerCase() : ""
+                    description = (items[i].desc) ? items[i].desc.toLowerCase() : ""
+
+                    if( searchString === ""){
+                        _filter[items[i].id] = true;
+                    }
+
+                    else if( _filter[items[i].id] === true){
+                        if( items[i].parent !== null ){
+                            _filter[items[i].parent] = true;
+                            _collapsed[items[i].parent] = false;
+                        }
+                    }
+                        
+                    else if(name.indexOf(searchString) !== -1 || units.indexOf(searchString) !== -1 || description.indexOf(searchString) !== -1) {
+                        _filter[items[i].id] = true;
+                        _collapsed[items[i].id] = false;
+                        if(items[i].parent !== null){
+                            _filter[items[i].parent] = true;
+                            _collapsed[items[i].parent] = false;
+                        }
+                    }
+                    
+                    else {
+                        _filter[items[i].id] = false;
+                        _collapsed[items[i].id] = true;
+                    }
+
+                }
+                dataView.refresh();
+                highlightCells();
+                jQuery(this).trigger('dialogresizestop')
+            });
+        }
+
         props.onBeforeEditCell.subscribe(function(row,cell) {
             if (props.getDataItem(cell.row).connected.length > 0) {
                 return false;
@@ -75,6 +125,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     // dataView needs to know to update.
                     dataView.updateItem(item.id, item);
                     highlightCells();
+                    jQuery("#" + name + "_variableFilter").trigger('dialogresizestop')
                 }
                 e.stopImmediatePropagation();
             }
@@ -92,8 +143,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView.onRowsChanged.subscribe(function (e, args) {
             props.invalidateRows(args.rows);
             props.resizeCanvas();
-        });    
-        
+        });
+
         if (editable) {
             props.onCellChange.subscribe(function(e,args) {
                 // TODO: better way to do this (e.g. model.setProperty(path,name,value)
@@ -106,6 +157,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
 
+        
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
         var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
         var idx = dataView.getIdxById(dataContext.id);
@@ -120,10 +172,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             return spacer + "<span class='toggle'></span>" + value;
         }
     }
-        
-    /* Function that returns false for collapsed rows, and true for the rest.
-    Used by Slickgrid */
-    this.filter = function myFilter(item) {
+    
+    function matchesFilter(item){
+        return (item.name.indexOf(searchString) !== -1) ||
+            (item.units.indexOf(searchString) !==-1 )||
+            (item.description.indexOf(searchString)) !==-1
+    }
+
+    function expansionFilter(item, args){
         var idx, parent;
         if (item.parent != null) {
             idx = dataView.getIdxById(item.parent);
@@ -133,10 +189,28 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     return false;
                 }
                 idx = dataView.getIdxById(parent.parent);
-                parent = dataView.getItemByIdx(idx)
+                parent = dataView.getItemByIdx(idx);
             }
         }
+
         return true;
+
+    }
+
+    function textboxFilter(item, args){
+        return _filter[item.id];
+    }
+
+    /* Function that returns false for collapsed rows, and true for the rest.
+    Used by Slickgrid */
+    this.filter = function myFilter(item, args) {
+        return expansionFilter(item, args) && textboxFilter(item, args);
+        //return true;
+    }
+    
+    function updateFilter(args){
+        dataView.setFilterArgs(args);
+        dataView.refresh();
     }
     
     /* Sets the CSS style for cells based on connection status, while
@@ -178,7 +252,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             jQuery.each(properties, function(index, value) {
             
                 editableInTable[value.id] = {};
-
+                _filter[value.id] = true;
                 if (value.hasOwnProperty("parent")) {
                     if ( !_collapsed.hasOwnProperty(value.id) ) {
                         _collapsed[value.id] = true; 
@@ -219,6 +293,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             dataView.beginUpdate();
             dataView.setItems(properties);
+            dataView.setFilterArgs({filter:expansionFilter});
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate()

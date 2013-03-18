@@ -73,7 +73,8 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'ttype': 'slot', 
                          'type': 'TstContainer', 
-                         'id': 'dummy_data'} in attrs['Inputs'])
+                         'id': 'dummy_data',
+                         'target': 'comp.dummy_data'} in attrs['Inputs'])
         self.assertTrue({'indent': 1, 
                          'name': 'dummy1', 
                          'parent': 'dummy_data', 
@@ -83,7 +84,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy_data_dummy1'} in attrs['Inputs'])
+                         'id': 'dummy_data.dummy1'} in attrs['Inputs'])
         self.assertTrue({'indent': 0, 
                          'name': 'dummy1_out', 
                          'vt': 'vt', 
@@ -92,7 +93,8 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'ttype': 'slot', 
                          'type': 'TstContainer', 
-                         'id': 'dummy1_out'} in attrs['Outputs'])
+                         'id': 'dummy1_out',
+                         'target': 'comp.dummy_data_out'} in attrs['Outputs'])
         self.assertTrue({'indent': 1, 
                          'name': 'dummy1', 
                          'parent': 'dummy1_out', 
@@ -102,7 +104,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy1_out_dummy1'} in attrs['Outputs'])
+                         'id': 'dummy1_out.dummy1'} in attrs['Outputs'])
 
         blah = set_as_top(TstAssembly())
         attrs = blah.get_attributes(True)

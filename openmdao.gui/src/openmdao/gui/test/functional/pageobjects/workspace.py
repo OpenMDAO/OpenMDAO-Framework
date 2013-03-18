@@ -13,6 +13,8 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
+from component import NameInstanceDialog
+
 from connections import ConnectionsPage
 from dataflow import find_dataflow_figure, find_dataflow_figures, \
                      find_dataflow_component_names
@@ -22,6 +24,7 @@ from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures, \
                      find_workflow_component_figure
+
 from util import ArgsPrompt, ValuePrompt, NotifierPage, ConfirmationPage
 
 
@@ -86,7 +89,7 @@ class WorkspacePage(BasePageObject):
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
     file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-#    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    #file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
     file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
     file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
     file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
@@ -109,6 +112,9 @@ class WorkspacePage(BasePageObject):
     library_tab    = ButtonElement((By.ID, 'library_tab'))
     library_search = InputElement((By.ID, 'objtt-select'))
     library_clear  = ButtonElement((By.ID, 'objtt-clear'))
+
+    library_item_docs = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[1]"))
+    library_item_metadata = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[2]"))
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
@@ -216,15 +222,15 @@ class WorkspacePage(BasePageObject):
         #if you expect the "close without saving?" dialog
         if expectDialog:
             dialog = ConfirmationPage(self)
-            if confirm:  #close without saving
+            if confirm:  # close without saving
                 self.browser.execute_script('openmdao.Util.closeWebSockets();')
                 NotifierPage.wait(self)
                 dialog.click_ok()
                 from project import ProjectsPage
                 return ProjectsPage.verify(self.browser, self.port)
-            else:  #return to the project, intact.
+            else:  # return to the project, intact.
                 dialog.click_cancel()
-        else:      #no unsaved changes
+        else:      # no unsaved changes
             from project import ProjectsPage
             return ProjectsPage.verify(self.browser, self.port)
 
@@ -263,6 +269,7 @@ class WorkspacePage(BasePageObject):
         self('add_button').click()
 
         self.file_chooser = file_path
+        time.sleep(1)  # Some extra time for the file tree update.
         self.find_file(os.path.basename(file_path))  # Verify added.
         time.sleep(1)  # Some extra time for the library update.
 
@@ -509,6 +516,18 @@ class WorkspacePage(BasePageObject):
                 break
         return library_item
 
+    def view_library_item_docs(self, item_name):
+        chain = ActionChains(self.browser)
+        current_windows = set(self.browser.window_handles)
+        self.show_library()
+        item = self.get_library_item(item_name)
+        chain.context_click(item).perform()
+        self("library_item_docs").click()
+        new_windows = set(self.browser.window_handles) - current_windows
+        docs_window = list(new_windows)[0]
+
+        return docs_window
+
     def add_library_item_to_dataflow(self, item_name, instance_name,
                                      check=True, offset=None, prefix=None,
                                      args=None):
@@ -617,13 +636,13 @@ class WorkspacePage(BasePageObject):
                 parent = items[:-1]
                 comp = items[-1]
                 obj = self.get_dataflow_figure(comp, parent)
-                
+
                 target = self.find_object_button(target_name)
-                
+
                 chain = ActionChains(self.browser)
                 chain.drag_and_drop(obj.root, target)
                 chain.perform()
-                
+
                 #obj = self.find_object_button(obj_path)
                 #workflow = self.get_workflow_figure(target_name)
                 #flow_fig = workflow.flow
@@ -688,3 +707,194 @@ class WorkspacePage(BasePageObject):
     def show_console(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-closed')
         toggler.click()
+
+    def drag_element_to(self, element, drag_to, centerx):
+        '''Drag one element over to another element'''
+        chain = ActionChains(self.browser)
+        chain.move_to_element(element)
+        chain.click_and_hold(element)
+        chain.move_to_element(drag_to)
+        if centerx:
+            offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
+            chain.move_by_offset(offset, 1)
+        else:
+            chain.move_by_offset(5, 1)
+        chain.perform()
+        return chain
+
+    def release(self, chain):
+        '''The drop part of the ActionChain when doing drag and drop'''
+        chain.release(on_element=None).perform()
+        time.sleep(0.5)  # Pacing for diagram update.
+
+    def replace_driver(self, assembly_name, driver_type):
+        ''' find 'driver_type' in the library, drag and drop it on to
+            the driver figure of the 'assembly_name'
+        '''
+        newdriver = self.find_library_button(driver_type)
+        assembly = self.get_dataflow_figure(assembly_name)
+        driver_element = self.get_dataflow_figure('driver')
+
+        div = driver_element.get_drop_targets()[0]
+        chain = self.drag_element_to(newdriver, div, True)
+        self.check_highlighting(driver_element('content_area').element, True,
+                           "Driver's content_area")
+        self.release(chain)
+
+        # brings up a confirm dialog for replacing the existing driver.
+        dialog = ConfirmationPage(assembly)
+        dialog.click_ok()
+
+    def resize_editor(self, editor):
+        '''ensure that the editor is not covering the library
+        (or else we cannot drag things from it!)'''
+        browser = self.browser
+
+        page_width = browser.get_window_size()['width']
+
+        lib_tab      = self('library_tab').find_element_by_xpath('..')
+        lib_width    = lib_tab.size['width']
+        lib_position = lib_tab.location['x']
+
+        dialog_title    = editor('dialog_title').find_element_by_xpath('../..')
+        dialog_width    = dialog_title.size['width']
+        dialog_position = dialog_title.location['x']
+
+        # how much overlap do we have?
+        overlap = lib_position - (dialog_position + dialog_width)
+
+        if overlap < 0:  # we are overlapping
+            # check to see if we have enough room to move out of the way
+            if page_width < dialog_width + lib_width:
+                # not enough, need to rezize the editor
+
+                # look for the resize handle
+                sibblings = dialog_title.find_elements_by_xpath('../../div')
+                handle = None
+                for sib in sibblings:
+                    if "ui-resizable-se" in sib.get_attribute('class'):
+                        handle = sib
+
+                # do the resizing
+                chain = ActionChains(browser)
+                chain.click_and_hold(handle)
+                # we can resize editor down to 425px, any less and we cover drop targets
+                chain.move_by_offset(450 - dialog_width, 0).perform()
+                # must click because release is not working. why? I do not know.
+                chain.click().perform()
+                chain.release(None).perform()
+
+                # recalculate the overlap
+                dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+                dialog_width = dialog_title.size['width']
+                dialog_position = dialog_title.location['x']
+                overlap = lib_position - (dialog_position + dialog_width)
+
+            # We are good, move out!
+            chain = ActionChains(browser)
+            chain.click_and_hold(editor('dialog_title').element)
+            chain.move_by_offset(overlap, 0).perform()
+            # must click because release is not working. why? I do not know.
+            chain.click().perform()
+            chain.release(None).perform()
+
+            # recalculate the overlap
+            dialog_title = editor('dialog_title').find_element_by_xpath('../..')
+            dialog_width = dialog_title.size['width']
+            dialog_position = dialog_title.location['x']
+            overlap = lib_position - (dialog_position + dialog_width)
+
+            if overlap < 0:
+                # we still have a problem.
+                eq(True, False,
+                    "Could not move or rezise the editor dialog so it is not "
+                    "overlapping the library. The browser window is too small")
+
+    def get_dataflow_fig_in_globals(self, name):
+        '''Find the named dataflow fig in the global dataflow editor'''
+        all_figs = self.get_dataflow_figures()
+        for fig in all_figs:
+            location = fig.get_parent().get_attribute('id')
+            if location == "top-dataflow":
+                return fig
+
+        return None
+
+    def put_element_on_grid(self, element_str):
+        '''find and get the 'assembly', and the div for the grid object'''
+        browser = self.browser
+
+        for retry in range(3):
+            try:
+                assembly = self.find_library_button(element_str)
+                chain = ActionChains(browser)
+                chain.click_and_hold(assembly)
+                chain.move_by_offset(-100, 0).perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('put_element_on_grid %s:'
+                                    ' StaleElementReferenceException', element_str)
+                else:
+                    raise
+            else:
+                break
+
+        grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
+        self.check_highlighting(grid, True, "Grid")
+        self.release(chain)
+
+        # deal with the modal dialog
+        name = NameInstanceDialog(self).create_and_dismiss()
+
+        # make sure it is on the grid
+        self.ensure_names_in_workspace([name],
+            "Dragging '" + element_str +
+            "' to grid did not produce a new element on page")
+
+        return name
+
+    def slot_drop(self, element, slot, should_drop, message='Slot'):
+        '''Drop an element on a slot'''
+        chain = self.drag_element_to(element, slot, True)
+        chain.move_by_offset(25, 0).perform()
+        time.sleep(1.0)  # give it a second to update the figure
+        self.check_highlighting(slot, should_highlight=should_drop, message=message)
+        self.release(chain)
+
+    def ensure_names_in_workspace(self, names, message=None):
+        """ensures the list of element names in included in the workspace"""
+
+        allnames = self.get_dataflow_component_names()
+
+        # sometimes does not load all of the names for some reason.
+        # Reloading seems to fix the problem
+        try_reload = False
+        for name in names:
+            if not name in allnames:
+                try_reload = True
+        if try_reload:
+            time.sleep(.1)
+            allnames = self.get_dataflow_component_names()
+
+        # now we will assert that the elements that we added appear on the page
+        for name in names:
+            eq(name in allnames, True, '%s: %s' % (message, name))
+
+    def check_highlighting(self, element, should_highlight=True, message='Element'):
+        '''check to see that the background-color of the element is highlighted
+        '''
+        if 'SlotFigure' in element.get_attribute('class'):
+            # a slot figure is a div containing a ul element (the context menu) and
+            # one or more svg elements, each of which contains a rect and two texts
+            # the last rect fill style is what we need to check for highlighting
+            rect = element.find_elements_by_css_selector('svg rect')[-1]
+            style = rect.get_attribute('style')
+        else:
+            style = element.get_attribute('style')
+        highlighted = ('background-color: rgb(207, 214, 254)' in style) \
+                    or ('highlighted.png' in style) \
+                    or ('fill: #cfd6fe' in style)
+        eq(highlighted, should_highlight, message +
+            (' did not highlight (and should have) ' if should_highlight else
+             ' highlighed (and should not have) ')
+             + 'when dragging a dropable element to it')

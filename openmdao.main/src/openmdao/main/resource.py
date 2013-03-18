@@ -102,7 +102,9 @@ class ResourceAllocationManager(object):
 
     By default ``~/.openmdao/resources.cfg`` will be used for additional
     configuration information. To avoid this, call :meth:`configure` before
-    any other allocation routines.
+    any other allocation routines, or set the ``OPENMDAO_RAMFILE`` environment
+    variable to the path to be used (a null path is legal and avoids any
+    additional configuration).
     """
 
     _lock = threading.Lock()
@@ -117,6 +119,14 @@ class ResourceAllocationManager(object):
         self._allocators.append(LocalAllocator('LocalHost',
                                                authkey='PublicKey',
                                                allow_shell=True))
+
+        # If OPENMDA_RAMFILE is specified, use that.
+        # Set to null during testing for better coverage analysis.
+        config_filename = os.environ.get('OPENMDAO_RAMFILE')
+        if config_filename is not None:
+            if config_filename and not os.path.exists(config_filename):
+                self.log_error('DA_RAMFILE %r not found', config_filename)
+
         if config_filename is None:
             config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
             config_filename = os.path.expanduser(config_filename)
@@ -200,6 +210,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.append(allocator)
 
     @staticmethod
@@ -215,6 +229,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.insert(index, allocator)
 
     @staticmethod
