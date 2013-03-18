@@ -5,6 +5,7 @@ import tempfile
 
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
 from openmdao.util.log import logger
+from openmdao.util.fileutil import onerror
 
 _ignore = """
 .coverage
@@ -237,7 +238,7 @@ class DumbRepo(RepositoryBase):
                         continue
                     try:
                         if os.path.isdir(f):
-                            shutil.rmtree(f)
+                            shutil.rmtree(f, onerror=onerror)
                         else:
                             os.remove(f)
                     except Exception as err:
@@ -258,7 +259,7 @@ def get_repo(path):
         '.hg': HgRepo,
         '.bzr': BzrRepo,
         DumbRepo.repodir: DumbRepo,
-        }
+    }
     for repo, klass in repo_map.items():
         if os.path.exists(os.path.join(path, repo)) and klass.is_present():
             return klass(path)

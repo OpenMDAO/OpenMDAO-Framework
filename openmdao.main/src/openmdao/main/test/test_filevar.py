@@ -10,6 +10,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top, FileRef
 from openmdao.main.datatypes.api import Bool, File, Str, List
+from openmdao.util.fileutil import onerror
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -37,7 +38,6 @@ class Source(Component):
             out.close()
 
 
-
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
     text_in = File(iotype='in', local_path='tout',
@@ -53,7 +53,6 @@ class Passthrough(Component):
         self.binary_out.extra_stuff = self.binary_in.extra_stuff
 
 
-
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
@@ -67,7 +66,6 @@ class Middle(Assembly):
 
         self.create_passthrough('passthrough.text_out')
         self.create_passthrough('passthrough.binary_out')
-
 
 
 class Sink(Component):
@@ -92,7 +90,6 @@ class Sink(Component):
         inp.close()
 
 
-
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
@@ -101,7 +98,7 @@ class Model(Assembly):
         self.add('source', Source(directory='Source'))
         self.add('middle', Middle(directory='Middle'))
         self.add('sink', Sink(directory='Sink'))
-        self.driver.workflow.add(['source','middle','sink'])
+        self.driver.workflow.add(['source', 'middle', 'sink'])
 
         self.connect('source.text_file', 'middle.text_in')
         self.connect('source.binary_file', 'middle.binary_in')
@@ -134,7 +131,7 @@ class TestCase(unittest.TestCase):
         self.model.pre_delete()
         for directory in ('Source', 'Middle', 'Sink'):
             try:
-                shutil.rmtree(directory)
+                shutil.rmtree(directory, onerror=onerror)
             except OSError:
                 pass
         self.model = None
@@ -159,7 +156,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.sink.binary_file.binary, True)
         self.assertEqual(self.model.sink.binary_file.extra_stuff,
                          self.model.source.binary_file.extra_stuff)
-
 
     def test_src_failure(self):
         logging.debug('')
@@ -317,4 +313,3 @@ if __name__ == '__main__':
     import sys
     sys.argv.append('--cover-package=openmdao.main')
     nose.runmodule()
-
