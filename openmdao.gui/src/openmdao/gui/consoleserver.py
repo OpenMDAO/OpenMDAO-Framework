@@ -715,12 +715,12 @@ class ConsoleServer(cmd.Cmd):
             comp_id = compname
             input_comp = {"data": compname}
             input_comp["attr"] = {"id" : comp_id,
-                                  "type": "disabled"}
+                                  "rel": "disabled"}
             input_comp["children"] = []
             
             output_comp = {"data": compname}
             output_comp["attr"] = {"id" : comp_id,
-                                   "type": "disabled"}
+                                   "rel": "disabled"}
             output_comp["children"] = []
             
             comp, root = self.get_container(pathname +'.'+ compname)
