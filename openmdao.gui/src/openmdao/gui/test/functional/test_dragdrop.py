@@ -15,7 +15,7 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 
 from pageobjects.component import NameInstanceDialog
-from pageobjects.util import ArgsPrompt
+from pageobjects.util import ArgsPrompt, NotifierPage
 
 
 @with_setup(setup_server, teardown_server)
@@ -402,9 +402,68 @@ def _test_list_slot(browser):
     closeout(project_dict, workspace_page)
 
 
-# Note, I removed the component_to_simple_workflow because it provides nothing
-# that this test does not. Also, I removed library_to_workflow because that
-# operation is unsupported in the new workflow. -- KTM
+def _test_slot_subclass(browser):
+    # test that a slot will accept subclasses
+    project_dict, workspace_page = startup(browser)
+
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/slot_test.py')
+    workspace_page.add_file(file_path)
+
+    name = workspace_page.put_element_on_grid("AutoAssemb")
+    aa = workspace_page.get_dataflow_figure(name)
+    editor = aa.editor_page(double_click=False)
+    editor.move(-200, 200)
+
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',        '', '', 'true', 'If non-blank, the directory to execute in.', '', ''],
+        ['force_execute', 'bool',  'False', '', 'true', 'If True, always execute even if all IO traits are valid.', '', ''],
+        ['input',         'float',     '0', '', 'true', '', '', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    inputs[2][2] = "10"
+    aa.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
+
+    outputs = editor.get_outputs()
+    expected = [
+        ['derivative_exec_count', 'int',    '0', '', 'true', "Number of times this Component's derivative function has been executed.", '', ''],
+        ['exec_count',            'int',    '1', '', 'true', 'Number of times this Component has been executed.', '', ''],
+        ['itername',              'str',     '', '', 'true', 'Iteration coordinates.', '', ''],
+        ['output',                'float', '80', '', 'true', '', '', ''],
+    ]
+    for i, row in enumerate(outputs.value):
+        eq(row, expected[i])
+
+    editor.show_slots()
+    dummy2 = workspace_page.find_library_button('Dummy2')
+    d2_slot = browser.find_element(By.ID, 'SlotFigure-%s-d2' % name)
+    workspace_page.slot_drop(dummy2, d2_slot, True, 'd2 (Dummy)')
+
+    aa.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
+
+    outputs = editor.get_outputs()
+    expected = [
+        ['derivative_exec_count', 'int',      '0', '', 'true', "Number of times this Component's derivative function has been executed.", '', ''],
+        ['exec_count',            'int',      '2', '', 'true', 'Number of times this Component has been executed.', '', ''],
+        ['itername',              'str',       '', '', 'true', 'Iteration coordinates.', '', ''],
+        ['output',                'float',  '160', '', 'true', '', '', ''],
+    ]
+    for i, row in enumerate(outputs.value):
+        eq(row, expected[i])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
 
 def _test_component_to_complex_workflow(browser):
     project_dict, workspace_page = startup(browser)
