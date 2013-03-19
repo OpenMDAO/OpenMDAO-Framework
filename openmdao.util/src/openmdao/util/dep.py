@@ -17,16 +17,16 @@ from openmdao.util.log import logger
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
 # identify plugins, and their corresponding Interfaces.
 plugin_groups = { 'openmdao.container': ['IContainer'],
-                  'openmdao.component': ['IComponent','IContainer'], 
-                  'openmdao.driver': ['IDriver','IComponent','IContainer'], 
-                  'openmdao.variable': ['IVariable'], 
+                  'openmdao.component': ['IComponent','IContainer'],
+                  'openmdao.driver': ['IDriver','IComponent','IContainer'],
+                  'openmdao.variable': ['IVariable'],
                   'openmdao.surrogatemodel': ['ISurrogate'],
-                  'openmdao.doegenerator': ['IDOEgenerator'], 
-                  'openmdao.casefilter': ['ICaseFilter'], 
-                  'openmdao.caseiterator': ['ICaseIterator'], 
-                  'openmdao.caserecorder': ['ICaseRecorder'], 
-                  'openmdao.architecture': ['IArchitecture'], 
-                  'openmdao.optproblem': ['IOptProblem','IAssembly','IComponent','IContainer'], 
+                  'openmdao.doegenerator': ['IDOEgenerator'],
+                  'openmdao.casefilter': ['ICaseFilter'],
+                  'openmdao.caseiterator': ['ICaseIterator'],
+                  'openmdao.caserecorder': ['ICaseRecorder'],
+                  'openmdao.architecture': ['IArchitecture'],
+                  'openmdao.optproblem': ['IOptProblem','IAssembly','IComponent','IContainer'],
                   'openmdao.differentiator': ['IDifferentiator'],
                   'openmdao.parametric_geometry': ['IParametricGeometry'],
                   }
@@ -72,29 +72,29 @@ class ClassInfo(object):
         self.fname = fname
         self.bases = bases
         self.meta = meta
-        
+
         ifaces = meta.setdefault('ifaces', [])
         for dec in decorators:
             if dec.func.id == 'add_delegate':
                 for arg in [_to_str(a) for a in dec.args]:
                     if arg in _delegate_ifaces:
                         ifaces.append(_delegate_ifaces[arg])
-        
+
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
         self.metadata = {}
         ast.NodeVisitor.__init__(self)
-        
+
     def visit_ClassDef(self, node):
         for bnode in node.body:
             self.visit(bnode)
-            
+
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name) and node.func.id == 'implements':
             for arg in node.args:
                 if isinstance(arg, ast.Name):
                     self.metadata.setdefault('ifaces',[]).append(arg.id)
-    
+
     def visit_Assign(self, node):
         if len(self.metadata)==0 and len(node.targets) == 1:
             lhs = node.targets[0]
@@ -105,7 +105,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
                 self.metadata.update(dct)
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
-    """Collects info about imports and class inheritance from a 
+    """Collects info about imports and class inheritance from a
     Python file.
     """
     def __init__(self, fname, tree_analyser):
@@ -117,7 +117,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         self.starimports = []
         self.unresolved_classes = set()
         self.tree_analyser = tree_analyser
-        
+
         # in order to get this to work with the 'ast' lib, I have
         # to read using universal newlines and append a newline
         # to the string I read for some files.  The 'compiler' lib
@@ -131,7 +131,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 self.visit(node)
         finally:
             f.close()
-        
+
         self.update_graph(self.tree_analyser.graph)
         self.update_ifaces(self.tree_analyser.graph)
 
@@ -142,16 +142,16 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
         bases = [_to_str(b) for b in node.bases]
-            
+
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
-        
+
         bases = [self.localnames.get(b,b) for b in bases]
 
         self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata,
                                            node.decorator_list)
         self.tree_analyser.class_map[fullname] = self.classes[fullname]
-        
+
         undef_bases = [b for b in bases if b not in self.classes and not hasattr(__builtin__,b)]
         while undef_bases:
             base = undef_bases.pop()
@@ -164,7 +164,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 else:
                     trymods = [parts[0]]
                     basename = parts[1]
-                    
+
                 for modname in trymods:
                     excluded = False
                     for m in self.tree_analyser.mod_excludes:
@@ -193,7 +193,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                     self.unresolved_classes.add(base)
 
     def visit_Import(self, node):
-        """This executes every time an "import foo" style import statement 
+        """This executes every time an "import foo" style import statement
         is parsed.
         """
         for al in node.names:
@@ -223,7 +223,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 self.localnames[al.name] = '.'.join([module, al.name])
             else:
                 self.localnames[al.asname] = '.'.join([module, al.name])
-                
+
     def update_graph(self, graph):
         """Update the inheritance/implements graph."""
         for classname, classinfo in self.classes.items():
@@ -235,7 +235,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 graph.add_edge(base, classname)
             for iface in classinfo.meta.setdefault('ifaces', []):
                 graph.add_edge(iface, classname)
-    
+
     def update_ifaces(self, graph):
         """Update our ifaces metadata based on the contents of the
         inheritance/implements graph.
@@ -253,30 +253,30 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, mod_excludes=None):
         self.files_count = 0 # number of files analyzed
-        
+
         # inheritance graph. It's a directed graph with base classes
         # pointing to the classes that inherit from them.  Also includes interfaces
         # pointing to classes that implement them.
         self.graph = nx.DiGraph()
-        
+
         if isinstance(startdir, basestring):
             self.startdirs = [startdir]
         elif startdir is None:
             self.startdirs = []
         else:
             self.startdirs = startdir
-            
+
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
-        
+
         if mod_excludes is None:
             self.mod_excludes = set(['enthought','zope','ast'])
         else:
             self.mod_excludes = mod_excludes
-    
+
         self.modinfo = {}  # maps module pathnames to PythonSourceFileAnalyzers
         self.fileinfo = {} # maps filenames to (PythonSourceFileAnalyzer, modtime)
         self.class_map = {} # map of classname to ClassInfo for the class
-        
+
         for pyfile in find_files(self.startdirs, "*.py", exclude):
             self.analyze_file(pyfile)
 
@@ -299,9 +299,9 @@ class PythonSourceTreeAnalyser(object):
                         out.write("         interfaces:\n")
                         for iface in cinfo.meta['ifaces']:
                             out.write("            %s\n" % iface)
-        
+
         out.write("\n\nFiles examined: %d\n\n" % self.files_count)
-            
+
     def find_classinfo(self, cname):
         cinfo = cname
         while True:
@@ -327,19 +327,19 @@ class PythonSourceTreeAnalyser(object):
                 return info[0]
 
         logger.info("analyzing %s" % pyfile)
-        
+
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor
         self.fileinfo[myvisitor.fname] = (myvisitor, os.path.getmtime(myvisitor.fname))
-        
+
         self.files_count += 1
-        
+
         if use_cache:
             _FileInfoCache.record(pyfile, (myvisitor,
                                            os.path.getmtime(myvisitor.fname)))
 
         return myvisitor
-        
+
     def flush_cache(self):
         _FileInfoCache.save()
 
@@ -359,7 +359,7 @@ class PythonSourceTreeAnalyser(object):
         self.graph.remove_nodes_from(nodes)
         for klass in nodes:
             del self.class_map[klass]
-        
+
     def find_inheritors(self, base):
         """Returns a list of names of classes that inherit from the given base class."""
         try:
@@ -450,10 +450,10 @@ def main():
                         help="use analysis cache")
     parser.add_argument('files', metavar='fname', type=str, nargs='+',
                         help='a file or directory to be scanned')
-    
+
     options = parser.parse_args()
     print options.use_cache
-    
+
     stime = time.time()
     psta = PythonSourceTreeAnalyser()
     for f in options.files:
