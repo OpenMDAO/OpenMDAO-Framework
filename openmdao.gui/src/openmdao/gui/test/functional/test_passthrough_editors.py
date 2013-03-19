@@ -34,34 +34,30 @@ def _test_passthrough_editor(browser):
     top = workspace_page.get_dataflow_figure("top")
     top._context_click('edit_passthroughs')
 
-    expand_i = '//*[@id="PassthroughsFrame-top-passthrough-input-table-div"]/ul/li[3]/ins'
-    expand_o = '//*[@id="PassthroughsFrame-top-passthrough-output-table-div"]/ul/li[3]/ins' 
-    
+    expand_i = '//*[@id="p1"]/ins'
     browser.find_element_by_xpath(expand_i).click()
     time.sleep(2)
-    y_box = '//*[@id="top-p1-yinput-cbchb"]'
+    y_box = '//*[@id="check_y"]'
     y_btn = browser.find_element_by_xpath(y_box)
     eq(y_btn.is_selected(), True)  # check existing passthrough
     
-    browser.find_element_by_xpath(expand_o).click()
-    time.sleep(2)
-    f_xy_box = '//*[@id="top-p1-f_xyoutput-cbchb"]'
-    f_xy_btn = browser.find_element_by_xpath(f_xy_box)
-    eq(f_xy_btn.is_selected(), False)  # verify passthrough doesn't exist yet
+    browser.find_element_by_xpath('//*[@id="y"]/a').click()  # remove passthrough
+    time.sleep(1)
     
-    browser.find_element_by_xpath('//*[@id="top-p1-yinput' \
-                                  '-cb"]/ins[1]').click()  # remove passthrough
-    time.sleep(2)
-    browser.find_element_by_xpath('//*[@id="top-p1-f_xyoutput' \
-                                  '-cb"]/ins[1]').click()  # create passthrough
-    time.sleep(2)
-
     workspace_page.do_command("top.list_connections()")
     time.sleep(.5)
     output = workspace_page.history.split("\n")[-1]
-    eq("('p1.f_xy', 'f_xy')" in output, True)  # verify created passthrough
     eq("('y', 'p1.y')" in output, False)  # verify removed passthrough
-
+    
+    browser.find_element_by_xpath(expand_i).click()
+    time.sleep(1)
+    browser.find_element_by_xpath('//*[@id="y"]/a').click()
+    time.sleep(2)
+    workspace_page.do_command("top.list_connections()")
+    output = workspace_page.history.split("\n")[-1]
+    eq("('y', 'p1.y')" in output, True)  # verify added passthrough    
+    
+    
     # Clean up.
     closeout(project_dict, workspace_page)
     
