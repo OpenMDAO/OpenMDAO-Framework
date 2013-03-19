@@ -628,11 +628,11 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])
         url += os.path.join(htmldir, anchorpath)
-        url = url.replace('\\', '/')
     else:
         url += os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
                            'sphinx_build', 'html', 'index.html')
-        url = url.replace('\\', '/')
+        
+    url = url.replace('\\', '/')
     return url
 
 
