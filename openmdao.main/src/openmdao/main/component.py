@@ -133,7 +133,7 @@ class Component(Container):
                      desc='Number of times this Component has been executed.')
 
     derivative_exec_count = Int(0, iotype='out',
-                     desc="Number of times this Component's derivative " + \
+                     desc="Number of times this Component's derivative "
                           "function has been executed.")
 
     itername = Str('', iotype='out', desc='Iteration coordinates.')
@@ -152,7 +152,7 @@ class Component(Container):
 
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
-        self._valid_dict = dict([(name, t.iotype == 'in') \
+        self._valid_dict = dict([(name, t.iotype == 'in')
             for name, t in self.class_traits().items() if t.iotype])
 
         # dependency graph between us and our boundaries (bookkeeps connections between our
@@ -225,12 +225,12 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        
+
         if name.endswith('_items'):
             n = name[:-6]
             if n in self._valid_dict:
                 name = n
-                
+
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -383,7 +383,7 @@ class Component(Container):
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
                     valids[name] = True
-            elif self._call_execute == False and len(self.list_outputs(valid=False)):
+            elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
         if self._call_check_config:
@@ -596,15 +596,15 @@ class Component(Container):
     def _set_input_callback(self, name, remove=False):
 
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
-        
+
         # Certain containers get an additional listener for access by index.
-        # Currently, List and Dict are supported, as well as any other 
+        # Currently, List and Dict are supported, as well as any other
         # Enthought or user-defined trait whose handler supports it.
         # Array is not supported yet.
         t = self.trait(name)
         if t.handler.has_items:
             name = name + '_items'
-            self.on_trait_change(self._input_trait_modified, name, 
+            self.on_trait_change(self._input_trait_modified, name,
                                  remove=remove)
 
 
@@ -1599,11 +1599,11 @@ class Component(Container):
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
         for name in io_list:
-            
+
             #for variable trees
             if '.' in name:
                 continue
-            
+
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
