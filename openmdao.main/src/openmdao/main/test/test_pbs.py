@@ -14,6 +14,7 @@ from openmdao.main.pbs import PBS_Allocator, PBS_Server
 from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
 from openmdao.util.shellproc import DEV_NULL
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import onerror
 
 
 class TestCase(unittest.TestCase):
@@ -37,7 +38,7 @@ class TestCase(unittest.TestCase):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('PBS_TestServer*'):
-            shutil.rmtree(name)
+            shutil.rmtree(name, onerror=onerror)
 
     def test_allocator(self):
         logging.debug('')
@@ -220,4 +221,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=pbs.')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

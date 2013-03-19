@@ -10,6 +10,7 @@ from watchdog.events import FileSystemEventHandler
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 from openmdao.util.log import logger
+from openmdao.util.fileutil import onerror
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -187,7 +188,7 @@ class FileManager(object):
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
             if os.path.isdir(filepath):
-                shutil.rmtree(filepath)
+                shutil.rmtree(filepath, onerror=onerror)
             else:
                 os.remove(filepath)
             return True
