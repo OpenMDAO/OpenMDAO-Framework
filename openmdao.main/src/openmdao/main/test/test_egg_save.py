@@ -13,19 +13,16 @@ import sys
 import unittest
 import nose
 
-from enthought.traits.api import Callable
-
-from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
-                              SAVE_CPICKLE, set_as_top
+from openmdao.main.api import Assembly, Component, Container, set_as_top
 from openmdao.main.filevar import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, List, Str, Array, \
-     File
+from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
+from openmdao.util.fileutil import onerror
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -47,6 +44,7 @@ OBSERVATIONS = []
 
 # Version counter to ensure we know which egg we're dealing with.
 EGG_VERSION = 0
+
 
 def next_egg():
     """ Return next egg version. """
@@ -115,17 +113,17 @@ class Source(Assembly):
             with open(path, 'w') as out:
                 out.write('Some more external data.\n')
         self.external_files.append(FileMetadata(path=path))
-    
+
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
             cwd = os.getcwd()
-            self._logger.debug("opening file '%s' in %s" % 
+            self._logger.debug("opening file '%s' in %s" %
                        (self.text_file.path, cwd))
             with open(self.text_file.path, 'w') as out:
                 out.write(self.text_data)
 
-            self._logger.debug("opening file '%s' in %s" % 
+            self._logger.debug("opening file '%s' in %s" %
                        (self.sub.binary_file.path, cwd))
             with open(self.sub.binary_file.path, 'wb') as out:
                 cPickle.dump(self.sub.binary_data, out, 2)
@@ -137,14 +135,13 @@ class Subcontainer(Container):
     binary_data = Array(dtype='d', iotype='in')
     binary_file = File(path=os.path.join('..', 'sub', 'source.bin'),
                             iotype='out', binary=True)
-        
+
 
 class DataObj(object):
     """ Just a custom class for objects to save & reload. """
 
     def __init__(self, data):
         self.data = data
-
 
 
 class Sink(Component):
@@ -169,7 +166,6 @@ class Sink(Component):
 
         with self.binary_file.open() as inp:
             self.binary_data = cPickle.load(inp)
-
 
 
 class Oddball(Assembly):
@@ -230,7 +226,6 @@ class Oddball(Assembly):
         return None
 
 
-
 class OddballComponent(Component):
     """ Just a subcomponent for Oddball to test nested entry points. """
 
@@ -256,7 +251,6 @@ def observer(state, string, file_fraction, byte_fraction):
     return True
 
 
-
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
@@ -264,8 +258,8 @@ class Model(Assembly):
         self.add('Source', Source(directory='Source'))
         self.add('Oddball', Oddball(directory='Oddball'))
         self.add('Sink', Sink(directory='Sink'))
-        
-        self.driver.workflow.add(['Source','Oddball','Sink'])
+
+        self.driver.workflow.add(['Source', 'Oddball', 'Sink'])
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
@@ -378,13 +372,13 @@ class TestCase(unittest.TestCase):
                     ob_state, ob_string, ffract, bfract = OBSERVATIONS[i]
                 else:
                     ob_state = '---'
-                    ob_string= '---'
+                    ob_string = '---'
                 if i < len(expected):
                     ex_state = expected[i][0]
                     ex_string = expected[i][1]
                 else:
                     ex_state = '---'
-                    ex_string= '---'
+                    ex_string = '---'
                 logging.debug('%s:%s\t%s:%s',
                               ob_state, ob_string, ex_state, ex_string)
 
@@ -392,11 +386,11 @@ class TestCase(unittest.TestCase):
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
             self.assertEqual(state, expected[i][0])
-            if expected[i][1].endswith('.egg'): # Unique versions mess this up.
+            if expected[i][1].endswith('.egg'):  # Unique versions mess this up.
                 self.assertEqual(string.startswith(self.model.name), True)
                 self.assertEqual(string.endswith('.egg'), True)
             else:
-                self.assertEqual(string.replace('\\','/'), expected[i][1])
+                self.assertEqual(string.replace('\\', '/'), expected[i][1])
             self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
@@ -404,7 +398,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
         self.assertEqual(True,
-            all(self.model.Sink.binary_data==self.model.Source.sub.binary_data))
+            all(self.model.Sink.binary_data == self.model.Source.sub.binary_data))
         self.assertEqual(self.model.Sink.binary_file.binary, True)
 
         self.assertEqual(self.model.Sink.executions, 3)
@@ -413,7 +407,7 @@ class TestCase(unittest.TestCase):
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
@@ -425,7 +419,7 @@ class TestCase(unittest.TestCase):
             self.model.pre_delete()
             egg_path = os.path.join('..', self.egg_name)
             OBSERVATIONS = []
-            self.model = Component.load_from_eggfile(egg_path, 
+            self.model = Component.load_from_eggfile(egg_path,
                                                      observer=observer)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
@@ -493,7 +487,7 @@ class TestCase(unittest.TestCase):
             self.model.run()
             self.assertEqual(self.model.Sink.text_data,
                              self.model.Source.text_data)
-            self.assertEqual(all(self.model.Sink.binary_data==
+            self.assertEqual(all(self.model.Sink.binary_data ==
                              self.model.Source.sub.binary_data), True)
             self.assertEqual(
                 self.model.Sink.binary_file.binary, True)
@@ -502,7 +496,7 @@ class TestCase(unittest.TestCase):
 
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
 
     def test_save_load(self):
         logging.debug('')
@@ -548,7 +542,7 @@ class TestCase(unittest.TestCase):
             self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
                                    dst_dir=directory)
         except IOError, exc:
-            self.assertTrue('no write permission' in str(exc) or 
+            self.assertTrue('no write permission' in str(exc) or
                             'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
@@ -638,7 +632,7 @@ class TestCase(unittest.TestCase):
             msg = "Egg_TestModel: Can't save to" \
                   " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
                   " <type 'code'>: attribute lookup __builtin__.code failed"
-            self.assertEqual(str(exc).replace('\\','/'), msg)
+            self.assertEqual(str(exc).replace('\\', '/'), msg)
         else:
             self.fail('Expected cPickle.PicklingError')
 
@@ -673,7 +667,7 @@ class TestCase(unittest.TestCase):
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
@@ -682,7 +676,7 @@ class TestCase(unittest.TestCase):
             self.assertTrue(all(sub.binary_data == self.model.Source.sub.binary_data))
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
 
     def test_load_badfile(self):
         logging.debug('')
@@ -739,7 +733,7 @@ class TestCase(unittest.TestCase):
         # Create directory for installation.
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
-            shutil.rmtree(install_dir)
+            shutil.rmtree(install_dir, onerror=onerror)
         os.mkdir(install_dir)
         try:
             # Create special installer script.
@@ -822,7 +816,7 @@ sys.exit(
                 pkg_resources.working_set = orig_ws
 
         finally:
-            shutil.rmtree(install_dir)
+            shutil.rmtree(install_dir, onerror=onerror)
 
     def load_n_run(self, python, install_dir, package_name, entry_name):
         """ Load component from installed egg and run it. """
@@ -830,7 +824,7 @@ sys.exit(
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
@@ -842,9 +836,9 @@ sys.path.append('%(egg)s')
 from openmdao.main.api import Component
 comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
 comp.run()
-    
-""" % {'egg':os.path.join(install_dir, self.egg_name).replace('\\', '/'),
-       'package':package_name, 'entry':entry_name})
+
+""" % {'egg': os.path.join(install_dir, self.egg_name).replace('\\', '/'),
+       'package': package_name, 'entry': entry_name})
             out.close()
 
             # Load & run in subprocess.
@@ -857,13 +851,13 @@ comp.run()
             stdout.close()
             stdout = open('load-n-run.out', 'r')
             for line in stdout:
-                logging.debug('    %s'% line.rstrip())
+                logging.debug('    %s' % line.rstrip())
             stdout.close()
             return retcode
 
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
 
     def test_pkg_resources_factory(self):
         # NOTE: this test fails if run standalone:
@@ -890,7 +884,7 @@ comp.run()
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
@@ -960,7 +954,7 @@ comp.run()
 
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
 
     def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
@@ -1001,9 +995,9 @@ comp.run()
         model.run()
         self.assertEqual(model.Sink.text_data,
                          model.Source.text_data)
-        self.assertEqual(all(model.Sink.binary_data==model.Source.sub.binary_data),
+        self.assertEqual(all(model.Sink.binary_data == model.Source.sub.binary_data),
                          True)
-        
+
         self.assertEqual(model.Sink.binary_file.binary, True)
 
         self.assertEqual(model.Oddball.executions, 3)
@@ -1012,7 +1006,7 @@ comp.run()
         if MODULE_NAME == '__main__':
             return
 
-        # Ensure that __main__ translation is correctly handled. 
+        # Ensure that __main__ translation is correctly handled.
         logging.debug('')
         logging.debug('test_main_module')
 
@@ -1030,7 +1024,7 @@ comp.run()
             stdout.close()
             stdout = open('main_handling.out', 'r')
             for line in stdout:
-                logging.debug('    %s'% line.rstrip())
+                logging.debug('    %s' % line.rstrip())
             stdout.close()
             os.remove('main_handling.out')
         finally:
@@ -1049,4 +1043,3 @@ if __name__ == '__main__':
         os.remove(path)
 
     nose.runmodule()
-

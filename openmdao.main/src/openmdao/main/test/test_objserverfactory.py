@@ -19,6 +19,7 @@ from openmdao.main.objserverfactory import ObjServerFactory, ObjServer, \
                                            connect_to_server, _PROXIES
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import onerror
 
 
 class TestCase(unittest.TestCase):
@@ -30,7 +31,7 @@ class TestCase(unittest.TestCase):
 
         testdir = 'test_factory'
         if os.path.exists(testdir):
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
         os.mkdir(testdir)
         os.chdir(testdir)
 
@@ -89,15 +90,15 @@ class TestCase(unittest.TestCase):
                 time.sleep(2)  # Wait for process shutdown.
             keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
             if not keep_dirs:
-                shutil.rmtree(testdir)
+                shutil.rmtree(testdir, onerror=onerror)
 
     def test_server(self):
         logging.debug('')
         logging.debug('test_server')
-        
+
         testdir = 'test_server'
         if os.path.exists(testdir):
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
         os.mkdir(testdir)
         os.chdir(testdir)
 
@@ -156,7 +157,7 @@ class TestCase(unittest.TestCase):
             else:
                 msg = "[Errno 2] No such file or directory: 'no-such-file'"
             assert_raises(self, "server.chmod('no-such-file', 0400)",
-                          globals(), locals(), OSError, msg) 
+                          globals(), locals(), OSError, msg)
 
             # Get stats.
             info = server.stat('zipped')
@@ -216,15 +217,15 @@ class TestCase(unittest.TestCase):
                           globals(), locals(), OSError, msg)
         finally:
             SimulationRoot.chroot('..')
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
 
     def test_shell(self):
         logging.debug('')
         logging.debug('test_shell')
-        
+
         testdir = 'test_shell'
         if os.path.exists(testdir):
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
         os.mkdir(testdir)
         os.chdir(testdir)
 
@@ -272,11 +273,10 @@ class TestCase(unittest.TestCase):
                           "'no-such-egg' not found.")
         finally:
             SimulationRoot.chroot('..')
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
 
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

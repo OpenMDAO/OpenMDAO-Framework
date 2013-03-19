@@ -13,6 +13,7 @@ from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
 from openmdao.main.grid_engine import GridEngineAllocator, GridEngineServer
 from openmdao.main.mp_support import is_instance
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import onerror
 
 
 class TestCase(unittest.TestCase):
@@ -38,7 +39,7 @@ class TestCase(unittest.TestCase):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('GridEngineTestServer*'):
-            shutil.rmtree(name)
+            shutil.rmtree(name, onerror=onerror)
 
     def test_allocator(self):
         logging.debug('')
@@ -201,13 +202,13 @@ echo hello world
                                     working_directory=work_dir,
                                     output_path='echo.out'))
         with open('echo.out', 'r') as inp:
-            lines=[]
+            lines = []
             linez = inp.readlines()
             for line in linez:
                 #Some Windows echo commands quote args with spaces
-                quote_stripped_line=line.replace('"', '')
+                quote_stripped_line = line.replace('"', '')
                 lines.append(quote_stripped_line)
-        
+
         self.assertEqual(lines,
                          ['%s %s\n' % (os.path.join(home_dir, 'hello'),
                                        os.path.join(work_dir, 'world'))])
@@ -222,9 +223,8 @@ echo hello world
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')
 
-        
+
 if __name__ == '__main__':
     sys.argv.append('--cover-package=grid_engine.')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

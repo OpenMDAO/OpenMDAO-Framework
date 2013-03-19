@@ -665,6 +665,7 @@ def _test_ordering(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+
 def _test_io_filter_without_vartree(browser):
 
     project_dict, workspace_page = startup(browser)
@@ -693,9 +694,9 @@ def _test_io_filter_without_vartree(browser):
     #filter on term='print'
     #filter should match items in name and description column
     expected = [
-            [u'iprint', u'enum', u'0', u'', u'true', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.', u'', u''],
-            [u'printvars', u'list', u'', u'', u'true', u'List of extra variables to output in the recorders.', u'', u'']
-            ]
+        [u'iprint', u'enum', u'0', u'', u'true', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.', u'', u''],
+        [u'printvars', u'list', u'', u'', u'true', u'List of extra variables to output in the recorders.', u'', u'']
+    ]
 
     editor.filter_inputs("print")
     eq(expected, editor.get_inputs().value)
@@ -717,24 +718,25 @@ def _test_io_filter_without_vartree(browser):
 
     #filter on term='time'.
     editor.filter_outputs("time")
-    expected = [\
+    expected = [
         [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
         [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
-        ]
+    ]
 
     eq(expected, editor.get_outputs().value)
 
     #filter on term='Time'.
     editor.filter_outputs("Time")
-    expected = [\
+    expected = [
         [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
         [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
-        ]
+    ]
 
     eq(expected, editor.get_outputs().value)
     editor.close()
 
     closeout(project_dict, workspace_page)
+
 
 def _test_io_filter_with_vartree(browser):
     project_dict, workspace_page = startup(browser)
@@ -751,30 +753,30 @@ def _test_io_filter_with_vartree(browser):
     editor = comp.editor_page()
     inputs = editor.get_inputs()
     #editor.move(-100, 0)
-    
+
     #filter when tree is expanded
     #filter on name="b"
     editor.filter_inputs("b")
-    expected = [\
+    expected = [
         [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
         [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
         [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
         [u'b', u'float', u'12', u'inch', u'true', u'', u'', u''],
         [u'directory', u'str', u'', u'', u'true', u'If non-blank, the directory to execute in.', u'', u'']
-        ]
+    ]
 
     eq(expected, editor.get_inputs().value)
-    time.sleep(3) 
+    time.sleep(3)
 
     #filter when tree is collapse
     #filter on units="ft"
     editor.filter_inputs("ft")
-    expected = [\
+    expected = [
         [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
         [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
         [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
         [u'a', u'float', u'1', u'ft', u'true', u'', u'', u''],
-        ]
+    ]
     eq(expected, editor.get_inputs().value)
 
     editor.show_outputs()
@@ -782,31 +784,32 @@ def _test_io_filter_with_vartree(browser):
     #filter when tree is expanded
     #filter on name="b"
     editor.filter_outputs("b")
-    expected = [\
+    expected = [
         [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
         [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
         [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
         [u'b', u'float', u'12', u'inch', u'false', u'', u'', u''],
         [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
         [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
-        ]
+    ]
 
     eq(expected, editor.get_outputs().value)
-    time.sleep(3) 
+    time.sleep(3)
 
     #filter when tree is collapse
     #filter on units="ft"
     editor.filter_outputs("ft")
-    expected = [\
+    expected = [
         [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
         [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
         [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
         [u'a', u'float', u'1', u'ft', u'false', u'', u'', u''],
-        ]
+    ]
     eq(expected, editor.get_outputs().value)
 
     editor.close()
     closeout(project_dict, workspace_page)
+
 
 def _test_taborder(browser):
     # Replaces various connected components.
