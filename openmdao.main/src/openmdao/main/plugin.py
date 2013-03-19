@@ -610,6 +610,7 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
         except ImportError:
             raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
 
+    url = 'file://'
     if modname.startswith('openmdao.'):  # lookup in builtin docs
         import openmdao.main
         fparts = mod.__file__.split(os.sep)
@@ -626,11 +627,12 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])
-        url = 'file://'+os.path.join(htmldir, anchorpath)
+        url += os.path.join(htmldir, anchorpath)
         url = url.replace('\\', '/')
     else:
-        url = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
+        url += os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
                            'sphinx_build', 'html', 'index.html')
+        url = url.replace('\\', '/')
     return url
 
 
