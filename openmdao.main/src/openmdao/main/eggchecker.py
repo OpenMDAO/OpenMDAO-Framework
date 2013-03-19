@@ -1,14 +1,13 @@
 import os.path
 import shutil
 import subprocess
-import sys
 import time
 
 from openmdao.main.component import Component
 from openmdao.main.container import get_default_name
 from openmdao.util.log import LOG_DEBUG
-from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.testutil import find_python
+from openmdao.util.fileutil import onerror
 
 __all__ = ('check_save_load',)
 
@@ -52,11 +51,11 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
 
     orig_dir = os.getcwd()
     if os.path.exists(test_dir):
-        shutil.rmtree(test_dir)
+        shutil.rmtree(test_dir, onerror=onerror)
     os.mkdir(test_dir)
     os.chdir(test_dir)
     egg_path = os.path.join('..', egg_name)
-    
+
     try:
         print '\nUnpacking %s in subprocess...' % egg_name
         if logfile:
@@ -92,7 +91,6 @@ Component.load_from_eggfile(r'%s')
         comp.log_level = old_level
         if cleanup:
             os.remove(egg_name)
-            shutil.rmtree(test_dir)
+            shutil.rmtree(test_dir, onerror=onerror)
 
     return retcode
-

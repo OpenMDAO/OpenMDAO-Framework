@@ -26,6 +26,7 @@ from openmdao.lib.datatypes.api import Int, File, Str
 from openmdao.test.cluster import init_cluster
 
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import onerror
 
 
 # Capture original working directory so we can restore in tearDown().
@@ -94,12 +95,12 @@ class TestCase(unittest.TestCase):
             out.write(INP_DATA)
         if os.path.exists(ENV_FILE):
             os.remove(ENV_FILE)
-        dum = Assembly() # create this here to prevent any Assemblies in tests to be 'first'
-        
+        dum = Assembly()  # create this here to prevent any Assemblies in tests to be 'first'
+
     def tearDown(self):
         for directory in ('a', 'b'):
             if os.path.exists(directory):
-                shutil.rmtree(directory)
+                shutil.rmtree(directory, onerror=onerror)
         for name in (ENV_FILE, INP_FILE, 'input', 'output',
                      'sleep.in', 'sleep.out', 'sleep.err'):
             if os.path.exists(name):
@@ -107,14 +108,14 @@ class TestCase(unittest.TestCase):
         if os.path.exists("error.out"):
             try:
                 os.remove("error.out")
-                
+
             # Windows processes greedily clutch files. I see no
             # way to delete this file in test_timeout
             except WindowsError:
                 pass
-                
+
         SimulationRoot.chroot(ORIG_DIR)
-        
+
     def test_normal(self):
         logging.debug('')
         logging.debug('test_normal')
@@ -244,7 +245,7 @@ class TestCase(unittest.TestCase):
 
         extcode = set_as_top(ExternalCode())
         extcode.command = ['python', 'sleep.py']
-        extcode.resources = {'allocator':'LocalHost',
+        extcode.resources = {'allocator': 'LocalHost',
                              'localhost': False}
 
         assert_raises(self, 'extcode.run()', globals(), locals(),
@@ -266,7 +267,7 @@ class TestCase(unittest.TestCase):
             extcode.copy_inputs('Inputs', '*.inp')
             self.assertEqual(os.path.exists('junk.inp'), True)
         finally:
-            shutil.rmtree('Inputs')
+            shutil.rmtree('Inputs', onerror=onerror)
             if os.path.exists('junk.inp'):
                 os.remove('junk.inp')
 
@@ -280,7 +281,7 @@ class TestCase(unittest.TestCase):
             extcode.copy_results('Outputs', '*.dat')
             self.assertEqual(os.path.exists('junk.dat'), True)
         finally:
-            shutil.rmtree('Outputs')
+            shutil.rmtree('Outputs', onerror=onerror)
             if os.path.exists('junk.dat'):
                 os.remove('junk.dat')
 
@@ -350,7 +351,7 @@ class TestCase(unittest.TestCase):
         finally:
             if os.path.exists(extcode.stdout):
                 os.remove(extcode.stdout)
-    
+
     def test_unique(self):
         logging.debug('')
         logging.debug('test_unique')
@@ -388,7 +389,7 @@ class TestCase(unittest.TestCase):
 
         testdir = 'external_rsh'
         if os.path.exists(testdir):
-            shutil.rmtree(testdir)
+            shutil.rmtree(testdir, onerror=onerror)
         os.mkdir(testdir)
         os.chdir(testdir)
 
@@ -429,11 +430,10 @@ class TestCase(unittest.TestCase):
                 time.sleep(2)  # Wait for process shutdown.
             keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
             if not keep_dirs:
-                shutil.rmtree(testdir)
+                shutil.rmtree(testdir, onerror=onerror)
 
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.components')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

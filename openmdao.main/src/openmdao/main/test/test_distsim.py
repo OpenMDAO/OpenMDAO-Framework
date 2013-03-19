@@ -3,11 +3,10 @@ Test distributed simulation.
 """
 
 import cPickle
-import glob
 import hashlib
 import logging
 from math import pi
-from multiprocessing import AuthenticationError, current_process
+from multiprocessing import AuthenticationError
 from multiprocessing.managers import RemoteError
 import os
 import shutil
@@ -15,7 +14,6 @@ import socket
 import sys
 import traceback
 import unittest
-import nose
 
 from Crypto.Random import get_random_bytes
 
@@ -39,6 +37,7 @@ from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.publickey import get_key_pair
 from openmdao.util.testutil import assert_raises, assert_rel_error
+from openmdao.util.fileutil import onerror
 
 
 # Used for naming classes we want to create instances of.
@@ -46,7 +45,6 @@ _MODULE = 'openmdao.main.test.test_distsim'
 
 # Used for naming server directories.
 _SERVER_ID = 0
-
 
 
 class Box(ExecComp):
@@ -94,7 +92,6 @@ class Box(ExecComp):
         return self.parent.xyzzy()
 
 
-
 class HollowSphere(Component):
     """ Simple component for testing. """
 
@@ -108,7 +105,7 @@ class HollowSphere(Component):
     pid = Int(iotype='out')
 
     def __init__(self):
-        super(HollowSphere, self).__init__() 
+        super(HollowSphere, self).__init__()
         self.pid = os.getpid()
 
     def execute(self):
@@ -160,6 +157,7 @@ class BoxSource(ExecComp):
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
         sub.add('subvar', Int())
+
 
 class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """
@@ -301,7 +299,7 @@ class TestCase(unittest.TestCase):
 
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         os.mkdir(server_dir)
         os.chdir(server_dir)
         self.server_dirs.append(server_dir)
@@ -358,7 +356,7 @@ class TestCase(unittest.TestCase):
                len(self.test_result.failures) == self.n_failures and \
                not int(self.keepdirs):
                 for server_dir in self.server_dirs:
-                    shutil.rmtree(server_dir)
+                    shutil.rmtree(server_dir, onerror=onerror)
         finally:
             os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
 
@@ -582,7 +580,7 @@ class TestCase(unittest.TestCase):
         authkey = 'password'
         server_dir = 'Factory_authkey'
         if os.path.exists(server_dir):
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         os.mkdir(server_dir)
         os.chdir(server_dir)
         self.server_dirs.append(server_dir)
@@ -712,4 +710,3 @@ if __name__ == '__main__':
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')
     #nose.runmodule()
-

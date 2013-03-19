@@ -8,6 +8,7 @@ import tempfile
 from openmdao.gui.consoleserver import ConsoleServer
 from openmdao.main.publisher import Publisher
 from openmdao.main.project import project_from_archive
+from openmdao.util.fileutil import onerror
 
 
 class ConsoleServerTestCase(unittest.TestCase):
@@ -21,7 +22,7 @@ class ConsoleServerTestCase(unittest.TestCase):
     def tearDown(self):
         self.cserver.cleanup()
         try:
-            shutil.rmtree(self.tdir)
+            shutil.rmtree(self.tdir, onerror=onerror)
         except:
             pass
 
