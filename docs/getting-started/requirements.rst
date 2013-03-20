@@ -19,7 +19,7 @@ OpenMDAO requires that the following software be installed at the system level o
     builds, such as Enthought, ActiveState Python, or Python(x,y) are not officially supported at this time,
     though some may work with OpenMDAO.    
 
-  - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the
+  - OpenMDAO does not support Python 3.x; nor does it support Python versions below 2.6.5.  Having the
     incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
     will only lead to problems.
 
@@ -48,19 +48,27 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - On **Fedora**, the names of the needed RPM packages are:
 
- - python-devel
- - numpy
- - scipy
- - python-matplotlib
- - gcc-gfortran
+  - python-devel
+
+  - numpy
+
+  - scipy
+
+  - python-matplotlib
+
+  - gcc-gfortran
 
 - On **Ubuntu**, the .deb package names are:
 
- - python-dev
- - python-numpy
- - python-scipy
- - python-matplotlib
- - gfortran
+  - python-dev
+
+  - python-numpy
+
+  - python-scipy
+
+  - python-matplotlib
+
+  - gfortran
 
 **Windows**: 
 
@@ -75,18 +83,18 @@ use it, you must have compilers (C and Fortran) on your system.
 
 .. note:: 
 
-  Numpy and SciPy have one-click installers. You should use those unless 
-  you have a very good reason not to. You need to pick the proper installer
-  for your version of python (v2.6 or v2.7). For instance, if you had python 2.6, you want
-  a Numpy version named something like ``numpy-1.7.0-win32-superpack-python2.6.exe``. If you have python 2.7 then you want 
-  a SciPy version called ``scipy-0.11.0-win32-superpack-python2.7.exe``. The 
-  version numbers might be different than the ones here, but make sure you 
-  get something with *superpack* and *.exe* in the name. 
+  Numpy and SciPy have one-click installers. You should use those unless  you have a very good
+  reason not to. You need to pick the proper installer for your version of Python (v2.6 or
+  v2.7). For instance, if you had Python 2.6, you want a Numpy version named something like
+  ``numpy-1.7.0-win32-superpack-python2.6.exe``. If you have Python 2.7, then you want  a
+  SciPy version called ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version numbers
+  might be different than the ones here, but make sure you get something with ``superpack`` and
+  ``.exe`` in the name. 
 
   If you go to the Numpy link above, you might see: "Looking for the 
   latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one. 
   It's a source distribution, not the installer. The same goes for SciPy. Click through 
-  to the latest version and get the .exe file. 
+  to the latest version and get the ``.exe`` file. 
 
 Not required, but highly recommended:
 
