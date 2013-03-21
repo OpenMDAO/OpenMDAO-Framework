@@ -261,6 +261,17 @@ class BadComponent(Component):
         c0.replace('c', c2)
         self.assertEqual(id(c0.c), id(c2))
 
+    def test_driver(self):
+        # Ensure we can't add a Driver to a component that is not an Assembly.
+        comp = Component()
+
+        try:
+            comp.add('driver', Driver())
+        except Exception as err:
+            self.assertEqual(str(err),
+                "A Driver may only be added to an Assembly")
+            pass
+
 
 if __name__ == '__main__':
     unittest.main()
