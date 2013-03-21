@@ -403,10 +403,12 @@ class PluginsTestCase(unittest.TestCase):
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
         url = find_docs_url(options.plugin_dist_name)
+        # Strip off the file protocol header
+        url = url.replace('file://', '')
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
-        expected = 'file://' + expected
-        self.assertEqual(url, expected)
+        self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
+        
 
     def test_install(self):
         # Errors.
