@@ -282,19 +282,19 @@ class Component(Container):
         configured to execute. This function is called prior to each
         component execution, but is a no-op unless self._call_check_config is
         True.
-        
+
         Do not override this function.
-        
-        This function calls check_config(), which may be overridden by inheriting 
+
+        This function calls check_config(), which may be overridden by inheriting
         classes to perform more specific configuration checks.
         """
         if self._call_check_config:
             self.check_config()
-            
+
             visited = set([id(self), id(self.parent)])
             for name, value in self.traits(type=not_event).items():
                 obj = getattr(self, name)
-                if value.is_trait_type(Slot) and value.required == True and obj is None:
+                if value.is_trait_type(Slot) and value.required is True and obj is None:
                     self.raise_exception("required plugin '%s' is not present" %
                                          name, RuntimeError)
                 if has_interface(obj, IComponent) and id(obj) not in visited:
@@ -596,6 +596,35 @@ class Component(Container):
         self.config_changed()
         return obj
 
+    def replace(self, target_name, newobj):
+        """Replace one object with another, attempting to mimic the replaced
+        object as much as possible.
+        """
+        tobj = getattr(self, target_name)
+
+        # Save existing driver references.
+        refs = {}
+        if has_interface(tobj, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not tobj and obj_has_interface(obj, IDriver):
+                    refs[obj] = obj.get_references(target_name)
+
+        if hasattr(newobj, 'mimic'):
+            try:
+                newobj.mimic(tobj)  # this should copy inputs, delegates and set name
+            except Exception:
+                self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
+                                       % (target_name, type(tobj).__name__,
+                                          type(newobj).__name__))
+
+        self.add(target_name, newobj)  # this will remove the old object
+
+        # Restore driver references.
+        if refs:
+            for obj in self.__dict__.values():
+                if obj is not newobj and obj_has_interface(obj, IDriver):
+                    obj.restore_references(refs[obj], target_name)
+
     def add_trait(self, name, trait):
         """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
@@ -627,7 +656,6 @@ class Component(Container):
             name = name + '_items'
             self.on_trait_change(self._input_trait_modified, name,
                                  remove=remove)
-
 
     def remove_trait(self, name):
         """Overrides base definition of *add_trait* in order to
@@ -836,7 +864,7 @@ class Component(Container):
             groups = [(HasConstraints, HasEqConstraints, HasIneqConstraints),
                       (HasObjective, HasObjectives)]
             matches = {}
-            tset = set(target._delegates_.keys())
+
             # should be safe assuming only one delegate of each type here, since
             # multiples would simply overwrite each other
             for tname, tdel in target._delegates_.items():
@@ -908,7 +936,7 @@ class Component(Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(u, 0) \
+            self._expr_sources = [(u, 0)
                 for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
@@ -1657,7 +1685,7 @@ class Component(Container):
 
             io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:
-                io_attr['implicit'] = str([driver_name.split('.')[0] for \
+                io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in parameters["%s.%s" % (self.name, name)]])
 
             if "%s.%s" % (self.name, name) in implicit:
@@ -1679,7 +1707,7 @@ class Component(Container):
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
                 # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] == False:
+                if 'hidden' not in meta or meta['hidden'] is False:
                     slots.append(slot_attr)
 
             # For variables trees only: recursively add the inputs and outputs
@@ -1731,7 +1759,7 @@ class Component(Container):
                     value = getattr(self, name)
                     ttype = trait.trait_type
                     # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden'] == False:
+                    if 'hidden' not in meta or meta['hidden'] is False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         if slot_attr is not None:
                             slots.append(slot_attr)
