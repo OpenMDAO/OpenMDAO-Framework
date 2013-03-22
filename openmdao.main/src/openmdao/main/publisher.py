@@ -32,16 +32,21 @@ class Publisher(object):
             self._sender = sock
         self._lock = RLock()
 
-    def publish(self, topic, value, lock=True):
+    def publish(self, topic, value, lock=True, binary=False):
         if Publisher.__enabled:
             try:
                 if lock:
                     self._lock.acquire()
-                try:
-                    value = json.dumps(value)
-                except TypeError:
-                    value = json.dumps(str(type(value)))
-                self._sender.send_multipart([topic.encode('utf-8'), value])
+                if binary:
+                    if not isinstance(value, bytes):
+                        raise TypeError("published binary value must be of type 'bytes'")
+                    self._sender.send_multipart([topic.encode('utf-8'), value])
+                else:
+                    try:
+                        msg = json.dumps([topic.encode('utf-8'), value])
+                    except TypeError:
+                        msg = json.dumps([topic.encode('utf-8'), str(type(value))])
+                    self._sender.send_multipart([msg])
                 if hasattr(self._sender, 'flush'):
                     self._sender.flush()
             except Exception, err:
@@ -52,19 +57,6 @@ class Publisher(object):
             finally:
                 if lock:
                     self._lock.release()
-
-    def publish_binary(self, topic, value):
-        if Publisher.__enabled:
-            with self._lock:
-                try:
-                    self._sender.send_multipart([topic, value])
-                    if hasattr(self._sender, 'flush'):
-                        self._sender.flush()
-                except Exception, err:
-                    strio = StringIO.StringIO()
-                    traceback.print_exc(file=strio)
-                    print 'Publisher - Error publishing binary message %s: %s, %s' % \
-                          (topic, value, strio.getvalue())
 
     def publish_list(self, items):
         if Publisher.__enabled:

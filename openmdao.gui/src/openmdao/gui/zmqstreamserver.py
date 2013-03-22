@@ -41,26 +41,26 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
 
-    def __init__(self, application, request, **kwargs):
-        addr = kwargs.get('addr')
-        version = request.headers.get('Sec-Websocket-Version')
-        msg = 'Warning: %s WebSocket protocol version %s from %s'
-        if version is None:
-            print msg % ('unknown', '', addr)
-        else:
-            try:
-                version = int(version)
-            except ValueError:
-                print msg % ('invalid', version, addr)
-            else:
-                if version < 13:
-                    print msg % ('obsolete', version, addr)
-        sys.stdout.flush()
-        super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
+    #def __init__(self, application, request, **kwargs):
+        #addr = kwargs.get('addr')
+        #version = request.headers.get('Sec-Websocket-Version')
+        #msg = 'Warning: %s WebSocket protocol version %s from %s'
+        #if version is None:
+            #print msg % ('unknown', '', addr)
+        #else:
+            #try:
+                #version = int(version)
+            #except ValueError:
+                #print msg % ('invalid', version, addr)
+            #else:
+                #if version < 13:
+                    #print msg % ('obsolete', version, addr)
+        #sys.stdout.flush()
+        #super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
 
-    def allow_draft76(self):
-        ''' Not recommended, but enabled so we can display in __init__(). '''
-        return True
+    #def allow_draft76(self):
+        #''' Not recommended, but enabled so we can display in __init__(). '''
+        #return True
 
     def initialize(self, addr):
         self.addr = addr
@@ -84,22 +84,22 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:
-            # convert to unicode (tornado websocket wants unicode)
             try:
-                message = make_unicode(message[0])
+                message = message[0]
             except Exception, err:
                 exc_type, exc_value, exc_traceback = sys.exc_info
                 print 'ZMQStreamHandler ERROR converting message to unicode:', topic, err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
-        elif len(message) == 2:
-            # package topic and content into a single json object
+        elif len(message) == 2:  # it's a msg of the form [topic, binary_value]
             try:
-                message = json.dumps([message[0], json.loads(message[1])], ensure_ascii=False)
+                # 1) look up websocket handler based on topic
+                # 2) send message value (not including topic) out on that websocket
+                #message = ???
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
+                print 'ZMQStreamHandler ERROR:', topic, err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 

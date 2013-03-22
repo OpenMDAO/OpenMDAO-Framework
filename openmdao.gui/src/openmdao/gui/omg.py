@@ -30,6 +30,8 @@ from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
+#from opemdao.gui.zmqstreamserver import ZMQStreamHandler
+from pyV3D.wvserver import WSViewerHandler
 
 from openmdao.gui.handlers import LoginHandler, LogoutHandler, \
                                   ExitHandler, PluginDocsHandler
@@ -73,7 +75,8 @@ class App(web.Application):
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
             web.url(r'/docs/plugins/(.*)', PluginDocsHandler, {'route': '/docs/plugins/'}),
-            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'})
+            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'}),
+            web.url(r'/binary/(.*)', ZMQStreamHandler),
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
