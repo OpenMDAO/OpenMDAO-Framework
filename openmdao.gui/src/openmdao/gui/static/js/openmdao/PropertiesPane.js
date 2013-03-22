@@ -13,7 +13,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80,  formatter:VarTableFormatter  },
             {id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor},
-            //{id:"valid", name:"Valid", field:"valid", width:60},
         ],
         options = {
             asyncEditorLoading: false,
@@ -37,13 +36,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             {id:"info",      name:"",            field:"info",      width:30, formatter:InfoFormatter },
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
-            //{id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
-            //{id:"valid",     name:"Valid",       field:"valid",     width:60 },
             {id:"desc",      name:"Description", field:"desc",      width:120 },
-            //{id:"connected", name:"Connected To",   field:"connected", width:100 },
-            //{id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
 
@@ -284,10 +279,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         _collapsed[items[i].id] = true;
                     }
 
-                    dataView.updateItem(items[i].id, items[i]);
                 }
-                updateFilter({ filter: textboxFilter});
-                
+                dataView.refresh();
+                highlightCells();
+                jQuery(this).trigger('dialogresizestop');
             });
 
             //TODO: On hover of variable icon should bring up tool tip with information for that row
@@ -340,9 +335,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         _collapsed[item.id] = false;
                     }
                     // dataView needs to know to update.
-                    dataView.setFilterArgs({filter:expansionFilter});
                     dataView.updateItem(item.id, item);
                     highlightCells();
+                    jQuery("#" + name + "_variableFilter").trigger('dialogresizestop');
                 }
                 e.stopImmediatePropagation();
             }
@@ -393,12 +388,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
     
-    function matchesFilter(item){
-        return (item.name.indexOf(searchString) !== -1) ||
-            (item.units.indexOf(searchString) !==-1 )||
-            (item.description.indexOf(searchString)) !==-1
-    }
-
     function expansionFilter(item, args){
         var idx, parent;
         if (item.parent != null) {
@@ -426,11 +415,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     this.filter = function myFilter(item, args) {
         return expansionFilter(item, args) && textboxFilter(item, args);
         //return true;
-    }
-    
-    function updateFilter(args){
-        dataView.setFilterArgs(args);
-        dataView.refresh();
     }
     
     /* Sets the CSS style for cells based on connection status, while
@@ -514,40 +498,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             dataView.beginUpdate();
             dataView.setItems(properties);
-            //dataView.setFilterArgs({filter:expansionFilter});
             dataView.setFilter(this.filter);
             dataView.endUpdate();
             props.invalidate();
-
-            /*jQuery(".variableInfo").tooltip( {
-                    content : function(){
-                        debug.info(current_item);
-                        var str = "";
-                        for(var field in current_item){
-                            str = str + "<p>" + field + ":" + current_item[field] + "</p>";
-                            str = str + "<br />"; 
-                        }
-                        element = jQuery("<div id='tooltip'>" + str + "</div>");
-                        element.position( {
-                            my : "right top",
-                            at : "left top",
-                        });
-                        elm.append(element);
-                        event.stopPropagation();
-                    },
-                    items : ".variableInfo",
-                    hide : false,
-                    show : false,
-
-            });*/
-
-            /*jQuery(".variableInfo").mouseleave( function(event) {
-                debug.info("leaving icon");
-                jQuery("#tooltip").remove();
-                event.stopPropagation();
-
-            });*/
-
 
         }
         else {
