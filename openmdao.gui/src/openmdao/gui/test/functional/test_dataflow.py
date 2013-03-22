@@ -159,16 +159,16 @@ def _test_connect(browser):
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
-        ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
-        ['derivative_exec_count', 'int', '0', '', 'true',
-         "Number of times this Component's derivative function has been executed.", '', ''],
-        ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
-        ['exec_count', 'int', '1', '', 'true',
-         'Number of times this Component has been executed.', '', ''],
-        ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
-        ['i_out', 'int',   '42',       '', 'true', '', '', ''],
-        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates.', '', ''],
-        ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
+        ['', 'b_out', 'True', '', ''],
+        ['', 'derivative_exec_count', '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'e_out', '3', '', ''],
+        ['', 'exec_count', '1', '',
+         'Number of times this Component has been executed.'],
+        ['', 'f_out', '2.781828', '', ''],
+        ['', 'i_out', '42', '', ''],
+        ['', 'itername', '1-2', '', 'Iteration coordinates.'],
+        ['', 's_out', 'xyzzy', '', '']
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -499,11 +499,11 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -516,12 +516,12 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['scaler', 'float', '1', '', 'true', '', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', ''
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'scaler', '1', '', ''],
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -533,11 +533,11 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', ''
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'result_in', '0', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -550,12 +550,12 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
-        ['scaler', 'float', '1', '', 'true', '', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'result_in', '0', '', ''],
+        ['', 'scaler', '1', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -567,8 +567,8 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['cons_is_linear', 'ndarray', '[]', '', 'true',
-        'Array designating whether each constraint is linear.', '', ''])
+       ['', 'cons_is_linear', '[]', '',
+        'Array designating whether each constraint is linear.'])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
@@ -579,7 +579,7 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['accuracy', 'float', '0.000001', '', 'true', 'Convergence accuracy', '', ''])
+       ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
     editor.close()
 
     # Verify comp is a OptRosenSuzukiComponent.
@@ -588,11 +588,11 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", "['driver']"],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'x', '[]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -611,10 +611,10 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -678,24 +678,24 @@ def _test_io_filter_without_vartree(browser):
 
     #filter on name='ctlmin'
     editor.filter_inputs("ctlmin")
-    eq([u'ctlmin', u'float', u'0.001', u'', u'true', u'Minimum absolute value of ctl used in optimization.', u'', u''], editor.get_inputs().value[0])
+    eq([u'', u'ctlmin', u'0.001', u'', u'Minimum absolute value of ctl used in optimization.'], editor.get_inputs().value[0])
     editor.filter_inputs("")
 
     #filter on description='conjugate'
     editor.filter_inputs("conjugate")
-    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
     editor.filter_inputs("")
 
     #filter on description='Conjugate'
     editor.filter_inputs("Conjugate")
-    eq([u'icndir', u'float', u'0', u'', u'true', u'Conjugate gradient restart. parameter.', u'', u''], editor.get_inputs().value[0])
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
     editor.filter_inputs("")
 
     #filter on term='print'
     #filter should match items in name and description column
     expected = [
-        [u'iprint', u'enum', u'0', u'', u'true', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.', u'', u''],
-        [u'printvars', u'list', u'', u'', u'true', u'List of extra variables to output in the recorders.', u'', u'']
+        [u'', u'iprint', u'0', u'', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.'],
+        [u'', u'printvars', u'', u'', u'List of extra variables to output in the recorders.']
     ]
 
     editor.filter_inputs("print")
@@ -708,19 +708,19 @@ def _test_io_filter_without_vartree(browser):
 
     #filter on name='derivative_exec_count'
     editor.filter_outputs("derivative_exec_count")
-    eq([u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''], editor.get_outputs().value[0])
+    eq([u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."], editor.get_outputs().value[0])
     editor.filter_outputs("")
 
     #filter on description='coordinates'
     editor.filter_outputs("coordinates")
-    eq([u'itername', u'str', u'', u'', u'false', u"Iteration coordinates.", u'', u''], editor.get_outputs().value[0])
+    eq([u'', u'itername', u'', u'', u"Iteration coordinates."], editor.get_outputs().value[0])
     editor.filter_outputs("")
 
     #filter on term='time'.
     editor.filter_outputs("time")
     expected = [
-        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
-        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'',  u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -728,8 +728,8 @@ def _test_io_filter_without_vartree(browser):
     #filter on term='Time'.
     editor.filter_outputs("Time")
     expected = [
-        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
-        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -758,11 +758,11 @@ def _test_io_filter_with_vartree(browser):
     #filter on name="b"
     editor.filter_inputs("b")
     expected = [
-        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
-        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
-        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
-        [u'b', u'float', u'12', u'inch', u'true', u'', u'', u''],
-        [u'directory', u'str', u'', u'', u'true', u'If non-blank, the directory to execute in.', u'', u'']
+        [u'', u' cont_in', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'b', u'12', u'inch', u''],
+        [u'', u'directory', u'', u'', u'If non-blank, the directory to execute in.']
     ]
 
     eq(expected, editor.get_inputs().value)
@@ -772,10 +772,10 @@ def _test_io_filter_with_vartree(browser):
     #filter on units="ft"
     editor.filter_inputs("ft")
     expected = [
-        [u' cont_in', u'DumbVT', u'', u'', u'true', u'', u'', u''],
-        [u' vt2', u'DumbVT2', u'', u'', u'true', u'', u'', u''],
-        [u' vt3', u'DumbVT3', u'', u'', u'true', u'', u'', u''],
-        [u'a', u'float', u'1', u'ft', u'true', u'', u'', u''],
+        [u'', u' cont_in', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'a', u'1', u'ft', u''],
     ]
     eq(expected, editor.get_inputs().value)
 
@@ -785,12 +785,12 @@ def _test_io_filter_with_vartree(browser):
     #filter on name="b"
     editor.filter_outputs("b")
     expected = [
-        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
-        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
-        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
-        [u'b', u'float', u'12', u'inch', u'false', u'', u'', u''],
-        [u'derivative_exec_count', u'int', u'0', u'', u'false', u"Number of times this Component's derivative function has been executed.", u'', u''],
-        [u'exec_count', u'int', u'0', u'', u'false', u"Number of times this Component has been executed.", u'', u'']
+        [u'', u' cont_out', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'b', u'12', u'inch', u''],
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -800,10 +800,10 @@ def _test_io_filter_with_vartree(browser):
     #filter on units="ft"
     editor.filter_outputs("ft")
     expected = [
-        [u' cont_out', u'DumbVT', u'', u'', u'false', u'', u'', u''],
-        [u' vt2', u'DumbVT2', u'', u'', u'false', u'', u'', u''],
-        [u' vt3', u'DumbVT3', u'', u'', u'false', u'', u'', u''],
-        [u'a', u'float', u'1', u'ft', u'false', u'', u'', u''],
+        [u'', u' cont_out', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'a', u'1', u'ft', u''],
     ]
     eq(expected, editor.get_outputs().value)
 
