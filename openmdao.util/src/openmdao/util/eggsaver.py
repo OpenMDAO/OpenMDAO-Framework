@@ -12,7 +12,7 @@ This requires finding the real module name and munging references to
 correctly.
 """
 
-#Also note that YAML format doesn't handle more than one layer of back-pointers, 
+#Also note that YAML format doesn't handle more than one layer of back-pointers,
 #so it's only suitable for very flat object networks.
 
 # Note that handling __main__ module references is exercised during testing by
@@ -48,6 +48,7 @@ from zope.interface.interface import InterfaceClass
 
 from openmdao.util.log import NullLogger, LOG_DEBUG2
 from openmdao.util import eggobserver, eggwriter
+from openmdao.util.fileutil import onerror
 
 # Save formats.
 #SAVE_YAML    = 1
@@ -76,6 +77,7 @@ SAVE_CPICKLE = 4
 #            break
 #    return func.__get__(obj, cls)
 
+
 def _pickle_method(method):
     """ Pickles an instancemethod object. """
     name = method.__name__
@@ -89,6 +91,7 @@ def _pickle_method(method):
             raise RuntimeError('_pickle_method: %r with module __main__ (%s)'
                                % (method, im_self))
     return _unpickle_method, (name, im_self, im_class)
+
 
 def _unpickle_method(name, im_self, im_class):
     """ Unpickles an instancemethod object. """
@@ -294,7 +297,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     finally:
         os.chdir(orig_dir)
         if tmp_dir:
-            shutil.rmtree(tmp_dir)
+            shutil.rmtree(tmp_dir, onerror=onerror)
         _restore_objects(fixup)
 
     return (egg_name, required_distributions, orphan_modules)
@@ -664,7 +667,7 @@ def _get_standard_modules():
                     if name.endswith('.__init__'):
                         name = name[:name.rfind('.')]
                     excludes.add(name)
- 
+
     return list(excludes)
 
 
@@ -803,7 +806,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name': state_name, 'pkg': pkg_arg, 'top': top_arg})
     out.close()
 
 
@@ -946,4 +949,3 @@ class _DistCache(object):
         if not os.path.exists(dirname):  #pragma no cover
             os.mkdir(dirname)
         return open(filename, mode)
-

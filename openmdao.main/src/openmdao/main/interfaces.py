@@ -188,12 +188,11 @@ class IComponent(IContainer):
     its output variables based on the values of its input variables.
     """
 
-    def check_config ():
-        """Verify that this component is fully configured to execute.
-        This function is called once prior to the first execution of this
-        component and may be called explicitly at other times if desired. 
-        Classes that override this function must still call the base class
-        version.
+    def check_configuration():
+        """Verify that this component is properly configured to execute.
+        Classes inheriting from Component should not override this function,
+        but instead override check_config().
+        Bad configurations should raise an exception.
         """
     
     def run (force=False):

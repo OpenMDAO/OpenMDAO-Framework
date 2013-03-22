@@ -3,7 +3,6 @@ Tests of grid value editor functions.
 """
 
 import pkg_resources
-import sys
 import time
 
 from nose.tools import eq_ as eq
@@ -12,6 +11,7 @@ from selenium.webdriver import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -207,7 +207,7 @@ def _test_Avartrees(browser):
     obj = workspace_page.get_dataflow_figure('p1', 'top')
     chain = ActionChains(browser)
     chain.click(obj.root)
-    chain.perform()    
+    chain.perform()
     inputs = workspace_page.props_inputs
     expected = [
         [' cont_in',      ''],

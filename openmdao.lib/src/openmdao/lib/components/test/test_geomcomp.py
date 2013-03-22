@@ -10,6 +10,8 @@ from nose import SkipTest
 
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.main.api import Component
+from openmdao.util.fileutil import onerror
+
 
 class GeomCompTestCase(unittest.TestCase):
 
@@ -21,7 +23,7 @@ class GeomCompTestCase(unittest.TestCase):
         self.base_outputs = set(comp.list_outputs())
 
     def tearDown(self):
-        shutil.rmtree(self.tdir)
+        shutil.rmtree(self.tdir, onerror=onerror)
 
     def test_with_pygem_diamond(self):
         try:
@@ -139,8 +141,6 @@ end
         self.def_outs = []
         # add test here...
 
-       
+
 if __name__ == "__main__":
     unittest.main()
-
-

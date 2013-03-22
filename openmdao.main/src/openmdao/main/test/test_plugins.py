@@ -14,7 +14,7 @@ from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  find_all_plugins, find_docs_url
 from openmdao.util.fileutil import find_files
 from openmdao.util.testutil import assert_raises
-from openmdao.util.fileutil import find_in_path
+from openmdao.util.fileutil import find_in_path, onerror
 
 
 class PluginsTestCase(unittest.TestCase):
@@ -23,7 +23,7 @@ class PluginsTestCase(unittest.TestCase):
         self.tdir = tempfile.mkdtemp()
 
     def tearDown(self):
-        shutil.rmtree(self.tdir)
+        shutil.rmtree(self.tdir, onerror=onerror)
 
     def test_basic(self):
         logging.debug('')
@@ -45,13 +45,13 @@ class PluginsTestCase(unittest.TestCase):
             retval = plugin_quickstart(parser, options, args)
             self.assertEqual(retval, 0)
             fandd = find_files(self.tdir, showdirs=True)
-            self.assertEqual(set([os.path.basename(f) for f in fandd]), 
+            self.assertEqual(set([os.path.basename(f) for f in fandd]),
                              set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                                   'MANIFEST.in', '__init__.py', 'conf.py',
                                   'usage.rst', 'index.rst',
-                                  'srcdocs.rst', 'pkgdocs.rst', 'foobar.py', 
+                                  'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
                                   'README.txt',
-                                  'test','test_foobar.py']))
+                                  'test', 'test_foobar.py']))
         finally:
             os.chdir(orig_dir)
 
@@ -169,6 +169,8 @@ class PluginsTestCase(unittest.TestCase):
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
             url = find_docs_url(options.plugin_dist_name)
+            # Strip off the file protocol header
+            url = url.replace('file://', '')
             expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
                                     'sphinx_build', 'html', 'index.html')
             self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
@@ -232,13 +234,13 @@ class PluginsTestCase(unittest.TestCase):
         retval = plugin_quickstart(parser, options, args)
         self.assertEqual(retval, 0)
         fandd = find_files(self.tdir, showdirs=True)
-        self.assertEqual(set([os.path.basename(f) for f in fandd]), 
+        self.assertEqual(set([os.path.basename(f) for f in fandd]),
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                               'MANIFEST.in', '__init__.py', 'conf.py',
                               'usage.rst', 'index.rst',
-                              'srcdocs.rst', 'pkgdocs.rst', 'foobar.py', 
+                              'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
                               'README.txt',
-                              'test','test_foobar.py']))
+                              'test', 'test_foobar.py']))
 
         # Errors.
         code = 'plugin_quickstart(parser, options, args)'
@@ -401,9 +403,12 @@ class PluginsTestCase(unittest.TestCase):
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
         url = find_docs_url(options.plugin_dist_name)
+        # Strip off the file protocol header
+        url = url.replace('file://', '')
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
-        self.assertEqual(url, expected)
+        self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
+        
 
     def test_install(self):
         # Errors.
@@ -421,7 +426,7 @@ from openmdao.main.api import Component, Container
 
 class MyComp(Component):
     pass
-    
+
 class MyCont(Container):
     pass
             """)
@@ -443,4 +448,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

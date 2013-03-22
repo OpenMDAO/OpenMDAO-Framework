@@ -36,6 +36,7 @@ from openmdao.util.log import install_remote_handler, remove_remote_handlers, \
 from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
+from openmdao.util.fileutil import onerror
 
 _PROXIES = {}
 
@@ -157,7 +158,7 @@ class ObjServerFactory(Factory):
         del self._managers[server]
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
         if not keep_dirs and os.path.exists(root_dir):
-            shutil.rmtree(root_dir)
+            shutil.rmtree(root_dir, onerror=onerror)
 
     @rbac('owner')
     def cleanup(self):
@@ -314,7 +315,7 @@ class _FactoryManager(OpenMDAO_Manager):
 
 register(ObjServerFactory, _FactoryManager, 'openmdao.main.objserverfactory')
 
-    
+
 class ObjServer(object):
     """
     An object which knows how to create other objects, load a model, etc.
@@ -666,7 +667,7 @@ class _ServerManager(OpenMDAO_Manager):
 
 register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
 
-    
+
 def connect_to_server(config_filename):
     """
     Connects to the the server specified by `config_filename` and returns a
