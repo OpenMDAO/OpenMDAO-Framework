@@ -144,6 +144,22 @@ class VariableHandler(ReqHandler):
         self.content_type = 'text/html'
         self.write('')  # not used for now, could render a form
 
+class GetAllAtributesHandler(ReqHandler):
+    ''' Get all attributes of an assembly's components
+    '''
+    
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_all_attributes(name)
+        except Exception as exc:
+            print 'Error getting all attributes on', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
+        self.content_type = 'application/javascript'
+        self.write(attr)
+
 
 class ComponentHandler(ReqHandler):
     ''' Add, get, or remove a component.
@@ -688,4 +704,5 @@ handlers = [
     web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
+    web.url(r'/workspace/get_all_attributes/(.*)',GetAllAtributesHandler),
 ]

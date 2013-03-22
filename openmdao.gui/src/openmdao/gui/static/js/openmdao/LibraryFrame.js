@@ -17,6 +17,7 @@ openmdao.LibraryFrame = function(id,model) {
        var yPos = 0,
            scrolls = 0,
            firstElemWithOSP = 0;
+
        while(elem && !isNaN(elem.offsetTop)) {
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
@@ -114,7 +115,7 @@ openmdao.LibraryFrame = function(id,model) {
                 dtable.fnFilter(e.target.value);
                 dtable.width('100%');
                 var found = jQuery('#objtypetable > tbody > tr > td');
-                if (found.length > 1 || 
+                if (found.length > 1 ||
                     found.attr('class') !== 'dataTables_empty') {
                     if (selections.indexOf(e.target.value) === -1) {
                         selections.push(e.target.value);
@@ -189,16 +190,22 @@ openmdao.LibraryFrame = function(id,model) {
         //        But for now it all looks pretty good with just an open hand for the hover
         //        and then drag
         //cursor: 'url( http://www.google.com/intl/en_ALL/mapfiles/closedhand.cur ) 8 8, auto ' });
-                             
+
         //objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = "<tr><td class='objtype " + item.ifaces.toString().replace(/,/g," " ) + "' modpath="+item.modpath+">"+name+"</td><td>"+
-                   item.modpath+"</td><td>"+item.version+"</td><td>"+
-                   item._context+"</td><td>"+item.ifaces+"</td></tr>";
-        return html;
+        var classes = item.ifaces.toString().replace(/,/g," ")+" ";
+
+        if (item.hasOwnProperty('bases')) {
+            classes += item.bases.toString().replace(/,/g," ");
+        }
+
+        return "<tr><td class='objtype " + classes + "' modpath="+item.modpath+">"+name+"</td>"+
+                   "<td>"+item.modpath+"</td><td>"+item.version+"</td>"+
+                   "<td>"+item._context+"</td><td>"+item.ifaces+"</td>"+
+               "</tr>";
     }
 
     function handleMessage(message) {

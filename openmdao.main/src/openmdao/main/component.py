@@ -133,7 +133,7 @@ class Component(Container):
                      desc='Number of times this Component has been executed.')
 
     derivative_exec_count = Int(0, iotype='out',
-                     desc="Number of times this Component's derivative " + \
+                     desc="Number of times this Component's derivative "
                           "function has been executed.")
 
     itername = Str('', iotype='out', desc='Iteration coordinates.')
@@ -152,7 +152,7 @@ class Component(Container):
 
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
-        self._valid_dict = dict([(name, t.iotype == 'in') \
+        self._valid_dict = dict([(name, t.iotype == 'in')
             for name, t in self.class_traits().items() if t.iotype])
 
         # dependency graph between us and our boundaries (bookkeeps connections between our
@@ -225,12 +225,12 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        
+
         if name.endswith('_items'):
             n = name[:-6]
             if n in self._valid_dict:
                 name = n
-                
+
         self._input_check(name, old)
         self._call_execute = True
         self._input_updated(name)
@@ -275,17 +275,40 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-    def check_config(self):
-        """Verify that this component is fully configured to execute.
-        This function is called once prior to the first execution of this
-        component and may be called explicitly at other times if desired.
-        Classes that override this function must still call the base class
-        version.
+    @rbac(('owner', 'user'))
+    def check_configuration(self):
         """
-        for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Slot) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, RuntimeError)
+        Verify that this component and all of its children are properly
+        configured to execute. This function is called prior to each
+        component execution, but is a no-op unless self._call_check_config is
+        True.
+
+        Do not override this function.
+
+        This function calls check_config(), which may be overridden by inheriting
+        classes to perform more specific configuration checks.
+        """
+        if self._call_check_config:
+            self.check_config()
+
+            visited = set([id(self), id(self.parent)])
+            for name, value in self.traits(type=not_event).items():
+                obj = getattr(self, name)
+                if value.is_trait_type(Slot) and value.required is True and obj is None:
+                    self.raise_exception("required plugin '%s' is not present" %
+                                         name, RuntimeError)
+                if has_interface(obj, IComponent) and id(obj) not in visited:
+                    visited.add(id(obj))
+                    obj.check_configuration()
+
+            self._call_check_config = False
+
+    def check_config(self):
+        """
+        Override this function to perform configuration checks specific to your class.
+        Bad configurations should raise an exception.
+        """
+        pass
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -383,12 +406,10 @@ class Component(Container):
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
                     valids[name] = True
-            elif self._call_execute == False and len(self.list_outputs(valid=False)):
+            elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
+        self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -575,6 +596,35 @@ class Component(Container):
         self.config_changed()
         return obj
 
+    def replace(self, target_name, newobj):
+        """Replace one object with another, attempting to mimic the replaced
+        object as much as possible.
+        """
+        tobj = getattr(self, target_name)
+
+        # Save existing driver references.
+        refs = {}
+        if has_interface(tobj, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not tobj and obj_has_interface(obj, IDriver):
+                    refs[obj] = obj.get_references(target_name)
+
+        if hasattr(newobj, 'mimic'):
+            try:
+                newobj.mimic(tobj)  # this should copy inputs, delegates and set name
+            except Exception:
+                self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
+                                       % (target_name, type(tobj).__name__,
+                                          type(newobj).__name__))
+
+        self.add(target_name, newobj)  # this will remove the old object
+
+        # Restore driver references.
+        if refs:
+            for obj in self.__dict__.values():
+                if obj is not newobj and obj_has_interface(obj, IDriver):
+                    obj.restore_references(refs[obj], target_name)
+
     def add_trait(self, name, trait):
         """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
@@ -596,17 +646,16 @@ class Component(Container):
     def _set_input_callback(self, name, remove=False):
 
         self.on_trait_change(self._input_trait_modified, name, remove=remove)
-        
+
         # Certain containers get an additional listener for access by index.
-        # Currently, List and Dict are supported, as well as any other 
+        # Currently, List and Dict are supported, as well as any other
         # Enthought or user-defined trait whose handler supports it.
         # Array is not supported yet.
         t = self.trait(name)
         if t.handler.has_items:
             name = name + '_items'
-            self.on_trait_change(self._input_trait_modified, name, 
+            self.on_trait_change(self._input_trait_modified, name,
                                  remove=remove)
-
 
     def remove_trait(self, name):
         """Overrides base definition of *add_trait* in order to
@@ -815,7 +864,7 @@ class Component(Container):
             groups = [(HasConstraints, HasEqConstraints, HasIneqConstraints),
                       (HasObjective, HasObjectives)]
             matches = {}
-            tset = set(target._delegates_.keys())
+
             # should be safe assuming only one delegate of each type here, since
             # multiples would simply overwrite each other
             for tname, tdel in target._delegates_.items():
@@ -887,7 +936,7 @@ class Component(Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(u, 0) \
+            self._expr_sources = [(u, 0)
                 for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
@@ -1599,11 +1648,11 @@ class Component(Container):
         # Add all inputs and outputs
         io_list = self.list_inputs() + self.list_outputs()
         for name in io_list:
-            
+
             #for variable trees
             if '.' in name:
                 continue
-            
+
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
@@ -1636,7 +1685,7 @@ class Component(Container):
 
             io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:
-                io_attr['implicit'] = str([driver_name.split('.')[0] for \
+                io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in parameters["%s.%s" % (self.name, name)]])
 
             if "%s.%s" % (self.name, name) in implicit:
@@ -1658,7 +1707,7 @@ class Component(Container):
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
                 # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] == False:
+                if 'hidden' not in meta or meta['hidden'] is False:
                     slots.append(slot_attr)
 
             # For variables trees only: recursively add the inputs and outputs
@@ -1710,7 +1759,7 @@ class Component(Container):
                     value = getattr(self, name)
                     ttype = trait.trait_type
                     # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden'] == False:
+                    if 'hidden' not in meta or meta['hidden'] is False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         if slot_attr is not None:
                             slots.append(slot_attr)

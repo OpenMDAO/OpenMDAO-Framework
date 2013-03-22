@@ -24,8 +24,8 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
    ``go-openmdao.py`` script (listed first). You will see that earlier versions may also
    be downloaded.
 
-   If you are using Internet Explorer, right-click on ``go-openmdao.py`` script; then select "Save
-   Target as." Be sure to save the ``go-openmdao.py`` script to the folder where you want to install
+   If you are using Internet Explorer, right-click on ``go-openmdao.py`` script; then select **Save
+   Target as.** Be sure to save the ``go-openmdao.py`` script to the folder where you want to install
    OpenMDAO. Other browsers may automatically download the file to a specific folder (e.g., a
    Downloads folder), and you will have to move it to the location where you want to install
    OpenMDAO. We highly recommend you pick a folder without any spaces in your path name! For

@@ -82,10 +82,9 @@ class ExternalCode(ComponentWithDerivatives):
         """
         Runs the specified command.
 
-            1. Existing output (but not in/out) files are removed.
-            2. Checks that all external input files exist.
-            3. Runs the command.
-            4. Checks that all external output files exist.
+            1. Checks that all external input files exist.
+            2. Runs the command.
+            3. Checks that all external output files exist.
 
         If a subclass generates outputs (such as postprocessing results),
         then it should set attribute ``check_external_outputs`` False and call
@@ -138,18 +137,6 @@ class ExternalCode(ComponentWithDerivatives):
         """
         self.return_code = -12345678
         self.timed_out = False
-
-        # Remove existing output (but not in/out) files.
-        for metadata in self.external_files:
-            if metadata.get('output', False) and \
-               not metadata.get('input', False):
-                for path in glob.glob(metadata.path):
-                    if os.path.exists(path):
-                        os.remove(path)
-        for pathname, obj in self.items(iotype='out', recurse=True):
-            if isinstance(obj, FileRef):
-                if os.path.exists(obj.path):
-                    os.remove(obj.path)
 
         if not self.command:
             self.raise_exception('Empty command list', ValueError)

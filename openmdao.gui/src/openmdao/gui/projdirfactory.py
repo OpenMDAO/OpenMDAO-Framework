@@ -8,7 +8,7 @@ import threading
 import traceback
 import fnmatch
 import ast
-from inspect import isclass, getmembers
+from inspect import isclass, getmembers, getmro
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -150,6 +150,7 @@ class _FileInfo(object):
                 fullname = '.'.join([self.modpath, key])
                 self.classes[fullname] = {
                     'ctor': key,
+                    'bases':  [klass.__name__ for klass in getmro(val)],
                     'ifaces': [klass.__name__ for klass in implementedBy(val)],
                     'version': self.version,
                     'modpath': self.modpath,
@@ -263,8 +264,10 @@ class ProjDirFactory(Factory):
             for typ in typset:
                 finfo = self._classes[typ]
                 meta = finfo.classes[typ]
+
                 if ifaces.intersection(meta['ifaces']):
                     meta = {
+                        'bases': meta['bases'],
                         'ifaces': meta['ifaces'],
                         'version': meta['version'],
                         '_context': 'In Project',

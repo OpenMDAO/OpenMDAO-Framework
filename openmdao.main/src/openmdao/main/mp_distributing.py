@@ -29,6 +29,7 @@ from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
 from openmdao.main.rbac import get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
+from openmdao.util.fileutil import onerror
 
 
 # SSH command to be used to access remote hosts.
@@ -549,7 +550,7 @@ def main():  #pragma no cover
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
         if not keep_dirs and os.path.exists(directory):
             print '%s removing directory %s' % (ident, directory)
-            shutil.rmtree(directory)
+            shutil.rmtree(directory, onerror=onerror)
         print '%s shutting down host manager' % ident
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
