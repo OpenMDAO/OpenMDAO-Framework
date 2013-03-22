@@ -518,7 +518,7 @@ def _test_replace(browser):
     expected = [
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', ''
+        ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
         ['', 'scaler', '1', '', ''],
         ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
@@ -535,7 +535,7 @@ def _test_replace(browser):
     expected = [
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', ''
+        ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
         ['', 'result_in', '0', '', ''],
     ]
