@@ -43,7 +43,7 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
-          'jsonpickle',
+          'simplejson',
           'networkx==1.3',
           'openmdao.units',
           'openmdao.util',

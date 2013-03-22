@@ -13,6 +13,7 @@ import pkg_resources
 import sys
 import weakref
 
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
@@ -1524,7 +1525,7 @@ class Component(Container):
             names = [names]
         for name in names:
             # TODO: allow wildcard naming at lowest level
-            parts = name.split('.')
+            parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
                     if not hasattr(self, name):
@@ -1549,7 +1550,7 @@ class Component(Container):
                             del self._publish_vars[name]
             else:
                 obj = getattr(self, parts[0])
-                obj.register_published_vars('.'.join(parts[1:]), publish)
+                obj.register_published_vars(parts[1], publish)
 
     def publish_vars(self):
         pub = Publisher.get_instance()

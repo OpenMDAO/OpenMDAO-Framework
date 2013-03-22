@@ -2,6 +2,7 @@ import sys
 import os
 import traceback
 import cPickle as pickle
+import StringIO
 
 import time
 import threading
@@ -78,7 +79,12 @@ class ZmqCompWrapper(object):
             ret = traceback.format_exc(exc_traceback)
         if debug:
             DEBUG('returning %s' % ret)
-        self._repstream.send_multipart([self._encoder(ret)])
+        try:
+            self._repstream.send_multipart([self._encoder(ret)])
+        except Exception:
+            strio = StringIO.StringIO()
+            traceback.print_exc(file=strio)
+            print "Error handling request: %s: %s" % (msg, strio.getvalue())
         
     @staticmethod
     def serve(top, context=None, wspub=None, wscmd=None, port=8888,

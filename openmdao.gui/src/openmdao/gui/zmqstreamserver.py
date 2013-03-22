@@ -5,13 +5,16 @@ import subprocess
 
 from optparse import OptionParser
 
+try:
+    import simplejson as json
+except ImportError:
+    import json
+    
 import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
-
-import jsonpickle
 
 debug = True
 
@@ -81,35 +84,27 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:
-            message = message[0]
-            message = make_unicode(message)  # tornado websocket wants unicode
-            self.write_message(message)
-
-        elif len(message) == 2:
-            topic = message[0]
-            content = message[1]
-
-            # package topic and content into a single json object
-            try:
-                content = jsonpickle.decode(content)
-                message = jsonpickle.encode([topic, content])
-            except Exception as err:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return
-
             # convert to unicode (tornado websocket wants unicode)
             try:
-                message = make_unicode(message)
+                message = make_unicode(message[0])
             except Exception, err:
                 exc_type, exc_value, exc_traceback = sys.exc_info
                 print 'ZMQStreamHandler ERROR converting message to unicode:', topic, err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
-            # write message to websocket
-            self.write_message(message)
+        elif len(message) == 2:
+            # package topic and content into a single json object
+            try:
+                message = json.dumps([message[0], json.loads(message[1])], ensure_ascii=False)
+            except Exception as err:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return
+
+        # write message to websocket
+        self.write_message(message)
 
     def on_message(self, message):
         pass

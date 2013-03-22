@@ -1,5 +1,8 @@
 import cmd
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import logging
 import os.path
 import sys
@@ -273,11 +276,6 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self._recorded_cmds[:]
 
-    def get_JSON(self):
-        ''' Return current state as JSON.
-        '''
-        return jsonpickle.encode(self.proj._model_globals)
-
     def get_container(self, pathname, report=True):
         ''' Get the container with the specified pathname.
             Returns the container and the name of the root object.
@@ -332,7 +330,7 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return jsonpickle.encode(self._get_components(self.proj._model_globals))
+        return json.dumps(self._get_components(self.proj._model_globals))
 
     def get_connections(self, pathname, src_name, dst_name):
         ''' Get list of source variables, destination variables, and the
@@ -554,7 +552,7 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return jsonpickle.encode(conns)
+        return json.dumps(conns)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -588,7 +586,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['parameters'] = []
             dataflow['constraints'] = []
             dataflow['objectives'] = []
-        return jsonpickle.encode(dataflow)
+        return json.dumps(dataflow)
 
     def get_available_events(self, pathname):
         ''' Serve a list of events that are available to a driver.
@@ -598,7 +596,7 @@ class ConsoleServer(cmd.Cmd):
             drvr, root = self.get_container(pathname)
             events = drvr.list_available_events()
 
-        return jsonpickle.encode(events)
+        return json.dumps(events)
 
     def get_workflow(self, pathname):
         flows = []
@@ -642,7 +640,7 @@ class ConsoleServer(cmd.Cmd):
                                 'valid':    comp.is_valid()
                             })
                     flows.append(flow)
-        return jsonpickle.encode(flows)
+        return json.dumps(flows)
 
     def get_attributes(self, pathname):
         attr = {}
@@ -652,7 +650,7 @@ class ConsoleServer(cmd.Cmd):
                 attr = comp.get_attributes(io_only=False)
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return jsonpickle.encode(attr)
+        return json.dumps(attr)
     
     def _nested_put(self, cdict, vardict, parent):
         for inp in cdict["children"]:
@@ -670,7 +668,6 @@ class ConsoleServer(cmd.Cmd):
             if name in parent_path:
                 return False
         return True
-        
     
     def _process_input_output(self, compname, data, comp_dict, 
                               existing_passthroughs, top_names):
@@ -737,7 +734,7 @@ class ConsoleServer(cmd.Cmd):
                 input_tree.append( input_comp )
                 output_tree.append( output_comp )
             
-        return jsonpickle.encode({"top":top_level, "inputs" : input_tree, 
+        return json.dumps({"top":top_level, "inputs" : input_tree, 
                                   "outputs" : output_tree})
     
     def get_value(self, pathname):

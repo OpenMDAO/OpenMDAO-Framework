@@ -1,8 +1,13 @@
 import sys
+import StringIO
+import traceback
 
 from threading import RLock
 
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 try:
     import zmq
@@ -26,54 +31,46 @@ class Publisher(object):
         else:
             self._sender = sock
         self._lock = RLock()
-        self.enc = sys.getdefaultencoding()
 
-    def publish(self, topic, value):
+    def publish(self, topic, value, lock=True):
         if Publisher.__enabled:
-            if isinstance(topic, unicode):
-                # zmq doesn't like unicode
-                topic = topic.encode(self.enc)
-
-            # encode value as json
             try:
-                number = float(value)
-            except (ValueError, TypeError):
-                value = jsonpickle.encode(value)
-            else:
-                value = jsonpickle.encode(number)
+                if lock:
+                    self._lock.acquire()
+                try:
+                    value = json.dumps(value)
+                except TypeError:
+                    value = json.dumps(str(type(value)))
+                self._sender.send_multipart([topic.encode('utf-8'), value])
+                if hasattr(self._sender, 'flush'):
+                    self._sender.flush()
+            except Exception, err:
+                strio = StringIO.StringIO()
+                traceback.print_exc(file=strio)
+                print 'Publisher - Error publishing message %s: %s, %s' % \
+                      (topic, value, strio.getvalue())
+            finally:
+                if lock:
+                    self._lock.release()
 
+    def publish_binary(self, topic, value):
+        if Publisher.__enabled:
             with self._lock:
                 try:
                     self._sender.send_multipart([topic, value])
                     if hasattr(self._sender, 'flush'):
                         self._sender.flush()
                 except Exception, err:
-                    print 'Publisher - Error publishing message %s: %s, %s' % \
-                          (topic, value, err)
+                    strio = StringIO.StringIO()
+                    traceback.print_exc(file=strio)
+                    print 'Publisher - Error publishing binary message %s: %s, %s' % \
+                          (topic, value, strio.getvalue())
 
     def publish_list(self, items):
         if Publisher.__enabled:
             with self._lock:
-                try:
-                    for topic, value in items:
-                        if isinstance(topic, unicode):
-                            # zmq doesn't like unicode
-                            topic = topic.encode(self.enc)
-
-                        # encode value as json
-                        try:
-                            number = float(value)
-                        except (ValueError, TypeError):
-                            value = jsonpickle.encode(value)
-                        else:
-                            value = jsonpickle.encode(number)
-
-                        self._sender.send_multipart([topic, value])
-                        if hasattr(self._sender, 'flush'):
-                            self._sender.flush()
-                except Exception, err:
-                    print 'Publisher - Error publishing list %s, %s' % \
-                          (topic, err)
+                for topic, value in items:
+                    self.publish(topic, value, lock=False)
 
     @staticmethod
     def get_instance():
