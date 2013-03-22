@@ -312,29 +312,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 });
             }
 
-            else if(cell.cell === 4){
-                var item = dataView.getItem(cell.row);      
-                var description = ("desc" in item) ? item.desc : "";
-                var tooltip = "<div id='tooltip' style='float: right; display:block;'><p>" + description + "</p></div>";
-                jQuery("body").append(tooltip);
-                jQuery("#tooltip").show()
-                //jQuery("#tooltip").position( {
-                //        of : "#CE-" + pathname.replace(".", "-", "g") + "_" + name,
-                //        my : "right top",
-                //        at : "left-20 top",
-                //});
-                //jQuery("#tooltip").css("z-index", 9999);
-            }
-            
-        });
-
-        props.onMouseLeave.subscribe(function(e, args){
-            var cell = args.grid.getCellFromEvent(e);
-
-            if(cell.cell === 4){
-                obj = jQuery("#tooltip");
-                obj.remove();
-            }
         });
 
         props.onBeforeEditCell.subscribe(function(row,cell) {
@@ -352,9 +329,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         });
     
         props.onClick.subscribe(function (e) {
-            getCurrentVariable();
             var cell = props.getCellFromEvent(e);
-            if (cell.cell==0) {
+            name_col_index = (meta) ? 1 : 0;
+            if (cell.cell === name_col_index) {
                 var item = dataView.getItem(cell.row);
                 if (item.hasOwnProperty("vt")) {
                     if (!_collapsed[item.id]) {

@@ -557,7 +557,7 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
-    inputs.rows[2].cells[1].click()
+    inputs.rows[2].cells[2].click()
     inputs[2][2] = '42'  # printvars
     expected = "TraitError: The 'printvars' trait of a "     \
                "Run_Once instance must be a list of items "  \
@@ -942,13 +942,14 @@ def _test_arguments(browser):
     exe_editor.move(-100, 0)
     inputs = exe_editor.get_inputs()
     expected = [
-        ['directory',     'str',   '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool',  'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x',             'float', '0',     '',  'true', '', '', ''],
-        ['y',             'float', '0',     '',  'true', '', '', ''],
+        ['', 'directory',  '',  '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '', 
+         'If True, always execute even if all IO traits are valid.'],
+        ['', 'x',             '0',     '',  ''],
+        ['', 'y',             '0',     '',  ''],
     ]
+
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
     exe_editor.close()

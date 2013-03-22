@@ -38,6 +38,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     #edit dictionary - remove 'e', add 'phi', round down 'pi'
+    #action_chain = ActionChains(browser)
+    #action_chain.double_click(inputs.rows[0].cells[1]).perform()
     inputs.rows[0].cells[1].click()
 
     pi_value_path = '//*[@id="d-editor"]/input[2]'
@@ -179,6 +181,7 @@ def _test_Avartrees(browser):
     # While expanded, verify that cell that became the 2nd vartree is now
     # uneditable
     inputs.rows[3].cells[1].click()
+    inputs = editor.get_inputs()
     try:
         inputs[3][2] = "abcd"
     except IndexError:

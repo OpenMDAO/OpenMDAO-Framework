@@ -420,9 +420,9 @@ def _test_slot_subclass(browser):
 
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',        '', '', 'true', 'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool',  'False', '', 'true', 'If True, always execute even if all IO traits are valid.', '', ''],
-        ['input',         'float',     '0', '', 'true', '', '', ''],
+        ['', 'directory',           '', '', 'If non-blank, the directory to execute in.' ],
+        ['', 'force_execute',  'False', '', 'If True, always execute even if all IO traits are valid.'],
+        ['', 'input',              '0', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -434,10 +434,10 @@ def _test_slot_subclass(browser):
 
     outputs = editor.get_outputs()
     expected = [
-        ['derivative_exec_count', 'int',    '0', '', 'true', "Number of times this Component's derivative function has been executed.", '', ''],
-        ['exec_count',            'int',    '1', '', 'true', 'Number of times this Component has been executed.', '', ''],
-        ['itername',              'str',     '', '', 'true', 'Iteration coordinates.', '', ''],
-        ['output',                'float', '80', '', 'true', '', '', ''],
+        ['', 'derivative_exec_count',  '0', '', "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count',             '1', '', 'Number of times this Component has been executed.'],
+        ['', 'itername',                '', '', 'Iteration coordinates.'],
+        ['', 'output',                '80', '', '' ],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -453,10 +453,10 @@ def _test_slot_subclass(browser):
 
     outputs = editor.get_outputs()
     expected = [
-        ['derivative_exec_count', 'int',      '0', '', 'true', "Number of times this Component's derivative function has been executed.", '', ''],
-        ['exec_count',            'int',      '2', '', 'true', 'Number of times this Component has been executed.', '', ''],
-        ['itername',              'str',       '', '', 'true', 'Iteration coordinates.', '', ''],
-        ['output',                'float',  '160', '', 'true', '', '', ''],
+        ['', 'derivative_exec_count',    '0', '', "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count',               '2', '', 'Number of times this Component has been executed.'],
+        ['', 'itername',                  '', '', 'Iteration coordinates.'],
+        ['', 'output',                 '160', '', '' ],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
