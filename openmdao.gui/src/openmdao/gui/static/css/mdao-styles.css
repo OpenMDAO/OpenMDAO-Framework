@@ -324,6 +324,10 @@ nav ul ul a.omg-disabled:hover {
     background-position:-112px 0px;
 }
 
+/*Overriding jQuery UI ToolTip width*/
+div.ui-tooltip{
+    max-width: 200px;
+}
 /* end CSS3 */
 
 
