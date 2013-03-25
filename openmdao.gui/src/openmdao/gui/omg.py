@@ -30,7 +30,7 @@ from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
-#from opemdao.gui.zmqstreamserver import ZMQStreamHandler
+from openmdao.gui.zmqstreamserver import ZMQStreamHandler
 from pyV3D.wvserver import WSViewerHandler
 
 from openmdao.gui.handlers import LoginHandler, LogoutHandler, \

@@ -146,7 +146,7 @@ openmdao.Model=function(listeners_ready) {
     /** publish message to subscribed listeners.
     */
     this.publish = function(message) {
-        var topic = message[0],
+        var i, topic = message[0],
             callbacks;
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
