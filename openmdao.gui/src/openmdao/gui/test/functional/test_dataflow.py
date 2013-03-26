@@ -493,6 +493,8 @@ def _test_replace(browser):
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 
+    time.sleep(1)  # when all else fails, just sleep
+
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
@@ -526,6 +528,8 @@ def _test_replace(browser):
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
     editor.close()
+
+    time.sleep(1)  # when all else fails, just sleep
 
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
@@ -561,6 +565,8 @@ def _test_replace(browser):
         eq(row, expected[i])
     editor.close()
 
+    time.sleep(1)  # when all else fails, just sleep
+
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
@@ -581,6 +587,8 @@ def _test_replace(browser):
     eq(inputs.value[0],
        ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
     editor.close()
+
+    time.sleep(1)  # when all else fails, just sleep
 
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
