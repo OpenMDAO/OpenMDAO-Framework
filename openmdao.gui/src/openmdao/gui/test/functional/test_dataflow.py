@@ -2,9 +2,11 @@
 Tests of dataflow functions.
 """
 
+import sys
 import pkg_resources
 import time
 
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -477,6 +479,10 @@ def _test_driverflows(browser):
 
 
 def _test_replace(browser):
+    if sys.platform == 'win32':
+        raise SkipTest('For some unknown reason, this test causes '
+                       'chromedriver to hang on EC2 Windows images')
+
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
@@ -492,8 +498,6 @@ def _test_replace(browser):
     # Show dataflow for Simulation.
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
-
-    time.sleep(1)  # when all else fails, just sleep
 
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
@@ -529,8 +533,6 @@ def _test_replace(browser):
         eq(row, expected[i])
     editor.close()
 
-    time.sleep(1)  # when all else fails, just sleep
-
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
@@ -565,8 +567,6 @@ def _test_replace(browser):
         eq(row, expected[i])
     editor.close()
 
-    time.sleep(1)  # when all else fails, just sleep
-
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
@@ -587,8 +587,6 @@ def _test_replace(browser):
     eq(inputs.value[0],
        ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
     editor.close()
-
-    time.sleep(1)  # when all else fails, just sleep
 
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
