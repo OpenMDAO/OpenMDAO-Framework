@@ -85,7 +85,39 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
+    def load_inputs(self):
+        self.show_inputs()
+        return VariableGrid(self.inputs, editable=True)
 
+    def load_outputs(self):
+        self.show_outputs()
+        return VariableGrid(self.outputs)
+
+class VariableGrid(object):
+    def __init__(self, grid, editable=False):
+        self._grid = grid
+
+    def get_variable(self, name):
+        found = []
+        for row in self._grid.rows:
+            if row.cells[1] == name:
+                return row.cells[1:]
+            found.append(row)
+
+    def get_value(self, name):
+        get_variable(name)[1].value
+
+    def get_description(self, name):
+        get_variable(name)[3].value
+
+    def get_units(self, name):
+        get_variable(name)[2].value
+
+    if edtiable:
+       def set_value(self, name, value):
+           get_variable(name)[1] = value
+           
+	
 class DriverPage(ComponentPage):
     """ Driver editor page. """
 
