@@ -580,6 +580,9 @@ class Component(Container):
 
         Returns the added Container object.
         """
+        if has_interface(obj, IDriver) and not has_interface(self, IAssembly):
+            raise Exception("A Driver may only be added to an Assembly")
+
         self.config_changed()
         super(Component, self).add(name, obj)
         if is_instance(obj, Container) and not is_instance(obj, Component):
@@ -602,13 +605,6 @@ class Component(Container):
         """
         tobj = getattr(self, target_name)
 
-        # Save existing driver references.
-        refs = {}
-        if has_interface(tobj, IComponent):
-            for obj in self.__dict__.values():
-                if obj is not tobj and obj_has_interface(obj, IDriver):
-                    refs[obj] = obj.get_references(target_name)
-
         if hasattr(newobj, 'mimic'):
             try:
                 newobj.mimic(tobj)  # this should copy inputs, delegates and set name
@@ -618,12 +614,6 @@ class Component(Container):
                                           type(newobj).__name__))
 
         self.add(target_name, newobj)  # this will remove the old object
-
-        # Restore driver references.
-        if refs:
-            for obj in self.__dict__.values():
-                if obj is not newobj and obj_has_interface(obj, IDriver):
-                    obj.restore_references(refs[obj], target_name)
 
     def add_trait(self, name, trait):
         """Overrides base definition of *add_trait* in order to
