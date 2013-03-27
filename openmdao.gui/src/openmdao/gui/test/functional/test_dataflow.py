@@ -2,11 +2,9 @@
 Tests of dataflow functions.
 """
 
-import sys
 import pkg_resources
 import time
 
-from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -479,10 +477,6 @@ def _test_driverflows(browser):
 
 
 def _test_replace(browser):
-    # if sys.platform == 'win32':
-    #     raise SkipTest('For some unknown reason, this test causes '
-    #                    'chromedriver to hang on EC2 Windows images')
-
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
