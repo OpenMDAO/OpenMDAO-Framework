@@ -1,10 +1,11 @@
+import pprint
 
 from openmdao.main.component import Component
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom
 from openmdao.util.log import logger
-from openmdao.main.datatypes.api import Float, Int, Str, Python, List
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Array
 
 _ttdict = {
     float: Float,
@@ -14,6 +15,14 @@ _ttdict = {
     unicode: Str,
     list: List,
 }
+
+try:
+    import numpy
+except ImportError:
+    pass
+else:
+    _ttdict[numpy.ndarray] = Array
+
 
 class GeomComponent(Component):
 
@@ -102,19 +111,22 @@ class GeomComponent(Component):
 
     def _add_input(self, name):
         """Adds the specified input variable."""
-        param = self.parametric_geometry.getParameter(name)
-        val = param['value']
+        meta = self.parametric_geometry.getParameter(name)
+        val = meta['value']
         typ = _ttdict.get(type(val))
         if typ is None:
+            logger.debug("typ is None for trait %s, valtype=%s" % (name, str(type(val))))
             typ = Python   # FIXME
         self.add_trait(name, typ(val, iotype='in'))
         setattr(self, name, val)
     
     def _add_output(self, name):
         """Adds the specified output variable."""
-        val = self.parametric_geometry.getParameter(name)
+        meta = self.parametric_geometry.getParameter(name)
+        val = meta['value']
         typ = _ttdict.get(type(val))
         if typ is None:
+            logger.debug("typ is None for trait %s, valtype=%s" % (name, str(type(val))))
             typ = Python   # FIXME
         self.add_trait(name, typ(val, iotype='out'))
     

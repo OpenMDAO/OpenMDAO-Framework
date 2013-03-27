@@ -31,7 +31,7 @@ from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
 from openmdao.gui.zmqstreamserver import ZMQStreamHandler
-from pyV3D.wvserver import WSViewerHandler
+from pyV3D.handlers import WSHandler
 
 from openmdao.gui.handlers import LoginHandler, LogoutHandler, \
                                   ExitHandler, PluginDocsHandler

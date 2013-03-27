@@ -97,6 +97,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 # 1) look up websocket handler based on topic
                 # 2) send message value (not including topic) out on that websocket
                 #message = ???
+                pass
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 print 'ZMQStreamHandler ERROR:', topic, err
