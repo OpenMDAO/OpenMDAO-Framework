@@ -4,6 +4,7 @@ import shutil
 import tarfile
 from tempfile import mkdtemp
 from time import strftime
+from urllib import quote_plus
 from urllib2 import HTTPError
 
 from tornado import web
@@ -233,7 +234,7 @@ class NewHandler(ReqHandler):
             info[key] = project[key]
         proj.set_info(info)
 
-        self.redirect("/workspace/project?projpath=" + project['projpath'])
+        self.redirect("/workspace/project?projpath=" + quote_plus(project['projpath']))
 
 
 class ImportHandler(ReqHandler):
@@ -324,7 +325,7 @@ class ImportHandler(ReqHandler):
 
                     pdb.new(project)
 
-                    self.redirect("/workspace/project?projpath=" + project['projpath'])
+                    self.redirect("/workspace/project?projpath=" + quote_plus(project['projpath']))
 
         self.redirect("/")
 
