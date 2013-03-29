@@ -144,10 +144,11 @@ class VariableHandler(ReqHandler):
         self.content_type = 'text/html'
         self.write('')  # not used for now, could render a form
 
+
 class GetAllAtributesHandler(ReqHandler):
     ''' Get all attributes of an assembly's components
     '''
-    
+
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()

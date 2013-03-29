@@ -215,7 +215,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         var itemFormatter = undefined;
         var newItem = undefined;
 
-        debug.info(pathname);
         itemFormatter = new ItemFormatter();
         newItem = itemFormatter.cloneItem(item);
 
@@ -301,7 +300,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     hide : false,
                     show : false,
                     position : {
-                        of : "#CE-" + pathname.replace(".", "-", "g") + "_" + name,
+                        of : "#CE-" + pathname.replace(/\./g,'-') + "_" + name,
                         my : "right top",
                         at : "left-20 top",
                     },
