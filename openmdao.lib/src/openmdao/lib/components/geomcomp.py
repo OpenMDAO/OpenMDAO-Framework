@@ -27,8 +27,8 @@ class GeomComponent(Component):
     def __init__(self):
         super(GeomComponent, self).__init__()
         self._class_names = set(self.traits().keys())
-        self._input_var_names = None
-        self._output_var_names = None
+        self._input_var_names = set()
+        self._output_var_names = set()
 
     def _parametric_geometry_changed(self, old, new):
         """Called whenever the parametric geometry is set.
@@ -41,7 +41,9 @@ class GeomComponent(Component):
                 new.name = 'parametric_geometry'
             new.register_param_list_changedCB(self._model_updated)
             
-        self.geometry_output = new.get_geometry()
+            self.geometry_output = new.get_static_geometry()
+        else:
+            self.geometry_output = None
 
     def _model_updated(self):
         """Should be called by the parametric_geometry object whenever
@@ -55,68 +57,52 @@ class GeomComponent(Component):
         """Rebuild the geometry using the current set of parameters.
         """
         if self.parametric_geometry is not None:
-            self.parametric_geometry.regenModel()
+            self.parametric_geometry.regen_model()
             self._update_comp_outputs()
 
     def _update_comp_outputs(self):
         """Set the values of the component outputs based on their
         corresponding values in the geometry.
         """
-        if self._output_var_names is not None:
-            for name in self._output_var_names:
-                out = self.parametric_geometry.getParameter(name)['value']
+        if self._output_var_names:
+            outs = self.parametric_geometry.get_parameters(self._output_var_names)
+            for name,out in zip(self._output_var_names, outs):
                 setattr(self, name, out)
 
     def _update_iovar_set(self):
         """Determine the set of input and output variables for the
         current parametric geometry.
         """
-        old_in = set()
-        if self._input_var_names is not None:
-            old_in.update(self._input_var_names)
-        old_out = set()
-        if self._output_var_names is not None:
-            old_out.update(self._output_var_names)
+        old_in = self._input_var_names
+        old_out = self._output_var_names
             
-        self._input_var_names = None
-        self._output_var_names = None
+        inps, outps = self._get_io_info()
+
+        self._input_var_names = set([p[0] for p in inps])
+        self._output_var_names = set([p[0] for p in outps])
         
-        new_in = set(self.input_var_names())
-        new_out = set(self.output_var_names())
+        added_ins = self._input_var_names - old_in
+        added_outs = self._output_var_names - old_out
         
-        added_outs = new_out - old_out
-        added_ins = new_in - old_in
-        
-        removed_outs = old_out - new_out
-        removed_ins = old_in - new_in
+        removed_ins = old_in - self._input_var_names
+        removed_outs = old_out - self._output_var_names
         
         for name in removed_ins:
             self._remove_var(name)
-        for name in added_ins:
-            self._add_input(name)
-            
         for name in removed_outs:
             self._remove_var(name)
-        for name in added_outs:
-            self._add_output(name)
 
-    def _add_input(self, name):
-        """Adds the specified input variable."""
-        param = self.parametric_geometry.getParameter(name)
-        val = param['value']
-        typ = _ttdict.get(type(val))
-        if typ is None:
-            typ = Python   # FIXME
-        self.add_trait(name, typ(val, iotype='in'))
-        setattr(self, name, val)
-    
-    def _add_output(self, name):
-        """Adds the specified output variable."""
-        val = self.parametric_geometry.getParameter(name)
-        typ = _ttdict.get(type(val))
-        if typ is None:
-            typ = Python   # FIXME
-        self.add_trait(name, typ(val, iotype='out'))
+        for plist in (inps, outps):
+            for name, meta in plist:
+                if name in added_ins or name in added_outs:
+                    val = meta['value']
+                    typ = _ttdict.get(type(val))
+                    del meta['value'] # don't include value in trait metadata
+                    if typ is None:
+                        typ = Python   # FIXME
+                    self.add_trait(name, typ(val, **meta))
+                    if meta['iotype'] == 'in':
+                        setattr(self, name, val)
     
     def _remove_var(self, name):
         """Removes the specified variable."""
@@ -124,39 +110,38 @@ class GeomComponent(Component):
             self.parent.disconnect('.'.join([self.name, name]))
         self.remove_trait(name)
 
-    def _update_io_names(self):
+    def _get_io_info(self):
+        """Returns a tuple of (inputs, outputs) where inputs and outputs are
+        lists of tuples of the form (name, meta) for each parameter.
+        """
         if self.parametric_geometry:
-            params = self.parametric_geometry.listParameters()
-            inter = self._class_names.intersection([p[0] for p in params])
+            paraminfos = self.parametric_geometry.list_parameters()
+            cnames = self._class_names
+            inter = []
+            params = []
+            for p in paraminfos:
+                if p[0] in cnames:
+                    inter.append(p[0])
+                elif self._eligible(p[0]):
+                    params.append(p)
             if inter:
                 logger.warning("the following variables already exist in "
-                               "GeomComponent and will be ignored: %s" % 
-                               list(inter))
-            params = [p for p in params if self._eligible(p[0]) and 
-                                       p[0] not in self._class_names]
-            self._input_var_names = set([p[0] for p in params
-                                         if p[1]['iotype']=='in'])
-            self._output_var_names = set([p[0] for p in params
-                                         if p[1]['iotype']=='out'])
-        else:
-            self._input_var_names = set()
-            self._output_var_names = set()
-
-    def input_var_names(self):
-        """Return the list of names of public inputs that correspond
-        to model inputs.
-        """
-        if self._input_var_names is None:
-            self._update_io_names()
-        return self._input_var_names
-
-    def output_var_names(self):
-        """Return the list of names of public outputs that correspond
-        to model outputs.
-        """
-        if self._output_var_names is None:
-            self._update_io_names()
-        return self._output_var_names
+                               "GeomComponent and will be ignored: %s" % inter)
+        ins = []
+        outs = []
+        for p in params:
+            try:
+                io = p[1]['iotype']
+            except KeyError:
+                raise RuntimeError("parameter %s has no iotype metadata" % p[0])
+            if io == 'in':
+                ins.append(p)
+            elif io == 'out':
+                outs.append(p)
+            else:
+                raise RuntimeError("parameter %s does not have valid iotype metadata (iotype='%s'), must be 'in' or 'out'" 
+                                   % (p[0],p[1]['iotype']))
+        return (ins, outs)
 
     def _eligible(self, name):
         """Return True if the named trait is not excluded from the public interface 
@@ -171,7 +156,7 @@ class GeomComponent(Component):
         return True
 
     def _input_updated(self, name):
-        if self.parametric_geometry is not None and name in self.input_var_names():
-            self.parametric_geometry.setParameter(name, getattr(self, name))
+        if self.parametric_geometry is not None and name in self._input_var_names:
+            self.parametric_geometry.set_parameter(name, getattr(self, name))
         super(GeomComponent, self)._input_updated(name)
 
