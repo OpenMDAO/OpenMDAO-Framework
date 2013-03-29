@@ -6,6 +6,7 @@ import time
 
 import pkg_resources
 
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -458,96 +459,98 @@ def _test_properties(browser):
     #closeout(project_dict, workspace_page)
 
 
-#def _test_editable_inputs(browser):
-#    def test_color(actual, expected, alpha=False):
-#        if(alpha):
-#            eq(actual, expected)
-#        else:
-#            eq(actual[0:3], expected[0:3])
-#
-#    def test_inputs(inputs):
-#        for i, row in enumerate(inputs):
-#            connected_to_cell = row.cells[len(row.cells) - 2]
-#            implicit_cell = row.cells[len(row.cells) - 1]
-#            name_cell = row.cells[0]
-#            value_cell = row.cells[2]
-#
-#            if connected_to_cell.value:
-#                test_color(name_cell.color, [255, 255, 255, 1])
-#                test_color(value_cell.color, [255, 255, 255, 1])
-#                test_color(value_cell.background_color, [0, 0, 0, 1])
-#            elif implicit_cell.value:
-#                test_color(name_cell.color, [100, 180, 255, 1])
-#                test_color(value_cell.color, [100, 180, 255, 1])
-#                test_color(value_cell.background_color, [255, 255, 255, 1])
-#            else:
-#                test_color(name_cell.color, [255, 255, 255, 1])
-#                test_color(value_cell.color, [0, 0, 0, 1])
-#                test_color(value_cell.background_color, [255, 255, 255, 1])
-#
-#    def test_outputs(outputs):
-#        for i, row in enumerate(outputs):
-#            implicit_cell = row.cells[len(row.cells) - 1]
-#            name_cell = row.cells[0]
-#            value_cell = row.cells[2]
-#
-#            if implicit_cell.value:
-#                test_color(name_cell.color, [100, 180, 255, 1])
-#                test_color(value_cell.color, [100, 180, 255, 1])
-#            else:
-#                test_color(name_cell.color, [255, 255, 255, 1])
-#                test_color(value_cell.color, [255, 255, 255, 1])
-#
-#            test_color(value_cell.background_color, [0, 0, 0, 1])
-#
-#    project_dict, workspace_page = startup(browser)
-#
-#    # Import vehicle_singlesim
-#    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
-#                                                    'files/basic_model.py')
-#    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-#                                                    'vehicle_singlesim.py')
-#    workspace_page.add_file(file_path_one)
-#    workspace_page.add_file(file_path_two)
-#
-#    # Replace 'top' with Vehicle ThreeSim  top.
-#    top = workspace_page.get_dataflow_figure('top')
-#    top.remove()
-#    assembly_name = "sim"
-#    workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
-#                                                assembly_name)
-#    paraboloid = workspace_page.get_dataflow_figure('paraboloid', assembly_name)
-#
-#    #Test highlighting for implicit connections
-#    component_editor = paraboloid.editor_page()
-#    test_inputs(component_editor.get_inputs())
-#    test_outputs(component_editor.get_outputs())
-#
-#    component_editor.close()
-#
-#    #Remove sim from the dataflow
-#    assembly = workspace_page.get_dataflow_figure(assembly_name)
-#    assembly.remove()
-#
-#    #Add VehicleSim to the dataflow
-#    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
-#                                                assembly_name)
-#
-#    # Get component editor for transmission.
-#    workspace_page.expand_object(assembly_name)
-#    workspace_page.show_dataflow(assembly_name + ".vehicle")
-#    transmission = workspace_page.get_dataflow_figure('transmission',
-#                                                      assembly_name + '.vehicle')
-#
-#    #Test highlighting for explicit connections
-#    component_editor = transmission.editor_page()
-#    test_inputs(component_editor.get_inputs())
-#    test_outputs(component_editor.get_outputs())
-#
-#    component_editor.close()
-#
-#    # Clean up.
-#    closeout(project_dict, workspace_page)
+def _test_editable_inputs(browser):
+    raise SkipTest
+
+    def test_color(actual, expected, alpha=False):
+        if(alpha):
+            eq(actual, expected)
+        else:
+            eq(actual[0:3], expected[0:3])
+
+    def test_inputs(inputs):
+        for i, row in enumerate(inputs):
+            connected_to_cell = row.cells[len(row.cells) - 2]
+            implicit_cell = row.cells[len(row.cells) - 1]
+            name_cell = row.cells[0]
+            value_cell = row.cells[2]
+
+            if connected_to_cell.value:
+                test_color(name_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.background_color, [0, 0, 0, 1])
+            elif implicit_cell.value:
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+            else:
+                test_color(name_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.color, [0, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+
+    def test_outputs(outputs):
+        for i, row in enumerate(outputs):
+            implicit_cell = row.cells[len(row.cells) - 1]
+            name_cell = row.cells[0]
+            value_cell = row.cells[2]
+
+            if implicit_cell.value:
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
+            else:
+                test_color(name_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.color, [255, 255, 255, 1])
+
+            test_color(value_cell.background_color, [0, 0, 0, 1])
+
+    project_dict, workspace_page = startup(browser)
+
+    # Import vehicle_singlesim
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                    'files/basic_model.py')
+    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
+                                                    'vehicle_singlesim.py')
+    workspace_page.add_file(file_path_one)
+    workspace_page.add_file(file_path_two)
+
+    # Replace 'top' with Vehicle ThreeSim  top.
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    assembly_name = "sim"
+    workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
+                                                assembly_name)
+    paraboloid = workspace_page.get_dataflow_figure('paraboloid', assembly_name)
+
+    #Test highlighting for implicit connections
+    component_editor = paraboloid.editor_page()
+    test_inputs(component_editor.get_inputs())
+    test_outputs(component_editor.get_outputs())
+
+    component_editor.close()
+
+    #Remove sim from the dataflow
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    assembly.remove()
+
+    #Add VehicleSim to the dataflow
+    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+                                                assembly_name)
+
+    # Get component editor for transmission.
+    workspace_page.expand_object(assembly_name)
+    workspace_page.show_dataflow(assembly_name + ".vehicle")
+    transmission = workspace_page.get_dataflow_figure('transmission',
+                                                      assembly_name + '.vehicle')
+
+    #Test highlighting for explicit connections
+    component_editor = transmission.editor_page()
+    test_inputs(component_editor.get_inputs())
+    test_outputs(component_editor.get_outputs())
+
+    component_editor.close()
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_console_errors(browser):

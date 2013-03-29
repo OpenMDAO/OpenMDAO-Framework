@@ -1,6 +1,8 @@
 import random
 import string
 
+from functools import partial
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
@@ -13,6 +15,8 @@ from util import ArgsPrompt, NotifierPage
 class ComponentPage(DialogPage):
     """ Component editor page. """
 
+    Version = type('Enum', (), {"OLD":0, "NEW":1})
+
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
     outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
@@ -20,13 +24,15 @@ class ComponentPage(DialogPage):
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
+
     inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
     outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
-
-    def __init__(self, browser, port, locator):
+    
+    def __init__(self, browser, port, locator, version=Version.OLD):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
+        self.version = version
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -37,6 +43,7 @@ class ComponentPage(DialogPage):
     def get_inputs(self):
         """ Return inputs grid. """
         self('inputs_tab').click()
+        #return self._get_variables(self.inputs)
         return self.inputs
 
     def set_input(self, name, value):
@@ -52,14 +59,18 @@ class ComponentPage(DialogPage):
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
     def filter_inputs(self, filter_text):
+        """ Filter out input variables from grid using `filter_text`. """
         self.inputs_filter = filter_text
 
     def filter_outputs(self, filter_text):
+        """ Filter out output variables from grid using `filter_text`. """
         self.outputs_filter = filter_text
 
+    #This does not work. May have to send backspaces to clear filter
     def clear_inputs_filter(self):
         self.inputs_filter = ""
 
+    #This does not work. May have to send backspaces to clear filter
     def clear_outputs_filter(self):
         self.outputs_filter = ""
 
@@ -71,8 +82,9 @@ class ComponentPage(DialogPage):
     def get_outputs(self):
         """ Return outputs grid. """
         self('outputs_tab').click()
+        #return self._get_variables(self.outputs)
         return self.outputs
-    
+
     def show_inputs(self):
         """switch to inputs tab"""
         self('inputs_tab').click()
@@ -85,39 +97,24 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
-    def load_inputs(self):
-        self.show_inputs()
-        return VariableGrid(self.inputs, editable=True)
+    def get_input(self, name):
+        """ Return first input variable with `name`. """
+        self('inputs_tab').click()
+        return self._get_variable(name, self.inputs)
+    
+    def get_output(self, name):
+        """ Return first output variable with `name`. """
+        self('outputs_tab').click()
+        return self._get_variable(name, self.outputs)
 
-    def load_outputs(self):
-        self.show_outputs()
-        return VariableGrid(self.outputs)
-
-class VariableGrid(object):
-    def __init__(self, grid, editable=False):
-        self._grid = grid
-
-    def get_variable(self, name):
+    def _get_variable(self, name, grid):
         found = []
-        for row in self._grid.rows:
-            if row.cells[1] == name:
-                return row.cells[1:]
-            found.append(row)
+        for row in grid.rows:
+            if row[1] == name:
+                return row
+            found.append(row[1])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
 
-    def get_value(self, name):
-        get_variable(name)[1].value
-
-    def get_description(self, name):
-        get_variable(name)[3].value
-
-    def get_units(self, name):
-        get_variable(name)[2].value
-
-    if edtiable:
-       def set_value(self, name, value):
-           get_variable(name)[1] = value
-           
-	
 class DriverPage(ComponentPage):
     """ Driver editor page. """
 
