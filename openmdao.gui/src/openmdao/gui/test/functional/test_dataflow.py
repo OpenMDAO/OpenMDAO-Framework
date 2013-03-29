@@ -480,6 +480,9 @@ def _test_replace(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
+    browser.set_window_position(0, 0)
+    browser.set_window_size(1280, 1024)
+
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
@@ -496,7 +499,7 @@ def _test_replace(browser):
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',
@@ -513,7 +516,7 @@ def _test_replace(browser):
     workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',
@@ -530,7 +533,7 @@ def _test_replace(browser):
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',
@@ -547,7 +550,7 @@ def _test_replace(browser):
     workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',
@@ -564,7 +567,7 @@ def _test_replace(browser):
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['', 'cons_is_linear', '[]', '',
@@ -576,7 +579,7 @@ def _test_replace(browser):
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
@@ -585,7 +588,7 @@ def _test_replace(browser):
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',
@@ -608,7 +611,7 @@ def _test_replace(browser):
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
         ['', 'directory', '', '',

@@ -34,7 +34,6 @@ from pageobjects.util import SafeDriver, abort
 from pageobjects.workspace import WorkspacePage
 from pageobjects.component import NameInstanceDialog
 from pageobjects.dataflow import DataflowFigure
-from pageobjects.util import ConfirmationPage
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
@@ -676,7 +675,7 @@ def resize_editor(workspace_page, editor):
         if overlap < 0:
             # we still have a problem.
             eq(True, False,
-                "Could not move or rezise the editor dialog so it is not " \
+                "Could not move or rezise the editor dialog so it is not "
                 "overlapping the library. The browser window is too small")
 
 
@@ -832,4 +831,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-
