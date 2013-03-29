@@ -38,6 +38,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     #edit dictionary - remove 'e', add 'phi', round down 'pi'
+    #action_chain = ActionChains(browser)
+    #action_chain.double_click(inputs.rows[0].cells[1]).perform()
     inputs.rows[0].cells[1].click()
 
     pi_value_path = '//*[@id="d-editor"]/input[2]'
@@ -149,28 +151,28 @@ def _test_Avartrees(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
-        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['', ' cont_in', '',  '', ''],
+        ['', 'directory', '', '',
+            'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '', 
+            'If True, always execute even if all IO traits are valid.'],
     ]
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
 
     # Expand first vartree
-    inputs.rows[0].cells[0].click()
+    inputs.rows[0].cells[1].click()
     inputs = editor.get_inputs()
     expected = [
-        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
-        ['v1', 'float',  '1',  '', 'true', 'vv1', '', ''],
-        ['v2', 'float',  '2',  '', 'true', 'vv2', '', ''],
-        [' vt2', 'DumbVT2',  '',  '', 'true', '', '', ''],
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['', ' cont_in', '',  '', ''],
+        ['', 'v1', '1',  '', 'vv1'],
+        ['', 'v2', '2',  '', 'vv2'],
+        ['', ' vt2', '',  '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -179,22 +181,23 @@ def _test_Avartrees(browser):
     # While expanded, verify that cell that became the 2nd vartree is now
     # uneditable
     inputs.rows[3].cells[1].click()
+    inputs = editor.get_inputs()
     try:
-        inputs[3][1] = "abcd"
+        inputs[3][2] = "abcd"
     except IndexError:
         pass
     else:
         self.fail('Exception expected: Slot value should not be settable on inputs.')
 
     # Contract first vartree
-    inputs.rows[0].cells[0].click()
+    inputs.rows[0].cells[1].click()
     inputs = editor.get_inputs()
     expected = [
-        [' cont_in', 'DumbVT',  '',  '', 'true', '', '', ''],
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['', ' cont_in', '',  '', ''],
+        ['', 'directory', '', '',
+            'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '', 
+            'If True, always execute even if all IO traits are valid.'],
     ]
 
     for i, row in enumerate(inputs.value):

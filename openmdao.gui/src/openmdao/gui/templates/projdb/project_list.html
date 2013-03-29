@@ -306,7 +306,7 @@
         {% for project in project_list %}
         <tr>
             <td>
-                <a style="white-space:nowrap;" href="/workspace/project?projpath={{ project['projpath'] }}">{{ project['projectname'] }}</a>
+                <a style="white-space:nowrap;" href="/workspace/project?projpath={{ url_escape(project['projpath']) }}">{{ project['projectname'] }}</a>
             </td>
             <td>{{ project['description'] }}</td>
             <td>{{ project['version'] }}</td>
