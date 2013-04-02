@@ -12,6 +12,7 @@ from tornado import web
 from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
 
+from pyV3D.handlers import WSHandler
 
 class AddOnsHandler(BaseHandler):
     ''' Addon installation utility.
@@ -70,7 +71,10 @@ class GeometryHandler(ReqHandler):
         ''' geometry viewer
         '''
         filename = self.get_argument('path')
-        self.render('workspace/o3dviewer.html', filename=filename)
+        #self.render('workspace/o3dviewer.html', filename=filename)
+        if filename.startswith('file/'):
+            filename = filename[5:]
+        self.render('workspace/wvclient.html', geom_name=filename)
 
 
 class CloseHandler(ReqHandler):
@@ -481,8 +485,9 @@ class ProjectLoadHandler(ReqHandler):
             path = self.get_secure_cookie('projpath')
         if path:
             cserver = self.get_server()
-            #path = os.path.join(self.get_project_dir(), path)
             cserver.load_project(path)
+            sys.stderr.write("setting ViewerStreamHandler._projpath to %s\n" % path)
+            ViewerStreamHandler._projpath = path
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -633,6 +638,12 @@ class ValueHandler(ReqHandler):
         self.write(value)
 
 
+class ViewerStreamHandler(WSHandler):
+    _projpath = None
+    
+    def initialize(self):
+        super(ViewerStreamHandler, self).initialize(self._projpath)
+
 class WorkflowHandler(ReqHandler):
 
     @web.authenticated
@@ -708,4 +719,5 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
     web.url(r'/workspace/get_all_attributes/(.*)',GetAllAtributesHandler),
+    web.url(r'/ws_geometry/(.*)',           ViewerStreamHandler),
 ]

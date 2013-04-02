@@ -40,28 +40,7 @@ def make_unicode(content):
 class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
-
-    #def __init__(self, application, request, **kwargs):
-        #addr = kwargs.get('addr')
-        #version = request.headers.get('Sec-Websocket-Version')
-        #msg = 'Warning: %s WebSocket protocol version %s from %s'
-        #if version is None:
-            #print msg % ('unknown', '', addr)
-        #else:
-            #try:
-                #version = int(version)
-            #except ValueError:
-                #print msg % ('invalid', version, addr)
-            #else:
-                #if version < 13:
-                    #print msg % ('obsolete', version, addr)
-        #sys.stdout.flush()
-        #super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
-
-    #def allow_draft76(self):
-        #''' Not recommended, but enabled so we can display in __init__(). '''
-        #return True
-
+    
     def initialize(self, addr):
         self.addr = addr
 
@@ -83,7 +62,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        if len(message) == 1:
+        if len(message) == 1:  # assume message[0] is some json object
             try:
                 message = message[0]
             except Exception, err:

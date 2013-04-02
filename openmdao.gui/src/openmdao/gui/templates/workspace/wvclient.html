@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+/*
+ * WebViewer (wv) WebSocket simple example
+ */
+ -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>WebViewer</title>
+
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/webgl-utils.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/webgl-debug.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/J3DIMath.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/wv-draw.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/wv-render.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/wv-gPrim.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/wv-sGraph.js"> </script>
+<script type="text/javascript" src="/static/js/wvclient/WebViewer/wv-socket.js"> </script>
+
+<script type="text/javascript" src="/static/js/wvclient/simpleUI.js"> </script>
+
+<script>
+    "use strict";
+
+    var g = {};                 // place to store "globals"
+    
+    g.zNear =  1.0;             // have some values for Zscreen
+    g.zFar  = 11.0;
+
+    getSockets("ws://"+window.location.host, "{{geom_name}}" );
+
+</script>
+
+<style type="text/css">
+    canvas {
+        /* border: 2px solid black; */
+    }
+    .text {
+        position:absolute;
+        top:100px;
+        left:20px;
+        font-size:2em;
+        color: blue;
+    }
+</style>
+</head>
+
+<body onload="wvStart()">
+<canvas id="WebViewer">
+    If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
+</canvas>
+<div id="statusline"></div>
+</body>
+
+</html>

@@ -227,7 +227,10 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             };
 
             // if it's a geometry file, let them load it into viewer
-            if (/.geom$/.test(path)) {
+            // FIXME: ultimately the test of whether a file is a geometry file
+            //     should use information from geometry viewer plugins that have
+            //     been loaded in ther server...
+            if (/.geom$/.test(path) || /.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
                     "action" : function(node) { viewGeometry('file'+path.replace(/\\/g,'/')); }

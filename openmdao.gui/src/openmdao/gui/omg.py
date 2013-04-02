@@ -30,12 +30,13 @@ from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
-from openmdao.gui.zmqstreamserver import ZMQStreamHandler
 
 from openmdao.gui.handlers import LoginHandler, LogoutHandler, \
                                   ExitHandler, PluginDocsHandler
 import openmdao.gui.handlers_projectdb as proj
 import openmdao.gui.handlers_workspace as wksp
+
+from pyV3D.handlers import load_subhandlers
 
 debug = True
 
@@ -75,7 +76,6 @@ class App(web.Application):
             web.url(r'/exit',   ExitHandler),
             web.url(r'/docs/plugins/(.*)', PluginDocsHandler, {'route': '/docs/plugins/'}),
             web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'}),
-            web.url(r'/binary/(.*)', ZMQStreamHandler),
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
@@ -113,6 +113,8 @@ class App(web.Application):
             self._poller.start()
         else:
             signal.signal(signal.SIGTERM, self._sigterm_handler)
+
+        load_subhandlers()  # load pyv3d subhandlers
 
         super(App, self).__init__(handlers, **app_settings)
 
@@ -262,6 +264,7 @@ def main():
     ''' Process command line arguments and run.
     '''
     enable_console()
+ 
     parser = AppServer.get_argument_parser()
     options, args = parser.parse_known_args()
     run(parser, options, args)
