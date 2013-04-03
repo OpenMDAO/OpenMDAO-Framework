@@ -177,7 +177,7 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     file, pushes it to the remote host, and runs it, returning the result of
     'run'.
     """
-    cmdfname = '_cmd_. py'
+    cmdfname = '_cmd_.py'
     with open(cmdfname, 'w') as f:
         f.write("import os\n")
         for cmd in cmds:
