@@ -177,7 +177,7 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     file, pushes it to the remote host, and runs it, returning the result of
     'run'.
     """
-    cmdfname = '_cmd_.py'
+    cmdfname = '_cmd_. py'
     with open(cmdfname, 'w') as f:
         f.write("import os\n")
         for cmd in cmds:
@@ -190,8 +190,14 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
     put(cmdfname, remotecmd)
     os.remove(cmdfname)  # remove local version
-    return run('%s %s' % (py, cmdfname))
-
+    retval = run('%s %s' % (py, cmdfname))
+    if (retval.failed):
+        #print the stuff
+        print "return code was: %d\n" % retval.return_code
+        print "Enjoy the contents of _cmd_.py below!"
+        for i, cmd in cmds:
+            print "%d: %s\n" % (i+1, cmd)
+    return retval
 
 @stub_if_missing_deps('fabric')
 def remote_get_platform():
