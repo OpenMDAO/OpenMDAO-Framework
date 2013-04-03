@@ -738,21 +738,32 @@ class IParametricGeometry(Interface):
         """Rebuild the model based on current parameter values."""
 
     def list_parameters():
-        """Return a list of input and output parameters."""
+        """Return a list tuples of input and output parameters and their
+        metadata.  The tuples should be of the form: (name, meta) where
+        meta is a dict.  Two required pieces of metadata are 'value', the
+        current value of the parameter, and 'iotype', which should be 'in'
+        for inputs and 'out' for outputs.
+        """
 
     def set_parameter(name, val):
         """Set new value for an input parameter."""
 
-    def get_parameter(name):
-        """Get info about a Parameter in a Model"""
+    def get_parameters(names):
+        """Return a list of values for the given list of parameter
+        names.
+        """
     
     def register_param_list_changedCB(callback):
         """Register a function to be called when the list of parameters
-        changes, e.g., when a new model is loaded.
+        changes, e.g., when a new model is loaded or parameters are added
+        or removed.  Note that this function is already defined in the 
+        openmdao.main.geom.ParametricGeometry class. If you inherit from that
+        class, you can simply call self.invoke_callbacks() to execute
+        any callbacks that have been registered.
         """
         
-    def get_geometry():
-        """Return an object that conforms to the IStaticGeometry interface.
+    def get_static_geometry():
+        """Return an object that implements the IStaticGeometry interface.
         """
         
         
@@ -761,11 +772,37 @@ class IStaticGeometry(Interface):
     These are created by Parametric Geometry objects.
     """
     
-    def get_tessellation(*args, **kwargs):
-        """Return a list of tuples, where each tuple contains two ndarrays
-        that describe the tessellation for one solid in the model. The first
-        ndarray contains the the point coordinates and the second ndarray
-        contains the triangle connectivities."""
+    def get_visualization_data(wv_wrapper,  **kwargs):
+        """Populate the wv_wrapper object with data for faces and edges by 
+        calling the following methods on wv_wrapper:
+
+        set_face_data(points, tris, colors=None, normals=None, name='',
+                      bounding_box=None, visible=True, transparency=False,
+                      shading=False, orientation=True, points_visible=False,
+                      lines_visible=False)
+
+        set_edge_data(points, colors=None,
+                      name='', bounding_box=None,
+                      visible=True, transparency=False,
+                      shading=False, orientation=False,
+                      points_visible=False, lines_visible=False)
+
+        where:
+
+        points is a float32 1xN*3 ndarray of vertex point coordinates where N is the 
+            number of vertices, i.e., [x1,y1,z1,x2,y2,z2,...x_n,y_n,z_n]
+
+        tris is an int 1xM*3 ndarray of triangle connectivities (vertex indices) where 
+            M is the number of triangles.
+
+        colors is an optional 1x3 float32 ndarray
+
+        normals is an optional 1xM*3 float32 ndarray where M is the number of triangles
+
+        For more info, see the WV_Wrapper class definition in _pyV3D.pyx in the pyV3D 
+        distribution.
+
+        """
         
         
         
