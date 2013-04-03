@@ -40,7 +40,7 @@ def _test_grid(browser):
 
 
     #Checks all the inputs
-    inputs = editor.get_inputs().rows
+    inputs = editor.get_inputs()
     eq(inputs[0].name.value, "directory")
     eq(inputs[0].value.value, "")
     eq(inputs[0].units.value, "")
@@ -62,7 +62,7 @@ def _test_grid(browser):
     eq(inputs[3].description.value, "The variable y")
 
     #Checks all the outputs
-    outputs = editor.get_outputs().rows
+    outputs = editor.get_outputs()
     eq(outputs[0].name.value, "derivative_exec_count")
     eq(outputs[0].value.value, "0")
     eq(outputs[0].units.value, "")
@@ -115,7 +115,7 @@ def _test_grid(browser):
 
     try:
         f_xy.value.value = "1"
-    except AttributeError:
+    except IndexError:
         #Attribute error should be raised because the cell is not editable, and thus, the property should not have a setter.
         pass
     else:

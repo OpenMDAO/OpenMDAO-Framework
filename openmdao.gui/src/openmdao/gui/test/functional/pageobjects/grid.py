@@ -101,22 +101,6 @@ class GridRow(object):
         self._row = row
         self._cells = None
 
-        def getter(cls, index=0):
-            return cls.cells[index]
-        
-        def setter(cls, value, index=0):
-            cls.cells[index].value = value
-
-        for index in range(len(headers)):
-            if headers[index].value != "":
-                setattr( \
-                        self.__class__, 
-                        headers[index].value.lower(), 
-                        property( \
-                                partial(getter, index=index),
-                                partial(setter, index=index)
-                                )
-                        )
     @property
     def cells(self):
         if self._cells is None:
@@ -150,9 +134,6 @@ class GridRow(object):
                 break
         return val
 
-    def get_cell(self, index):
-        return self.cells[index]
-
     def __len__(self):
         return len(self.cells)
 
@@ -160,7 +141,7 @@ class GridRow(object):
         return self.cells[index].value
 
     def __setitem__(self, index, value):
-            self.cells[index] = value
+            self.cells[index].value = value
 
 
 class GridCell(object):
@@ -181,21 +162,18 @@ class GridCell(object):
 
     @value.setter
     def value(self, value):
-        """ Sets the value of the cell. Raises `AttributeError if the cell does not have a `cell-editable` class"""
-        if not self.editable:
-            raise AttributeError("can't set attribute")
-        else:
-            chain = ActionChains(self._browser)
-            chain.double_click(self._root).perform()
-            element = self._root.find_elements(By.XPATH, 'input')[0]
-            WebDriverWait(self._browser, 5).until(
-                lambda browser: element.is_displayed())
-            WebDriverWait(self._browser, 5).until(
-                lambda browser: element.is_enabled())
-            if element.get_attribute('value'):
-                element.clear()
-            time.sleep(0.1)  # Just some pacing.
-            element.send_keys(value + Keys.RETURN)
+        """ Sets the value of the cell. """
+        chain = ActionChains(self._browser)
+        chain.double_click(self._root).perform()
+        element = self._root.find_elements(By.XPATH, 'input')[0]
+        WebDriverWait(self._browser, 5).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, 5).until(
+            lambda browser: element.is_enabled())
+        if element.get_attribute('value'):
+            element.clear()
+        time.sleep(0.1)  # Just some pacing.
+        element.send_keys(value + Keys.RETURN)
 
     @property
     def editable(self):

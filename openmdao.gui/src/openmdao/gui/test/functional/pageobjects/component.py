@@ -13,9 +13,35 @@ from util import ArgsPrompt, NotifierPage
 
 
 class ComponentPage(DialogPage):
-    """ Component editor page. """
 
-    Version = type('Enum', (), {"OLD":0, "NEW":1})
+    class Variable(object):
+        def __init__(self, row, headers):
+            self._cells = row.cells
+
+            def getter(cls, index=0):
+                return cls._cells[index]
+            
+            def setter(cls, value, index=0):
+                if not cls._cells[index].editable:
+                    raise AttributeError("can't set attribute")
+                else:
+                    cls._cells[index].value = value
+
+            for index in range(len(headers)):
+                if headers[index].value != "":
+                    setattr( \
+                            self.__class__, 
+                            headers[index].value.lower(), 
+                            property( \
+                                    partial(getter, index=index),
+                                    partial(setter, index=index)
+                                    )
+                            )
+
+    """ Component editor page. """
+   
+    Version = type('Enum', (), {"OLD":1, "NEW":2})
+    As = type('Enum', (), {"GRID":0, "ROW":1, "VARIABLE":2})
 
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
@@ -40,11 +66,6 @@ class ComponentPage(DialogPage):
         labels = [element.text for element in elements]
         return labels
 
-    def get_inputs(self):
-        """ Return inputs grid. """
-        self('inputs_tab').click()
-        #return self._get_variables(self.inputs)
-        return self.inputs
 
     def set_input(self, name, value):
         """ Set input `name` to `value`. """
@@ -79,12 +100,6 @@ class ComponentPage(DialogPage):
         self('events_tab').click()
         return self.events
 
-    def get_outputs(self):
-        """ Return outputs grid. """
-        self('outputs_tab').click()
-        #return self._get_variables(self.outputs)
-        return self.outputs
-
     def show_inputs(self):
         """switch to inputs tab"""
         self('inputs_tab').click()
@@ -97,21 +112,45 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
-    def get_input(self, name):
+    def get_inputs(self, return_type=None):
+        """ Return inputs grid. """
+        self('inputs_tab').click()
+        #return self._get_variables(self.inputs)
+        return self._get_variables(self.inputs, return_type)
+
+    def get_outputs(self, return_type=None):
+        """ Return outputs grid. """
+        self('outputs_tab').click()
+        #return self._get_variables(self.outputs)
+        return self._get_variables(self.outputs, return_type)
+
+    def get_input(self, name, return_type=None):
         """ Return first input variable with `name`. """
         self('inputs_tab').click()
-        return self._get_variable(name, self.inputs)
+        return self._get_variable(name, self.inputs, return_type)
     
-    def get_output(self, name):
+    def get_output(self, name, return_type=None):
         """ Return first output variable with `name`. """
         self('outputs_tab').click()
-        return self._get_variable(name, self.outputs)
+        return self._get_variable(name, self.outputs, return_type)
 
-    def _get_variable(self, name, grid):
+    def _get_variables(self, grid, return_type):
+        if(return_type==self.As.GRID or self.version==self.Version.OLD):
+            return grid
+
+        headers = grid.headers
+        rows = grid.rows
+
+        return [self.Variable(row, headers) for row in rows]
+
+    def _get_variable(self, name, grid, return_type):
         found = []
         for row in grid.rows:
             if row[1] == name:
-                return row
+                if(return_type==self.As.ROW or self.version==self.Version.OLD):
+                    return row
+                else:
+                    return self.Variable(row, grid.headers)
             found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
