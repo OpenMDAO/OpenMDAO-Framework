@@ -86,7 +86,12 @@ jQuery(function() {
                 openmdao.Util.popupWindow('editor?filename='+path, 'Code Editor');
             }
         }
-        function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); }
+        function geom_fn(path) { 
+           // if the second arg is always the same, popup window will replace an existing
+           // one. Adding path to the window name results in a separate popup window for
+           // each viewed geometry.
+           openmdao.Util.popupWindow('geometry?path='+path,'Geometry: '+path); 
+        }
 
         //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.WorkflowTreeFrame("wtree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
