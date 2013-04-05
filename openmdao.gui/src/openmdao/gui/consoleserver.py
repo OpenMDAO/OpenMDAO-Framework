@@ -920,6 +920,9 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
+        elif pathname.startswith('/'): # treat it as a filename
+            # TODO: add handling for geometry files (and possibly others)
+            pass
         else:
             parts = pathname.split('.')
             if len(parts) > 1:

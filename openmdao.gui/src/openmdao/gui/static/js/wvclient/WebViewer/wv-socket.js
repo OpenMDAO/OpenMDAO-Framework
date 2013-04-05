@@ -68,6 +68,9 @@ function wsGpOnMessage(evt)
   //    "  -- bytelength = " + evt.data.length); 
  
   //g.messageQ.push(newbuf);
+  //console.debug("**** type of msg = "+(typeof evt.data));
+  //console.debug("**** message instanceof String  = ");
+  //console.debug(evt.data instanceof String);
   g.messageQ.push(evt.data);
 }
 

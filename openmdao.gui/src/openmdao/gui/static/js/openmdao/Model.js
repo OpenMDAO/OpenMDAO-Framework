@@ -74,6 +74,11 @@ openmdao.Model=function(listeners_ready) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
+        else { // binary message, assume it uses our simple framing protocol
+            // framing protocol is: msg starts with a null terminated routing string,
+            // followed by the actual binary msg
+            var Uint8View = new Uint8Array(message);
+        }
     }
 
     var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),

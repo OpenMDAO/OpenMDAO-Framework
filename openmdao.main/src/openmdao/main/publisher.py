@@ -84,9 +84,11 @@ class Publisher(object):
         Publisher.__enabled = False
 
 
-def publish(topic, msg):
+def publish(topic, msg, binary=False):
     try:
-        Publisher.get_instance().publish(topic, msg)
+        Publisher.get_instance().publish(topic, msg, binary=binary)
     except AttributeError:
         if not Publisher.silent:
             raise RuntimeError("Publisher has not been initialized")
+        
+        

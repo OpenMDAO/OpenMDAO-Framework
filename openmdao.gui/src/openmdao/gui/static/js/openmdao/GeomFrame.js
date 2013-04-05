@@ -18,7 +18,6 @@ openmdao.GeomFrame = function(id, model, pathname) {
             newdata[message[0]] = message[1];
             updateData(newdata);
         }
-        updatePlot();
     }
 
     // subscribe to model for data
@@ -66,11 +65,13 @@ openmdao.GeomFrame = function(id, model, pathname) {
 /** set prototype */
 openmdao.GeomFrame.prototype = new openmdao.BaseFrame();
 
+/*
 openmdao.GeomFrame.prototype.chooseVariable = function() {
     openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
         function(pathname) {
             p=new openmdao.GeomFrame('plot-'+pathname,openmdao.model,pathname);
         }
     );
+*/
 };
 

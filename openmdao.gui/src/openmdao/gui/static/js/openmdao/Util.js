@@ -605,6 +605,7 @@ openmdao.Util = {
         function connect() {
             if (socket === null || socket.readyState > 0) {
                 socket = new WebSocket(addr);
+                socket.binaryType = "arraybuffer"; // when binary msgs are received, treat as ArrayBuffers
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
                     defrd.resolve(socket);

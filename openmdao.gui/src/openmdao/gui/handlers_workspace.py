@@ -2,15 +2,18 @@ import sys
 import os
 import re
 
+from threading import Lock
+
 try:
     import simplejson as json
 except ImportError:
     import json
 
-from tornado import web
+from tornado import web, websocket
 
 from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
+from openmdao.util.log import logger
 
 from pyV3D.handlers import WSHandler
 
@@ -639,10 +642,11 @@ class ValueHandler(ReqHandler):
 
 
 class ViewerStreamHandler(WSHandler):
-    _projpath = None
+    _projpath = None  # this gets set in ProjectLoadHandler
     
     def initialize(self):
         super(ViewerStreamHandler, self).initialize(self._projpath)
+        
 
 class WorkflowHandler(ReqHandler):
 
