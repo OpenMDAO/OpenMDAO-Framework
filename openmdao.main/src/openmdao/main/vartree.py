@@ -7,7 +7,8 @@ from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.interfaces import IVariable
 from openmdao.main.container import Container
-from openmdao.main.datatypes.api import Slot, Str
+from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.str import Str
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -21,6 +22,28 @@ class VariableTree(Container):
         super(VariableTree, self).__init__()
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
+
+        # Wrap subtrees in VarTree (similar to Slot).
+        for name, obj in self.__class__.__dict__.items():
+            if name not in self.class_traits():
+                if isinstance(obj, VariableTree):
+                    # Avoids an import loop.
+                    from openmdao.main.datatypes.vtree import VarTree
+                    new_obj = obj.copy()  # Otherwise we share the default value
+                    new_obj.install_callbacks()
+                    trait = VarTree(new_obj)
+
+                    self._added_traits[name] = trait
+                    super(Container, self).add_trait(name, trait)
+#                    setattr(self, name, obj)
+                    if self._cached_traits_ is None:
+                        self.get_trait(name)
+                    else:
+                        self._cached_traits_[name] = self.trait(name)
+
+                    if not name.startswith('_'):
+                        self.on_trait_change(self._trait_modified, name)
+
         # register callbacks for our class traits
         for name, trait in self.class_traits().items():
             if not name.startswith('_'):
@@ -56,10 +79,27 @@ class VariableTree(Container):
         """Returns a deep copy of this VariableTree."""
         return copy.deepcopy(self)
 
+    def install_callbacks(self):
+        """Install trait callbacks on deep-copied VariableTree."""
+        self.on_trait_change(self._iotype_modified, '_iotype')
+        for name, trait in self.traits().items():
+            if not name.startswith('_'):
+                if name not in ('trait_added', 'trait_modified'):
+                    self.on_trait_change(self._trait_modified, name)
+
+        for name, trait in self._added_traits.items():
+            self.on_trait_change(self._trait_modified, name)
+            obj = getattr(self, name)
+            if isinstance(obj, VariableTree) and obj is not self.parent:
+                obj.install_callbacks()
+
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:
-                self.add_trait(name, Slot(VariableTree, iotype=obj._iotype))
+#Slot
+#                self.add_trait(name, Slot(obj.__class__, iotype=obj._iotype))
+                from openmdao.main.datatypes.vtree import VarTree
+                self.add_trait(name, VarTree(obj.__class__, iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
         elif not IVariable.providedBy(obj):
             msg = "a VariableTree may only contain Variables or other " + \
@@ -90,12 +130,13 @@ class VariableTree(Container):
         return None
 
     def _iotype_modified(self, obj, name, old, new):
+        from openmdao.main.datatypes.vtree import VarTree
         for k, v in self.__dict__.items():
-            if isinstance(v, VariableTree) and v is not self.parent:
+            if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
 
     def _trait_modified(self, obj, name, old, new):
-         # handle weird traits side-effect from hasattr call
+        # handle weird traits side-effect from hasattr call
         if name == 'trait_added':
             return
         if isinstance(new, VariableTree):
@@ -187,7 +228,6 @@ class VariableTree(Container):
                 connected = graph.get_connected_outputs()
 
         variables = []
-        slots = []
         for name in self.list_vars():
 
             trait = self.get_trait(name)
@@ -201,7 +241,7 @@ class VariableTree(Container):
 
             # Let the GUI know that this var is the top element of a
             # variable tree
-            if slot_attr is not None:
+            if attr.get('ttype') in ('vartree', 'slot'):
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
                     attr['vt'] = 'vt'
@@ -223,25 +263,14 @@ class VariableTree(Container):
                 else:
                     attr['connected'] = str([dst for src, dst in \
                                             connections]).replace('@xout.', '')
-
             variables.append(attr)
-
-            # Process singleton and contained slots.
-            if not io_only and slot_attr is not None:
-
-                # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] == False:
-
-                    slots.append(slot_attr)
 
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in attr:
-
                 vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
                                                    parent=attr['id'],
                                                    valid=valid)
-
                 if self._iotype == 'in':
                     variables += vt_attrs['Inputs']
                 else:
@@ -253,7 +282,6 @@ class VariableTree(Container):
             panel = 'Outputs'
 
         attrs[panel] = variables
-        attrs['Slots'] = slots
         return attrs
 
 

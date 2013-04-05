@@ -13,6 +13,7 @@ from openmdao.main.datatypes.int import Int
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.str import Str
+from openmdao.main.datatypes.vtree import VarTree
 
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later

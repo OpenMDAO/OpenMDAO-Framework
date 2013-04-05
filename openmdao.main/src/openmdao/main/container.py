@@ -34,7 +34,8 @@ from enthought.traits.trait_base import not_none, not_event
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
-from openmdao.main.datatypes.api import List, Slot
+from openmdao.main.datatypes.list import List
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
@@ -411,8 +412,12 @@ class Container(SafeHasTraits):
         olditraits = self._instance_traits()
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name in self._added_traits:
-                
-                result.add_trait(name, _clone_trait(trait))
+                from openmdao.main.datatypes.vtree import VarTree
+                if isinstance(trait.trait_type, VarTree):
+                    if name not in result._added_traits:
+                        result.add_trait(name, _clone_trait(trait))
+                else:
+                    result.add_trait(name, _clone_trait(trait))
                 result.__dict__[name] = self.__dict__[name]
 
         return result

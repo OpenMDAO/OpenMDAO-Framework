@@ -1,4 +1,5 @@
 import glob
+import nose
 import os
 import unittest
 
@@ -6,28 +7,32 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, Slot, File, List
+from openmdao.main.datatypes.api import Float, Slot, File, List, VarTree
 from openmdao.main.case import flatten_obj
 
 
 class DumbVT3(VariableTree):
-    def __init__(self):
-        super(DumbVT3, self).__init__()
-        self.add('a', Float(1., units='ft'))
-        self.add('b', Float(12., units='inch'))
-        self.add('data', File())
+
+    a = Float(1., units='ft')
+    b = Float(12., units='inch')
+    data = File()
 
 
 class DumbVT2(VariableTree):
-    def __init__(self):
-        super(DumbVT2, self).__init__()
-        self.add('x', Float(-1.))
-        self.add('y', Float(-2.))
-        self.add('data', File())
-        self.add('vt3', DumbVT3())
+
+    x = Float(-1.)
+    y = Float(-2.)
+    data = File()
+    vt3 = DumbVT3()
 
 
 class DumbVT(VariableTree):
+
+#    vt2 = DumbVT2()
+#    v1 = Float(1., desc='vv1')
+#    v2 = Float(2., desc='vv2')
+#    data = File()
+
     def __init__(self):
         super(DumbVT, self).__init__()
         self.add('vt2', DumbVT2())
@@ -228,15 +233,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'type': 'float',
                          'desc': 'vv2'} in attrs['Outputs'])
         self.assertEqual(len(attrs['Outputs']), 11)
-
-        # Slots panel too
-        attrs = self.asm.scomp1.cont_in.get_attributes(io_only=False)
-        self.assertTrue("Slots" in attrs.keys())
-        self.assertEqual(len(attrs['Slots']), 1)
-        self.assertTrue(attrs['Slots'][0]['name'] == 'vt2')
-        self.assertTrue(attrs['Slots'][0]['klass'] == 'VariableTree')
-        self.assertTrue(attrs['Slots'][0]['containertype'] == 'singleton')
-        self.assertTrue(attrs['Slots'][0]['filled'] == 'DumbVT2')
 
         # Now connect
         try:
