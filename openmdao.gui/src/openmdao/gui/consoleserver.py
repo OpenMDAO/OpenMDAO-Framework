@@ -924,11 +924,11 @@ class ConsoleServer(cmd.Cmd):
             # TODO: add handling for geometry files (and possibly others)
             pass
         else:
-            parts = pathname.split('.')
+            parts = pathname.split('.', 1)
             if len(parts) > 1:
                 root = self.proj.get(parts[0])
                 if root:
-                    rest = '.'.join(parts[1:])
+                    rest = parts[1]
                     root.register_published_vars(rest, publish)
 
             cont, root = self.get_container(pathname)

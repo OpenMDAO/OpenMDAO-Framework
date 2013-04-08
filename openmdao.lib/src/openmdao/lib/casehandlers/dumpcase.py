@@ -51,3 +51,9 @@ class DumpCaseRecorder(object):
         attrs['type'] = type(self).__name__
         
         return attrs
+    
+    def get_iterator(self):
+        """Doesn't really make sense to have a case iterator for dump files, so
+        just return None.
+        """
+        return None

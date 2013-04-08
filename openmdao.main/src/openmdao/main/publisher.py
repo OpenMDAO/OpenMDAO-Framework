@@ -21,6 +21,9 @@ class Publisher(object):
     __publisher = None
     __enabled = True
     silent = False
+    
+    _sender_types = [] # classes for sending complex binary reps of objects
+
 
     def __init__(self, context, url, use_stream=True):
         # Socket to talk to pub socket

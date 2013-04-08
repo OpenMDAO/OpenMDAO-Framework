@@ -641,11 +641,11 @@ class ValueHandler(ReqHandler):
         self.write(value)
 
 
-class ViewerStreamHandler(WSHandler):
-    _projpath = None  # this gets set in ProjectLoadHandler
+#class ViewerStreamHandler(WSHandler):
+    #_projpath = None  # this gets set in ProjectLoadHandler
     
-    def initialize(self):
-        super(ViewerStreamHandler, self).initialize(self._projpath)
+    #def initialize(self):
+        #super(ViewerStreamHandler, self).initialize(self._projpath)
         
 
 class WorkflowHandler(ReqHandler):

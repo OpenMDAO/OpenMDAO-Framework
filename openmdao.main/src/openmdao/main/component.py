@@ -42,6 +42,7 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 import openmdao.util.log as tracing
 
+__missing__ = object()
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -194,6 +195,8 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
+        self._senders = {} # objects that send complex binary reps of component vars to clients
+        
 
     @property
     def dir_context(self):
@@ -1542,21 +1545,31 @@ class Component(Container):
         if isinstance(names, basestring):
             names = [names]
         for name in names:
-            # TODO: allow wildcard naming at lowest level
             parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
-                    if not hasattr(self, name):
+                    obj = getattr(self, name, __missing__)
+                    if obj is __missing__:
                         self.raise_exception("%s has no attribute named '%s'"
                                               % (self.get_pathname(), name),
                                              NameError)
                     else:
-                        obj = getattr(self, name)
                         if has_interface(obj, IComponent):
                             obj.register_published_vars(__attributes__, publish)
                             return
 
                 if publish:
+                    if name not in self._senders:
+                        # see if a sender is registered for this object type
+                        for sender_type in Publisher._sender_types:
+                            if sender_type.supports(obj):
+                                sender = sender_type(Pub_WV_Wrapper('.'.join([self.get_pathname(),
+                                                                              name])))
+                                sender.geom_from_obj(obj)
+                                self._senders[name] = sender
+                                # go ahead and publish the first time
+                                sender.send_geometry(first=True)
+                        
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
@@ -1566,6 +1579,8 @@ class Component(Container):
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
                             del self._publish_vars[name]
+                            if name in self._senders:
+                                del self._senders[name]
             else:
                 obj = getattr(self, parts[0])
                 obj.register_published_vars(parts[1], publish)
@@ -1579,12 +1594,16 @@ class Component(Container):
                 lst = []
                 for var in pub_vars:
                     if var == __attributes__:
-                        key = pname
-                        val = self.get_attributes()
+                        lst.append((pname, self.get_attributes()))
                     else:
-                        key = '.'.join([pname, var])
-                        val = getattr(self, var)
-                    lst.append((key, val))
+                        # if var has a binary representation, publish it directly instead
+                        # of putting it on the list, because some binary reps require
+                        # multiple messages to be published and binary messages require
+                        # special handling
+                        if var in self._senders:
+                            _senders[var].send_geometry()
+                        else:
+                            lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):

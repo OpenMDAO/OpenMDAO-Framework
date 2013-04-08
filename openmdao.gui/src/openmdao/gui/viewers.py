@@ -7,7 +7,7 @@ from openmdao.main.interfaces import IStaticGeometry
 from openmdao.main.mp_support import has_interface
 from openmdao.util.log import logger
 
-NAME_SIZE = 512
+NAME_SIZE = 256
 
 class ObjectViewer(object):
     """This is a base class for custom viewers of OpenMDAO objects."""
@@ -26,20 +26,23 @@ class WV_ObjectViewer(ObjectViewer):
             raise RuntimeError("WV_ObjectViewer requires an object with the IStaticGeometry interface")
         
         self.wv = WV_Wrapper()
-        # create a storage buffer for the graphics primitive data
         
         # TODO: see if we can use pre-padding of the buffer to allow adding a simple routing
         # protocol without copying the buffer.
-        #  Our simple routing protocol is:
+        #  Our simple routing protocol (for now) is:
         #   - a 0 padded routing string of size 512 bytes
         #   - followed by the actual binary message that will go the webviewer
 
+        # create a storage buffer for the graphics primitive data
         self.buf = self.wv.get_bufflen()*b'\0'
 
         # send the initial version of the geometry
         self.create_geom()
         self.send_geometry(first=True)
 
+    def create_geom(self):
+        raise NotImplementedError("create_geom")
+    
     def send_binary_data(self, wsi, buf, ibuf):
         try:
             publish(self.objname, self.nullname+buf)
@@ -58,4 +61,7 @@ class WV_ObjectViewer(ObjectViewer):
             pass
 
         self.wv.finish_sends()
+        
+    def publish(self):
+        pass
 
