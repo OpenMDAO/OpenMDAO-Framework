@@ -6,19 +6,14 @@ from openmdao.main.api import Component, Assembly, VariableTree
 from openmdao.lib.datatypes.api import Float, Slot
 
 class DumbVT3(VariableTree):
-    def __init__(self):
-        super(DumbVT3, self).__init__()
-        self.add('a', Float(1., units='ft'))
-        self.add('b', Float(12., units='inch'))
+     a = Float(1., units='ft')
+     b = Float(12., units='inch')
 
 
 class DumbVT2(VariableTree):
-    vt3 = Slot(DumbVT3, iotype='in')
-    def __init__(self):
-        super(DumbVT2, self).__init__()
-        self.add('x', Float(-1.))
-        self.add('y', Float(-2.))
-        self.add('vt3', DumbVT3())
+     x = Float(-1.)
+     y = Float(-2.)
+     vt3 = DumbVT3()
 
 
 class DumbVT(VariableTree):

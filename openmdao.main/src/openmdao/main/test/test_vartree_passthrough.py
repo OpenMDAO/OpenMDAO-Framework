@@ -1,21 +1,16 @@
 import unittest
 
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Int, Slot
+from openmdao.main.datatypes.api import Float, Int, VarTree
 
 class TstContainer(VariableTree):
     dummy1 = Float(1.0) 
 
 class TstComponent(Component):
-    dummy_data = Slot(TstContainer, iotype='in')
-    dummy_data_out = Slot(TstContainer, iotype='out')
+    dummy_data = VarTree(TstContainer(), iotype='in')
+    dummy_data_out = VarTree(TstContainer(), iotype='out')
     dummyin = Float(iotype='in')
 
-    def __init__(self): 
-        super(TstComponent,self).__init__()
-        self.add('dummy_data',TstContainer())
-        self.add('dummy_data_out',TstContainer())
-        
     def execute(self):
         self.dummy_data_out = self.dummy_data.copy()
 
@@ -71,7 +66,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'implicit': '', 
                          'valid': True, 
                          'connected': '', 
-                         'ttype': 'slot', 
+                         'ttype': 'vartree', #'slot', 
                          'type': 'TstContainer', 
                          'id': 'dummy_data',
                          'target': 'comp.dummy_data'} in attrs['Inputs'])
@@ -91,7 +86,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'implicit': '', 
                          'valid': False, 
                          'connected': '', 
-                         'ttype': 'slot', 
+                         'ttype': 'vartree', #'slot', 
                          'type': 'TstContainer', 
                          'id': 'dummy1_out',
                          'target': 'comp.dummy_data_out'} in attrs['Outputs'])
@@ -133,6 +128,4 @@ class VarTreePassthroughTestCase(unittest.TestCase):
         
 if __name__ == "__main__":
     unittest.main()
-
-
 

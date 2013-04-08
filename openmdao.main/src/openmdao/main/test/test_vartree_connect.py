@@ -2,18 +2,14 @@
 import unittest
 
 from openmdao.main.api import VariableTree, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Slot
+from openmdao.main.datatypes.api import Float, VarTree
 
 class TstContainer(VariableTree):
     dummy1 = Float(1.0) 
 
 class TstAssembly1(Assembly):
-    dummy_data = Slot(TstContainer, iotype='in')
-
-    def configure(self): 
-        super(TstAssembly1,self).configure()
-        self.add('dummy_data',TstContainer())
-        self.add('dummy_data_out',TstContainer())
+    dummy_data = VarTree(TstContainer(), iotype='in')
+    dummy_data_out = VarTree(TstContainer(), iotype='out')
 
 class TstAssembly2(Assembly):
     

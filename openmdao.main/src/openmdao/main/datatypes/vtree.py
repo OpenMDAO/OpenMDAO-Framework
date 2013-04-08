@@ -31,6 +31,7 @@ class VarTree(Variable):
                 if 'iotype' not in metadata:
                     raise ValueError('default_value is a class and no iotype'
                                      ' specified')
+#                default_value = klass()
             else:
                 raise TypeError('default_value must be a VariableTree instance'
                                 ' or subclass')
@@ -44,7 +45,6 @@ class VarTree(Variable):
             self._instance.default_value = default_value
         else:
             default_value = self._instance.default_value
-
         super(VarTree, self).__init__(default_value, **metadata)
 
     def validate(self, obj, name, value):
