@@ -36,8 +36,6 @@ from openmdao.gui.handlers import LoginHandler, LogoutHandler, \
 import openmdao.gui.handlers_projectdb as proj
 import openmdao.gui.handlers_workspace as wksp
 
-from pyV3D.handlers import load_subhandlers
-
 debug = True
 
 
@@ -113,8 +111,6 @@ class App(web.Application):
             self._poller.start()
         else:
             signal.signal(signal.SIGTERM, self._sigterm_handler)
-
-        load_subhandlers()  # load pyv3d subhandlers
 
         super(App, self).__init__(handlers, **app_settings)
 

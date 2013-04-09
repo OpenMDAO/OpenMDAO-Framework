@@ -1,5 +1,4 @@
 import sys
-import StringIO
 import traceback
 
 from threading import RLock
@@ -15,6 +14,43 @@ try:
 except ImportError:
     zmq = None
 
+from pkg_resources import working_set
+from openmdao.util.log import logger
+from pyV3D.handlers import WV_Wrapper
+
+_lock = RLock()
+_binpub_types = None # classes for sending complex binary reps of objects
+_binpubs = {}  # [count, sender] corresponding to specific topics
+
+
+
+class Pub_WV_Wrapper(WV_Wrapper):
+    """A wrapper for the wv library that sends updates to the Publisher."""
+    
+    def __init__(self, name):
+        super(Pub_WV_Wrapper, self).__init_()
+        self.objname = name
+        
+        # TODO: make this buffer internal to WV_Wrapper
+        self.buf = self.get_bufflen()*b'\0'
+
+    def send(self, first=False):
+        self.prepare_for_sends()
+
+        if first:
+            self.send_GPrim(self, self.buf,  1, self.send_binary_data)  # send init packet
+            self.send_GPrim(self, self.buf, -1, self.send_binary_data)  # send initial suite of GPrims
+        else:  #FIXME: add updating of GPRims here...
+            pass
+
+        self.wv.finish_sends()
+        
+    def send_binary_data(self, wsi, buf, ibuf):
+        """This is called multiple times during the sending of a 
+        set of graphics primitives.
+        """
+        publish(self.objname, buf, binary=True)
+
 
 class Publisher(object):
 
@@ -22,9 +58,6 @@ class Publisher(object):
     __enabled = True
     silent = False
     
-    _sender_types = [] # classes for sending complex binary reps of objects
-
-
     def __init__(self, context, url, use_stream=True):
         # Socket to talk to pub socket
         sock = context.socket(zmq.PUB)
@@ -33,18 +66,26 @@ class Publisher(object):
             self._sender = zmqstream.ZMQStream(sock)
         else:
             self._sender = sock
-        self._lock = RLock()
 
     def publish(self, topic, value, lock=True, binary=False):
+        global _binpubs
         if Publisher.__enabled:
             try:
                 if lock:
-                    self._lock.acquire()
+                    _lock.acquire()
                 if binary:
                     if not isinstance(value, bytes):
                         raise TypeError("published binary value must be of type 'bytes'")
                     self._sender.send_multipart([topic.encode('utf-8'), value])
+                elif topic in _binpubs:
+                    # if a binary publisher exists for this topic, use that to 
+                    # publish the value. It will call publish again (possibly multiple times)
+                    # with binary=True
+                    _binpubs[topic].send(value)
                 else:
+                    # try to json encode the [topic, obj] list. If that fails,
+                    # assume we can't encode the obj and just send across a json
+                    # encoded list of [topic, obj_type_name]
                     try:
                         msg = json.dumps([topic.encode('utf-8'), value])
                     except TypeError:
@@ -53,17 +94,15 @@ class Publisher(object):
                 if hasattr(self._sender, 'flush'):
                     self._sender.flush()
             except Exception, err:
-                strio = StringIO.StringIO()
-                traceback.print_exc(file=strio)
                 print 'Publisher - Error publishing message %s: %s, %s' % \
-                      (topic, value, strio.getvalue())
+                      (topic, value, traceback.format_exc())
             finally:
                 if lock:
-                    self._lock.release()
+                    _lock.release()
 
     def publish_list(self, items):
         if Publisher.__enabled:
-            with self._lock:
+            with _lock:
                 for topic, value in items:
                     self.publish(topic, value, lock=False)
 
@@ -86,6 +125,42 @@ class Publisher(object):
     def disable():
         Publisher.__enabled = False
 
+    @staticmethod
+    def register(topic, obj):
+        """Associates a given topic with a binary publisher based on the corresponding object type.
+        If no binpub type exists for that object type, nothing happens.
+        """
+        global _binpubs, _binpub_types
+        sender = None
+        
+        if _binpub_types is None:
+            load_binpubs()
+
+        with _lock:
+            if topic in _binpubs:
+                _binpubs[topic][0] += 1
+            else:
+                # see if a sender is registered for this object type
+                for sender_type in _binpub_types:
+                    if sender_type.supports(obj):
+                        sender = sender_type(Pub_WV_Wrapper(topic))
+                        _binpubs[topic] = [1, sender]
+                        break
+                    
+        if sender is not None:
+            sender.send(obj, first=True)
+
+    @staticmethod
+    def unregister(topic, obj):
+        """Removes an association between a 'sender' and a topic."""
+        global _binpubs
+        with _lock:
+            if topic in _binpubs:
+                if _binpubs[topic][0] <= 1:
+                    del _binpubs[topic]
+                else:
+                    _binpubs[topic][0] -= 1
+                
 
 def publish(topic, msg, binary=False):
     try:
@@ -95,3 +170,24 @@ def publish(topic, msg, binary=False):
             raise RuntimeError("Publisher has not been initialized")
         
         
+def load_binpubs():
+    """Loads all binpubs entry points."""
+    global _binpub_types
+    
+    if _binpub_types is None:
+        _binpub_types = []
+    
+        # find all of the installed binpubs
+        for ep in working_set.iter_entry_points('openmdao.binpub'):
+            try:
+                klass = ep.load()
+            except Exception as err:
+                logger.error("Entry point %s failed to load: %s" % (str(ep).split()[0], err))
+            else:
+                logger.debug("adding binpub entry point: %s" % str(ep).split()[0])
+                with _lock:
+                    Publisher._binpub_types.append(klass)
+                
+
+
+

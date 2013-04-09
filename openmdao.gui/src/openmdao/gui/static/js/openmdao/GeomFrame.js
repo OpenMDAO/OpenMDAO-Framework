@@ -13,11 +13,7 @@ openmdao.GeomFrame = function(id, model, pathname) {
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
 
     function handleMessage(message) {
-        if (message.length === 2) {
-            var newdata = {};
-            newdata[message[0]] = message[1];
-            updateData(newdata);
-        }
+        g.messageQ.push(message); // FIXME: add namespacing to WebViewer stuff
     }
 
     // subscribe to model for data
@@ -54,7 +50,9 @@ openmdao.GeomFrame = function(id, model, pathname) {
      ***********************************************************************/
 
     this.destructor = function() {
-        model.removeListener(variables[i], handleMessage);
+        if ( geometry != null ) {
+            model.removeListener(geometry, handleMessage);
+        }
     };
 
     /** nothing to see here, we get our data elsewhere */
@@ -65,13 +63,13 @@ openmdao.GeomFrame = function(id, model, pathname) {
 /** set prototype */
 openmdao.GeomFrame.prototype = new openmdao.BaseFrame();
 
-/*
+
 openmdao.GeomFrame.prototype.chooseVariable = function() {
     openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
         function(pathname) {
-            p=new openmdao.GeomFrame('plot-'+pathname,openmdao.model,pathname);
+            //p=new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
+            openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry');
         }
     );
-*/
 };
 

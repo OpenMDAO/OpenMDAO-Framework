@@ -8,6 +8,7 @@ openmdao.Model=function(listeners_ready) {
      ***********************************************************************/
 
     var self = this,
+        NAME_SIZE=256,
         _modified = false,
         outstream_opened = false,
         pubstream_opened = false,
@@ -75,9 +76,15 @@ openmdao.Model=function(listeners_ready) {
             }
         }
         else { // binary message, assume it uses our simple framing protocol
-            // framing protocol is: msg starts with a null terminated routing string,
+            // framing protocol is: msg starts with a null padded routing string of size NAME_SIZE,
             // followed by the actual binary msg
-            var Uint8View = new Uint8Array(message);
+            var whole = new Uint8Array(message);
+            var name = TextDecoder("utf-8").decode(whole.subarray(0, NAME_SIZE-1));
+            console.debug("name = "+name);
+            console.debug("size = ");
+            console.debug(name.length);
+            var msg = whole.subarray(NAME_SIZE);
+            self.publish(name, msg);
         }
     }
 

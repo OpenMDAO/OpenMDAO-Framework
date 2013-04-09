@@ -89,8 +89,6 @@ function getSockets(wsURLp, fname)
   var ws_ctor = window['MozWebSocket'] ? window['MozWebSocket'] : window['WebSocket'];
   var socketGp, socketUT;
 
-  g.messageQ = [];              // a place to put the binary messages
-  
   socketGp = new ws_ctor(wsURLp+'/ws_geometry/'+fname, 'pyv3d-bin-1.0'); 
   socketUt = new ws_ctor(wsURLp+'/ws_geometry/'+fname, 'pyv3d-txt-1.0');
   

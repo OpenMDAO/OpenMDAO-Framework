@@ -105,11 +105,11 @@ function wvUpdateUI()
     if (g.keyPress == 42)       // '*' -- center the view
       g.centerV = 1;
 
-    if (g.keyPress == 60)       // '<' -- finer tessellation
-      g.socketUt.send("coarser");
+    //if (g.keyPress == 60)       // '<' -- finer tessellation
+     // g.socketUt.send("coarser");
       
-    if (g.keyPress == 62)       // '>' -- finer tessellation
-      g.socketUt.send("finer");
+    //if (g.keyPress == 62)       // '>' -- finer tessellation
+     // g.socketUt.send("finer");
 
     if (g.keyPress ==  76)      // 'L' -- locating state
       if (g.locate == 1)

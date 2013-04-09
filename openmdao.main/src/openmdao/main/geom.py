@@ -70,28 +70,3 @@ class ParametricGeometry(object):
             ]
         }
 
-
-class Pub_WV_Wrapper(WV_Wrapper):
-    def __init__(self, name):
-        super(Pub_WV_Wrapper, self).__init_()
-        self.objname = name
-        
-        # TODO: make this buffer internal to WV_Wrapper
-        self.buf = self.get_bufflen()*b'\0'
-
-    def send_geometry(self, first=False):
-        self.prepare_for_sends()
-
-        if first:
-            self.send_GPrim(self, self.buf,  1, self.send_binary_data)  # send init packet
-            self.send_GPrim(self, self.buf, -1, self.send_binary_data)  # send initial suite of GPrims
-        else:  #FIXME: add updating of GPRims here...
-            pass
-
-        self.wv.finish_sends()
-        
-    def send_binary_data(self, wsi, buf, ibuf):
-        """This is called multiple times during the sending of a 
-        set of graphics primitives.
-        """
-        publish(self.objname, buf, binary=True)

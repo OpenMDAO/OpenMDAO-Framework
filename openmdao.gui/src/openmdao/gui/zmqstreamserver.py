@@ -17,7 +17,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from tornado import httpserver, web, websocket
 
 debug = True
-
+NAME_SIZE = 256  # this must agree with NAME_SIZE in Model.js
 
 def DEBUG(msg):
     if debug:
@@ -73,10 +73,13 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
         elif len(message) == 2:  # it's a msg of the form [topic, binary_value]
             try:
-                # 1) look up websocket handler based on topic
-                # 2) send message value (not including topic) out on that websocket
-                #message = ???
-                pass
+                if len(message[0]) > NAME_SIZE:
+                    raise RuntimeError("topic field of message is longer than %d characters" % NAME_SIZE)
+                if not isinstance(message[1], bytes):
+                    raise TypeError("message value must be of type 'bytes', not type '%s'" %
+                                    str(type(message[1])))
+                padded = bytes(message[0])+(NAME_SIZE-len(message[0]))*b'\0'  # 0 padded object name in bytes
+                message = padded + message[1]  # FIXME: message is copied here
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 print 'ZMQStreamHandler ERROR:', topic, err

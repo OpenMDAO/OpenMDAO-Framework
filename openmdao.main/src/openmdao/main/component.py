@@ -194,9 +194,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count
-        self._senders = {} # objects that send complex binary reps of component vars to clients
-        
+        self._publish_vars = {}  # dict of varname to subscriber count        
 
     @property
     def dir_context(self):
@@ -1559,28 +1557,18 @@ class Component(Container):
                             return
 
                 if publish:
-                    if name not in self._senders:
-                        # see if a sender is registered for this object type
-                        for sender_type in Publisher._sender_types:
-                            if sender_type.supports(obj):
-                                sender = sender_type(Pub_WV_Wrapper('.'.join([self.get_pathname(),
-                                                                              name])))
-                                sender.geom_from_obj(obj)
-                                self._senders[name] = sender
-                                # go ahead and publish the first time
-                                sender.send_geometry(first=True)
-                        
+                    Publisher.register('.'.join([self.get_pathname(), name]),
+                                       obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
+                    Publisher.unregister('.'.join([self.get_pathname(), name]))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
                             del self._publish_vars[name]
-                            if name in self._senders:
-                                del self._senders[name]
             else:
                 obj = getattr(self, parts[0])
                 obj.register_published_vars(parts[1], publish)
@@ -1596,14 +1584,7 @@ class Component(Container):
                     if var == __attributes__:
                         lst.append((pname, self.get_attributes()))
                     else:
-                        # if var has a binary representation, publish it directly instead
-                        # of putting it on the list, because some binary reps require
-                        # multiple messages to be published and binary messages require
-                        # special handling
-                        if var in self._senders:
-                            _senders[var].send_geometry()
-                        else:
-                            lst.append(('.'.join([pname, var]), getattr(self, var)))
+                        lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
