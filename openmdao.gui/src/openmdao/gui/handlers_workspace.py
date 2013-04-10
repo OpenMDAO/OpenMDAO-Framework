@@ -489,8 +489,8 @@ class ProjectLoadHandler(ReqHandler):
         if path:
             cserver = self.get_server()
             cserver.load_project(path)
-            sys.stderr.write("setting ViewerStreamHandler._projpath to %s\n" % path)
-            ViewerStreamHandler._projpath = path
+            #sys.stderr.write("setting ViewerStreamHandler._projpath to %s\n" % path)
+            #ViewerStreamHandler._projpath = path
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')

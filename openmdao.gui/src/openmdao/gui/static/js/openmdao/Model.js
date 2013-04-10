@@ -66,7 +66,9 @@ openmdao.Model=function(listeners_ready) {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
+        console.debug('handlePubMessage: typeof='+typeof message);
         if (typeof message === 'string' || message instanceof String) {
+            console.debug('msg start = '+message.substr(0,5));
             try {
                 message = jQuery.parseJSON(message);
                 self.publish(message);
@@ -79,7 +81,13 @@ openmdao.Model=function(listeners_ready) {
             // framing protocol is: msg starts with a null padded routing string of size NAME_SIZE,
             // followed by the actual binary msg
             var whole = new Uint8Array(message);
-            var name = TextDecoder("utf-8").decode(whole.subarray(0, NAME_SIZE-1));
+            var namearr = whole.subarray(0, NAME_SIZE-1);
+            var name = String.fromCharCode.apply(null, namearr);
+            var idx = name.indexOf("\0");
+            if (idx > 0) {
+                name = name.substr(0, idx);
+            }
+
             console.debug("name = "+name);
             console.debug("size = ");
             console.debug(name.length);
@@ -117,6 +125,7 @@ openmdao.Model=function(listeners_ready) {
         Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
+        console.debug("added a listener for topic "+topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -163,8 +172,11 @@ openmdao.Model=function(listeners_ready) {
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
             callbacks = subscribers[topic].slice();
+            console.debug("in Model.publish.  for topic "+topic+", len subs = ");
+            console.debug(callbacks.length);
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
+                    console.debug("calling callback")
                     callbacks[i](message);
                 }
                 else {

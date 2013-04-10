@@ -1,7 +1,15 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
+g = {};                 // place to store "globals"  FIXME: this should be namespaced to WebViewer
+
+g.zNear =  1.0;             // have some values for Zscreen
+g.zFar  = 11.0;
+
+g.messageQ = [];              // a place to put the binary messages
+
 openmdao.GeomFrame = function(id, model, pathname) {
+
     openmdao.GeomFrame.prototype.init.call(this, id, 'Geometry: '+pathname);
 
     /***********************************************************************
@@ -12,7 +20,20 @@ openmdao.GeomFrame = function(id, model, pathname) {
         geometry = null,
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
 
+    var html = '<div class="geom-frame">'
+              +'<canvas id="WebViewer">'
+              +'  If you are seeing this your web browser does not support the &lt;canvas>&gt; element. Ouch!'
+              +'</canvas>'
+              +'<div id="statusline"></div>'
+              + '</div>';
+
+    // replace old html
+    self.elm.html(html);
+
+    wvStart();  // FIXME
+
     function handleMessage(message) {
+        console.debug("GeomFrame.handleMessage")
         g.messageQ.push(message); // FIXME: add namespacing to WebViewer stuff
     }
 
@@ -63,12 +84,16 @@ openmdao.GeomFrame = function(id, model, pathname) {
 /** set prototype */
 openmdao.GeomFrame.prototype = new openmdao.BaseFrame();
 
+//var pushit = function(message) {
+ //   g.messageQ.push(message);
+//}
 
 openmdao.GeomFrame.prototype.chooseVariable = function() {
     openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
         function(pathname) {
-            //p=new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
-            openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry');
+            p=new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
+            //openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry');
+            //openmdao.model.addListener(pathname, pushit);
         }
     );
 };

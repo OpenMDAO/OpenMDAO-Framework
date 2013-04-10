@@ -28,7 +28,7 @@ class Pub_WV_Wrapper(WV_Wrapper):
     """A wrapper for the wv library that sends updates to the Publisher."""
     
     def __init__(self, name):
-        super(Pub_WV_Wrapper, self).__init_()
+        super(Pub_WV_Wrapper, self).__init__()
         self.objname = name
         
         # TODO: make this buffer internal to WV_Wrapper
@@ -43,13 +43,19 @@ class Pub_WV_Wrapper(WV_Wrapper):
         else:  #FIXME: add updating of GPRims here...
             pass
 
-        self.wv.finish_sends()
+        self.finish_sends()
         
     def send_binary_data(self, wsi, buf, ibuf):
         """This is called multiple times during the sending of a 
         set of graphics primitives.
         """
-        publish(self.objname, buf, binary=True)
+        logger.error("send_binary_data: , objname='%s', ibuf=%d" % (self.objname, ibuf))
+        try:
+            publish(self.objname, buf, binary=True)
+        except Exception as err:
+            logger.error(traceback.format_exc())
+            return -1
+        return 0
 
 
 class Publisher(object):
@@ -76,11 +82,13 @@ class Publisher(object):
                 if binary:
                     if not isinstance(value, bytes):
                         raise TypeError("published binary value must be of type 'bytes'")
+                    logger.error("sending binary value for topic %s" % topic)
                     self._sender.send_multipart([topic.encode('utf-8'), value])
                 elif topic in _binpubs:
                     # if a binary publisher exists for this topic, use that to 
                     # publish the value. It will call publish again (possibly multiple times)
                     # with binary=True
+                    logger.error("sending value via binpub for topic %s" % topic)
                     _binpubs[topic].send(value)
                 else:
                     # try to json encode the [topic, obj] list. If that fails,
@@ -143,7 +151,11 @@ class Publisher(object):
                 # see if a sender is registered for this object type
                 for sender_type in _binpub_types:
                     if sender_type.supports(obj):
-                        sender = sender_type(Pub_WV_Wrapper(topic))
+                        logger.error("creating a sender for topic: %s" % topic)
+                        try:
+                            sender = sender_type(Pub_WV_Wrapper(topic))
+                        except Exception as err:
+                            logger.error(traceback.format_exc())
                         _binpubs[topic] = [1, sender]
                         break
                     
@@ -173,7 +185,8 @@ def publish(topic, msg, binary=False):
 def load_binpubs():
     """Loads all binpubs entry points."""
     global _binpub_types
-    
+    logger.error("loading binpubs")
+
     if _binpub_types is None:
         _binpub_types = []
     
@@ -184,9 +197,9 @@ def load_binpubs():
             except Exception as err:
                 logger.error("Entry point %s failed to load: %s" % (str(ep).split()[0], err))
             else:
-                logger.debug("adding binpub entry point: %s" % str(ep).split()[0])
+                logger.error("adding binpub entry point: %s" % str(ep).split()[0])
                 with _lock:
-                    Publisher._binpub_types.append(klass)
+                    _binpub_types.append(klass)
                 
 
 

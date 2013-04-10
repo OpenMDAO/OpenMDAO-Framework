@@ -40,7 +40,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-import openmdao.util.log as tracing
+from openmdao.util.log import TRACER, logger
 
 __missing__ = object()
 
@@ -532,11 +532,11 @@ class Component(Container):
                 else:
                     # Component executes as normal
                     self.exec_count += 1
-                    if tracing.TRACER is not None and \
+                    if TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
 
-                        tracing.TRACER.debug(self.get_itername())
+                        TRACER.debug(self.get_itername())
 
                     self.execute()
 
@@ -1540,6 +1540,7 @@ class Component(Container):
         self._logger.level = level
 
     def register_published_vars(self, names, publish=True):
+        logger.error("registering pub vars: %s" % names)
         if isinstance(names, basestring):
             names = [names]
         for name in names:

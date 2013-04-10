@@ -15,6 +15,7 @@ from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
+from openmdao.util.log import logger
 
 debug = True
 NAME_SIZE = 256  # this must agree with NAME_SIZE in Model.js
@@ -63,6 +64,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:  # assume message[0] is some json object
+            binary = False
             try:
                 message = message[0]
             except Exception, err:
@@ -72,14 +74,15 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 return
 
         elif len(message) == 2:  # it's a msg of the form [topic, binary_value]
+            binary = True
             try:
                 if len(message[0]) > NAME_SIZE:
                     raise RuntimeError("topic field of message is longer than %d characters" % NAME_SIZE)
                 if not isinstance(message[1], bytes):
                     raise TypeError("message value must be of type 'bytes', not type '%s'" %
                                     str(type(message[1])))
-                padded = bytes(message[0])+(NAME_SIZE-len(message[0]))*b'\0'  # 0 padded object name in bytes
-                message = padded + message[1]  # FIXME: message is copied here
+                #padded = bytes(message[0])+(NAME_SIZE-len(message[0]))*b'\0'  # 0 padded object name in bytes
+                message = message[0].ljust(NAME_SIZE, '\0') + message[1]  # FIXME: message is copied here
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 print 'ZMQStreamHandler ERROR:', topic, err
@@ -87,7 +90,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 return
 
         # write message to websocket
-        self.write_message(message)
+        self.write_message(message, binary=binary)
 
     def on_message(self, message):
         pass

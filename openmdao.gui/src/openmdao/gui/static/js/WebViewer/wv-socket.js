@@ -130,6 +130,7 @@ function convert2string(array)
 function wvUpdateScene(gl)
 {
   if (g.messageQ.length == 0) return;
+  console.debug("wvUpdateScene");
   
   g.sceneUpd    = 1;
   var message   = g.messageQ[g.messageQ.length-1];
