@@ -47,8 +47,8 @@ var BrowserDetect = {
 	init: function () {
 		this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
 		this.version = this.searchVersion(navigator.userAgent)
-			|| this.searchVersion(navigator.appVersion)
-			|| "an unknown version";
+                   || this.searchVersion(navigator.appVersion)
+                   || "an unknown version";
 		this.OS = this.searchString(this.dataOS) || "an unknown OS";
 	},
 	searchString: function (data) {
@@ -75,7 +75,7 @@ var BrowserDetect = {
 			subString: "Chrome",
 			identity: "Chrome"
 		},
-		{ 	string: navigator.userAgent,
+		{ string: navigator.userAgent,
 			subString: "OmniWeb",
 			versionSearch: "OmniWeb/",
 			identity: "OmniWeb"
@@ -128,7 +128,7 @@ var BrowserDetect = {
 			identity: "Mozilla",
 			versionSearch: "rv"
 		},
-		{ 		// for older Netscapes (4-)
+		{ // for older Netscapes (4-)
 			string: navigator.userAgent,
 			subString: "Mozilla",
 			identity: "Netscape",
@@ -150,7 +150,7 @@ var BrowserDetect = {
                         string: navigator.userAgent,
                         subString: "iPhone",
                         identity: "iPhone/iPod"
-	        },
+    },
 		{
 			string: navigator.platform,
 			subString: "Linux",
@@ -158,7 +158,7 @@ var BrowserDetect = {
 		}
 	]
 
-}
+};
 
 
 //
@@ -168,7 +168,7 @@ var BrowserDetect = {
 function initWebGL(canvasName)
 {
     var canvas = document.getElementById(canvasName);
-    return  gl = WebGLUtils.setupWebGL(canvas, { antialias: false });
+    return WebGLUtils.setupWebGL(canvas, { antialias: false });
 }
 
 
@@ -263,7 +263,7 @@ function wvSetup(gl, vshader, fshader, attribs, clearColor, clearDepth)
 function wvInit()
 {
   var requestId;
-  
+
   // "globals" used:
 
   g.width    = -1;                                      // "canvas" size
@@ -275,12 +275,12 @@ function wvInit()
   g.sgUpdate =  0;                                      // sceneGraph update
   g.sceneUpd =  1;                                      // scene updated -- rerender
   g.centerV  =  0;                                      // centering flag
-  if (g.debug     == undefined) g.debug     = 0;        // debug flag
-  if (g.pick      == undefined) g.pick      = 0;        // picking flag (0-off, 1-on)
-  if (g.locate    == undefined) g.locate    = 0;        // locating flag
-  if (g.eye       == undefined) g.eye       = [0.0, 0.0, 0.0];
-  if (g.center    == undefined) g.center    = [0.0, 0.0, 0.0];
-  if (g.up        == undefined) g.up        = [0,0, 1.0, 0.0];
+  if (g.debug     === undefined) g.debug     = 0;        // debug flag
+  if (g.pick      === undefined) g.pick      = 0;        // picking flag (0-off, 1-on)
+  if (g.locate    === undefined) g.locate    = 0;        // locating flag
+  if (g.eye       === undefined) g.eye       = [0.0, 0.0, 0.0];
+  if (g.center    === undefined) g.center    = [0.0, 0.0, 0.0];
+  if (g.up        === undefined) g.up        = [0,0, 1.0, 0.0];
 
   // define our plotting attributes
   g.plotAttrs  = { ON:1,          TRANSPARENT:2, SHADING:4,
@@ -516,7 +516,7 @@ function wvStart()
   // setup our render loop
   var f = function() {
   
-    if (g.fov != undefined) drawPicture(gl);
+    if (g.fov !== undefined) drawPicture(gl);
 
     // update the UI and matrices
     wvUpdateUI();
@@ -524,7 +524,10 @@ function wvStart()
     //update scene graph
     wvUpdateScene(gl);
 
+    //g.animcount += 1;
+    //if (g.animcount < 1000) {
     requestId = window.requestAnimFrame(f, c);
+    //}
   };
   f();
 

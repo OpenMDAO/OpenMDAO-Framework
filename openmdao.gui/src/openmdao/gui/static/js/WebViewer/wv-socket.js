@@ -95,16 +95,16 @@ function getSockets(wsURLp, fname)
     console.debug("***", wsURLp+'/ws_geometry/'+fname);
   
   socketGp.binaryType = 'arraybuffer';
-  socketGp.onopen     = function(evt) { wsGpOnOpen(evt)    };
-  socketGp.onclose    = function(evt) { wsGpOnClose(evt)   };
-  socketGp.onmessage  = function(evt) { wsGpOnMessage(evt) };
-  socketGp.onerror    = function(evt) { wsGpOnError(evt)   };
+  socketGp.onopen     = function(evt) { wsGpOnOpen(evt);    };
+  socketGp.onclose    = function(evt) { wsGpOnClose(evt);   };
+  socketGp.onmessage  = function(evt) { wsGpOnMessage(evt); };
+  socketGp.onerror    = function(evt) { wsGpOnError(evt);   };
   g.socketGp          = socketGp;
   
-  socketUt.onopen    = function(evt) { wsUtOnOpen(evt)    };
-  socketUt.onclose   = function(evt) { wsUtOnClose(evt)   };
-  socketUt.onmessage = function(evt) { wsUtOnMessage(evt) };
-  socketUt.onerror   = function(evt) { wsUtOnError(evt)   };
+  socketUt.onopen    = function(evt) { wsUtOnOpen(evt);    };
+  socketUt.onclose   = function(evt) { wsUtOnClose(evt);   };
+  socketUt.onmessage = function(evt) { wsUtOnMessage(evt); };
+  socketUt.onerror   = function(evt) { wsUtOnError(evt);   };
   g.socketUt         = socketUt;
 }
 
@@ -129,29 +129,31 @@ function convert2string(array)
 // Use WebSockets to determine if the sceneGraph needs updating
 function wvUpdateScene(gl)
 {
-  if (g.messageQ.length == 0) return;
-  console.debug("wvUpdateScene");
-  
+  //console.debug("   wvUpdateScene");
+  if (g.messageQ.length === 0) return;
+  //console.debug("  messageQ.length = "+g.messageQ.length.toString());
   g.sceneUpd    = 1;
   var message   = g.messageQ[g.messageQ.length-1];
   var uint8View = new Uint8Array(message);
   var byteLen   = message.byteLength;
-  if ((uint8View[byteLen-4] == 0) && (uint8View[byteLen-3] == 0) &&
-      (uint8View[byteLen-2] == 0) && (uint8View[byteLen-1] == 7)) {
+  //console.debug("byteLen = "+byteLen.toString());
+  var nameLen;
+  if ((uint8View[byteLen-4] === 0) && (uint8View[byteLen-3] === 0) &&
+      (uint8View[byteLen-2] === 0) && (uint8View[byteLen-1] === 7)) {
     // adjust message queue
     var messages = g.messageQ;
     g.messageQ   = [];
     
     log(" MessageQ len = " + messages.length);
     // update scene
-    for (var i = 0; i < messages.length; i++)
-    {
+    for (var i = 0; i < messages.length; i++) {
       message = messages[i];
-      var start = 0;
-      while (start < message.byteLength)
+      byteLen = message.byteLength;
+      var start = g.MSG_START;  // 0;
+      while (start < byteLen)
       {
         var int32View = new Int32Array(message, start, 
-                                       (message.byteLength-start)/4);
+                                       (byteLen-start)/4);
         var opcode = int32View[0] >> 24;
         var stripe = int32View[0] & 0xFFFFFF;
         log("   Message = " + i + "  Start = " + start + "  Opcode = " + opcode +
@@ -177,8 +179,8 @@ function wvUpdateScene(gl)
           case 1:
             // new gPrim
             g.sgUpdate   = 1;
+            nameLen  = int32View[1] & 0xFFFF;
             var gtype    = int32View[1] >> 24;
-            var nameLen  = int32View[1] & 0xFFFF;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var next     = nameLen/4 + 2;
@@ -187,7 +189,7 @@ function wvUpdateScene(gl)
             if (gtype == 1) size = 14;
             if (gtype == 2) size = 17;
             var float32  = new Float32Array(message, start+numBytes, size);
-            if (g.sceneGraph[name] != undefined) 
+            if (g.sceneGraph[name] !== undefined) 
             {
                log(" Error: SceneGraph already has: " + name);
             }
@@ -224,8 +226,8 @@ function wvUpdateScene(gl)
           case 2:
             // delete gPrim
             g.sgUpdate  = 1;
-            var nameLen = int32View[1] & 0xFFFF;
-            if (nameLen == 0)
+            nameLen = int32View[1] & 0xFFFF;
+            if (nameLen === 0)
             {
               for (var gprim in g.sceneGraph)
               {
@@ -246,9 +248,9 @@ function wvUpdateScene(gl)
             break;
           case 3:
             // new VBO Data
+            nameLen  =  int32View[1] & 0xFFFF;
             var gtype    =  int32View[1] >> 24;
             var vflags   = (int32View[1] >> 16) & 0xFF;
-            var nameLen  =  int32View[1] & 0xFFFF;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var vertices = undefined;
@@ -293,9 +295,9 @@ function wvUpdateScene(gl)
             break;
           case 4:
             // VBO update (only one at a time)
+            nameLen  =  int32View[1] & 0xFFFF;
             var gtype    =  int32View[1] >> 24;
             var vflags   = (int32View[1] >> 16) & 0xFF;
-            var nameLen  =  int32View[1] & 0xFFFF;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var vtype    = 0;
@@ -335,7 +337,7 @@ function wvUpdateScene(gl)
             break;
           case 5:
             // Complete Update (same as 1 and 2) -- num of stripes must be the same
-            var nameLen  = int32View[1] & 0xFFFF;
+            nameLen  = int32View[1] & 0xFFFF;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var next     = nameLen/4 + 2;
@@ -349,8 +351,8 @@ function wvUpdateScene(gl)
             break;
           case 6:
             // complete stripe delete
+            nameLen  = int32View[1] & 0xFFFF;
             var gtype    = int32View[1] >> 24;
-            var nameLen  = int32View[1] & 0xFFFF;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             deleteStripe(gl, name, stripe, gtype)

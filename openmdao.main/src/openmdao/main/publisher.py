@@ -1,4 +1,3 @@
-import sys
 import traceback
 
 from threading import RLock
@@ -52,7 +51,7 @@ class Pub_WV_Wrapper(WV_Wrapper):
         logger.error("send_binary_data: , objname='%s', ibuf=%d" % (self.objname, ibuf))
         try:
             publish(self.objname, buf, binary=True)
-        except Exception as err:
+        except Exception:
             logger.error(traceback.format_exc())
             return -1
         return 0
@@ -101,7 +100,7 @@ class Publisher(object):
                     self._sender.send_multipart([msg])
                 if hasattr(self._sender, 'flush'):
                     self._sender.flush()
-            except Exception, err:
+            except Exception:
                 print 'Publisher - Error publishing message %s: %s, %s' % \
                       (topic, value, traceback.format_exc())
             finally:
@@ -154,7 +153,7 @@ class Publisher(object):
                         logger.error("creating a sender for topic: %s" % topic)
                         try:
                             sender = sender_type(Pub_WV_Wrapper(topic))
-                        except Exception as err:
+                        except Exception:
                             logger.error(traceback.format_exc())
                         _binpubs[topic] = [1, sender]
                         break
@@ -163,7 +162,7 @@ class Publisher(object):
             sender.send(obj, first=True)
 
     @staticmethod
-    def unregister(topic, obj):
+    def unregister(topic):
         """Removes an association between a 'sender' and a topic."""
         global _binpubs
         with _lock:

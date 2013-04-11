@@ -316,7 +316,7 @@ function reshape(gl)
 // put out a cursor
 function jack(gl, x,y,z, delta)
 {
-  if (g.sceneGraph["jack"] != undefined)
+  if (g.sceneGraph["jack"] !== undefined)
   {
     deleteGPrim(gl, "jack");
     delete g.sceneGraph["jack"];

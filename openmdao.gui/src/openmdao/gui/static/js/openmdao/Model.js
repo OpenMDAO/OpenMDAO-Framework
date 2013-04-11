@@ -8,7 +8,6 @@ openmdao.Model=function(listeners_ready) {
      ***********************************************************************/
 
     var self = this,
-        NAME_SIZE=256,
         _modified = false,
         outstream_opened = false,
         pubstream_opened = false,
@@ -66,9 +65,7 @@ openmdao.Model=function(listeners_ready) {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        console.debug('handlePubMessage: typeof='+typeof message);
         if (typeof message === 'string' || message instanceof String) {
-            console.debug('msg start = '+message.substr(0,5));
             try {
                 message = jQuery.parseJSON(message);
                 self.publish(message);
@@ -80,19 +77,16 @@ openmdao.Model=function(listeners_ready) {
         else { // binary message, assume it uses our simple framing protocol
             // framing protocol is: msg starts with a null padded routing string of size NAME_SIZE,
             // followed by the actual binary msg
-            var whole = new Uint8Array(message);
-            var namearr = whole.subarray(0, NAME_SIZE-1);
+            var namearr = new Uint8Array(message, 0, g.NAME_SIZE-1);
             var name = String.fromCharCode.apply(null, namearr);
             var idx = name.indexOf("\0");
             if (idx > 0) {
                 name = name.substr(0, idx);
             }
 
-            console.debug("name = "+name);
-            console.debug("size = ");
-            console.debug(name.length);
-            var msg = whole.subarray(NAME_SIZE);
-            self.publish(name, msg);
+            console.debug("publishing ArrayBuffer for name = "+name);
+            //var msg = whole.subarray(g.NAME_SIZE);
+            self.publish([name, message]);  // send the whole message to save on some copying later...
         }
     }
 
@@ -169,14 +163,15 @@ openmdao.Model=function(listeners_ready) {
     this.publish = function(message) {
         var i, topic = message[0],
             callbacks;
+        console.debug("in Model.publish.  for topic "+topic);
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
             callbacks = subscribers[topic].slice();
-            console.debug("in Model.publish.  for topic "+topic+", len subs = ");
+            console.debug("len subs = ");
             console.debug(callbacks.length);
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
-                    console.debug("calling callback")
+                    console.debug("calling callback");
                     callbacks[i](message);
                 }
                 else {

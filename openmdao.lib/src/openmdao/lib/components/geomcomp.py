@@ -1,5 +1,3 @@
-import pprint
-
 from openmdao.main.component import Component
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
@@ -31,8 +29,8 @@ class GeomComponent(Component):
                                desc='Slot for a parametric geometry.')
 
     geometry_output = Geom(IStaticGeometry, iotype='out',
-                           desc ='Geometry object')
-    
+                           desc='Geometry object')
+
     def __init__(self):
         super(GeomComponent, self).__init__()
         self._class_names = set(self.traits().keys())
@@ -43,13 +41,13 @@ class GeomComponent(Component):
         """Called whenever the parametric geometry is set.
         """
         self._update_iovar_set()
-        
+
         if new is not None:
             if isinstance(new, Container):
                 new.parent = self
                 new.name = 'parametric_geometry'
             new.register_param_list_changedCB(self._model_updated)
-            
+
             self.geometry_output = new.get_static_geometry()
         else:
             self.geometry_output = None
@@ -75,7 +73,7 @@ class GeomComponent(Component):
         """
         if self._output_var_names:
             outs = self.parametric_geometry.get_parameters(self._output_var_names)
-            for name,out in zip(self._output_var_names, outs):
+            for name, out in zip(self._output_var_names, outs):
                 setattr(self, name, out)
 
     def _update_iovar_set(self):
@@ -84,18 +82,18 @@ class GeomComponent(Component):
         """
         old_in = self._input_var_names
         old_out = self._output_var_names
-            
+
         inps, outps = self._get_io_info()
 
         self._input_var_names = set([p[0] for p in inps])
         self._output_var_names = set([p[0] for p in outps])
-        
+
         added_ins = self._input_var_names - old_in
         added_outs = self._output_var_names - old_out
-        
+
         removed_ins = old_in - self._input_var_names
         removed_outs = old_out - self._output_var_names
-        
+
         for name in removed_ins:
             self._remove_var(name)
         for name in removed_outs:
@@ -106,13 +104,13 @@ class GeomComponent(Component):
                 if name in added_ins or name in added_outs:
                     val = meta['value']
                     typ = _ttdict.get(type(val))
-                    del meta['value'] # don't include value in trait metadata
+                    del meta['value']  # don't include value in trait metadata
                     if typ is None:
                         typ = Python   # FIXME
                     self.add_trait(name, typ(val, **meta))
                     if meta['iotype'] == 'in':
                         setattr(self, name, val)
-    
+
     def _remove_var(self, name):
         """Removes the specified variable."""
         if self.parent:
@@ -123,11 +121,11 @@ class GeomComponent(Component):
         """Returns a tuple of (inputs, outputs) where inputs and outputs are
         lists of tuples of the form (name, meta) for each parameter.
         """
+        params = []
         if self.parametric_geometry:
             paraminfos = self.parametric_geometry.list_parameters()
             cnames = self._class_names
             inter = []
-            params = []
             for p in paraminfos:
                 if p[0] in cnames:
                     inter.append(p[0])
@@ -148,12 +146,12 @@ class GeomComponent(Component):
             elif io == 'out':
                 outs.append(p)
             else:
-                raise RuntimeError("parameter %s does not have valid iotype metadata (iotype='%s'), must be 'in' or 'out'" 
-                                   % (p[0],p[1]['iotype']))
+                raise RuntimeError("parameter %s does not have valid iotype metadata (iotype='%s'), must be 'in' or 'out'"
+                                   % (p[0], p[1]['iotype']))
         return (ins, outs)
 
     def _eligible(self, name):
-        """Return True if the named trait is not excluded from the public interface 
+        """Return True if the named trait is not excluded from the public interface
         based on the includes and excludes lists.
         """
         if name in self._class_names:
