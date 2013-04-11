@@ -88,7 +88,7 @@ class Publisher(object):
                     # publish the value. It will call publish again (possibly multiple times)
                     # with binary=True
                     logger.error("sending value via binpub for topic %s" % topic)
-                    _binpubs[topic].send(value)
+                    _binpubs[topic][1].send(value)
                 else:
                     # try to json encode the [topic, obj] list. If that fails,
                     # assume we can't encode the obj and just send across a json

@@ -37,7 +37,9 @@ openmdao.GeomFrame = function(id, model, pathname) {
     wvStart();  // FIXME
 
     function handleMessage(message) {
-        console.debug("GeomFrame.handleMessage. pushing ArrayBuffer onto g.messageQ");
+        // NOTE: the message here is the entire ArrayBuffer containing the padded topic name + the
+        // actual message being sent to the WebViewer.  This is done so we can avoid copying 
+        // the buffer.
         g.messageQ.push(message[1]); // FIXME: add namespacing to WebViewer stuff
     }
 
@@ -82,6 +84,14 @@ openmdao.GeomFrame = function(id, model, pathname) {
 
     /** nothing to see here, we get our data elsewhere */
     this.update = function() {};
+
+    g.getWidth = function() {
+        return self.elm.height();
+    };
+
+    g.getHeight = function() {
+        return self.elm.width();
+    };
 
 };
 

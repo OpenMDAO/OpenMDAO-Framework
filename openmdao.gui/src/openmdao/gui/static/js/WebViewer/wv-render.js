@@ -524,10 +524,7 @@ function wvStart()
     //update scene graph
     wvUpdateScene(gl);
 
-    //g.animcount += 1;
-    //if (g.animcount < 1000) {
     requestId = window.requestAnimFrame(f, c);
-    //}
   };
   f();
 

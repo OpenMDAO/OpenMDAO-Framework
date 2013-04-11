@@ -84,7 +84,7 @@ var GET_A_WEBGL_BROWSER = '' +
   '<a href="http://get.webgl.org">Click here to upgrade your browser.</a>';
 
 /**
- * Mesasge for need better hardware
+ * Message for need better hardware
  * @type {string}
  */
 var OTHER_PROBLEM = '' +
@@ -107,7 +107,7 @@ var setupWebGL = function(canvas, opt_attribs) {
     if (container) {
       container.innerHTML = makeFailHTML(str);
     }
-  };
+  }
 
   if (!window.WebGLRenderingContext) {
     showLink(GET_A_WEBGL_BROWSER);

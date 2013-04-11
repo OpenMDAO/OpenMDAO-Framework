@@ -117,7 +117,7 @@ function convert2string(array)
 
   for (var i = 0, j=array.length; i < j; i++)
   {
-    if (array[i] == 0) break;
+    if (array[i] === 0) break;
     string += String.fromCharCode(array[i]);
   }
 
@@ -259,30 +259,30 @@ function wvUpdateScene(gl)
             var normals  = undefined;
             var size     = 0;
             var numBytes = nameLen + 8;
-            if ((vflags&1) != 0)
+            if ((vflags&1) !== 0)
             {
               size     = int32View[numBytes/4];
               log("     vertices size = " + size  + "  gtype = " + gtype);
               vertices  = new Float32Array(message, start+numBytes+4, size);
               numBytes += 4+size*4;
             }
-            if ((vflags&2) != 0)
+            if ((vflags&2) !== 0)
             {
               size      = int32View[numBytes/4];
               log("     indices size = " + size  + "  gtype = " + gtype);
               indices   = new Uint16Array(message, start+numBytes+4, size);
               numBytes += 4+size*2;
-              if ((size%2) != 0) numBytes += 2;
+              if ((size%2) !== 0) numBytes += 2;
             }
-            if ((vflags&4) != 0)
+            if ((vflags&4) !== 0)
             {
               size      = int32View[numBytes/4];
               log("     colors size = " + size  + "  gtype = " + gtype);
               colors    = new Uint8Array(message, start+numBytes+4, size);
               numBytes += 4+size;
-              if ((size%4) != 0) numBytes += 4 - size%4;
+              if ((size%4) !== 0) numBytes += 4 - size%4;
             }
-            if ((vflags&8) != 0)
+            if ((vflags&8) !== 0)
             {
               size      = int32View[numBytes/4];
               log("     normals size = " + size + "  gtype = " + gtype);
@@ -301,9 +301,9 @@ function wvUpdateScene(gl)
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var vtype    = 0;
-            if ((vflags&2) != 0) vtype = 1;
-            if ((vflags&4) != 0) vtype = 2;
-            if ((vflags&8) != 0) vtype = 3;
+            if ((vflags&2) !== 0) vtype = 1;
+            if ((vflags&4) !== 0) vtype = 2;
+            if ((vflags&8) !== 0) vtype = 3;
             var next = nameLen/4 + 2;
             var size = int32View[next];
             log("     gPrim = "+name+"  vflags = " + vflags + "  gtype = " + 
@@ -319,12 +319,12 @@ function wvUpdateScene(gl)
                 editGPrim(gl, name, stripe, gtype, 1, data);
                 var oldSize = size;
                 size *= 2;
-                if ((oldSize%2) != 0) size += 2;
+                if ((oldSize%2) !== 0) size += 2;
                 break;
               case 2:
                 var data = new Uint8Array(message, start+nameLen+12, size);
                 editGPrim(gl, name, stripe, gtype, 2, data);
-                if ((size%4) != 0) size += 4 - size%4;
+                if ((size%4) !== 0) size += 4 - size%4;
                 break;
               case 3:
                 var data = new Float32Array(message, start+nameLen+12, size);
@@ -341,7 +341,7 @@ function wvUpdateScene(gl)
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
             var next     = nameLen/4 + 2;
-            if (g.sceneGraph[name] != undefined)
+            if (g.sceneGraph[name] !== undefined)
             {
               deleteGPrim(gl, name);
               g.sceneGraph[name].attrs = int32View[next];
@@ -355,7 +355,7 @@ function wvUpdateScene(gl)
             var gtype    = int32View[1] >> 24;
             var uint8nam = new Uint8Array(message, start+8, nameLen);
             var name     = convert2string(uint8nam);
-            deleteStripe(gl, name, stripe, gtype)
+            deleteStripe(gl, name, stripe, gtype);
 
             start += 8 + nameLen;
             break;

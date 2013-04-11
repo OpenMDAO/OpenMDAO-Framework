@@ -12,7 +12,7 @@
 
 function getCursorXY(e) 
 {
-  if (!e) var e = event;
+  if (!e) e = event;
   g.cursorX  = e.clientX;
   g.cursorY  = e.clientY;
   g.cursorX -= g.offLeft+1;
@@ -27,7 +27,7 @@ function getCursorXY(e)
 
 function getMouseDown(e) 
 {
-  if (!e) var e = event;
+  if (!e) e = event;
   g.startX   = e.clientX;
   g.startY   = e.clientY;
   g.startX  -= g.offLeft+1;
@@ -50,7 +50,7 @@ function getMouseUp(e)
 
 function getKeyPress(e)
 {
-  if (!e) var e = event;
+  if (!e) e = event;
   g.keyPress = e.charCode;
 }
 
@@ -129,7 +129,7 @@ function wvUpdateUI()
       }
 
     if (g.keyPress ==  99)      // 'c' -- color state
-      if (g.active != undefined) 
+      if (g.active !== undefined) 
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.SHADING;
         g.sceneUpd = 1;
@@ -143,7 +143,7 @@ function wvUpdateUI()
     }
         
     if (g.keyPress == 108)      // 'l' -- line state
-      if (g.active != undefined)
+      if (g.active !== undefined)
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.LINES;
         g.sceneUpd = 1;
@@ -153,7 +153,7 @@ function wvUpdateUI()
     {
       for (var gprim in g.sceneGraph)
       {
-        if (g.active == undefined)
+        if (g.active === undefined)
         {
           g.active = gprim;
           break;
@@ -163,31 +163,31 @@ function wvUpdateUI()
     }
 
     if (g.keyPress == 111)      // 'o' -- orientation state
-      if (g.active != undefined)
+      if (g.active !== undefined)
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.ORIENTATION;
         g.sceneUpd = 1;
       }
         
     if (g.keyPress == 112)      // 'p' -- point state
-      if (g.active != undefined)
+      if (g.active !== undefined)
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.POINTS;
         g.sceneUpd = 1;
       }
 
     if (g.keyPress == 114)      // 'r' -- render state
-      if (g.active != undefined)
+      if (g.active !== undefined)
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.ON;
         g.sceneUpd = 1;
       }
 
     if (g.keyPress == 115)      // 's' -- set active to picked
-      if (g.picked != undefined) g.active = g.picked.gprim;
+      if (g.picked !== undefined) g.active = g.picked.gprim;
 
     if (g.keyPress == 116)      // 't' -- transparent state
-      if (g.active != undefined)
+      if (g.active !== undefined)
       {
         g.sceneGraph[g.active].attrs ^= g.plotAttrs.TRANSPARENT;
         g.sceneUpd = 1;
@@ -209,7 +209,7 @@ function wvUpdateUI()
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
       var angleY = -(g.startX-g.cursorX)/4.0;
-      if ((angleX != 0.0) || (angleY != 0.0))
+      if ((angleX !== 0.0) || (angleY !== 0.0))
       {
         g.mvMatrix.rotate(angleX, 1,0,0);
         g.mvMatrix.rotate(angleY, 0,1,0);
@@ -222,12 +222,12 @@ function wvUpdateUI()
     {
       var xf = g.startX - g.width/2;
       var yf = g.startY - g.height/2;
-      if ((xf != 0.0) || (yf != 0.0)) 
+      if ((xf !== 0.0) || (yf !== 0.0)) 
       {
         var theta1 = Math.atan2(yf, xf);
         xf = g.cursorX - g.width/2;
         yf = g.cursorY - g.height/2;
-        if ((xf != 0.0) || (yf != 0.0)) 
+        if ((xf !== 0.0) || (yf !== 0.0)) 
         {
           var dtheta = Math.atan2(yf, xf)-theta1;
           if (Math.abs(dtheta) < 1.5708)
@@ -253,11 +253,11 @@ function wvUpdateUI()
     }
     
     // no modifier
-    if (g.modifier == 0)
+    if (g.modifier === 0)
     {
       var transX = (g.cursorX-g.startX)/256.0;
       var transY = (g.cursorY-g.startY)/256.0;
-      if ((transX != 0.0) || (transY != 0.0))
+      if ((transX !== 0.0) || (transY !== 0.0))
       {
         g.mvMatrix.translate(transX, transY, 0.0);
         g.sceneUpd = 1;
@@ -288,6 +288,9 @@ function wvServerMessage(text)
 function reshape(gl)
 {
   var canvas = document.getElementById('WebViewer');
+  if (canvas === null) {
+    return;
+  }
   if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft)
   {
     g.offTop  = canvas.offsetTop;
@@ -357,20 +360,24 @@ function jack(gl, x,y,z, delta)
 
 StatusLine = function(id)
 {
+    this.id = id;
     this.numFramerates = 10;
     this.framerateUpdateInterval = 500;
-    this.id = id;
 
     this.renderTime = -1;
     this.framerates = [ ];
-    self = this;
-    var fr = function() { self.updateFramerate() }
+    var self = this;
+    var fr = function() { self.updateFramerate(); };
     setInterval(fr, this.framerateUpdateInterval);
-}
+};
 
 
 StatusLine.prototype.updateFramerate = function()
 {
+    var sline = document.getElementById(this.id);
+    if (sline === null) {
+      return;
+    }
     var tot = 0;
     for (var i = 0; i < this.framerates.length; ++i)
         tot += this.framerates[i];
@@ -378,17 +385,17 @@ StatusLine.prototype.updateFramerate = function()
     var framerate = tot / this.framerates.length;
     framerate = Math.round(framerate);
     var string = "Framerate:"+framerate+"fps";
-    if (g.picked != undefined) 
+    if (g.picked !== undefined) 
       string = string+"&nbsp; &nbsp; &nbsp; Picked: "+g.picked.gprim+
                       "  strip = "+g.picked.strip+"  type = "+g.picked.type;
-    if (g.active != undefined) 
+    if (g.active !== undefined) 
       string = string+"&nbsp; &nbsp; &nbsp; Active: "+g.active;
-    if (g.located != undefined)
+    if (g.located !== undefined)
       string = string+"&nbsp; &nbsp; &nbsp; ("+g.located[0]+", &nbsp; "+
                       g.located[1]+", &nbsp; "+g.located[2]+")";
               
-    document.getElementById(this.id).innerHTML = string
-}
+    sline.innerHTML = string;
+ };
 
 
 StatusLine.prototype.snapshot = function()
@@ -398,7 +405,7 @@ StatusLine.prototype.snapshot = function()
     else {
         var newTime = new Date().getTime();
         var t = newTime - this.renderTime;
-        if (t == 0)
+        if (t === 0)
             return;
         var framerate = 1000/t;
         this.framerates.push(framerate);
@@ -406,4 +413,4 @@ StatusLine.prototype.snapshot = function()
             this.framerates.shift();
         this.renderTime = newTime;
     }
-}
+};
