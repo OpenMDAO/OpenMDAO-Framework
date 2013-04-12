@@ -13,8 +13,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, release
 from pageobjects.util import ArgsPrompt, NotifierPage
-from pageobjects.component.ComponentPage import Version, SortOrder
-
+from pageobjects.component import ComponentPage
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -815,6 +814,9 @@ def _test_io_filter_with_vartree(browser):
     closeout(project_dict, workspace_page)
 
 def _test_column_sorting(browser):
+    Version = ComponentPage.Version
+    SortOrder = ComponentPage.SortOrder
+
     project_dict, workspace_page = startup(browser)
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -827,22 +829,26 @@ def _test_column_sorting(browser):
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
     editor = comp.editor_page(version=Version.NEW)
 
-    editor.get_variable(" cont_in").click()
-    editor.get_variable(" vt2").click()
-    editor.get_variable(" vt3").click()
+    editor.get_input(" cont_in").name.click()
+    editor.get_input(" vt2").name.click()
+    editor.get_input(" vt3").name.click()
     
+    editor.get_output(" cont_out").name.click()
+    editor.get_output(" vt2").name.click()
+    editor.get_output(" vt3").name.click()
+
     def test_sorting(expected, grid, sort_order):
         names = None
         variables = None
 
-        if(grid="inputs"):
+        if(grid=="inputs"):
             editor.show_inputs()
-            editor.sort_inputs_column("name", sort_order)
+            editor.sort_inputs_column("Name", sort_order)
             variables = editor.get_inputs()
 
         else:
             editor.show_outputs()
-            editor.sort_outputs_column("name")
+            editor.sort_outputs_column("Name", sort_order)
             variables = editor.get_outputs()
             
         
@@ -861,7 +867,7 @@ def _test_column_sorting(browser):
         )
 
     test_sorting( \
-        ["force_execute", "director", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
         )

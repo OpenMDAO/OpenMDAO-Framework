@@ -60,8 +60,7 @@ class ComponentPage(DialogPage):
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
         self.version = version
-        self._sort_order = 0
-        self._toggle_state = 0
+        self._sort_order = {"inputs" : 0, "outputs" : 0}
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -98,30 +97,31 @@ class ComponentPage(DialogPage):
     def clear_outputs_filter(self):
         self.outputs_filter = ""
 
-    def _sort_column(self, grid, column_name, sort_order):
+    def _sort_column(self, grid, column_name, sort_order, tab):
         """ Sorts the variables in column `column_name`"""
-        header = [header for header in grid.headers if header == column_name]
+        header = [header for header in grid.headers if header.value == column_name]
         if(not header):
             raise Exception("Grid has no column named %s" % column_name)
 
-        if(sort_order==SortOrder.ASCENDING):
-            while(self._sort_order % 2 == 0):
-                self._sort_order = self._sort_order + 1
+        header = header[0]
+        if(sort_order==self.SortOrder.ASCENDING):
+            while( (self._sort_order[tab] % 2) == 0):
+                self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
         else:
-            while(self._sort_order % 2 != 0):
-                self._sort_order = self._sort_order + 1
+            while( (self._sort_order[tab] % 2) != 0):
+                self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
 
     def sort_inputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
         """ Sort `column_name` in inputs grid in `sort_order` """
         self("inputs_tab").click()
-        self._sort_column(self.inputs, column_name, sort_order)
+        self._sort_column(self.inputs, column_name, sort_order, "inputs")
 
     def sort_outputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
         """ Sort `column_name` in outputs grid in `sort_order` """
         self("outputs_tab").click()
-        self._sort_column(self.outputs, column_name, sort_order)
+        self._sort_column(self.outputs, column_name, sort_order, "outputs")
 
     def get_events(self):
         """ Return events grid. """
