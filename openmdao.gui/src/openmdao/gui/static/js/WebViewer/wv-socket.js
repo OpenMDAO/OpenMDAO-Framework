@@ -133,6 +133,7 @@ function wvUpdateScene(gl)
   if (g.messageQ.length === 0) return;
   //console.debug("  messageQ.length = "+g.messageQ.length.toString());
   g.sceneUpd    = 1;
+  var uint8nam, name, gtype, next, size, numBytes, vflags, data;
   var message   = g.messageQ[g.messageQ.length-1];
   var uint8View = new Uint8Array(message);
   var byteLen   = message.byteLength;
@@ -180,12 +181,12 @@ function wvUpdateScene(gl)
             // new gPrim
             g.sgUpdate   = 1;
             nameLen  = int32View[1] & 0xFFFF;
-            var gtype    = int32View[1] >> 24;
-            var uint8nam = new Uint8Array(message, start+8, nameLen);
-            var name     = convert2string(uint8nam);
-            var next     = nameLen/4 + 2;
-            var numBytes = nameLen + 12;
-            var size     = 4;
+            gtype    = int32View[1] >> 24;
+            uint8nam = new Uint8Array(message, start+8, nameLen);
+            name     = convert2string(uint8nam);
+            next     = nameLen/4 + 2;
+            numBytes = nameLen + 12;
+            size     = 4;
             if (gtype == 1) size = 14;
             if (gtype == 2) size = 17;
             var float32  = new Float32Array(message, start+numBytes, size);
@@ -237,8 +238,8 @@ function wvUpdateScene(gl)
             }
             else
             {
-              var uint8nam = new Uint8Array(message, start+8, nameLen);
-              var name     = convert2string(uint8nam);
+              uint8nam = new Uint8Array(message, start+8, nameLen);
+              name     = convert2string(uint8nam);
               deleteGPrim(gl, name);
               // remove the graphics primitive from the scene graph
               delete g.sceneGraph[name];
@@ -249,16 +250,13 @@ function wvUpdateScene(gl)
           case 3:
             // new VBO Data
             nameLen  =  int32View[1] & 0xFFFF;
-            var gtype    =  int32View[1] >> 24;
-            var vflags   = (int32View[1] >> 16) & 0xFF;
-            var uint8nam = new Uint8Array(message, start+8, nameLen);
-            var name     = convert2string(uint8nam);
-            var vertices = undefined;
-            var colors   = undefined;
-            var indices  = undefined;
-            var normals  = undefined;
-            var size     = 0;
-            var numBytes = nameLen + 8;
+            gtype    =  int32View[1] >> 24;
+            vflags   = (int32View[1] >> 16) & 0xFF;
+            uint8nam = new Uint8Array(message, start+8, nameLen);
+            name     = convert2string(uint8nam);
+            var vertices, colors, indices, normals;
+            size     = 0;
+            numBytes = nameLen + 8;
             if ((vflags&1) !== 0)
             {
               size     = int32View[numBytes/4];
@@ -296,38 +294,38 @@ function wvUpdateScene(gl)
           case 4:
             // VBO update (only one at a time)
             nameLen  =  int32View[1] & 0xFFFF;
-            var gtype    =  int32View[1] >> 24;
-            var vflags   = (int32View[1] >> 16) & 0xFF;
-            var uint8nam = new Uint8Array(message, start+8, nameLen);
-            var name     = convert2string(uint8nam);
+            gtype    =  int32View[1] >> 24;
+            vflags   = (int32View[1] >> 16) & 0xFF;
+            uint8nam = new Uint8Array(message, start+8, nameLen);
+            name     = convert2string(uint8nam);
             var vtype    = 0;
             if ((vflags&2) !== 0) vtype = 1;
             if ((vflags&4) !== 0) vtype = 2;
             if ((vflags&8) !== 0) vtype = 3;
-            var next = nameLen/4 + 2;
-            var size = int32View[next];
+            next = nameLen/4 + 2;
+            size = int32View[next];
             log("     gPrim = "+name+"  vflags = " + vflags + "  gtype = " + 
                 gtype + "  size = " + size);
             switch (vtype) {
               case 0:
-                var data = new Float32Array(message, start+nameLen+12, size);
+                data = new Float32Array(message, start+nameLen+12, size);
                 editGPrim(gl, name, stripe, gtype, 0, data);
                 size *= 4;
                 break;
               case 1:
-                var data = new Uint16Array(message, start+nameLen+12, size);
+                data = new Uint16Array(message, start+nameLen+12, size);
                 editGPrim(gl, name, stripe, gtype, 1, data);
                 var oldSize = size;
                 size *= 2;
                 if ((oldSize%2) !== 0) size += 2;
                 break;
               case 2:
-                var data = new Uint8Array(message, start+nameLen+12, size);
+                data = new Uint8Array(message, start+nameLen+12, size);
                 editGPrim(gl, name, stripe, gtype, 2, data);
                 if ((size%4) !== 0) size += 4 - size%4;
                 break;
               case 3:
-                var data = new Float32Array(message, start+nameLen+12, size);
+                data = new Float32Array(message, start+nameLen+12, size);
                 editGPrim(gl, name, stripe, gtype, 3, data);
                 size *= 4;
                 break;
@@ -338,9 +336,9 @@ function wvUpdateScene(gl)
           case 5:
             // Complete Update (same as 1 and 2) -- num of stripes must be the same
             nameLen  = int32View[1] & 0xFFFF;
-            var uint8nam = new Uint8Array(message, start+8, nameLen);
-            var name     = convert2string(uint8nam);
-            var next     = nameLen/4 + 2;
+            uint8nam = new Uint8Array(message, start+8, nameLen);
+            name     = convert2string(uint8nam);
+            next     = nameLen/4 + 2;
             if (g.sceneGraph[name] !== undefined)
             {
               deleteGPrim(gl, name);
@@ -352,9 +350,9 @@ function wvUpdateScene(gl)
           case 6:
             // complete stripe delete
             nameLen  = int32View[1] & 0xFFFF;
-            var gtype    = int32View[1] >> 24;
-            var uint8nam = new Uint8Array(message, start+8, nameLen);
-            var name     = convert2string(uint8nam);
+            gtype    = int32View[1] >> 24;
+            uint8nam = new Uint8Array(message, start+8, nameLen);
+            name     = convert2string(uint8nam);
             deleteStripe(gl, name, stripe, gtype);
 
             start += 8 + nameLen;

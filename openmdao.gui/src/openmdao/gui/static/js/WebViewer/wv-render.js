@@ -24,7 +24,7 @@ function logger(msg)
 // A debug-based console function is added to the context: log(msg).
 function log(msg) 
 {
-    if (g.debug != 0) logger(msg);
+    if (g.debug !== 0) logger(msg);
 }
 
 
@@ -46,7 +46,7 @@ function checkGLError(gl, source) {
 var BrowserDetect = {
 	init: function () {
 		this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
-		this.version = this.searchVersion(navigator.userAgent)
+		this.version = this.searchVersion(navigator.userAgent) 
                    || this.searchVersion(navigator.appVersion)
                    || "an unknown version";
 		this.OS = this.searchString(this.dataOS) || "an unknown OS";
