@@ -109,6 +109,7 @@ function getSockets(wsURLp, fname)
 }
 
 
+/*
 //
 // Convert an Array Buffer to a String
 function convert2string(array)
@@ -123,7 +124,7 @@ function convert2string(array)
 
   return string;
 }
-
+*/
 
 //
 // Use WebSockets to determine if the sceneGraph needs updating
@@ -183,7 +184,7 @@ function wvUpdateScene(gl)
             nameLen  = int32View[1] & 0xFFFF;
             gtype    = int32View[1] >> 24;
             uint8nam = new Uint8Array(message, start+8, nameLen);
-            name     = convert2string(uint8nam);
+            name     = String.fromCharCode.apply(null, uint8nam);  //convert2string(uint8nam);
             next     = nameLen/4 + 2;
             numBytes = nameLen + 12;
             size     = 4;
@@ -239,7 +240,7 @@ function wvUpdateScene(gl)
             else
             {
               uint8nam = new Uint8Array(message, start+8, nameLen);
-              name     = convert2string(uint8nam);
+              name     = String.fromCharCode.apply(null, uint8nam); // convert2string(uint8nam);
               deleteGPrim(gl, name);
               // remove the graphics primitive from the scene graph
               delete g.sceneGraph[name];
@@ -253,7 +254,7 @@ function wvUpdateScene(gl)
             gtype    =  int32View[1] >> 24;
             vflags   = (int32View[1] >> 16) & 0xFF;
             uint8nam = new Uint8Array(message, start+8, nameLen);
-            name     = convert2string(uint8nam);
+            name     = String.fromCharCode.apply(null, uint8nam); // convert2string(uint8nam);
             var vertices, colors, indices, normals;
             size     = 0;
             numBytes = nameLen + 8;
@@ -297,7 +298,7 @@ function wvUpdateScene(gl)
             gtype    =  int32View[1] >> 24;
             vflags   = (int32View[1] >> 16) & 0xFF;
             uint8nam = new Uint8Array(message, start+8, nameLen);
-            name     = convert2string(uint8nam);
+            name     = String.fromCharCode.apply(null, uint8nam); // convert2string(uint8nam);
             var vtype    = 0;
             if ((vflags&2) !== 0) vtype = 1;
             if ((vflags&4) !== 0) vtype = 2;
@@ -337,7 +338,7 @@ function wvUpdateScene(gl)
             // Complete Update (same as 1 and 2) -- num of stripes must be the same
             nameLen  = int32View[1] & 0xFFFF;
             uint8nam = new Uint8Array(message, start+8, nameLen);
-            name     = convert2string(uint8nam);
+            name     = String.fromCharCode.apply(null, uint8nam); // convert2string(uint8nam);
             next     = nameLen/4 + 2;
             if (g.sceneGraph[name] !== undefined)
             {
@@ -352,7 +353,7 @@ function wvUpdateScene(gl)
             nameLen  = int32View[1] & 0xFFFF;
             gtype    = int32View[1] >> 24;
             uint8nam = new Uint8Array(message, start+8, nameLen);
-            name     = convert2string(uint8nam);
+            name     = String.fromCharCode.apply(null, uint8nam); // convert2string(uint8nam);
             deleteStripe(gl, name, stripe, gtype);
 
             start += 8 + nameLen;
