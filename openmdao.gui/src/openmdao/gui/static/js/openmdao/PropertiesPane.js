@@ -37,30 +37,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             { id:"info",  name:"",            field:"info",   width:30,  formatter:InfoFormatter },
             { id:"name",  name:"Name",        field:"name",   width:100, formatter:VarTableFormatter, sortable:true },
-            { id:"type",  name: "Type",       field:"type",   width:30                                              },
             { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
-            { id:"hi",    name: "High",       field:"high",   width:30                                              },
-            { id:"low",   name: "Low",        field:"low",    width:30                                              },
             { id:"units", name:"Units",       field:"units",  width:60   },
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
         
-        if(!("preferences" in openmdao)){
-            openmdao.preferences = {};
-        }
-        
-        if(!("columns" in openmdao.preferences)){
-            openmdao.preferences.columns = {
-                info : true,
-                name : true,
-                type : false,
-                value : true,
-                hi : false,
-                low : false,
-                units : true,
-                desc : true,
-            };
-        }
     }
 
     elm.append(propsDiv);
@@ -263,7 +244,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-        columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
         if(meta){
         
             // Sorting for the first column
