@@ -42,6 +42,7 @@ class ComponentPage(DialogPage):
    
     Version = type('Enum', (), {"OLD":1, "NEW":2})
     As = type('Enum', (), {"GRID":0, "ROW":1, "VARIABLE":2})
+    SortOrder = type('Enum', (), {"ASCENDING" : 0, "DESCENDING" : 1})
 
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
@@ -59,6 +60,8 @@ class ComponentPage(DialogPage):
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
         self.version = version
+        self._sort_order = 0
+        self._toggle_state = 0
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -94,6 +97,31 @@ class ComponentPage(DialogPage):
     #This does not work. May have to send backspaces to clear filter
     def clear_outputs_filter(self):
         self.outputs_filter = ""
+
+    def _sort_column(self, grid, column_name, sort_order):
+        """ Sorts the variables in column `column_name`"""
+        header = [header for header in grid.headers if header == column_name]
+        if(not header):
+            raise Exception("Grid has no column named %s" % column_name)
+
+        if(sort_order==SortOrder.ASCENDING):
+            while(self._sort_order % 2 == 0):
+                self._sort_order = self._sort_order + 1
+                header.click()
+        else:
+            while(self._sort_order % 2 != 0):
+                self._sort_order = self._sort_order + 1
+                header.click()
+
+    def sort_inputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
+        """ Sort `column_name` in inputs grid in `sort_order` """
+        self("inputs_tab").click()
+        self._sort_column(self.inputs, column_name, sort_order)
+
+    def sort_outputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
+        """ Sort `column_name` in outputs grid in `sort_order` """
+        self("outputs_tab").click()
+        self._sort_column(self.outputs, column_name, sort_order)
 
     def get_events(self):
         """ Return events grid. """
