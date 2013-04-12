@@ -7,7 +7,6 @@ from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.interfaces import IVariable
 from openmdao.main.container import Container
-from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.str import Str
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
@@ -24,18 +23,19 @@ class VariableTree(Container):
         self.on_trait_change(self._iotype_modified, '_iotype')
 
         # Wrap subtrees in VarTree (similar to Slot).
+        # Avoids an import loop.
+        from openmdao.main.datatypes.vtree import VarTree
         for name, obj in self.__class__.__dict__.items():
             if name not in self.class_traits():
                 if isinstance(obj, VariableTree):
-                    # Avoids an import loop.
-                    from openmdao.main.datatypes.vtree import VarTree
+                    raise NotImplementedError('VariableTree as class attribute')
                     new_obj = obj.copy()  # Otherwise we share the default value
                     new_obj.install_callbacks()
+                    new_obj.name = name
                     trait = VarTree(new_obj)
 
                     self._added_traits[name] = trait
                     super(Container, self).add_trait(name, trait)
-#                    setattr(self, name, obj)
                     if self._cached_traits_ is None:
                         self.get_trait(name)
                     else:
@@ -43,6 +43,9 @@ class VariableTree(Container):
 
                     if not name.startswith('_'):
                         self.on_trait_change(self._trait_modified, name)
+
+                elif isinstance(obj, VarTree):
+                    raise NotImplementedError('VarTree as class attribute')
 
         # register callbacks for our class traits
         for name, trait in self.class_traits().items():
@@ -93,11 +96,19 @@ class VariableTree(Container):
             if isinstance(obj, VariableTree) and obj is not self.parent:
                 obj.install_callbacks()
 
+        for name, trait in self.__class__.__dict__['__class_traits__'].items():
+            if name not in ('trait_added', 'trait_modified'):
+                if not hasattr(self, name):
+#                    print self.__class__.__name__, hex(id(self)), 'install_callbacks skipping', name
+                    continue
+                self.on_trait_change(self._trait_modified, name)
+                obj = getattr(self, name)
+                if isinstance(obj, VariableTree) and obj is not self.parent:
+                    obj.install_callbacks()
+
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:
-#Slot
-#                self.add_trait(name, Slot(obj.__class__, iotype=obj._iotype))
                 from openmdao.main.datatypes.vtree import VarTree
                 self.add_trait(name, VarTree(obj.__class__, iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)

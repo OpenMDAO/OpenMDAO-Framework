@@ -12,8 +12,7 @@ class OutputTree(VariableTree):
     pass
 
 class TestComponent(Component):
-
-    input = VarTree(InputTree, iotype='in')
+    input = VarTree(InputTree(), iotype='in')
     output = VarTree(OutputTree(iotype='out'))
 
 
@@ -21,8 +20,6 @@ class TestCase(unittest.TestCase):
 
     def test_basic(self):
         comp = TestComponent()
-        comp.input = InputTree()
-        comp.output = OutputTree()
 
         code = "VarTree(OutputTree)"
         msg = "default_value is a class and no iotype specified"

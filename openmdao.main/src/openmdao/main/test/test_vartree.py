@@ -23,32 +23,20 @@ class DumbVT2(VariableTree):
     x = Float(-1.)
     y = Float(-2.)
     data = File()
-    vt3 = DumbVT3()
+    vt3 = VarTree(DumbVT3())
 
 
 class DumbVT(VariableTree):
 
-#    vt2 = DumbVT2()
-#    v1 = Float(1., desc='vv1')
-#    v2 = Float(2., desc='vv2')
-#    data = File()
-
-    def __init__(self):
-        super(DumbVT, self).__init__()
-        self.add('vt2', DumbVT2())
-        self.add('v1', Float(1., desc='vv1'))
-        self.add('v2', Float(2., desc='vv2'))
-        self.add('data', File())
+    vt2 = VarTree(DumbVT2())
+    v1 = Float(1., desc='vv1')
+    v2 = Float(2., desc='vv2')
+    data = File()
 
 
 class SimpleComp(Component):
-    cont_in = Slot(DumbVT, iotype='in')
-    cont_out = Slot(DumbVT, iotype='out')
-
-    def __init__(self):
-        super(SimpleComp, self).__init__()
-        self.add('cont_in', DumbVT())
-        self.add('cont_out', DumbVT())
+    cont_in = VarTree(DumbVT(), iotype='in')
+    cont_out = VarTree(DumbVT(), iotype='out')
 
     def execute(self):
         self.cont_out.v1 = self.cont_in.v1 + 1.0

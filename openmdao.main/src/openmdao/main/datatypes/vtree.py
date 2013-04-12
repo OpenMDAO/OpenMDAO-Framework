@@ -31,7 +31,6 @@ class VarTree(Variable):
                 if 'iotype' not in metadata:
                     raise ValueError('default_value is a class and no iotype'
                                      ' specified')
-#                default_value = klass()
             else:
                 raise TypeError('default_value must be a VariableTree instance'
                                 ' or subclass')

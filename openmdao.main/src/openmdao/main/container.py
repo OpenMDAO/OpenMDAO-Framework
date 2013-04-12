@@ -29,7 +29,7 @@ from enthought.traits.api import HasTraits, Missing, Python, \
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none, not_event
+from enthought.traits.trait_base import not_none
 
 from multiprocessing import connection
 
@@ -192,6 +192,20 @@ class Container(SafeHasTraits):
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
 
+        # Similarly, create per-instance VariableTrees for VarTree traits.
+        from openmdao.main.datatypes.vtree import VarTree
+        for name, obj in self.__class__.__dict__['__class_traits__'].items():
+            ttype = obj.trait_type
+            if isinstance(ttype, VarTree):
+                variable_tree = getattr(self, name)
+                variable_tree._parent = None
+                try:
+                    new_tree = variable_tree.copy()
+                finally:
+                    variable_tree._parent = self
+                setattr(self, name, new_tree)
+                new_tree.install_callbacks()
+
     @property
     def parent(self):
         """The parent Container of this Container."""
@@ -280,7 +294,7 @@ class Container(SafeHasTraits):
             self._depgraph.check_connect(srcpath, destpath)
         
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[',1)[0]):
+                if not self.contains(destpath.split('[', 1)[0]):
                     self.raise_exception("Can't find '%s'" % destpath, AttributeError)
                 parts = destpath.split('.')
                 for i in range(len(parts)):
@@ -330,7 +344,7 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        destvar = destpath.split('[',1)[0]
+        destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
         if not srcexpr.refs_parent():
             srcvar = srcexpr.get_referenced_varpaths().pop()
@@ -418,7 +432,8 @@ class Container(SafeHasTraits):
                         result.add_trait(name, _clone_trait(trait))
                 else:
                     result.add_trait(name, _clone_trait(trait))
-                result.__dict__[name] = self.__dict__[name]
+                if name in self.__dict__:  # Not true with VarTree
+                    result.__dict__[name] = self.__dict__[name]
 
         return result
 
@@ -985,7 +1000,7 @@ class Container(SafeHasTraits):
         else:
             # TODO: fix this...
             if '[' in path:
-                path,idx = path.replace(']','').split('[')
+                path,idx = path.replace(']', '').split('[')
                 if path and idx.isdigit():
                     obj = getattr(self, path, Missing)[int(idx)]
                 else:
