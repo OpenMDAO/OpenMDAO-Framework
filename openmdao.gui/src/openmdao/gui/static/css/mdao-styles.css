@@ -270,6 +270,11 @@ nav ul ul a.omg-disabled:hover {
     color:rgba(0,0,0,255);
 }
 
+.framework_var {
+    background:rgba(204,204,204,255);
+    color:rgba(0,0,0,255);
+}
+
 .parameter {
     color:rgba(100,180,255,255);
 }
