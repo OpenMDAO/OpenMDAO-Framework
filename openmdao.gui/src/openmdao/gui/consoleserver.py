@@ -249,7 +249,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         try:
             self.proj.command("execfile('%s', '%s')" %
-                                 (filename, file_md5(filename)))
+                              (filename, file_md5(filename)))
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -678,8 +678,10 @@ class ConsoleServer(cmd.Cmd):
             this_id = this_variable["id"]
             this_path = compname + '.' + this_id
             tree_d = {"data": name}
-            tree_d["attr"] = {"id": this_id,
-                               "path": this_path}
+            tree_d["attr"] = {
+                "id": this_id,
+                "path": this_path
+            }
             tree_d["children"] = []
 
             if this_path in existing_passthroughs:
@@ -753,6 +755,9 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, projdir):
+        ''' activate the project in the specified directory,
+            instantiate a file manager and projdirfactory
+        '''
         _clear_insts()
         self.cleanup()
 

@@ -28,6 +28,7 @@ def _test_drop_on_driver(browser):
     project_dict, workspace_page = startup(browser)
 
     # replace the 'top' assembly driver with a CONMINdriver
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace_driver('top', 'CONMINdriver')
 
     # Check to see that the content area for the driver is now CONMINdriver
@@ -41,9 +42,10 @@ def _test_drop_on_driver(browser):
 def _test_workspace_dragdrop(browser):
     project_dict, workspace_page = startup(browser)
 
-    #find and get the 'assembly', and 'top' objects
-    assembly = workspace_page.find_library_button('Assembly')
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('top')
+
+    assembly = workspace_page.find_library_button('Assembly')
 
     names = []
     for div in top.get_drop_targets():
@@ -126,10 +128,12 @@ def _test_drop_on_existing_assembly(browser):
 def _test_drop_on_component_editor(browser):
     project_dict, workspace_page = startup(browser)
 
-    #find and get the 'assembly', and 'top' objects
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    top = workspace_page.get_dataflow_figure('top', '')
+
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
-    top = workspace_page.get_dataflow_figure('top', '')
+
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
@@ -178,11 +182,13 @@ def _test_drop_on_component_editor(browser):
 
 def _test_drop_on_component_editor_grid(browser):
     project_dict, workspace_page = startup(browser)
-    #find and get the 'assembly', and 'top' objects
+
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    top = workspace_page.get_dataflow_figure('top', '')
+
     workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
 
-    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
@@ -266,6 +272,7 @@ def _test_list_slot(browser):
 
     # replace the 'top' assembly driver with a DOEdriver
     # (this additionally verifies that an issue with DOEdriver slots is fixed)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace_driver('top', 'DOEdriver')
 
     # open the object editor dialog for the driver
@@ -406,9 +413,6 @@ def _test_slot_subclass(browser):
     # test that a slot will accept subclasses
     project_dict, workspace_page = startup(browser)
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/slot_test.py')
     workspace_page.add_file(file_path)
@@ -420,7 +424,7 @@ def _test_slot_subclass(browser):
 
     inputs = editor.get_inputs()
     expected = [
-        ['', 'directory',           '', '', 'If non-blank, the directory to execute in.' ],
+        ['', 'directory',           '', '', 'If non-blank, the directory to execute in.'],
         ['', 'force_execute',  'False', '', 'If True, always execute even if all IO traits are valid.'],
         ['', 'input',              '0', '', ''],
     ]
@@ -437,7 +441,7 @@ def _test_slot_subclass(browser):
         ['', 'derivative_exec_count',  '0', '', "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count',             '1', '', 'Number of times this Component has been executed.'],
         ['', 'itername',                '', '', 'Iteration coordinates.'],
-        ['', 'output',                '80', '', '' ],
+        ['', 'output',                '80', '', ''],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -456,7 +460,7 @@ def _test_slot_subclass(browser):
         ['', 'derivative_exec_count',    '0', '', "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count',               '2', '', 'Number of times this Component has been executed.'],
         ['', 'itername',                  '', '', 'Iteration coordinates.'],
-        ['', 'output',                 '160', '', '' ],
+        ['', 'output',                 '160', '', ''],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])

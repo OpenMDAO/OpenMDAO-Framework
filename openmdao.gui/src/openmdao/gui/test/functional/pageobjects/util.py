@@ -62,6 +62,14 @@ class ArgsPrompt(BasePageObject):
         arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
         arg_inputs[index].send_keys(text)
 
+    def argument_count(self):
+        table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        if table:
+            arg_inputs = table[0].find_elements(By.XPATH, 'tbody/tr/td/input')
+            return len(arg_inputs)
+        else:
+            return 0
+
     def click_ok(self):
         self('ok_button').click()
 

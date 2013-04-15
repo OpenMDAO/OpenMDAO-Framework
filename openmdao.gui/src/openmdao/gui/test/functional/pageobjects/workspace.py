@@ -562,10 +562,12 @@ class WorkspacePage(BasePageObject):
                 break
 
         page = ArgsPrompt(self.browser, self.port)
+        argc = page.argument_count()
         page.set_name(instance_name)
-        if args is not None:
-            for i, arg in enumerate(args):
-                page.set_argument(i, arg)
+        if argc > 0:
+            if args is not None:
+                for i, arg in enumerate(args):
+                    page.set_argument(i, arg)
             page.click_ok()
 
         # Check that the prompt is gone so we can distinguish a prompt problem
