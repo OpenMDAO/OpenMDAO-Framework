@@ -62,7 +62,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
             refreshing = d.inst.data.core.refreshing;
 
         if ((tagName == "A" || tagName == "INS") &&
-            (refreshing !== true && refreshing != "undefined")) {
+            (refreshing !== true && refreshing !== "undefined")) {
 
             var cobj = jQuery(d.rslt[0]),
                 this_path = cobj.attr("path"),
@@ -103,9 +103,6 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                 }
              }
         });
-        // .on('loaded.jstree', function() {
-        //     tree_div.jstree('open_all');
-        // });
 
         tree_div.bind("change_state.jstree", handleCbClick);
     }

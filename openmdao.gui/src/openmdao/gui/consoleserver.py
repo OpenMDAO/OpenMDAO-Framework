@@ -708,21 +708,31 @@ class ConsoleServer(cmd.Cmd):
     def get_all_attributes(self, pathname):
         asm, root = self.get_container(pathname)
         input_tree, output_tree = [], []
+
         top_level = asm.get_attributes(io_only=False)
         top_names = [var["name"] for var in top_level['Inputs'] + top_level['Outputs']]
         inputs_passthroughs = self._get_existing_passthroughs(top_level['Inputs'])
         output_passthroughs = self._get_existing_passthroughs(top_level['Outputs'])
+
         for compname in asm.list_components():
             comp_id = compname
-            input_comp = {"data": compname}
-            input_comp["attr"] = {"id": comp_id,
-                                  "rel": "disabled"}
-            input_comp["children"] = []
+            input_comp = {
+                "data": compname,
+                "attr": {
+                    "id": comp_id,
+                    "rel": "disabled"
+                },
+                "children": []
+            }
 
-            output_comp = {"data": compname}
-            output_comp["attr"] = {"id": comp_id,
-                                   "rel": "disabled"}
-            output_comp["children"] = []
+            output_comp = {
+                "data": compname,
+                "attr": {
+                    "id": comp_id,
+                    "rel": "disabled"
+                },
+                "children": []
+            }
 
             comp, root = self.get_container(pathname + '.' + compname)
             if comp:
@@ -740,6 +750,21 @@ class ConsoleServer(cmd.Cmd):
 
         return jsonpickle.encode({"top": top_level, "inputs": input_tree,
                                   "outputs": output_tree})
+
+    # def get_passthroughs(self, pathname):
+    #     ''' get the inputs and outputs of the assembly's child components
+    #         and indicate for each whether or not it is a passthrough variable
+    #     '''
+    #     asm, root = self.get_container(pathname)
+
+    #     top_level = asm.get_attributes(io_only=False)
+    #     inputs = [attr.name for attr in top_level['Inputs'] if 'target' in attr.keys()]
+    #     outputs = [attr.name for attr in top_level['Outputs'] if 'target' in attr.keys()]
+
+    #     return {
+    #         'inputs': inputs,
+    #         'outputs': outputs
+    #     }
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.

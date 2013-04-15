@@ -246,6 +246,7 @@ def _test_menu(browser):
     eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
     workspace_page('project_menu').click()
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
