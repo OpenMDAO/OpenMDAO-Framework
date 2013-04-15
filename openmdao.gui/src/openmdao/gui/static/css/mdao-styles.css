@@ -271,8 +271,9 @@ nav ul ul a.omg-disabled:hover {
 }
 
 .framework_var {
-    background:rgba(204,204,204,255);
-    color:rgba(0,0,0,255);
+    /*background:rgba(204,204,204,255);
+    color:rgba(0,0,0,255);*/
+    font-style:italic;
 }
 
 .parameter {
