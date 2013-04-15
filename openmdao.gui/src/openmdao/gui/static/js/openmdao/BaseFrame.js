@@ -103,7 +103,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             if (extra.length>0) {
                 extra_height += extra.outerHeight();
             }
-            extra = panel.find('.filterpanel');
+            extra = panel.find('#inlineFilter');
             if (extra.length>0) {
                 extra_height += extra.outerHeight();
             }
