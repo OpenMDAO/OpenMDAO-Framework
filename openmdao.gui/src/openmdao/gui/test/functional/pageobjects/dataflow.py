@@ -91,7 +91,7 @@ class DataflowFigure(BasePageObject):
         top = int(top[0:-2])  # Drop 'px'.
         return (left, top)
 
-    def editor_page(self, double_click=True, base_type='Component'):
+    def editor_page(self, double_click=True, base_type='Component', version=ComponentPage.Version.OLD):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
         if double_click:
@@ -105,7 +105,7 @@ class DataflowFigure(BasePageObject):
         elif base_type == 'Driver':
             return DriverPage(self.browser, self.port, (By.ID, editor_id))
         else:
-            return ComponentPage(self.browser, self.port, (By.ID, editor_id))
+            return ComponentPage(self.browser, self.port, (By.ID, editor_id), version=version)
 
     def properties_page(self):
         """ Return :class:`PropertiesPage` for this component. """

@@ -1,6 +1,8 @@
 import logging
 import time
 
+from functools import partial
+
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -31,6 +33,17 @@ class Grid(object):
         self._browser = browser
         self._root = root
         self._rows = None
+        self._headers = None
+
+    @property
+    def headers(self):
+        '''Grid contains a list of GridHeader objects.'''
+        if self._headers is None:
+            headers = self._root.find_elements(By.CLASS_NAME, 'slick-header-column')
+            self._headers = [GridHeader(self._browser, row)
+                                for i, row in enumerate(headers)]
+        
+        return self._headers
 
     @property
     def rows(self):
@@ -41,7 +54,7 @@ class Grid(object):
         if self._rows is None:
             rows = self._root.find_elements(By.CLASS_NAME, 'slick-row')
             rows_sort = sorted(rows, key=_row_sorter)
-            self._rows = [GridRow(self._browser, row, self._root, i)
+            self._rows = [GridRow(self._browser, row, self._root, i, self.headers)
                           for i, row in enumerate(rows_sort)]
         return self._rows
 
@@ -64,11 +77,27 @@ class Grid(object):
                     raise
         return item
 
+class GridHeader(object):
+    """ Represents a slickHeaderColumn at `root` """
+    #slick-header
+    # slick-header-columns
+    #  slick-header-column
+    #   slick-column-name
+    def __init__(self, browser, root):
+        self._browser = browser
+        self._root = root
+
+    @property
+    def value(self):
+        return self._root.find_element(By.CLASS_NAME, "slick-column-name").text
+
+    def click(self):
+        self._root.click()
 
 class GridRow(object):
     """ Represents a SlickRow at `root`. """
 
-    def __init__(self, browser, root, grid_root, row):
+    def __init__(self, browser, root, grid_root, row, headers):
         self._browser = browser
         self._root = root
         self._grid_root = grid_root
@@ -115,7 +144,7 @@ class GridRow(object):
         return self.cells[index].value
 
     def __setitem__(self, index, value):
-        self.cells[index].value = value
+            self.cells[index].value = value
 
 
 class GridCell(object):
@@ -124,6 +153,7 @@ class GridCell(object):
     def __init__(self, browser, root):
         self._browser = browser
         self._root = root
+
 
     @property
     def value(self):
@@ -135,6 +165,7 @@ class GridCell(object):
 
     @value.setter
     def value(self, value):
+        """ Sets the value of the cell. """
         chain = ActionChains(self._browser)
         chain.double_click(self._root).perform()
         element = self._root.find_elements(By.XPATH, 'input')[0]
@@ -146,6 +177,10 @@ class GridCell(object):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
         element.send_keys(value + Keys.RETURN)
+
+    @property
+    def editable(self):
+        return "cell-editable" in self._root.get_attribute("class")
 
     @property
     def color(self):
