@@ -22,27 +22,52 @@ openmdao.GeomFrame = function(id, model, pathname) {
     // initialize private variables
     var self = this,
         geometry = null,
-        contextMenu = jQuery('<ul id='+id+'-menu class="context-menu">');
+        contextMenu = jQuery('<ul id='+id+'-menu class="context-menu">'),
+        canvas_id = id+"-canvas",
+        status_id = id+"-status";
 
-    var html = ['<canvas id="WebViewer">',
+    var html = ['<canvas id='+canvas_id+'>',
                 '  If you are seeing this your web browser does not support the &lt;canvas>&gt; element. Ouch!',
                 '</canvas>',
-                '<div id="statusline"></div>'].join();
+                '<div id='+status_id+'></div>'].join();
 
     // replace old html
     self.elm.html(html);
 
-    self.canvas = document.getElementById('WebViewer');
+    g.id = id;
+    g.canvas = document.getElementById(id+"-canvas");
 
-    wvStart();  // FIXME
+    // set up extra storage for matrix-matrix multiplies
+    g.uiMatrix = new J3DIMatrix4();
+
+    // ui cursor variables
+    g.cursorX  = -1;    // current cursor position
+    g.cursorY  = -1;
+    g.keyPress = -1;    // last key pressed
+    g.startX   = -1;    // start of dragging position
+    g.startY   = -1;
+    g.button   = -1;    // button pressed
+    g.modifier =  0;    // modifier (shift,alt,cntl) bitflag
+    g.offTop   =  0;    // offset to upper-left corner of the canvas
+    g.offLeft  =  0;
+    g.dragging = false;
+  
+  //var canvas = document.getElementById("WebViewer");
+    g.canvas.addEventListener('mousemove',  getCursorXY,  false);
+    g.canvas.addEventListener('mousedown',  getMouseDown, false);
+    g.canvas.addEventListener('mouseup',    getMouseUp,   false);
+    document.addEventListener('keypress',   getKeyPress,  false);
+
+    g.statusline = new StatusLine(status_id);
+    wvStart(); 
 
     // set the connections pane height to dynamically fill the space between the
     // component and variable selectors
     function resize_contents() {
         var title_height = self.elm.find('ui-dialog-titlebar').outerHeight();
         var status_height = self.elm.find("#statusline").outerHeight();
-        self.canvas.height = self.elm.height()-title_height-status_height;
-        self.canvas.width = self.elm.width() - 20;
+        g.canvas.height = self.elm.height()-title_height-status_height;
+        g.canvas.width = self.elm.width() - 20;
     }
 
     // resize contents when told to do so (e.g. by BaseFrame when dialog is resized)

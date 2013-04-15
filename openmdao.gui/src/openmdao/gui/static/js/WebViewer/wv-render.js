@@ -165,12 +165,12 @@ var BrowserDetect = {
 // Initialize the Canvas element with the passed name as a WebGL object and 
 // return the WebGLRenderingContext.
 // Turn off anti-aliasing so that picking works at the fringe
-function initWebGL(canvasName)
+/*function initWebGL(canvasName)
 {
     var canvas = document.getElementById(canvasName);
     return WebGLUtils.setupWebGL(canvas, { antialias: false });
 }
-
+*/
 
 //
 // Load this shader and return the WebGLShader object.
@@ -290,7 +290,7 @@ function wvInit()
   g.sceneGraph = {};
 
   // initialize WebGL with the id of the Canvas Element
-  var gl = initWebGL("WebViewer");
+  var gl = WebGLUtils.setupWebGL(g.canvas, { antialias: false });
   if (!gl) return;
 
   //
@@ -487,7 +487,7 @@ function wvInit()
 //
 function wvStart()
 {
-  var c = document.getElementById("WebViewer");
+  var c = g.canvas; //document.getElementById("WebViewer");
   c.addEventListener('webglcontextlost',     handleContextLost,     false);
   c.addEventListener('webglcontextrestored', handleContextRestored, false);
   
@@ -508,10 +508,6 @@ function wvStart()
   g.lineBump = -0.0002;
   if (nZbits < 24) g.lineBump *= 2.0;
   
-  //
-  // initialize the UI
-  wvInitUI();
-
   //
   // setup our render loop
   var f = function() {

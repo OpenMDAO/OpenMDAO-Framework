@@ -62,35 +62,7 @@ function getKeyPress(e)
 function wvUpdateCanvas(gl)
 {
   // Show the status line
-  statusline.snapshot();
-}
-
-
-function wvInitUI()
-{
-
-  // set up extra storage for matrix-matrix multiplies
-  g.uiMatrix = new J3DIMatrix4();
-  
-                                // ui cursor variables
-  g.cursorX  = -1;              // current cursor position
-  g.cursorY  = -1;
-  g.keyPress = -1;              // last key pressed
-  g.startX   = -1;              // start of dragging position
-  g.startY   = -1;
-  g.button   = -1;              // button pressed
-  g.modifier =  0;              // modifier (shift,alt,cntl) bitflag
-  g.offTop   =  0;              // offset to upper-left corner of the canvas
-  g.offLeft  =  0;
-  g.dragging = false;
-  
-  var canvas = document.getElementById("WebViewer");
-    canvas.addEventListener('mousemove',  getCursorXY,  false);
-    canvas.addEventListener('mousedown',  getMouseDown, false);
-    canvas.addEventListener('mouseup',    getMouseUp,   false);
-  document.addEventListener('keypress',   getKeyPress,  false);
-
-  statusline = new StatusLine("statusline");
+  g.statusline.snapshot();
 }
 
 
@@ -282,43 +254,9 @@ function wvServerMessage(text)
   logger(" Server Message: " + text);
 }
 
-
-/*
-//
-// needed when the canvas size changes or relocates
 function reshape(gl)
 {
-  var canvas = document.getElementById('WebViewer');
-  if (canvas === null) {
-    return;
-  }
-  if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft)
-  {
-    g.offTop  = canvas.offsetTop;
-    g.offLeft = canvas.offsetLeft;
-  }
-
-  var windowWidth  = window.innerWidth  - 20;
-  var windowHeight = window.innerHeight - 40;
-  if (windowWidth == g.width && windowHeight == g.height) return;
-
-  g.width       = windowWidth;
-  g.height      = windowHeight;
-  canvas.width  = g.width;
-  canvas.height = g.height;
-
-  // Set the viewport and perspective matrix for the scene
-  gl.viewport(0, 0, g.width, g.height);
-  g.perspectiveMatrix = new J3DIMatrix4();
-  g.sceneUpd = 1;
-  
-  wvInitDraw();
-}
-*/
-
-function reshape(gl)
-{
-    var canvas = document.getElementById('WebViewer');
+    var canvas = g.canvas; //document.getElementById('WebViewer');
     if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;
         g.offLeft = canvas.offsetLeft;
