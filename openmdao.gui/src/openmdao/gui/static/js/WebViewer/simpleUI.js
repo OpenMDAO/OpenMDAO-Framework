@@ -283,6 +283,7 @@ function wvServerMessage(text)
 }
 
 
+/*
 //
 // needed when the canvas size changes or relocates
 function reshape(gl)
@@ -313,7 +314,28 @@ function reshape(gl)
   
   wvInitDraw();
 }
+*/
 
+function reshape(gl)
+{
+    var canvas = document.getElementById('WebViewer');
+    if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
+        g.offTop  = canvas.offsetTop;
+        g.offLeft = canvas.offsetLeft;
+    }
+
+    if (g.width == canvas.width && g.height == canvas.height) return;
+
+    g.width  = canvas.width;
+    g.height = canvas.height;
+
+    // Set the viewport and projection matrix for the scene
+    gl.viewport(0, 0, g.width, g.height);
+    g.perspectiveMatrix = new J3DIMatrix4();
+    g.sceneUpd = 1;
+
+    wvInitDraw();
+}
 
 //
 // put out a cursor

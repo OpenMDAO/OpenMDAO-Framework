@@ -24,17 +24,31 @@ openmdao.GeomFrame = function(id, model, pathname) {
         geometry = null,
         contextMenu = jQuery('<ul id='+id+'-menu class="context-menu">');
 
-    var html = ['<div class="geom-frame">',
-                '<canvas id="WebViewer">',
+    var html = ['<canvas id="WebViewer">',
                 '  If you are seeing this your web browser does not support the &lt;canvas>&gt; element. Ouch!',
                 '</canvas>',
-                '<div id="statusline"></div>',
-                '</div>'].join();
+                '<div id="statusline"></div>'].join();
 
     // replace old html
     self.elm.html(html);
 
+    self.canvas = document.getElementById('WebViewer');
+
     wvStart();  // FIXME
+
+    // set the connections pane height to dynamically fill the space between the
+    // component and variable selectors
+    function resize_contents() {
+        var title_height = self.elm.find('ui-dialog-titlebar').outerHeight();
+        var status_height = self.elm.find("#statusline").outerHeight();
+        self.canvas.height = self.elm.height()-title_height-status_height;
+        self.canvas.width = self.elm.width() - 20;
+    }
+
+    // resize contents when told to do so (e.g. by BaseFrame when dialog is resized)
+    self.elm.on('resize_contents', function(e) {
+        resize_contents();
+    });
 
     function handleMessage(message) {
         // NOTE: the message here is the entire ArrayBuffer containing the padded topic name + the
