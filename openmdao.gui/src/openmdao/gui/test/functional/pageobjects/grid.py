@@ -91,6 +91,9 @@ class GridHeader(object):
     def value(self):
         return self._root.find_element(By.CLASS_NAME, "slick-column-name").text
 
+    def click(self):
+        self._root.click()
+
 class GridRow(object):
     """ Represents a SlickRow at `root`. """
 
