@@ -782,7 +782,8 @@ class Container(SafeHasTraits):
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
                 if obj is not Missing:
-                    if is_instance(obj, Container) and id(obj) not in visited:
+                    from openmdao.main.datatypes.vtree import VarTree
+                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
