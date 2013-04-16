@@ -76,7 +76,6 @@ jQuery(function() {
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
-        function prop_fn(path) { prop.editObject(path); }
         function comp_fn(path) { new openmdao.ObjectFrame(model,path); }
         function code_fn(path) {
             if (openmdao.model.editor) {
@@ -87,10 +86,7 @@ jQuery(function() {
             }
         }
         function geom_fn(path) { 
-           // if the second arg is always the same, popup window will replace an existing
-           // one. Adding path to the window name results in a separate popup window for
-           // each viewed geometry.
-           openmdao.Util.popupWindow('geometry?path='+path,'Geometry: '+path); 
+            new openmdao.GeomFrame('geom-'+path, openmdao.model, path);
         }
 
         //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);

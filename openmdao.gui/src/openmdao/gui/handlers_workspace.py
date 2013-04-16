@@ -723,5 +723,4 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
     web.url(r'/workspace/get_all_attributes/(.*)',GetAllAtributesHandler),
-    #web.url(r'/ws_geometry/(.*)',           ViewerStreamHandler),
 ]

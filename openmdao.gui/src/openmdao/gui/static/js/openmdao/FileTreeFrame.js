@@ -224,18 +224,18 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path); }
                 };
-            };
+            }
 
             // if it's a geometry file, let them load it into viewer
             // FIXME: ultimately the test of whether a file is a geometry file
             //     should use information from geometry viewer plugins that have
             //     been loaded in ther server...
-            if (/.geom$/.test(path) || /.stl$/.test(path) || /.csm$/.test(path)) {
+            if (/.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { viewGeometry('file'+path.replace(/\\/g,'/')); }
+                    "action" : function(node) { viewGeometry(path.replace(/\\/g,'/')); }
                 };
-            };
+            }
 
             menu.renameFile = {
                 "label"  : 'Rename',
@@ -256,7 +256,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                                 saveCopy(path);
                            }
             };
-        };
+        }
 
         // delete only files and empty folders
         if (!isFolder) {
@@ -270,7 +270,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 "label"  : 'Delete Empty Folder',
                 "action" : function(node) { model.removeFile(path); }
             };
-        };
+        }
 
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
@@ -329,12 +329,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                if (/.geom$/.test(path)) {
-                    viewGeometry('file'+path.replace(/\\/g,'/'));
-                }
-                else {
-                    editFile(path);
-                }
+                editFile(path);
             }
             else if (node.hasClass('folder')) {
                 // what do, what do

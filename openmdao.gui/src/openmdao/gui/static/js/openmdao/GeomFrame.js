@@ -15,6 +15,7 @@ g.messageQ = [];              // a place to put the binary messages
 openmdao.GeomFrame = function(id, model, pathname) {
 
     id = id.replace(/\./g, "_"); // jQuery id selector doesn't like '.' in name
+    id = id.replace(/\//g, "_");  // same with '/'
 
     openmdao.GeomFrame.prototype.init.call(this, id, 'Geometry: '+pathname);
 

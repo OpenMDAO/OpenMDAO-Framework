@@ -17,7 +17,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.project import Project, ProjFinder, \
                                   _clear_insts, _match_insts
-from openmdao.main.publisher import publish
+from openmdao.main.publisher import publish, Publisher
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, \
@@ -921,8 +921,10 @@ class ConsoleServer(cmd.Cmd):
             else:
                 self._stop_log_msgs()
         elif pathname.startswith('/'): # treat it as a filename
-            # TODO: add handling for geometry files (and possibly others)
-            pass
+            if publish:
+                Publisher.register(pathname, pathname[1:])
+            else:
+                Publisher.unregister(pathname)
         else:
             parts = pathname.split('.', 1)
             if len(parts) > 1:
