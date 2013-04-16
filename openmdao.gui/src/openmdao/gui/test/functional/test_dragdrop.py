@@ -583,7 +583,7 @@ def _test_drop_onto_layered_div(browser):
 
     # Confirm expected number of workflow component figures before adding one
     eq(len(driver_editor.get_workflow_component_figures()), 5)
-    eq(len(workspace_page.get_workflow_component_figures()), 22)
+    eq(len(workspace_page.get_workflow_component_figures()), 21)
 
     # Drop onto the object editor's workflow figure is no longer supported.
     # -- KTM

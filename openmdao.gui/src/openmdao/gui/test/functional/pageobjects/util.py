@@ -63,7 +63,11 @@ class ArgsPrompt(BasePageObject):
         arg_inputs[index].send_keys(text)
 
     def argument_count(self):
-        table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        self.browser.implicitly_wait(1)
+        try:
+            table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        finally:
+            self.browser.implicitly_wait(TMO)
         if table:
             arg_inputs = table[0].find_elements(By.XPATH, 'tbody/tr/td/input')
             return len(arg_inputs)

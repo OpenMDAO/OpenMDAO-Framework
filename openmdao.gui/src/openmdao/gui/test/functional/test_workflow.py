@@ -30,8 +30,8 @@ def _test_basic(browser):
                                                 'nested', offset=(300, 300))
     # Verify full workflow shown.
     workspace_page('workflow_tab').click()
-    eq(len(workspace_page.get_workflow_figures()), 3)
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_figures()), 2)
+    eq(len(workspace_page.get_workflow_component_figures()), 5)
 
     # Verify flow layout is horizontal and can be switched to vertical
     sim = workspace_page.get_workflow_figure('sim.driver')
@@ -55,7 +55,7 @@ def _test_basic(browser):
     # Verify workflow can be cleared
     nested = workspace_page.get_workflow_figure('nested.driver')
     nested.clear()
-    eq(len(workspace_page.get_workflow_component_figures()), 2)
+    eq(len(workspace_page.get_workflow_component_figures()), 1)
 
     # Clean up.
     closeout(project_dict, workspace_page)
