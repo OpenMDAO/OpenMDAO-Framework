@@ -28,8 +28,8 @@ class GeomComponent(Component):
     parametric_geometry = Slot(IParametricGeometry, allow_none=True,
                                desc='Slot for a parametric geometry.')
 
-    geometry_output = Geom(IStaticGeometry, iotype='out',
-                           desc='Geometry object')
+    geom_out = Geom(IStaticGeometry, iotype='out',
+                  desc='a geometry generated using the set of current input parameters')
 
     def __init__(self):
         super(GeomComponent, self).__init__()
@@ -63,9 +63,16 @@ class GeomComponent(Component):
     def execute(self):
         """Rebuild the geometry using the current set of parameters.
         """
+        logger.error("executing geomcomp, parametrig_geom=%s" % self.parametric_geometry)
         if self.parametric_geometry is not None:
-            self.parametric_geometry.regen_model()
+            try:
+                logger.error("trying regen")
+                self.parametric_geometry.regen_model()
+            except Exception as err:
+                logger.error("ERROR:"+str(err))
+            logger.error("regen done")
             self._update_comp_outputs()
+            logger.error("outputs updated")
 
     def _update_comp_outputs(self):
         """Set the values of the component outputs based on their
@@ -163,6 +170,7 @@ class GeomComponent(Component):
         return True
 
     def _input_updated(self, name):
+        logger.error("input_updated for %s" % name)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, getattr(self, name))
         super(GeomComponent, self)._input_updated(name)

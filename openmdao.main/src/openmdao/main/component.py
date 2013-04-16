@@ -515,7 +515,7 @@ class Component(Container):
             self._set_exec_state('RUNNING')
 
             if self._call_execute or force:
-                #print 'execute: %s' % self.get_pathname()
+                print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 and \
                    hasattr(self, 'calculate_first_derivatives'):
@@ -541,8 +541,8 @@ class Component(Container):
                     self.execute()
 
                 self._post_execute()
-            #else:
-                #print 'skipping: %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
@@ -1544,6 +1544,7 @@ class Component(Container):
         if isinstance(names, basestring):
             names = [names]
         for name in names:
+            obj = None
             parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
@@ -1578,6 +1579,8 @@ class Component(Container):
         pub = Publisher.get_instance()
         if pub:
             pub_vars = self._publish_vars.keys()
+            logger.error("=== for comp %s, pub vars = %s" %(self.get_pathname(),
+                                                         pub_vars))
             if len(pub_vars) > 0:
                 pname = self.get_pathname()
                 lst = []

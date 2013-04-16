@@ -14,6 +14,8 @@ g.messageQ = [];              // a place to put the binary messages
 
 openmdao.GeomFrame = function(id, model, pathname) {
 
+    id = id.replace(/\./g, "_"); // jQuery id selector doesn't like '.' in name
+
     openmdao.GeomFrame.prototype.init.call(this, id, 'Geometry: '+pathname);
 
     /***********************************************************************
@@ -59,14 +61,13 @@ openmdao.GeomFrame = function(id, model, pathname) {
     document.addEventListener('keypress',   getKeyPress,  false);
 
     g.statusline = new StatusLine(status_id);
-    wvStart(); 
 
     // set the connections pane height to dynamically fill the space between the
     // component and variable selectors
     function resize_contents() {
         var title_height = self.elm.find('ui-dialog-titlebar').outerHeight();
-        var status_height = self.elm.find("#statusline").outerHeight();
-        g.canvas.height = self.elm.height()-title_height-status_height;
+        var status_height = jQuery("#"+status_id).outerHeight();
+        g.canvas.height = self.elm.height()-title_height-status_height-10;
         g.canvas.width = self.elm.width() - 20;
     }
 
@@ -124,14 +125,7 @@ openmdao.GeomFrame = function(id, model, pathname) {
     /** nothing to see here, we get our data elsewhere */
     this.update = function() {};
 
-    g.getWidth = function() {
-        return self.elm.height();
-    };
-
-    g.getHeight = function() {
-        return self.elm.width();
-    };
-
+    wvStart(); 
 };
 
 /** set prototype */

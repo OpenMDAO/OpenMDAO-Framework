@@ -45,6 +45,7 @@ openmdao.Model=function(listeners_ready) {
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
         var callbacks = subscribers.outstream;
+        console.debug(message);
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {

@@ -90,7 +90,7 @@ class CSVCaseIterator(object):
             if self.need_fieldnames:
 
                 # OpenMDAO-style CSV file
-                if row[1] == '/INPUTS':
+                if len(row)>1 and row[1] == '/INPUTS':
                     
                     input_fields, output_fields = self._parse_fieldnames(row)
                         

@@ -39,8 +39,8 @@ class Pub_WV_Wrapper(WV_Wrapper):
         if first:
             self.send_GPrim(self, self.buf,  1, self.send_binary_data)  # send init packet
             self.send_GPrim(self, self.buf, -1, self.send_binary_data)  # send initial suite of GPrims
-        else:  #FIXME: add updating of GPRims here...
-            pass
+        else:  
+            self.send_GPrim(self, self.buf, -1, self.send_binary_data)  # send initial suite of GPrims
 
         self.finish_sends()
         
@@ -88,7 +88,10 @@ class Publisher(object):
                     # publish the value. It will call publish again (possibly multiple times)
                     # with binary=True
                     logger.error("sending value via binpub for topic %s" % topic)
-                    _binpubs[topic][1].send(value)
+                    try:
+                        _binpubs[topic][1].send(value)
+                    except Exception:
+                        logger.error("ERROR: %s" % traceback.format_exc())
                 else:
                     # try to json encode the [topic, obj] list. If that fails,
                     # assume we can't encode the obj and just send across a json
