@@ -12,12 +12,20 @@ g.zFar  = 11.0;
 
 g.messageQ = [];              // a place to put the binary messages
 
+openmdao.viewGeometry = function() {
+    openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
+        function(pathname) {
+            new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
+        }
+    );
+};
+
 openmdao.GeomFrame = function(id, model, pathname) {
 
     id = id.replace(/\./g, "_"); // jQuery id selector doesn't like '.' in name
     id = id.replace(/\//g, "_");  // same with '/'
 
-    openmdao.GeomFrame.prototype.init.call(this, id, 'Geometry: '+pathname);
+    openmdao.GeomFrame.prototype.init.call(this, id, 'Geometry: '+pathname, menu);
 
     /***********************************************************************
      *  private
@@ -132,11 +140,4 @@ openmdao.GeomFrame = function(id, model, pathname) {
 /** set prototype */
 openmdao.GeomFrame.prototype = new openmdao.BaseFrame();
 
-openmdao.GeomFrame.prototype.chooseVariable = function() {
-    openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
-        function(pathname) {
-            p=new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
-        }
-    );
-};
 
