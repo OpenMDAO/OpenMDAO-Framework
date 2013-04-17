@@ -664,6 +664,32 @@ class WorkspacePage(BasePageObject):
             else:
                 break
 
+    def add_object_to_workflow_figure(self, obj_path, target_name):
+        """ Add `obj_path` object to `target_name` in workflow. """
+        for retry in range(3):
+            try:
+                items = obj_path.split('.')
+                parent = items[:-1]
+                comp = items[-1]
+                obj = self.get_dataflow_figure(comp, parent)
+
+                workflow = self.get_workflow_figure(target_name)
+                flow_fig = workflow.flow
+
+                print 'flow fig:', flow_fig
+
+                chain = ActionChains(self.browser)
+                chain.drag_and_drop(obj.root, flow_fig)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('add_object_to_workflow_figure:'
+                                    ' StaleElementReferenceException')
+                else:
+                    raise
+            else:
+                break
+
     def get_workflow_figures(self):
         """ Return workflow figure elements. """
         return find_workflow_figures(self)

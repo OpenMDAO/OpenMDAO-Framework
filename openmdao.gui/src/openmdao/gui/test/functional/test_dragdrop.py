@@ -554,6 +554,8 @@ def _test_component_to_complex_workflow(browser):
 def _test_drop_onto_layered_div(browser):
     project_dict, workspace_page = startup(browser)
 
+    browser.set_window_size(1280, 1024)
+
     # Add paraboloid and vehicle_threesim files
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'paraboloid.py')
@@ -574,36 +576,34 @@ def _test_drop_onto_layered_div(browser):
     paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
     paraboloid_pathname = sim_name + "." + paraboloid_name
 
+    workspace_page.hide_left()
+
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
                                                              sim_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
-    driver_editor.move(-200, 200)
+    driver_editor.move(800, 800)
     driver_editor.show_workflow()
 
     # Confirm expected number of workflow component figures before adding one
     eq(len(driver_editor.get_workflow_component_figures()), 5)
     eq(len(workspace_page.get_workflow_component_figures()), 21)
 
-    # Drop onto the object editor's workflow figure is no longer supported.
-    # -- KTM
-
     # Drag paraboloid component into sim_EPA_city workflow
-    #workspace_page('dataflow_tab').click()
-    #workspace_page.expand_object(sim_name)
-    #simsim_name = sim_name + '.' + 'sim_EPA_city'
-    #workspace_page.add_object_to_workflow(paraboloid_pathname, simsim_name)
+    workspace_page('dataflow_tab').click()
+    simsim_name = sim_name + '.' + 'sim_EPA_city'
+    workspace_page.add_object_to_workflow_figure(paraboloid_pathname, 'sim_EPA_city')
 
     ## Confirm there is one more workflow component figure in the editor
-    #workspace_page('workflow_tab').click()
-    #eq(len(driver_editor.get_workflow_component_figures()), 6)
+    workspace_page('workflow_tab').click()
+    eq(len(driver_editor.get_workflow_component_figures()), 6)
 
     ## Confirm two more workflow component figures in the workspace as a whole
-    #eq(len(workspace_page.get_workflow_component_figures()), 24)
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
 
     ## Confirm that the paraboloid has been added to the sim_EPA_city workflow
     ## by trying to access it.
-    #obj = workspace_page.find_object_button(simsim_name + "." + paraboloid_name)
+    # obj = workspace_page.find_object_button(simsim_name + "." + paraboloid_name)
 
     # Don't see the reason to verfiy again that you can't add something to an
     # out-of-scope workflow. -- KTM
