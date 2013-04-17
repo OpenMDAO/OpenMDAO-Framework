@@ -78,7 +78,7 @@ openmdao.Model=function(listeners_ready) {
         else { // binary message, assume it uses our simple framing protocol
             // framing protocol is: msg starts with a null padded routing string of size NAME_SIZE,
             // followed by the actual binary msg
-            var namearr = new Uint8Array(message, 0, g.NAME_SIZE-1);
+            var namearr = new Uint8Array(message, 0, openmdao.NAME_SIZE-1);
             var name = String.fromCharCode.apply(null, namearr);
             var idx = name.indexOf("\0");
             if (idx > 0) {

@@ -73,11 +73,11 @@ class GeometryHandler(ReqHandler):
     def get(self):
         ''' geometry viewer
         '''
-        filename = self.get_argument('path')
-        #self.render('workspace/o3dviewer.html', filename=filename)
-        if filename.startswith('file/'):
-            filename = filename[5:]
-        self.render('workspace/wvclient.html', geom_name=filename)
+        path = self.get_argument('path')
+        #self.render('workspace/o3dviewer.html', filename=path)
+        if path.startswith('file/'):
+            path = path[4:]  # leave the '/' at the beginning of filename
+        self.render('workspace/wvclient.html', geom_name=path)
 
 
 class CloseHandler(ReqHandler):

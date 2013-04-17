@@ -66,6 +66,33 @@ function wvUpdateCanvas(gl)
 }
 
 
+function wvInitUI()
+{
+
+  // set up extra storage for matrix-matrix multiplies
+  g.uiMatrix = new J3DIMatrix4();
+  
+                                // ui cursor variables
+  g.cursorX  = -1;              // current cursor position
+  g.cursorY  = -1;
+  g.keyPress = -1;              // last key pressed
+  g.startX   = -1;              // start of dragging position
+  g.startY   = -1;
+  g.button   = -1;              // button pressed
+  g.modifier =  0;              // modifier (shift,alt,cntl) bitflag
+  g.offTop   =  0;              // offset to upper-left corner of the canvas
+  g.offLeft  =  0;
+  g.dragging = false;
+  
+  var canvas = document.getElementById("WebViewer");
+    canvas.addEventListener('mousemove',  getCursorXY,  false);
+    canvas.addEventListener('mousedown',  getMouseDown, false);
+    canvas.addEventListener('mouseup',    getMouseUp,   false);
+  document.addEventListener('keypress',   getKeyPress,  false);
+
+  g.statusline = new StatusLine("statusline");
+}
+
 function wvUpdateUI()
 {
 
@@ -256,7 +283,11 @@ function wvServerMessage(text)
 
 function reshape(gl)
 {
-    var canvas = g.canvas; //document.getElementById('WebViewer');
+    var canvas = document.getElementById('WebViewer');
+
+    canvas.height = window.innerHeight * 0.95;
+    canvas.width = window.innerWidth * 0.95;
+
     if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;
         g.offLeft = canvas.offsetLeft;

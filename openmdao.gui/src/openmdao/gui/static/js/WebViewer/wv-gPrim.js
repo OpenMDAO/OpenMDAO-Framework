@@ -59,7 +59,7 @@ function createVBO(ctx, vertices, colors, indices, normals)
   ctx.bindBuffer(ctx.ARRAY_BUFFER, returned.vertex);
   ctx.bufferData(ctx.ARRAY_BUFFER, vertices, ctx.STATIC_DRAW);
 
-  if (colors !== undefined) {
+  if (colors != undefined) {
     if (returned.nVerts != colors.length/3) {
       logger(" Mismatch with Colors: nVerts = " + returned.nVerts +
              " nColors = " + colors.length/3 + " (createVBO)!");
@@ -75,7 +75,7 @@ function createVBO(ctx, vertices, colors, indices, normals)
     ctx.bufferData(ctx.ARRAY_BUFFER, colors, ctx.STATIC_DRAW);
   }
 
-  if (normals !== undefined) {
+  if (normals != undefined) {
     if (returned.nVerts != normals.length/3) {
       logger(" Mismatch with Normals: nVerts = " + returned.nVerts +
              " nNormals = " + normals.length/3 + " (createVBO)!");
@@ -91,7 +91,7 @@ function createVBO(ctx, vertices, colors, indices, normals)
     ctx.bufferData(ctx.ARRAY_BUFFER, normals, ctx.STATIC_DRAW);
   }
 
-  if (indices !== undefined) {
+  if (indices != undefined) {
     if (toType(indices) != "Uint16Array") {
       logger(" Indices Type = " + toType(indices) + 
              " should be Uint16Array (createVBO)!");
@@ -126,17 +126,17 @@ function releaseVBO(ctx, vbo)
   delete vbo.nVerts;
   delete vbo.vertex;
 
-  if (vbo.color !== undefined) {
+  if (vbo.color != undefined) {
     ctx.deleteBuffer(vbo.color);
     delete vbo.color;
   }
 
-  if (vbo.normal !== undefined) {
+  if (vbo.normal != undefined) {
     ctx.deleteBuffer(vbo.normal);
     delete vbo.normal;
   }
 
-  if (vbo.index !== undefined) {
+  if (vbo.index != undefined) {
     ctx.deleteBuffer(vbo.index);
     delete vbo.index;
   }
@@ -149,7 +149,7 @@ function releaseVBO(ctx, vbo)
 //
 function createGPrim(type, nStripe, attrs)
 {
-  var i, returned = { };
+  var returned = { };
   
   returned.GPtype = type;
   returned.nStrip = nStripe;
@@ -159,7 +159,7 @@ function createGPrim(type, nStripe, attrs)
   switch (type) {
     case 0:
       returned.points = [];
-      for (i = 0; i < nStripe; i++) {
+      for (var i = 0; i < nStripe; i++) {
         returned.points[i] = undefined;
       }
       break;
@@ -171,7 +171,7 @@ function createGPrim(type, nStripe, attrs)
       returned.points    = [];
       returned.lines     = [];
       returned.triangles = undefined;
-      for (i = 0; i < nStripe; i++) {
+      for (var i = 0; i < nStripe; i++) {
         returned.points[i] = undefined;
         returned.lines[i]  = undefined;
       }
@@ -185,7 +185,7 @@ function createGPrim(type, nStripe, attrs)
       returned.points    = [];
       returned.lines     = [];
       returned.triangles = [];
-      for (i = 0; i < nStripe; i++) {
+      for (var i = 0; i < nStripe; i++) {
         returned.points[i]    = undefined;
         returned.lines[i]     = undefined;
         returned.triangles[i] = undefined;

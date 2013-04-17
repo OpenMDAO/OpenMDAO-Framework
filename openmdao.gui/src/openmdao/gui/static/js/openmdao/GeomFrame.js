@@ -1,21 +1,22 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-g = {};                 // place to store "globals"  FIXME: this should be namespaced to WebViewer
+//g = {};                 // place to store "globals"  FIXME: this should be namespaced to WebViewer
 
-g.animcount = 0;
-g.NAME_SIZE=256;   // our messages have the first NAME_SIZE bytes allocated for a topic name
-g.MSG_START = g.NAME_SIZE;
+openmdao.NAME_SIZE = 256;
+//g.NAME_SIZE=256;   // our messages have the first NAME_SIZE bytes allocated for a topic name
+//g.MSG_START = g.NAME_SIZE;
 
-g.zNear =  1.0;             // have some values for Zscreen
-g.zFar  = 11.0;
+//g.zNear =  1.0;             // have some values for Zscreen
+//g.zFar  = 11.0;
 
-g.messageQ = [];              // a place to put the binary messages
+//g.messageQ = [];              // a place to put the binary messages
 
 openmdao.viewGeometry = function() {
     openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
         function(pathname) {
-            new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
+            //new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
+            openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry'); 
         }
     );
 };

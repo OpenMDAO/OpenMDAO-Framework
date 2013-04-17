@@ -86,7 +86,8 @@ jQuery(function() {
             }
         }
         function geom_fn(path) { 
-            new openmdao.GeomFrame('geom-'+path, openmdao.model, path);
+            //new openmdao.GeomFrame('geom-'+path, openmdao.model, path);
+            openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); 
         }
 
         //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);

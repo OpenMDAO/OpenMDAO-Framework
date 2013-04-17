@@ -24,7 +24,7 @@ function logger(msg)
 // A debug-based console function is added to the context: log(msg).
 function log(msg) 
 {
-    if (g.debug !== 0) logger(msg);
+    if (g.debug != 0) logger(msg);
 }
 
 
@@ -46,9 +46,9 @@ function checkGLError(gl, source) {
 var BrowserDetect = {
 	init: function () {
 		this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
-		this.version = this.searchVersion(navigator.userAgent) 
-                   || this.searchVersion(navigator.appVersion)
-                   || "an unknown version";
+		this.version = this.searchVersion(navigator.userAgent)
+			|| this.searchVersion(navigator.appVersion)
+			|| "an unknown version";
 		this.OS = this.searchString(this.dataOS) || "an unknown OS";
 	},
 	searchString: function (data) {
@@ -75,7 +75,7 @@ var BrowserDetect = {
 			subString: "Chrome",
 			identity: "Chrome"
 		},
-		{ string: navigator.userAgent,
+		{ 	string: navigator.userAgent,
 			subString: "OmniWeb",
 			versionSearch: "OmniWeb/",
 			identity: "OmniWeb"
@@ -128,7 +128,7 @@ var BrowserDetect = {
 			identity: "Mozilla",
 			versionSearch: "rv"
 		},
-		{ // for older Netscapes (4-)
+		{ 		// for older Netscapes (4-)
 			string: navigator.userAgent,
 			subString: "Mozilla",
 			identity: "Netscape",
@@ -150,7 +150,7 @@ var BrowserDetect = {
                         string: navigator.userAgent,
                         subString: "iPhone",
                         identity: "iPhone/iPod"
-    },
+	        },
 		{
 			string: navigator.platform,
 			subString: "Linux",
@@ -158,19 +158,19 @@ var BrowserDetect = {
 		}
 	]
 
-};
+}
 
 
 //
 // Initialize the Canvas element with the passed name as a WebGL object and 
 // return the WebGLRenderingContext.
 // Turn off anti-aliasing so that picking works at the fringe
-/*function initWebGL(canvasName)
+function initWebGL(canvasName)
 {
     var canvas = document.getElementById(canvasName);
-    return WebGLUtils.setupWebGL(canvas, { antialias: false });
+    return  gl = WebGLUtils.setupWebGL(canvas, { antialias: false });
 }
-*/
+
 
 //
 // Load this shader and return the WebGLShader object.
@@ -263,7 +263,7 @@ function wvSetup(gl, vshader, fshader, attribs, clearColor, clearDepth)
 function wvInit()
 {
   var requestId;
-
+  
   // "globals" used:
 
   g.width    = -1;                                      // "canvas" size
@@ -275,12 +275,12 @@ function wvInit()
   g.sgUpdate =  0;                                      // sceneGraph update
   g.sceneUpd =  1;                                      // scene updated -- rerender
   g.centerV  =  0;                                      // centering flag
-  if (g.debug     === undefined) g.debug     = 0;        // debug flag
-  if (g.pick      === undefined) g.pick      = 0;        // picking flag (0-off, 1-on)
-  if (g.locate    === undefined) g.locate    = 0;        // locating flag
-  if (g.eye       === undefined) g.eye       = [0.0, 0.0, 0.0];
-  if (g.center    === undefined) g.center    = [0.0, 0.0, 0.0];
-  if (g.up        === undefined) g.up        = [0,0, 1.0, 0.0];
+  if (g.debug     == undefined) g.debug     = 0;        // debug flag
+  if (g.pick      == undefined) g.pick      = 0;        // picking flag (0-off, 1-on)
+  if (g.locate    == undefined) g.locate    = 0;        // locating flag
+  if (g.eye       == undefined) g.eye       = [0.0, 0.0, 0.0];
+  if (g.center    == undefined) g.center    = [0.0, 0.0, 0.0];
+  if (g.up        == undefined) g.up        = [0,0, 1.0, 0.0];
 
   // define our plotting attributes
   g.plotAttrs  = { ON:1,          TRANSPARENT:2, SHADING:4,
@@ -290,7 +290,7 @@ function wvInit()
   g.sceneGraph = {};
 
   // initialize WebGL with the id of the Canvas Element
-  var gl = WebGLUtils.setupWebGL(g.canvas, { antialias: false });
+  var gl = initWebGL("WebViewer");
   if (!gl) return;
 
   //
@@ -487,7 +487,7 @@ function wvInit()
 //
 function wvStart()
 {
-  var c = g.canvas; //document.getElementById("WebViewer");
+  var c = document.getElementById("WebViewer");
   c.addEventListener('webglcontextlost',     handleContextLost,     false);
   c.addEventListener('webglcontextrestored', handleContextRestored, false);
   
@@ -509,10 +509,14 @@ function wvStart()
   if (nZbits < 24) g.lineBump *= 2.0;
   
   //
+  // initialize the UI
+  wvInitUI();
+
+  //
   // setup our render loop
   var f = function() {
   
-    if (g.fov !== undefined) drawPicture(gl);
+    if (g.fov != undefined) drawPicture(gl);
 
     // update the UI and matrices
     wvUpdateUI();
