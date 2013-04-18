@@ -124,14 +124,14 @@ def _test_connect(browser):
     eq(props.header, 'Connectable: top.comp1')
     props.move(-100, -100)
     inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = 'xyzzy'
+    eq(inputs[4].value, ['s_in', ''])
+    inputs[4][1] = 'xyzzy'
     inputs = props.inputs
-    eq(inputs[3].value, ['f_in', '0'])
-    inputs[3][1] = '2.781828'
+    eq(inputs[2].value, ['f_in', '0'])
+    inputs[2][1] = '2.781828'
     inputs = props.inputs
-    eq(inputs[5].value, ['i_in', '0'])
-    inputs[5][1] = '42'
+    eq(inputs[3].value, ['i_in', '0'])
+    inputs[3][1] = '42'
 
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
@@ -141,8 +141,8 @@ def _test_connect(browser):
     #inputs[0][1] = 'True'
 
     inputs = props.inputs
-    eq(inputs[2].value, ['e_in', '1'])
-    inputs.rows[2].cells[1].click()
+    eq(inputs[1].value, ['e_in', '1'])
+    inputs.rows[1].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
     #inputs.rows[2].cells[0].click()
     #inputs[2][1] = '3'
@@ -160,15 +160,15 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['', 'b_out', 'True', '', ''],
-        ['', 'derivative_exec_count', '0', '',
-         "Number of times this Component's derivative function has been executed."],
         ['', 'e_out', '3', '', ''],
-        ['', 'exec_count', '1', '',
-         'Number of times this Component has been executed.'],
         ['', 'f_out', '2.781828', '', ''],
         ['', 'i_out', '42', '', ''],
+        ['', 's_out', 'xyzzy', '', ''],
+        ['', 'derivative_exec_count', '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count', '1', '',
+         'Number of times this Component has been executed.'],
         ['', 'itername', '1-2', '', 'Iteration coordinates.'],
-        ['', 's_out', 'xyzzy', '', '']
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -502,11 +502,11 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -519,12 +519,12 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', 'scaler', '1', '', ''],
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'scaler', '1', '', ''],
-        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -536,11 +536,11 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', 'result_in', '0', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'result_in', '0', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -553,12 +553,12 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', 'result_in', '0', '', ''],
+        ['', 'scaler', '1', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'result_in', '0', '', ''],
-        ['', 'scaler', '1', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -591,11 +591,11 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', 'x', '[]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'x', '[]', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
