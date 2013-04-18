@@ -2,7 +2,7 @@
   function SlickColumnPicker(columns, grid, options, default_columns) {
     var $menu;
     var columnCheckboxes;
-    var visibleColumns;
+    var visibleColumns = [];
 
     var defaults = {
       fadeSpeed:250

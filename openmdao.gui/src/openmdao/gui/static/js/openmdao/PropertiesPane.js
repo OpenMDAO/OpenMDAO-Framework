@@ -47,17 +47,17 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         
         var compName = pathname.replace(".", "-", "g");
         
-        if(!(componentEditor in openmdao.preferences.gui.compeditor)){
+        if(!(compName in openmdao.preferences.gui.compeditor)){
             openmdao.preferences.gui.compeditor[compName] = {};        
         }
 
         
-        if(!(name.tolower() in openmdao.preferences.gui.compeditor[compName])){
-            openmdao.preferences.gui.compeditor[compName][name.tolower()] = {};        
+        if(!(name.toLowerCase() in openmdao.preferences.gui.compeditor[compName])){
+            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()] = {};        
         }
 
-        if(!("columns" in openmdao.preferences.gui.compeditor[compName][name.tolower()])){
-            openmdao.preferences.gui.compeditor[compName][name.tolower()].columns = {        
+        if(!("columns" in openmdao.preferences.gui.compeditor[compName][name.toLowerCase()])){
+            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns = {        
                 info : true,
                 name : true,
                 type : false,
@@ -271,7 +271,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
         if(meta){
-            var default_columns = openmdao.preferences.gui.compeditor[compName][name.tolower()].columns;
+            var default_columns = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
             columnpicker = new Slick.Controls.ColumnPicker(columns, props, options, default_columns);
         
             // Sorting for the first column

@@ -20,7 +20,7 @@ jQuery(function() {
     
     //setup prefernces
     //these are a temporary solution
-    openmdao.prefrerences = { gui : { compeditor : {} } }    
+    openmdao.preferences = { gui : { compeditor : {} } }    
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
