@@ -271,7 +271,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
         if(meta){
-            columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
+            var columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
         
             var visibility = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
             var visibleColumns = [];
@@ -331,6 +331,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         visibility[columnId] = false;
                     }
                 }
+                console.log("Destroying slick grid.");
+                columnpicker.destroy();
             });
             
             jQuery("#" + name + "_variableFilter").keyup(function (e) {

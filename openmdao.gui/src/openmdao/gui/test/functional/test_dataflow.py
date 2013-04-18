@@ -908,6 +908,32 @@ def _test_taborder(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+def _test_column_picking(browser):
+    project_dict, workspace_page = startup(browser)
+    top = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = top.editor_page()
+
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+    
+    editor.show_inputs()
+    input_column_names = [header.value for header in editor.inputs.headers]
+
+    eq(input_column_names, expected_column_names)
+    column_picker = editor.inputs.headers[0].get_column_picker()
+    column_picker.toggle_visibility("Value")
+    del expected_column_names[1]
+    input_column_names = [header.value for header in editor.inputs.headers]
+
+    eq(input_column_names, expected_column_names)
+    
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+    #column_picker.toggle_visibility("Hi")
+    #editor.show_outputs()
+    #output_column_names = [header.value for header in editor.outputs.headers]
+    #
+    #eq(output_column_names, expected_column_names)
 
 if __name__ == '__main__':
     main()
