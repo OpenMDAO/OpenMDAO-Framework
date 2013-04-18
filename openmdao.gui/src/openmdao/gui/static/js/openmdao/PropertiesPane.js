@@ -45,12 +45,19 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
         
-        if(!("preferences" in openmdao)){
-            openmdao.preferences = {};
-        }
+        var compName = pathname.replace(".", "-", "g");
         
-        if(!("columns" in openmdao.preferences)){
-            openmdao.preferences.columns = {
+        if(!(componentEditor in openmdao.preferences.gui.compeditor)){
+            openmdao.preferences.gui.compeditor[compName] = {};        
+        }
+
+        
+        if(!(name.tolower() in openmdao.preferences.gui.compeditor[compName])){
+            openmdao.preferences.gui.compeditor[compName][name.tolower()] = {};        
+        }
+
+        if(!("columns" in openmdao.preferences.gui.compeditor[compName][name.tolower()])){
+            openmdao.preferences.gui.compeditor[compName][name.tolower()].columns = {        
                 info : true,
                 name : true,
                 type : false,
@@ -263,8 +270,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-        columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
         if(meta){
+            var default_columns = openmdao.preferences.gui.compeditor[compName][name.tolower()].columns;
+            columnpicker = new Slick.Controls.ColumnPicker(columns, props, options, default_columns);
         
             // Sorting for the first column
             props.onSort.subscribe(function (e, args) {
