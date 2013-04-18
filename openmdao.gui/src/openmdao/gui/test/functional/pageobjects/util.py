@@ -282,6 +282,12 @@ class SafeDriver(SafeElementBase):
     def get_window_size(self, *args, **kwargs):
         return self._invoke('get_window_size', args, kwargs)
 
+    def set_window_size(self, *args, **kwargs):
+        return self._invoke('set_window_size', args, kwargs)
+
+    def set_window_position(self, *args, **kwargs):
+        return self._invoke('set_window_position', args, kwargs)
+
     def implicitly_wait(self, *args, **kwargs):
         return self._invoke('implicitly_wait', args, kwargs)
 
