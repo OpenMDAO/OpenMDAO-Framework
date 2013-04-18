@@ -40,7 +40,8 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import TRACER, logger
+from openmdao.util.log import logger
+import openmdao.util.log as tracing
 
 __missing__ = object()
 
@@ -515,7 +516,7 @@ class Component(Container):
             self._set_exec_state('RUNNING')
 
             if self._call_execute or force:
-                print 'execute: %s' % self.get_pathname()
+                #print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 and \
                    hasattr(self, 'calculate_first_derivatives'):
@@ -532,17 +533,17 @@ class Component(Container):
                 else:
                     # Component executes as normal
                     self.exec_count += 1
-                    if TRACER is not None and \
+                    if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
 
-                        TRACER.debug(self.get_itername())
+                        tracing.TRACER.debug(self.get_itername())
 
                     self.execute()
 
                 self._post_execute()
-            else:
-                print 'skipping: %s' % self.get_pathname()
+            #else:
+                #print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
