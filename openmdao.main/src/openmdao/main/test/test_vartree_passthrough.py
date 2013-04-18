@@ -1,7 +1,7 @@
 import unittest
 
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Int, VarTree
+from openmdao.main.datatypes.api import Float, VarTree
 
 class TstContainer(VariableTree):
     dummy1 = Float(1.0) 
@@ -17,7 +17,7 @@ class TstComponent(Component):
 class TstAssembly(Assembly):
 
     def configure(self):
-        self.add('comp',TstComponent())
+        self.add('comp', TstComponent())
         self.create_passthrough('comp.dummy_data.dummy1')
         self.create_passthrough('comp.dummy_data_out.dummy1', 'dummy1_out')
         self.driver.workflow.add('comp')
@@ -25,7 +25,7 @@ class TstAssembly(Assembly):
 class TstAssembly2(Assembly):
 
     def configure(self):
-        self.add('comp',TstComponent())
+        self.add('comp', TstComponent())
         self.create_passthrough('comp.dummy_data')
         self.create_passthrough('comp.dummy_data_out', 'dummy1_out')
         self.driver.workflow.add('comp')

@@ -812,15 +812,7 @@ class Component(Container):
         destpath = destexpr.text
 
         valid_updates = []
-#        print
-#        print self.get_pathname(), 'Component.connect', srcexpr, destexpr
-#        print self.get_pathname(), 'class dict'
-#        print 'parent.scomp1.cont_out.v1', 'parent.scomp1.cont_out.v1' in self.__class__.__dict__['__class_traits__']
-        retval = srcexpr.refs_parent()
-#        print self.get_pathname(), 'class dict2'
-#        print 'parent.scomp1.cont_out.v1', 'parent.scomp1.cont_out.v1' in self.__class__.__dict__['__class_traits__']
-#        if not srcexpr.refs_parent():
-        if not retval:
+        if not srcexpr.refs_parent():
             if srcexpr.text not in self._valid_dict:
                 valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs

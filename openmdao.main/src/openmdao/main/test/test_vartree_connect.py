@@ -16,7 +16,7 @@ class TstAssembly2(Assembly):
     dummy_var1 = Float(1.0, iotype='in')
 
     def configure(self):
-        self.add('assemb1',TstAssembly1())
+        self.add('assemb1', TstAssembly1())
         self.connect('dummy_var1', 'assemb1.dummy_data.dummy1')
         self.driver.workflow.add('assemb1')
 

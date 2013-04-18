@@ -1,5 +1,4 @@
 import glob
-import nose
 import os
 import unittest
 
@@ -7,7 +6,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, Slot, File, List, VarTree
+from openmdao.main.datatypes.api import Float, File, List, VarTree
 from openmdao.main.case import flatten_obj
 
 
@@ -28,10 +27,10 @@ class DumbVT2(VariableTree):
 
 class DumbVT(VariableTree):
 
-    vt2 = VarTree(DumbVT2())
     v1 = Float(1., desc='vv1')
     v2 = Float(2., desc='vv2')
     data = File()
+    vt2 = VarTree(DumbVT2())
 
 
 class SimpleComp(Component):
@@ -354,8 +353,8 @@ class ListConnectTestCase(unittest.TestCase):
 
     def test_connect(self):
         class Vars(VariableTree):
-                f1 = Float()
-                f2 = Float()
+            f1 = Float()
+            f2 = Float()
 
         class TestAsm(Assembly):
 

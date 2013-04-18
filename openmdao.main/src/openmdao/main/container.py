@@ -198,11 +198,12 @@ class Container(SafeHasTraits):
             ttype = obj.trait_type
             if isinstance(ttype, VarTree):
                 variable_tree = getattr(self, name)
+                parent = variable_tree._parent
                 variable_tree._parent = None
                 try:
                     new_tree = variable_tree.copy()
                 finally:
-                    variable_tree._parent = self
+                    variable_tree._parent = parent
                 setattr(self, name, new_tree)
                 new_tree.install_callbacks()
 

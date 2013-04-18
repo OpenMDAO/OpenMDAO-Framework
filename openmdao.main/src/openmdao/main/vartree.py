@@ -22,31 +22,6 @@ class VariableTree(Container):
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
 
-        # Wrap subtrees in VarTree (similar to Slot).
-        # Avoids an import loop.
-        from openmdao.main.datatypes.vtree import VarTree
-        for name, obj in self.__class__.__dict__.items():
-            if name not in self.class_traits():
-                if isinstance(obj, VariableTree):
-                    raise NotImplementedError('VariableTree as class attribute')
-                    new_obj = obj.copy()  # Otherwise we share the default value
-                    new_obj.install_callbacks()
-                    new_obj.name = name
-                    trait = VarTree(new_obj)
-
-                    self._added_traits[name] = trait
-                    super(Container, self).add_trait(name, trait)
-                    if self._cached_traits_ is None:
-                        self.get_trait(name)
-                    else:
-                        self._cached_traits_[name] = self.trait(name)
-
-                    if not name.startswith('_'):
-                        self.on_trait_change(self._trait_modified, name)
-
-                elif isinstance(obj, VarTree):
-                    raise NotImplementedError('VarTree as class attribute')
-
         # register callbacks for our class traits
         for name, trait in self.class_traits().items():
             if not name.startswith('_'):
@@ -98,8 +73,12 @@ class VariableTree(Container):
 
         for name, trait in self.__class__.__dict__['__class_traits__'].items():
             if name not in ('trait_added', 'trait_modified'):
+                # Component.connect has a line:
+                #     if not srcexpr.refs_parent():
+                # that results in dotted pathnames being put in this dictionary
+                # that need to be skipped.  (This is likely a symtom of
+                # bigger problems regarding copying of VariableTrees)
                 if not hasattr(self, name):
-#                    print self.__class__.__name__, hex(id(self)), 'install_callbacks skipping', name
                     continue
                 self.on_trait_change(self._trait_modified, name)
                 obj = getattr(self, name)
