@@ -1,7 +1,8 @@
 (function ($) {
-  function SlickColumnPicker(columns, grid, options) {
+  function SlickColumnPicker(columns, grid, options, default_columns) {
     var $menu;
     var columnCheckboxes;
+    var visibleColumns;
 
     var defaults = {
       fadeSpeed:250
@@ -18,7 +19,15 @@
         $(this).fadeOut(options.fadeSpeed)
       });
       $menu.bind("click", updateColumn);
-
+      
+      if(default_columns !== null || default_columns !== undefined){
+        for(i=0; i<columns.length; i++){
+            if(default_columns[columns[i].id] === true){
+                visibleColumns.push(columns[i]);
+            }
+        }  
+        grid.setColumns(visibleColumns);
+      }
     }
 
     function handleHeaderContextMenu(e, args) {
