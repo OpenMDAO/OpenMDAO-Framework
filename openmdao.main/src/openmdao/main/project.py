@@ -20,7 +20,7 @@ from openmdao.main.api import set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
-from openmdao.main.publisher import Publisher
+from openmdao.main.publisher import publish
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger

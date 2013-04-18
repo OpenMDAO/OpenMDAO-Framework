@@ -1556,10 +1556,12 @@ class Component(Container):
                                              NameError)
                     else:
                         if has_interface(obj, IComponent):
+                            logger.error("obj is an IComponent")
                             obj.register_published_vars(__attributes__, publish)
                             return
 
                 if publish:
+                    logger.error("calling Publisher.register for %s" % name)
                     Publisher.register('.'.join([self.get_pathname(), name]),
                                        obj)
                     if name in self._publish_vars:

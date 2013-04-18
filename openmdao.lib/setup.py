@@ -96,7 +96,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 
-      
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
@@ -134,5 +133,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.architectures.co.CO = openmdao.lib.architectures.co:CO
       openmdao.lib.architectures.ego.EGO = openmdao.lib.architectures.ego:EGO
       openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
+
+      [openmdao.parametric_geometry]
+      openmdao.lib.geometry.diamond.GEMParametricGeometry = openmdao.lib.geometry.diamond:GEMParametricGeometry
+      [openmdao.binpub]
+      openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       """,
       )

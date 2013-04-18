@@ -1,6 +1,5 @@
 
 from openmdao.main.interfaces import IParametricGeometry, implements
-from openmdao.main.publisher import publish
 
 class ParametricGeometry(object):
     """A base class for objects implementing the IParametricGeometry

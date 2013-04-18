@@ -1,6 +1,7 @@
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -43,7 +44,6 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
-          'simplejson',
           'networkx==1.3',
           'openmdao.units',
           'openmdao.util',

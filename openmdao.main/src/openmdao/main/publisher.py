@@ -142,12 +142,13 @@ class Publisher(object):
         """
         global _binpubs, _binpub_types
         sender = None
-        
+        logger.error("in Publisher.register")
         if _binpub_types is None:
             load_binpubs()
 
         with _lock:
             if topic in _binpubs:
+                logger.error("found topic %s in _binpubs" % topic)
                 _binpubs[topic][0] += 1
             else:
                 # see if a sender is registered for this object type
@@ -160,6 +161,8 @@ class Publisher(object):
                             logger.error(traceback.format_exc())
                         _binpubs[topic] = [1, sender]
                         break
+                    else:
+                        logger.error("sender type %s does not support %s" % (sender_type,obj))
                     
         if sender is not None:
             sender.send(obj, first=True)
