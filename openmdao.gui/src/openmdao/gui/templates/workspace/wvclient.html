@@ -42,6 +42,10 @@
 
     window.opener.openmdao.model.addListener("{{geom_name}}", handleMsg);
 
+    window.onbeforeunload = function() {
+        window.opener.openmdao.model.removeListener("{{geom_name}}");
+    };
+
 </script>
 
 <style type="text/css">

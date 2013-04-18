@@ -173,6 +173,7 @@ class Publisher(object):
         global _binpubs
         with _lock:
             if topic in _binpubs:
+                logger.error("Publisher unregistering topic %s" % topic)
                 if _binpubs[topic][0] <= 1:
                     del _binpubs[topic]
                 else:
