@@ -68,6 +68,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 desc : true,
             };
         }
+
+        console.log(openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns); 
     }
 
     elm.append(propsDiv);
@@ -306,6 +308,26 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             props.onContextMenu.subscribe(function(e){
                 console.log(e);
                 console.log(props.getCellFromEvent(e));
+            });
+
+            props.onBeforeDestroy.subscribe(function(e, args){
+                var default_columns = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+                var visibleColumns = args.grid.getColumns();
+                var visibleColumnNames = {};
+
+                for(i=0; i<visibleColumns.length; i++){
+                    visibleColumnNames[visibleColumns[i].id] = undefined;
+                }
+
+                for(var columnName in default_columns){
+                    if(columnName in visibleColumnNames){
+                        default_columns[columnName] = true;
+                    }
+                    
+                    else{
+                        default_columns[columnName] = false;
+                    }
+                }
             });
             
             jQuery("#" + name + "_variableFilter").keyup(function (e) {
@@ -575,5 +597,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
         highlightCells();
         props.resizeCanvas();
+    };
+
+    this.destructor = function(){
+        console.log("PropertiesPane destructor called");
+        props.destroy();
     };
 };

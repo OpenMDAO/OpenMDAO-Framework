@@ -142,6 +142,10 @@
       return columns;
     }
 
+    function getVisibleColumns(){
+        
+    }
+
     init();
 
     return {
