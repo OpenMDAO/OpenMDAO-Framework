@@ -1,6 +1,8 @@
 import random
 import string
 
+from functools import partial
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
@@ -11,7 +13,36 @@ from util import ArgsPrompt, NotifierPage
 
 
 class ComponentPage(DialogPage):
+
+    class Variable(object):
+        def __init__(self, row, headers):
+            self._cells = row.cells
+
+            def getter(cls, index=0):
+                return cls._cells[index]
+            
+            def setter(cls, value, index=0):
+                if not cls._cells[index].editable:
+                    raise AttributeError("can't set attribute")
+                else:
+                    cls._cells[index].value = value
+
+            for index in range(len(headers)):
+                if headers[index].value != "":
+                    setattr( \
+                            self.__class__, 
+                            headers[index].value.lower(), 
+                            property( \
+                                    partial(getter, index=index),
+                                    partial(setter, index=index)
+                                    )
+                            )
+
     """ Component editor page. """
+   
+    Version = type('Enum', (), {"OLD":1, "NEW":2})
+    As = type('Enum', (), {"GRID":0, "ROW":1, "VARIABLE":2})
+    SortOrder = type('Enum', (), {"ASCENDING" : 0, "DESCENDING" : 1})
 
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
@@ -20,13 +51,16 @@ class ComponentPage(DialogPage):
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
+
     inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
     outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
-
-    def __init__(self, browser, port, locator):
+    
+    def __init__(self, browser, port, locator, version=Version.OLD):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
+        self.version = version
+        self._sort_order = {"inputs" : 0, "outputs" : 0}
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -34,10 +68,6 @@ class ComponentPage(DialogPage):
         labels = [element.text for element in elements]
         return labels
 
-    def get_inputs(self):
-        """ Return inputs grid. """
-        self('inputs_tab').click()
-        return self.inputs
 
     def set_input(self, name, value):
         """ Set input `name` to `value`. """
@@ -52,27 +82,52 @@ class ComponentPage(DialogPage):
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
     def filter_inputs(self, filter_text):
+        """ Filter out input variables from grid using `filter_text`. """
         self.inputs_filter = filter_text
 
     def filter_outputs(self, filter_text):
+        """ Filter out output variables from grid using `filter_text`. """
         self.outputs_filter = filter_text
 
+    #This does not work. May have to send backspaces to clear filter
     def clear_inputs_filter(self):
         self.inputs_filter = ""
 
+    #This does not work. May have to send backspaces to clear filter
     def clear_outputs_filter(self):
         self.outputs_filter = ""
+
+    def _sort_column(self, grid, column_name, sort_order, tab):
+        """ Sorts the variables in column `column_name`"""
+        header = [header for header in grid.headers if header.value == column_name]
+        if(not header):
+            raise Exception("Grid has no column named %s" % column_name)
+
+        header = header[0]
+        if(sort_order==self.SortOrder.ASCENDING):
+            while( (self._sort_order[tab] % 2) == 0):
+                self._sort_order[tab] = self._sort_order[tab] + 1
+                header.click()
+        else:
+            while( (self._sort_order[tab] % 2) != 0):
+                self._sort_order[tab] = self._sort_order[tab] + 1
+                header.click()
+
+    def sort_inputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
+        """ Sort `column_name` in inputs grid in `sort_order` """
+        self("inputs_tab").click()
+        self._sort_column(self.inputs, column_name, sort_order, "inputs")
+
+    def sort_outputs_column(self, column_name, sort_order=SortOrder.ASCENDING):
+        """ Sort `column_name` in outputs grid in `sort_order` """
+        self("outputs_tab").click()
+        self._sort_column(self.outputs, column_name, sort_order, "outputs")
 
     def get_events(self):
         """ Return events grid. """
         self('events_tab').click()
         return self.events
 
-    def get_outputs(self):
-        """ Return outputs grid. """
-        self('outputs_tab').click()
-        return self.outputs
-    
     def show_inputs(self):
         """switch to inputs tab"""
         self('inputs_tab').click()
@@ -85,6 +140,47 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
+    def get_inputs(self, return_type=None):
+        """ Return inputs grid. """
+        self('inputs_tab').click()
+        #return self._get_variables(self.inputs)
+        return self._get_variables(self.inputs, return_type)
+
+    def get_outputs(self, return_type=None):
+        """ Return outputs grid. """
+        self('outputs_tab').click()
+        #return self._get_variables(self.outputs)
+        return self._get_variables(self.outputs, return_type)
+
+    def get_input(self, name, return_type=None):
+        """ Return first input variable with `name`. """
+        self('inputs_tab').click()
+        return self._get_variable(name, self.inputs, return_type)
+    
+    def get_output(self, name, return_type=None):
+        """ Return first output variable with `name`. """
+        self('outputs_tab').click()
+        return self._get_variable(name, self.outputs, return_type)
+
+    def _get_variables(self, grid, return_type):
+        if(return_type==self.As.GRID or self.version==self.Version.OLD):
+            return grid
+
+        headers = grid.headers
+        rows = grid.rows
+
+        return [self.Variable(row, headers) for row in rows]
+
+    def _get_variable(self, name, grid, return_type):
+        found = []
+        for row in grid.rows:
+            if row[1] == name:
+                if(return_type==self.As.ROW or self.version==self.Version.OLD):
+                    return row
+                else:
+                    return self.Variable(row, grid.headers)
+            found.append(row[1])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
 
 class DriverPage(ComponentPage):
     """ Driver editor page. """

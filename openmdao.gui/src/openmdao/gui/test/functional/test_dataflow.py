@@ -13,7 +13,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, release
 from pageobjects.util import ArgsPrompt, NotifierPage
-
+from pageobjects.component import ComponentPage
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -813,6 +813,81 @@ def _test_io_filter_with_vartree(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+def _test_column_sorting(browser):
+    Version = ComponentPage.Version
+    SortOrder = ComponentPage.SortOrder
+
+    project_dict, workspace_page = startup(browser)
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.show_dataflow("vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    editor = comp.editor_page(version=Version.NEW)
+
+    editor.get_input(" cont_in").name.click()
+    editor.get_input(" vt2").name.click()
+    editor.get_input(" vt3").name.click()
+    
+    editor.get_output(" cont_out").name.click()
+    editor.get_output(" vt2").name.click()
+    editor.get_output(" vt3").name.click()
+
+    def test_sorting(expected, grid, sort_order):
+        names = None
+        variables = None
+
+        if(grid=="inputs"):
+            editor.show_inputs()
+            editor.sort_inputs_column("Name", sort_order)
+            variables = editor.get_inputs()
+
+        else:
+            editor.show_outputs()
+            editor.sort_outputs_column("Name", sort_order)
+            variables = editor.get_outputs()
+            
+        
+        names = [variable.name.value for variable in variables]
+
+        for index, name in enumerate(names):
+            eq(name, expected[index])
+
+        
+    #Testing sort for inputs
+    
+    test_sorting( \
+        [" cont_in", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "directory", "force_execute"],
+        "inputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        "inputs",
+        SortOrder.DESCENDING
+        )
+
+    #Testing sort for outputs
+
+    test_sorting( \
+        [" cont_out", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "derivative_exec_count", "exec_count", "itername"],
+        "outputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["itername", "exec_count", "derivative_exec_count", " cont_out", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        "outputs",
+        SortOrder.DESCENDING
+        )
+
+    editor.close()
+    closeout(project_dict, workspace_page)
 
 def _test_taborder(browser):
     # Replaces various connected components.
