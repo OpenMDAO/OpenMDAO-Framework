@@ -919,13 +919,35 @@ def _test_column_picking(browser):
     input_column_names = [header.value for header in editor.inputs.headers]
 
     eq(input_column_names, expected_column_names)
+
     column_picker = editor.inputs.headers[0].get_column_picker()
-    column_picker.toggle_visibility("Value")
-    del expected_column_names[1]
+    column_picker.toggle_visibility("Low")
+    column_picker.toggle_visibility("High")
+    column_picker.toggle_visibility("Type")
+
+    expected_column_names[2:2] = ["Type"]
+    expected_column_names[4:4] = ["High"]
+    expected_column_names[5:5] = ["Low"]
+
     input_column_names = [header.value for header in editor.inputs.headers]
 
     eq(input_column_names, expected_column_names)
     
+    column_picker.toggle_visibility("Name")
+    column_picker.toggle_visibility("Description")
+
+    del expected_column_names[1]
+    del expected_column_names[-1]
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+    
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
     editor.close()
     closeout(project_dict, workspace_page)
 
