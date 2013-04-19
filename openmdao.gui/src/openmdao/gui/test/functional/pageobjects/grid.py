@@ -101,7 +101,13 @@ class GridHeader(object):
 
     def get_column_picker(self):
         self.context_click()
-        return GridColumnPicker(self._browser, self._browser.find_element(By.CLASS_NAME, "slick-columnpicker")) 
+        time.sleep(1)
+        #return GridColumnPicker(self._browser, self._browser.find_element(By.CLASS_NAME, "slick-columnpicker")) 
+        column_pickers = [GridColumnPicker(self._browser, element) for element in self._browser.find_elements( By. CLASS_NAME, "slick-columnpicker" )] 
+        for column_picker in column_pickers:
+            if column_picker.displayed:
+                return column_picker
+        #return GridColumnPicker(self._browser, self._browser.find_element( By.XPATH, "//span[contains(@class, 'slick-columnpicker')]")) 
 
 class GridColumnPicker(object):
     """ Represents a slickColumnPicker at `root` """
@@ -109,12 +115,15 @@ class GridColumnPicker(object):
         self._browser = browser
         self._root = root
 
+    @property
+    def displayed(self):
+        return self._root.is_displayed()
+
     def toggle_visibility(self, column_name):
         options = [GridColumnPickerOption(self._browser, option) 
                     for option in self._root.find_elements(By.XPATH, "li")]
 
         for option in options:
-            print option.text
             if(option.text == column_name):
                 option.click()
                 break

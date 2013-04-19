@@ -913,6 +913,9 @@ def _test_column_picking(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page()
 
+    #Testing for Inputs tab 
+
+    #Test that the default columns are loaded first
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
     
     editor.show_inputs()
@@ -920,6 +923,7 @@ def _test_column_picking(browser):
 
     eq(input_column_names, expected_column_names)
 
+    #Test that low, high and type are added
     column_picker = editor.inputs.headers[0].get_column_picker()
     column_picker.toggle_visibility("Low")
     column_picker.toggle_visibility("High")
@@ -933,6 +937,7 @@ def _test_column_picking(browser):
 
     eq(input_column_names, expected_column_names)
     
+    #Test that the name and description columns are removed
     column_picker.toggle_visibility("Name")
     column_picker.toggle_visibility("Description")
 
@@ -943,19 +948,71 @@ def _test_column_picking(browser):
     
     eq(input_column_names, expected_column_names)
 
+    #Testing for Outputs tab
+    
+    #Test that the default columns are loaded first.
     editor.show_outputs()
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
 
     output_column_names = [header.value for header in editor.outputs.headers]
     eq(output_column_names, expected_column_names)
+
+
+    #Test that the units and name columns are removed
+    column_picker = editor.outputs.headers[0].get_column_picker()
+    
+    column_picker.toggle_visibility("Units")
+    column_picker.toggle_visibility("Name")
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+
+    del expected_column_names[1]
+    del expected_column_names[2]
+
+    eq(output_column_names, expected_column_names)
+
+    #Test that the low column is shown
+    column_picker.toggle_visibility("Low")
+
+    expected_column_names[2:2] = ["Low"]
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
+
+    editor = top.editor_page()
+
+    #Reload the editor and check that the column settings
+    #for the Inputs and Outputs tabs were recalled
+    editor.show_inputs()
+    expected_column_names = ["", "Type", "Value", "High", "Low", "Units"]
+    input_column_names = [header.value for header in editor.inputs.headers]
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+    expected_column_names = ["", "Value", "Low", "Description"]
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
+
+    #Test that changes did not affect other component editors.
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    editor = driver.editor_page()
+
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+    editor.show_inputs()
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
     editor.close()
     closeout(project_dict, workspace_page)
-
-    #column_picker.toggle_visibility("Hi")
-    #editor.show_outputs()
-    #output_column_names = [header.value for header in editor.outputs.headers]
-    #
-    #eq(output_column_names, expected_column_names)
 
 if __name__ == '__main__':
     main()

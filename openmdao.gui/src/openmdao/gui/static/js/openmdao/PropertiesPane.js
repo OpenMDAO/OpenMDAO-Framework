@@ -40,7 +40,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             { id:"type",  name: "Type",       field:"type",   width:30                                              },
             { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
             { id:"hi",    name: "High",       field:"high",   width:30                                              },
-            { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
+            { id:"low",    name: "Low",        field:"low",    width:30                                              },
             { id:"units", name:"Units",       field:"units",  width:60   },
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
