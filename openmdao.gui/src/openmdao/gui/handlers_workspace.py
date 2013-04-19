@@ -2,20 +2,16 @@ import sys
 import os
 import re
 
-from threading import Lock
-
 try:
     import simplejson as json
 except ImportError:
     import json
 
-from tornado import web, websocket
+from tornado import web
 
 from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
-from openmdao.util.log import logger
 
-from pyV3D.handlers import WSHandler
 
 class AddOnsHandler(BaseHandler):
     ''' Addon installation utility.
@@ -489,8 +485,6 @@ class ProjectLoadHandler(ReqHandler):
         if path:
             cserver = self.get_server()
             cserver.load_project(path)
-            #sys.stderr.write("setting ViewerStreamHandler._projpath to %s\n" % path)
-            #ViewerStreamHandler._projpath = path
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -640,13 +634,6 @@ class ValueHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(value)
 
-
-#class ViewerStreamHandler(WSHandler):
-    #_projpath = None  # this gets set in ProjectLoadHandler
-    
-    #def initialize(self):
-        #super(ViewerStreamHandler, self).initialize(self._projpath)
-        
 
 class WorkflowHandler(ReqHandler):
 
