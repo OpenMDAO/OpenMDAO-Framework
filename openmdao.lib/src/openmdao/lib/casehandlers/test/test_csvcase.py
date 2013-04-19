@@ -9,7 +9,7 @@ import unittest
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           ListCaseIterator, ListCaseRecorder, \
                                           DumpCaseRecorder
-from openmdao.lib.datatypes.api import Array, Str, Slot, Bool
+from openmdao.lib.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array
@@ -30,8 +30,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         top.comp1.add('a_array', Array(array([1.0, 3.0, 5.5]), iotype='out'))
         top.comp1.add('x_array', Array(array([1.0, 1.0, 1.0]), iotype='in'))
         top.comp1.add('b_bool', Bool(False, iotype='in'))
-        top.comp1.add('vt', Slot(DumbVT, iotype='out'))
-        top.comp1.vt = DumbVT()
+        top.comp1.add('vt', VarTree(DumbVT(), iotype='out'))
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases

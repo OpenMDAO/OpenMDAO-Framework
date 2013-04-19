@@ -76,20 +76,21 @@ setup(name='openmdao.main',
       openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
       
       [openmdao.variable]
-      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
-      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
+      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
+      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
+      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
       openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
       openmdao.main.datatypes.geom.Geom = openmdao.main.datatypes.geom:Geom
       openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
-      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
-      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
-      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
-      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
-      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
+      openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       
       """,
     )
