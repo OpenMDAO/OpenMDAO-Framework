@@ -2,7 +2,7 @@
 import unittest
 import pickle
 
-from openmdao.main.api import Assembly, Component, Container, Case
+from openmdao.main.api import Assembly, Component, Container, Case, VariableTree
 from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
@@ -176,6 +176,17 @@ class SlotTestCase(unittest.TestCase):
                          'filled': 'MyClass',
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
+
+    def test_variabletree(self):
+        # Ensure VariableTree is rejected.
+        msg = 'Slotting of VariableTrees is not supported,' \
+              ' please use VarTree instead'
+
+        code = 'Slot(VariableTree)'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
+
+        code = 'Slot(VariableTree())'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
 
 
 class MyIface(zope.interface.Interface):

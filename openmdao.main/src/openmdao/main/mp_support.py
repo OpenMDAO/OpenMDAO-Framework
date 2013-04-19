@@ -82,24 +82,31 @@ CLASSES_TO_PROXY = []
 _PROXY_CACHE = {}
 
 
-def is_instance(obj, typ):
+def is_instance(obj, type_info):
     """
     :func:`isinstance` replacement for when `obj` might be a proxy.
 
     obj: object
         Object to be tested.
 
-    typ: class
-        Class to be tested against.
+    type_info: class or tuple of classes
+        Class(es) to be tested against.
 
-    Returns True if `obj` is an instance of `typ` or the object `obj` refers
-    to is an instance of `typ`.
+    Returns True if `obj` is an instance of `type_info` or the object `obj`
+    refers to is an instance of `type_info`.
     """
     if isinstance(obj, OpenMDAO_Proxy):
-        typename = '%s.%s' % (typ.__module__, typ.__name__)
-        return obj.__is_instance__(typename)
+        try:
+            type_info[0]
+        except TypeError:
+            type_info = (type_info,)
+        for typ in type_info:
+            typename = '%s.%s' % (typ.__module__, typ.__name__)
+            if obj.__is_instance__(typename):
+                return True
+        return False
     else:
-        return isinstance(obj, typ)
+        return isinstance(obj, type_info)
 
 
 def has_interface(obj, *ifaces):

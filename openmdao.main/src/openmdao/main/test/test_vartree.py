@@ -6,44 +6,46 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, Slot, File, List
+from openmdao.main.datatypes.api import Float, File, List, VarTree
 from openmdao.main.case import flatten_obj
+
+from openmdao.util.testutil import assert_raises
 
 
 class DumbVT3(VariableTree):
-    def __init__(self):
-        super(DumbVT3, self).__init__()
-        self.add('a', Float(1., units='ft'))
-        self.add('b', Float(12., units='inch'))
-        self.add('data', File())
+
+    a = Float(1., units='ft')
+    b = Float(12., units='inch')
+    data = File()
 
 
 class DumbVT2(VariableTree):
-    def __init__(self):
-        super(DumbVT2, self).__init__()
-        self.add('x', Float(-1.))
-        self.add('y', Float(-2.))
-        self.add('data', File())
-        self.add('vt3', DumbVT3())
+
+    x = Float(-1.)
+    y = Float(-2.)
+    data = File()
+    vt3 = VarTree(DumbVT3())
+
+
+class BadVT2(VariableTree):
+
+    x = Float(-1.)
+    y = Float(-2.)
+    data = File()
+    vt3 = DumbVT3()
 
 
 class DumbVT(VariableTree):
-    def __init__(self):
-        super(DumbVT, self).__init__()
-        self.add('vt2', DumbVT2())
-        self.add('v1', Float(1., desc='vv1'))
-        self.add('v2', Float(2., desc='vv2'))
-        self.add('data', File())
+
+    v1 = Float(1., desc='vv1')
+    v2 = Float(2., desc='vv2')
+    data = File()
+    vt2 = VarTree(DumbVT2())
 
 
 class SimpleComp(Component):
-    cont_in = Slot(DumbVT, iotype='in')
-    cont_out = Slot(DumbVT, iotype='out')
-
-    def __init__(self):
-        super(SimpleComp, self).__init__()
-        self.add('cont_in', DumbVT())
-        self.add('cont_out', DumbVT())
+    cont_in = VarTree(DumbVT(), iotype='in')
+    cont_out = VarTree(DumbVT(), iotype='out')
 
     def execute(self):
         self.cont_out.v1 = self.cont_in.v1 + 1.0
@@ -229,15 +231,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'desc': 'vv2'} in attrs['Outputs'])
         self.assertEqual(len(attrs['Outputs']), 11)
 
-        # Slots panel too
-        attrs = self.asm.scomp1.cont_in.get_attributes(io_only=False)
-        self.assertTrue("Slots" in attrs.keys())
-        self.assertEqual(len(attrs['Slots']), 1)
-        self.assertTrue(attrs['Slots'][0]['name'] == 'vt2')
-        self.assertTrue(attrs['Slots'][0]['klass'] == 'VariableTree')
-        self.assertTrue(attrs['Slots'][0]['containertype'] == 'singleton')
-        self.assertTrue(attrs['Slots'][0]['filled'] == 'DumbVT2')
-
         # Now connect
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
@@ -365,13 +358,28 @@ class NamespaceTestCase(unittest.TestCase):
                               ('foo.vt2.x', -1.), ('foo.vt2.y', -2.),
                               ('foo.v1', 1.), ('foo.v2', 2.)]))
 
+    def test_nesting(self):
+        # Check direct nesting in class definition.
+        code = 'vt2 = BadVT2()'
+        msg = 'Nested VariableTrees are not supported,' \
+              ' please wrap BadVT2.vt3 in a VarTree'
+        assert_raises(self, code, globals(), locals(), TypeError, msg,
+                      use_exec=True)
+
+        # Check direct nesting via add().
+        vt3 = DumbVT3()
+        vt3.add('ok', VarTree(DumbVT3()))
+        code = "vt3.add('bad', DumbVT3())"
+        msg = ': a VariableTree may only contain Variables or VarTrees'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
+
 
 class ListConnectTestCase(unittest.TestCase):
 
     def test_connect(self):
         class Vars(VariableTree):
-                f1 = Float()
-                f2 = Float()
+            f1 = Float()
+            f2 = Float()
 
         class TestAsm(Assembly):
 

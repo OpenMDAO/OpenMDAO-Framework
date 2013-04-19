@@ -1684,7 +1684,7 @@ class Component(Container):
 
             # Let the GUI know that this var is the top element of a
             # variable tree
-            if slot_attr is not None:
+            if io_attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
                     io_attr['vt'] = 'vt'
@@ -1703,11 +1703,9 @@ class Component(Container):
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in io_attr:
-
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
                                                    parent=name,
                                                    valid=io_attr['valid'])
-
                 if name in self.list_inputs():
                     inputs += vt_attrs['Inputs']
                 else:

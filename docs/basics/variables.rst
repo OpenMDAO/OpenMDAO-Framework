@@ -330,8 +330,12 @@ by `FileMetadata`, which supports arbitrary user metadata.
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
 
-The *path* must be a descendant of the parent component's path. The *binary* flag can be used to
-mark a file as binary. 
+The *path* must be a descendant of the parent component's path.
+The *binary* flag can be used to mark a file as binary. This can be important
+when transferring files between Windows and OS X or Linux.  The default value
+is False, signifying a text file which needs newline translation between
+different systems.  If newline translation is applied to a binary file it will
+corrupt the data.
 
 .. todo::
 
@@ -510,8 +514,8 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import Component, VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
     class FlightCondition(VariableTree):
         """Container of variables"""
@@ -524,22 +528,13 @@ three variables that define two flight conditions:
     class AircraftSim(Component):
         """This component contains variables in a VariableTree"""
     
-        # create Slots to handle updates to our FlightCondition attributes
-        fcc1 = Slot(FlightCondition, iotype='in')
-        fcc2 = Slot(FlightCondition, iotype='out')
+        # create VarTrees to handle updates to our FlightCondition attributes
+        fcc1 = VarTree(FlightCondition(), iotype='in')
+        fcc2 = VarTree(FlightCondition(), iotype='out')
         
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
 
-        def __init__(self):
-            """Instantiate variable containers here"""
-
-            super(AircraftSim, self).__init__()
-        
-            # Instantiate and add our variable containers.
-            self.add('fcc1', FlightCondition())
-            self.add('fcc2', FlightCondition())
-    
         def execute(self):
             """Do something."""
         
@@ -549,13 +544,13 @@ three variables that define two flight conditions:
 
 .. note::
 
-    It's important to create a Slot variable for each VariableTree object contained
-    in your component if you intend to connect it to variables in other components.
-    Also make sure to set the *iotype* attribute in the Slot.  If you don't, changes 
+    It's important to create a VarTree variable (which is much like a Slot)
+    for each VariableTree object contained in your component if you intend to
+    connect it to variables in other components.
+    Also make sure to set the *iotype* attribute in the VarTree.  If you don't, changes 
     to variables within the VariableTree object won't properly notify the component.
-    If you have a nested VariableTree, it's only necessary to create a Slot in the
-    component that contains it.  Adding Slots for VariableTrees inside of another
-    VariableTree is not necessary.
+    If you have a nested VariableTree, it's necessary to create a VarTree in the
+    VariableTree that contains it.
     
     
 Here, we defined the class ``FlightCondition``, containing three variables.
@@ -569,12 +564,13 @@ another VariableTree, so any level of nesting is possible.  For example:
 
 .. testsetup:: nested_vartree
 
-    from openmdao.main.api import VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
+    class FlightCondition(VariableTree):
+        pass
     
 .. testcode:: nested_vartree
-
 
     class MyNestedVars(VariableTree):
         """A nested container of variables"""
@@ -582,10 +578,7 @@ another VariableTree, so any level of nesting is possible.  For example:
         f1 = Float(120.0)
         f2 = Float(0.0)
         
-        def __init__(self):
-            super(MyNestedVars, self).__init__()
-            self.add('sub_vartree', FlightCondition())
-            
+        sub_vartree = VarTree(FlightCondition())
         
     
 An interesting thing about this example is that we've

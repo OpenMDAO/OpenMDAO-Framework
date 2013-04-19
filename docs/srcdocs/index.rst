@@ -45,6 +45,8 @@ Source Documentation
 
 .. _openmdao.main.datatypes.str.py:
 
+.. _openmdao.main.datatypes.vtree.py:
+
 .. _openmdao.lib.doegenerators.api:
 
 .. _doedriver.py: 

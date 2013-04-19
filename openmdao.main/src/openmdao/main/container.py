@@ -29,12 +29,14 @@ from enthought.traits.api import HasTraits, Missing, Python, \
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none, not_event
+from enthought.traits.trait_base import not_none
 
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
-from openmdao.main.datatypes.api import List, Slot
+from openmdao.main.datatypes.list import List
+from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
@@ -191,6 +193,20 @@ class Container(SafeHasTraits):
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
 
+        # Similarly, create per-instance VariableTrees for VarTree traits.
+        for name, obj in self.__class__.__dict__['__class_traits__'].items():
+            ttype = obj.trait_type
+            if isinstance(ttype, VarTree):
+                variable_tree = getattr(self, name)
+                parent = variable_tree._parent
+                variable_tree._parent = None
+                try:
+                    new_tree = variable_tree.copy()
+                finally:
+                    variable_tree._parent = parent
+                setattr(self, name, new_tree)
+                new_tree.install_callbacks()
+
     @property
     def parent(self):
         """The parent Container of this Container."""
@@ -279,7 +295,7 @@ class Container(SafeHasTraits):
             self._depgraph.check_connect(srcpath, destpath)
         
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[',1)[0]):
+                if not self.contains(destpath.split('[', 1)[0]):
                     self.raise_exception("Can't find '%s'" % destpath, AttributeError)
                 parts = destpath.split('.')
                 for i in range(len(parts)):
@@ -329,7 +345,7 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        destvar = destpath.split('[',1)[0]
+        destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
         if not srcexpr.refs_parent():
             srcvar = srcexpr.get_referenced_varpaths().pop()
@@ -411,9 +427,13 @@ class Container(SafeHasTraits):
         olditraits = self._instance_traits()
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name in self._added_traits:
-                
-                result.add_trait(name, _clone_trait(trait))
-                result.__dict__[name] = self.__dict__[name]
+                if isinstance(trait.trait_type, VarTree):
+                    if name not in result._added_traits:
+                        result.add_trait(name, _clone_trait(trait))
+                else:
+                    result.add_trait(name, _clone_trait(trait))
+                if name in self.__dict__:  # Not true with VarTree
+                    result.__dict__[name] = self.__dict__[name]
 
         return result
 
@@ -762,7 +782,7 @@ class Container(SafeHasTraits):
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
                 if obj is not Missing:
-                    if is_instance(obj, Container) and id(obj) not in visited:
+                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
@@ -980,7 +1000,7 @@ class Container(SafeHasTraits):
         else:
             # TODO: fix this...
             if '[' in path:
-                path,idx = path.replace(']','').split('[')
+                path,idx = path.replace(']', '').split('[')
                 if path and idx.isdigit():
                     obj = getattr(self, path, Missing)[int(idx)]
                 else:

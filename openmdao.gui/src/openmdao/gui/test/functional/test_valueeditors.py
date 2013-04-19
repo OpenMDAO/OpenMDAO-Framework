@@ -9,6 +9,8 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 from selenium.webdriver import ActionChains
 
+from unittest import TestCase
+
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 
@@ -187,7 +189,8 @@ def _test_Avartrees(browser):
     except IndexError:
         pass
     else:
-        self.fail('Exception expected: Slot value should not be settable on inputs.')
+        raise TestCase.failureException(
+            'Exception expected: VarTree value should not be settable on inputs.')
 
     # Contract first vartree
     inputs.rows[0].cells[1].click()
