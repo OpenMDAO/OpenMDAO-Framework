@@ -2014,7 +2014,7 @@ def _update_activate(bindir):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['SetupDocs==1.0.5', 'networkx==1.3', 'Pyevolve==0.6', 'slsqp==1.0.1', 'virtualenv==1.8.4', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'conmin==1.0.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'pycrypto==2.3']
+    reqs = ['SetupDocs==1.0.5', 'networkx==1.3', 'pyV3D', 'Pyevolve==0.6', 'slsqp==1.0.1', 'virtualenv==1.8.4', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'conmin==1.0.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'pycrypto==2.3']
     guireqs = ['pyzmq-static==2.1.11.1', 'PyYAML==3.10', 'pathtools==0.1.2', 'tornado==2.2.1', 'argh==0.15.1', 'watchdog==0.6.0']
     guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
     
