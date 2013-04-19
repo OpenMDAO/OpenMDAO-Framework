@@ -36,6 +36,7 @@ from multiprocessing import connection
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
@@ -193,7 +194,6 @@ class Container(SafeHasTraits):
                 setattr(self, name, obj.copy(owner=self))
 
         # Similarly, create per-instance VariableTrees for VarTree traits.
-        from openmdao.main.datatypes.vtree import VarTree
         for name, obj in self.__class__.__dict__['__class_traits__'].items():
             ttype = obj.trait_type
             if isinstance(ttype, VarTree):
@@ -427,7 +427,6 @@ class Container(SafeHasTraits):
         olditraits = self._instance_traits()
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name in self._added_traits:
-                from openmdao.main.datatypes.vtree import VarTree
                 if isinstance(trait.trait_type, VarTree):
                     if name not in result._added_traits:
                         result.add_trait(name, _clone_trait(trait))
@@ -783,7 +782,6 @@ class Container(SafeHasTraits):
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
                 if obj is not Missing:
-                    from openmdao.main.datatypes.vtree import VarTree
                     if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)

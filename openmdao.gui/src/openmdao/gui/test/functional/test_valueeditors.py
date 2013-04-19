@@ -190,7 +190,7 @@ def _test_Avartrees(browser):
         pass
     else:
         raise TestCase.failureException(
-            'Exception expected: Slot value should not be settable on inputs.')
+            'Exception expected: VarTree value should not be settable on inputs.')
 
     # Contract first vartree
     inputs.rows[0].cells[1].click()

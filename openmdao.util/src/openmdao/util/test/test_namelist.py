@@ -50,7 +50,7 @@ class VarComponent(Component):
     listenumvar3 = List(Enum('a', ('a', 'b', 'c')), iotype='in')
     listenumvar4 = List(Enum(True, (True, False)), iotype='in')
     
-    varcontainer = VarTree(VarContainer(), iotype='input')
+    varcontainer = VarTree(VarContainer(), iotype='in')
     
     
 class TestCase(unittest.TestCase):

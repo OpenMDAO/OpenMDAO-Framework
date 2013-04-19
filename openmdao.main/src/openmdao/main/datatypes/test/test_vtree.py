@@ -21,16 +21,12 @@ class TestCase(unittest.TestCase):
     def test_basic(self):
         comp = TestComponent()
 
-        code = "VarTree(OutputTree)"
-        msg = "default_value is a class and no iotype specified"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
-
-        code = "VarTree(Component)"
-        msg = "default_value must be a VariableTree instance or subclass"
+        code = "VarTree(InputTree)"
+        msg = "default_value must be an instance of VariableTree or subclass"
         assert_raises(self, code, globals(), locals(), TypeError, msg)
 
         code = "comp.input = OutputTree()"
-        msg = ": input must be an instance of %s.%s" \
+        msg = ": 'input' must be an instance of %s.%s" \
               % (InputTree.__module__, InputTree.__name__)
         assert_raises(self, code, globals(), locals(), TypeError, msg,
                       use_exec=True)

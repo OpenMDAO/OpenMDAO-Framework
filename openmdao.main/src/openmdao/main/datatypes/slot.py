@@ -67,7 +67,7 @@ class Slot(Variable):
             else:
                 default_value = self._instance.default_value
 
-            if default_value.__class__.__name__ == 'VariableTree':
+            if klass.__name__ == 'VariableTree':
                 raise TypeError('Slotting of VariableTrees is not supported,'
                                 ' please use VarTree instead')
 

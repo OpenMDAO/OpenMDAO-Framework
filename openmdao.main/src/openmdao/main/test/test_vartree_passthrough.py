@@ -66,7 +66,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'implicit': '', 
                          'valid': True, 
                          'connected': '', 
-                         'ttype': 'vartree', #'slot', 
+                         'ttype': 'vartree',
                          'type': 'TstContainer', 
                          'id': 'dummy_data',
                          'target': 'comp.dummy_data'} in attrs['Inputs'])
@@ -86,7 +86,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'implicit': '', 
                          'valid': False, 
                          'connected': '', 
-                         'ttype': 'vartree', #'slot', 
+                         'ttype': 'vartree',
                          'type': 'TstContainer', 
                          'id': 'dummy1_out',
                          'target': 'comp.dummy_data_out'} in attrs['Outputs'])

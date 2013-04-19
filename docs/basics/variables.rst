@@ -332,7 +332,7 @@ by `FileMetadata`, which supports arbitrary user metadata.
 
 The *path* must be a descendant of the parent component's path.
 The *binary* flag can be used to mark a file as binary. This can be important
-when transferring file between Windows and OS X or Linux.  The default value
+when transferring files between Windows and OS X or Linux.  The default value
 is False, signifying a text file which needs newline translation between
 different systems.  If newline translation is applied to a binary file it will
 corrupt the data.
@@ -544,8 +544,9 @@ three variables that define two flight conditions:
 
 .. note::
 
-    It's important to create a VarTree variable for each VariableTree object contained
-    in your component.
+    It's important to create a VarTree variable (which is much like a Slot)
+    for each VariableTree object contained in your component if you intend to
+    connect it to variables in other components.
     Also make sure to set the *iotype* attribute in the VarTree.  If you don't, changes 
     to variables within the VariableTree object won't properly notify the component.
     If you have a nested VariableTree, it's necessary to create a VarTree in the

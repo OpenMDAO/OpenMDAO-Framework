@@ -1684,7 +1684,7 @@ class Component(Container):
 
             # Let the GUI know that this var is the top element of a
             # variable tree
-            if io_attr.get('ttype') in ('vartree', 'slot'):
+            if io_attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
                     io_attr['vt'] = 'vt'

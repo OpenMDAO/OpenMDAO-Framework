@@ -10,40 +10,29 @@ from inspect import isclass
 from enthought.traits.api import Instance
 
 from openmdao.main.variable import Variable, gui_excludes
-from openmdao.main.vartree import VariableTree
 
 
 class VarTree(Variable):
     """ A Variable for a :class:`VariableTree` of a particular type. """
 
-    def __init__(self, klass=VariableTree, allow_none=True, **metadata):
-        default_value = None
-
-        if isinstance(klass, VariableTree):
-            default_value = klass
-            klass = klass.__class__
+    def __init__(self, default_value, allow_none=True, **metadata):
+        # Break import loop on VariableTree by checking for _iotype.
+        if hasattr(default_value, '_iotype'):
+            klass = default_value.__class__
             if 'iotype' in metadata:
                 default_value._iotype = metadata['iotype']
             else:
                 metadata['iotype'] = default_value.iotype
         else:
-            if isclass(klass) and issubclass(klass, VariableTree):
-                if 'iotype' not in metadata:
-                    raise ValueError('default_value is a class and no iotype'
-                                     ' specified')
-            else:
-                raise TypeError('default_value must be a VariableTree instance'
-                                ' or subclass')
+            raise TypeError('default_value must be an instance of VariableTree'
+                            ' or subclass')
 
         metadata.setdefault('copy', 'deep')
         self._allow_none = allow_none
         self.klass = klass
         self._instance = Instance(klass=klass, allow_none=False, factory=None,
                                   args=None, kw=None, **metadata)
-        if default_value:
-            self._instance.default_value = default_value
-        else:
-            default_value = self._instance.default_value
+        self._instance.default_value = default_value
         super(VarTree, self).__init__(default_value, **metadata)
 
     def validate(self, obj, name, value):
@@ -56,7 +45,7 @@ class VarTree(Variable):
         try:
             value = self._instance.validate(obj, name, value)
         except Exception:
-            obj.raise_exception('%s must be an instance of %s.%s' %
+            obj.raise_exception('%r must be an instance of %s.%s' %
                                 (name, self._instance.klass.__module__,
                                  self._instance.klass.__name__), TypeError)
         return value

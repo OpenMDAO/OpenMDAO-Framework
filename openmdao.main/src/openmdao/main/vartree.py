@@ -8,6 +8,7 @@ from enthought.traits.has_traits import FunctionType
 from openmdao.main.interfaces import IVariable
 from openmdao.main.container import Container
 from openmdao.main.datatypes.str import Str
+from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -21,6 +22,13 @@ class VariableTree(Container):
         super(VariableTree, self).__init__()
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
+
+        # Check for nested VariableTrees in the class definition.
+        for name, obj in self.__class__.__dict__.items():
+            if isinstance(obj, VariableTree):
+                raise TypeError('Nested VariableTrees are not supported,'
+                                ' please wrap %s.%s in a VarTree'
+                                % (self.__class__.__name__, name))
 
         # register callbacks for our class traits
         for name, trait in self.class_traits().items():
@@ -86,14 +94,8 @@ class VariableTree(Container):
                     obj.install_callbacks()
 
     def add(self, name, obj):
-        if isinstance(obj, VariableTree):
-            if self.trait(name) is None:
-                from openmdao.main.datatypes.vtree import VarTree
-                self.add_trait(name, VarTree(obj.__class__, iotype=obj._iotype))
-                self.on_trait_change(self._trait_modified, name)
-        elif not IVariable.providedBy(obj):
-            msg = "a VariableTree may only contain Variables or other " + \
-                  "VariableTrees"
+        if not (IVariable.providedBy(obj) or isinstance(obj, VarTree)):
+            msg = "a VariableTree may only contain Variables or VarTrees"
             self.raise_exception(msg, TypeError)
         return super(VariableTree, self).add(name, obj)
 
@@ -120,7 +122,6 @@ class VariableTree(Container):
         return None
 
     def _iotype_modified(self, obj, name, old, new):
-        from openmdao.main.datatypes.vtree import VarTree
         for k, v in self.__dict__.items():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
@@ -187,8 +188,7 @@ class VariableTree(Container):
                             yield ('.'.join([name, chname]), child)
 
     def get_attributes(self, io_only=True, indent=0, parent='', valid='false'):
-        """ Get attributes for this variable tree. Variables may also include
-        slots. Used by the GUI.
+        """ Get attributes for this variable tree. Used by the GUI.
 
         io_only: bool
             Set to True if we only want to populate the input and output
@@ -231,7 +231,7 @@ class VariableTree(Container):
 
             # Let the GUI know that this var is the top element of a
             # variable tree
-            if attr.get('ttype') in ('vartree', 'slot'):
+            if attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
                     attr['vt'] = 'vt'

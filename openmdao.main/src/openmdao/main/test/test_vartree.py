@@ -9,6 +9,8 @@ from openmdao.main.api import Component, Assembly, VariableTree, \
 from openmdao.main.datatypes.api import Float, File, List, VarTree
 from openmdao.main.case import flatten_obj
 
+from openmdao.util.testutil import assert_raises
+
 
 class DumbVT3(VariableTree):
 
@@ -23,6 +25,14 @@ class DumbVT2(VariableTree):
     y = Float(-2.)
     data = File()
     vt3 = VarTree(DumbVT3())
+
+
+class BadVT2(VariableTree):
+
+    x = Float(-1.)
+    y = Float(-2.)
+    data = File()
+    vt3 = DumbVT3()
 
 
 class DumbVT(VariableTree):
@@ -347,6 +357,21 @@ class NamespaceTestCase(unittest.TestCase):
                          set([('foo.vt2.vt3.a', 1.), ('foo.vt2.vt3.b', 12.),
                               ('foo.vt2.x', -1.), ('foo.vt2.y', -2.),
                               ('foo.v1', 1.), ('foo.v2', 2.)]))
+
+    def test_nesting(self):
+        # Check direct nesting in class definition.
+        code = 'vt2 = BadVT2()'
+        msg = 'Nested VariableTrees are not supported,' \
+              ' please wrap BadVT2.vt3 in a VarTree'
+        assert_raises(self, code, globals(), locals(), TypeError, msg,
+                      use_exec=True)
+
+        # Check direct nesting via add().
+        vt3 = DumbVT3()
+        vt3.add('ok', VarTree(DumbVT3()))
+        code = "vt3.add('bad', DumbVT3())"
+        msg = ': a VariableTree may only contain Variables or VarTrees'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
 
 
 class ListConnectTestCase(unittest.TestCase):

@@ -351,7 +351,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             if (item.connected.length > 0) {
                 return false;
             }
-            else if (item.ttype == 'slot' || item.ttype == 'vartree') {
+            else if (item.ttype == 'vartree') {
                 return false;
             }
             else {
@@ -504,7 +504,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     var nameStyle = '',
                         valueStyle = '';
                     if (options.editable && (value.connected.length === 0)
-                        && (value.ttype != 'slot') && (value.ttype != 'vartree')) {
+                        && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
                     if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
