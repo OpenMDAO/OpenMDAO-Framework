@@ -931,13 +931,14 @@ class Assembly(Component):
                     if is_instance(comp, Component):
                         inames = [cls.__name__
                                   for cls in list(implementedBy(comp.__class__))]
-                        components.append({'name': comp.name,
-                                           'pathname': comp.get_pathname(),
-                                           'type': type(comp).__name__,
-                                           'valid': comp.is_valid(),
-                                           'interfaces': inames,
-                                           'python_id': id(comp)
-                                          })
+                        components.append({
+                            'name': comp.name,
+                            'pathname': comp.get_pathname(),
+                            'type': type(comp).__name__,
+                            'valid': comp.is_valid(),
+                            'interfaces': inames,
+                            'python_id': id(comp)
+                        })
 
                     if is_instance(comp, Driver):
                         if hasattr(comp, '_delegates_'):

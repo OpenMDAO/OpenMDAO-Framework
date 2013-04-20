@@ -576,8 +576,6 @@ def _test_drop_onto_layered_div(browser):
     paraboloid_name = NameInstanceDialog(workspace_page).create_and_dismiss()
     paraboloid_pathname = sim_name + "." + paraboloid_name
 
-    workspace_page.hide_left()
-
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city',
                                                              sim_name)
@@ -587,23 +585,14 @@ def _test_drop_onto_layered_div(browser):
 
     # Confirm expected number of workflow component figures before adding one
     eq(len(driver_editor.get_workflow_component_figures()), 5)
-    eq(len(workspace_page.get_workflow_component_figures()), 21)
 
     # Drag paraboloid component into sim_EPA_city workflow
     workspace_page('dataflow_tab').click()
-    simsim_name = sim_name + '.' + 'sim_EPA_city'
-    workspace_page.add_object_to_workflow_figure(paraboloid_pathname, 'sim_EPA_city')
+    workspace_page.add_object_to_workflow_figure(
+        paraboloid_pathname, 'sim_EPA_city', target_page=driver_editor)
 
-    ## Confirm there is one more workflow component figure in the editor
-    workspace_page('workflow_tab').click()
+    # Confirm there is one more workflow component figure in the editor
     eq(len(driver_editor.get_workflow_component_figures()), 6)
-
-    ## Confirm two more workflow component figures in the workspace as a whole
-    eq(len(workspace_page.get_workflow_component_figures()), 24)
-
-    ## Confirm that the paraboloid has been added to the sim_EPA_city workflow
-    ## by trying to access it.
-    # obj = workspace_page.find_object_button(simsim_name + "." + paraboloid_name)
 
     # Don't see the reason to verfiy again that you can't add something to an
     # out-of-scope workflow. -- KTM

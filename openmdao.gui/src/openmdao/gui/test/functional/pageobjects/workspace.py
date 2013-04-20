@@ -664,8 +664,12 @@ class WorkspacePage(BasePageObject):
             else:
                 break
 
-    def add_object_to_workflow_figure(self, obj_path, target_name):
-        """ Add `obj_path` object to `target_name` in workflow. """
+    def add_object_to_workflow_figure(self, obj_path, target_name, target_page=None):
+        """ Add `obj_path` object to `target_name` in workflow diagram. """
+
+        if target_page is None:
+            target_page = self
+
         for retry in range(3):
             try:
                 items = obj_path.split('.')
@@ -673,9 +677,8 @@ class WorkspacePage(BasePageObject):
                 comp = items[-1]
                 obj = self.get_dataflow_figure(comp, parent)
 
-                workflow = self.get_workflow_figure(target_name)
+                workflow = target_page.get_workflow_figure(target_name)
                 flow_fig = workflow.flow
-
                 print 'flow fig:', flow_fig
 
                 chain = ActionChains(self.browser)
