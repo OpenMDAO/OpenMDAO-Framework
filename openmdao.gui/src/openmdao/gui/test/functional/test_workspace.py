@@ -425,10 +425,11 @@ def _test_properties(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 # This test no longer needed because there is no longer a component panel that
 # tracks the minimize/maximize behavior of the dataflow. The collapse/expand
 # behavior is alrady tested in test_dataflow. -- KTM
-
+# Correction: has nothing to do with dataflow.. just tests the object tree.
 #def _test_objtree(browser):
     ## Toggles maxmimize/minimize button on assemblies.
     #project_dict, workspace_page = startup(browser)

@@ -679,7 +679,6 @@ class WorkspacePage(BasePageObject):
 
                 workflow = target_page.get_workflow_figure(target_name)
                 flow_fig = workflow.flow
-                print 'flow fig:', flow_fig
 
                 chain = ActionChains(self.browser)
                 chain.drag_and_drop(obj.root, flow_fig)
