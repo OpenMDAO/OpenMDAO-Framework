@@ -1717,9 +1717,9 @@ class Component(Container):
                                                    valid=io_attr['valid'])
 
                 if name in self.list_inputs():
-                    inputs += vt_attrs['Inputs']
+                    inputs += vt_attrs.get('Inputs', [])
                 else:
-                    outputs += vt_attrs['Outputs']
+                    outputs += vt_attrs.get('Outputs', [])
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs

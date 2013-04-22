@@ -61,7 +61,15 @@ function wsGpOnMessage(evt)
   g.messageQ.push(evt.data.slice(0));
   delete evt.data;
  */
-  g.messageQ.push(evt.data);
+
+  // ignore non-binary messages here
+  // FIXME: we really need to handler this at the framework level, possibly
+  //    by including some extra info in the topic string, like  <protocol_name>:topic
+  //    For example, for pyV3D messages,  pyV3D:var_path_name
+  if (typeof evt.data === 'ArrayBuffer' || evt.data instanceof ArrayBuffer) {
+    console.debug("pushing ", evt.data);
+    g.messageQ.push(evt.data);
+  }
 }
 
 

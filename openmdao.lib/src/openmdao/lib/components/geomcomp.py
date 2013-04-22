@@ -47,6 +47,10 @@ class GeomComponent(Component):
                 new.parent = self
                 new.name = 'parametric_geometry'
             new.register_param_list_changedCB(self._model_updated)
+            try:
+                self.geom_out = self.parametric_geometry.get_static_geometry()
+            except:
+                self.geom_out = None
         else:
             self.geom_out = None
 
@@ -104,6 +108,7 @@ class GeomComponent(Component):
         for plist in (inps, outps):
             for name, meta in plist:
                 if name in added_ins or name in added_outs:
+                    meta = meta.copy()
                     val = meta['value']
                     typ = _ttdict.get(type(val))
                     del meta['value']  # don't include value in trait metadata

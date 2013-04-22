@@ -142,7 +142,6 @@ class Publisher(object):
         """
         global _binpubs, _binpub_types
         sender = None
-        logger.error("in Publisher.register")
         if _binpub_types is None:
             load_binpubs()
 

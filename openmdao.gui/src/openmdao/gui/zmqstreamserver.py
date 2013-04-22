@@ -4,18 +4,12 @@ import traceback
 import subprocess
 
 from optparse import OptionParser
-
-try:
-    import simplejson as json
-except ImportError:
-    import json
     
 import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
-from openmdao.util.log import logger
 
 debug = True
 NAME_SIZE = 256  # this must agree with NAME_SIZE in Model.js
@@ -67,9 +61,9 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             binary = False
             try:
                 message = message[0]
-            except Exception, err:
+            except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info
-                print 'ZMQStreamHandler ERROR converting message to unicode:', topic, err
+                print 'ZMQStreamHandler ERROR converting message to unicode:', str(message), err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
@@ -85,7 +79,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 message = message[0].ljust(NAME_SIZE, '\0') + message[1]  # FIXME: message is copied here
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print 'ZMQStreamHandler ERROR:', topic, err
+                print 'ZMQStreamHandler ERROR:', str(message), err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 

@@ -6,7 +6,7 @@ from openmdao.main.geom import ParametricGeometry
 from openmdao.main.interfaces import IStaticGeometry, implements
 
 from pyV3D.handlers import WV_Sender
-from pyV3D import WV_ON, WV_ORIENTATION, WV_SHADING
+
 
 
 class BoxParametricGeometry(ParametricGeometry):
@@ -21,7 +21,7 @@ class BoxParametricGeometry(ParametricGeometry):
 
         self.vertices = self.get_vertices()
 
-        # color array
+        # color array.  one color per face in this case
         self.colors = array([
                [0, 0, 255],    # v0-v1-v2-v3
                [255, 0, 0],    # v0-v3-v4-v5
@@ -33,23 +33,19 @@ class BoxParametricGeometry(ParametricGeometry):
 
         # normal array
         self.normals = array([
-               [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],     # v0-v1-v2-v3 front
-               [1, 0, 0,   1, 0, 0,   1, 0, 0,   1, 0, 0],     # v0-v3-v4-v5 right
-               [0, 1, 0,   0, 1, 0,   0, 1, 0,   0, 1, 0],     # v0-v5-v6-v1 top
-              [-1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0],     # v1-v6-v7-v2 left
-               [0,-1, 0,   0,-1, 0,   0,-1, 0,   0,-1, 0],     # v7-v4-v3-v2 bottom
-               [0, 0,-1,   0, 0,-1,   0, 0,-1,   0, 0,-1 ],   # v4-v7-v6-v5 back
+               [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],  # v0-v1-v2-v3 front
+               [1, 0, 0,   1, 0, 0,   1, 0, 0,   1, 0, 0],  # v0-v3-v4-v5 right
+               [0, 1, 0,   0, 1, 0,   0, 1, 0,   0, 1, 0],  # v0-v5-v6-v1 top
+              [-1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0],  # v1-v6-v7-v2 left
+               [0,-1, 0,   0,-1, 0,   0,-1, 0,   0,-1, 0],  # v7-v4-v3-v2 bottom
+               [0, 0,-1,   0, 0,-1,   0, 0,-1,   0, 0,-1 ], # v4-v7-v6-v5 back
         ], dtype=float32)
 
         # index array
-        self.indices = array([
-               [0, 1, 2,   0, 2, 3],    # front
-               [4, 5, 6,   4, 6, 7],    # right
-               [8, 9,10,   8,10,11],    # top
-              [12,13,14,  12,14,15],    # left
-              [16,17,18,  16,18,19],    # bottom
-              [20,21,22,  20,22,23],    # back
-        ], dtype=int32)
+        # each face has 2 triangles
+        self.triangles = array([0, 1, 2,   0, 2, 3], dtype=int32)
+
+        self.bbox = [-1.,-1.,-1.,1.,1.,1.]
               
         # other index array
         #self.oIndices = array([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,
@@ -62,6 +58,7 @@ class BoxParametricGeometry(ParametricGeometry):
         s = self.meta['side']['value']
         x = s/2.
         self.meta['volume']['value'] = s * s * 2.
+        self.bbox = [-x, -x, -x, x, x, x]
 
         # box  (side x side x 1)
         #    v6----- v5
@@ -85,7 +82,6 @@ class BoxParametricGeometry(ParametricGeometry):
     def regen_model(self):
         self.vertices = self.get_vertices()
 
-
     def list_parameters(self):
         """Return a list of parameters (inputs and outputs) for this model.
         """
@@ -103,14 +99,6 @@ class BoxParametricGeometry(ParametricGeometry):
     def get_parameters(self, names):
         """Get parameter values"""
         return [self.meta[n]['value'] for n in names if n in self.meta]
-
-    def get_attributes(self, io_only=True):
-        """Return an attribute dict for use by the openmdao GUI.
-        """
-        
-        return {
-            'type': type(self).__name__,
-        }
 
     def get_static_geometry(self):
         return BoxGeometry(self)
@@ -135,7 +123,7 @@ class BoxGeometry(object):
         min_y = min(v[1], v[4], v[7], v[10])
         min_z = min(v[2], v[5], v[8], v[11])
 
-        return [max_x, max_y, max_z, min_x, min_y, min_z]
+        return [min_x, min_y, min_z, max_x, max_y, max_z]
 
     def get_visualization_data(self, wv):
         '''Fills the given WV_Wrapper object with data for faces,
@@ -143,12 +131,14 @@ class BoxGeometry(object):
         
         wv: WV_Wrapper object 
         '''
+        pgeom = self.parametric_geom
+        
         for i in range(6):  # 6 faces
-            wv.set_face_data(points=self.parametric_geom.vertices[i], 
-                             tris=self.parametric_geom.indices[i], 
-                             colors=self.parametric_geom.colors[i],
-                             #normals=self.parametric_geom.normals[i],
-                             bbox=self.get_bounding_box(i),
+            wv.set_face_data(points=pgeom.vertices[i], 
+                             tris=pgeom.triangles, 
+                             colors=pgeom.colors[i],
+                             #normals=pgeom.normals[i],
+                             bbox=pgeom.bbox,
                              name="Face %d"%(i+1))
 
 
