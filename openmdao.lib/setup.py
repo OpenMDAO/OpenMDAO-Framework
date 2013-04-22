@@ -136,11 +136,13 @@ Component, Driver, and Variable plugins for OpenMDAO
 
       [openmdao.parametric_geometry]
       openmdao.lib.geometry.diamond.GEMParametricGeometry = openmdao.lib.geometry.diamond:GEMParametricGeometry
+      openmdao.lib.geometry.demo.BoxParametricGeometry = openmdao.lib.geometry.demo:BoxParametricGeometry
 
       [openmdao.binpub]
       openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
       openmdao.lib.geometry.pam.GeoMACHSender = openmdao.lib.geometry.pam:GeoMACHSender
+      openmdao.lib.geometry.demo.BoxSender = openmdao.lib.geometry.demo:BoxSender
 
       """,
       )
