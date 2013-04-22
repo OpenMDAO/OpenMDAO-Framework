@@ -16,7 +16,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PassthroughsFrame = function(model, pathname) {
     var id = ('PassthroughsFrame-'+pathname).replace(/\./g,'-');
     openmdao.PassthroughsFrame.prototype.init.call(this, id,
-        'Edit passthroughs: ' + openmdao.Util.getName(pathname));
+        'Edit passthroughs: ' + pathname);
 
     /***********************************************************************
      *  private
@@ -107,34 +107,37 @@ openmdao.PassthroughsFrame = function(model, pathname) {
         tree_div.bind("change_state.jstree", handleCbClick);
     }
 
+    function updateTrees(attributes) {
+        var openNodes = [];
+        div_input.find("li.jstree-open").each(function () {
+            openNodes.push(this.id);
+        });
+        div_input.empty();
+        jQuery.each(attributes.inputs, function(idx, component) {
+            if (openNodes.indexOf(component.data) >= 0) {
+                component.state = 'open';
+            }
+            makeTree(component.data+"-input", div_input, component);
+
+        });
+
+        openNodes = [];
+        div_output.find("li.jstree-open").each(function () {
+            openNodes.push(this.id);
+        });
+        div_output.empty();
+        jQuery.each(attributes.outputs, function(idx, component) {
+            if (openNodes.indexOf(component.data) >= 0) {
+                component.state = 'open';
+            }
+            makeTree(component.data+"-output", div_output, component);
+        });
+    }
+
     // (re)create the inputs & outputs trees
     function update() {
-        model.getAllAttributes(pathname, function(attributes,e) {
-            var openNodes = [];
-            div_input.find("li.jstree-open").each(function () {
-                openNodes.push(this.id);
-            });
-            div_input.empty();
-            jQuery.each(attributes.inputs, function(idx, component) {
-                if (openNodes.indexOf(component.data) >= 0) {
-                    component.state = 'open';
-                }
-                makeTree(component.data+"-input", div_input, component);
-
-            });
-
-            openNodes = [];
-            div_output.find("li.jstree-open").each(function () {
-                openNodes.push(this.id);
-            });
-            div_output.empty();
-            jQuery.each(attributes.outputs, function(idx, component) {
-                if (openNodes.indexOf(component.data) >= 0) {
-                    component.state = 'open';
-                }
-                makeTree(component.data+"-output", div_output, component);
-            });
-
+        model.getAllAttributes(pathname, updateTrees, function(data) {
+            debug.error('Error getting passthrough data:', data)
         });
     }
 

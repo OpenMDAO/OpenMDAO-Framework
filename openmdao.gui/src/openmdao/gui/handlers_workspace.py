@@ -246,6 +246,23 @@ class ObjectHandler(ReqHandler):
         self.write(attr)
 
 
+class PassthroughsHandler(ReqHandler):
+    ''' Get the passthrough variables for the named assembly
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_passthroughs(name)
+        except Exception as exc:
+            print 'Error getting passthroughs for', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
+        self.content_type = 'application/javascript'
+        self.write(attr)
+
+
 class RenameHandler(ReqHandler):
     ''' Rename a file.
     '''
@@ -691,6 +708,7 @@ handlers = [
     web.url(r'/workspace/model/?',          ModelHandler),
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
+    web.url(r'/workspace/passthroughs/(.*)', PassthroughsHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
@@ -705,5 +723,5 @@ handlers = [
     web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
-    web.url(r'/workspace/get_all_attributes/(.*)',GetAllAtributesHandler),
+    web.url(r'/workspace/get_all_attributes/(.*)', GetAllAtributesHandler),
 ]

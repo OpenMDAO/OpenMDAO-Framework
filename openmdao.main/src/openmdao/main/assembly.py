@@ -517,12 +517,54 @@ class Assembly(Component):
 
         setattr(self, newname, val)
 
-        if iotype == 'in':
-            self.connect(newname, pathname)
-        else:
-            self.connect(pathname, newname)
+        try:
+            if iotype == 'in':
+                self.connect(newname, pathname)
+            else:
+                self.connect(pathname, newname)
+        except RuntimeError as err:
+            self.remove(newname)
+            raise err
 
         return newtrait
+
+    def get_passthroughs(self):
+        ''' get all the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable
+            and if it is a passthrough, the assembly's name for the variable
+        '''
+        inputs = {}
+        outputs = {}
+        passthroughs = {}
+
+        for name in self.list_inputs() + self.list_outputs():
+            target = self.get_metadata(name, 'target')
+            if target is not None:
+                passthroughs[target] = name
+
+        for comp in self.list_components():
+            inputs[comp] = {}
+            input_vars = self.get(comp).list_inputs()
+            for var_name in input_vars:
+                var_path = '.'.join([comp, var_name])
+                if var_path in passthroughs:
+                    inputs[comp][var_name] = passthroughs[var_path]
+                else:
+                    inputs[comp][var_name] = False
+
+            outputs[comp] = {}
+            output_vars = self.get(comp).list_outputs()
+            for var_name in output_vars:
+                var_path = '.'.join([comp, var_name])
+                if var_path in passthroughs:
+                    outputs[comp][var_name] = passthroughs[var_path]
+                else:
+                    outputs[comp][var_name] = False
+
+        return {
+            'inputs': inputs,
+            'outputs': outputs
+        }
 
     def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
@@ -898,78 +940,78 @@ class Assembly(Component):
         parameters = []
         constraints = []
         objectives = []
-        if is_instance(self, Assembly):
-            # list of components (name & type) in the assembly
-            g = self._depgraph._graph
-            names = [name for name in nx.algorithms.dag.topological_sort(g)
-                                   if not name.startswith('@')]
 
-            # Bubble-up drivers ahead of their parameter targets.
-            sorted_names = []
-            for name in names:
+        # list of components (name & type) in the assembly
+        g = self._depgraph._graph
+        names = [name for name in nx.algorithms.dag.topological_sort(g)
+                               if not name.startswith('@')]
+
+        # Bubble-up drivers ahead of their parameter targets.
+        sorted_names = []
+        for name in names:
+            comp = self.get(name)
+            if is_instance(comp, Driver) and hasattr(comp, '_delegates_'):
+                driver_index = len(sorted_names)
+                for dname, dclass in comp._delegates_.items():
+                    inst = getattr(comp, dname)
+                    if isinstance(inst, HasParameters):
+                        refs = inst.get_referenced_compnames()
+                        for ref in refs:
+                            try:
+                                target_index = sorted_names.index(ref)
+                            except ValueError:
+                                pass
+                            else:
+                                driver_index = min(driver_index, target_index)
+                sorted_names.insert(driver_index, name)
+            else:
+                sorted_names.append(name)
+
+        # Process names in new order.
+        for name in sorted_names:
                 comp = self.get(name)
-                if is_instance(comp, Driver) and hasattr(comp, '_delegates_'):
-                    driver_index = len(sorted_names)
-                    for dname, dclass in comp._delegates_.items():
-                        inst = getattr(comp, dname)
-                        if isinstance(inst, HasParameters):
-                            refs = inst.get_referenced_compnames()
-                            for ref in refs:
-                                try:
-                                    target_index = sorted_names.index(ref)
-                                except ValueError:
-                                    pass
-                                else:
-                                    driver_index = min(driver_index, target_index)
-                    sorted_names.insert(driver_index, name)
-                else:
-                    sorted_names.append(name)
+                if is_instance(comp, Component):
+                    inames = [cls.__name__
+                              for cls in list(implementedBy(comp.__class__))]
+                    components.append({
+                        'name': comp.name,
+                        'pathname': comp.get_pathname(),
+                        'type': type(comp).__name__,
+                        'valid': comp.is_valid(),
+                        'interfaces': inames,
+                        'python_id': id(comp)
+                    })
 
-            # Process names in new order.
-            for name in sorted_names:
-                    comp = self.get(name)
-                    if is_instance(comp, Component):
-                        inames = [cls.__name__
-                                  for cls in list(implementedBy(comp.__class__))]
-                        components.append({
-                            'name': comp.name,
-                            'pathname': comp.get_pathname(),
-                            'type': type(comp).__name__,
-                            'valid': comp.is_valid(),
-                            'interfaces': inames,
-                            'python_id': id(comp)
-                        })
+                if is_instance(comp, Driver):
+                    if hasattr(comp, '_delegates_'):
+                        for name, dclass in comp._delegates_.items():
+                            inst = getattr(comp, name)
+                            if isinstance(inst, HasParameters):
+                                for name, param in inst.get_parameters().items():
+                                    if isinstance(param, ParameterGroup):
+                                        for n, p in zip(name, tuple(param.targets)):
+                                            parameters.append([comp.name + '.' + n, p])
+                                    else:
+                                        parameters.append([comp.name + '.' + name,
+                                                           param.target])
+                            elif isinstance(inst, (HasConstraints,
+                                                   HasEqConstraints,
+                                                   HasIneqConstraints)):
+                                for path in inst.get_referenced_varpaths():
+                                    name, dot, rest = path.partition('.')
+                                    constraints.append([path,
+                                                        comp.name + '.' + rest])
+                            elif isinstance(inst, (HasObjective,
+                                                   HasObjectives)):
+                                for path in inst.get_referenced_varpaths():
+                                    name, dot, rest = path.partition('.')
+                                    objectives.append([path,
+                                                       comp.name + '.' + name])
 
-                    if is_instance(comp, Driver):
-                        if hasattr(comp, '_delegates_'):
-                            for name, dclass in comp._delegates_.items():
-                                inst = getattr(comp, name)
-                                if isinstance(inst, HasParameters):
-                                    for name, param in inst.get_parameters().items():
-                                        if isinstance(param, ParameterGroup):
-                                            for n, p in zip(name, tuple(param.targets)):
-                                                parameters.append([comp.name + '.' + n, p])
-                                        else:
-                                            parameters.append([comp.name + '.' + name,
-                                                               param.target])
-                                elif isinstance(inst, (HasConstraints,
-                                                       HasEqConstraints,
-                                                       HasIneqConstraints)):
-                                    for path in inst.get_referenced_varpaths():
-                                        name, dot, rest = path.partition('.')
-                                        constraints.append([path,
-                                                            comp.name + '.' + rest])
-                                elif isinstance(inst, (HasObjective,
-                                                       HasObjectives)):
-                                    for path in inst.get_referenced_varpaths():
-                                        name, dot, rest = path.partition('.')
-                                        objectives.append([path,
-                                                           comp.name + '.' + name])
-
-            # list of connections (convert tuples to lists)
-            conntuples = self.list_connections(show_passthrough=True)
-            for connection in conntuples:
-                connections.append(list(connection))
+        # list of connections (convert tuples to lists)
+        conntuples = self.list_connections(show_passthrough=True)
+        for connection in conntuples:
+            connections.append(list(connection))
 
         return {'components': components, 'connections': connections,
                 'parameters': parameters, 'constraints': constraints,
