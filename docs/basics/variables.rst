@@ -4,15 +4,19 @@
 Working with Variables
 ======================
 
-In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
+In OpenMDAO, a *variable* is a piece of data that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
 model must use variables to declare the inputs and outputs for each
 component.
 
-You can create a variable for a component in two ways. The first is to
-declare it in the component's class definition. A simple component that takes
-a floating point number as an input and provides a floating point number as an
-output would look like this:
+You can create a variable for a component in two ways. The first way is to
+declare it in the component's class definition as illustrated in the examples
+that follow. The second way is to add them using a component's `add` function.
+This way should only be used it a variable needs to be added after the component
+is instantiated.
+
+A simple component that takes a floating point number as an input and
+provides a floating point number as an output would look like this:
 
 .. testcode:: creating_public_variables_1
 
