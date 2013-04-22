@@ -8,14 +8,13 @@ from openmdao.main.interfaces import IStaticGeometry, implements
 from pyV3D.handlers import WV_Sender
 
 
-
 class BoxParametricGeometry(ParametricGeometry):
     """A simple parametric geometry (a box)"""
 
     def __init__(self):
         super(BoxParametricGeometry, self).__init__()
         self.meta = {
-           'side': { 'iotype': 'in', 'value': 2. }, 
+           'height': { 'iotype': 'in', 'value': 2. }, 
            'volume': { 'iotype': 'out', 'value': 2.*2.*2. },
         }
 
@@ -55,12 +54,12 @@ class BoxParametricGeometry(ParametricGeometry):
 
 
     def get_vertices(self):
-        s = self.meta['side']['value']
-        x = s/2.
-        self.meta['volume']['value'] = s * s * 2.
-        self.bbox = [-x, -x, -x, x, x, x]
+        h = self.meta['height']['value']
+        x = h/2.
+        self.meta['volume']['value'] = 2 * 2 * h
+        self.bbox = [-1, -1, -x, 1, 1, x]
 
-        # box  (side x side x 1)
+        # box  (1 x 1 x height)
         #    v6----- v5
         #   /|      /|
         #  v1------v0|
@@ -71,12 +70,12 @@ class BoxParametricGeometry(ParametricGeometry):
         #
         # vertex coords arrays
         return array([
-          [ x, 1, x,  -x, 1, x,  -x,-1, x,   x,-1, x],  # v0-v1-v2-v3 front
-          [ x, 1, x,   x,-1, x,   x,-1,-x,   x, 1,-x],  # v0-v3-v4-v5 right
-          [ x, 1, x,   x, 1,-x,  -x, 1,-x,  -x, 1, x],  # v0-v5-v6-v1 top
-          [-x, 1, x,  -x, 1,-x,  -x,-1,-x,  -x,-1, x],  # v1-v6-v7-v2 left
-          [-x,-1,-x,   x,-1,-x,   x,-1, x,  -x,-1, x],  # v7-v4-v3-v2 bottom
-          [ x,-1,-x,  -x,-1,-x,  -x, 1,-x,   x, 1,-x],  # v4-v7-v6-v5 back
+          [ 1, 1, x,  -1, 1, x,  -1,-1, x,   1,-1, x],  # v0-v1-v2-v3 front
+          [ 1, 1, x,   1,-1, x,   1,-1,-x,   1, 1,-x],  # v0-v3-v4-v5 right
+          [ 1, 1, x,   1, 1,-x,  -1, 1,-x,  -1, 1, x],  # v0-v5-v6-v1 top
+          [-1, 1, x,  -1, 1,-x,  -1,-1,-x,  -1,-1, x],  # v1-v6-v7-v2 left
+          [-1,-1,-x,   1,-1,-x,   1,-1, x,  -1,-1, x],  # v7-v4-v3-v2 bottom
+          [ 1,-1,-x,  -1,-1,-x,  -1, 1,-x,   1, 1,-x],  # v4-v7-v6-v5 back
         ], dtype=float32)
 
     def regen_model(self):
@@ -112,19 +111,6 @@ class BoxGeometry(object):
     def __init__(self, parametric_geom):
         self.parametric_geom = parametric_geom
 
-    def get_bounding_box(self, i):
-        v = self.parametric_geom.vertices[i]
-
-        # 4 vertices per face, 3 coords per vertex
-        max_x = max(v[0], v[3], v[6], v[9])
-        max_y = max(v[1], v[4], v[7], v[10])
-        max_z = max(v[2], v[5], v[8], v[11])
-        min_x = min(v[0], v[3], v[6], v[9])
-        min_y = min(v[1], v[4], v[7], v[10])
-        min_z = min(v[2], v[5], v[8], v[11])
-
-        return [min_x, min_y, min_z, max_x, max_y, max_z]
-
     def get_visualization_data(self, wv):
         '''Fills the given WV_Wrapper object with data for faces,
         edges, colors, etc.
@@ -132,7 +118,7 @@ class BoxGeometry(object):
         wv: WV_Wrapper object 
         '''
         pgeom = self.parametric_geom
-        
+
         for i in range(6):  # 6 faces
             wv.set_face_data(points=pgeom.vertices[i], 
                              tris=pgeom.triangles, 
