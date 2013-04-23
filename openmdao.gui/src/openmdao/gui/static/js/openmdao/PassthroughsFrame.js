@@ -1,6 +1,6 @@
 /***********************************************************************
  *  PassthroughsFrame: A frame that shows all the inputs and outputs of
- *                     of an assembly andenables creating and removing
+ *                     of an assembly and enables creating and removing
  *                     of passthroughs.
  *
  *  There is an Inputs tree and an Outputs tree, with a checkbox next
@@ -8,6 +8,7 @@
  *  variable as a passthrough variable.
  *
  *  Arguments:
+ *      model:    object that provides access to the openmdao model
  *      pathname: the pathname of the assembly
  ***********************************************************************/
 
@@ -16,7 +17,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PassthroughsFrame = function(model, pathname) {
     var id = ('PassthroughsFrame-'+pathname).replace(/\./g,'-');
     openmdao.PassthroughsFrame.prototype.init.call(this, id,
-        'Edit passthroughs: ' + pathname);
+        'Passthroughs: ' + pathname);
 
     /***********************************************************************
      *  private
