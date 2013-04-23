@@ -1,6 +1,7 @@
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -15,7 +16,7 @@ setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
       long_description="""\
-Component, Driver, and Variable plugins for OpenMDAO
+Component, Driver, Variable and other plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',

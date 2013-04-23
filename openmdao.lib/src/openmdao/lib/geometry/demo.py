@@ -59,7 +59,7 @@ class BoxParametricGeometry(ParametricGeometry):
         self.meta['volume']['value'] = 2 * 2 * h
         self.bbox = [-1, -1, -x, 1, 1, x]
 
-        # box  (1 x 1 x height)
+        # box  (2 x 2 x height)
         #    v6----- v5
         #   /|      /|
         #  v1------v0|
@@ -127,6 +127,9 @@ class BoxGeometry(object):
                              bbox=pgeom.bbox,
                              name="Face %d"%(i+1))
 
+            wv.set_edge_data(points=pgeom.vertices[i],
+                             bbox=pgeom.bbox,
+                             name="Edge %d"%(i+1))
 
 
 class BoxSender(WV_Sender):
