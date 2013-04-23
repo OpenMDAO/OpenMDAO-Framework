@@ -72,6 +72,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
             Authorization key.
         """
         manager = cls(address, authkey)
+        _LOGGER.debug('Client connecting to server at %s' % (address,))
         conn = connection.Client(address, authkey=authkey)
         try:
             managers.dispatch(conn, None, 'dummy')
@@ -358,8 +359,12 @@ class Host(object):  #pragma no cover
         credentials = get_credentials()
         allowed_users = {credentials.user: credentials.public_key}
 
+        # Tell the server what name to bind to
+        # (in case it has multiple interfaces).
+        user, at, remote_name = self.hostname.partition('@')
+        
         data = dict(
-            name='BoostrappingHost', index=index,
+            name='BoostrappingHost', index=index, hostname=remote_name,
             # Avoid lots of SUBDEBUG messages.
             dist_log_level=max(_LOGGER.getEffectiveLevel(), logging.DEBUG),
             dir=self.tempdir, authkey=str(authkey),
@@ -469,10 +474,8 @@ def main():  #pragma no cover
     # Avoid root possibly masking us.
     logging.getLogger().setLevel(logging.DEBUG)
 
-    import platform
-    hostname = platform.node()
     pid = os.getpid()
-    ident = '(%s:%d)' % (hostname, pid)
+    ident = '(%s:%d)' % (socket.gethostname(), pid)
     print '%s main startup' % ident
     sys.stdout.flush()
 
@@ -480,6 +483,9 @@ def main():  #pragma no cover
     data = cPickle.load(sys.stdin)
     sys.stdin.close()
     print '%s data received' % ident
+
+    hostname = data['hostname']
+    print '%s using hostname %s' % (ident, hostname)
 
     authkey = data['authkey']
     allow_shell = data['allow_shell']
@@ -521,6 +527,7 @@ def main():  #pragma no cover
                                  authkey, 'pickle', name=name,
                                  allowed_users=allowed_users,
                                  allowed_hosts=[data['parent_address'][0]])
+        print '%s server listening at %s' % (ident, server.address)
     except Exception as exc:
         print '%s caught exception: %s' % (ident, exc)
 
