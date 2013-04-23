@@ -103,6 +103,8 @@ class PluginDocsHandler(StaticFileHandler):
             with self._plugin_lock:
                 if self._cname_valid(parts[0]) and parts[0] not in self._plugin_map:
                     url = find_docs_url(parts[0], build_if_needed=False)
+                    #Remove "file://" from URL
+                    url = url[7:]
                     if self.cname.startswith('openmdao.'):
                         if(self.regex.search(url)):
                             # url points to docs in a release version, so use docs packaged with openmdao.main
@@ -110,11 +112,10 @@ class PluginDocsHandler(StaticFileHandler):
                         else:  # url points to docs in a developer version, so use locally built docs
                             root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
                                             '_build', 'html')
-                        if url.startswith('file://'):
-                            url = url[7:]
-                            self.added = os.path.dirname(url)[len(root) + 1:]
+                        self.added = os.path.dirname(url)[len(root) + 1:]
                     else:
                         root = os.path.dirname(url)
+                    
                     default = os.path.basename(url)
                     self._plugin_map[parts[0]] = (root, default, self.added)
 
