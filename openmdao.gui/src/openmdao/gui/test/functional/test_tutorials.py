@@ -29,6 +29,7 @@ def _test_MDAO_MDF(browser):
     workspace_page.add_file(file_path)
 
     # Add Disciplines to assembly.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'sellar.Discipline1', 'dis1')

@@ -24,12 +24,12 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 type       = item.type,
                 interfaces = item.interfaces,
                 name = openmdao.Util.getName(pathname);
-            
+
             // Figure out what type we are (lacking interfaces)
             if (item.workflow) {
                 interfaces = ['IDriver'];
                 subpath = pathname;
-                
+
                 // Exception: top is always an assembly
                 if (name === 'driver') {
                     interfaces = ['IAssembly'];
@@ -47,7 +47,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
             else {
                 interfaces = ['IComponent'];
             }
-            
+
             interfaces = JSON.stringify(interfaces);
             var node = { 'data': name  };
             node.attr = {
@@ -56,7 +56,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                  'interfaces' : interfaces,
                  'parent' : parent
             };
-            
+
             // Driver recursion
             if (item.workflow) {
                 node.children = convertJSON(item.workflow, subpath,
@@ -67,7 +67,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 node.children = convertJSON(item.driver.workflow,
                                             subpath, openNodes);
             }
-            
+
             if (openNodes.indexOf(pathname) >= 0) {
                 node.state = 'open';
             }
@@ -79,13 +79,13 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 
     /** update the tree with JSON model data */
     function updateTree(json) {
-    
+
         // Grab paths of currently open nodes.
         var openNodes = [];
         self.elm.find("li.jstree-open").each(function () {
             openNodes.push(this.getAttribute("path"));
         });
-        
+
         // We may get a single workflow object or a list of workflow objects
         // if we get a single workflow, stick it in a list for consistency
         if (!jQuery.isArray(json)) {
@@ -150,11 +150,11 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                         }
                     },
                     drop: function(ev, ui) {
-                        
+
                         var droppedObject = jQuery(ui.draggable).clone(),
                             source_path = droppedObject.attr('pathname'),
                             target_iface = this.parentElement.getAttribute('interfaces');
-                        
+
                         if (target_iface.indexOf("IComponent") >= 0) {
                             // Don't do anything if we drop on a component.
                             cmd='';
@@ -179,7 +179,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
             /* add classes so that the items in the component tree are specific
                to what they are: assembly, driver or component */
             jQuery('#'+id+' li').each(function () {
-            
+
                 if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
                     this.children[1].children[0].addClass("jstree-assembly");
                 }

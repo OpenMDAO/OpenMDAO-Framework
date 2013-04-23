@@ -179,7 +179,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     };
 
     flow_div.droppable ({
-        accept: '.component, .IComponent',
+        accept: '.component, .IComponent, .DataflowFigure',
         greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(flow_div);
@@ -192,7 +192,14 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dragged_pathname,
                 dragged_parent;
 
-            if (dragged_object.hasClass('component')) {
+            if (dragged_object.hasClass('DataflowFigure')) {
+                var dragged_pathname = jQuery(ui.draggable).attr('pathname'),
+                    dragged_parent = openmdao.Util.getPath(dragged_pathname);
+                if (dragged_parent === target_parent) {
+                    openmdao.drag_and_drop_manager.draggableOver(flow_div);
+                }
+            }
+            else if (dragged_object.hasClass('component')) {
                 dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                 dragged_parent = openmdao.Util.getPath(dragged_pathname);
                 if (dragged_parent === target_parent) {
@@ -227,7 +234,16 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dropped_name,
                 prompt;
 
-            if (dropped_object.hasClass('component')) {
+            if (dropped_object.hasClass('DataflowFigure')) {
+                dropped_pathname = jQuery(ui.draggable).attr('pathname'),
+                dropped_parent = openmdao.Util.getPath(dropped_pathname);
+                if (dropped_parent === target_parent) {
+                    dropped_name = openmdao.Util.getName(dropped_pathname);
+                    cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
+                    model.issueCommand(cmd);
+                }
+            }
+            else if (dropped_object.hasClass('component')) {
                 // dropped from component tree, component must be in same assembly as the driver
                 dropped_pathname = jQuery(ui.draggable).parent().attr("path");
                 dropped_parent = openmdao.Util.getPath(dropped_pathname);

@@ -42,7 +42,7 @@ class ProjectTestCase(unittest.TestCase):
             os.chdir(self.startdir)
 
     def _fill_project(self, proj):
-        top = proj.get('top')
+        proj.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
         proj.command('top.add("comp1", create("openmdao.main.test.test_project.Multiplier"))')
         proj.command('top.add("comp2", create("openmdao.main.test.test_project.Multiplier"))')
 

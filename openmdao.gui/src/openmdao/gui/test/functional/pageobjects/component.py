@@ -4,11 +4,12 @@ import string
 from functools import partial
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
-from workflow import find_workflow_component_figures
+from workflow import find_workflow_figure, find_workflow_figures, \
+                     find_workflow_component_figures, \
+                     find_workflow_component_figure
 from util import ArgsPrompt, NotifierPage
 
 
@@ -20,7 +21,7 @@ class ComponentPage(DialogPage):
 
             def getter(cls, index=0):
                 return cls._cells[index]
-            
+
             def setter(cls, value, index=0):
                 if not cls._cells[index].editable:
                     raise AttributeError("can't set attribute")
@@ -29,20 +30,20 @@ class ComponentPage(DialogPage):
 
             for index in range(len(headers)):
                 if headers[index].value != "":
-                    setattr( \
-                            self.__class__, 
-                            headers[index].value.lower(), 
-                            property( \
-                                    partial(getter, index=index),
-                                    partial(setter, index=index)
-                                    )
-                            )
+                    setattr(
+                        self.__class__,
+                        headers[index].value.lower(),
+                        property(
+                            partial(getter, index=index),
+                            partial(setter, index=index)
+                        )
+                    )
 
     """ Component editor page. """
-   
-    Version = type('Enum', (), {"OLD":1, "NEW":2})
-    As = type('Enum', (), {"GRID":0, "ROW":1, "VARIABLE":2})
-    SortOrder = type('Enum', (), {"ASCENDING" : 0, "DESCENDING" : 1})
+
+    Version = type('Enum', (), {"OLD": 1, "NEW": 2})
+    As = type('Enum', (), {"GRID": 0, "ROW": 1, "VARIABLE": 2})
+    SortOrder = type('Enum', (), {"ASCENDING": 0, "DESCENDING": 1})
 
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
@@ -54,20 +55,19 @@ class ComponentPage(DialogPage):
 
     inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
     outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
-    
+
     def __init__(self, browser, port, locator, version=Version.OLD):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
         self.version = version
-        self._sort_order = {"inputs" : 0, "outputs" : 0}
+        self._sort_order = {"inputs": 0, "outputs": 0}
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
         elements = self.root.find_elements_by_class_name('ui-tabs-anchor')
         labels = [element.text for element in elements]
         return labels
-
 
     def set_input(self, name, value):
         """ Set input `name` to `value`. """
@@ -104,12 +104,12 @@ class ComponentPage(DialogPage):
             raise Exception("Grid has no column named %s" % column_name)
 
         header = header[0]
-        if(sort_order==self.SortOrder.ASCENDING):
-            while( (self._sort_order[tab] % 2) == 0):
+        if(sort_order == self.SortOrder.ASCENDING):
+            while((self._sort_order[tab] % 2) == 0):
                 self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
         else:
-            while( (self._sort_order[tab] % 2) != 0):
+            while((self._sort_order[tab] % 2) != 0):
                 self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
 
@@ -156,14 +156,14 @@ class ComponentPage(DialogPage):
         """ Return first input variable with `name`. """
         self('inputs_tab').click()
         return self._get_variable(name, self.inputs, return_type)
-    
+
     def get_output(self, name, return_type=None):
         """ Return first output variable with `name`. """
         self('outputs_tab').click()
         return self._get_variable(name, self.outputs, return_type)
 
     def _get_variables(self, grid, return_type):
-        if(return_type==self.As.GRID or self.version==self.Version.OLD):
+        if(return_type == self.As.GRID or self.version == self.Version.OLD):
             return grid
 
         headers = grid.headers
@@ -175,12 +175,13 @@ class ComponentPage(DialogPage):
         found = []
         for row in grid.rows:
             if row[1] == name:
-                if(return_type==self.As.ROW or self.version==self.Version.OLD):
+                if(return_type == self.As.ROW or self.version == self.Version.OLD):
                     return row
                 else:
                     return self.Variable(row, grid.headers)
             found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
+
 
 class DriverPage(ComponentPage):
     """ Driver editor page. """
@@ -249,9 +250,21 @@ class DriverPage(ComponentPage):
         """switch to workflow tab"""
         self('workflow_tab').click()
 
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        return find_workflow_figures(self)
+
     def get_workflow_component_figures(self):
         """ Return workflow component figure elements. """
         return find_workflow_component_figures(self)
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        return find_workflow_figure(self, name, prefix, retries)
+
+    def get_workflow_component_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowComponentFigure` for `name`. """
+        return find_workflow_component_figure(self, name, prefix, retries)
 
 
 class ParameterDialog(DialogPage):

@@ -10,8 +10,8 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
     // initialize private variables
     var self = this,
         dataflowID  = pathname.replace(/\./g,'-')+"-dataflow",
-        dataflowCSS = 'height:'+(screen.height-100)+'px;'+
-                      'width:'+(screen.width-100)+'px;'+
+        dataflowCSS = 'height:'+(screen.height*4)+'px;'+
+                      'width:'+(screen.width*4)+'px;'+
                       'position:relative;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
             .appendTo(elm),

@@ -7,9 +7,8 @@ import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
-from selenium.webdriver import ActionChains
-
 from unittest import TestCase
+from selenium.webdriver import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
@@ -30,8 +29,6 @@ def _test_value_editors(browser):
                                                 'files/variable_editors.py')
     workspace_page.add_file(file_path)
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('variable_editors.Topp', 'top')
 
     paraboloid = workspace_page.get_dataflow_figure('p1', 'top')
@@ -143,9 +140,6 @@ def _test_Avartrees(browser):
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-
     workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "top")
 
     comp = workspace_page.get_dataflow_figure('p1', "top")
@@ -156,7 +150,7 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
+        ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
     ]
 
@@ -199,7 +193,7 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
+        ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
     ]
 
