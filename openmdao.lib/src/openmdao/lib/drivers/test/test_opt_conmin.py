@@ -7,11 +7,10 @@ import numpy
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
-from openmdao.main.datatypes.api import Float, Array, Str, Slot
+from openmdao.main.datatypes.api import Float, Array, Str, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.conmindriver import CONMINdriver
-from openmdao.util.testutil import assert_rel_error
 
 
 class OptRosenSuzukiComponent(Component):
@@ -83,7 +82,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint,[
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
@@ -112,13 +111,13 @@ class CONMINdriverTestCase(unittest.TestCase):
 
     def test_opt1_with_OpenMDAO_gradient(self):
         self.top.driver.add_objective('comp.result')
-        self.top.driver.add_parameter('comp.x[0]', fd_step = .00001)
-        self.top.driver.add_parameter('comp.x[1]', fd_step = .00001)
-        self.top.driver.add_parameter('comp.x[2]', fd_step = .00001)
-        self.top.driver.add_parameter('comp.x[3]', fd_step = .00001)
+        self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[1]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[2]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[3]', fd_step=.00001)
         
         # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint,[
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])  
@@ -144,7 +143,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint,[
+        map(self.top.driver.add_constraint, [
             '8 > comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]',
             '10 > comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]',
             '5 > 2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]'])        
@@ -184,11 +183,12 @@ class CONMINdriverTestCase(unittest.TestCase):
             
     def test_get_objective(self):
         self.top.driver.add_objective('comp.result')
-        self.assertEqual(['comp.result'], self.top.driver.get_objectives().keys())
+        self.assertEqual(['comp.result'],
+                         self.top.driver.get_objectives().keys())
     
     def test_update_objective(self):
         try:
-            val = self.top.driver.eval_objective()
+            self.top.driver.eval_objective()
         except Exception, err:
             self.assertEqual(str(err), "driver: no objective specified")
         else:
@@ -215,7 +215,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]'])
+                                            'comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
@@ -244,10 +244,10 @@ class CONMINdriverTestCase(unittest.TestCase):
         map(self.top.driver.add_parameter, 
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
-        map(self.top.driver.add_constraint,['comp.x[1] + 3.0*comp.x[2] > 3.0',
-                                            'comp.x[2] + comp.x[3] > 13.0',
-                                            'comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0'])
-        self.top.driver.cons_is_linear = [1,1,0]
+        map(self.top.driver.add_constraint, ['comp.x[1] + 3.0*comp.x[2] > 3.0',
+                                             'comp.x[2] + comp.x[3] > 13.0',
+                                             'comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0'])
+        self.top.driver.cons_is_linear = [1, 1, 0]
         self.top.driver.itmax = 1
 
         self.top.run()
@@ -256,7 +256,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]'])
+                                            'comp.x[2]', 'comp.x[3]'])
         self.top.driver.nscal = -1
         
         self.top.driver.itmax = 2
@@ -265,13 +265,13 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.run()
         
         # pylint: disable-msg=E1101
-        self.assertEqual(self.top.driver.iter_count,2)
+        self.assertEqual(self.top.driver.iter_count, 2)
 
     def test_input_minmax_violation(self):
         
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]'])
+                                            'comp.x[2]', 'comp.x[3]'])
         
         self.top.comp.x[0] = 100
         try:
@@ -341,7 +341,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint,[
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
@@ -357,25 +357,22 @@ class TestContainer(VariableTree):
     dummy2 = Float(11.0) 
 
 class TestComponent(Component):
-    dummy_data = Slot(TestContainer, iotype='in')
+    dummy_data = VarTree(TestContainer(), iotype='in')
     x = Float(iotype='out')
-    def __init__(self): 
-        super(TestComponent,self).__init__()
-        self.add('dummy_data',TestContainer())
 
     def execute(self):
         self.x = (self.dummy_data.dummy1-3)**2 - self.dummy_data.dummy2
 
 class TestAssembly(Assembly):
     def configure(self):
-        self.add('dummy_top',TestContainer())
-        self.add('comp',TestComponent())
+        self.add('dummy_top', TestContainer())
+        self.add('comp', TestComponent())
         self.add('driver', CONMINdriver())
 
         self.driver.workflow.add(['comp'])
         #self.driver.iprint = 4 #debug verbosity
         self.driver.add_objective('comp.x') 
-        self.driver.add_parameter('comp.dummy_data.dummy1',low= -10.0 , high= 10.0)
+        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0 , high=10.0)
 
 class CONMINdriverTestCase2(unittest.TestCase):
 

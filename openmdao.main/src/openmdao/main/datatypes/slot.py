@@ -67,6 +67,10 @@ class Slot(Variable):
             else:
                 default_value = self._instance.default_value
 
+            if klass.__name__ == 'VariableTree':
+                raise TypeError('Slotting of VariableTrees is not supported,'
+                                ' please use VarTree instead')
+
         super(Slot, self).__init__(default_value, **metadata)
 
     def validate(self, obj, name, value):
@@ -100,9 +104,6 @@ class Slot(Variable):
         if self._is_container and value is not None:
             if value.parent is not obj:
                 value.parent = obj
-            # VariableTrees also need to know their iotype
-            if hasattr(value, '_iotype'):
-                value._iotype = self.iotype
 
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" %

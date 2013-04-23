@@ -362,6 +362,8 @@ class _Runner(object):
         base_window = browser.current_window_handle
         try:
             self.test(browser)
+        except SkipTest:
+            raise
         except Exception as exc:
             saved_exc = sys.exc_info()
             self.failed = True

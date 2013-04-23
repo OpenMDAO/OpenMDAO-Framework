@@ -29,12 +29,14 @@ from enthought.traits.api import HasTraits, Missing, Python, \
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
                                         MetaHasTraits
-from enthought.traits.trait_base import not_none, not_event
+from enthought.traits.trait_base import not_none
 
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
-from openmdao.main.datatypes.api import List, Slot
+from openmdao.main.datatypes.list import List
+from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
@@ -54,9 +56,10 @@ _copydict = {
     'shallow': copy.copy
     }
 
-_iodict = { 'out': 'output', 'in': 'input' }
+_iodict = {'out': 'output', 'in': 'input'}
 
 _missing = object()
+
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -83,7 +86,7 @@ def build_container_hierarchy(dct):
     """
     top = Container()
     for key, val in dct.items():
-        if isinstance(val, dict): # it's a dict, so this is a Container
+        if isinstance(val, dict):  # it's a dict, so this is a Container
             top.add(key, build_container_hierarchy(val))
         else:
             setattr(top, key, val)
@@ -93,10 +96,11 @@ def build_container_hierarchy(dct):
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
 # re-raised.
-push_exception_handler(handler = lambda o, t, ov, nv: None,
-                       reraise_exceptions = True,
-                       main = True,
-                       locked = True )
+push_exception_handler(handler=lambda o, t, ov, nv: None,
+                       reraise_exceptions=True,
+                       main=True,
+                       locked=True)
+
 
 class _ContainerDepends(object):
     """An object that bookkeeps connections to/from Container variables."""
@@ -106,7 +110,7 @@ class _ContainerDepends(object):
     def check_connect(self, srcpath, destpath):
         dpdot = destpath+'.'
         for dst, src in self._srcs.items():
-            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
+            if destpath.startswith(dst + '.') or dst.startswith(dpdot) or dst == destpath:
                 raise RuntimeError("'%s' is already connected to source '%s'" %
                                    (dst, src))
 
@@ -190,6 +194,20 @@ class Container(SafeHasTraits):
         for name, obj in self.items():
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
+
+        # Similarly, create per-instance VariableTrees for VarTree traits.
+        for name, obj in self.__class__.__dict__['__class_traits__'].items():
+            ttype = obj.trait_type
+            if isinstance(ttype, VarTree):
+                variable_tree = getattr(self, name)
+                parent = variable_tree._parent
+                variable_tree._parent = None
+                try:
+                    new_tree = variable_tree.copy()
+                finally:
+                    variable_tree._parent = parent
+                setattr(self, name, new_tree)
+                new_tree.install_callbacks()
 
     @property
     def parent(self):
@@ -279,7 +297,7 @@ class Container(SafeHasTraits):
             self._depgraph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[',1)[0]):
+                if not self.contains(destpath.split('[', 1)[0]):
                     self.raise_exception("Can't find '%s'" % destpath, AttributeError)
                 parts = destpath.split('.')
                 for i in range(len(parts)):
@@ -329,7 +347,7 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        destvar = destpath.split('[',1)[0]
+        destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
         if not srcexpr.refs_parent():
             srcvar = srcexpr.get_referenced_varpaths().pop()
@@ -357,7 +375,7 @@ class Container(SafeHasTraits):
         if cname == cname2 and cname is not None:
             self.raise_exception("Can't disconnect '%s' from '%s'. "
                                  "Both variables are on the same component" %
-                                 (srcpath,destpath), RuntimeError)
+                                 (srcpath, destpath), RuntimeError)
 
         self._depgraph.disconnect(srcpath, destpath)
 
@@ -367,7 +385,7 @@ class Container(SafeHasTraits):
     def is_valid(self):
         return True
 
-    def get_trait ( self, name, copy = False ):
+    def get_trait(self, name, copy=False):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
         for the trait() method on HasTraits objects because that method
@@ -389,13 +407,13 @@ class Container(SafeHasTraits):
     #  HasTraits overrides
     #
 
-    def __deepcopy__ ( self, memo ):
+    def __deepcopy__(self, memo):
         """ Overrides deepcopy for HasTraits because otherwise we lose instance
         traits when we copy. :(
         """
-        id_self = id( self )
+        id_self = id(self)
         if id_self in memo:
-            return memo[ id_self ]
+            return memo[id_self]
 
         # Make sure HasTraits is performing all deepcopies. We need this
         # in order for our sub-components and objects to get deep-copied.
@@ -411,10 +429,13 @@ class Container(SafeHasTraits):
         olditraits = self._instance_traits()
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name in self._added_traits:
-
-                result.add_trait(name, _clone_trait(trait))
-                result.__dict__[name] = self.__dict__[name]
-
+                if isinstance(trait.trait_type, VarTree):
+                    if name not in result._added_traits:
+                        result.add_trait(name, _clone_trait(trait))
+                else:
+                    result.add_trait(name, _clone_trait(trait))
+                if name in self.__dict__:  # Not true with VarTree
+                    result.__dict__[name] = self.__dict__[name]
         return result
 
     def __getstate__(self):
@@ -475,8 +496,8 @@ class Container(SafeHasTraits):
         #TODO: I'm probably missing something. There has to be a better way to
         #      do this...
         for name, val in self.__dict__.items():
-            if not name.startswith('__') and not self.get_trait(name) :
-                setattr(self, name, val) # force def of implicit trait
+            if not name.startswith('__') and not self.get_trait(name):
+                setattr(self, name, val)  # force def of implicit trait
 
         self._cached_traits_ = None
 
@@ -706,7 +727,7 @@ class Container(SafeHasTraits):
                 self.remove_trait(name)
             return obj
         else:
-            self.raise_exception("cannot remove '%s': not found"%
+            self.raise_exception("cannot remove '%s': not found" %
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))
@@ -762,7 +783,7 @@ class Container(SafeHasTraits):
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
                 if obj is not Missing:
-                    if is_instance(obj, Container) and id(obj) not in visited:
+                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
@@ -825,14 +846,13 @@ class Container(SafeHasTraits):
             if not io_only and slot_attr is not None:
 
                 # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] == False:
+                if 'hidden' not in meta or meta['hidden'] is False:
                     slots.append(slot_attr)
 
         attrs["Inputs"] = variables
         if slots:
             attrs['Slots'] = slots
         return attrs
-
 
     # Can't use items() since it returns a generator (won't pickle).
     @rbac(('owner', 'user'))
@@ -854,13 +874,13 @@ class Container(SafeHasTraits):
             if not events and trait.type is 'event':
                 continue
             for meta_name, meta_eval in metadata.items():
-                if type( meta_eval ) is FunctionType:
+                if type(meta_eval) is FunctionType:
                     if not meta_eval(getattr(trait, meta_name)):
                         break
                 elif meta_eval != getattr(trait, meta_name):
                     break
             else:
-                result[ name ] = trait
+                result[name] = trait
 
         return result
 
@@ -980,7 +1000,7 @@ class Container(SafeHasTraits):
         else:
             # TODO: fix this...
             if '[' in path:
-                path,idx = path.replace(']','').split('[')
+                path, idx = path.replace(']', '').split('[')
                 if path and idx.isdigit():
                     obj = getattr(self, path, Missing)[int(idx)]
                 else:
@@ -1008,7 +1028,7 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 "'%s' is connected to source '%s' and cannot be "
                 "set by source '%s'" %
-                (path,source,src), RuntimeError)
+                (path, source, src), RuntimeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype
@@ -1058,7 +1078,7 @@ class Container(SafeHasTraits):
             except Exception:
                 return self._set_failed(path, value, index, src, force)
 
-            if iotype == 'in' or src is not None: # setting an input or a boundary output, so have to check source
+            if iotype == 'in' or src is not None:  # setting an input or a boundary output, so have to check source
                 if not force:
                     self._check_source(path, src)
                 if index is None:
@@ -1128,7 +1148,7 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-        if not isinstance(eq, bool): # FIXME: probably a numpy sub-array. assume value has changed for now...
+        if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
             eq = False
         if not eq:
             self._call_execute = True
@@ -1148,7 +1168,7 @@ class Container(SafeHasTraits):
                 self._trait_change_notify(True)
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
-                "cannot be directly set"%
+                "cannot be directly set" %
                 (name, self._depgraph.get_source(name)), RuntimeError)
 
     def _input_nocheck(self, name, old):
@@ -1592,6 +1612,7 @@ def deep_hasattr(obj, pathname):
         return False
     return hasattr(obj, parts[-1])
 
+
 def deep_getattr(obj, pathname):
     """Returns the attrbute indicated by the given pathname or raises
     and exception if it doesn't exist.
@@ -1680,10 +1701,10 @@ def create_io_traits(cont, obj_info, iotype='in'):
             name = entry.replace('.', '_')
         elif isinstance(entry, tuple):
             ref_name = entry[0]  # internal name
-            name = entry[1] or ref_name.replace('.', '_') # wrapper name
+            name = entry[1] or ref_name.replace('.', '_')  # wrapper name
             try:
-                iostat = entry[2] # optional iotype/metadata
-                trait = entry[3]  # optional validation trait
+                iostat = entry[2]  # optional iotype/metadata
+                trait = entry[3]   # optional validation trait
             except IndexError:
                 pass
         else:
@@ -1705,4 +1726,3 @@ def create_io_traits(cont, obj_info, iotype='in'):
                                  " found" % ref_name, AttributeError)
 
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))
-
