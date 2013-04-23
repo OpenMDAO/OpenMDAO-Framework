@@ -142,7 +142,6 @@ Component, Driver, Variable and other plugins for OpenMDAO
       [openmdao.binpub]
       openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
-      openmdao.lib.geometry.pam.GeoMACHSender = openmdao.lib.geometry.pam:GeoMACHSender
       openmdao.lib.geometry.demo.BoxSender = openmdao.lib.geometry.demo:BoxSender
 
       """,

@@ -30,26 +30,12 @@ class BoxParametricGeometry(ParametricGeometry):
                [0, 255, 255],  # v4-v7-v6-v5
         ], dtype=float32)
 
-        # normal array
-        self.normals = array([
-               [0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1],  # v0-v1-v2-v3 front
-               [1, 0, 0,   1, 0, 0,   1, 0, 0,   1, 0, 0],  # v0-v3-v4-v5 right
-               [0, 1, 0,   0, 1, 0,   0, 1, 0,   0, 1, 0],  # v0-v5-v6-v1 top
-              [-1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0],  # v1-v6-v7-v2 left
-               [0,-1, 0,   0,-1, 0,   0,-1, 0,   0,-1, 0],  # v7-v4-v3-v2 bottom
-               [0, 0,-1,   0, 0,-1,   0, 0,-1,   0, 0,-1 ], # v4-v7-v6-v5 back
-        ], dtype=float32)
-
         # index array
         # each face has 2 triangles
         self.triangles = array([0, 1, 2,   0, 2, 3], dtype=int32)
 
         self.bbox = [-1.,-1.,-1.,1.,1.,1.]
               
-        # other index array
-        #self.oIndices = array([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,
-        #                       16,17,18,19,20,21,22,23 ], dtype=int32)
-
         self.regen_model()
 
 
