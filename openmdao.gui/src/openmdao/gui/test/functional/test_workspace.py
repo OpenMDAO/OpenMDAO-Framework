@@ -161,6 +161,7 @@ def _test_palette_update(browser):
             % (expected_file_names, file_names))
 
     # Make sure there are only two dataflow figures (top & driver)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
@@ -245,6 +246,7 @@ def _test_menu(browser):
     eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
     workspace_page('project_menu').click()
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
@@ -304,6 +306,7 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Add some Foo instances.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     time.sleep(2)  # Wait for it to get registered.
     workspace_page.set_library_filter('In Project')
@@ -405,6 +408,8 @@ def _test_properties(browser):
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+
     # Check default 'top.driver'.
     workspace_page('properties_tab').click()
     obj = workspace_page.get_dataflow_figure('top')
@@ -420,10 +425,11 @@ def _test_properties(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 # This test no longer needed because there is no longer a component panel that
 # tracks the minimize/maximize behavior of the dataflow. The collapse/expand
 # behavior is alrady tested in test_dataflow. -- KTM
-
+# Correction: has nothing to do with dataflow.. just tests the object tree.
 #def _test_objtree(browser):
     ## Toggles maxmimize/minimize button on assemblies.
     #project_dict, workspace_page = startup(browser)
@@ -513,9 +519,6 @@ def _test_editable_inputs(browser):
     workspace_page.add_file(file_path_one)
     workspace_page.add_file(file_path_two)
 
-    # Replace 'top' with Vehicle ThreeSim  top.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     assembly_name = "sim"
     workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
                                                 assembly_name)
@@ -557,6 +560,7 @@ def _test_console_errors(browser):
     project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
@@ -620,6 +624,7 @@ def _test_driver_config(browser):
     project_dict, workspace_page = startup(browser)
 
     # Add MetaModel so we can test events.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
@@ -738,6 +743,7 @@ def _test_remove(browser):
 
     # Show assembly information.
     # Lots of futzing here to handle short screens (EC2 Windows).
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.select_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
@@ -767,6 +773,7 @@ def _test_noslots(browser):
     project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode to assembly.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.external_code.ExternalCode', 'ext',
@@ -914,6 +921,7 @@ def _test_arguments(browser):
     # Check that objects requiring constructor arguments are handled.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
@@ -947,7 +955,7 @@ def _test_arguments(browser):
     expected = [
         ['', 'directory',  '',  '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
+        ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
         ['', 'x',             '0',     '',  ''],
         ['', 'y',             '0',     '',  ''],

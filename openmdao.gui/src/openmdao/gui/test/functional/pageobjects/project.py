@@ -112,23 +112,22 @@ class ProjectsPage(BasePageObject):
         delete_dialog.submit()
         time.sleep(1)  # Wait for silly fade-out.
 
-    def delete_all_test_projects(self, verbose=False):
+    def delete_projects(self, project_filter, verbose=False):
         """ Removes all projects with 'test project' in the name. """
-        self.search_input = '\n'
-        elements = self.browser.find_elements_by_partial_link_text('testing project')
+        self.search_input = project_filter + '\n'
+        elements = self.browser.find_elements_by_partial_link_text(project_filter)
         while len(elements) > 0:
             for i in range(len(elements)):
-                self.search_input = '\n'
                 element = WebDriverWait(self.browser, TMO).until(
-                    lambda browser: browser.find_element_by_partial_link_text('testing project'))
+                    lambda browser: browser.find_element_by_partial_link_text(project_filter))
 
                 project_name = element.text
                 self.delete_project(project_name)
                 if verbose:
                     print >>sys.stderr, 'Deleted', project_name
+                self.search_input = project_filter + '\n'
             # there may be more that were previously hidden due to the row limit
-            self.search_input = '\n'
-            elements = self.browser.find_elements_by_partial_link_text('testing project')
+            elements = self.browser.find_elements_by_partial_link_text(project_filter)
 
 
 class MetadataModal(BootstrapModal):
@@ -181,7 +180,6 @@ class EditDialog(MetadataModal):
     cancel_button = ButtonElement((By.XPATH, "div[2]/form/div[@class='modal-footer']/div/button"))
 
 
-
 class DeleteDialog(DialogPage):
     """ Dialog for deleting a project """
 
@@ -202,7 +200,7 @@ class ImportDialog(MetadataModal):
 
     submit_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Import Project']"))
     cancel_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Cancel']"))
-    load_button = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Load Project']"))
+    load_button   = ButtonElement((By.XPATH, "form/div[@class='modal-footer']/button[text()='Load Project']"))
 
     ##### need to add input element for file input
     #####      self.input_element = "" # path to project file
@@ -221,4 +219,3 @@ class ImportDialog(MetadataModal):
         chars = chars or string.ascii_uppercase + string.digits
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
-

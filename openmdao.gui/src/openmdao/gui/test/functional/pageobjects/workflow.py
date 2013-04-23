@@ -17,6 +17,10 @@ class WorkflowFigure(BasePageObject):
     flip_button  = ButtonElement((By.XPATH, "./ul/li[text()='Flip Workflow']"))
     clear_button = ButtonElement((By.XPATH, "./ul/li[text()='Clear Workflow']"))
 
+    def __init__(self, browser, port, root):
+        super(WorkflowFigure, self).__init__(browser, port, root)
+        self._pathname = None
+
     @property
     def pathname(self):
         """ Pathname of this component. """

@@ -562,10 +562,12 @@ class WorkspacePage(BasePageObject):
                 break
 
         page = ArgsPrompt(self.browser, self.port)
+        argc = page.argument_count()
         page.set_name(instance_name)
-        if args is not None:
-            for i, arg in enumerate(args):
-                page.set_argument(i, arg)
+        if argc > 0:
+            if args is not None:
+                for i, arg in enumerate(args):
+                    page.set_argument(i, arg)
             page.click_ok()
 
         # Check that the prompt is gone so we can distinguish a prompt problem
@@ -656,6 +658,34 @@ class WorkspacePage(BasePageObject):
             except StaleElementReferenceException:
                 if retry < 2:
                     logging.warning('add_object_to_workflow:'
+                                    ' StaleElementReferenceException')
+                else:
+                    raise
+            else:
+                break
+
+    def add_object_to_workflow_figure(self, obj_path, target_name, target_page=None):
+        """ Add `obj_path` object to `target_name` in workflow diagram. """
+
+        if target_page is None:
+            target_page = self
+
+        for retry in range(3):
+            try:
+                items = obj_path.split('.')
+                parent = items[:-1]
+                comp = items[-1]
+                obj = self.get_dataflow_figure(comp, parent)
+
+                workflow = target_page.get_workflow_figure(target_name)
+                flow_fig = workflow.flow
+
+                chain = ActionChains(self.browser)
+                chain.drag_and_drop(obj.root, flow_fig)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('add_object_to_workflow_figure:'
                                     ' StaleElementReferenceException')
                 else:
                     raise
