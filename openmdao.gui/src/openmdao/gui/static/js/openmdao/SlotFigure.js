@@ -49,9 +49,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
     else if ( slot.containertype === 'list' ){
         fig = jQuery(slotDiv).append(lbrkSVG).append(slotSVG).append(commSVG).append(rbrkSVG) ;
     }
-    // else if ( slot.containertype === 'dict' ){
-    //     fig = jQuery(slotDiv).append(lbraceSVG).append(slotSVG).append(commSVG).append(rbraceSVG) ;
-    // }
 
 
     // set name, id, and title
@@ -71,11 +68,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                 idx = Math.floor((e.pageX - figOffset.left) / 120);
                 cmd = 'del '+pathname+'['+ idx+']';
             }
-            // else if (slot.containertype === 'dict') {
-            //     figOffset = fig.offset();
-            //     idx = Math.floor((e.pageX - figOffset.left) / 120);
-            //     cmd = 'del '+pathname+'['+ idx+']';
-            // }
             else {
                 if ( isdict ) {
                     cmd = openmdao.Util.getPath(pathname)+"['"+openmdao.Util.getName(pathname)+"'] = None";
@@ -106,11 +98,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                     idx = Math.floor((e.pageX - figOffset.left) / 100);
                 new openmdao.ObjectFrame(model, pathname+'['+idx+']');
             }
-            // else if ( slot.containertype === 'dict' ) {
-            //     var figOffset = fig.offset();
-            //         idx = Math.floor((e.pageX - figOffset.left) / 100);
-            //     new openmdao.ObjectFrame(model, pathname+'['+idx+']');
-            // }
         }
     });
 
@@ -168,9 +155,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                         if (slot.containertype === 'list') {
                             cmd = pathname+'.append('+cmd+')';
                         }
-                        // else if (slot.containertype === 'dict') {
-                        //     cmd = pathname+'.append('+cmd+')';
-                        // }
                         else {
                             var slotParent = openmdao.Util.getPath(pathname);
                             if (slot.containertype === 'singleton' && slot.filled !== null) {
@@ -188,16 +172,12 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                     if (slot.containertype === 'list') {
                         cmd = pathname+'.append('+cmd+')';
                     }
-                    // else if (slot.containertype === 'dict') {
-                    //     cmd = pathname+'.append('+cmd+')';
-                    // }
                     else {
                         var slotParent = openmdao.Util.getPath(pathname);
                         if (slot.containertype === 'singleton' && slot.filled !== null) {
                             if ( isdict ) {
                                 var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
                                 cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
-                                //cmd = slotParent+'["'+slot.name+'"] = '+cmd;
                             } else {
                                 cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
                             }
@@ -206,7 +186,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                             if ( isdict ) {
                                 var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
                                 cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
-                                //cmd = slotParent+'["'+slot.name+'"] = '+cmd;
                             } else {
                                 cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                             }
@@ -229,9 +208,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
             filled = (slot.containertype === 'singleton' && value !== null) ||
                      (slot.containertype === 'list' && value.length > 0)
 
-            // filled = (slot.containertype === 'singleton' && value !== null) ||
-            //          (slot.containertype === 'list' && value.length > 0) ||
-            //          (slot.containertype === 'dict' && value.length > 0);
 
         if (filled) {
             fig.addClass('filled');
@@ -278,30 +254,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                 fig.height(60);
                 fig.width(120*(value.length+1)+40);
             }
-            // else if (slot.containertype === 'dict') {
-            //     // rebuild figure with a rect for each filled dict entry
-            //     fig.find('svg').remove();
-            //     fig.append(lbraceSVG);
-
-            //     var i = 0;
-            //     while(i < value.length) {
-            //         fig.append(slotSVG);
-            //         fig.find('#name').filter(':last').text(slot.name + '[' + value[i] + ']');
-            //         fig.find('#klass').filter(':last').text(value[i]);
-            //         i = i + 1;
-            //         fig.append(commSVG);
-            //     }
-
-            //     fig.append(rbraceSVG);
-
-            //     // set all to filled TODO - only fill the ones that are filled!
-            //     r = fig.find('rect').css(filledRectCSS);
-            //     n = fig.find('#name').css(filledTextCSS);
-            //     k = fig.find('#klass').css(filledTextCSS);
-
-            //     fig.height(60);
-            //     fig.width(120*(value.length+1)+40);
-            // }
             else {
                 debug.warm('SlotFigure - Unrecognized slot type:',slot.containertype);
             }
@@ -315,19 +267,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                 fig.height(60);
                 fig.width(160);
             }
-            // else if (slot.containertype === 'dict') {
-            //     // rebuild figure with a rect for each filled dict entry
-            //     fig.find('svg').remove();
-            //     fig.append(lbraceSVG);
-
-            //     fig.append(rbraceSVG);
-
-            //     fig.height(60);
-            //     fig.width(120*(value.length+1)+40);
-            //     // k.css(unfilledTextCSS).text(slot.klass);
-            //     // fig.height(60);
-            //     // fig.width(160);
-            // }
             else {
                 k.css(unfilledTextCSS).text(slot.klass);
                 fig.height(60);
