@@ -15,6 +15,7 @@ from util import main, setup_server, teardown_server, generate, \
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.component import ComponentPage
 
+
 @with_setup(setup_server, teardown_server)
 def test_generator():
     for _test, browser in generate(__name__):
@@ -36,6 +37,7 @@ def _test_maxmin(browser):
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
@@ -96,9 +98,6 @@ def _test_connect(browser):
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
 
-    # Replace 'top' with connect.py's top.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
@@ -187,8 +186,6 @@ def _test_connections(browser):
     workspace_page.add_file(filename)
 
     # Replace 'top' with VehicleSim.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
@@ -334,9 +331,6 @@ def _test_connect_nested(browser):
                                                 'files/bem.py')
     workspace_page.add_file(file_path)
 
-    # Replace 'top' with bem.BEM
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
 
     # get connection frame
@@ -433,9 +427,6 @@ def _test_driverflows(browser):
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -487,9 +478,6 @@ def _test_replace(browser):
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -637,6 +625,7 @@ def _test_ordering(browser):
     project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode and SLSQP.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
               'openmdao.lib.components.external_code.ExternalCode', 'ext',
@@ -670,8 +659,9 @@ def _test_ordering(browser):
 
 
 def _test_io_filter_without_vartree(browser):
-
     project_dict, workspace_page = startup(browser)
+
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
     conmin = workspace_page.get_dataflow_figure('conmin', 'top')
@@ -743,7 +733,9 @@ def _test_io_filter_without_vartree(browser):
 
 def _test_io_filter_with_vartree(browser):
     project_dict, workspace_page = startup(browser)
+
     #Test filtering variable trees
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -813,13 +805,13 @@ def _test_io_filter_with_vartree(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+
 def _test_column_sorting(browser):
     Version = ComponentPage.Version
     SortOrder = ComponentPage.SortOrder
 
     project_dict, workspace_page = startup(browser)
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
+
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
@@ -832,7 +824,7 @@ def _test_column_sorting(browser):
     editor.get_input(" cont_in").name.click()
     editor.get_input(" vt2").name.click()
     editor.get_input(" vt3").name.click()
-    
+
     editor.get_output(" cont_out").name.click()
     editor.get_output(" vt2").name.click()
     editor.get_output(" vt3").name.click()
@@ -841,7 +833,7 @@ def _test_column_sorting(browser):
         names = None
         variables = None
 
-        if(grid=="inputs"):
+        if (grid == "inputs"):
             editor.show_inputs()
             editor.sort_inputs_column("Name", sort_order)
             variables = editor.get_inputs()
@@ -850,50 +842,46 @@ def _test_column_sorting(browser):
             editor.show_outputs()
             editor.sort_outputs_column("Name", sort_order)
             variables = editor.get_outputs()
-            
-        
+
         names = [variable.name.value for variable in variables]
 
         for index, name in enumerate(names):
             eq(name, expected[index])
 
-        
     #Testing sort for inputs
-    
-    test_sorting( \
-        [" cont_in", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "directory", "force_execute"],
+    test_sorting(
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "directory", "force_execute"],
         "inputs",
         SortOrder.ASCENDING
-        )
-
-    test_sorting( \
+    )
+    test_sorting(
         ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
-        )
+    )
 
     #Testing sort for outputs
-
-    test_sorting( \
-        [" cont_out", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "derivative_exec_count", "exec_count", "itername"],
+    test_sorting(
+        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
-        )
-
-    test_sorting( \
+    )
+    test_sorting(
         ["itername", "exec_count", "derivative_exec_count", " cont_out", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "outputs",
         SortOrder.DESCENDING
-        )
+    )
 
     editor.close()
     closeout(project_dict, workspace_page)
+
 
 def _test_taborder(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
     # Replace driver with an SLSQPdriver.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
