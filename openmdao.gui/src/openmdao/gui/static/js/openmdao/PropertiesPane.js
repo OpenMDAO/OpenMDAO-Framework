@@ -573,6 +573,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                             valueStyle += " objective";
                         }
                     }
+                    if (value.hasOwnProperty("framework_var")) {
+                            nameStyle += " framework_var";
+                    }
                     var css = {};
                     if (nameStyle !== '') {
                         css['name'] = nameStyle;

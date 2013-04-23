@@ -420,24 +420,24 @@ def _test_slot_subclass(browser):
 
     inputs = editor.get_inputs()
     expected = [
+        ['', 'input',              '0', '', ''],
         ['', 'directory',           '', '', 'If non-blank, the directory to execute in.' ],
         ['', 'force_execute',  'False', '', 'If True, always execute even if all IO traits are valid.'],
-        ['', 'input',              '0', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
 
-    inputs[2][2] = "10"
+    inputs[0][2] = "10"
     aa.run()
     message = NotifierPage.wait(workspace_page)
     eq(message, 'Run complete: success')
 
     outputs = editor.get_outputs()
     expected = [
+        ['', 'output',                '80', '', '' ],
         ['', 'derivative_exec_count',  '0', '', "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count',             '1', '', 'Number of times this Component has been executed.'],
         ['', 'itername',                '', '', 'Iteration coordinates.'],
-        ['', 'output',                '80', '', '' ],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -453,10 +453,10 @@ def _test_slot_subclass(browser):
 
     outputs = editor.get_outputs()
     expected = [
+        ['', 'output',                 '160', '', '' ],
         ['', 'derivative_exec_count',    '0', '', "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count',               '2', '', 'Number of times this Component has been executed.'],
         ['', 'itername',                  '', '', 'Iteration coordinates.'],
-        ['', 'output',                 '160', '', '' ],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])

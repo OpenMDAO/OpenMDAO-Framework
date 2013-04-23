@@ -119,24 +119,25 @@ class Component(Container):
     implements(IComponent)
 
     directory = Str('', desc='If non-blank, the directory to execute in.',
-                    iotype='in')
+                    framework_var=True, iotype='in')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
                                ' by this component.')
-    force_execute = Bool(False, iotype='in',
+    force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, iotype='out',
+    exec_count = Int(0, iotype='out', framework_var=True,
                      desc='Number of times this Component has been executed.')
 
-    derivative_exec_count = Int(0, iotype='out',
+    derivative_exec_count = Int(0, iotype='out', framework_var=True,
                      desc="Number of times this Component's derivative "
                           "function has been executed.")
 
-    itername = Str('', iotype='out', desc='Iteration coordinates.')
+    itername = Str('', iotype='out', desc='Iteration coordinates.',
+                   framework_var=True)
 
     create_instance_dir = Bool(False)
 
@@ -1657,6 +1658,11 @@ class Component(Container):
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
 
             io_attr['id'] = name
+            
+            # Framework variables 
+            if 'framework_var' in meta:
+                io_attr['id'] = '~' + name
+                
             io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]

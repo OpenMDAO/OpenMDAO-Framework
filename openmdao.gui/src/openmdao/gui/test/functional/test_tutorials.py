@@ -122,7 +122,7 @@ def _test_MDAO_MDF(browser):
     dis1_fig = workspace_page.get_dataflow_figure('dis1', 'top')
     editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
-    eq(outputs.value[3][1:3], ['y1', '0'])
+    eq(outputs.value[0][1:3], ['y1', '0'])
     editor.close()
 
     # Run the model
@@ -131,8 +131,8 @@ def _test_MDAO_MDF(browser):
     # Verify implicitly connected output has been updated with valid result.
     editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
-    eq(outputs.value[3][1], 'y1')
-    dis1_y1 = float(outputs.value[3][2])
+    eq(outputs.value[0][1], 'y1')
+    dis1_y1 = float(outputs.value[0][2])
     if abs(dis1_y1 - 3.16) > 0.01:
         raise TestCase.failureException(
             "Output dis1.y1 did not reach correct value, but instead is %s"
