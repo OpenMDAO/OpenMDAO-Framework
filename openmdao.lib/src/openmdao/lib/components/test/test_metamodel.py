@@ -30,7 +30,7 @@ from openmdao.main.interfaces import implements, ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
 
-from openmdao.lib.datatypes.api import Float, Slot, Array
+from openmdao.lib.datatypes.api import Float, VarTree, Array
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, FloatKrigingSurrogate
@@ -585,25 +585,21 @@ class MetaModelTestCase(unittest.TestCase):
 #       single level variable trees
 ########################################
 class InVtree(VariableTree): 
-    a = Float(iotype="in")
-    b = Float(iotype="in")
+    a = Float()
+    b = Float()
 
 
 class OutVtree(VariableTree): 
-    x = Float(iotype="out", desc="horizontal distance", units="ft")
-    y = Float(iotype="out", desc="vertical distance", units="ft")    
+    x = Float(desc="horizontal distance", units="ft")
+    y = Float(desc="vertical distance", units="ft")    
 
 
 class InTreeOnly(Component): 
 
-    ins = Slot(InVtree, iotype="in")
+    ins = VarTree(InVtree(), iotype="in")
 
     x = Float(iotype="out")
     y = Float(iotype="out") 
-
-    def __init__(self): 
-        super(InTreeOnly, self).__init__()
-        self.ins = InVtree()
 
     def execute(self): 
         self.x = 2*self.ins.a
@@ -612,41 +608,14 @@ class InTreeOnly(Component):
 
 class InandOutTree(Component): 
 
-    ins = Slot(InVtree, iotype="in")
+    ins = VarTree(InVtree(), iotype="in")
 
-    outs = Slot(OutVtree, iotype="out")
-
-    def __init__(self): 
-        super(InandOutTree, self).__init__()
-        self.ins = InVtree()
-        self.outs = OutVtree()
+    outs = VarTree(OutVtree(), iotype="out")
 
     def execute(self): 
 
         self.outs.x = 2*self.ins.a
         self.outs.y = 2*self.ins.a+self.ins.b
-
-
-class InArrayOnly(Component):        
-
-    ins = Array([0, 0], dtype=Float, size=(2,), iotype="in")
-
-    x = Float(iotype="out")
-    y = Float(iotype="out") 
-
-    def execute(self): 
-        self.x = 2*self.ins[0]
-        self.y = 2*self.ins[0]+self.ins[1]
-
-
-class InandOutArray(Component):        
-
-    ins = Array([0, 0], dtype=Float, size=(2,), iotype="in")
-    outs = Array([0, 0], dtype=Float, size=(2,), iotype="out")
-
-    def execute(self): 
-        self.outs[0] = 2*self.ins[0]
-        self.outs[1] = 2*self.ins[0]+self.ins[1]        
 
 
 class MMTest(Assembly):    
@@ -769,7 +738,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         
         # now try changing the includes
         self.a.mm.includes = ['ins', 'outs']
-        self.assertEqual(self.a.mm.surrogate_input_names(), ['ins.a','ins.b'])
+        self.assertEqual(self.a.mm.surrogate_input_names(), ['ins.a', 'ins.b'])
         self.assertEqual(self.a.mm.surrogate_output_names(), ['outs.y', 'outs.x'])
 
     def test_excludes_with_vartrees(self):

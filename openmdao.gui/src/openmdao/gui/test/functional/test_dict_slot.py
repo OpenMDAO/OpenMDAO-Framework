@@ -31,6 +31,9 @@ def test_generator():
 def _test_dict_slot(browser):
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    
     # load in some files needed for the tests
 
     file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -144,16 +147,16 @@ def _test_dict_slot(browser):
     # There should two surrogates slots
     time.sleep(1.0)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
-    eq( 2, len( surrogates),
-        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
+    eq( 3, len( surrogates),
+        "There should be three surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
 
     # They should all be empty
     for surrogate in surrogates :
         eq(False, ("filled" in surrogate.get_attribute('class')), "Surrogate should not be filled")
 
     # Fill the outs.x surrogate slot with FloatKrigingSurrogate
-    surrogates_outs_x_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.x')
-    surrogates_outs_x_slot.fill_from_library('FloatKrigingSurrogate')
+    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.x')
+    surrogates_slot.fill_from_library('FloatKrigingSurrogate')
 
     # One should be filled now
     time.sleep(1.5)  # give it a bit to update the figure
@@ -166,8 +169,8 @@ def _test_dict_slot(browser):
        "Exactly one surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
     # Fill the outs.y surrogate slot with KrigingSurrogate
-    surrogates_outs_x_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.y')
-    surrogates_outs_x_slot.fill_from_library('KrigingSurrogate')
+    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.zzz')
+    surrogates_slot.fill_from_library('KrigingSurrogate')
 
     # Two should be filled now
     time.sleep(1.5)  # give it a bit to update the figure
@@ -179,21 +182,36 @@ def _test_dict_slot(browser):
     eq(2, num_surrogates_filled,
        "Exactly two surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
+    # Fill the outs.y surrogate slot with KrigingSurrogate
+    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.y')
+    args = [1, 1]
+    surrogates_slot.fill_from_library('ResponseSurface', args)
+
+    # Three should be filled now
+    time.sleep(1.5)  # give it a bit to update the figure
+    num_surrogates_filled = 0
+    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    for surrogate in surrogates :
+        if "filled" in surrogate.get_attribute('class') :
+            num_surrogates_filled += 1
+    eq(3, num_surrogates_filled,
+       "Exactly three surrogate slots should be filled but %d are filled" % num_surrogates_filled)
+
     # Check to see that excludes and includes work
     mm_editor.set_input( 'excludes', '[]' )
     # There should two surrogates slots
     time.sleep(1.0)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
-    eq( 2, len( surrogates),
-        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
+    eq( 3, len( surrogates),
+        "There should be three surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
 
     # set an exclude
     mm_editor.set_input( 'excludes', '["outs"]' )
     # There should not be any surrogates slots
     time.sleep(1.0)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
-    eq( 0, len( surrogates),
-        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
+    eq( 1, len( surrogates),
+        "There should be one surrogate in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
 
     # Clean up.
     closeout(project_dict, workspace_page)

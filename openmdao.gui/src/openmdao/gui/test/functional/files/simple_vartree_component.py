@@ -1,5 +1,5 @@
 from openmdao.main.api import VariableTree, Component
-from openmdao.main.datatypes.api import Float, Slot
+from openmdao.main.datatypes.api import Float, VarTree
 
 class InVtree(VariableTree): 
     a = Float(iotype='in')
@@ -13,14 +13,10 @@ class OutVtree(VariableTree):
 
 class InandOutTree(Component): 
 
-    ins = Slot(InVtree, iotype='in')
+    zzz = Float(iotype='out', desc='nonvartree', units='ft')
 
-    outs = Slot(OutVtree, iotype='out')
-
-    def __init__(self): 
-        super(InandOutTree, self).__init__()
-        self.ins = InVtree()
-        self.outs = OutVtree()
+    ins = VarTree(InVtree(), iotype='in')
+    outs = VarTree(OutVtree(), iotype='out')
 
     def execute(self): 
 

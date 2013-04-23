@@ -70,7 +70,8 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
             }
             else {
                 if ( isdict ) {
-                    cmd = openmdao.Util.getPath(pathname)+"['"+openmdao.Util.getName(pathname)+"'] = None";
+                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                    cmd = realSlotParent + "['" + slot.name + "'] = None";
                 } else {
                     cmd = openmdao.Util.getPath(pathname)+".remove('"+openmdao.Util.getName(pathname)+"')";
                 }
@@ -158,10 +159,20 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                         else {
                             var slotParent = openmdao.Util.getPath(pathname);
                             if (slot.containertype === 'singleton' && slot.filled !== null) {
-                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                                if ( isdict ) {
+                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                                } else {
+                                    cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                                }
                             }
                             else {
-                                cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                                if ( isdict ) {
+                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                                } else {
+                                    cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                                }
                             }
                         }
                         model.issueCommand(cmd);

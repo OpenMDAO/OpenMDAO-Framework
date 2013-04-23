@@ -90,6 +90,9 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                         var name_width = name_text.getBBox().width ;
                         var klass_width = klass_text.getBBox().width ;
                         var rect_width = Math.max( name_width, klass_width ) ;
+                        if ( rect_width === 0 ) {
+                            rect_width = 100;
+                        }
                         var svg = fig.find( "svg" )[0] ;
                         var rect = fig.find( "rect" )[0] ;
                         svg.setAttribute( "width", rect_width + 40 ) ;
@@ -120,6 +123,9 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                         var name_width = name_text.getBBox().width ;
                         var klass_width = klass_text.getBBox().width ;
                         var rect_width = Math.max( name_width, klass_width ) ;
+                        if ( rect_width === 0 ) {
+                            rect_width = 100;
+                        }
                         var svg = fig.find( "svg" )[0] ;
                         var rect = fig.find( "rect" )[0] ;
                         svg.setAttribute( "width", rect_width + 40 ) ;
