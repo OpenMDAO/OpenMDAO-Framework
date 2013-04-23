@@ -910,6 +910,26 @@ def _test_taborder(browser):
 
 def _test_column_picking(browser):
     project_dict, workspace_page = startup(browser)
+    
+    #Test that changes did not affect other component editors.
+
+    #During interactive testing, and on occassion, selenium decides that it likes
+    #to miss the drop, and drops the item on the dataflow grid, rather than in top.
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    editor = driver.editor_page()
+
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+    editor.show_inputs()
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page()
 
@@ -924,10 +944,10 @@ def _test_column_picking(browser):
     eq(input_column_names, expected_column_names)
 
     #Test that low, high and type are added
-    column_picker = editor.inputs.headers[0].get_column_picker()
-    column_picker.toggle_visibility("Low")
-    column_picker.toggle_visibility("High")
-    column_picker.toggle_visibility("Type")
+    #column_picker = editor.inputs.headers[0].get_column_picker()
+    editor.toggle_column_visibility("Low")
+    editor.toggle_column_visibility("High")
+    editor.toggle_column_visibility("Type")
 
     expected_column_names[2:2] = ["Type"]
     expected_column_names[4:4] = ["High"]
@@ -938,8 +958,8 @@ def _test_column_picking(browser):
     eq(input_column_names, expected_column_names)
     
     #Test that the name and description columns are removed
-    column_picker.toggle_visibility("Name")
-    column_picker.toggle_visibility("Description")
+    editor.toggle_column_visibility("Name")
+    editor.toggle_column_visibility("Description")
 
     del expected_column_names[1]
     del expected_column_names[-1]
@@ -959,10 +979,10 @@ def _test_column_picking(browser):
 
 
     #Test that the units and name columns are removed
-    column_picker = editor.outputs.headers[0].get_column_picker()
+    #column_picker = editor.outputs.headers[0].get_column_picker()
     
-    column_picker.toggle_visibility("Units")
-    column_picker.toggle_visibility("Name")
+    editor.toggle_column_visibility("Units")
+    editor.toggle_column_visibility("Name")
 
     output_column_names = [header.value for header in editor.outputs.headers]
 
@@ -972,7 +992,7 @@ def _test_column_picking(browser):
     eq(output_column_names, expected_column_names)
 
     #Test that the low column is shown
-    column_picker.toggle_visibility("Low")
+    editor.toggle_column_visibility("Low")
 
     expected_column_names[2:2] = ["Low"]
     output_column_names = [header.value for header in editor.outputs.headers]
@@ -996,22 +1016,6 @@ def _test_column_picking(browser):
 
     editor.close()
 
-    #Test that changes did not affect other component editors.
-    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
-    editor = driver.editor_page()
-
-    expected_column_names = ["", "Name", "Value", "Units", "Description"]
-    editor.show_inputs()
-
-    input_column_names = [header.value for header in editor.inputs.headers]
-    eq(input_column_names, expected_column_names)
-
-    editor.show_outputs()
-
-    output_column_names = [header.value for header in editor.outputs.headers]
-    eq(output_column_names, expected_column_names)
-
-    editor.close()
     closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':

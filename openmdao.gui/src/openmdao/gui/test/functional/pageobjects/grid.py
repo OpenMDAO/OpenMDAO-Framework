@@ -62,6 +62,10 @@ class Grid(object):
     def value(self):
         return [row.value for row in self.rows]
 
+    @property
+    def displayed(self):
+       return self._root.is_displayed()
+
     def __len__(self):
         return len(self.rows)
 
@@ -99,16 +103,6 @@ class GridHeader(object):
         chain = ActionChains(self._browser)
         chain.context_click(self._root).perform()
 
-    def get_column_picker(self):
-        self.context_click()
-        time.sleep(1)
-        #return GridColumnPicker(self._browser, self._browser.find_element(By.CLASS_NAME, "slick-columnpicker")) 
-        column_pickers = [GridColumnPicker(self._browser, element) for element in self._browser.find_elements( By. CLASS_NAME, "slick-columnpicker" )] 
-        for column_picker in column_pickers:
-            if column_picker.displayed:
-                return column_picker
-        #return GridColumnPicker(self._browser, self._browser.find_element( By.XPATH, "//span[contains(@class, 'slick-columnpicker')]")) 
-
 class GridColumnPicker(object):
     """ Represents a slickColumnPicker at `root` """
     def __init__(self, browser, root):
@@ -119,17 +113,14 @@ class GridColumnPicker(object):
     def displayed(self):
         return self._root.is_displayed()
 
-    def toggle_visibility(self, column_name):
-        options = [GridColumnPickerOption(self._browser, option) 
-                    for option in self._root.find_elements(By.XPATH, "li")]
+    @property
+    def options(self):
+        return [GridColumnPickerOption(self._browser, option) for option in self._root.find_elements(By.XPATH, "li")]
 
-        for option in options:
-            if(option.text == column_name):
-                option.click()
-                break
-        else:
-            #Todo: raise an execption because the column does not exist
-            pass
+    def get_option(self, option_name):
+        for option in self.options:
+            if(option.text == option_name):
+                return option
         
 class GridColumnPickerOption(object):
     """ """

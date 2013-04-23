@@ -10,7 +10,7 @@ from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
 from workflow import find_workflow_component_figures
 from util import ArgsPrompt, NotifierPage
-
+from grid import GridColumnPicker, GridColumnPickerOption
 
 class ComponentPage(DialogPage):
 
@@ -61,6 +61,7 @@ class ComponentPage(DialogPage):
         NotifierPage.wait(self)
         self.version = version
         self._sort_order = {"inputs" : 0, "outputs" : 0}
+        self._column_picker = None
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -139,6 +140,33 @@ class ComponentPage(DialogPage):
     def show_slots(self):
         """switch to slots tab"""
         self('slots_tab').click()
+
+    def toggle_column_visibility(self, column_name):
+        self._toggle_column_visibility(self._active_grid, column_name)
+
+    @property
+    def _active_grid(self):
+        if self.inputs.displayed:
+            return self.inputs
+
+        elif self.outputs.displayed:
+            return self.outputs
+
+    def _toggle_column_visibility(self, grid, column_name):
+        if not self._column_picker:
+            self._column_picker = self._get_column_picker(grid)
+
+        elif not self._column_picker.displayed:
+            self._column_picker = self._get_column_picker(grid)
+
+        self._column_picker.get_option(column_name).click()
+
+    def _get_column_picker(self, grid):
+        grid.headers[0].context_click()
+        column_pickers = [GridColumnPicker(self.browser, element) for element in self.browser.find_elements( By. CLASS_NAME, "slick-columnpicker" )] 
+        for column_picker in column_pickers:
+            if column_picker.displayed:
+                return column_picker
 
     def get_inputs(self, return_type=None):
         """ Return inputs grid. """
