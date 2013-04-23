@@ -107,37 +107,65 @@ openmdao.PassthroughsFrame = function(model, pathname) {
         tree_div.bind("change_state.jstree", handleCbClick);
     }
 
-    function updateTrees(attributes) {
-        var openNodes = [];
+    /** (re)create the input and output passthrough trees with the given passthrough data */
+    function updateTrees(passthroughs) {
+        var treeData = {},
+            openNodes = [];
+
+        // update inputs
         div_input.find("li.jstree-open").each(function () {
             openNodes.push(this.id);
         });
         div_input.empty();
-        jQuery.each(attributes.inputs, function(idx, component) {
-            if (openNodes.indexOf(component.data) >= 0) {
-                component.state = 'open';
-            }
-            makeTree(component.data+"-input", div_input, component);
-
+        jQuery.each(passthroughs.inputs, function(compName, compVars) {
+            treeData.data = compName;
+            treeData.attr = { 'id': compName, 'rel': 'disabled' };
+            treeData.state = openNodes.indexOf(compName) >= 0 ? 'open' : 'closed';
+            treeData.children = [];
+            jQuery.each(compVars, function(varName, alias) {
+                treeData.children.push({
+                    'data': varName,
+                    'attr': {
+                        'id': varName,
+                        'path': compName + '.' + varName,
+                        'class': alias ? 'jstree-checked' : 'jstree-unchecked'
+                    }
+                })
+            });
+            makeTree(compName+"-input", div_input, treeData);
         });
 
+        treeData = {};
         openNodes = [];
+
+        // update outputs
         div_output.find("li.jstree-open").each(function () {
             openNodes.push(this.id);
         });
         div_output.empty();
-        jQuery.each(attributes.outputs, function(idx, component) {
-            if (openNodes.indexOf(component.data) >= 0) {
-                component.state = 'open';
-            }
-            makeTree(component.data+"-output", div_output, component);
+        jQuery.each(passthroughs.outputs, function(compName, compVars) {
+            treeData.data = compName;
+            treeData.attr = { 'id': compName, 'rel': 'disabled' };
+            treeData.state = openNodes.indexOf(compName) >= 0 ? 'open' : 'closed';
+            treeData.children = [];
+            jQuery.each(compVars, function(varName, alias) {
+                treeData.children.push({
+                    'data': varName,
+                    'attr': {
+                        'id': varName,
+                        'path': compName + '.' + varName,
+                        'class': alias ? 'jstree-checked' : 'jstree-unchecked'
+                    }
+                })
+            });
+            makeTree(compName+"-output", div_output, treeData);
         });
     }
 
-    // (re)create the inputs & outputs trees
+    /** get passthrough data and update the input and output passthrough trees */
     function update() {
-        model.getAllAttributes(pathname, updateTrees, function(data) {
-            debug.error('Error getting passthrough data:', data)
+        model.getPassthroughs(pathname, updateTrees, function(err) {
+            debug.error('Error getting passthrough data:', err)
         });
     }
 

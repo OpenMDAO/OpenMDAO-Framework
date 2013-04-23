@@ -601,6 +601,10 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(events)
 
     def get_workflow(self, pathname):
+        ''' get the workflow for the specified driver or assembly
+            if no driver or assembly is specified, get the workflows for
+            all of the top-level assemblies
+        '''
         flows = []
         if pathname:
             drvr, root = self.get_container(pathname)
@@ -645,6 +649,8 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(flows)
 
     def get_attributes(self, pathname):
+        ''' get the attributes of the specified object
+        '''
         attr = {}
         comp, root = self.get_container(pathname)
         if comp:
@@ -653,103 +659,6 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
-
-    def _nested_put(self, cdict, vardict, parent):
-        for inp in cdict["children"]:
-            if inp["attr"]["id"] == parent:
-                inp["children"].append(vardict)
-                return cdict
-            elif inp["attr"]["id"] in parent:
-                cdict2 = self._nested_put(inp, vardict, parent)
-                if len(cdict2["children"]) > len(inp["children"]):
-                    return cdict2
-        return cdict
-
-    def _hide_childleaf(self, parent_path, passthroughs):
-        for name in passthroughs:
-            if name in parent_path:
-                return False
-        return True
-
-    def _process_input_output(self, compname, data, comp_dict,
-                              existing_passthroughs, top_names):
-        for this_variable in data:
-            name = this_variable["name"]
-            this_id = this_variable["id"]
-            this_path = compname + '.' + this_id
-            tree_d = {"data": name}
-            tree_d["attr"] = {
-                "id": this_id,
-                "path": this_path
-            }
-            tree_d["children"] = []
-
-            if this_path in existing_passthroughs:
-                tree_d["attr"]["class"] = "jstree-checked"
-            elif name in top_names:
-                continue
-
-            if "parent" in this_variable.keys():
-                parent = this_variable["parent"]
-                if self._hide_childleaf(compname + '.' + parent,
-                                        existing_passthroughs):
-                    comp_dict = self._nested_put(comp_dict, tree_d, parent)
-            else:
-                comp_dict["children"].append(tree_d)
-        return comp_dict
-
-    def _get_existing_passthroughs(self, top_vars):
-        passthrough_ids = []
-        for var in top_vars:
-            if "target" in var.keys():
-                passthrough_ids.append(var["target"])
-        return passthrough_ids
-
-    def get_all_attributes(self, pathname):
-        asm, root = self.get_container(pathname)
-        input_tree, output_tree = [], []
-
-        top_level = asm.get_attributes(io_only=False)
-        top_names = [var["name"] for var in top_level['Inputs'] + top_level['Outputs']]
-        inputs_passthroughs = self._get_existing_passthroughs(top_level['Inputs'])
-        output_passthroughs = self._get_existing_passthroughs(top_level['Outputs'])
-
-        for compname in asm.list_components():
-            comp_id = compname
-            input_comp = {
-                "data": compname,
-                "attr": {
-                    "id": comp_id,
-                    "rel": "disabled"
-                },
-                "children": []
-            }
-
-            output_comp = {
-                "data": compname,
-                "attr": {
-                    "id": comp_id,
-                    "rel": "disabled"
-                },
-                "children": []
-            }
-
-            comp, root = self.get_container(pathname + '.' + compname)
-            if comp:
-                full_attributes = comp.get_attributes(io_only=False)
-                Inputs = full_attributes["Inputs"]
-                Outputs = full_attributes["Outputs"]
-
-                input_comp = self._process_input_output(compname, Inputs,
-                                                        input_comp, inputs_passthroughs, top_names)
-                output_comp = self._process_input_output(compname, Outputs,
-                                                         output_comp, output_passthroughs, top_names)
-
-                input_tree.append(input_comp)
-                output_tree.append(output_comp)
-
-        return jsonpickle.encode({"top": top_level, "inputs": input_tree,
-                                  "outputs": output_tree})
 
     def get_passthroughs(self, pathname):
         ''' get the inputs and outputs of the assembly's child components
@@ -769,6 +678,8 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
+        ''' get a dictionary of types available for creation
+        '''
         return packagedict(get_available_types())
 
     @modifies_model
