@@ -179,6 +179,22 @@ def _test_dict_slot(browser):
     eq(2, num_surrogates_filled,
        "Exactly two surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
+    # Check to see that excludes and includes work
+    mm_editor.set_input( 'excludes', '[]' )
+    # There should two surrogates slots
+    time.sleep(1.0)  # give it a bit to update the figure
+    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    eq( 2, len( surrogates),
+        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
+
+    # set an exclude
+    mm_editor.set_input( 'excludes', '["outs"]' )
+    # There should not be any surrogates slots
+    time.sleep(1.0)  # give it a bit to update the figure
+    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    eq( 0, len( surrogates),
+        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
+
     # Clean up.
     closeout(project_dict, workspace_page)
 
