@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
+openmdao.FileTreeFrame = function(id,model,code_fn) {
     var menu = [
         {   "text": "File",
             "items": [
@@ -66,10 +66,11 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     });
 
     /** recursively build an HTML representation of a JSON file structure */
-    function getFileHTML(path,val) {
+    function getFileHTML(path, val) {
+        path = path.replace(/\\/g,'/');
+
         // get the file name and extension
-        var path = path.replace(/\\/g,'/'),
-            name = path.split('/'),
+        var name = path.split('/'),
             name = name[name.length-1],
             ext = name.split('.'),
             ext = ext[ext.length-1],
@@ -116,16 +117,6 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     /** save a copy of the file to the local file system (download) */
     function saveCopy(pathname) {
         jQuery.fileDownload('file'+pathname+'?download=True');
-    }
-
-    /** if we have a view geometry function, then call it on the specified file */
-    function viewGeometry(pathname) {
-        if (typeof geom_fn === 'function') {
-            geom_fn(pathname);
-        }
-        else {
-            alert("View Geometry function is not defined");
-        }
     }
 
     /** toggle the hidden files filter */
@@ -233,15 +224,15 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             if (/.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { viewGeometry(path.replace(/\\/g,'/')); }
+                    "action" : function(node) { openmdao.viewGeometry(path.replace(/\\/g,'/')); }
                 };
             }
 
             menu.renameFile = {
                 "label"  : 'Rename',
                 "action" : function(node) {
-                                var old = path.split('/'),
-                                    old = old[old.length-1];
+                                var old = path.split('/');
+                                old = old[old.length-1];
                                 openmdao.Util.promptForValue('New name for '+old, function(name) {
                                     model.renameFile(path, name);
                                 });
@@ -251,8 +242,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             menu.saveCopy = {
                 "label"  : 'Save a Copy',
                 "action" : function(node) {
-                                var name = path.split('/'),
-                                    name = name[name.length-1];
+                                var name = path.split('/');
+                                name = name[name.length-1];
                                 saveCopy(path);
                            }
             };
@@ -372,7 +363,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         }
         else {
             files = message[1];
-            highlightFiles()
+            highlightFiles();
             updateFiles(files);
         }
     }

@@ -16,12 +16,8 @@ jQuery(function() {
     var code = new openmdao.CodeFrame('code_pane', openmdao.model);
 
     function code_fn(path) { code.editFile(path); }
-    function geom_fn(path) { 
-        openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); 
-        //new openmdao.GeomFrame('geom-'+path, openmdao.model, path);
-    }
 
-    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model, code_fn, geom_fn);
+    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model, code_fn);
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {

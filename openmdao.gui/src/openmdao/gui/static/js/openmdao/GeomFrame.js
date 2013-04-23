@@ -12,14 +12,6 @@ openmdao.NAME_SIZE = 256;
 
 //g.messageQ = [];              // a place to put the binary messages
 
-openmdao.viewGeometry = function() {
-    openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
-        function(pathname) {
-            //new openmdao.GeomFrame('geom-'+pathname, openmdao.model, pathname);
-            openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry'); 
-        }
-    );
-};
 
 openmdao.GeomFrame = function(id, model, pathname) {
 
