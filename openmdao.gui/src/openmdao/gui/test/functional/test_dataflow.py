@@ -817,26 +817,6 @@ def _test_column_sorting(browser):
     Version = ComponentPage.Version
     SortOrder = ComponentPage.SortOrder
 
-    project_dict, workspace_page = startup(browser)
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/model_vartree.py')
-    workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
-    workspace_page.show_dataflow("vartree")
-
-    comp = workspace_page.get_dataflow_figure('p1', "vartree")
-    editor = comp.editor_page(version=Version.NEW)
-
-    editor.get_input(" cont_in").name.click()
-    editor.get_input(" vt2").name.click()
-    editor.get_input(" vt3").name.click()
-    
-    editor.get_output(" cont_out").name.click()
-    editor.get_output(" vt2").name.click()
-    editor.get_output(" vt3").name.click()
-
     def test_sorting(expected, grid, sort_order):
         names = None
         variables = None
@@ -857,7 +837,55 @@ def _test_column_sorting(browser):
         for index, name in enumerate(names):
             eq(name, expected[index])
 
-        
+    project_dict, workspace_page = startup(browser)
+    #driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    #editor = driver.editor_page(version=Version.NEW)
+
+    #test_sorting( \
+    #    ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
+    #    "inputs",
+    #    SortOrder.ASCENDING
+    #    )
+
+    #test_sorting( \
+    #    ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
+    #    "inputs",
+    #    SortOrder.DESCENDING
+    #    )
+
+    #test_sorting( \
+    #    ["error_code", "derivative_exec_count", "exec_count", "itername"],
+    #    "outputs",
+    #    SortOrder.ASCENDING
+    #    )
+
+    #test_sorting( \
+    #    ["itername", "exec_count", "derivative_exec_count", "error_code"],
+    #    "outputs",
+    #    SortOrder.DESCENDING
+    #    )
+
+    #editor.close()
+
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    comp = workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None, offset=(90, 120))
+    #workspace_page.show_dataflow("vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    editor = comp.editor_page(version=Version.NEW)
+
+    editor.get_input(" cont_in").name.click()
+    editor.get_input(" vt2").name.click()
+    editor.get_input(" vt3").name.click()
+    
+    editor.get_output(" cont_out").name.click()
+    editor.get_output(" vt2").name.click()
+    editor.get_output(" vt3").name.click()
+
     #Testing sort for inputs
     
     test_sorting( \
