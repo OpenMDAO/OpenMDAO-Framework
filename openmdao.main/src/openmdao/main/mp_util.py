@@ -132,18 +132,20 @@ def setup_tunnel(address, port):
 
     user = getpass.getuser()
     if sys.platform == 'win32':  # pragma no cover
-        stdin = open('nul:', 'r')
+#        stdin = open('nul:', 'r')
         args = ['plink', '-batch', '-ssh', '-l', user,
                 '-L', '%d:localhost:%d' % (port, port), address]
     else:
-        stdin = open('/dev/null', 'r')
-        args = ['ssh', '-l', user,
+#        stdin = open('/dev/null', 'r')
+        stdin = None
+        args = ['ssh', '-l', user, '-T',
                 '-L', '%d:localhost:%d' % (port, port), address]
 
     tunnel_proc = None
     connected = False
     try:
         try:
+            logging.critical('args %s', args)
             tunnel_proc = ShellProc(args, stdin=stdin,
                                     stdout=stdout, stderr=STDOUT)
         except Exception as exc:
@@ -151,7 +153,7 @@ def setup_tunnel(address, port):
             raise RuntimeError(msg)
 
         sock = socket.socket(socket.AF_INET)
-        address = ('127.0.0.1', port)
+        local_address = ('127.0.0.1', port)
         for retry in range(20):
             time.sleep(.5)
             exitcode = tunnel_proc.poll()
@@ -160,7 +162,7 @@ def setup_tunnel(address, port):
                       ' output in %s' % (exitcode, logname)
                 raise RuntimeError(msg)
             try:
-                sock.connect(address)
+                sock.connect(local_address)
             except socket.error as exc:
                 if exc.args[0] != errno.ECONNREFUSED and \
                    exc.args[0] != errno.ENOENT:
@@ -172,16 +174,22 @@ def setup_tunnel(address, port):
                                 logname, os.getpid())
                 sock.close()
                 connected = True
-                return address
+                return local_address
+    except Exception as exc:
+        logging.exception("Can't setup tunnel to %s:%s", address, port)
+        raise
     finally:
         if not connected:
             if tunnel_proc is not None:  # Cleanup but keep logfile.
+                exitcode = tunnel_proc.poll()
                 _cleanup_tunnel(tunnel_proc, stdin, stdout, None, os.getpid())
-                msg = 'Timeout trying to connect through tunnel to %s,' \
-                      ' output in %s' % (address, logname)
-                raise RuntimeError(msg)
+                if exitcode is None:
+                    msg = 'Timeout trying to connect through tunnel to %s:%s,' \
+                          ' output in %s' % (address, port, logname)
+                    raise RuntimeError(msg)
             else:
-                stdin.close()
+                if stdin is not None:
+                    stdin.close()
                 stdout.close()
 
 def _cleanup_tunnel(tunnel_proc, stdin, stdout, logname, pid):
@@ -190,7 +198,8 @@ def _cleanup_tunnel(tunnel_proc, stdin, stdout, logname, pid):
         return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
-    stdin.close()
+    if stdin is not None:
+        stdin.close()
     stdout.close()
     if logname is not None and os.path.exists(logname):
         try:

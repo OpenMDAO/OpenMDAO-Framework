@@ -26,6 +26,7 @@ from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
                                      register, decode_public_key, keytype
+from openmdao.main.mp_util import setup_tunnel
 from openmdao.main.rbac import get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
@@ -71,6 +72,8 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         authkey: string
             Authorization key.
         """
+        _LOGGER.debug('Client setting up tunnel to %s' % (address,))
+        address = setup_tunnel(address[0], address[1])
         manager = cls(address, authkey)
         _LOGGER.debug('Client connecting to server at %s' % (address,))
         conn = connection.Client(address, authkey=authkey)
@@ -170,7 +173,13 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
                     # This will hang if server doesn't receive our address.
-                    conn = listener.accept()
+#                    conn = listener.accept()
+                    conn = listener._listener.accept()
+                    _LOGGER.critical('connection attempt from %s', listener.last_accepted)
+                    if listener._authkey:
+                        connection.deliver_challenge(conn, listener._authkey)
+                        connection.answer_challenge(conn, listener._authkey)
+
                     i, address, pubkey_text = conn.recv()
                     conn.close()
                     other_host = self._hostlist[i]
@@ -178,16 +187,21 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                         _LOGGER.error('Host %s died: %s', other_host.hostname,
                                       pubkey_text)  # Exception text.
                         continue
-
-                    other_host.manager = HostManager.from_address(address,
-                                                                  self._authkey)
-                    other_host.state = 'up'
-                    if pubkey_text:
-                        other_host.manager._pubkey = \
-                            decode_public_key(pubkey_text)
-                    host_processed = True
-                    _LOGGER.debug('Host %s is now up', other_host.hostname)
-                    self._up.append(other_host)
+                    try:
+                        other_host.manager = \
+                            HostManager.from_address(address, self._authkey)
+                    except Exception as exc:
+                        _LOGGER.error("Can't start manager for %s: %s",
+                                      other_host.hostname, str(exc) or repr(exc))
+                        continue
+                    else:
+                        other_host.state = 'up'
+                        if pubkey_text:
+                            other_host.manager._pubkey = \
+                                decode_public_key(pubkey_text)
+                        host_processed = True
+                        _LOGGER.debug('Host %s is now up', other_host.hostname)
+                        self._up.append(other_host)
 
             # See if there are still hosts to wait for.
             waiting = []

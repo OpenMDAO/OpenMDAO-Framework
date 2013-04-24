@@ -249,7 +249,14 @@ class OpenMDAO_Server(Server):
             try:
                 while not self.stop:
                     try:
-                        conn = self.listener.accept()
+#                        conn = self.listener.accept()
+                         conn = self.listener._listener.accept()
+                         print 'connection attempt from', conn
+                         self._logger.critical('connection attempt from %s', self.listener.last_accepted)
+                         if self.listener._authkey:
+                             connection.deliver_challenge(conn, self.listener._authkey)
+                             connection.answer_challenge(conn, self.listener._authkey)
+
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
                         if self.stop:

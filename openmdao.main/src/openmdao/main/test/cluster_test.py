@@ -21,7 +21,8 @@ def main():
         dict(hostname='havoc.grc.nasa.gov',
              python='/OpenMDAO/dev/%s/OpenMDAO-Framework/devenv/bin/python' % user),
         dict(hostname='viper.grc.nasa.gov',
-             python='/Users/%s/OpenMDAO-Framework/devenv/bin/python' % user),
+             python='/Users/%s/OpenMDAO-Framework/devenv/bin/python' % user,
+             tunnel=True),
     ]
 
     cluster_name = 'TestCluster'
@@ -35,13 +36,13 @@ def main():
     print 'Cluster initialized'
     RAM.insert_allocator(0, cluster)
 
-    hosts = RAM.get_hostnames(dict(min_cpus=1, allocator=cluster_name))
+    hosts = RAM.get_hostnames(dict(min_cpus=2, allocator=cluster_name))
     print 'Hosts', hosts
-    assert sorted(hosts) == ['havoc']
+    assert sorted(hosts) == ['havoc.grc.nasa.gov', 'viper.grc.nasa.gov']
 
     server, server_info = RAM.allocate(dict(allocator=cluster_name))
     print 'Server info', server_info
-    assert server_info['host'] == 'havoc'
+    assert server_info['host'] == 'havoc.grc.nasa.gov'
     print 'Remote files', server.listdir('.')
     assert sorted(server.listdir('.')) == \
            ['openmdao_log.txt', 'stderr', 'stdout']
