@@ -64,6 +64,7 @@ class SlotFigure(BasePageObject):
             else:
                 break
             
+        # Handle arguments for the slotted class
         page = ArgsPrompt(self.browser, self.port)
         argc = page.argument_count()
         if argc > 0:
