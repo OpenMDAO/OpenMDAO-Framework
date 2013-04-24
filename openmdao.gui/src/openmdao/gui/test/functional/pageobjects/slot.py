@@ -75,12 +75,12 @@ class SlotFigure(BasePageObject):
 
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
-        #time.sleep(0.25)
-        #self.browser.implicitly_wait(1)  # We don't expect to find anything.
-        #try:
-        #    eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
-        #finally:
-        #    self.browser.implicitly_wait(TMO)            
+        time.sleep(0.25)
+        self.browser.implicitly_wait(1)  # We don't expect to find anything.
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)            
             
             
 
