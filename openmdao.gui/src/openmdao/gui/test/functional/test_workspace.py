@@ -934,9 +934,6 @@ def _test_arguments(browser):
     slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
     args = ['[]']
     slot.fill_from_library('ListCaseIterator', args)
-    #args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    #args_page.set_argument(0, '[]')
-    #args_page.click_ok()
 
     # Plug ListCaseRecorder into recorder.
     slot = SlotFigure(workspace_page, 'top.mm.recorder')
@@ -945,10 +942,7 @@ def _test_arguments(browser):
     # Plug ExecComp into model.
     slot = SlotFigure(workspace_page, 'top.mm.model')
     args = ["('z = x * y',)"]
-    slot.fill_from_library('ExecComp')
-    #args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    #args_page.set_argument(0, "('z = x * y',)")
-    #args_page.click_ok()
+    slot.fill_from_library('ExecComp', args)
 
     # Check that inputs were created from expression.
     exe_editor = slot.editor_page()
