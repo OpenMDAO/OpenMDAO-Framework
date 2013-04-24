@@ -53,8 +53,8 @@ is being evaluated for both outputs.
             #Components
             self.add("trig_meta_model",MetaModel())
             self.trig_meta_model.model = Trig()
-            self.trig_meta_model.sur_f_x_sin = LogisticRegression()
-            self.trig_meta_model.sur_f_x_cos = KrigingSurrogate()
+            self.trig_meta_model.surrogates['f_x_sin'] = LogisticRegression()
+            self.trig_meta_model.surrogates['f_x_cos'] = KrigingSurrogate()
             self.trig_meta_model.recorder = DBCaseRecorder()
 
             #Training the MetaModel
