@@ -1,42 +1,63 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotFigure=function(model,pathname,slot) {
+openmdao.SlotFigure=function(model,pathname,slot,isdict) {
     /***********************************************************************
      *  private
      ***********************************************************************/
 
-    var self = this,
-        id = 'SlotFigure-'+pathname.replace(/\./g,'-'),
-        slotDiv = '<div class="SlotFigure" style="margin:10px; clear:both;" />',
-        slotSVG = '<svg height="60" width="100">'
+    var self = this ;
+    var id = 'SlotFigure-'+pathname.replace(/\./g,'-') ;
+    var slotDiv = '<div class="SlotFigure" style="margin:10px; clear:both;" />' ;
+    var slotDictDiv = '<div class="SlotFigure" style="margin:10px; display:inline-block" >' ;
+    var slotSVG = '<svg height="60" width="100">'
                 + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
                 + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
                 + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
-                + '</svg>',
-        lbrkSVG = '<svg height="60" width="20">'
+        + '</svg>' ;
+    var lbrkSVG = '<svg height="60" width="20">'
                 + '    <text x="0" y="45" font-size="60" style="fill:gray">[</text>'
-                + '</svg>',
-        commSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
-                + '</svg>',
-        rbrkSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="45" font-size="60" style="fill:gray">]</text>'
-                + '</svg>',
-        fig = slot.containertype === 'singleton' ?
-                jQuery(slotDiv).append(slotSVG) :
-                jQuery(slotDiv).append(lbrkSVG).append(slotSVG).append(commSVG).append(rbrkSVG),
-        filledRectCSS = {'stroke-width':4, 'stroke-dasharray':'none', 'stroke':'#0b93d5', 'fill': 'gray'},
-        filledTextCSS = {'fill': 'black'},
-        unfilledRectCSS = {'stroke-width':2, 'stroke-dasharray':8, 'stroke':'gray', 'fill': 'none'},
-        unfilledTextCSS = {'fill': 'gray'},
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-            .appendTo(fig);
+        + '</svg>' ;
+    var commSVG = '<svg height="60" width="20">'
+        + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
+        + '</svg>' ;
+    var rbrkSVG = '<svg height="60" width="20">'
+        + '    <text x="0" y="45" font-size="60" style="fill:gray">]</text>'
+        + '</svg>' ;
+    
+    var lbraceSVG = '<svg height="60" width="20">'
+        + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
+        + '</svg>' ;
+    var rbraceSVG = '<svg height="60" width="20">'
+                + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
+        + '</svg>' ;
 
-    // set name, id, tooltip and width
+    var filledRectCSS = {'stroke-width':4, 'stroke-dasharray':'none', 'stroke':'#0b93d5', 'fill': 'gray'}; 
+    var filledTextCSS = {'fill': 'black'} ;
+    var unfilledRectCSS = {'stroke-width':2, 'stroke-dasharray':8, 'stroke':'gray', 'fill': 'none'} ;
+    var unfilledTextCSS = {'fill': 'gray'} ;
+
+
+    var fig ;
+    if ( slot.containertype === 'singleton' ){
+        if ( isdict ) {
+            fig = jQuery(slotDictDiv).append(slotSVG).append( "</div>" ) ;
+        } else {
+            fig = jQuery(slotDiv).append(slotSVG) ;
+        }
+    }
+    else if ( slot.containertype === 'list' ){
+        fig = jQuery(slotDiv).append(lbrkSVG).append(slotSVG).append(commSVG).append(rbrkSVG) ;
+    }
+
+
+    // set name, id, and title
     fig.find('#name').text(slot.name);
     fig.attr('id',id);
     fig.attr('title',slot.desc);
+
+    var contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(fig);
+
 
     // create context menu
     contextMenu.append(jQuery('<li>Remove Contents</li>').click(function(e) {
@@ -48,7 +69,12 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 cmd = 'del '+pathname+'['+ idx+']';
             }
             else {
-                cmd = openmdao.Util.getPath(pathname)+".remove('"+openmdao.Util.getName(pathname)+"')";
+                if ( isdict ) {
+                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                    cmd = realSlotParent + "['" + slot.name + "'] = None";
+                } else {
+                    cmd = openmdao.Util.getPath(pathname)+".remove('"+openmdao.Util.getName(pathname)+"')";
+                }
             }
             model.issueCommand(cmd);
         }
@@ -68,7 +94,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             if (slot.containertype === 'singleton') {
                 new openmdao.ObjectFrame(model, pathname);
             }
-            else {
+            else if ( slot.containertype === 'list' ) {
                 var figOffset = fig.offset();
                     idx = Math.floor((e.pageX - figOffset.left) / 100);
                 new openmdao.ObjectFrame(model, pathname+'['+idx+']');
@@ -78,6 +104,9 @@ openmdao.SlotFigure=function(model,pathname,slot) {
 
     /** Highlight figure when cursor is over it and it can accept a drop */
     fig.highlightAsDropTarget=function() {
+        // if ( isdict ) {
+        //     console.log( "highlightAsDropTarget" ) ;
+        // }
         fig.find('rect').filter(':last').css({'fill': '#CFD6FE'});
     };
 
@@ -130,10 +159,20 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                         else {
                             var slotParent = openmdao.Util.getPath(pathname);
                             if (slot.containertype === 'singleton' && slot.filled !== null) {
-                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                                if ( isdict ) {
+                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                                } else {
+                                    cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                                }
                             }
                             else {
-                                cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                                if ( isdict ) {
+                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                                } else {
+                                    cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                                }
                             }
                         }
                         model.issueCommand(cmd);
@@ -147,10 +186,20 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                     else {
                         var slotParent = openmdao.Util.getPath(pathname);
                         if (slot.containertype === 'singleton' && slot.filled !== null) {
-                            cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                            if ( isdict ) {
+                                var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                            } else {
+                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
+                            }
                         }
                         else {
-                            cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                            if ( isdict ) {
+                                var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
+                                cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                            } else {
+                                cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
+                            }
                         }
                     }
                     model.issueCommand(cmd);
@@ -168,14 +217,20 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             n = fig.find('#name'),
             k = fig.find('#klass'),
             filled = (slot.containertype === 'singleton' && value !== null) ||
-                     (slot.containertype === 'list' && value.length > 0);
+                     (slot.containertype === 'list' && value.length > 0)
+
 
         if (filled) {
             fig.addClass('filled');
             if (slot.containertype === 'singleton') {
                 r.css(filledRectCSS);
                 n.css(filledTextCSS);
-                k.css(filledTextCSS).text(value);
+
+                v = value.split(".").pop() ;
+
+
+                //k.css(filledTextCSS).text(value);
+                k.css(filledTextCSS).text(v);
                 fig.height(60);
                 fig.width(100);
             }
@@ -214,7 +269,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 debug.warm('SlotFigure - Unrecognized slot type:',slot.containertype);
             }
         }
-        else {
+        else { // if not filled
             fig.removeClass('filled');
             r.css(unfilledRectCSS);
             n.css(unfilledTextCSS).text(slot.name);
