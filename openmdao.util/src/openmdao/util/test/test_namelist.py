@@ -10,7 +10,8 @@ from numpy import float32 as numpy_float32
 from numpy import int32 as numpy_int32
 from numpy import array, zeros
 
-from openmdao.main.datatypes.api import Float, Bool, Int, Str, File, List, Enum, Slot, Array
+from openmdao.main.datatypes.api import Float, Bool, Int, Str, File, List, \
+                                        Enum, Array, VarTree
 from openmdao.main.api import VariableTree, Component
 from openmdao.util.namelist_util import Namelist, ToBool
 
@@ -21,7 +22,7 @@ class VarContainer(VariableTree):
     intvar = Int(7777)
     floatvar = Float(2.14543)
     textvar = Str("Hey")
-    listenumvar = List(Enum(1,(1,2,3)))
+    listenumvar = List(Enum(1, (1, 2, 3)))
 
 
 class VarComponent(Component):
@@ -36,28 +37,20 @@ class VarComponent(Component):
     arrayvar = Array(iotype='in')
     arrayvarsplit = Array(iotype='in')
     arrayvarsplit2 = Array(iotype='in')
-    arrayvarzerod = Array(zeros(shape=(0,0)), iotype='in')
-    arrayvartwod = Array(zeros(shape=(1,3)), iotype='in')
+    arrayvarzerod = Array(zeros(shape=(0, 0)), iotype='in')
+    arrayvartwod = Array(zeros(shape=(1, 3)), iotype='in')
     arraysmall = Array(iotype='in')
     arrayshorthand = Array(iotype='in')
     single = Array(iotype='in')
     singleint = Array(iotype='in', dtype=numpy_int32)
     singlebool = Array(iotype='in', dtype=bool)
     stringarray = List([], iotype='in')
-    listenumvar = List(Enum(1,(1,2,3)), iotype='in')
-    listenumvar2 = List(Enum(1.5,(1.5,2.4,3.3)), iotype='in')
-    listenumvar3 = List(Enum('a',('a','b','c')), iotype='in')
-    listenumvar4 = List(Enum(True,(True, False)), iotype='in')
+    listenumvar = List(Enum(1, (1, 2, 3)), iotype='in')
+    listenumvar2 = List(Enum(1.5, (1.5, 2.4, 3.3)), iotype='in')
+    listenumvar3 = List(Enum('a', ('a', 'b', 'c')), iotype='in')
+    listenumvar4 = List(Enum(True, (True, False)), iotype='in')
     
-    varcontainer = Slot(VarContainer, iotype='input')
-    
-    def __init__(self):
-        
-        super(VarComponent, self).__init__()
-
-        # Variable Containers
-        self.add('varcontainer',  VarContainer())
-
+    varcontainer = VarTree(VarContainer(), iotype='in')
     
     
 class TestCase(unittest.TestCase):
@@ -79,15 +72,15 @@ class TestCase(unittest.TestCase):
         except RuntimeError, err:
             msg = "Input file must be read with parse_file before " \
                   "load_model can be executed."
-            self.assertEqual(str(err),msg)
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')        
 
     def test_writes(self):
 
         my_comp = VarComponent()
-        my_comp.listenumvar = [1,2,1,3]
-        my_comp.listenumvar2 = [1.5,1.5]
+        my_comp.listenumvar = [1, 2, 1, 3]
+        my_comp.listenumvar2 = [1.5, 1.5]
         my_comp.listenumvar3 = ['b']
         my_comp.listenumvar4 = [False, False, False]
         sb = Namelist(my_comp)
@@ -178,7 +171,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.expvar1, 1.5e-12)
         self.assertEqual(my_comp.expvar2, -1.5e12)
         self.assertEqual(my_comp.textvar, 'That')
-        self.assertEqual(my_comp.listenumvar, [3,3,2,2])
+        self.assertEqual(my_comp.listenumvar, [3, 3, 2, 2])
         self.assertEqual(my_comp.listenumvar2, [1.5])
         self.assertEqual(my_comp.arrayvar[0], 3.5)
         self.assertEqual(my_comp.arrayvar[1], 7.76)
@@ -251,7 +244,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.varcontainer.boolvar, False)
         self.assertEqual(my_comp.varcontainer.floatvar, -3.14)
         self.assertEqual(my_comp.varcontainer.textvar, 'That')
-        self.assertEqual(my_comp.varcontainer.listenumvar, [3,3,2,2])
+        self.assertEqual(my_comp.varcontainer.listenumvar, [3, 3, 2, 2])
         
     def test_read3(self):
         # Parse a single group in a deck with non-unique group names
@@ -350,7 +343,7 @@ class TestCase(unittest.TestCase):
     def test_container_write(self):
         
         my_comp = VarComponent()
-        my_comp.varcontainer.listenumvar = [1,2,1,3]
+        my_comp.varcontainer.listenumvar = [1, 2, 1, 3]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
@@ -371,8 +364,8 @@ class TestCase(unittest.TestCase):
         # now test skipping
         
         sb = Namelist(my_comp)
-        my_comp.varcontainer.boolvar=True
-        my_comp.varcontainer.textvar="Skipme"
+        my_comp.varcontainer.boolvar = True
+        my_comp.varcontainer.textvar = "Skipme"
         
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -427,9 +420,9 @@ class TestCase(unittest.TestCase):
         my_comp = VarComponent()
         sb = Namelist(my_comp)
         
-        my_comp.arrayvar = zeros([3,2], dtype=numpy_float32)
-        my_comp.arrayvar[0,1] = 3.7
-        my_comp.arrayvar[2,0] = 7.88
+        my_comp.arrayvar = zeros([3, 2], dtype=numpy_float32)
+        my_comp.arrayvar[0, 1] = 3.7
+        my_comp.arrayvar[2, 0] = 7.88
         
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -454,7 +447,7 @@ class TestCase(unittest.TestCase):
         my_comp = VarComponent()
         sb = Namelist(my_comp)
         
-        my_comp.arrayvar = zeros([2,2,2], dtype=numpy_float32)
+        my_comp.arrayvar = zeros([2, 2, 2], dtype=numpy_float32)
         
         sb.set_filename(self.filename)
         sb.add_group('Test')
@@ -502,7 +495,7 @@ class TestCase(unittest.TestCase):
             
 if __name__ == '__main__':
     import nose
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.util')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

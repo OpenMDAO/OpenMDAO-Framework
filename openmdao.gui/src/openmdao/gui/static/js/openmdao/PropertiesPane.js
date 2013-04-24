@@ -242,7 +242,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         var itemFormatter = undefined;
         var newItem = undefined;
 
-        debug.info(pathname);
         itemFormatter = new ItemFormatter();
         newItem = itemFormatter.cloneItem(item);
 
@@ -392,7 +391,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     hide : false,
                     show : false,
                     position : {
-                        of : "#CE-" + pathname.replace(".", "-", "g") + "_" + name,
+                        of : "#CE-" + pathname.replace(/\./g,'-') + "_" + name,
                         my : "right top",
                         at : "left-20 top",
                     },
@@ -402,14 +401,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         });
 
         props.onBeforeEditCell.subscribe(function(row,cell) {
-            if (props.getDataItem(cell.row).connected.length > 0) {
+            var item = props.getDataItem(cell.row);
+            if (item.connected.length > 0) {
                 return false;
             }
-
-            else if (props.getDataItem(cell.row).ttype == 'slot') {
+            else if (item.ttype == 'vartree') {
                 return false;
             }
-
             else {
                 return true;
             }
@@ -559,7 +557,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
-                    if (options.editable && (value.connected.length === 0) && (value.ttype != 'slot')) {
+                    if (options.editable && (value.connected.length === 0)
+                        && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
                     if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {

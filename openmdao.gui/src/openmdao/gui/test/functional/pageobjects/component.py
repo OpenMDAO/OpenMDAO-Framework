@@ -8,7 +8,9 @@ from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
-from workflow import find_workflow_component_figures
+from workflow import find_workflow_figure, find_workflow_figures, \
+                     find_workflow_component_figures, \
+                     find_workflow_component_figure
 from util import ArgsPrompt, NotifierPage
 from grid import GridColumnPicker, GridColumnPickerOption
 
@@ -210,6 +212,7 @@ class ComponentPage(DialogPage):
             found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
+
 class DriverPage(ComponentPage):
     """ Driver editor page. """
 
@@ -277,9 +280,21 @@ class DriverPage(ComponentPage):
         """switch to workflow tab"""
         self('workflow_tab').click()
 
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        return find_workflow_figures(self)
+
     def get_workflow_component_figures(self):
         """ Return workflow component figure elements. """
         return find_workflow_component_figures(self)
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        return find_workflow_figure(self, name, prefix, retries)
+
+    def get_workflow_component_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowComponentFigure` for `name`. """
+        return find_workflow_component_figure(self, name, prefix, retries)
 
 
 class ParameterDialog(DialogPage):

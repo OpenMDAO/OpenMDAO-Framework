@@ -10,26 +10,6 @@ from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
 
 
-class AddOnsHandler(BaseHandler):
-    ''' Addon installation utility.
-    Eventually we will probably wrap the OpenMDAO plugin
-    functions to work through here.
-    '''
-    addons_url = 'http://openmdao.org/dists'
-
-    @web.authenticated
-    def post(self):
-        ''' Easy_install the POSTed addon.
-        '''
-        pass
-
-    @web.authenticated
-    def get(self):
-        ''' Show available plugins; prompt for plugin to be installed.
-        '''
-        self.render('workspace/addons.html')
-
-
 class ReqHandler(BaseHandler):
     ''' Render the base template.
     '''
@@ -60,14 +40,24 @@ class ReqHandler(BaseHandler):
         self.render('workspace/base.html', **attributes)
 
 
-class GeometryHandler(ReqHandler):
+class AddOnsHandler(BaseHandler):
+    ''' Addon installation utility.
+    Eventually we will probably wrap the OpenMDAO plugin
+    functions to work through here.
+    '''
+    addons_url = 'http://openmdao.org/dists'
+
+    @web.authenticated
+    def post(self):
+        ''' Easy_install the POSTed addon.
+        '''
+        pass
 
     @web.authenticated
     def get(self):
-        ''' geometry viewer
+        ''' Show available plugins; prompt for plugin to be installed.
         '''
-        filename = self.get_argument('path')
-        self.render('workspace/o3dviewer.html', filename=filename)
+        self.render('workspace/addons.html')
 
 
 class CloseHandler(ReqHandler):
@@ -106,59 +96,6 @@ class CommandHandler(ReqHandler):
     def get(self):
         self.content_type = 'text/html'
         self.write('')  # not used for now, could render a form
-
-
-class VariableHandler(ReqHandler):
-    ''' Get a command to set a variable, send it to the cserver, and return response.
-    '''
-
-    @web.authenticated
-    def post(self):
-        history = ''
-        lhs = self.get_argument('lhs', default=None)
-        rhs = self.get_argument('rhs', default=None)
-        vtype = self.get_argument('type', default=None)
-        if (lhs and rhs and vtype):
-            if vtype == 'str':
-                command = '%s = "%s"' % (lhs, rhs)
-            else:
-                command = '%s = %s' % (lhs, rhs)
-
-        # if there is a command, execute it & get the result
-        if command:
-            result = ''
-            try:
-                cserver = self.get_server()
-                result = cserver.onecmd(command)
-            except Exception as exc:
-                print exc
-                result = sys.exc_info()
-            if result:
-                history = history + str(result) + '\n'
-
-        self.content_type = 'text/html'
-        self.write(history)
-
-    @web.authenticated
-    def get(self):
-        self.content_type = 'text/html'
-        self.write('')  # not used for now, could render a form
-
-class GetAllAtributesHandler(ReqHandler):
-    ''' Get all attributes of an assembly's components
-    '''
-    
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        attr = {}
-        try:
-            attr = cserver.get_all_attributes(name)
-        except Exception as exc:
-            print 'Error getting all attributes on', name, ':', exc
-            attr = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(attr)
 
 
 class ComponentHandler(ReqHandler):
@@ -243,47 +180,6 @@ class ObjectHandler(ReqHandler):
             attr = '"%s"' % sys.exc_info()
         self.content_type = 'application/javascript'
         self.write(attr)
-
-
-class RenameHandler(ReqHandler):
-    ''' Rename a file.
-    '''
-
-    @web.authenticated
-    def post(self):
-        oldpath = self.get_argument('old')
-        newname = self.get_argument('new')
-        result = ''
-        try:
-            cserver = self.get_server()
-            cserver.rename_file(oldpath, newname)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
-        self.write(result)
-
-
-class ReplaceHandler(ReqHandler):
-    ''' Replace a component.
-    '''
-
-    @web.authenticated
-    def post(self, pathname):
-        type = self.get_argument('type')
-        if 'args' in self.request.arguments.keys():
-            args = self.get_argument('args')
-        else:
-            args = ''
-        result = ''
-        try:
-            cserver = self.get_server()
-            cserver.replace_component(pathname, type, args)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
-        self.write(result)
 
 
 class ComponentsHandler(ReqHandler):
@@ -436,6 +332,16 @@ class FilesHandler(ReqHandler):
         self.write(json)
 
 
+class GeometryHandler(ReqHandler):
+
+    @web.authenticated
+    def get(self):
+        ''' geometry viewer
+        '''
+        filename = self.get_argument('path')
+        self.render('workspace/o3dviewer.html', filename=filename)
+
+
 class ModelHandler(ReqHandler):
     ''' POST: get a new model (delete existing console server).
         GET:  get JSON representation of the model.
@@ -463,6 +369,23 @@ class OutstreamHandler(ReqHandler):
         url = self.application.server_manager.\
               get_out_server_url(self.get_sessionid(), '/workspace/outstream')
         self.write(url)
+
+
+class PassthroughsHandler(ReqHandler):
+    ''' Get the passthrough variables for the named assembly
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_passthroughs(name)
+        except Exception as exc:
+            print 'Error getting passthroughs for', name, ':', exc
+            attr = '"%s"' % sys.exc_info()
+        self.content_type = 'application/javascript'
+        self.write(attr)
 
 
 class ProjectLoadHandler(ReqHandler):
@@ -566,16 +489,45 @@ class PubstreamHandler(ReqHandler):
         self.write(url)
 
 
-class TypesHandler(ReqHandler):
-    ''' Get hierarchy of package/types to populate the Palette.
+class RenameHandler(ReqHandler):
+    ''' Rename a file.
     '''
 
     @web.authenticated
-    def get(self):
-        cserver = self.get_server()
-        types = cserver.get_types()
-        self.content_type = 'application/javascript'
-        self.write(jsonpickle.encode(types))
+    def post(self):
+        oldpath = self.get_argument('old')
+        newname = self.get_argument('new')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.rename_file(oldpath, newname)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
+        self.content_type = 'text/html'
+        self.write(result)
+
+
+class ReplaceHandler(ReqHandler):
+    ''' Replace a component.
+    '''
+
+    @web.authenticated
+    def post(self, pathname):
+        type = self.get_argument('type')
+        if 'args' in self.request.arguments.keys():
+            args = self.get_argument('args')
+        else:
+            args = ''
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.replace_component(pathname, type, args)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
+        self.content_type = 'text/html'
+        self.write(result)
 
 
 class SignatureHandler(ReqHandler):
@@ -589,6 +541,18 @@ class SignatureHandler(ReqHandler):
         signature = cserver.get_signature(typename)
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(signature))
+
+
+class TypesHandler(ReqHandler):
+    ''' Get hierarchy of package/types to populate the Palette.
+    '''
+
+    @web.authenticated
+    def get(self):
+        cserver = self.get_server()
+        types = cserver.get_types()
+        self.content_type = 'application/javascript'
+        self.write(jsonpickle.encode(types))
 
 
 class UploadHandler(ReqHandler):
@@ -628,6 +592,43 @@ class ValueHandler(ReqHandler):
         value = cserver.get_value(name)
         self.content_type = 'application/javascript'
         self.write(value)
+
+
+class VariableHandler(ReqHandler):
+    ''' Get a command to set a variable, send it to the cserver, and return response.
+    '''
+
+    @web.authenticated
+    def post(self):
+        history = ''
+        lhs = self.get_argument('lhs', default=None)
+        rhs = self.get_argument('rhs', default=None)
+        vtype = self.get_argument('type', default=None)
+        if (lhs and rhs and vtype):
+            if vtype == 'str':
+                command = '%s = "%s"' % (lhs, rhs)
+            else:
+                command = '%s = %s' % (lhs, rhs)
+
+        # if there is a command, execute it & get the result
+        if command:
+            result = ''
+            try:
+                cserver = self.get_server()
+                result = cserver.onecmd(command)
+            except Exception as exc:
+                print exc
+                result = sys.exc_info()
+            if result:
+                history = history + str(result) + '\n'
+
+        self.content_type = 'text/html'
+        self.write(history)
+
+    @web.authenticated
+    def get(self):
+        self.content_type = 'text/html'
+        self.write('')  # not used for now, could render a form
 
 
 class WorkflowHandler(ReqHandler):
@@ -690,6 +691,7 @@ handlers = [
     web.url(r'/workspace/model/?',          ModelHandler),
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
+    web.url(r'/workspace/passthroughs/(.*)', PassthroughsHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
@@ -704,5 +706,4 @@ handlers = [
     web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
-    web.url(r'/workspace/get_all_attributes/(.*)',GetAllAtributesHandler),
 ]
