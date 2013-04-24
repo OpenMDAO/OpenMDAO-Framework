@@ -78,10 +78,10 @@ class ComponentPage(DialogPage):
         grid = self.inputs
         found = []
         for row in grid.rows:
-            if row[0] == name:
+            if row[1] == name:
                 row[2] = value
                 return
-            found.append(row[0])
+            found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
     def filter_inputs(self, filter_text):

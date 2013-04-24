@@ -33,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -1747,7 +1747,9 @@ class Component(Container):
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if name not in io_list and (value.is_trait_type(Slot) or value.is_trait_type(List)):
+                if name not in io_list and (value.is_trait_type(Slot) \
+                                            or value.is_trait_type(List) \
+                                            or value.is_trait_type(Dict)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
                     value = getattr(self, name)
