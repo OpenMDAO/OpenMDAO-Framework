@@ -97,7 +97,7 @@ def _test_connect(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
-
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with connect.py's top.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -189,6 +189,7 @@ def _test_connections(browser):
     workspace_page.add_file(filename)
 
     # Replace 'top' with VehicleSim.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     asm_name = 'sim'
@@ -336,6 +337,7 @@ def _test_connect_nested(browser):
                                                 'files/bem.py')
     workspace_page.add_file(file_path)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with bem.BEM
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -434,7 +436,7 @@ def _test_driverflows(browser):
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
-
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -638,6 +640,7 @@ def _test_ordering(browser):
     # Verify that adding parameter to driver moves it ahead of target.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Add ExternalCode and SLSQP.
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
@@ -822,26 +825,6 @@ def _test_column_sorting(browser):
     Version = ComponentPage.Version
     SortOrder = ComponentPage.SortOrder
 
-    project_dict, workspace_page = startup(browser)
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/model_vartree.py')
-    workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
-    workspace_page.show_dataflow("vartree")
-
-    comp = workspace_page.get_dataflow_figure('p1', "vartree")
-    editor = comp.editor_page(version=Version.NEW)
-
-    editor.get_input(" cont_in").name.click()
-    editor.get_input(" vt2").name.click()
-    editor.get_input(" vt3").name.click()
-    
-    editor.get_output(" cont_out").name.click()
-    editor.get_output(" vt2").name.click()
-    editor.get_output(" vt3").name.click()
-
     def test_sorting(expected, grid, sort_order):
         names = None
         variables = None
@@ -863,41 +846,42 @@ def _test_column_sorting(browser):
             eq(name, expected[index])
 
     project_dict, workspace_page = startup(browser)
-    #driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
-    #editor = driver.editor_page(version=Version.NEW)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top')
+    editor = driver.editor_page(version=Version.NEW)
 
-    #test_sorting( \
-    #    ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
-    #    "inputs",
-    #    SortOrder.ASCENDING
-    #    )
+    test_sorting( \
+        ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
+        "inputs",
+        SortOrder.ASCENDING
+        )
 
-    #test_sorting( \
-    #    ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
-    #    "inputs",
-    #    SortOrder.DESCENDING
-    #    )
+    test_sorting( \
+        ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
+        "inputs",
+        SortOrder.DESCENDING
+        )
 
-    #test_sorting( \
-    #    ["error_code", "derivative_exec_count", "exec_count", "itername"],
-    #    "outputs",
-    #    SortOrder.ASCENDING
-    #    )
+    test_sorting( \
+        ["error_code", "derivative_exec_count", "exec_count", "itername"],
+        "outputs",
+        SortOrder.ASCENDING
+        )
 
-    #test_sorting( \
-    #    ["itername", "exec_count", "derivative_exec_count", "error_code"],
-    #    "outputs",
-    #    SortOrder.DESCENDING
-    #    )
+    test_sorting( \
+        ["itername", "exec_count", "derivative_exec_count", "error_code"],
+        "outputs",
+        SortOrder.DESCENDING
+        )
 
-    #editor.close()
+    editor.close()
 
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    comp = workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None, offset=(90, 120))
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None, offset=(90, 120))
     #workspace_page.show_dataflow("vartree")
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
@@ -945,6 +929,7 @@ def _test_column_sorting(browser):
 def _test_taborder(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
 
     # Replace driver with an SLSQPdriver.
     workspace_page.replace('driver',
@@ -968,6 +953,7 @@ def _test_column_picking(browser):
 
     #During interactive testing, and on occassion, selenium decides that it likes
     #to miss the drop, and drops the item on the dataflow grid, rather than in top.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
     editor = driver.editor_page()
 
