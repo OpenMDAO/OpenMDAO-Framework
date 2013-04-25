@@ -299,10 +299,12 @@ class ResourceAllocationManager(object):
         for allocator in self._allocators:
             count, criteria = allocator.max_servers(resource_desc)
             if count <= 0:
-                key = criteria.keys()[0]
-                info = criteria[key]
-                self._logger.debug('%r incompatible: key %r: %s',
-                                   allocator.name, key, info)
+                keys = criteria.keys()
+                if keys:
+                    info = ': key %r: %s' % (keys[0], criteria[keys[0]])
+                else:
+                    info = ''  # Don't die on an empty dictionary.
+                self._logger.debug('%r incompatible%s', allocator.name, info)
             else:
                 self._logger.debug('%r returned %d', allocator._name, count)
                 total += count
@@ -1314,14 +1316,15 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         """ Setup allocators on the given machines. """
         hostnames = set()
         hosts = []
-        for machine in machines:
-            hostname = machine['hostname']
-            if hostname in hostnames:
-                self._logger.warning('Ignoring duplicate hostname %r', hostname)
+        for i, host in enumerate(machines):
+            if not isinstance(host, ClusterHost):
+                raise TypeError('Expecting ClusterHost for machine %s, got %r'
+                                % (i, host))
+            if host.hostname in hostnames:
+                self._logger.warning('Ignoring duplicate hostname %r',
+                                     host.hostname)
                 continue
-            hostnames.add(hostname)
-            host = mp_distributing.Host(machine['hostname'],
-                                        python=machine['python'])
+            hostnames.add(host.hostname)
             host.register(LocalAllocator)
             hosts.append(host)
 
@@ -1413,7 +1416,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         machines = []
         for i in range(origin, nhosts+origin):
             hostname = pattern % i
-            machines.append(dict(hostname=hostname, python=python))
+            machines.append(ClusterHost(hostname=hostname, python=python))
         self._initialize(machines)
 
     def max_servers(self, resource_desc):
@@ -1747,4 +1750,30 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
     def shutdown(self):
         """ Shutdown, releasing resources. """
         self.cluster.shutdown()
+
+
+# Cluster allocation requires ssh configuration and multiple hosts.
+class ClusterHost(mp_distributing.Host):  #pragma no cover
+    """
+    Represents a host to use as a node in a cluster.
+
+    hostname: string
+        Name of the host. `ssh` is used to log into the host. To log in as a
+        different user, use a host name of the form: "username@somewhere.org".
+
+    python: string
+        Path to the Python command to be used on `hostname`.
+
+    tunnel_incoming: bool
+        True if we need to set up a tunnel for `hostname` to connect to us.
+        This is the case when a local firewall blocks connections.
+
+    tunnel_outgoing: bool
+        True if we need to set up a tunnel to connect to `hostname`.
+        This is the case when a remote firewall blocks connections.
+
+    identity_filename: string
+        Name of optional identity file to pass to ssh.
+    """
+    pass  # Currently identical.
 

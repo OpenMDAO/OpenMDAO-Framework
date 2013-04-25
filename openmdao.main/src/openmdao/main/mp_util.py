@@ -109,11 +109,10 @@ def read_server_config(filename):
     return cfg
 
 
-def setup_tunnel(address, port):
+def setup_tunnel(address, port, user=None, remote='localhost', identity=None):
     """
     Setup tunnel to `address` and `port` assuming:
 
-    - The remote login name matches the local login name.
     - `port` is available on the local host.
     - 'plink' is available on Windows, 'ssh' on other platforms.
     - No user interaction is required to connect via 'plink'/'ssh'.
@@ -124,22 +123,39 @@ def setup_tunnel(address, port):
     port: int
         Port at `address` to tunnel to.
 
+    user: string
+        Remote username, if different than local name.
+        Not needed if `address` is of the form ``user@host``.
+
+    remote: string
+        Address to bind to on remote host.
+
+    identity: string
+        Name of optional identity file.
+
     Returns ``(local_address, local_port)``.
     """
-    logname = 'tunnel-%s-%d.log' % (address, port)
+    if '@' in address:
+        user, host = address.split('@')
+    else:
+        user = user or getpass.getuser()
+        host = address
+
+    logname = 'tunnel-%s-%d.log' % (host, port)
     logname = os.path.join(os.getcwd(), logname)
     stdout = open(logname, 'w')
 
-    user = getpass.getuser()
     if sys.platform == 'win32':  # pragma no cover
-#        stdin = open('nul:', 'r')
-        args = ['plink', '-batch', '-ssh', '-l', user,
-                '-L', '%d:localhost:%d' % (port, port), address]
+        args = ['plink', '-batch', '-ssh']
     else:
-#        stdin = open('/dev/null', 'r')
-        stdin = None
-        args = ['ssh', '-l', user, '-T',
-                '-L', '%d:localhost:%d' % (port, port), address]
+        args = ['ssh']
+
+    args += ['-l', user]
+    if identity:
+        args += ['-i', identity]
+    args += ['-T', '-L', '%d:%s:%d' % (port, remote, port), host]
+
+    stdin = None
 
     tunnel_proc = None
     connected = False
@@ -149,8 +165,8 @@ def setup_tunnel(address, port):
             tunnel_proc = ShellProc(args, stdin=stdin,
                                     stdout=stdout, stderr=STDOUT)
         except Exception as exc:
-            msg = "Can't create ssh tunnel process from %s: %s" % (args, exc)
-            raise RuntimeError(msg)
+            raise RuntimeError("Can't create ssh tunnel process from %s: %s"
+                               % (args, exc))
 
         sock = socket.socket(socket.AF_INET)
         local_address = ('127.0.0.1', port)
@@ -158,17 +174,15 @@ def setup_tunnel(address, port):
             time.sleep(.5)
             exitcode = tunnel_proc.poll()
             if exitcode is not None:
-                msg = 'ssh tunnel process exited with exitcode %d,' \
-                      ' output in %s' % (exitcode, logname)
-                raise RuntimeError(msg)
+                raise RuntimeError('ssh tunnel process exited with exitcode %d,'
+                                   ' output in %s' % (exitcode, logname))
             try:
                 sock.connect(local_address)
             except socket.error as exc:
                 if exc.args[0] != errno.ECONNREFUSED and \
                    exc.args[0] != errno.ENOENT:
-                    msg = "Can't connect to ssh tunnel: %s, output in %s" \
-                          % (exc, logname)
-                    raise RuntimeError(msg)
+                    raise RuntimeError("Can't connect to ssh tunnel: %s,"
+                                       " output in %s" % (exc, logname))
             else:
                 atexit.register(_cleanup_tunnel, tunnel_proc, stdin, stdout,
                                 logname, os.getpid())
@@ -184,13 +198,70 @@ def setup_tunnel(address, port):
                 exitcode = tunnel_proc.poll()
                 _cleanup_tunnel(tunnel_proc, stdin, stdout, None, os.getpid())
                 if exitcode is None:
-                    msg = 'Timeout trying to connect through tunnel to %s:%s,' \
-                          ' output in %s' % (address, port, logname)
-                    raise RuntimeError(msg)
+                    raise RuntimeError('Timeout trying to connect through'
+                                       ' tunnel to %s:%s, output in %s'
+                                       % (address, port, logname))
             else:
                 if stdin is not None:
                     stdin.close()
                 stdout.close()
+
+def setup_reverse_tunnel(remote_address, local_address, port, user=None,
+                         identity=None):
+    """
+    Setup reversed tunnel to `local_address`:`port` from `remote_address`
+    assuming:
+
+    - 'plink' is available on Windows, 'ssh' on other platforms.
+    - No user interaction is required to connect via 'plink'/'ssh'.
+
+    address: string
+        IPv4 address to tunnel to.
+
+    sock: socket
+        Socket for remote end to connect to.
+    """
+    args = ['-T', '-R', '%d:%s:%d' % (port, local_address, port)]
+    _start_tunnel(remote_address, port, args, user, identity)
+
+def _start_tunnel(address, port, args, user, identity):
+    """ Start an ssh tunnel process. """
+    if '@' in address:
+        user, host = address.split('@')
+    else:
+        user = user or getpass.getuser()
+        host = address
+
+    if sys.platform == 'win32':  # pragma no cover
+        ssh = ['plink', '-batch', '-ssh']
+    else:
+        ssh = ['ssh']
+
+    ssh += ['-l', user]
+    if identity:
+        ssh += ['-i', identity]
+    args = ssh + args + [host]
+
+    stdin = None
+    logname = 'tunnel-%s-%d.log' % (host, port)
+    logname = os.path.join(os.getcwd(), logname)
+    stdout = open(logname, 'w')
+
+    tunnel_proc = None
+    logging.critical('tunnel cmd %s', args)
+    try:
+        tunnel_proc = ShellProc(args, stdout=stdout, stderr=STDOUT)
+    except Exception as exc:
+        raise RuntimeError("Can't create ssh tunnel process from %s: %s"
+                           % (args, exc))
+    time.sleep(1)
+    exitcode = tunnel_proc.poll()
+    if exitcode is not None:
+        raise RuntimeError('ssh tunnel process exited with exitcode %d,'
+                           ' output in %s' % (exitcode, logname))
+
+    atexit.register(_cleanup_tunnel, tunnel_proc, stdin, stdout,
+                    logname, os.getpid())
 
 def _cleanup_tunnel(tunnel_proc, stdin, stdout, logname, pid):
     """ Try to terminate `tunnel_proc` if it's still running. """

@@ -26,7 +26,7 @@ from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
                                      register, decode_public_key, keytype
-from openmdao.main.mp_util import setup_tunnel
+from openmdao.main.mp_util import setup_tunnel, setup_reverse_tunnel
 from openmdao.main.rbac import get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
@@ -35,8 +35,7 @@ from openmdao.util.fileutil import onerror
 
 # SSH command to be used to access remote hosts.
 if sys.platform == 'win32':  #pragma no cover
-    _SSH = r'C:\Putty\%s%s' % (getpass.getuser(), '.ppk')
-    _SSH = [r'C:\Putty\plink.exe', '-i', _SSH]
+    _SSH = ['plink', '-batch', '-ssh']
 else:
     _SSH = ['ssh']
 
@@ -62,7 +61,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         self._name = 'Host-unknown'
 
     @classmethod
-    def from_address(cls, address, authkey):
+    def from_address(cls, address, authkey, tunnel, hostname, identity_filename):
         """
         Return manager given an address.
 
@@ -71,9 +70,22 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
 
         authkey: string
             Authorization key.
+
+        tunnel: bool
+            True if we need to set up an ssh tunnel to `hostname`.
+
+        hostname: string
+            Host to tunnel to.
+
+        identity_filename: string
+            Name of optional identity file to pass to ssh tunnel.
         """
-        _LOGGER.debug('Client setting up tunnel to %s' % (address,))
-        address = setup_tunnel(address[0], address[1])
+        if tunnel:
+            _LOGGER.debug('Client setting up tunnel to %s for %s',
+                          address, hostname)
+            address = setup_tunnel(hostname, address[1], remote=address[0],
+                                   identity=identity_filename)
+
         manager = cls(address, authkey)
         _LOGGER.debug('Client connecting to server at %s' % (address,))
         conn = connection.Client(address, authkey=authkey)
@@ -86,8 +98,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         manager.shutdown = util.Finalize(
             manager, HostManager._finalize_host,
             args=(manager._address, manager._authkey, manager._name),
-            exitpriority=-10
-            )
+            exitpriority=-10)
         return manager
 
     @staticmethod
@@ -162,6 +173,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         starter.start()
 
         # Accept callback connections from started managers.
+        trace_connections = int(os.environ.get('OPENMDAO_TRACE_CONNECTIONS', '0'))
         waiting = ['']
         retry = 0
         while waiting:
@@ -172,13 +184,16 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     # Accept conection from *any* host.
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
-                    # This will hang if server doesn't receive our address.
-#                    conn = listener.accept()
-                    conn = listener._listener.accept()
-                    _LOGGER.critical('connection attempt from %s', listener.last_accepted)
-                    if listener._authkey:
-                        connection.deliver_challenge(conn, listener._authkey)
-                        connection.answer_challenge(conn, listener._authkey)
+                    # accept() will hang if server doesn't receive our address.
+                    if trace_connections:
+                        conn = listener._listener.accept()
+                        _LOGGER.critical('connection attempt from %s',
+                                         listener.last_accepted)
+                        if listener._authkey:
+                            connection.deliver_challenge(conn, listener._authkey)
+                            connection.answer_challenge(conn, listener._authkey)
+                    else:
+                        conn = listener.accept()
 
                     i, address, pubkey_text = conn.recv()
                     conn.close()
@@ -189,7 +204,10 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                         continue
                     try:
                         other_host.manager = \
-                            HostManager.from_address(address, self._authkey)
+                            HostManager.from_address(address, self._authkey,
+                                                     other_host.tunnel_outgoing,
+                                                     other_host.hostname,
+                                                     other_host.identity_filename)
                     except Exception as exc:
                         _LOGGER.error("Can't start manager for %s: %s",
                                       other_host.hostname, str(exc) or repr(exc))
@@ -227,6 +245,8 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
 
         self._up = sorted(self._up, key=lambda host: host.hostname)
 
+        # So our class defined shutdown() is called before the superclass
+        # installed shutdown().
         self._base_shutdown = self.shutdown
         del self.shutdown
 
@@ -300,17 +320,32 @@ class Host(object):  #pragma no cover
         different user, use a host name of the form: "username@somewhere.org".
 
     python: string
-        Path the the Python command to be used on `hostname`.
+        Path to the Python command to be used on `hostname`.
+
+    tunnel_incoming: bool
+        True if we need to set up a tunnel for `hostname` to connect to us.
+        This is the case when a local firewall blocks connections.
+
+    tunnel_outgoing: bool
+        True if we need to set up a tunnel to connect to `hostname`.
+        This is the case when a remote firewall blocks connections.
+
+    identity_filename: string
+        Name of optional identity file to pass to ssh.
     """
 
-    def __init__(self, hostname, python=None):
-        self.hostname = hostname
-        # Putty/Plink.exe wants user@host always.
-        parts = hostname.split('@')
-        if len(parts) == 1:
+    def __init__(self, hostname, python=None, tunnel_incoming=False,
+                 tunnel_outgoing=False, identity_filename=None):
+        if '@' not in hostname:
             user = getpass.getuser()
             self.hostname = '%s@%s' % (user, hostname)
+        else:
+            self.hostname = hostname
         self.python = python or 'python'
+        self.tunnel_incoming = tunnel_incoming
+        self.tunnel_outgoing = tunnel_outgoing
+        self.identity_filename = identity_filename
+
         self.registry = {}
         self.state = 'init'
         self.proc = None
@@ -350,15 +385,25 @@ class Host(object):  #pragma no cover
             in created servers. Use with caution!
         """
         try:
-            _check_ssh(self.hostname)
+            self._check_ssh()
         except Exception:
             self.state = 'failed'
             return
 
-        self.tempdir = _copy_to_remote(self.hostname, files, self.python)
+        self.tempdir = self._copy_to_remote(files)
         _LOGGER.debug('startup files copied to %s:%s',
                       self.hostname, self.tempdir)
+
+        if self.tunnel_incoming:
+            _LOGGER.debug('setup reverse tunnel from %s to %s:%s',
+                          self.hostname, address[0], address[1])
+            setup_reverse_tunnel(self.hostname, address[0], address[1], 
+                                 identity=self.identity_filename)
+            address = ('localhost', address[1])
+
         cmd = copy.copy(_SSH)
+        if self.identity_filename:
+            cmd.extend(['-i', self.identity_filename])
         cmd.extend([self.hostname, self.python, '-c',
                    '"import sys;'
                    ' sys.path.append(\'.\');'
@@ -375,17 +420,17 @@ class Host(object):  #pragma no cover
 
         # Tell the server what name to bind to
         # (in case it has multiple interfaces).
-        user, at, remote_name = self.hostname.partition('@')
+        user, remote_name = self.hostname.split('@')
         
         data = dict(
             name='BoostrappingHost', index=index, hostname=remote_name,
             # Avoid lots of SUBDEBUG messages.
             dist_log_level=max(_LOGGER.getEffectiveLevel(), logging.DEBUG),
-            dir=self.tempdir, authkey=str(authkey),
-            allowed_users=allowed_users, allow_shell=allow_shell,
+            dir=self.tempdir, authkey=str(authkey), allowed_users=allowed_users,
+            allow_shell=allow_shell, allow_tunneling=self.tunnel_outgoing,
             parent_address=address, registry=self.registry,
-            keep_dirs=os.environ.get('OPENMDAO_KEEPDIRS', '0')
-            )
+            keep_dirs=os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+
         cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
 # TODO: put timeout in accept() to avoid this hack.
@@ -407,48 +452,63 @@ class Host(object):  #pragma no cover
                     _LOGGER.error('>>    %s', line.rstrip())
                 self.state = 'failed'
 
+    def _check_ssh(self):
+        """ Check basic communication with `hostname`. """
+        cmd = copy.copy(_SSH)
+        if self.identity_filename:
+            cmd.extend(['-i', self.identity_filename])
+        cmd.extend([self.hostname, 'date'])
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        for retry in range(100):  # ~10 seconds based on sleep() below.
+            proc.poll()
+            if proc.returncode is None:
+                time.sleep(0.1)
+            elif proc.returncode == 0:
+                return
+            else:
+                msg = "ssh to %r failed, returncode %s" \
+                      % (self.hostname, proc.returncode)
+                _LOGGER.error(msg)
+                for line in proc.stdout:
+                    _LOGGER.error('   >%s', line.rstrip())
+                raise RuntimeError(msg)
 
-# Requires ssh configuration.
-def _check_ssh(hostname):  #pragma no cover
-    """ Check basic communication with `hostname`. """
-    cmd = copy.copy(_SSH)
-    cmd.extend([hostname, 'date'])
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    for retry in range(100):  # ~10 seconds based on sleep() below.
-        proc.poll()
-        if proc.returncode is None:
-            time.sleep(0.1)
-        elif proc.returncode == 0:
-            return
-        else:
-            msg = "ssh to %r failed, returncode %s" \
-                  % (hostname, proc.returncode)
+        # Timeout.  Kill process and log error.
+        proc.kill()
+        for retry in range(5):
+            proc.poll()
+            if proc.returncode is None:
+                time.sleep(1)
+            msg = "ssh to %r timed-out, returncode %s" \
+                  % (self.hostname, proc.returncode)
             _LOGGER.error(msg)
             for line in proc.stdout:
                 _LOGGER.error('   >%s', line.rstrip())
             raise RuntimeError(msg)
 
-    # Timeout.  Kill process and log error.
-    proc.kill()
-    for retry in range(5):
-        proc.poll()
-        if proc.returncode is None:
-            time.sleep(1)
-        msg = "ssh to %r timed-out, returncode %s" \
-              % (hostname, proc.returncode)
+        # Total zombie...
+        msg = "ssh to %r is a zombie, PID %s" % (self.hostname, proc.pid)
         _LOGGER.error(msg)
         for line in proc.stdout:
             _LOGGER.error('   >%s', line.rstrip())
         raise RuntimeError(msg)
 
-    # Total zombie...
-    msg = "ssh to %r is a zombie, PID %s" % (hostname, proc.pid)
-    _LOGGER.error(msg)
-    for line in proc.stdout:
-        _LOGGER.error('   >%s', line.rstrip())
-    raise RuntimeError(msg)
-
+    def _copy_to_remote(self, files):
+        """ Copy files to remote directory, returning directory path. """
+        cmd = copy.copy(_SSH)
+        if self.identity_filename:
+            cmd.extend(['-i', self.identity_filename])
+        cmd.extend([self.hostname, self.python,
+                    '-c', _UNZIP_CODE.replace('\n', ';')])
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')
+        for name in files:
+            archive.add(name, os.path.basename(name))
+        archive.close()
+        proc.stdin.close()
+        return proc.stdout.read().rstrip()
 
 _UNZIP_CODE = '''"import tempfile, os, sys, tarfile
 tempdir = tempfile.mkdtemp(prefix='omdao-')
@@ -456,20 +516,6 @@ os.chdir(tempdir)
 tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
 tf.extractall()
 print tempdir"'''
-
-# Requires ssh configuration.
-def _copy_to_remote(hostname, files, python):  #pragma no cover
-    """ Copy files to remote directory, returning directory path. """
-    cmd = copy.copy(_SSH)
-    cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace('\n', ';')])
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')
-    for name in files:
-        archive.add(name, os.path.basename(name))
-    archive.close()
-    proc.stdin.close()
-    return proc.stdout.read().rstrip()
 
 
 # Runs on the remote host.
@@ -502,16 +548,23 @@ def main():  #pragma no cover
     print '%s using hostname %s' % (ident, hostname)
 
     authkey = data['authkey']
-    allow_shell = data['allow_shell']
-    allowed_users = data['allowed_users']
     print '%s using %s authentication' % (ident, keytype(authkey))
+
+    allowed_users = data['allowed_users']
     if allowed_users is None:
         print '%s allowed_users: ANY' % ident
     else:
         print '%s allowed_users: %s' % (ident, sorted(allowed_users.keys()))
+
+    allow_shell = data['allow_shell']
     if allow_shell:
         print '%s ALLOWING SHELL ACCESS' % ident
+
+    allow_tunneling = data['allow_tunneling']
+    print '%s allow_tunneling: %s' % (ident, allow_tunneling)
+
     sys.stdout.flush()
+
     log_level = data['dist_log_level']
     os.environ['OPENMDAO_KEEPDIRS'] = data['keep_dirs']
 
@@ -540,7 +593,8 @@ def main():  #pragma no cover
         server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
                                  authkey, 'pickle', name=name,
                                  allowed_users=allowed_users,
-                                 allowed_hosts=[data['parent_address'][0]])
+                                 allowed_hosts=[data['parent_address'][0]],
+                                 allow_tunneling=allow_tunneling)
         print '%s server listening at %s' % (ident, server.address)
     except Exception as exc:
         print '%s caught exception: %s' % (ident, exc)
@@ -568,6 +622,7 @@ def main():  #pragma no cover
 
     # Register a cleanup function.
     def cleanup(directory):
+        """ Removes our directory unless OPENMDAO_KEEPDIRS set. """
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
         if not keep_dirs and os.path.exists(directory):
             print '%s removing directory %s' % (ident, directory)

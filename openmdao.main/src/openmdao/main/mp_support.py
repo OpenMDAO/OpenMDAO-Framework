@@ -156,7 +156,7 @@ class OpenMDAO_Server(Server):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
-        Ignored if `allowed_users` is specified.
+        Optional if `allowed_users` is specified.
 
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
@@ -164,8 +164,8 @@ class OpenMDAO_Server(Server):
         The host portions of user strings are used for address patterns.
 
     allow_tunneling: bool
-        If True, allow connections from 127.0.0.1 (localhost), even if not
-        listed otherwise.
+        If True, allow connections from the local host, even if not listed
+        otherwise.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
@@ -182,13 +182,16 @@ class OpenMDAO_Server(Server):
                 hosts.add(socket.gethostbyname(host))
                 if host == socket.gethostname():
                     hosts.add('127.0.0.1')
+            if allowed_hosts:
+                hosts |= set(allowed_hosts)
             self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
 
         self._allow_tunneling = allow_tunneling
-        if allow_tunneling and '127.0.0.1' not in self._allowed_hosts:
-            self._allowed_hosts.append('127.0.0.1')
+        if allow_tunneling:
+            self._allowed_hosts.append('127.0.0.1')  # localhost
+            self._allowed_hosts.append(socket.gethostbyname(address[0]))
 
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
@@ -244,18 +247,21 @@ class OpenMDAO_Server(Server):
         Connection filtering allows for PublicKey servers which aren't
         accessible by just any host.
         """
+        trace_connections = int(os.environ.get('OPENMDAO_TRACE_CONNECTIONS', '0'))
         current_process()._manager_server = self
         try:
             try:
                 while not self.stop:
                     try:
-#                        conn = self.listener.accept()
-                         conn = self.listener._listener.accept()
-                         print 'connection attempt from', conn
-                         self._logger.critical('connection attempt from %s', self.listener.last_accepted)
-                         if self.listener._authkey:
-                             connection.deliver_challenge(conn, self.listener._authkey)
-                             connection.answer_challenge(conn, self.listener._authkey)
+                        if trace_connections:  # pragma no cover
+                            conn = self.listener._listener.accept()
+                            self._logger.critical('connection attempt from %r',
+                                                  self.listener.last_accepted)
+                            if self.listener._authkey:
+                                connection.deliver_challenge(conn, self.listener._authkey)
+                                connection.answer_challenge(conn, self.listener._authkey)
+                        else:
+                            conn = self.listener.accept()
 
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
