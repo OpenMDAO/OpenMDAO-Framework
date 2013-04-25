@@ -238,14 +238,16 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     };
 
     this.destructor = function() {
-        if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
-        }
         for (paneName in panes){
             if((panes[paneName].hasOwnProperty('destructor')) &&
                 (typeof panes[paneName].destructor === 'function')){
                 panes[paneName].destructor();
             }
+        }
+
+        
+        if (self.pathname && self.pathname.length>0) {
+            model.removeListener(self.pathname, handleMessage);
         }
     };
 

@@ -313,11 +313,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             });
             
             props.onBeforeDestroy.subscribe(function(e, args){
-                var visiblity = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+                var visibility = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
                 var visibleColumns = args.grid.getColumns();
                 var visibleColumnIds = {};
 
-                for(i=0; i<visibleColumns.length; i++){
+                for(var i=0; i<visibleColumns.length; i++){
                     visibleColumnIds[visibleColumns[i].id] = undefined;
                 }
 
@@ -330,7 +330,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         visibility[columnId] = false;
                     }
                 }
-                console.log("Destroying slick grid.");
                 columnpicker.destroy();
             });
             
