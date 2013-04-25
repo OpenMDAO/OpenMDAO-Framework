@@ -491,6 +491,7 @@ def _test_replace(browser):
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -677,6 +678,7 @@ def _test_ordering(browser):
 def _test_io_filter_without_vartree(browser):
 
     project_dict, workspace_page = startup(browser)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
     conmin = workspace_page.get_dataflow_figure('conmin', 'top')
@@ -847,7 +849,7 @@ def _test_column_sorting(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top')
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130,90))
     editor = driver.editor_page(version=Version.NEW)
 
     test_sorting( \
@@ -881,10 +883,10 @@ def _test_column_sorting(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None, offset=(90, 120))
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "apples", offset=(120, 90))
     #workspace_page.show_dataflow("vartree")
 
-    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    comp = workspace_page.get_dataflow_figure('p1', "apples")
     editor = comp.editor_page(version=Version.NEW)
 
     editor.get_input(" cont_in").name.click()
