@@ -880,6 +880,8 @@ def _test_column_sorting(browser):
 
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
+
+    workspace_page.reload_project()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
