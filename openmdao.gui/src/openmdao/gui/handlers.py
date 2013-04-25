@@ -124,9 +124,17 @@ class PluginDocsHandler(StaticFileHandler):
         super(PluginDocsHandler, self).initialize(root, default)
 
     def get(self, path, include_body=True):
-        path = os.path.normcase(path)
+        
+        # Note, don't want to lower-case our URL
+        # However, we do want to replace any MS-DOS slashes.
+        if os.path.sep != "/":
+            path = path.replace("/", os.path.sep)
+            
         if path + os.sep == self.cname:
-            self.redirect(os.path.join('/docs', 'plugins', self.cname, self.default_filename))
+            self.redirect(os.path.join('/docs', 
+                                       'plugins', 
+                                       self.cname, self.default_filename))
+            
         elif path.startswith(self.cname):
             super(PluginDocsHandler, self).get(os.path.join(self.added, path[len(self.cname):]),
                                                include_body)
