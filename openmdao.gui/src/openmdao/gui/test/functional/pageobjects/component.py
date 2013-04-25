@@ -4,6 +4,7 @@ import string
 from functools import partial
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
@@ -11,7 +12,7 @@ from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures, \
                      find_workflow_component_figure
 from util import ArgsPrompt, NotifierPage
-
+from grid import GridColumnPicker, GridColumnPickerOption
 
 class ComponentPage(DialogPage):
 
@@ -21,7 +22,7 @@ class ComponentPage(DialogPage):
 
             def getter(cls, index=0):
                 return cls._cells[index]
-
+            
             def setter(cls, value, index=0):
                 if not cls._cells[index].editable:
                     raise AttributeError("can't set attribute")
@@ -30,20 +31,20 @@ class ComponentPage(DialogPage):
 
             for index in range(len(headers)):
                 if headers[index].value != "":
-                    setattr(
-                        self.__class__,
-                        headers[index].value.lower(),
-                        property(
-                            partial(getter, index=index),
-                            partial(setter, index=index)
-                        )
-                    )
+                    setattr( \
+                            self.__class__, 
+                            headers[index].value.lower(), 
+                            property( \
+                                    partial(getter, index=index),
+                                    partial(setter, index=index)
+                                    )
+                            )
 
     """ Component editor page. """
-
-    Version = type('Enum', (), {"OLD": 1, "NEW": 2})
-    As = type('Enum', (), {"GRID": 0, "ROW": 1, "VARIABLE": 2})
-    SortOrder = type('Enum', (), {"ASCENDING": 0, "DESCENDING": 1})
+   
+    Version = type('Enum', (), {"OLD":1, "NEW":2})
+    As = type('Enum', (), {"GRID":0, "ROW":1, "VARIABLE":2})
+    SortOrder = type('Enum', (), {"ASCENDING" : 0, "DESCENDING" : 1})
 
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
@@ -55,19 +56,21 @@ class ComponentPage(DialogPage):
 
     inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
     outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
-
+    
     def __init__(self, browser, port, locator, version=Version.OLD):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
         NotifierPage.wait(self)
         self.version = version
-        self._sort_order = {"inputs": 0, "outputs": 0}
+        self._sort_order = {"inputs" : 0, "outputs" : 0}
+        self._column_picker = None
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
         elements = self.root.find_elements_by_class_name('ui-tabs-anchor')
         labels = [element.text for element in elements]
         return labels
+
 
     def set_input(self, name, value):
         """ Set input `name` to `value`. """
@@ -104,12 +107,12 @@ class ComponentPage(DialogPage):
             raise Exception("Grid has no column named %s" % column_name)
 
         header = header[0]
-        if(sort_order == self.SortOrder.ASCENDING):
-            while((self._sort_order[tab] % 2) == 0):
+        if(sort_order==self.SortOrder.ASCENDING):
+            while( (self._sort_order[tab] % 2) == 0):
                 self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
         else:
-            while((self._sort_order[tab] % 2) != 0):
+            while( (self._sort_order[tab] % 2) != 0):
                 self._sort_order[tab] = self._sort_order[tab] + 1
                 header.click()
 
@@ -140,6 +143,33 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
+    def toggle_column_visibility(self, column_name):
+        self._toggle_column_visibility(self._active_grid, column_name)
+
+    @property
+    def _active_grid(self):
+        if self.inputs.displayed:
+            return self.inputs
+
+        elif self.outputs.displayed:
+            return self.outputs
+
+    def _toggle_column_visibility(self, grid, column_name):
+        if not self._column_picker:
+            self._column_picker = self._get_column_picker(grid)
+
+        elif not self._column_picker.displayed:
+            self._column_picker = self._get_column_picker(grid)
+
+        self._column_picker.get_option(column_name).click()
+
+    def _get_column_picker(self, grid):
+        grid.headers[0].context_click()
+        column_pickers = [GridColumnPicker(self.browser, element) for element in self.browser.find_elements( By. CLASS_NAME, "slick-columnpicker" )] 
+        for column_picker in column_pickers:
+            if column_picker.displayed:
+                return column_picker
+
     def get_inputs(self, return_type=None):
         """ Return inputs grid. """
         self('inputs_tab').click()
@@ -156,14 +186,14 @@ class ComponentPage(DialogPage):
         """ Return first input variable with `name`. """
         self('inputs_tab').click()
         return self._get_variable(name, self.inputs, return_type)
-
+    
     def get_output(self, name, return_type=None):
         """ Return first output variable with `name`. """
         self('outputs_tab').click()
         return self._get_variable(name, self.outputs, return_type)
 
     def _get_variables(self, grid, return_type):
-        if(return_type == self.As.GRID or self.version == self.Version.OLD):
+        if(return_type==self.As.GRID or self.version==self.Version.OLD):
             return grid
 
         headers = grid.headers
@@ -175,7 +205,7 @@ class ComponentPage(DialogPage):
         found = []
         for row in grid.rows:
             if row[1] == name:
-                if(return_type == self.As.ROW or self.version == self.Version.OLD):
+                if(return_type==self.As.ROW or self.version==self.Version.OLD):
                     return row
                 else:
                     return self.Variable(row, grid.headers)

@@ -2,7 +2,6 @@
   function SlickColumnPicker(columns, grid, options) {
     var $menu;
     var columnCheckboxes;
-
     var defaults = {
       fadeSpeed:250
     };
@@ -15,10 +14,9 @@
       $menu = $("<span class='slick-columnpicker' style='display:none;position:absolute;z-index:9001;' />").appendTo(document.body);
 
       $menu.bind("mouseleave", function (e) {
-        $(this).fadeOut(options.fadeSpeed)
+        $(this).fadeOut(options.fadeSpeed);
       });
       $menu.bind("click", updateColumn);
-
     }
 
     function handleHeaderContextMenu(e, args) {
@@ -133,10 +131,15 @@
       return columns;
     }
 
+    function destroy(){
+        $menu.remove();
+    }
+
     init();
 
     return {
-      "getAllColumns": getAllColumns
+      "getAllColumns": getAllColumns,
+      "destroy" : destroy
     };
   }
 

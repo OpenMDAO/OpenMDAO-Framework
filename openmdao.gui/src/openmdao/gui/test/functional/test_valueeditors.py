@@ -62,33 +62,33 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[1].cells[1].click()
-    inputs[1][1] = "abcd"
+    inputs.rows[5].cells[1].click()
+    inputs[5][1] = "abcd"
     time.sleep(1)
-
-    #bool editor - set to true
-    inputs = props.inputs
-    inputs.rows[3].cells[1].click()
-    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
-    browser.find_element_by_xpath(selection_path).click()
-    time.sleep(0.5)
 
     #enum editor - set to 3
     inputs = props.inputs
-    inputs.rows[2].cells[1].click()
+    inputs.rows[1].cells[1].click()
     selection_path = '//*[@id="editor-enum-e"]/option[4]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
     # float editor - set to 2.71
     inputs = props.inputs
-    inputs.rows[5].cells[1].click()
-    inputs[5][1] = '2.71'
+    inputs.rows[3].cells[1].click()
+    inputs[3][1] = '2.71'
+    time.sleep(0.5)
+
+    #bool editor - set to true
+    inputs = props.inputs
+    inputs.rows[6].cells[1].click()
+    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
+    browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
     #array 1d editor - add element, set to 4
     inputs = props.inputs
-    inputs.rows[4].cells[1].click()
+    inputs.rows[2].cells[1].click()
     add_path = '//*[@id="array-edit-add-X"]'
     browser.find_element_by_xpath(add_path).click()
     new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
@@ -101,7 +101,7 @@ def _test_value_editors(browser):
 
     # array 2d editor - set to [[1, 4],[9, 16]]
     inputs = props.inputs
-    inputs.rows[6].cells[1].click()
+    inputs.rows[4].cells[1].click()
     for i in range(1, 5):
         cell_path = '//*[@id="array-editor-dialog-Y"]/div/input[' + str(i) + ']'
         cell_input = browser.find_element_by_xpath(cell_path)
