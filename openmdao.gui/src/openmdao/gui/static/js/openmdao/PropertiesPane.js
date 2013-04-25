@@ -37,11 +37,37 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             { id:"info",  name:"",            field:"info",   width:30,  formatter:InfoFormatter },
             { id:"name",  name:"Name",        field:"name",   width:100, formatter:VarTableFormatter, sortable:true },
+            { id:"type",  name: "Type",       field:"type",   width:30                                              },
             { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
+            { id:"hi",    name: "High",       field:"high",   width:30                                              },
+            { id:"low",    name: "Low",        field:"low",    width:30                                              },
             { id:"units", name:"Units",       field:"units",  width:60   },
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
         
+        var compName = pathname.replace(".", "-", "g");
+        
+        if(!(compName in openmdao.preferences.gui.compeditor)){
+            openmdao.preferences.gui.compeditor[compName] = {};        
+        }
+
+        
+        if(!(name.toLowerCase() in openmdao.preferences.gui.compeditor[compName])){
+            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()] = {};        
+        }
+
+        if(!("columns" in openmdao.preferences.gui.compeditor[compName][name.toLowerCase()])){
+            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns = {        
+                info : true,
+                name : true,
+                type : false,
+                value : true,
+                hi : false,
+                low : false,
+                units : true,
+                desc : true,
+            };
+        }
     }
 
     elm.append(propsDiv);
@@ -244,7 +270,19 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
         if(meta){
+            var columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
         
+            var visibility = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+            var visibleColumns = [];
+
+            for(i =0; i<columns.length; i++){
+                if(visibility[columns[i].id]){
+                   visibleColumns.push(columns[i]); 
+                }
+            }
+
+            props.setColumns(visibleColumns);
+
             // Sorting for the first column
             props.onSort.subscribe(function (e, args) {
                
@@ -274,9 +312,26 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 props.render();
             });
             
-            props.onContextMenu.subscribe(function(e){
-                console.log(e);
-                console.log(props.getCellFromEvent(e));
+            props.onBeforeDestroy.subscribe(function(e, args){
+                var visiblity = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+                var visibleColumns = args.grid.getColumns();
+                var visibleColumnIds = {};
+
+                for(i=0; i<visibleColumns.length; i++){
+                    visibleColumnIds[visibleColumns[i].id] = undefined;
+                }
+
+                for(var columnId in visibility){
+                    if(columnId in visibleColumnIds){
+                        visibility[columnId] = true;
+                    }
+                    
+                    else{
+                        visibility[columnId] = false;
+                    }
+                }
+                console.log("Destroying slick grid.");
+                columnpicker.destroy();
             });
             
             jQuery("#" + name + "_variableFilter").keyup(function (e) {
@@ -517,6 +572,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                             valueStyle += " objective";
                         }
                     }
+                    if (value.hasOwnProperty("framework_var")) {
+                            nameStyle += " framework_var";
+                    }
                     var css = {};
                     if (nameStyle !== '') {
                         css['name'] = nameStyle;
@@ -546,5 +604,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
         highlightCells();
         props.resizeCanvas();
+    };
+
+    this.destructor = function(){
+        props.destroy();
     };
 };

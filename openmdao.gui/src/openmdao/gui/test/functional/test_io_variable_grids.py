@@ -41,42 +41,42 @@ def _test_grid(browser):
 
     #Checks all the inputs
     inputs = editor.get_inputs()
-    eq(inputs[0].name.value, "directory")
-    eq(inputs[0].value.value, "")
-    eq(inputs[0].units.value, "")
-    eq(inputs[0].description.value, "If non-blank, the directory to execute in.")
-
-    eq(inputs[1].name.value, "force_execute")
-    eq(inputs[1].value.value, "False")
-    eq(inputs[1].units.value, "")
-    eq(inputs[1].description.value, "If True, always execute even if all IO traits are valid.")
-
-    eq(inputs[2].name.value, "x")
-    eq(inputs[2].value.value, "0")
+    eq(inputs[2].name.value, "directory")
+    eq(inputs[2].value.value, "")
     eq(inputs[2].units.value, "")
-    eq(inputs[2].description.value, "The variable x")
+    eq(inputs[2].description.value, "If non-blank, the directory to execute in.")
 
-    eq(inputs[3].name.value, "y")
-    eq(inputs[3].value.value, "0")
+    eq(inputs[3].name.value, "force_execute")
+    eq(inputs[3].value.value, "False")
     eq(inputs[3].units.value, "")
-    eq(inputs[3].description.value, "The variable y")
+    eq(inputs[3].description.value, "If True, always execute even if all IO traits are valid.")
+
+    eq(inputs[0].name.value, "x")
+    eq(inputs[0].value.value, "0")
+    eq(inputs[0].units.value, "")
+    eq(inputs[0].description.value, "The variable x")
+
+    eq(inputs[1].name.value, "y")
+    eq(inputs[1].value.value, "0")
+    eq(inputs[1].units.value, "")
+    eq(inputs[1].description.value, "The variable y")
 
     #Checks all the outputs
     outputs = editor.get_outputs()
-    eq(outputs[0].name.value, "derivative_exec_count")
-    eq(outputs[0].value.value, "0")
-    eq(outputs[0].units.value, "")
-    eq(outputs[0].description.value, "Number of times this Component's derivative function has been executed.")
-
-    eq(outputs[1].name.value, "exec_count")
+    eq(outputs[1].name.value, "derivative_exec_count")
     eq(outputs[1].value.value, "0")
     eq(outputs[1].units.value, "")
-    eq(outputs[1].description.value, "Number of times this Component has been executed.")
+    eq(outputs[1].description.value, "Number of times this Component's derivative function has been executed.")
 
-    eq(outputs[2].name.value, "f_xy")
+    eq(outputs[2].name.value, "exec_count")
     eq(outputs[2].value.value, "0")
     eq(outputs[2].units.value, "")
-    eq(outputs[2].description.value, "F(x,y)")
+    eq(outputs[2].description.value, "Number of times this Component has been executed.")
+
+    eq(outputs[0].name.value, "f_xy")
+    eq(outputs[0].value.value, "0")
+    eq(outputs[0].units.value, "")
+    eq(outputs[0].description.value, "F(x,y)")
 
     eq(outputs[3].name.value, "itername")
     eq(outputs[3].value.value, "")
@@ -85,22 +85,22 @@ def _test_grid(browser):
 
     #Access and test a single varible by name
     x = editor.get_input("x")
-    eq(x.name.value, inputs[2].name.value)
-    eq(x.value.value, inputs[2].value.value)
-    eq(x.units.value, inputs[2].units.value)
-    eq(x.description.value, inputs[2].description.value)
+    eq(x.name.value, inputs[0].name.value)
+    eq(x.value.value, inputs[0].value.value)
+    eq(x.units.value, inputs[0].units.value)
+    eq(x.description.value, inputs[0].description.value)
 
     y = editor.get_input("y")
-    eq(y.name.value, inputs[3].name.value)
-    eq(y.value.value, inputs[3].value.value)
-    eq(y.units.value, inputs[3].units.value)
-    eq(y.description.value, inputs[3].description.value)
+    eq(y.name.value, inputs[1].name.value)
+    eq(y.value.value, inputs[1].value.value)
+    eq(y.units.value, inputs[1].units.value)
+    eq(y.description.value, inputs[1].description.value)
 
     f_xy = editor.get_output("f_xy")
-    eq(f_xy.name.value, outputs[2].name.value)
-    eq(f_xy.value.value, outputs[2].value.value)
-    eq(f_xy.units.value, outputs[2].units.value)
-    eq(f_xy.description.value, outputs[2].description.value)
+    eq(f_xy.name.value, outputs[0].name.value)
+    eq(f_xy.value.value, outputs[0].value.value)
+    eq(f_xy.units.value, outputs[0].units.value)
+    eq(f_xy.description.value, outputs[0].description.value)
 
     #Set a value
     x = editor.get_input("x")
