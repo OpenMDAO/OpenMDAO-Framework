@@ -18,13 +18,11 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
 
     elm.css({'overflow':'auto'});
 
-    /** update slots by recreating figures from JSON slots data
-     *  TODO: prob just want to iterate through & update existing figures
-     */
+    /** update slots by recreating figures from JSON slots data */
     function updateFigures(json) {
 
         // Sort slots by name
-        json.sort(function(a, b){
+        json.sort(function(a, b) {
             var nameA=a.name.toLowerCase(), nameB=b.name.toLowerCase() ;
             if (nameA < nameB) {  //sort string ascending
                 return -1;
@@ -41,28 +39,27 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 figures[slot.name].setState(slot.filled);
             }
             else {
-                if ( slot.containertype === 'dict' ) {
+                if (slot.containertype === 'dict') {
                     // create a new slot figure for each item in the dict
-                    // Need to build a new slot object for the specific
-                    //  item in the dict
-                    
-                    var lbraceSVG = '<svg height="60" width="35">'
-                        + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
-                        + '</svg>',
-                    commSVG = '<svg height="60" width="20">'
-                        + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
-                        + '</svg>',
-                        rbraceSVG = '<svg height="60" width="30">' 
-                        + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
-                        + '</svg>' ;
-                    var slotDictDiv = '<div style="margin:10px; clear:both;" />';
+                    // Need to build a new slot object for the specific item in the dict
 
-                    slotsDiv.append(slotDictDiv);
-                    slotsDiv.append(lbraceSVG);
-                    jQuery.each( slot.filled, function( idx, slot_in_dict_info ) {
-                        var dict_key = slot_in_dict_info[ "py/tuple" ][0] ;
-                        var dict_value = slot_in_dict_info[ "py/tuple" ][1] ;
-                        if ( dict_value ) {
+                    var lcrlySVG = '<svg height="60" width="35">'
+                                 + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
+                                 + '</svg>',
+                        commaSVG = '<svg height="60" width="20">'
+                                 + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
+                                 + '</svg>',
+                        rcrlySVG = '<svg height="60" width="30">'
+                                 + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
+                                 + '</svg>',
+                        dictDiv  = '<div style="margin:10px; clear:both;" />';
+
+                    slotsDiv.append(dictDiv);
+                    slotsDiv.append(lcrlySVG);
+                    jQuery.each(slot.filled, function( idx, slot_in_dict_info) {
+                        var dict_key = slot_in_dict_info[ "py/tuple" ][0],
+                            dict_value = slot_in_dict_info[ "py/tuple" ][1];
+                        if (dict_value) {
                             dict_value = dict_value[ "py/object" ] ;
                         }
                         var slot_in_dict = {
@@ -72,7 +69,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                             klass: "ISurrogate",
                             name: dict_key
                         };
-                        var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name+"." + dict_key, 
+                        var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name+"." + dict_key,
                                                       slot_in_dict, true ),
                         figMenu = fig.getContextMenu();
 
@@ -83,7 +80,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                         slotsDiv.append(fig);
 
                         // It is only at this point where we can get at the
-                        // size of the text in the slots so that the 
+                        // size of the text in the slots so that the
                         // bounding oval can be resized
                         var name_text = fig.find( '#name' )[0] ;
                         var klass_text = fig.find( '#klass' )[0] ;
@@ -102,11 +99,11 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                         fig.width( rect_width + 45 ) ;
 
                         if ( idx < slot.filled.length - 1 ) {
-                            slotsDiv.append(commSVG);
+                            slotsDiv.append(commaSVG);
                         }
                         ContextMenu.set(figMenu.attr('id'), fig.attr('id'));
                     } ) ;
-                    slotsDiv.append(rbraceSVG);
+                    slotsDiv.append(rcrlySVG);
                 }
                 else {
                     // create a new slot figure
@@ -115,7 +112,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                     figures[slot.name] = fig;
                     slotsDiv.append(fig);
                     // It is only at this point where we can get at the
-                    // size of the text in the slots so that the 
+                    // size of the text in the slots so that the
                     // bounding oval can be resized
                     if ( slot.containertype === 'singleton' ) {
                         var name_text = fig.find( '#name' )[0] ;
@@ -149,13 +146,9 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
-            /* divs could be in front of divs and the div that gets the drop
-               event might not be the one that is in front visibly and therefore
-               is not the div the user wants the drop to occur on */
-            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            /* call the method on the correct div to handle the drop */
+            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             if (top_div) {
-                var drop_function = top_div.droppable('option','actualDropHandler');
+                var drop_function = top_div.droppable('option', 'actualDropHandler');
                 drop_function(ev,ui);
             }
         }
