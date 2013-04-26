@@ -8,9 +8,11 @@ from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, GridElement, TextElement, InputElement
-from workflow import find_workflow_component_figures
+from workflow import find_workflow_figure, find_workflow_figures, \
+                     find_workflow_component_figures, \
+                     find_workflow_component_figure
 from util import ArgsPrompt, NotifierPage
-
+from grid import GridColumnPicker, GridColumnPickerOption
 
 class ComponentPage(DialogPage):
 
@@ -61,6 +63,7 @@ class ComponentPage(DialogPage):
         NotifierPage.wait(self)
         self.version = version
         self._sort_order = {"inputs" : 0, "outputs" : 0}
+        self._column_picker = None
 
     def get_tab_labels(self):
         """ Return a list of the tab labels. """
@@ -75,10 +78,10 @@ class ComponentPage(DialogPage):
         grid = self.inputs
         found = []
         for row in grid.rows:
-            if row[0] == name:
+            if row[1] == name:
                 row[2] = value
                 return
-            found.append(row[0])
+            found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
     def filter_inputs(self, filter_text):
@@ -140,6 +143,33 @@ class ComponentPage(DialogPage):
         """switch to slots tab"""
         self('slots_tab').click()
 
+    def toggle_column_visibility(self, column_name):
+        self._toggle_column_visibility(self._active_grid, column_name)
+
+    @property
+    def _active_grid(self):
+        if self.inputs.displayed:
+            return self.inputs
+
+        elif self.outputs.displayed:
+            return self.outputs
+
+    def _toggle_column_visibility(self, grid, column_name):
+        if not self._column_picker:
+            self._column_picker = self._get_column_picker(grid)
+
+        elif not self._column_picker.displayed:
+            self._column_picker = self._get_column_picker(grid)
+
+        self._column_picker.get_option(column_name).click()
+
+    def _get_column_picker(self, grid):
+        grid.headers[0].context_click()
+        column_pickers = [GridColumnPicker(self.browser, element) for element in self.browser.find_elements( By. CLASS_NAME, "slick-columnpicker" )] 
+        for column_picker in column_pickers:
+            if column_picker.displayed:
+                return column_picker
+
     def get_inputs(self, return_type=None):
         """ Return inputs grid. """
         self('inputs_tab').click()
@@ -181,6 +211,7 @@ class ComponentPage(DialogPage):
                     return self.Variable(row, grid.headers)
             found.append(row[1])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
+
 
 class DriverPage(ComponentPage):
     """ Driver editor page. """
@@ -249,9 +280,21 @@ class DriverPage(ComponentPage):
         """switch to workflow tab"""
         self('workflow_tab').click()
 
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        return find_workflow_figures(self)
+
     def get_workflow_component_figures(self):
         """ Return workflow component figure elements. """
         return find_workflow_component_figures(self)
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        return find_workflow_figure(self, name, prefix, retries)
+
+    def get_workflow_component_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowComponentFigure` for `name`. """
+        return find_workflow_component_figure(self, name, prefix, retries)
 
 
 class ParameterDialog(DialogPage):

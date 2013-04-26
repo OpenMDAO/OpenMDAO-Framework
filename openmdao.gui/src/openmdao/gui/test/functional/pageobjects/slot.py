@@ -1,11 +1,16 @@
 import logging
+import time
+
+from nose.tools import eq_ as eq
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 
-from basepageobject import BasePageObject
+from basepageobject import BasePageObject, TMO
 from component import ComponentPage
+
+from util import ArgsPrompt
 
 
 class SlotFigure(BasePageObject):
@@ -38,7 +43,7 @@ class SlotFigure(BasePageObject):
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
-    def fill_from_library(self, classname):
+    def fill_from_library(self, classname, args=None):
         """ Fill slot with `classname` instance from library. """
         for retry in range(3):
             try:
@@ -58,4 +63,24 @@ class SlotFigure(BasePageObject):
                     raise
             else:
                 break
+            
+        # Handle arguments for the slotted class
+        page = ArgsPrompt(self.browser, self.port)
+        argc = page.argument_count()
+        if argc > 0:
+            if args is not None:
+                for i, arg in enumerate(args):
+                    page.set_argument(i, arg)
+            page.click_ok()
+
+        # Check that the prompt is gone so we can distinguish a prompt problem
+        # from a dataflow update problem.
+        time.sleep(0.25)
+        self.browser.implicitly_wait(1)  # We don't expect to find anything.
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)            
+            
+            
 
