@@ -296,7 +296,8 @@
     ArrayEditor : function(args) {
         var var_name = args.item['name'];
         var grid = args.grid;
-        var dim = args.item['dim'];
+        //var dim = args.item['dim'];
+        //console.log(dim);
         var var_item = args.item;
         var var_editor = this;
         var input = [];	    
