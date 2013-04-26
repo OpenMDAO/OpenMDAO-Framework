@@ -6,7 +6,7 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
      *  private
      ***********************************************************************/
 
-    var self = this ;
+    var self = this,
         id = 'SlotFigure-' + pathname.replace(/\./g, '-'),
         slotDiv = '<div class="SlotFigure">',
         slotSVG = '<svg height="60" width="100">'

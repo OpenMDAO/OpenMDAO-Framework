@@ -435,6 +435,8 @@ def _save_screenshot(browser, filename, retry=True):
 def startup(browser):
     """ Create a project and enter workspace. """
     print 'running %s...' % inspect.stack()[1][3]
+    browser.set_window_position(0, 0)
+    browser.set_window_size(1280, 1024)
     projects_page = begin(browser)
     workspace_page, project_dict = new_project(projects_page.new_project(),
                                                load_workspace=True)

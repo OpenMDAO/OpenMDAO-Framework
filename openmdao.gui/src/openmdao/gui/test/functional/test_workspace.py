@@ -743,12 +743,13 @@ def _test_remove(browser):
     project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
-    # Lots of futzing here to handle short screens (EC2 Windows).
     top = workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    #workspace_page.select_object('top')
-    #workspace_page.show_dataflow('top')
-    #workspace_page.hide_left()
-    #top = workspace_page.get_dataflow_figure('top', '')
+    workspace_page.select_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
+
+    # open various views on the top assembly
+    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
     editor.move(100, 200)
     connections = top.connections_page()
@@ -761,6 +762,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    # make sure all the views on the top assembly go away
     time.sleep(1)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
