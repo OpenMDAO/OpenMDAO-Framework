@@ -2,7 +2,10 @@
 (function($) {
 
     var customEditors = {
-
+    
+    //------------------------------------
+    // Custom Editor for Dictionaries
+    //------------------------------------
     DictEditor : function(args) {
         var this_editor = this;
         var input = [];
@@ -145,7 +148,6 @@
         };
 
         this.isValueChanged = function() {
-            //return ($select.val() != defaultValue);
             return true;
         };
     
@@ -159,6 +161,9 @@
         this.init();
     },
 
+    //------------------------------------
+    // Custom Editor for Enums
+    //------------------------------------
     EnumEditor : function(args) {
         var $select;
         var grid = args.grid;
@@ -229,6 +234,9 @@
         //jQuery("#"+select_id).change(function () {state = this.serializeValue(); this.applyValue(this_item, state);})
     },
 
+    //------------------------------------
+    // Custom Editor for Booleans
+    //------------------------------------
     BoolEditor : function(args) {
         var $select;
         var var_name = args.item['name'];
@@ -282,10 +290,13 @@
         this.init();
     },
 
-
+    //------------------------------------
+    // Custom Editor for Arrays
+    //------------------------------------
     ArrayEditor : function(args) {
         var var_name = args.item['name'];
         var grid = args.grid;
+        var dim = args.item['dim'];
         var var_item = args.item;
         var var_editor = this;
         var input = [];	    
@@ -322,6 +333,7 @@
         var default_length;
         var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
         var $subtract_button = $("<button id = 'array-edit-add-"+var_name+"'>-</button>").button();
+        
         $add_button.click( function () {
             input.push($("<INPUT type=text class='editor-text' value = '0.' size = 6/>"));
             length = input.length;
