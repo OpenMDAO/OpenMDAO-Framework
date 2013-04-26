@@ -218,6 +218,7 @@ class Array(TraitArray):
         attr['name'] = name
         attr['type'] = "ndarray"
         attr['value'] = str(value)
+        attr['dim'] = value.size()
         
         for field in meta:
             if field not in gui_excludes:
