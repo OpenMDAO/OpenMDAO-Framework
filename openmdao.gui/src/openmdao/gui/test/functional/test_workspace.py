@@ -763,8 +763,8 @@ def _test_remove(browser):
 
     time.sleep(1)
     eq(editor.is_visible, False)
-    eq(connections.is_visible, True)
-    eq(properties.is_visible, True)
+    eq(connections.is_visible, False)
+    eq(properties.is_visible, False)
 
     # Clean up.
     closeout(project_dict, workspace_page)
