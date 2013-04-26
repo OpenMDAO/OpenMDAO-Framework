@@ -419,7 +419,7 @@ def _test_properties(browser):
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
-    eq(inputs.value, [['printvars',     ''],
+    eq(inputs.value, [['printvars',     '[]'],
                       ['directory',     ''],
                       ['force_execute', 'True'],
                       ])  # FIXME: printvars is really an empty list...

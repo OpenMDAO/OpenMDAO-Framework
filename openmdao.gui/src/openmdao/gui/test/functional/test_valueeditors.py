@@ -62,8 +62,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[5].cells[1].click()
-    inputs[5][1] = "abcd"
+    inputs.rows[6].cells[1].click()
+    inputs[6][1] = "abcd"
     time.sleep(1)
 
     #enum editor - set to 3
@@ -81,7 +81,7 @@ def _test_value_editors(browser):
 
     #bool editor - set to true
     inputs = props.inputs
-    inputs.rows[6].cells[1].click()
+    inputs.rows[7].cells[1].click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
@@ -110,12 +110,24 @@ def _test_value_editors(browser):
     submit_path = '//*[@id="array-edit-Y-submit"]'
     browser.find_element_by_xpath(submit_path).click()
 
+    #list editor - set to [1, 2, 3, 4, 5]
+    inputs = props.inputs
+    eq(inputs[5][1].startswith("["), True)
+    eq(inputs[5][1].endswith("]"), True)
+    values = [int(value.strip()) for value in inputs[5][1].strip("[]").split(",")]
+    eq(len(values), 4)
+    eq(values, [1, 2, 3, 4])
+
+    values.append(5)
+    values = str([value for value in values])
+    inputs[5][1]=values
+
     props.close()
 
     #check that all values were set correctly by the editors
     commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute",
-                "top.p1.e", "top.p1.x", "top.p1.X", "top.p1.directory"]
-    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd"]
+                "top.p1.e", "top.p1.x", "top.p1.X", "top.p1.directory", "top.p1.Z"]
+    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd", "[1, 2, 3, 4, 5]"]
 
     for cmd_str, check_val in zip(commands, values):
         workspace_page.do_command(cmd_str)
