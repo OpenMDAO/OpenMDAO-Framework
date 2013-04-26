@@ -1778,7 +1778,7 @@ class ClusterHost(mp_distributing.Host):  #pragma no cover
         This is the case when a remote firewall blocks connections.
 
     identity_filename: string
-        Name of optional identity file to pass to ssh.
+        Path to optional identity file to pass to ssh.
     """
     pass  # Currently identical.
 

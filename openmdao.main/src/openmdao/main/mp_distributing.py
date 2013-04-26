@@ -6,6 +6,7 @@ This code assumes `ssh` has been set-up on all hosts such that no user
 intervention for passwords or passphrases is required.
 """
 
+import atexit
 import copy
 import cPickle
 import getpass
@@ -78,13 +79,15 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
             Host to tunnel to.
 
         identity_filename: string
-            Name of optional identity file to pass to ssh tunnel.
+            Path to optional identity file to pass to ssh tunnel.
         """
         if tunnel:
-            _LOGGER.debug('Client setting up tunnel to %s for %s',
+            _LOGGER.debug('Client setting up tunnel at %s for %s',
                           address, hostname)
-            address = setup_tunnel(hostname, address[1], remote=address[0],
-                                   identity=identity_filename)
+            address, cleanup = setup_tunnel(hostname, address[1],
+                                            identity=identity_filename)
+        else:
+            cleanup = None
 
         manager = cls(address, authkey)
         _LOGGER.debug('Client connecting to server at %s' % (address,))
@@ -97,18 +100,21 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         manager._name = 'Host-%s:%s' % manager.address
         manager.shutdown = util.Finalize(
             manager, HostManager._finalize_host,
-            args=(manager._address, manager._authkey, manager._name),
+            args=(manager._address, manager._authkey, manager._name, cleanup),
             exitpriority=-10)
         return manager
 
     @staticmethod
-    def _finalize_host(address, authkey, name):
+    def _finalize_host(address, authkey, name, cleanup):
         """ Sends a shutdown message. """
         conn = connection.Client(address, authkey=authkey)
         try:
-            return managers.dispatch(conn, None, 'shutdown')
+            retval = managers.dispatch(conn, None, 'shutdown')
         finally:
             conn.close()
+        if cleanup is not None:
+            cleanup[0](*cleanup[1:])
+        return retval
 
     def __repr__(self):
         return '<Host(%s)>' % self._name
@@ -296,7 +302,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                                self._allow_shell)
         except Exception as exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
-            _LOGGER.error('starter for %s caught exception %s',
+            _LOGGER.error('starter for %s caught exception: %s',
                           host.hostname, msg)
         return host
 
@@ -330,7 +336,7 @@ class Host(object):  #pragma no cover
         This is the case when a remote firewall blocks connections.
 
     identity_filename: string
-        Name of optional identity file to pass to ssh.
+        Path to optional identity file to pass to ssh.
     """
 
     def __init__(self, hostname, python=None, tunnel_incoming=False,
@@ -396,9 +402,10 @@ class Host(object):  #pragma no cover
         if self.tunnel_incoming:
             _LOGGER.debug('setup reverse tunnel from %s to %s:%s',
                           self.hostname, address[0], address[1])
-            setup_reverse_tunnel(self.hostname, address[0], address[1], 
-                                 identity=self.identity_filename)
-            address = ('localhost', address[1])
+            address, cleanup = \
+                setup_reverse_tunnel(self.hostname, address[0], address[1], 
+                                     identity=self.identity_filename)
+            atexit.register(*cleanup)
 
         cmd = copy.copy(_SSH)
         if self.identity_filename:
@@ -561,6 +568,8 @@ def main():  #pragma no cover
 
     allow_tunneling = data['allow_tunneling']
     print '%s allow_tunneling: %s' % (ident, allow_tunneling)
+    if allow_tunneling:
+        hostname = 'localhost'
 
     sys.stdout.flush()
 

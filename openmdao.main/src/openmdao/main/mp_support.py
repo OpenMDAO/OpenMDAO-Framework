@@ -187,8 +187,8 @@ class OpenMDAO_Server(Server):
                     self._logger.warning('No address for %r', host)
                 else:
                     hosts.add(ip_addr)
-                if host == socket.gethostname():
-                    hosts.add('127.0.0.1')
+                if host == socket.getfqdn() or host == socket.gethostname():
+                    hosts.add('127.0.0.1')  # localhost
             if allowed_hosts:
                 hosts |= set(allowed_hosts)
             self._allowed_hosts = list(hosts)
@@ -946,9 +946,9 @@ class OpenMDAO_Manager(BaseManager):
             if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
                 timeout = 120
             else:
-                timeout = 10
+                timeout = 20
         else:
-            timeout = 10
+            timeout = 20
 
         writer.close()
         start = time.time()
@@ -1284,16 +1284,9 @@ class OpenMDAO_Proxy(BaseProxy):
                 proxytype = self._manager._registry[token.typeid][-1]
 
             if token.address != self._manager.address:
-                if self._manager.address[0] == '127.0.0.1' and \
-                   self._manager.address[1] == token.address[1]:
-                    # Appears to be a reverse tunnel connection where the
-                    # existing manager is using a forward tunnel.
-                    manager = self._manager
-                    token.address = self._manager.address
-                else:
-                    # Proxy to different server than request was sent to (?).
-                    manager = OpenMDAO_Manager(token.address, self._authkey,
-                                               pubkey=pubkey)
+                # Proxy to different server than request was sent to.
+                manager = OpenMDAO_Manager(token.address, self._authkey,
+                                           pubkey=pubkey)
             else:
                 manager = self._manager
 

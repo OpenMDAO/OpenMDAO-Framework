@@ -4,6 +4,7 @@ which support various operations such as creating objects, loading models via
 egg files, remote execution, and remote file access.
 """
 
+import atexit
 import logging
 import optparse
 import os.path
@@ -714,7 +715,8 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
     except KeyError:
         # Requires ssh setup.
         if tunnel:  # pragma no cover
-            location = setup_tunnel(address, port)
+            location, cleanup = setup_tunnel(address, port)
+            atexit.register(*cleanup)
         else:
             location = key
         via = ' (via tunnel)' if tunnel else ''
