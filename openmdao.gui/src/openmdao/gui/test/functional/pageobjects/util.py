@@ -62,6 +62,18 @@ class ArgsPrompt(BasePageObject):
         arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
         arg_inputs[index].send_keys(text)
 
+    def argument_count(self):
+        self.browser.implicitly_wait(1)
+        try:
+            table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        finally:
+            self.browser.implicitly_wait(TMO)
+        if table:
+            arg_inputs = table[0].find_elements(By.XPATH, 'tbody/tr/td/input')
+            return len(arg_inputs)
+        else:
+            return 0
+
     def click_ok(self):
         self('ok_button').click()
 
@@ -97,8 +109,8 @@ class NotifierPage(object):
         """ Wait for notification. Returns notification message. """
         time.sleep(0.5)  # Pacing.
         base_id = base_id or 'notify'
-        msg_id = base_id+'-msg'
-        ok_id  = base_id+'-ok'
+        msg_id = base_id + '-msg'
+        ok_id  = base_id + '-ok'
         msg = WebDriverWait(parent.browser, timeout).until(
                   lambda browser: browser.find_element(By.ID, msg_id))
         ok = WebDriverWait(parent.browser, timeout).until(
@@ -282,6 +294,12 @@ class SafeDriver(SafeElementBase):
     def get_window_size(self, *args, **kwargs):
         return self._invoke('get_window_size', args, kwargs)
 
+    def set_window_size(self, *args, **kwargs):
+        return self._invoke('set_window_size', args, kwargs)
+
+    def set_window_position(self, *args, **kwargs):
+        return self._invoke('set_window_position', args, kwargs)
+
     def implicitly_wait(self, *args, **kwargs):
         return self._invoke('implicitly_wait', args, kwargs)
 
@@ -344,4 +362,3 @@ class SafeInvoker(object):
 
             self._request_q.task_done()
             self._reply_q.put((retval, exc))
-

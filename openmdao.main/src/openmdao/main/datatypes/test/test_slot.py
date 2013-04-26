@@ -2,7 +2,7 @@
 import unittest
 import pickle
 
-from openmdao.main.api import Assembly, Component, Container, Case
+from openmdao.main.api import Assembly, Component, Container, Case, VariableTree
 from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
@@ -166,16 +166,32 @@ class SlotTestCase(unittest.TestCase):
                          'filled': ['MyClass', 'MyClass'],
                          'klass': 'MyClass',
                          'desc': 'Stuff'} in slot_attrs)
-        self.assertTrue({'name': 'dict_sock',
-                         'containertype': 'dict',
-                         'filled': ['Testing'],
-                         'klass': 'MyClass',
-                         'desc': 'Stuff2'} in slot_attrs)
+        # Need some special checking for the dict slot
+        # since we get back a MyClass instance
+        dict_slots = filter( lambda x: x["name"] == "dict_sock", slot_attrs )
+        self.assertEqual( len( dict_slots ), 1 )
+        dict_slot = dict_slots[0]
+        self.assertEqual( dict_slot[ "containertype" ], "dict" )
+        self.assertEqual( dict_slot[ "klass" ], "MyClass" )
+        self.assertEqual( dict_slot[ "desc" ], "Stuff2" )
+        self.assertEqual( dict_slot[ "filled" ][0][0], "Testing" )
+        self.assertTrue( isinstance( dict_slot[ "filled" ][0][1], MyClass ) )
         self.assertTrue({'name': 'sock',
                          'containertype': 'singleton',
                          'filled': 'MyClass',
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
+
+    def test_variabletree(self):
+        # Ensure VariableTree is rejected.
+        msg = 'Slotting of VariableTrees is not supported,' \
+              ' please use VarTree instead'
+
+        code = 'Slot(VariableTree)'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
+
+        code = 'Slot(VariableTree())'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
 
 
 class MyIface(zope.interface.Interface):

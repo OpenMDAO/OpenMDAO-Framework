@@ -13,6 +13,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, release
 from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.component import ComponentPage
 
 
 @with_setup(setup_server, teardown_server)
@@ -36,6 +37,7 @@ def _test_maxmin(browser):
     workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
@@ -95,7 +97,7 @@ def _test_connect(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
-
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with connect.py's top.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -124,14 +126,14 @@ def _test_connect(browser):
     eq(props.header, 'Connectable: top.comp1')
     props.move(-100, -100)
     inputs = props.inputs
-    eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = 'xyzzy'
+    eq(inputs[4].value, ['s_in', ''])
+    inputs[4][1] = 'xyzzy'
     inputs = props.inputs
-    eq(inputs[3].value, ['f_in', '0'])
-    inputs[3][1] = '2.781828'
+    eq(inputs[2].value, ['f_in', '0'])
+    inputs[2][1] = '2.781828'
     inputs = props.inputs
-    eq(inputs[5].value, ['i_in', '0'])
-    inputs[5][1] = '42'
+    eq(inputs[3].value, ['i_in', '0'])
+    inputs[3][1] = '42'
 
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
@@ -141,8 +143,8 @@ def _test_connect(browser):
     #inputs[0][1] = 'True'
 
     inputs = props.inputs
-    eq(inputs[2].value, ['e_in', '1'])
-    inputs.rows[2].cells[1].click()
+    eq(inputs[1].value, ['e_in', '1'])
+    inputs.rows[1].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
     #inputs.rows[2].cells[0].click()
     #inputs[2][1] = '3'
@@ -159,16 +161,16 @@ def _test_connect(browser):
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
-        ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
-        ['derivative_exec_count', 'int', '0', '', 'true',
-         "Number of times this Component's derivative function has been executed.", '', ''],
-        ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
-        ['exec_count', 'int', '1', '', 'true',
-         'Number of times this Component has been executed.', '', ''],
-        ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
-        ['i_out', 'int',   '42',       '', 'true', '', '', ''],
-        ['itername', 'str', '1-2', '', 'true', 'Iteration coordinates.', '', ''],
-        ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
+        ['', 'b_out', 'True', '', ''],
+        ['', 'e_out', '3', '', ''],
+        ['', 'f_out', '2.781828', '', ''],
+        ['', 'i_out', '42', '', ''],
+        ['', 's_out', 'xyzzy', '', ''],
+        ['', 'derivative_exec_count', '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count', '1', '',
+         'Number of times this Component has been executed.'],
+        ['', 'itername', '1-2', '', 'Iteration coordinates.'],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -187,6 +189,7 @@ def _test_connections(browser):
     workspace_page.add_file(filename)
 
     # Replace 'top' with VehicleSim.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     asm_name = 'sim'
@@ -334,6 +337,7 @@ def _test_connect_nested(browser):
                                                 'files/bem.py')
     workspace_page.add_file(file_path)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with bem.BEM
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -432,7 +436,7 @@ def _test_driverflows(browser):
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
-
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -480,10 +484,14 @@ def _test_replace(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
+    browser.set_window_position(0, 0)
+    browser.set_window_size(1280, 1024)
+
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
@@ -496,14 +504,14 @@ def _test_replace(browser):
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', '', ''],
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -513,15 +521,15 @@ def _test_replace(browser):
     workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['scaler', 'float', '1', '', 'true', '', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', '', ''],
+        ['', 'scaler', '1', '', ''],
+        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -530,14 +538,14 @@ def _test_replace(browser):
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
+        ['', 'result_in', '0', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -547,15 +555,15 @@ def _test_replace(browser):
     workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
-        ['scaler', 'float', '1', '', 'true', '', '', ''],
+        ['', 'result_in', '0', '', ''],
+        ['', 'scaler', '1', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -564,11 +572,11 @@ def _test_replace(browser):
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['cons_is_linear', 'ndarray', '[]', '', 'true',
-        'Array designating whether each constraint is linear.', '', ''])
+       ['', 'cons_is_linear', '[]', '',
+        'Array designating whether each constraint is linear.'])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
@@ -576,23 +584,23 @@ def _test_replace(browser):
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['accuracy', 'float', '0.000001', '', 'true', 'Convergence accuracy', '', ''])
+       ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
     editor.close()
 
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", "['driver']"],
+        ['', 'x', '[]', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -602,18 +610,19 @@ def _test_replace(browser):
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
-    message = NotifierPage.wait(workspace_page)
-    eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
-                " 'postproc.result_in': top: Can't find 'comp.result'")
+    expected = "RuntimeError: top: Can't connect 'comp.result' to" \
+               " 'postproc.result_in': top: Can't find 'comp.result'"
+    assert workspace_page.history.endswith(expected)
+
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
-    editor.move(-100, 0)
+    editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', '', ''],
-        ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['', 'directory', '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -632,6 +641,7 @@ def _test_ordering(browser):
     # Verify that adding parameter to driver moves it ahead of target.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     # Add ExternalCode and SLSQP.
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
@@ -661,8 +671,395 @@ def _test_ordering(browser):
     assert ext.coords[0] > opt.coords[0]
 
     # Clean up.
+    editor.close()
     closeout(project_dict, workspace_page)
 
+
+def _test_io_filter_without_vartree(browser):
+
+    project_dict, workspace_page = startup(browser)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
+    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
+    editor = conmin.editor_page()
+
+    #Test filtering inputs
+
+    #filter on name='ctlmin'
+    editor.filter_inputs("ctlmin")
+    eq([u'', u'ctlmin', u'0.001', u'', u'Minimum absolute value of ctl used in optimization.'], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on description='conjugate'
+    editor.filter_inputs("conjugate")
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on description='Conjugate'
+    editor.filter_inputs("Conjugate")
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
+    editor.filter_inputs("")
+
+    #filter on term='print'
+    #filter should match items in name and description column
+    expected = [
+        [u'', u'iprint', u'0', u'', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.'],
+        [u'', u'printvars', u'[]', u'', u'List of extra variables to output in the recorders.']
+    ]
+
+    editor.filter_inputs("print")
+    eq(expected, editor.get_inputs().value)
+    editor.filter_inputs("")
+
+    editor.show_outputs()
+
+    #Test filtering outputs
+
+    #filter on name='derivative_exec_count'
+    editor.filter_outputs("derivative_exec_count")
+    eq([u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."], editor.get_outputs().value[0])
+    editor.filter_outputs("")
+
+    #filter on description='coordinates'
+    editor.filter_outputs("coordinates")
+    eq([u'', u'itername', u'', u'', u"Iteration coordinates."], editor.get_outputs().value[0])
+    editor.filter_outputs("")
+
+    #filter on term='time'.
+    editor.filter_outputs("time")
+    expected = [
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'',  u"Number of times this Component has been executed."]
+    ]
+
+    eq(expected, editor.get_outputs().value)
+
+    #filter on term='Time'.
+    editor.filter_outputs("Time")
+    expected = [
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
+    ]
+
+    eq(expected, editor.get_outputs().value)
+    editor.close()
+
+    closeout(project_dict, workspace_page)
+
+
+def _test_io_filter_with_vartree(browser):
+    project_dict, workspace_page = startup(browser)
+
+    #Test filtering variable trees
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.show_dataflow("vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "vartree")
+    editor = comp.editor_page()
+    inputs = editor.get_inputs()
+    #editor.move(-100, 0)
+
+    #filter when tree is expanded
+    #filter on name="b"
+    editor.filter_inputs("b")
+    expected = [
+        [u'', u' cont_in', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'b', u'12', u'inch', u''],
+        [u'', u'directory', u'', u'', u'If non-blank, the directory to execute in.']
+    ]
+
+    eq(expected, editor.get_inputs().value)
+    time.sleep(3)
+
+    #filter when tree is collapse
+    #filter on units="ft"
+    editor.filter_inputs("ft")
+    expected = [
+        [u'', u' cont_in', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'a', u'1', u'ft', u''],
+    ]
+    eq(expected, editor.get_inputs().value)
+
+    editor.show_outputs()
+
+    #filter when tree is expanded
+    #filter on name="b"
+    editor.filter_outputs("b")
+    expected = [
+        [u'', u' cont_out', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'b', u'12', u'inch', u''],
+        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
+    ]
+
+    eq(expected, editor.get_outputs().value)
+    time.sleep(3)
+
+    #filter when tree is collapse
+    #filter on units="ft"
+    editor.filter_outputs("ft")
+    expected = [
+        [u'', u' cont_out', u'', u'', u''],
+        [u'', u' vt2', u'', u'', u''],
+        [u'', u' vt3', u'', u'', u''],
+        [u'', u'a', u'1', u'ft', u''],
+    ]
+    eq(expected, editor.get_outputs().value)
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+
+def _test_column_sorting(browser):
+    Version = ComponentPage.Version
+    SortOrder = ComponentPage.SortOrder
+
+    def test_sorting(expected, grid, sort_order):
+        names = None
+        variables = None
+
+        if(grid=="inputs"):
+            editor.show_inputs()
+            editor.sort_inputs_column("Name", sort_order)
+            variables = editor.get_inputs()
+
+        else:
+            editor.show_outputs()
+            editor.sort_outputs_column("Name", sort_order)
+            variables = editor.get_outputs()
+            
+        
+        names = [variable.name.value for variable in variables]
+
+        for index, name in enumerate(names):
+            eq(name, expected[index])
+
+    project_dict, workspace_page = startup(browser)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130,90))
+    editor = driver.editor_page(version=Version.NEW)
+
+    test_sorting( \
+        ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
+        "inputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
+        "inputs",
+        SortOrder.DESCENDING
+        )
+
+    test_sorting( \
+        ["error_code", "derivative_exec_count", "exec_count", "itername"],
+        "outputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["itername", "exec_count", "derivative_exec_count", "error_code"],
+        "outputs",
+        SortOrder.DESCENDING
+        )
+
+    editor.close()
+
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+
+    workspace_page.reload_project()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "apples", offset=(120, 90))
+    #workspace_page.show_dataflow("vartree")
+
+    comp = workspace_page.get_dataflow_figure('p1', "apples")
+    editor = comp.editor_page(version=Version.NEW)
+
+    editor.get_input(" cont_in").name.click()
+    editor.get_input(" vt2").name.click()
+    editor.get_input(" vt3").name.click()
+    
+    editor.get_output(" cont_out").name.click()
+    editor.get_output(" vt2").name.click()
+    editor.get_output(" vt3").name.click()
+
+    #Testing sort for inputs
+    
+    test_sorting( \
+        [" cont_in", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "directory", "force_execute"],
+        "inputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        "inputs",
+        SortOrder.DESCENDING
+        )
+
+    #Testing sort for outputs
+
+    test_sorting( \
+        [" cont_out", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "derivative_exec_count", "exec_count", "itername"],
+        "outputs",
+        SortOrder.ASCENDING
+        )
+
+    test_sorting( \
+        ["itername", "exec_count", "derivative_exec_count", " cont_out", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        "outputs",
+        SortOrder.DESCENDING
+        )
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+def _test_taborder(browser):
+    # Replaces various connected components.
+    project_dict, workspace_page = startup(browser)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
+
+    # Replace driver with an SLSQPdriver.
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    eq(editor.get_tab_labels(),
+       ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
+        'Triggers', 'Workflow', 'Slots'])
+
+    editor.close()
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+def _test_column_picking(browser):
+    project_dict, workspace_page = startup(browser)
+    
+    #Test that changes did not affect other component editors.
+
+    #During interactive testing, and on occassion, selenium decides that it likes
+    #to miss the drop, and drops the item on the dataflow grid, rather than in top.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    editor = driver.editor_page()
+
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+    editor.show_inputs()
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
+    top = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = top.editor_page()
+
+    #Testing for Inputs tab 
+
+    #Test that the default columns are loaded first
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+    
+    editor.show_inputs()
+    input_column_names = [header.value for header in editor.inputs.headers]
+
+    eq(input_column_names, expected_column_names)
+
+    #Test that low, high and type are added
+    #column_picker = editor.inputs.headers[0].get_column_picker()
+    editor.toggle_column_visibility("Low")
+    editor.toggle_column_visibility("High")
+    editor.toggle_column_visibility("Type")
+
+    expected_column_names[2:2] = ["Type"]
+    expected_column_names[4:4] = ["High"]
+    expected_column_names[5:5] = ["Low"]
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+
+    eq(input_column_names, expected_column_names)
+    
+    #Test that the name and description columns are removed
+    editor.toggle_column_visibility("Name")
+    editor.toggle_column_visibility("Description")
+
+    del expected_column_names[1]
+    del expected_column_names[-1]
+
+    input_column_names = [header.value for header in editor.inputs.headers]
+    
+    eq(input_column_names, expected_column_names)
+
+    #Testing for Outputs tab
+    
+    #Test that the default columns are loaded first.
+    editor.show_outputs()
+    expected_column_names = ["", "Name", "Value", "Units", "Description"]
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+
+    #Test that the units and name columns are removed
+    #column_picker = editor.outputs.headers[0].get_column_picker()
+    
+    editor.toggle_column_visibility("Units")
+    editor.toggle_column_visibility("Name")
+
+    output_column_names = [header.value for header in editor.outputs.headers]
+
+    del expected_column_names[1]
+    del expected_column_names[2]
+
+    eq(output_column_names, expected_column_names)
+
+    #Test that the low column is shown
+    editor.toggle_column_visibility("Low")
+
+    expected_column_names[2:2] = ["Low"]
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
+
+    editor = top.editor_page()
+
+    #Reload the editor and check that the column settings
+    #for the Inputs and Outputs tabs were recalled
+    editor.show_inputs()
+    expected_column_names = ["", "Type", "Value", "High", "Low", "Units"]
+    input_column_names = [header.value for header in editor.inputs.headers]
+    eq(input_column_names, expected_column_names)
+
+    editor.show_outputs()
+    expected_column_names = ["", "Value", "Low", "Description"]
+    output_column_names = [header.value for header in editor.outputs.headers]
+    eq(output_column_names, expected_column_names)
+
+    editor.close()
+
+    closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':
     main()

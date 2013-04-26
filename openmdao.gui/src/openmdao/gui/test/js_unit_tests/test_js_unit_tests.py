@@ -1,8 +1,7 @@
 import sys
 
 # to run interactively, use the following command in directory with jsTestDriver.conf:
-# java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser /usr/bin/chromium-browser --tests all
-# if /usr/bin/chromium-browser doesn't work, try google-chrome
+# java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests all
 
 # Because Xvfb does not exist on Windows, it is difficult
 #   to do headless testing on Windows. So for now
@@ -38,9 +37,7 @@ if sys.platform.startswith("linux"):
     server: http://localhost:%(port_num)s
 
     load:
-      - %(gd)s/static/js/require-jquery*
-      - %(gd)s/static/js/jquery.event.drag-2.0.min.js
-      - %(gd)s/static/js/jquery-ui-1.8.7.custom.min.js
+      - %(gd)s/static/js/jquery*.js
       - %(gd)s/static/js/slickgrid/*.js
       - %(gd)s/static/js/ba-debug.min.js
       - %(gd)s/static/js/openmdao/Util.js

@@ -9,7 +9,7 @@ import unittest
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           ListCaseIterator, ListCaseRecorder, \
                                           DumpCaseRecorder
-from openmdao.lib.datatypes.api import Array, Str, Slot
+from openmdao.lib.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array
@@ -29,15 +29,16 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         top.comp1.add('a_string', Str("Hello',;','", iotype='out'))
         top.comp1.add('a_array', Array(array([1.0, 3.0, 5.5]), iotype='out'))
         top.comp1.add('x_array', Array(array([1.0, 1.0, 1.0]), iotype='in'))
-        top.comp1.add('vt', Slot(DumbVT, iotype='out'))
-        top.comp1.vt = DumbVT()
+        top.comp1.add('b_bool', Bool(False, iotype='in'))
+        top.comp1.add('vt', VarTree(DumbVT(), iotype='out'))
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases
         outputs = ['comp1.z', 'comp2.z', 'comp1.a_string', 'comp1.a_array[2]']
         cases = []
         for i in range(10):
-            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1), ('comp1.x_array[1]', 99.88)]
+            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1), 
+                      ('comp1.x_array[1]', 99.88), ('comp1.b_bool', True)]
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
         
@@ -70,6 +71,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
+            '      comp1.b_bool: True',
             '      comp1.x: 8.1',
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
@@ -133,6 +135,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
+            '      comp1.b_bool: True',
             '      comp1.x: 8.1',
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',

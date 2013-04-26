@@ -1,5 +1,3 @@
-
-
 import unittest
 import os
 import sys
@@ -18,3 +16,5 @@ class SphinxDocsTestCase(unittest.TestCase):
         if not output.strip().endswith('build succeeded.'):
             self.fail('problem in building sphinx documentation:\\n'+output)
 
+if __name__ == '__main__':
+    unittest.main()

@@ -108,7 +108,7 @@ class ConsoleServer(cmd.Cmd):
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
-                                   if is_instance(obj, Driver)]:
+                               if is_instance(obj, Driver)]:
                     driver._update_workflow()
 
     def publish_components(self):
@@ -249,7 +249,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         try:
             self.proj.command("execfile('%s', '%s')" %
-                                 (filename, file_md5(filename)))
+                              (filename, file_md5(filename)))
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -546,10 +546,10 @@ class ConsoleServer(cmd.Cmd):
                 for src_var, dst_var in conntuples:
                     src_root = src_var.split('.')[0]
                     dst_root = dst_var.split('.')[0]
-                    if ((src_name and src_root == src_name) or \
-                       (not src_name and src_root not in comp_names)) \
-                    and ((dst_name and dst_root == dst_name) or \
-                        (not dst_name and dst_root not in comp_names)):
+                    if (((src_name and src_root == src_name) or
+                         (not src_name and src_root not in comp_names)) and
+                        ((dst_name and dst_root == dst_name) or
+                         (not dst_name and dst_root not in comp_names))):
                         connections.append([src_var, dst_var])
                 conns['connections'] = connections
             except Exception as err:
@@ -575,13 +575,14 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Component):
                     inames = [cls.__name__
                               for cls in list(implementedBy(v.__class__))]
-                    components.append({'name': k,
-                                       'pathname': k,
-                                       'type': type(v).__name__,
-                                       'valid': v.is_valid(),
-                                       'interfaces': inames,
-                                       'python_id': id(v)
-                                      })
+                    components.append({
+                        'name': k,
+                        'pathname': k,
+                        'type': type(v).__name__,
+                        'valid': v.is_valid(),
+                        'interfaces': inames,
+                        'python_id': id(v)
+                    })
             dataflow['components'] = components
             dataflow['connections'] = []
             dataflow['parameters'] = []
@@ -600,6 +601,10 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(events)
 
     def get_workflow(self, pathname):
+        ''' get the workflow for the specified driver or assembly
+            if no driver or assembly is specified, get the workflows for
+            all of the top-level assemblies
+        '''
         flows = []
         if pathname:
             drvr, root = self.get_container(pathname)
@@ -631,7 +636,7 @@ class ConsoleServer(cmd.Cmd):
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'driver':   comp.driver.get_workflow(),
                                 'valid':    comp.is_valid()
-                              })
+                            })
                         elif is_instance(comp, Driver):
                             flow['workflow'].append(comp.get_workflow())
                         else:
@@ -639,11 +644,13 @@ class ConsoleServer(cmd.Cmd):
                                 'pathname': pathname,
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'valid':    comp.is_valid()
-                              })
+                            })
                     flows.append(flow)
         return jsonpickle.encode(flows)
 
     def get_attributes(self, pathname):
+        ''' get the attributes of the specified object
+        '''
         attr = {}
         comp, root = self.get_container(pathname)
         if comp:
@@ -652,6 +659,14 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
+
+    def get_passthroughs(self, pathname):
+        ''' get the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable
+        '''
+        asm, root = self.get_container(pathname)
+        passthroughs = asm.get_passthroughs()
+        return jsonpickle.encode(passthroughs)
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
@@ -663,10 +678,15 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
+        ''' get a dictionary of types available for creation
+        '''
         return packagedict(get_available_types())
 
     @modifies_model
     def load_project(self, projdir):
+        ''' activate the project in the specified directory,
+            instantiate a file manager and projdirfactory
+        '''
         _clear_insts()
         self.cleanup()
 
@@ -800,7 +820,9 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
-        return self.files.write_file(filename, contents)
+        ret = self.files.write_file(filename, contents)
+        if not ret is True:
+            return ret
 
     def add_file(self, filename, contents):
         ''' Add file.
@@ -917,11 +939,12 @@ class ConsoleServer(cmd.Cmd):
         if pdf:
             if self.is_macro(filename):
                 return True
-            filename = filename.lstrip('/')
-            filename = os.path.join(self.proj.path, filename)
-            info = pdf._files.get(filename)
-            if info and _match_insts(info.classes.keys()):
-                return True
+            if filename.endswith('.py'):
+                filename = filename.lstrip('/')
+                filename = os.path.join(self.proj.path, filename)
+                info = pdf._files.get(filename)
+                if info and _match_insts(info.classes.keys()):
+                    return True
         return False
 
 

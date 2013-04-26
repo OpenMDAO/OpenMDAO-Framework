@@ -11,7 +11,7 @@ from scipy.optimize import fsolve
 from scipy.interpolate import interp1d
 
 from openmdao.main.api import Component, Assembly, VariableTree
-from openmdao.lib.datatypes.api import Float, Int, Array, Slot
+from openmdao.lib.datatypes.api import Float, Int, Array, VarTree
 
 
 class ActuatorDisk(Component):
@@ -71,17 +71,13 @@ class BEMPerf(Component):
     r = Float(.8, iotype="in", desc="tip radius of the rotor", units="m")
     rpm = Float(2100, iotype="in", desc="rotations per minute", low=0, units="min**-1")
 
-    free_stream = Slot(FlowConditions, iotype="in")
+    free_stream = VarTree(FlowConditions(), iotype="in")
 
-    data = Slot(BEMPerfData, iotype="out")
+    data = VarTree(BEMPerfData(), iotype="out")
 
     #this lets the size of the arrays vary for different numbers of elements
     def __init__(self, n=10):
         super(BEMPerf, self).__init__()
-
-        #needed initialization for VTs
-        self.add('data', BEMPerfData())
-        self.add('free_stream', FlowConditions())
 
         #array size based on number of elements
         self.add('delta_Ct', Array(iotype='in', desc='thrusts from %d different blade elements' % n,
@@ -122,11 +118,7 @@ class BEM(Assembly):
     B = Int(3, iotype="in", desc="number of blades", low=1)
 
     #wind condition inputs
-    free_stream = Slot(FlowConditions, iotype="in")
-
-    def __init__(self):
-        super(BEM, self).__init__()
-        self.add('free_stream', FlowConditions())
+    free_stream = VarTree(FlowConditions(), iotype="in")
 
     def configure(self):
         self.add('BE0', BladeElement())

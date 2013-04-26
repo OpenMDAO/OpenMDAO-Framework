@@ -34,7 +34,6 @@ from pageobjects.util import SafeDriver, abort
 from pageobjects.workspace import WorkspacePage
 from pageobjects.component import NameInstanceDialog
 from pageobjects.dataflow import DataflowFigure
-from pageobjects.util import ConfirmationPage
 
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
@@ -363,6 +362,8 @@ class _Runner(object):
         base_window = browser.current_window_handle
         try:
             self.test(browser)
+        except SkipTest:
+            raise
         except Exception as exc:
             saved_exc = sys.exc_info()
             self.failed = True
@@ -493,7 +494,7 @@ def new_project(new_project_modal, verify=False, load_workspace=False):
     Returns ``(projects_page, info_dict)``
     """
 
-    time.sleep(2)  # Otherwise, intermittent failure of next assert
+    time.sleep(4)  # Otherwise, intermittent failure of next assert
     eq(new_project_modal.modal_title[:11], 'New Project')
 
     if verify:
@@ -526,7 +527,6 @@ def import_project(import_project_modal, projectfile_path, verify=False,
     Creates a randomly-named imported new project.
     Returns ``(projects_page, info_dict)``
     """
-    print import_project_modal.modal_title, projectfile_path
     assert import_project_modal.modal_title.startswith('Import Project')
 
     # load project
@@ -677,17 +677,8 @@ def resize_editor(workspace_page, editor):
         if overlap < 0:
             # we still have a problem.
             eq(True, False,
-                "Could not move or rezise the editor dialog so it is not " \
+                "Could not move or rezise the editor dialog so it is not "
                 "overlapping the library. The browser window is too small")
-
-
-def get_slot_target(labels, element_str):
-    '''Return the element with the given label string'''
-    for label in labels:
-        if element_str in label.text:
-            return label.find_element_by_xpath("..")
-
-    return None
 
 
 def get_dataflow_fig_in_assembly_editor(workspace_page, name):
@@ -737,13 +728,6 @@ def put_element_on_grid(workspace_page, element_str):
         "Dragging '" + element_str + "' to grid did not produce a new element on page")
 
     return name
-
-
-def get_pathname(browser, fig):
-    '''Get the OpenMDAO pathname for a figure'''
-    figid = fig.get_attribute('id')  # get the ID of the element here
-    script = "return jQuery('#" + figid + "').data('pathname')"
-    return browser.execute_script(script)
 
 
 def ensure_names_in_workspace(workspace_page, names, message=None):
@@ -806,37 +790,6 @@ def check_highlighting(element, should_highlight=True, message='Element'):
          + 'when dragging a dropable element to it')
 
 
-def getDropableElements(dataflow_figure):
-    '''Dataflow figures are made of many subelements. This function
-    returns a list of them so that we can try dropping on any one
-    of the elements
-    '''
-    # return [dataflow_figure(area).element for area in \
-    #        ['top_left','header','top_right', 'content_area',
-    #         'bottom_left', 'footer', 'bottom_right']]
-
-    # add back 'top_left' 'bottom_left' at some point. right now that test fails
-    arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
-    return [dataflow_figure(area).element for area in arr]
-
-
-def replace_driver(workspace_page, assembly_name, driver_type):
-    #find and get the 'comnindriver', 'top', and 'driver' objects
-    newdriver = workspace_page.find_library_button(driver_type)
-    assembly = workspace_page.get_dataflow_figure(assembly_name)
-    driver_element = workspace_page.get_dataflow_figure('driver')
-
-    div = getDropableElements(driver_element)[0]
-    chain = drag_element_to(workspace_page.browser, newdriver, div, True)
-    check_highlighting(driver_element('content_area').element, True,
-                       "Driver's content_area")
-    release(chain)
-
-    # brings up a confirm dialog for replacing the existing driver.
-    dialog = ConfirmationPage(assembly)
-    dialog.click_ok()
-
-
 def main(args=None):
     """ run tests for module
     """
@@ -880,4 +833,3 @@ def main(args=None):
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

@@ -314,6 +314,41 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
+
+    /** get attributes of all components of an assembly */
+    this.getAllAttributes= function(name,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'get_all_attributes/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
+    /** get attributes of all components of an assembly */
+    this.getPassthroughs= function(name, callback, errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'passthroughs/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
     /** get  attributes of any slotable object */
     this.getObject = function(name,callback,errorHandler) {
         if (typeof callback !== 'function') {
@@ -513,7 +548,6 @@ openmdao.Model=function(listeners_ready) {
         jQuery.ajax({
             type: 'GET',
             url:  'file'+filepath.replace(/\\/g,'/'),
-            dataType: 'text',
             success: callback,
             error: errorHandler
         });

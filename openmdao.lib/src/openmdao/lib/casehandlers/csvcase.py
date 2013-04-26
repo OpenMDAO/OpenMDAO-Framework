@@ -128,6 +128,12 @@ class CSVCaseIterator(object):
                 
             inputs = []
             for i, field in input_fields.iteritems():
+                
+                # Convert bools from string back into bools
+                # Note, only really need this for inputs.
+                if row[i] in ['True', 'False']:
+                    row[i] = bool(row[i])
+                    
                 inputs.append( (field, row[i]) )
             
             outputs = []
@@ -275,6 +281,19 @@ class CSVCaseRecorder(object):
         input_values = case.values(iotype='in', flatten=True)
         output_keys = case.keys(iotype='out', flatten=True)
         output_values = case.values(iotype='out', flatten=True)
+        
+        # This should not be necessary, however python's csv writer
+        # is not writing boolean variables correctly as strings.
+        
+        for index, item in enumerate(input_values):
+            if isinstance(item, bool):
+                input_values[index] = str(item)
+                
+        for index, item in enumerate(output_values):
+            if isinstance(item, bool):
+                output_values[index] = str(item)
+                
+        # Sort the columns alphabetically.
         
         if len(input_keys) > 0:
             sorted_input_keys, sorted_input_values = \

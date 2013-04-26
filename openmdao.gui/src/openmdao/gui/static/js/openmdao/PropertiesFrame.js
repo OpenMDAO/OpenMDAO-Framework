@@ -86,18 +86,19 @@ openmdao.PropertiesFrame = function(id,model) {
             outputs.pathname = path;
             // listen for messages and update component properties accordingly
             model.addListener(self.pathname, handleMessage);
+
+            model.getComponent(path, loadTables,
+                function(jqXHR, textStatus, errorThrown) {
+                    self.pathname = '';
+                    if (self.elm.parent().hasClass('ui-dialog')) {
+                        self.close();
+                    }
+                    else {
+                        loadTables({});
+                    }
+                }
+            );
         }
-        model.getComponent(path, loadTables,
-            function(jqXHR, textStatus, errorThrown) {
-                self.pathname = '';
-                if (self.elm.parent().hasClass('ui-dialog')) {
-                    self.close();
-                }
-                else {
-                    loadTables({});
-                }
-            }
-        );
         return this;
     };
 

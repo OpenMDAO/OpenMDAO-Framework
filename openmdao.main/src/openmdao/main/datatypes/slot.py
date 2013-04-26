@@ -32,7 +32,7 @@ class Slot(Variable):
 
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
-        
+
         default_value = None
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
@@ -66,9 +66,13 @@ class Slot(Variable):
                 self._instance.default_value = default_value
             else:
                 default_value = self._instance.default_value
-                
+
+            if klass.__name__ == 'VariableTree':
+                raise TypeError('Slotting of VariableTrees is not supported,'
+                                ' please use VarTree instead')
+
         super(Slot, self).__init__(default_value, **metadata)
-        
+
     def validate(self, obj, name, value):
         ''' wrapper around Enthought validate method'''
 
@@ -100,9 +104,6 @@ class Slot(Variable):
         if self._is_container and value is not None:
             if value.parent is not obj:
                 value.parent = obj
-            # VariableTrees also need to know their iotype
-            if hasattr(value, '_iotype'):
-                value._iotype = self.iotype
 
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" %
@@ -147,5 +148,6 @@ class Slot(Variable):
         for field in meta:
             if field not in gui_excludes:
                 slot_attr[field] = meta[field]
+                io_attr[field] = meta[field]
 
         return io_attr, slot_attr

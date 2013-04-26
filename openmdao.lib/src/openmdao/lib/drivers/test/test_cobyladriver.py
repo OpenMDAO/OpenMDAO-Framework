@@ -6,11 +6,10 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
-from openmdao.main.datatypes.api import Float, Array, Str, Slot
+from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.datatypes.api import Float, Array, Str
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.cobyladriver import COBYLAdriver
-from openmdao.util.testutil import assert_rel_error
 
 
 class OptRosenSuzukiComponent(Component):
@@ -81,7 +80,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint,[
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        

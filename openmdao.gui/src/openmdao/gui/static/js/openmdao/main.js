@@ -17,6 +17,10 @@ jQuery(function() {
     openmdao.ValueEditor.registerEditor("enum", EnumEditor);
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
+    
+    //setup prefernces
+    //these are a temporary solution
+    openmdao.preferences = { gui : { compeditor : {} } }    
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
@@ -55,7 +59,7 @@ jQuery(function() {
 
         var prop = new openmdao.PropertiesFrame("properties_pane", model);
         function prop_fn(path) { prop.editObject(path); }
-        
+
         var data = new openmdao.DataflowFrame("dataflow_pane", model,'', prop_fn),
             work = new openmdao.WorkflowFrame("workflow_pane", model,'');
 

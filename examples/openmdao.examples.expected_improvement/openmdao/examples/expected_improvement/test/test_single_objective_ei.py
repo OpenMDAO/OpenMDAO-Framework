@@ -28,6 +28,8 @@ class SingleObjectiveEITest(unittest.TestCase):
             os.remove('DOE_trainer.csv')
 
     def test_EI(self): 
+
+        random.seed(0)
                 
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
@@ -57,7 +59,7 @@ class SingleObjectiveEITest(unittest.TestCase):
             analysis.branin_meta_model.y = y
             analysis.branin_meta_model.execute()
             
-            errors.append((analysis.branin_meta_model.f_xy.mu - z)/z*100)
+            errors.append(abs((analysis.branin_meta_model.f_xy.mu - z)/z*100))
         avg_error = sum(errors)/float(len(errors))
         logging.info('#errors %s, sum(errors) %s, avg_error %s',
                      len(errors), sum(errors), avg_error)
