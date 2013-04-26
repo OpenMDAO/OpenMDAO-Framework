@@ -1,12 +1,11 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectFrame = function(model,pathname,tabName) {
+openmdao.ObjectFrame = function(model,pathname,selectTabName) {
     // TODO: hack alert... mangling pathname
     openmdao.ObjectFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/(\.|\[|\])/g,'-'),'Object: '+pathname);
-
-    this.initiallySelected = tabName || 'Inputs';
+        'CE-'+pathname.replace(/(\.|\[|\]|')/g,'-'),'Object: '+pathname);
+debug.info('ObjectFrame() pathname:', pathname)
 
     /***********************************************************************
      *  private
@@ -15,7 +14,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     // initialize private variables
     var self = this,
         panes = {},
-        tab_order = [
+        tabOrder = [
             'Inputs',
             'Outputs',
             'Parameters',
@@ -27,7 +26,8 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             'Dataflow',
             'Workflow',
             'Slots'
-        ];
+        ],
+        selectTabName = selectTabName || 'Inputs';
 
     self.elm.css({'overflow':'hidden'});
 
@@ -55,8 +55,8 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             }
         }
         names.sort(function(a, b){
-            tab_a = tab_order.indexOf(a);
-            tab_b = tab_order.indexOf(b);
+            tab_a = tabOrder.indexOf(a);
+            tab_b = tabOrder.indexOf(b);
             return (tab_a == tab_b) ? 0 : (tab_a > tab_b) ? 1 : -1;
         })
 
@@ -86,7 +86,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 tabs.append(tab);
                 tabbed_pane.append(contentPane);
                 getContent(contentPane,name,val);
-                if (self.initiallySelected === name) {
+                if (selectTabName === name) {
                     selected = tabcount;
                 }
                 tabcount = tabcount + 1;
@@ -245,7 +245,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             }
         }
 
-        
+
         if (self.pathname && self.pathname.length>0) {
             model.removeListener(self.pathname, handleMessage);
         }

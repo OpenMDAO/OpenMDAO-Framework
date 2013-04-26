@@ -63,7 +63,7 @@ class SlotFigure(BasePageObject):
                     raise
             else:
                 break
-            
+
         # Handle arguments for the slotted class
         page = ArgsPrompt(self.browser, self.port)
         argc = page.argument_count()
@@ -80,7 +80,4 @@ class SlotFigure(BasePageObject):
         try:
             eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         finally:
-            self.browser.implicitly_wait(TMO)            
-            
-            
-
+            self.browser.implicitly_wait(TMO)

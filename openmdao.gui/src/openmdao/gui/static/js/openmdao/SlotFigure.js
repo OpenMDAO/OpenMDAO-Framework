@@ -54,7 +54,31 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
     contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(fig);
 
     // create context menu
-    contextMenu.append(jQuery('<li>Remove Contents</li>').click(function(e) {
+    contextMenu.append(jQuery('<li>Edit</li>').click(function(e) {
+        if (fig.hasClass('filled')) {
+            var figOffset,
+                idx,
+                editor;
+            if (slot.containertype === 'list') {
+                figOffset = fig.offset();
+                idx = Math.floor((e.pageX - figOffset.left) / 120);
+                editor = new openmdao.ObjectFrame(model, pathname+'['+ idx+']');
+            }
+            else {
+                if (isdict) {
+                    var realSlotParent = pathname.slice(0, -slot.name.length - 1);
+                     editor = new openmdao.ObjectFrame(model, realSlotParent + "['" + slot.name + "']");
+                }
+                else {
+                    editor = new openmdao.ObjectFrame(model, pathname);
+                }
+            }
+        }
+        else {
+            openmdao.Util.notify('Slot is empty!');
+        }
+    }));
+    contextMenu.append(jQuery('<li>Remove</li>').click(function(e) {
         if (fig.hasClass('filled')) {
             var figOffset,
                 idx,
@@ -89,10 +113,17 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
     /** open object editor on double click */
     fig.dblclick(function(e) {
         if (fig.hasClass('filled')) {
-            if (slot.containertype === 'singleton') {
+            if (isdict) {
+                debug.info('SlotFigure dblclick: dict');
+                var realSlotParent = pathname.slice(0, -slot.name.length - 1);
+                new openmdao.ObjectFrame(model, realSlotParent + "['" + slot.name + "']");
+            }
+            else if (slot.containertype === 'singleton') {
+                debug.info('SlotFigure dblclick: singleton');
                 new openmdao.ObjectFrame(model, pathname);
             }
-            else if ( slot.containertype === 'list' ) {
+            else if (slot.containertype === 'list') {
+                debug.info('SlotFigure dblclick: list');
                 var figOffset = fig.offset();
                     idx = Math.floor((e.pageX - figOffset.left) / 100);
                 new openmdao.ObjectFrame(model, pathname+'['+idx+']');

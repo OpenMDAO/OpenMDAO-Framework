@@ -317,9 +317,11 @@ def _test_dict_slot(browser):
     model_slot = SlotFigure(workspace_page, 'top.mm.model')
 
     # Should not be any surrogates slots without a model in the slot
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(0, len(surrogates),
-        "There should not be any surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))
+        "There should not be any surrogates in the surrogates dict but "
+        "%d surrogate(s) are being displayed" % len(surrogates))
 
     # Fill the model slot
     workspace_page.do_command('from openmdao.examples.simple.paraboloid import Paraboloid')
@@ -328,9 +330,11 @@ def _test_dict_slot(browser):
 
     # Should be one surrogates slot in the dict
     time.sleep(1.0)  # give it a bit to update the figure
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(1, len(surrogates),
-        "There should be one surrogate in the surrogate slot but %d surrogate is being displayed" % len(surrogates))
+        "There should be one surrogate in the surrogate slot but "
+        "%d surrogate is being displayed" % len(surrogates))
 
     # remove the model
     model_elem = browser.find_element(By.ID, 'SlotFigure-top-mm-model')
