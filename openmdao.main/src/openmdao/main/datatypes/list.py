@@ -42,7 +42,7 @@ class List(Enthought_List):
 
         attr['name'] = name
         attr['type'] = 'list'
-        attr['value'] = list(value)
+        attr['value'] = str(list(value))
 
         for field in meta:
             if field not in gui_excludes:

@@ -705,7 +705,7 @@ def _test_io_filter_without_vartree(browser):
     #filter should match items in name and description column
     expected = [
         [u'', u'iprint', u'0', u'', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.'],
-        [u'', u'printvars', u'', u'', u'List of extra variables to output in the recorders.']
+        [u'', u'printvars', u'[]', u'', u'List of extra variables to output in the recorders.']
     ]
 
     editor.filter_inputs("print")
