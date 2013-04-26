@@ -372,9 +372,10 @@
         };
 
         this.getDim = function(input_data) {
-            // This counts the dimenions of our submatrix by counting the depth
-            // of brackets.
+            // This counts the number of dimensions of our submatrix by counting 
+            // the depth of brackets.
             step1 = input_data.split("[").length;
+            console.log(step1);
             if (step1 > 2) {return step1 - 2;}
             else {return 1;}
         }
