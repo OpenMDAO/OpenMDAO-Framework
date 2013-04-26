@@ -1448,7 +1448,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 if i < max_workers:
                     worker_q = WorkerPool.get()
                     worker_q.put((self._get_count,
-                                  (allocator, resource_desc, credentials),
+                                  (allocator, rdesc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -1467,7 +1467,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_count,
-                                  (next_allocator, resource_desc, credentials),
+                                  (next_allocator, rdesc, credentials),
                                   {}, self._reply_q))
                 count = retval
                 if count:
@@ -1493,6 +1493,10 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             msg = traceback.format_exc()
             self._logger.error('%r max_servers() caught exception %s',
                                allocator.name, msg)
+        else:
+            if count < 1:
+                self._logger.debug('%s incompatible: %s',
+                                   allocator.name, criteria)
         return max(count, 0)
 
     def time_estimate(self, resource_desc):
@@ -1578,7 +1582,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 if retval is None:
                     continue
                 allocator, estimate, criteria = retval
-                if estimate is None:
+                if estimate is None or estimate < -1:
                     continue
 
                 # Accumulate available cpus in cluster.
@@ -1712,6 +1716,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             allocator = criteria['allocator']
             self._last_deployed = allocator
             del criteria['allocator']  # Don't pass a proxy without a server!
+        self._logger.debug('deploying on %r as %r', allocator.name, name)
         try:
             server = allocator.deploy(name, resource_desc, criteria)
         except Exception as exc:

@@ -173,13 +173,20 @@ class OpenMDAO_Server(Server):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
+        self._logger = logging.getLogger(name)
+
         self.host = socket.gethostname()
         self._allowed_users = allowed_users
         if self._allowed_users is not None:
             hosts = set()
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
-                hosts.add(socket.gethostbyname(host))
+                try:
+                    ip_addr = socket.gethostbyname(host)
+                except socket.gaierror:
+                    self._logger.warning('No address for %r', host)
+                else:
+                    hosts.add(ip_addr)
                 if host == socket.gethostname():
                     hosts.add('127.0.0.1')
             if allowed_hosts:
@@ -193,7 +200,6 @@ class OpenMDAO_Server(Server):
             self._allowed_hosts.append('127.0.0.1')  # localhost
             self._allowed_hosts.append(socket.gethostbyname(address[0]))
 
-        self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
                           os.getpid(), keytype(authkey))
         if self._allowed_users is None:
@@ -247,21 +253,20 @@ class OpenMDAO_Server(Server):
         Connection filtering allows for PublicKey servers which aren't
         accessible by just any host.
         """
-        trace_connections = int(os.environ.get('OPENMDAO_TRACE_CONNECTIONS', '0'))
         current_process()._manager_server = self
         try:
             try:
                 while not self.stop:
                     try:
-                        if trace_connections:  # pragma no cover
-                            conn = self.listener._listener.accept()
-                            self._logger.critical('connection attempt from %r',
-                                                  self.listener.last_accepted)
-                            if self.listener._authkey:
-                                connection.deliver_challenge(conn, self.listener._authkey)
-                                connection.answer_challenge(conn, self.listener._authkey)
-                        else:
-                            conn = self.listener.accept()
+                        conn = self.listener.accept()
+                        # Comment-out the line above and use this equivalent
+                        # to debug connectivity issues.
+                        #conn = self.listener._listener.accept()
+                        #self._logger.critical('connection attempt from %r',
+                        #                      self.listener.last_accepted)
+                        #if self.listener._authkey:
+                        #    connection.deliver_challenge(conn, self.listener._authkey)
+                        #    connection.answer_challenge(conn, self.listener._authkey)
 
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
@@ -1279,9 +1284,16 @@ class OpenMDAO_Proxy(BaseProxy):
                 proxytype = self._manager._registry[token.typeid][-1]
 
             if token.address != self._manager.address:
-                # Proxy to different server than request was sent to.
-                manager = OpenMDAO_Manager(token.address, self._authkey,
-                                           pubkey=pubkey)
+                if self._manager.address[0] == '127.0.0.1' and \
+                   self._manager.address[1] == token.address[1]:
+                    # Appears to be a reverse tunnel connection where the
+                    # existing manager is using a forward tunnel.
+                    manager = self._manager
+                    token.address = self._manager.address
+                else:
+                    # Proxy to different server than request was sent to (?).
+                    manager = OpenMDAO_Manager(token.address, self._authkey,
+                                               pubkey=pubkey)
             else:
                 manager = self._manager
 
@@ -1550,8 +1562,13 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
     """
     ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
                                  exposed)
-    proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
-                      incref=incref, pubkey=pubkey)
+    try:
+        proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
+                          incref=incref, pubkey=pubkey)
+    except Exception as exc:
+        logging.exception('Auto proxy creation failed for %s at %s:',
+                          token.typeid, token.address)
+        raise
     proxy._isauto = True
     return proxy
 

@@ -173,7 +173,6 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         starter.start()
 
         # Accept callback connections from started managers.
-        trace_connections = int(os.environ.get('OPENMDAO_TRACE_CONNECTIONS', '0'))
         waiting = ['']
         retry = 0
         while waiting:
@@ -185,15 +184,15 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
                     # accept() will hang if server doesn't receive our address.
-                    if trace_connections:
-                        conn = listener._listener.accept()
-                        _LOGGER.critical('connection attempt from %s',
-                                         listener.last_accepted)
-                        if listener._authkey:
-                            connection.deliver_challenge(conn, listener._authkey)
-                            connection.answer_challenge(conn, listener._authkey)
-                    else:
-                        conn = listener.accept()
+                    conn = listener.accept()
+                    # Comment-out the line above and use this equivalent
+                    # to debug connectivity issues.
+                    #conn = listener._listener.accept()
+                    #_LOGGER.critical('connection attempt from %s',
+                    #                 listener.last_accepted)
+                    #if listener._authkey:
+                    #    connection.deliver_challenge(conn, listener._authkey)
+                    #    connection.answer_challenge(conn, listener._authkey)
 
                     i, address, pubkey_text = conn.recv()
                     conn.close()

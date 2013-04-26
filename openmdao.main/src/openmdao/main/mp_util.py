@@ -161,7 +161,6 @@ def setup_tunnel(address, port, user=None, remote='localhost', identity=None):
     connected = False
     try:
         try:
-            logging.critical('args %s', args)
             tunnel_proc = ShellProc(args, stdin=stdin,
                                     stdout=stdout, stderr=STDOUT)
         except Exception as exc:
@@ -248,7 +247,6 @@ def _start_tunnel(address, port, args, user, identity):
     stdout = open(logname, 'w')
 
     tunnel_proc = None
-    logging.critical('tunnel cmd %s', args)
     try:
         tunnel_proc = ShellProc(args, stdout=stdout, stderr=STDOUT)
     except Exception as exc:
