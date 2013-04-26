@@ -296,8 +296,6 @@
     ArrayEditor : function(args) {
         var var_name = args.item['name'];
         var grid = args.grid;
-        //var dim = args.item['dim'];
-        //console.log(dim);
         var var_item = args.item;
         var var_editor = this;
         var input = [];	    
@@ -374,27 +372,17 @@
         };
 
         this.getDim = function(input_data) {
+            // This counts the dimenions of our submatrix by counting the depth
+            // of brackets.
             step1 = input_data.split("[").length;
             if (step1 > 2) {return step1 - 2;}
             else {return 1;}
         }
     
         this.splitData = function (input_data) {
-            var substr = '';
-            var parsed = [];
-            step1 = input_data.split('[').join('').split(']').join('').split('  ').join(' ').split(',').join(' ');
-            for (var i = 0; i < step1.length; i++) {
-                if (step1[i] == " ") {
-                    if (substr.length > 0) {
-                        parsed.push(substr);
-                        substr = '';
-                    }
-                }
-                else {
-                    substr = substr + step1[i];
-                }
-            }
-            if (substr.length > 0) {parsed.push(substr);}
+            // Split out all numerical values from the array.
+            var step1 = input_data.replace(/\[/g, '').replace(/\]/g, '');
+            var parsed = step1.trim().split(/[ ,]+/); 
             return parsed
         }
 
@@ -416,7 +404,7 @@
         };
 
         this.setValue = function(val) {
-            values =   this.splitData(args.item['value']);
+            values = this.splitData(args.item['value']);
             for (var i = 0; i< length; i++) {
                 input[i].val(values[i]);
             }
@@ -424,7 +412,7 @@
     
         this.loadValue = function(item) {
             defaultValue = item[args.column.field] || "";
-            values =   this.splitData(defaultValue);
+            values = this.splitData(defaultValue);
             for (var i = 0; i< length; i++) {
                 input[i].val(values[i]);
             }
