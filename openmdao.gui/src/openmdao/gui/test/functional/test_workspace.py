@@ -419,9 +419,10 @@ def _test_properties(browser):
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
-    eq(inputs.value, [['directory',     ''],
+    eq(inputs.value, [['printvars',     '[]'],
+                      ['directory',     ''],
                       ['force_execute', 'True'],
-                      ['printvars',     '']])  # FIXME: printvars is really an empty list...
+                      ])  # FIXME: printvars is really an empty list...
     # Clean up.
     closeout(project_dict, workspace_page)
 
@@ -564,9 +565,9 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
-    inputs.rows[2].cells[2].click()
-    inputs[2][2] = '42'  # printvars
-    expected = u"TraitError: The 'printvars' trait of a "     \
+    inputs.rows[0].cells[2].click()
+    inputs[0][2] = '42'  # printvars
+    expected = "TraitError: The 'printvars' trait of a "     \
                "Run_Once instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."
@@ -743,11 +744,11 @@ def _test_remove(browser):
 
     # Show assembly information.
     # Lots of futzing here to handle short screens (EC2 Windows).
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.select_object('top')
-    workspace_page.show_dataflow('top')
-    workspace_page.hide_left()
-    top = workspace_page.get_dataflow_figure('top', '')
+    top = workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    #workspace_page.select_object('top')
+    #workspace_page.show_dataflow('top')
+    #workspace_page.hide_left()
+    #top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
     editor.move(100, 200)
     connections = top.connections_page()
@@ -932,10 +933,8 @@ def _test_arguments(browser):
 
     # Plug ListCaseIterator into warm_start_data.
     slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
-    slot.fill_from_library('ListCaseIterator')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.set_argument(0, '[]')
-    args_page.click_ok()
+    args = ['[]']
+    slot.fill_from_library('ListCaseIterator', args)
 
     # Plug ListCaseRecorder into recorder.
     slot = SlotFigure(workspace_page, 'top.mm.recorder')
@@ -943,22 +942,20 @@ def _test_arguments(browser):
 
     # Plug ExecComp into model.
     slot = SlotFigure(workspace_page, 'top.mm.model')
-    slot.fill_from_library('ExecComp')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.set_argument(0, "('z = x * y',)")
-    args_page.click_ok()
+    args = ["('z = x * y',)"]
+    slot.fill_from_library('ExecComp', args)
 
     # Check that inputs were created from expression.
     exe_editor = slot.editor_page()
     exe_editor.move(-100, 0)
     inputs = exe_editor.get_inputs()
     expected = [
+        ['', 'x',             '0',     '',  ''],
+        ['', 'y',             '0',     '',  ''],
         ['', 'directory',  '',  '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
-        ['', 'x',             '0',     '',  ''],
-        ['', 'y',             '0',     '',  ''],
     ]
 
     for i, row in enumerate(inputs.value):

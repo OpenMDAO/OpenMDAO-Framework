@@ -290,6 +290,10 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.disconnect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         # and now this
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+        self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
+        
+        self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
 
     def test_callbacks(self):
         # verify that setting a var nested down in a VariableTree hierarchy will

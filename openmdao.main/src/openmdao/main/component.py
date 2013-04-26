@@ -34,7 +34,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -122,24 +122,25 @@ class Component(Container):
     implements(IComponent)
 
     directory = Str('', desc='If non-blank, the directory to execute in.',
-                    iotype='in')
+                    framework_var=True, iotype='in')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
                                ' by this component.')
-    force_execute = Bool(False, iotype='in',
+    force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, iotype='out',
+    exec_count = Int(0, iotype='out', framework_var=True,
                      desc='Number of times this Component has been executed.')
 
-    derivative_exec_count = Int(0, iotype='out',
+    derivative_exec_count = Int(0, iotype='out', framework_var=True,
                      desc="Number of times this Component's derivative "
                           "function has been executed.")
 
-    itername = Str('', iotype='out', desc='Iteration coordinates.')
+    itername = Str('', iotype='out', desc='Iteration coordinates.',
+                   framework_var=True)
 
     create_instance_dir = Bool(False)
 
@@ -1665,6 +1666,11 @@ class Component(Container):
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
 
             io_attr['id'] = name
+            
+            # Framework variables 
+            if 'framework_var' in meta:
+                io_attr['id'] = '~' + name
+                
             io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]
@@ -1749,7 +1755,9 @@ class Component(Container):
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if name not in io_list and (value.is_trait_type(Slot) or value.is_trait_type(List)):
+                if name not in io_list and (value.is_trait_type(Slot) \
+                                            or value.is_trait_type(List) \
+                                            or value.is_trait_type(Dict)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
                     value = getattr(self, name)
