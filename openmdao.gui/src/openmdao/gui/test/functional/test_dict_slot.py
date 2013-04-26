@@ -64,7 +64,9 @@ def _test_dict_slot(browser):
         "There should not be any surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len( surrogates ) )
 
     # Fill the model slot
-    model_slot.fill_from_library('Paraboloid')
+    workspace_page.do_command('from openmdao.examples.simple.paraboloid import Paraboloid')
+    workspace_page.do_command('top.mm.model = Paraboloid()')
+    #model_slot.fill_from_library('Paraboloid')
 
     # Should be one surrogates slot in the dict
     time.sleep(1.0)  # give it a bit to update the figure
