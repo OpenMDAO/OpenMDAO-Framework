@@ -586,6 +586,45 @@ class WorkspacePage(BasePageObject):
                                                                  prefix))
         return retval
 
+    def fill_slot_from_library(self, slot, classname, args=None):
+        """ Fill slot with `classname` instance from library. """
+        for retry in range(3):
+            try:
+                button = self.find_library_button(classname)
+                chain = ActionChains(self.browser)
+                chain.move_to_element(button)
+                chain.click_and_hold(button)
+                chain.move_to_element(slot.root)
+                chain.move_by_offset(20, 20)
+                chain.release(None)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('fill_slot_from_library:'
+                                    'StaleElementReferenceException')
+                else:
+                    raise
+            else:
+                break
+
+        # Handle arguments for the slotted class
+        page = ArgsPrompt(self.browser, self.port)
+        argc = page.argument_count()
+        if argc > 0:
+            if args is not None:
+                for i, arg in enumerate(args):
+                    page.set_argument(i, arg)
+            page.click_ok()
+
+        # Check that the prompt is gone so we can distinguish a prompt problem
+        # from a dataflow update problem.
+        time.sleep(0.25)
+        self.browser.implicitly_wait(1)  # We don't expect to find anything.
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)
+
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
         return find_dataflow_figures(self)
@@ -883,12 +922,12 @@ class WorkspacePage(BasePageObject):
 
         return name
 
-    def slot_drop(self, element, slot, should_drop, message='Slot'):
-        '''Drop an element on a slot'''
-        chain = self.drag_element_to(element, slot, True)
+    def drag_and_drop(self, element, target, should_drop, message='Target'):
+        '''Drag and drop an element onto a target'''
+        chain = self.drag_element_to(element, target, True)
         chain.move_by_offset(25, 0).perform()
         time.sleep(1.0)  # give it a second to update the figure
-        self.check_highlighting(slot, should_highlight=should_drop, message=message)
+        self.check_highlighting(target, should_highlight=should_drop, message=message)
         self.release(chain)
 
     def ensure_names_in_workspace(self, names, message=None):

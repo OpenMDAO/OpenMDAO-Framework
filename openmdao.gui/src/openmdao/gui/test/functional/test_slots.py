@@ -8,15 +8,14 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 
-from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.util import NotifierPage
 
-from pageobjects.slot import SlotFigure
+from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -33,25 +32,27 @@ def _test_slots(browser):
     execcomp = workspace_page.find_library_button('ExecComp')
 
     # drop ExecComp onto MetaModel 'recorder' slot. This should fail.
-    workspace_page.slot_drop(execcomp, caserec, False, 'Component')
-
-    slot_id = 'SlotFigure-%s-%s'
-
+    workspace_page.drag_and_drop(execcomp, caserec, False, 'Component')
     time.sleep(1.0)  # give it a second to update the figure
-    caserec = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
-    eq(False, ("filled" in caserec.get_attribute('class')),
+    caserec = find_slot_figure(workspace_page, 'recorder', prefix=meta_name)
+    eq(False, caserec.filled,
         "Component dropped into CaseRecorder (should not have)")
 
     # drop ExecComp onto the MetaModel 'model' slot. This should succeed.
-    workspace_page.slot_drop(execcomp, comp, True, 'Component')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
+    comp = find_slot_figure(workspace_page, 'model', prefix=meta_name)
+    workspace_page.fill_slot_from_library(comp, 'ExecComp')
 
     time.sleep(1.0)  # give it a second to update the figure
-    comp = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
-
-    eq(True, ("filled" in comp.get_attribute('class')),
+    comp = find_slot_figure(workspace_page, 'model', prefix=meta_name)
+    eq(True, comp.filled,
         "Component did not drop into Component slot")
+
+    # remove ExecComp from the MetaModel 'model' slot. This should succeed.
+    comp.remove()
+    time.sleep(1.0)  # give it a second to update the figure
+    comp = find_slot_figure(workspace_page, 'model', prefix=meta_name)
+    eq(False, comp.filled,
+        "Component slot was not emptied")
 
     #for the future:
     """
@@ -68,13 +69,13 @@ def _test_slots(browser):
     #now loop through each dropable item, and see what happens when it lands on the target
     for ele in drop_elements:
         #drop on caseiter
-        slot_drop(browser, ele[0].element, caseiter, ele[1], 'CaseIterator')
+        drag_and_drop(browser, ele[0].element, caseiter, ele[1], 'CaseIterator')
     #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
         #drop on caserec
-        slot_drop(browser, ele[0].element, caserec, ele[2], 'CaseRecorder')
+        drag_and_drop(browser, ele[0].element, caserec, ele[2], 'CaseRecorder')
     #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
         #drop on comp
-        slot_drop(browser, ele[0].element, comp, ele[3], 'Component')
+        drag_and_drop(browser, ele[0].element, comp, ele[3], 'Component')
     #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
 
         editor, metamodel, caseiter, caserec, comp = slot_reset(workspace_page, editor, metamodel, True)
@@ -99,82 +100,67 @@ def _test_list_slot(browser):
     editor.show_slots()
 
     # get the generator slot figure
-    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'DOEgenerator')
-    generator_slot = browser.find_element(By.ID, slot_id)
+    generator_slot = find_slot_figure(workspace_page, 'DOEgenerator', prefix='top.driver')
 
     # check that slot is not filled
-    eq(False, ("filled" in generator_slot.get_attribute('class')),
+    eq(False, generator_slot.filled,
         "generator slot is showing as filled when it should not be")
 
     # drop a FullFactorial onto the generator slot
-    generator = workspace_page.find_library_button('FullFactorial')
-    workspace_page.slot_drop(generator, generator_slot, True, 'generator')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
+    workspace_page.fill_slot_from_library(generator_slot, 'FullFactorial')
 
-    # refresh
-    time.sleep(1.0)  # give it a second to update the figure
-    generator_slot = browser.find_element(By.ID, slot_id)
-
-    # check for class change (should now be filled)
-    eq(True, ("filled" in generator_slot.get_attribute('class')),
+    # refresh and check that slot is now filled
+    time.sleep(1.0)
+    generator_slot = find_slot_figure(workspace_page, 'DOEgenerator', prefix='top.driver')
+    eq(True, generator_slot.filled,
         "FullFactorial did not drop into generator slot")
 
     # get the recorders slot figure
-    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'recorders')
-    recorders_slot = browser.find_element(By.ID, slot_id)
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
 
     # check that slot is not filled
-    eq(False, ("filled" in recorders_slot.get_attribute('class')),
+    eq(False, recorders_slot.filled,
         "recorders slot is showing as filled when it should not be")
 
     # set center pane to workflow to make sure workflow doesn't steal drops
     workspace_page('workflow_tab').click()
 
     # drop a DumpCaseRecorder onto the recorders slot
-    case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
-    workspace_page.slot_drop(case_recorder, recorders_slot, True, 'recorders')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    workspace_page.fill_slot_from_library(recorders_slot, 'DumpCaseRecorder')
 
-    # refresh
+    # refresh and check that slot is now filled
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = browser.find_element(By.ID, slot_id)
-
-    # check for class change (should now be filled)
-    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    eq(True, recorders_slot.filled,
         "DumpCaseRecorder did not drop into recorders slot")
 
     # check that recorders fig now has one filled and one empty rect
-    rects = recorders_slot.find_elements_by_css_selector('rect')
+    rects = recorders_slot.root.find_elements_by_css_selector('rect')
     eq(len(rects), 2)
     eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
     eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
 
-    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
     eq(klass[0].text, 'DumpCaseRecorder',
         "Filled slot element should show the correct type (DumpCaseRecorder)")
     eq(klass[1].text, 'ICaseRecorder',
         "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # drop another CaseRecorder onto the recorders slot
-    case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
-    workspace_page.slot_drop(case_recorder, recorders_slot, True, 'recorders')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    workspace_page.fill_slot_from_library(recorders_slot, 'CSVCaseRecorder')
 
-    # refresh
+    # refresh and check for change (it should not change... still filled)
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = browser.find_element(By.ID, slot_id)
-
-    # check for class change (it should not change... still filled)
-    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    eq(True, recorders_slot.filled,
         "CSVCaseRecorder did not drop into recorders slot")
 
     # check that recorders fig now has two filled and one empty rect
-    rects = recorders_slot.find_elements_by_css_selector('rect')
+    rects = recorders_slot.root.find_elements_by_css_selector('rect')
     eq(len(rects), 3)
     eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
@@ -183,7 +169,7 @@ def _test_list_slot(browser):
     eq(True, ('stroke: #808080' in rects[2].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
 
-    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
     eq(klass[0].text, 'DumpCaseRecorder',
         "Filled slot element should show the correct type (DumpCaseRecorder)")
     eq(klass[1].text, 'CSVCaseRecorder',
@@ -192,33 +178,22 @@ def _test_list_slot(browser):
         "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # drop another CaseRecorder onto the recorders slot
-    case_recorder = workspace_page.find_library_button('DBCaseRecorder')
-    workspace_page.slot_drop(case_recorder, recorders_slot, True, 'recorders')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    workspace_page.fill_slot_from_library(recorders_slot, 'DBCaseRecorder')
 
-    # refresh
+    # refresh and check that recorders fig now has four total rects
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = browser.find_element(By.ID, slot_id)
-
-    # check that recorders fig now has four total rects
-    rects = recorders_slot.find_elements_by_css_selector('rect')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    rects = recorders_slot.root.find_elements_by_css_selector('rect')
     eq(len(rects), 4)
 
-    # remove an item from the list (the only context menu option)
-    menu_item_remove = recorders_slot.find_element_by_css_selector('ul li')
-    chain = ActionChains(browser)
-    chain.move_to_element_with_offset(recorders_slot, 25, 25)
-    chain.context_click(recorders_slot).perform()
-    menu_item_remove.click()
-
-    # refresh
-    time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = browser.find_element(By.ID, slot_id)
+    # remove an item from the list (TODO: test removing a specific item)
+    recorders_slot.remove()
 
     # check that recorders fig now has only three rect
-    # TODO: check that the correct one was removed
-    rects = recorders_slot.find_elements_by_css_selector('rect')
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    rects = recorders_slot.root.find_elements_by_css_selector('rect')
     eq(len(rects), 3)
 
     # Clean up.
@@ -264,9 +239,8 @@ def _test_slot_subclass(browser):
         eq(row, expected[i])
 
     editor.show_slots()
-    dummy2 = workspace_page.find_library_button('Dummy2')
-    d2_slot = browser.find_element(By.ID, 'SlotFigure-%s-d2' % name)
-    workspace_page.slot_drop(dummy2, d2_slot, True, 'd2 (Dummy)')
+    recorders_slot = find_slot_figure(workspace_page, 'd2', prefix=name)
+    workspace_page.fill_slot_from_library(recorders_slot, 'Dummy2')
 
     aa.run()
     message = NotifierPage.wait(workspace_page)
@@ -314,8 +288,6 @@ def _test_dict_slot(browser):
     mm_editor.show_slots()
     mm_editor.move(-150, 0)
 
-    model_slot = SlotFigure(workspace_page, 'top.mm.model')
-
     # Should not be any surrogates slots without a model in the slot
     surrogates = browser.find_elements_by_xpath(
         "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
@@ -324,9 +296,8 @@ def _test_dict_slot(browser):
         "%d surrogate(s) are being displayed" % len(surrogates))
 
     # Fill the model slot
-    workspace_page.do_command('from openmdao.examples.simple.paraboloid import Paraboloid')
-    workspace_page.do_command('top.mm.model = Paraboloid()')
-    #model_slot.fill_from_library('Paraboloid')
+    model_slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
+    workspace_page.fill_slot_from_library(model_slot, 'Paraboloid')
 
     # Should be one surrogates slot in the dict
     time.sleep(1.0)  # give it a bit to update the figure
@@ -337,79 +308,74 @@ def _test_dict_slot(browser):
         "%d surrogate is being displayed" % len(surrogates))
 
     # remove the model
-    model_elem = browser.find_element(By.ID, 'SlotFigure-top-mm-model')
-    menu_item_remove = model_elem.find_element_by_css_selector('ul li')
-    chain = ActionChains(browser)
-    chain.move_to_element_with_offset(model_elem, 25, 25)
-    chain.context_click(model_elem).perform()
-    menu_item_remove.click()
+    model_slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
+    model_slot.remove()
 
     # There should not be any surrogates slots
     time.sleep(1.0)  # give it a bit to update the figure
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(0, len(surrogates),
-        "There should not be any surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))
+        "There should not be any surrogates in the surrogates dict but "
+        "%d surrogate(s) are being displayed" % len(surrogates))
 
     # see what happens when you change the model
-    model_slot.fill_from_library('Transmission')
+    model_slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
+    workspace_page.fill_slot_from_library(model_slot, 'Transmission')
 
     # There should two surrogates slots
     time.sleep(1.0)  # give it a bit to update the figure
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(2, len(surrogates),
-        "There should be two surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))
+        "There should be two surrogates in the surrogates dict but "
+        "%d surrogate(s) are being displayed" % len(surrogates))
 
     # They should all be empty: RPM and torque_ratio
     for surrogate in surrogates:
-        eq(False, ("filled" in surrogate.get_attribute('class')), "Surrogate should not be filled")
+        eq(False, ("filled" in surrogate.get_attribute('class')),
+            "Surrogate should not be filled")
 
     # Fill the torque_ratio surrogate slot with FloatKrigingSurrogate
-    # The ID of that slot div is SlotFigure-top-mm-surrogates-torque_ratio
-    surrogates_torque_ratio_slot = SlotFigure(workspace_page, 'top.mm.surrogates.torque_ratio')
-    surrogates_torque_ratio_slot.fill_from_library('KrigingSurrogate')
+    surrogate_slot = find_slot_figure(workspace_page, 'torque_ratio', prefix='top.mm.surrogates')
+    workspace_page.fill_slot_from_library(surrogate_slot, 'KrigingSurrogate')
 
     # One should be filled now
-    time.sleep(1.5)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     num_surrogates_filled = 0
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     for surrogate in surrogates:
         if "filled" in surrogate.get_attribute('class'):
             num_surrogates_filled += 1
     eq(1, num_surrogates_filled,
-       "Exactly one surrogate slot should be filled but %d are filled" % num_surrogates_filled)
+       "Exactly one surrogate slot should be filled but "
+       "%d are filled" % num_surrogates_filled)
 
     # Fill the RPM surrogate slot with FloatKrigingSurrogate
-    # The ID of that slot div is SlotFigure-top-mm-surrogates-RPM
-    surrogates_torque_ratio_slot = SlotFigure(workspace_page, 'top.mm.surrogates.RPM')
-    surrogates_torque_ratio_slot.fill_from_library('FloatKrigingSurrogate')
+    surrogate_slot = find_slot_figure(workspace_page, 'RPM', prefix='top.mm.surrogates')
+    workspace_page.fill_slot_from_library(surrogate_slot, 'FloatKrigingSurrogate')
 
     # Two should be filled now
-    time.sleep(1.0)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     num_surrogates_filled = 0
-    surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
+    surrogates = browser.find_elements_by_xpath(
+        "//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     for surrogate in surrogates:
         if "filled" in surrogate.get_attribute('class'):
             num_surrogates_filled += 1
     eq(2, num_surrogates_filled,
-       "Exactly two surrogate slot should be filled but %d are filled" % num_surrogates_filled)
+       "Exactly two surrogate slot should be filled but "
+       "%d are filled" % num_surrogates_filled)
 
     # Test with components that have variable trees
 
-    # TODO: Change the model without removing it first ################
-
-    # # remove the model
-    # model_elem = browser.find_element(By.ID, 'SlotFigure-top-mm-model')
-    # menu_item_remove = model_elem.find_element_by_css_selector('ul li')
-    # chain = ActionChains(browser)
-    # chain.move_to_element_with_offset(model_elem, 25, 25)
-    # chain.context_click(model_elem).perform()
-    # menu_item_remove.click()
-
     # test vartree with metamodel
-    model_slot.fill_from_library('InandOutTree')
+    model_slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
+    workspace_page.fill_slot_from_library(model_slot, 'InandOutTree')
 
     # There should two surrogates slots
-    time.sleep(1.0)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(3, len(surrogates),
         "There should be three surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))
@@ -419,11 +385,11 @@ def _test_dict_slot(browser):
         eq(False, ("filled" in surrogate.get_attribute('class')), "Surrogate should not be filled")
 
     # Fill the outs.x surrogate slot with FloatKrigingSurrogate
-    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.x')
-    surrogates_slot.fill_from_library('FloatKrigingSurrogate')
+    surrogate_slot = find_slot_figure(workspace_page, 'outs.x', prefix='top.mm.surrogates')
+    workspace_page.fill_slot_from_library(surrogate_slot, 'FloatKrigingSurrogate')
 
     # One should be filled now
-    time.sleep(1.5)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     num_surrogates_filled = 0
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     for surrogate in surrogates:
@@ -432,12 +398,12 @@ def _test_dict_slot(browser):
     eq(1, num_surrogates_filled,
        "Exactly one surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
-    # Fill the outs.y surrogate slot with KrigingSurrogate
-    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.zzz')
-    surrogates_slot.fill_from_library('KrigingSurrogate')
+    # Fill the outs.zzz surrogate slot with KrigingSurrogate
+    surrogate_slot = find_slot_figure(workspace_page, 'zzz', prefix='top.mm.surrogates')
+    workspace_page.fill_slot_from_library(surrogate_slot, 'KrigingSurrogate')
 
     # Two should be filled now
-    time.sleep(1.5)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     num_surrogates_filled = 0
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     for surrogate in surrogates:
@@ -446,13 +412,12 @@ def _test_dict_slot(browser):
     eq(2, num_surrogates_filled,
        "Exactly two surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
-    # Fill the outs.y surrogate slot with KrigingSurrogate
-    surrogates_slot = SlotFigure(workspace_page, 'top.mm.surrogates.outs.y')
-    args = [1, 1]
-    surrogates_slot.fill_from_library('ResponseSurface', args)
+    # Fill the outs.y surrogate slot with ResponseSurface
+    surrogate_slot = find_slot_figure(workspace_page, 'outs.y', prefix='top.mm.surrogates')
+    workspace_page.fill_slot_from_library(surrogate_slot, 'ResponseSurface', [1, 1])
 
     # Three should be filled now
-    time.sleep(1.5)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     num_surrogates_filled = 0
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     for surrogate in surrogates:
@@ -464,7 +429,7 @@ def _test_dict_slot(browser):
     # Check to see that excludes and includes work
     mm_editor.set_input('excludes', '[]')
     # There should two surrogates slots
-    time.sleep(1.0)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(3, len(surrogates),
         "There should be three surrogates in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))
@@ -472,7 +437,7 @@ def _test_dict_slot(browser):
     # set an exclude
     mm_editor.set_input('excludes', '["outs"]')
     # There should not be any surrogates slots
-    time.sleep(1.0)  # give it a bit to update the figure
+    time.sleep(2)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(1, len(surrogates),
         "There should be one surrogate in the surrogates dict but %d surrogate(s) are being displayed" % len(surrogates))

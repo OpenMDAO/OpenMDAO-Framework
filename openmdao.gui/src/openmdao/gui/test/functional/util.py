@@ -576,47 +576,6 @@ def parse_test_args(args=None):
     return options
 
 
-def slot_drop(browser, element, slot, should_drop, message='Slot'):
-    '''Drop an element on a slot'''
-    chain = drag_element_to(browser, element, slot, True)
-    chain.move_by_offset(25, 0).perform()
-    time.sleep(1.0)  # give it a second to update the figure
-    check_highlighting(slot, should_highlight=should_drop, message=message)
-    release(chain)
-
-
-def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
-    '''every successfull drop permanently fills the slot. because of this,
-    we need to make a new metamodel (with empty slots) every successfull drop'''
-
-    if remove_old:
-        # first, close out the dialog box we have open
-        editor.close()
-        # remove the current metamodel
-        metamodel.remove()
-
-    #drop 'metamodel' onto the grid
-    meta_name = put_element_on_grid(workspace_page, "MetaModel")
-    #find it on the page
-    metamodel = workspace_page.get_dataflow_figure(meta_name)
-
-    #open the 'edit' dialog on metamodel
-    editor = metamodel.editor_page(False)
-    editor.move(-250, 0)
-    editor.show_slots()
-
-    #resize_editor(workspace_page, editor)
-
-    #find the slots (this is both the drop target and highlight area)
-    browser = workspace_page.browser
-    slot_id = 'SlotFigure-' + meta_name + '-%s'
-    caseiter = browser.find_element(By.ID, slot_id % 'warm_start_data')
-    caserec  = browser.find_element(By.ID, slot_id % 'recorder')
-    model    = browser.find_element(By.ID, slot_id % 'model')
-
-    return editor, metamodel, caseiter, caserec, model, meta_name
-
-
 def resize_editor(workspace_page, editor):
     '''ensure that the editor is not covering the library
     (or else we cannot drag things from it!)'''
