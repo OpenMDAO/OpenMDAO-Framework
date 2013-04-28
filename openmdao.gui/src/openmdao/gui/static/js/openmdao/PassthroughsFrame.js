@@ -131,7 +131,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                         'path': compName + '.' + varName,
                         'class': alias ? 'jstree-checked' : 'jstree-unchecked'
                     }
-                })
+                });
             });
             makeTree(compName+"-input", div_input, treeData);
         });
@@ -157,7 +157,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                         'path': compName + '.' + varName,
                         'class': alias ? 'jstree-checked' : 'jstree-unchecked'
                     }
-                })
+                });
             });
             makeTree(compName+"-output", div_output, treeData);
         });
@@ -166,7 +166,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
     /** get passthrough data and update the input and output passthrough trees */
     function update() {
         model.getPassthroughs(pathname, updateTrees, function(err) {
-            debug.error('Error getting passthrough data:', err)
+            debug.error('Error getting passthrough data:', err);
         });
     }
 

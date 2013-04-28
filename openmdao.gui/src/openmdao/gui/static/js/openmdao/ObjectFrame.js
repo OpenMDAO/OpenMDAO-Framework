@@ -1,11 +1,9 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectFrame = function(model,pathname,selectTabName) {
-    // TODO: hack alert... mangling pathname
+openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     openmdao.ObjectFrame.prototype.init.call(this,
         'CE-'+pathname.replace(/(\.|\[|\]|')/g,'-'),'Object: '+pathname);
-debug.info('ObjectFrame() pathname:', pathname)
 
     /***********************************************************************
      *  private
@@ -26,10 +24,11 @@ debug.info('ObjectFrame() pathname:', pathname)
             'Dataflow',
             'Workflow',
             'Slots'
-        ],
-        selectTabName = selectTabName || 'Inputs';
+        ];
 
     self.elm.css({'overflow':'hidden'});
+
+    selectTabName = selectTabName || 'Inputs';
 
     /** load the table with the given properties */
     function loadTabs(properties) {
@@ -48,8 +47,9 @@ debug.info('ObjectFrame() pathname:', pathname)
         tabbed_pane.append(tabs);
 
         // sort the properties by the desired tab order
-        var names = [];
-        for (var name in properties) {
+        var name,
+            names = [];
+        for (name in properties) {
             if (properties.hasOwnProperty(name)) {
                 names.push(name);
             }
@@ -58,11 +58,12 @@ debug.info('ObjectFrame() pathname:', pathname)
             tab_a = tabOrder.indexOf(a);
             tab_b = tabOrder.indexOf(b);
             return (tab_a == tab_b) ? 0 : (tab_a > tab_b) ? 1 : -1;
-        })
+        });
 
         for (var i=0; i<names.length; i++) {
-            var name = names[i],
-                val = properties[name];
+            name = names[i];
+
+            var val = properties[name];
 
             if (name === 'type') {
                 if (self.elm.parent().hasClass('ui-dialog')) {
@@ -91,7 +92,7 @@ debug.info('ObjectFrame() pathname:', pathname)
                 }
                 tabcount = tabcount + 1;
             }
-        };
+        }
 
         self.elm.height(400);
         self.elm.width(640);
@@ -238,7 +239,7 @@ debug.info('ObjectFrame() pathname:', pathname)
     };
 
     this.destructor = function() {
-        for (paneName in panes){
+        for (var paneName in panes){
             if((panes[paneName].hasOwnProperty('destructor')) &&
                 (typeof panes[paneName].destructor === 'function')){
                 panes[paneName].destructor();

@@ -1,13 +1,29 @@
+/***********************************************************************
+ * SlotFigure: A graphical representation of a Slot.
+ *
+ * A singleton slot is rendered as a dash-outlined component-like figure.
+ * Dropping an object type on a figure will fill the slot with an object
+ * of that type. A list slot is represented as a comma saparated list of
+ * singleton slot figures in square brackets. Dropping an object type on
+ * a list slot figure will add an object of that type to the list slot.
+ *
+ *  Arguments:
+ *      elm:      the parent element in the DOM for this figure
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the slot
+ *      slot:     the contents of the slot
+ *      inDict:   true if this slot is in a dictionary
+ ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotFigure=function(model,pathname,slot,isdict) {
+openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     var self = this,
-        id = 'SlotFigure-' + pathname.replace(/\./g, '-'),
+        id = 'SlotFigure-' + pathname.replace(/\.|\[|\]|\"|\'/g, '-'),
         slotDiv = '<div class="SlotFigure">',
         slotSVG = '<svg height="60" width="100">'
                 + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
@@ -29,11 +45,13 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
         filledTextCSS = {'fill': 'black'},
         unfilledRectCSS = {'stroke-width': 2, 'stroke-dasharray': 8, 'stroke': 'gray', 'fill': 'none'},
         unfilledTextCSS = {'fill': 'gray'},
-        fig = jQuery(slotDiv),
-        contextMenu;
+        fig = jQuery(slotDiv)
+            .appendTo(elm),
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+            .appendTo(fig);
 
     if (slot.containertype === 'singleton') {
-        if (isdict) {
+        if (inDict) {
             fig.css(dictionaryCSS);
         }
         else {
@@ -51,8 +69,6 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
     fig.attr('id',id);
     fig.attr('title',slot.desc);
 
-    contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(fig);
-
     // create context menu
     contextMenu.append(jQuery('<li>Edit</li>').click(function(e) {
         if (fig.hasClass('filled')) {
@@ -65,13 +81,7 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                 editor = new openmdao.ObjectFrame(model, pathname+'['+ idx+']');
             }
             else {
-                if (isdict) {
-                    var realSlotParent = pathname.slice(0, -slot.name.length - 1);
-                     editor = new openmdao.ObjectFrame(model, realSlotParent + "['" + slot.name + "']");
-                }
-                else {
-                    editor = new openmdao.ObjectFrame(model, pathname);
-                }
+                editor = new openmdao.ObjectFrame(model, pathname);
             }
         }
         else {
@@ -89,9 +99,8 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                 cmd = 'del '+pathname+'['+ idx+']';
             }
             else {
-                if (isdict) {
-                    var realSlotParent = pathname.slice(0, -slot.name.length - 1);
-                    cmd = realSlotParent + "['" + slot.name + "'] = None";
+                if (inDict) {
+                    cmd = pathname + " = None";
                 }
                 else {
                     cmd = openmdao.Util.getPath(pathname)
@@ -104,26 +113,15 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
             openmdao.Util.notify('Slot is already empty!');
         }
     }));
-
-    /** provide access to fig's context menu (for use after fig is in the DOM */
-    fig.getContextMenu = function() {
-        return contextMenu;
-    };
+    ContextMenu.set(contextMenu.attr('id'), fig.attr('id'));
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
         if (fig.hasClass('filled')) {
-            if (isdict) {
-                debug.info('SlotFigure dblclick: dict');
-                var realSlotParent = pathname.slice(0, -slot.name.length - 1);
-                new openmdao.ObjectFrame(model, realSlotParent + "['" + slot.name + "']");
-            }
-            else if (slot.containertype === 'singleton') {
-                debug.info('SlotFigure dblclick: singleton');
+            if (slot.containertype === 'singleton') {
                 new openmdao.ObjectFrame(model, pathname);
             }
             else if (slot.containertype === 'list') {
-                debug.info('SlotFigure dblclick: list');
                 var figOffset = fig.offset();
                     idx = Math.floor((e.pageX - figOffset.left) / 100);
                 new openmdao.ObjectFrame(model, pathname+'['+idx+']');
@@ -185,18 +183,13 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                         else {
                             var slotParent = openmdao.Util.getPath(pathname);
                             if (slot.containertype === 'singleton' && slot.filled !== null) {
-                                if (isdict) {
-                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
-                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
-                                } else {
-                                    cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
-                                }
+                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
                             }
                             else {
-                                if (isdict) {
-                                    var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
-                                    cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
-                                } else {
+                                if (inDict) {
+                                    cmd = pathname + '=' + cmd;
+                                }
+                                else {
                                     cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
                                 }
                             }
@@ -210,20 +203,19 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
                         cmd = pathname+'.append('+cmd+')';
                     }
                     else {
-                        var slotParent = openmdao.Util.getPath(pathname);
+                        var slotParent = openmdao.Util.getPath(pathname),
+                            realSlotParent = inDict ? pathname.slice(0,-slot.name.length - 1 ) : undefined;
                         if (slot.containertype === 'singleton' && slot.filled !== null) {
-                            if (isdict) {
-                                var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
-                                cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                            if (inDict) {
+                                cmd = pathname + '=' + cmd;
                             }
                             else {
                                 cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
                             }
                         }
                         else {
-                            if (isdict) {
-                                var realSlotParent = pathname.slice(0,-slot.name.length - 1 );
-                                cmd = realSlotParent + '["' + slot.name + '"] = ' + cmd;
+                            if (inDict) {
+                                cmd = pathname + '=' + cmd;
                             }
                             else {
                                 cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
@@ -240,23 +232,20 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
      *  protected
      ***********************************************************************/
 
+    /* update the figure to represent the filled state of the slot */
     this.setState = function(value) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
             filled = (slot.containertype === 'singleton' && value !== null) ||
-                     (slot.containertype === 'list' && value.length > 0)
+                     (slot.containertype === 'list' && value.length > 0);
 
         if (filled) {
             fig.addClass('filled');
             if (slot.containertype === 'singleton') {
                 r.css(filledRectCSS);
                 n.css(filledTextCSS);
-
-                v = value.split(".").pop() ;
-
-                //k.css(filledTextCSS).text(value);
-                k.css(filledTextCSS).text(v);
+                k.css(filledTextCSS).text(value.split(".").pop());
                 fig.height(60);
                 fig.width(100);
             }
@@ -312,7 +301,79 @@ openmdao.SlotFigure=function(model,pathname,slot,isdict) {
         }
     };
 
+    /** set the size of the figure to be wide enough to contain it's text */
+    this.resize = function() {
+        var name_text = fig.find('#name')[0],
+            klass_text = fig.find('#klass')[0],
+            name_width = name_text.getBBox().width,
+            klass_width = klass_text.getBBox().width,
+            rect_width = Math.max(name_width, klass_width) || 100,
+            svg = fig.find("svg")[0];
+            rect = fig.find("rect")[0];
+
+        svg.setAttribute("width", rect_width + 40 ) ;
+        rect.setAttribute("width", rect_width + 40 ) ;
+        name_text.setAttribute("x", (rect_width + 40) / 2) ;
+        klass_text.setAttribute("x", (rect_width + 40) / 2) ;
+        fig.width(rect_width + 45);
+    };
+
     // set initial state & return it
     this.setState(slot.filled);
-    return fig;
+    // this.resize();
+};
+
+/***********************************************************************
+ * SlotDictFigure: A graphical representation of a dictionary of slots.
+ *
+ * A dictionary of slots is represented as a comma saparated list of
+ * singleton slot figures in curly brackets.
+ *
+ *  Arguments:
+ *      elm:      the parent element in the DOM for this figure
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the slot
+ *      slot:     the contents of the slot dictionary
+ ***********************************************************************/
+
+openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+    var lcrlySVG = '<svg height="60" width="20">'
+                 + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
+                 + '</svg>',
+        commaSVG = '<svg height="60" width="20">'
+                 + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
+                 + '</svg>',
+        rcrlySVG = '<svg height="60" width="20">'
+                 + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
+                 + '</svg>',
+        dictDiv  = jQuery('<div style="margin:10px; clear:both;">')
+            .appendTo(elm);
+
+    dictDiv.append(lcrlySVG);
+
+    jQuery.each(slot.filled, function(idx, slot_in_dict_info) {
+        var dict_key = slot_in_dict_info["py/tuple"][0],
+            dict_val = slot_in_dict_info["py/tuple"][1];
+        if (dict_val) {
+            dict_val = dict_val["py/object"];
+        }
+        var slot_in_dict = {
+            containertype: "singleton",
+            desc: slot.desc + " for " + dict_key,
+            filled: dict_val,
+            klass: "ISurrogate",
+            name: dict_key
+        };
+
+        openmdao.SlotFigure(dictDiv, model, pathname+'["'+dict_key+'"]', slot_in_dict, true);
+
+        if (idx < slot.filled.length - 1) {
+            dictDiv.append(commaSVG);
+        }
+    });
+
+    dictDiv.append(rcrlySVG);
 };
