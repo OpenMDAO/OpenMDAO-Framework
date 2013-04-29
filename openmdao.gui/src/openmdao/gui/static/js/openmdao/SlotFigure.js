@@ -349,31 +349,33 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
         rcrlySVG = '<svg height="60" width="20">'
                  + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
                  + '</svg>',
-        dictDiv  = jQuery('<div style="margin:10px; clear:both;">')
-            .appendTo(elm);
+        dictDiv  = jQuery('<div style="margin:10px; clear:both;">'),
+        slotCnt  = Object.keys(slot.filled).length;
 
-    dictDiv.append(lcrlySVG);
+    // don't bother if there are no slots in the dict (nothing to see)
+    if (slotCnt > 0) {
+        elm.append(dictDiv);
 
-    jQuery.each(slot.filled, function(idx, slot_in_dict_info) {
-        var dict_key = slot_in_dict_info["py/tuple"][0],
-            dict_val = slot_in_dict_info["py/tuple"][1];
-        if (dict_val) {
-            dict_val = dict_val["py/object"];
-        }
-        var slot_in_dict = {
-            containertype: "singleton",
-            desc: slot.desc + " for " + dict_key,
-            filled: dict_val,
-            klass: "ISurrogate",
-            name: dict_key
-        };
+        dictDiv.append(lcrlySVG);
 
-        openmdao.SlotFigure(dictDiv, model, pathname+'["'+dict_key+'"]', slot_in_dict, true);
+        jQuery.each(slot.filled, function(key, val) {
+            var slot_info = {
+                containertype: "singleton",
+                desc: slot.desc + ": " + key,
+                filled: val,
+                klass: val ? val: slot.klass,
+                name: key
+            };
 
-        if (idx < slot.filled.length - 1) {
-            dictDiv.append(commaSVG);
-        }
-    });
+            openmdao.SlotFigure(dictDiv, model, pathname+'["'+key+'"]', slot_info, true);
 
-    dictDiv.append(rcrlySVG);
+            if (slotCnt > 1) {
+                dictDiv.append(commaSVG);
+            }
+            slotCnt = slotCnt - 1;
+        });
+
+        dictDiv.append(rcrlySVG);
+    }
+
 };

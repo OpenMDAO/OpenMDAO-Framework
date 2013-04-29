@@ -46,9 +46,7 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
 
         jQuery.each(json, function(idx, slot) {
             if (slot.containertype === 'dict') {
-                if (slot.filled.length > 0) {
-                    openmdao.SlotDictFigure(slotsDiv, model, pathname+'.'+slot.name, slot);
-                }
+                openmdao.SlotDictFigure(slotsDiv, model, pathname+'.'+slot.name, slot);
             }
             else {
                 openmdao.SlotFigure(slotsDiv, model, pathname+'.'+slot.name, slot);

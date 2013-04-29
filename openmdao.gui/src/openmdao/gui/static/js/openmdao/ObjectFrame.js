@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     openmdao.ObjectFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/(\.|\[|\]|')/g,'-'),'Object: '+pathname);
+        'CE-'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-'),'Object: '+pathname);
 
     /***********************************************************************
      *  private
