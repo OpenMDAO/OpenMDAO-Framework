@@ -189,7 +189,7 @@ def _test_connections(browser):
     workspace_page.add_file(filename)
 
     # Replace 'top' with VehicleSim.
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     asm_name = 'sim'
@@ -484,9 +484,6 @@ def _test_replace(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
 
-    browser.set_window_position(0, 0)
-    browser.set_window_size(1280, 1024)
-
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
@@ -766,8 +763,7 @@ def _test_io_filter_with_vartree(browser):
     inputs = editor.get_inputs()
     #editor.move(-100, 0)
 
-    #filter when tree is expanded
-    #filter on name="b"
+    #filter when tree is expanded, filter on name="b"
     editor.filter_inputs("b")
     expected = [
         [u'', u' cont_in', u'', u'', u''],
@@ -780,8 +776,7 @@ def _test_io_filter_with_vartree(browser):
     eq(expected, editor.get_inputs().value)
     time.sleep(3)
 
-    #filter when tree is collapse
-    #filter on units="ft"
+    #filter when tree is collapsed, filter on units="ft"
     editor.filter_inputs("ft")
     expected = [
         [u'', u' cont_in', u'', u'', u''],
@@ -793,8 +788,7 @@ def _test_io_filter_with_vartree(browser):
 
     editor.show_outputs()
 
-    #filter when tree is expanded
-    #filter on name="b"
+    #filter when tree is expanded, filter on name="b"
     editor.filter_outputs("b")
     expected = [
         [u'', u' cont_out', u'', u'', u''],
@@ -808,8 +802,7 @@ def _test_io_filter_with_vartree(browser):
     eq(expected, editor.get_outputs().value)
     time.sleep(3)
 
-    #filter when tree is collapse
-    #filter on units="ft"
+    #filter when tree is collapsed, filter on units="ft"
     editor.filter_outputs("ft")
     expected = [
         [u'', u' cont_out', u'', u'', u''],
@@ -831,7 +824,7 @@ def _test_column_sorting(browser):
         names = None
         variables = None
 
-        if(grid=="inputs"):
+        if (grid == "inputs"):
             editor.show_inputs()
             editor.sort_inputs_column("Name", sort_order)
             variables = editor.get_inputs()
@@ -840,8 +833,7 @@ def _test_column_sorting(browser):
             editor.show_outputs()
             editor.sort_outputs_column("Name", sort_order)
             variables = editor.get_outputs()
-            
-        
+
         names = [variable.name.value for variable in variables]
 
         for index, name in enumerate(names):
@@ -849,32 +841,33 @@ def _test_column_sorting(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130,90))
+    driver = workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130, 90))
     editor = driver.editor_page(version=Version.NEW)
 
-    test_sorting( \
+    test_sorting(
         ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
         "inputs",
         SortOrder.ASCENDING
-        )
+    )
 
-    test_sorting( \
+    test_sorting(
         ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
         "inputs",
         SortOrder.DESCENDING
-        )
+    )
 
-    test_sorting( \
+    test_sorting(
         ["error_code", "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
-        )
+    )
 
-    test_sorting( \
+    test_sorting(
         ["itername", "exec_count", "derivative_exec_count", "error_code"],
         "outputs",
         SortOrder.DESCENDING
-        )
+    )
 
     editor.close()
 
@@ -894,46 +887,47 @@ def _test_column_sorting(browser):
     editor.get_input(" cont_in").name.click()
     editor.get_input(" vt2").name.click()
     editor.get_input(" vt3").name.click()
-    
+
     editor.get_output(" cont_out").name.click()
     editor.get_output(" vt2").name.click()
     editor.get_output(" vt3").name.click()
 
     #Testing sort for inputs
-    
-    test_sorting( \
-        [" cont_in", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "directory", "force_execute"],
+
+    test_sorting(
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "directory", "force_execute"],
         "inputs",
         SortOrder.ASCENDING
-        )
+    )
 
-    test_sorting( \
+    test_sorting(
         ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
-        )
+    )
 
     #Testing sort for outputs
 
-    test_sorting( \
-        [" cont_out", "v1", "v2"," vt2", " vt3", "a", "b" ,"x", "y", "derivative_exec_count", "exec_count", "itername"],
+    test_sorting(
+        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
-        )
+    )
 
-    test_sorting( \
+    test_sorting(
         ["itername", "exec_count", "derivative_exec_count", " cont_out", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "outputs",
         SortOrder.DESCENDING
-        )
+    )
 
     editor.close()
     closeout(project_dict, workspace_page)
 
+
 def _test_taborder(browser):
     # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top') 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
     # Replace driver with an SLSQPdriver.
     workspace_page.replace('driver',
@@ -950,15 +944,17 @@ def _test_taborder(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 def _test_column_picking(browser):
     project_dict, workspace_page = startup(browser)
-    
+
     #Test that changes did not affect other component editors.
 
     #During interactive testing, and on occassion, selenium decides that it likes
     #to miss the drop, and drops the item on the dataflow grid, rather than in top.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    driver = workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
     editor = driver.editor_page()
 
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
@@ -976,11 +972,11 @@ def _test_column_picking(browser):
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page()
 
-    #Testing for Inputs tab 
+    #Testing for Inputs tab
 
     #Test that the default columns are loaded first
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
-    
+
     editor.show_inputs()
     input_column_names = [header.value for header in editor.inputs.headers]
 
@@ -999,7 +995,7 @@ def _test_column_picking(browser):
     input_column_names = [header.value for header in editor.inputs.headers]
 
     eq(input_column_names, expected_column_names)
-    
+
     #Test that the name and description columns are removed
     editor.toggle_column_visibility("Name")
     editor.toggle_column_visibility("Description")
@@ -1008,11 +1004,11 @@ def _test_column_picking(browser):
     del expected_column_names[-1]
 
     input_column_names = [header.value for header in editor.inputs.headers]
-    
+
     eq(input_column_names, expected_column_names)
 
     #Testing for Outputs tab
-    
+
     #Test that the default columns are loaded first.
     editor.show_outputs()
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
@@ -1020,10 +1016,9 @@ def _test_column_picking(browser):
     output_column_names = [header.value for header in editor.outputs.headers]
     eq(output_column_names, expected_column_names)
 
-
     #Test that the units and name columns are removed
     #column_picker = editor.outputs.headers[0].get_column_picker()
-    
+
     editor.toggle_column_visibility("Units")
     editor.toggle_column_visibility("Name")
 
