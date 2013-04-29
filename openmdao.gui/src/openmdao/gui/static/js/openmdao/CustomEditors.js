@@ -339,7 +339,6 @@
         for (var i=0; i<dim.length; i++) {
             dim[i] = parseFloat(dim[i]);
         }
-        console.log(dim)
         
         // Button to extend array        
         var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
