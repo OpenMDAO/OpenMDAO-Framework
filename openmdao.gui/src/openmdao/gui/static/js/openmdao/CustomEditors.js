@@ -15,7 +15,6 @@
         var loaded = false;
         var val_types = args.item.value_type;
         var key_types = args.item.key_type;
-        console.log(args.item);
         var $add_button = $("<button>+</button>").button();
         var var_name = args.item['name'];
         if (typeof args.item.value == "string") {
@@ -26,6 +25,7 @@
         var $container = $("<div id = '"+var_name+"-editor'/>");
         var $editor_dialog = $("<div id = '"+var_name+"-dialog'/>").dialog({
             width: "auto",
+            modal: "true",
             title: "Editing dictionary: '"+var_name+"'",
                 buttons: [{ 
                     text:"Submit changes",
@@ -143,7 +143,6 @@
         };
     
         this.applyValue = function(item,state) {
-            console.log(state);
             item[args.column.field] = state;
         };
 
@@ -300,8 +299,10 @@
         var var_editor = this;
         var input = [];	    
         var $container = $("<div />");
-        var $editor_dialog = $("<div id = 'array-editor-dialog-"+var_name+"'/>").dialog({
+        var win = "<div id = 'array-editor-dialog-"+var_name+"'/>";
+        var $editor_dialog = $(win).dialog({
             width: "auto",
+            modal: "true",
             title: "Editing array: '"+var_name+"'",
             buttons: [{
                 text:"Submit changes",
@@ -309,16 +310,18 @@
                 click: function() {
                     grid.getEditorLock().commitCurrentEdit();
                     $( this ).dialog( "close" );
-                }},{
-                    text:"Cancel",
-                    id: "array-edit-"+var_name+"-cancel",
-                    click: function() {
-                        grid.getEditorLock().cancelCurrentEdit();
-                        $( this ).dialog( "close" );
-                    }
+                    win.remove();
+            }},{
+                text:"Cancel",
+                id: "array-edit-"+var_name+"-cancel",
+                click: function() {
+                    grid.getEditorLock().cancelCurrentEdit();
+                    $( this ).dialog( "close" );
+                    win.remove();
                 }
-            ]
+            }]
         });
+        
         $editor_dialog.live('keyup', function(e){
             if (e.keyCode == 13) {
                 $(':button:contains("Submit changes")').click();
@@ -355,14 +358,17 @@
         this.init = function() {
             parsed = this.splitData(args.item['value']);
             length = parsed.length;
-    
             dim = [this.getDim(args.item['value'])];
             dim.push(length / dim[0]);
         
             default_length = length;
             for (var i = 0; i< length; i++) {
                 input.push($("<INPUT type=text class='editor-text' size = 6/>").appendTo($container));
-                if (i > 0 && dim[0] > 1 && (i+1)%dim[1] == 0) { $('<br>').appendTo($container);}
+                
+                // New row gets a new line.
+                if (dim[0] > 1 && (i+1)%dim[1] == 0) { 
+                    $('<br>').appendTo($container);
+                }
             }
 
             if (dim[0] == 1) {
@@ -375,7 +381,6 @@
             // This counts the number of dimensions of our submatrix by counting 
             // the depth of brackets.
             step1 = input_data.split("[").length;
-            console.log(step1);
             if (step1 > 2) {return step1 - 2;}
             else {return 1;}
         }
@@ -422,9 +427,11 @@
 
         this.serializeValue = function() {
             state = [];
+            
             for (var i = 0; i< length; i++) {
                 state.push(input[i].val());
             }
+            
             state[0] = "["+state[0];
             state[length-1] = state[length-1] + "]";
 
@@ -433,7 +440,7 @@
                 row = [];
                 for (var i = 0; i < state.length; i++) {
                     row.push(state[i]);
-                    if (i > 0 && (i+1)%dim[1] == 0) { 
+                    if ((i+1)%dim[1] == 0) { 
                         row[0] = "["+row[0];
                         row[row.length-1] = row[row.length-1] + "]";
                         row = row.join(", ");

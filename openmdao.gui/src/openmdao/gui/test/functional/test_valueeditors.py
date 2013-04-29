@@ -62,8 +62,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[6].cells[1].click()
-    inputs[6][1] = "abcd"
+    inputs.rows[7].cells[1].click()
+    inputs[7][1] = "abcd"
     time.sleep(1)
 
     #enum editor - set to 3
@@ -81,7 +81,7 @@ def _test_value_editors(browser):
 
     #bool editor - set to true
     inputs = props.inputs
-    inputs.rows[7].cells[1].click()
+    inputs.rows[8].cells[1].click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
@@ -110,24 +110,47 @@ def _test_value_editors(browser):
     submit_path = '//*[@id="array-edit-Y-submit"]'
     browser.find_element_by_xpath(submit_path).click()
 
+    # array 2d editor - special case for a bug - set to [[5],[7]]
+    inputs = props.inputs
+    inputs.rows[5].cells[1].click()
+    cell_path = '//*[@id="array-editor-dialog-Y2"]/div/input[2]'
+    cell_input = browser.find_element_by_xpath(cell_path)
+    cell_input.clear()
+    cell_input.send_keys(str(7))
+    submit_path = '//*[@id="array-edit-Y2-submit"]'
+    browser.find_element_by_xpath(submit_path).click()
+
     #list editor - set to [1, 2, 3, 4, 5]
     inputs = props.inputs
-    eq(inputs[5][1].startswith("["), True)
-    eq(inputs[5][1].endswith("]"), True)
-    values = [int(value.strip()) for value in inputs[5][1].strip("[]").split(",")]
+    eq(inputs[6][1].startswith("["), True)
+    eq(inputs[6][1].endswith("]"), True)
+    values = [int(value.strip()) for value in inputs[6][1].strip("[]").split(",")]
     eq(len(values), 4)
     eq(values, [1, 2, 3, 4])
 
     values.append(5)
     values = str([value for value in values])
-    inputs[5][1]=values
+    inputs[6][1] = values
 
     props.close()
 
     #check that all values were set correctly by the editors
-    commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute",
-                "top.p1.e", "top.p1.x", "top.p1.X", "top.p1.directory", "top.p1.Z"]
-    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd", "[1, 2, 3, 4, 5]"]
+    commands = ["top.p1.d['pi']", 
+                "top.p1.d['phi']", 
+                "top.p1.force_execute",
+                "top.p1.e", 
+                "top.p1.x", 
+                "top.p1.X", 
+                "top.p1.directory", 
+                "top.p1.Z"]
+    values = ["3.0", 
+              "1.61", 
+              "True", 
+              "3", 
+              "2.71", 
+              "[ 0.  1.  2.  3.  4.]", 
+              "abcd", 
+              "[1, 2, 3, 4, 5]"]
 
     for cmd_str, check_val in zip(commands, values):
         workspace_page.do_command(cmd_str)
@@ -139,6 +162,12 @@ def _test_value_editors(browser):
     output = workspace_page.history.split("\n")
     eq(output[-2], "[[ 1  4]")
     eq(output[-1], " [ 9 16]]")
+
+    #separate check for 2d arrays
+    workspace_page.do_command("top.p1.Y2")
+    output = workspace_page.history.split("\n")
+    eq(output[-2], "[[5]")
+    eq(output[-1], " [7]]")
 
     # Clean up.
     closeout(project_dict, workspace_page)
