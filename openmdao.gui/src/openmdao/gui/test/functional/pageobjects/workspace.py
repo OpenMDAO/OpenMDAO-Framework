@@ -595,7 +595,8 @@ class WorkspacePage(BasePageObject):
                 chain.move_to_element(button)
                 chain.click_and_hold(button)
                 chain.move_to_element(slot.root)
-                chain.move_by_offset(20, 20)
+                offset = int(slot.root.value_of_css_property('width')[:-2]) / 2
+                chain.move_by_offset(offset, 1)
                 chain.release(None)
                 chain.perform()
             except StaleElementReferenceException:
