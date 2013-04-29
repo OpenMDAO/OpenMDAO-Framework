@@ -446,7 +446,7 @@
             // Turns the values in the boxes into a valid python array.
             
             if (input.length == 0) {
-                return;
+                return '[]';
             }                
             
             state = [];
