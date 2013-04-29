@@ -2,7 +2,6 @@
 Multiprocessing support utilities.
 """
 
-import atexit
 import ConfigParser
 import cPickle
 import errno
@@ -134,7 +133,7 @@ def setup_tunnel(address, port, user=None, identity=None):
     `cleanup-info` contains a cleanup function and its arguments.
     """
     args = ['-T', '-L', '%d:localhost:%d' % (port, port)]
-    connected = False
+    cleanup_info = None
     try:
         cleanup_info = _start_tunnel(address, port, args, user, identity,
                                      'ftunnel')
@@ -162,6 +161,8 @@ def setup_tunnel(address, port, user=None, identity=None):
                            % (address, port))
     except Exception:
         logging.error("Can't setup tunnel to %s:%s", address, port)
+        if cleanup_info is not None:
+            cleanup_info[0](*cleanup_info[1:])
         raise
 
 def setup_reverse_tunnel(remote_address, local_address, port, user=None,

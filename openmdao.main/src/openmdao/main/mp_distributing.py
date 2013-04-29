@@ -342,8 +342,7 @@ class Host(object):  #pragma no cover
     def __init__(self, hostname, python=None, tunnel_incoming=False,
                  tunnel_outgoing=False, identity_filename=None):
         if '@' not in hostname:
-            user = getpass.getuser()
-            self.hostname = '%s@%s' % (user, hostname)
+            self.hostname = '%s@%s' % (getpass.getuser(), hostname)
         else:
             self.hostname = hostname
         self.python = python or 'python'
@@ -355,6 +354,13 @@ class Host(object):  #pragma no cover
         self.state = 'init'
         self.proc = None
         self.tempdir = None
+
+    def _ssh_cmd(self):
+        """ Return leading part of ssh command as a list. """
+        cmd = copy.copy(_SSH)
+        if self.identity_filename:
+            cmd.extend(['-i', self.identity_filename])
+        return cmd
 
     def register(self, cls):
         """
@@ -407,9 +413,7 @@ class Host(object):  #pragma no cover
                                      identity=self.identity_filename)
             atexit.register(*cleanup)
 
-        cmd = copy.copy(_SSH)
-        if self.identity_filename:
-            cmd.extend(['-i', self.identity_filename])
+        cmd = self._ssh_cmd()
         cmd.extend([self.hostname, self.python, '-c',
                    '"import sys;'
                    ' sys.path.append(\'.\');'
@@ -460,9 +464,7 @@ class Host(object):  #pragma no cover
 
     def _check_ssh(self):
         """ Check basic communication with `hostname`. """
-        cmd = copy.copy(_SSH)
-        if self.identity_filename:
-            cmd.extend(['-i', self.identity_filename])
+        cmd = self._ssh_cmd()
         cmd.extend([self.hostname, 'date'])
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
@@ -502,9 +504,7 @@ class Host(object):  #pragma no cover
 
     def _copy_to_remote(self, files):
         """ Copy files to remote directory, returning directory path. """
-        cmd = copy.copy(_SSH)
-        if self.identity_filename:
-            cmd.extend(['-i', self.identity_filename])
+        cmd = self._ssh_cmd()
         cmd.extend([self.hostname, self.python,
                     '-c', _UNZIP_CODE.replace('\n', ';')])
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,

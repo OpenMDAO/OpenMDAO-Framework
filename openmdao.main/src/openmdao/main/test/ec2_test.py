@@ -115,10 +115,9 @@ def main():
     # Configure DOE.
     top.driver.sequential = False   # Run concurrently across cluster.
     top.driver.reload_model = False
-
     # Force use of only cluster hosts by adding this requirement.
     top.driver.extra_resources = dict(allocator=cluster_name)
-#FIXME: this shouldn't be necessary.
+    # This is necessary more often than it should be.
     top.driver.ignore_egg_requirements = True
 
     # Perform the optimization.
