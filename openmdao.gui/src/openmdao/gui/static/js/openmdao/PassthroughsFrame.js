@@ -78,7 +78,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
         }
     };
 
-    /** create jstree on the target element with the given json data*/
+    /** create jstree on the target element with the given json data */
     function makeTree(name, target, jsonData) {
         var tree_div = jQuery('<div>')
             .appendTo(target);
@@ -131,7 +131,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                         'path': compName + '.' + varName,
                         'class': alias ? 'jstree-checked' : 'jstree-unchecked'
                     }
-                })
+                });
             });
             makeTree(compName+"-input", div_input, treeData);
         });
@@ -157,7 +157,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                         'path': compName + '.' + varName,
                         'class': alias ? 'jstree-checked' : 'jstree-unchecked'
                     }
-                })
+                });
             });
             makeTree(compName+"-output", div_output, treeData);
         });
@@ -166,7 +166,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
     /** get passthrough data and update the input and output passthrough trees */
     function update() {
         model.getPassthroughs(pathname, updateTrees, function(err) {
-            debug.error('Error getting passthrough data:', err)
+            debug.error('Error getting passthrough data:', err);
         });
     }
 
@@ -174,6 +174,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
      *  protected
      ***********************************************************************/
 
+    // cancel subscriptions before you die
     this.destructor = function() {
         if (pathname && pathname.length>0) {
             model.removeListener(pathname, update);

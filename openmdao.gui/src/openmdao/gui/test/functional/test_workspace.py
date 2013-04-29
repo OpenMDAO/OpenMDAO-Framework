@@ -21,7 +21,7 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, put_element_on_grid
 
 from pageobjects.basepageobject import TMO
-from pageobjects.slot import SlotFigure
+from pageobjects.slot import find_slot_figure
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.workspace import WorkspacePage
 
@@ -743,12 +743,13 @@ def _test_remove(browser):
     project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
-    # Lots of futzing here to handle short screens (EC2 Windows).
     top = workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    #workspace_page.select_object('top')
-    #workspace_page.show_dataflow('top')
-    #workspace_page.hide_left()
-    #top = workspace_page.get_dataflow_figure('top', '')
+    workspace_page.select_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
+
+    # open various views on the top assembly
+    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
     editor.move(100, 200)
     connections = top.connections_page()
@@ -761,6 +762,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    # make sure all the views on the top assembly go away
     time.sleep(1)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
@@ -788,6 +790,7 @@ def _test_noslots(browser):
     eq(editor('outputs_tab').is_present, True)
 
     # Clean up.
+    editor.close()
     closeout(project_dict, workspace_page)
 
 
@@ -922,7 +925,8 @@ def _test_arguments(browser):
     # Check that objects requiring constructor arguments are handled.
     project_dict, workspace_page = startup(browser)
 
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
@@ -932,20 +936,21 @@ def _test_arguments(browser):
     mm_editor.move(-200, 0)
 
     # Plug ListCaseIterator into warm_start_data.
-    slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
+    slot = find_slot_figure(workspace_page, 'warm_start_data', prefix='top.mm')
     args = ['[]']
-    slot.fill_from_library('ListCaseIterator', args)
+    workspace_page.fill_slot_from_library(slot, 'ListCaseIterator', args)
 
     # Plug ListCaseRecorder into recorder.
-    slot = SlotFigure(workspace_page, 'top.mm.recorder')
-    slot.fill_from_library('ListCaseRecorder')
+    slot = find_slot_figure(workspace_page, 'recorder', prefix='top.mm')
+    workspace_page.fill_slot_from_library(slot, 'ListCaseRecorder')
 
     # Plug ExecComp into model.
-    slot = SlotFigure(workspace_page, 'top.mm.model')
+    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
     args = ["('z = x * y',)"]
-    slot.fill_from_library('ExecComp', args)
+    workspace_page.fill_slot_from_library(slot, 'ExecComp', args)
 
     # Check that inputs were created from expression.
+    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
     exe_editor = slot.editor_page()
     exe_editor.move(-100, 0)
     inputs = exe_editor.get_inputs()
