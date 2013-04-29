@@ -20,7 +20,7 @@ Name                  Output Type
 ``ListCaseRecorder``  Python List
 ==================== ====================================================================
 
-The recorders are interchangeable, so you can use any of them in a slot that can accept them. All
+The recorders are interchangeable, so you can use any of them in a :term:`slot` that can accept them. All
 drivers contain a slot that can accept a list of case recorders. Why a list? It's so you can have the same
 case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
 output data to the screen and use the DBCaseRecorder to save the same data to a database. 

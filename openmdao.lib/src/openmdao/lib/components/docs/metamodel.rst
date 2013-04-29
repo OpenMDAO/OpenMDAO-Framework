@@ -6,7 +6,7 @@
 ~~~~~~~~~~~
 
 MetaModel is a class which supports generalized meta modeling 
-(a.k.a. surrogate modeling) capabilities. It has a slot called 
+(a.k.a. surrogate modeling) capabilities. It has a :term:`slot` called 
 `model` for the component that is being approximated. As soon as a component is put in the
 slot, MetaModel will automatically mirror the inputs and outputs of that 
 component. In other words, MetaModel will have the same inputs and 
