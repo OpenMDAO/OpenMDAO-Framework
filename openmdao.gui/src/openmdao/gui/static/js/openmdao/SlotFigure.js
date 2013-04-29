@@ -30,14 +30,14 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
                 + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
                 + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
                 + '</svg>',
-        lbrkSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="45" font-size="60" style="fill:gray">[</text>'
+        lbrkSVG = '<svg height="60" width="25">'
+                + '    <text x="0" y="48" font-size="60" style="fill:gray">[</text>'
                 + '</svg>',
         commSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
+                + '    <text x="0" y="48" font-size="60" style="fill:gray">,</text>'
                 + '</svg>',
-        rbrkSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="45" font-size="60" style="fill:gray">]</text>'
+        rbrkSVG = '<svg height="60" width="25">'
+                + '    <text x="0" y="48" font-size="60" style="fill:gray">]</text>'
                 + '</svg>',
         singletonCSS = {'margin': '10px', 'clear': 'both'},
         dictionaryCSS = {'margin': '10px', 'display': 'inline-block'},
@@ -61,7 +61,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
     }
     else if (slot.containertype === 'list') {
         fig.css(singletonCSS);
-        fig.append(lbrkSVG).append(slotSVG).append(commSVG).append(rbrkSVG);
+        fig.append(lbrkSVG).append(slotSVG).append(rbrkSVG);
     }
 
     // set name, id, and title
@@ -264,7 +264,6 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
                 }
 
                 fig.append(slotSVG);  // add empty spot for adding to list
-                fig.append(commSVG);
                 fig.append(rbrkSVG);
 
                 // set all to filled
@@ -278,7 +277,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
                 k.filter(':last').css(unfilledTextCSS).text(slot.klass);
 
                 fig.height(60);
-                fig.width(120*(value.length+1)+40);
+                fig.width(120*(value.length+1)+50);
             }
             else {
                 debug.warn('SlotFigure - Unrecognized slot type:',slot.containertype);
@@ -291,7 +290,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
             if (slot.containertype === 'list') {
                 k.css(unfilledTextCSS).text(slot.klass);
                 fig.height(60);
-                fig.width(160);
+                fig.width(170);
             }
             else {
                 k.css(unfilledTextCSS).text(slot.klass);
@@ -340,21 +339,26 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-    var lcrlySVG = '<svg height="60" width="20">'
-                 + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
+    var lcrlySVG = '<svg height="60" width="30">'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">{</text>'
                  + '</svg>',
         commaSVG = '<svg height="60" width="20">'
-                 + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">,</text>'
                  + '</svg>',
-        rcrlySVG = '<svg height="60" width="20">'
-                 + '    <text x="0" y="45" font-size="60" style="fill:gray">}</text>'
+        rcrlySVG = '<svg height="60" width="30">'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">}</text>'
                  + '</svg>',
-        dictDiv  = jQuery('<div style="margin:10px; clear:both;">'),
+        contDiv  = jQuery('<div style="width:100%;margin:10px;">')
+        nameDiv  = jQuery('<div style="color:gray;margin:0px">'
+                 + openmdao.Util.getName(pathname)+':</div>')
+        dictDiv  = jQuery('<div style="margin:0px; clear:both;">'),
         slotCnt  = Object.keys(slot.filled).length;
 
     // don't bother if there are no slots in the dict (nothing to see)
     if (slotCnt > 0) {
-        elm.append(dictDiv);
+        elm.append(contDiv);
+        contDiv.append(nameDiv);
+        contDiv.append(dictDiv);
 
         dictDiv.append(lcrlySVG);
 
@@ -363,7 +367,7 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
                 containertype: "singleton",
                 desc: slot.desc + ": " + key,
                 filled: val,
-                klass: val ? val: slot.klass,
+                klass: val ? val : slot.klass,
                 name: key
             };
 

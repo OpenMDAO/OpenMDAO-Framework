@@ -95,7 +95,7 @@ def find_slot_figure(page, name, prefix=None, retries=5):
                 if texts[0].text != '[':
                     slot_name = texts[0].text
                 else:
-                    slot_name = texts[-4].text  # name, type, comma, rbracket
+                    slot_name = texts[-3].text  # last 3 are: name, type, rbracket
             except StaleElementReferenceException:
                 logging.warning('get_workflow_figure:'
                                 ' StaleElementReferenceException')
