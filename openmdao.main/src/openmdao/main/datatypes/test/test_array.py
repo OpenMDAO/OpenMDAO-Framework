@@ -151,6 +151,57 @@ class ArrayTestCase(unittest.TestCase):
                           ('foo[2][0]',5),
                           ('foo[2][1]',6),])
         
+    def test_attributes(self):
+        
+        self.hobj.arr1 = [1.0, 2.0, 3.0]
+        self.hobj.arr2 = [[1.,2.],[3.,4.]]
+        self.hobj.arr3 = [1.1]
+        
+        attrs = self.hobj.get_attributes(io_only=False)
+        input_attrs = attrs['Inputs']
+            
+        self.assertEqual(len(input_attrs), 4)
+        self.assertTrue({'name': 'arr1',
+                         'id': 'arr1',
+                         'dim': '3',
+                         'comparison_mode': 1,
+                         'value': '[1., 2., 3.]',
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'units': 'ft',
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)
+        self.assertTrue({'name': 'arr3',
+                         'id': 'arr3',
+                         'dim': '1',
+                         'comparison_mode': 1,
+                         'value': '[1.1]',
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'units': 'kg',
+                         'array': True,
+                         'type': 'ndarray',
+                         'desc': 'stuff',
+                         'indent': 0} in input_attrs)
+        
+        output_attrs = attrs['Outputs']
+        
+        self.assertTrue({'name': 'arr2',
+                         'id': 'arr2',
+                         'dim': '2, 2',
+                         'comparison_mode': 1,
+                         'value': '[[1., 2.], [3., 4.]]',
+                         'implicit': '',
+                         'connected': '',
+                         'valid': False,
+                         'units': 'inch',
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in output_attrs)
+        
 if __name__ == "__main__":
     unittest.main()
 
