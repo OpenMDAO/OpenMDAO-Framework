@@ -1,10 +1,12 @@
 import Queue
 import threading
 import time
+import logging
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import WebDriverException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -105,19 +107,24 @@ class NotifierPage(object):
     """
 
     @staticmethod
-    def wait(parent, timeout=TMO, base_id=None):
+    def wait(parent, timeout=TMO, base_id=None, retries=5):
         """ Wait for notification. Returns notification message. """
-        time.sleep(0.5)  # Pacing.
-        base_id = base_id or 'notify'
-        msg_id = base_id + '-msg'
-        ok_id  = base_id + '-ok'
-        msg = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, msg_id))
-        ok = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, ok_id))
-        message = msg.text
-        ok.click()
-        return message
+        for retry in range(retries):
+            time.sleep(0.5)  # Pacing.
+            base_id = base_id or 'notify'
+            msg_id = base_id + '-msg'
+            ok_id  = base_id + '-ok'
+            try:
+                msg = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, msg_id))
+                ok = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, ok_id))
+                message = msg.text
+                ok.click()
+                return message
+            except WebDriverException as err:
+                logging.warning('NotifierPage:' + str(err))
+        raise err
 
 
 class SafeBase(object):

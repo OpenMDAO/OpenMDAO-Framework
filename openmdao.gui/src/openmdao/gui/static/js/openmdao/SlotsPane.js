@@ -66,9 +66,18 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
         drop: function(ev,ui) {
             var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             if (top_div) {
-                var drop_function = top_div.droppable('option', 'actualDropHandler');
-                drop_function(ev,ui);
+                // getting some intermittent errors here.. catch and log a warning
+                try {
+                    var drop_function = top_div.droppable('option', 'actualDropHandler');
+                    drop_function(ev,ui);
+                }
+                catch (err) {
+                    debug.warn('Unexpected error in openmdao.SlotsPane.droppable',
+                               'top_div:', top_div, 'drop_function:', drop_function);
+                }
             }
+        },
+        actualDropHandler: function(ev,ui) {
         }
     });
 

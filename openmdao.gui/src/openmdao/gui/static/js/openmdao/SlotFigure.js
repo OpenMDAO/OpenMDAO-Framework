@@ -70,7 +70,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
     fig.attr('title',slot.desc);
 
     // create context menu
-    contextMenu.append(jQuery('<li>Edit</li>').click(function(e) {
+    contextMenu.append(jQuery('<li title="Edit object">Edit</li>').click(function(e) {
         if (fig.hasClass('filled')) {
             var figOffset,
                 idx,
@@ -88,7 +88,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
             openmdao.Util.notify('Slot is empty!');
         }
     }));
-    contextMenu.append(jQuery('<li>Remove</li>').click(function(e) {
+    contextMenu.append(jQuery('<li title="Remove object from slot">Remove</li>').click(function(e) {
         if (fig.hasClass('filled')) {
             var figOffset,
                 idx,
@@ -318,7 +318,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
         fig.width(rect_width + 45);
     };
 
-    // set initial state & return it
+    // set initial state & resize it
     this.setState(slot.filled);
     // this.resize();
 };

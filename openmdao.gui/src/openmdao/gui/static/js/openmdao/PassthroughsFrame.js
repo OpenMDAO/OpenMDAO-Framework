@@ -78,7 +78,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
         }
     };
 
-    /** create jstree on the target element with the given json data*/
+    /** create jstree on the target element with the given json data */
     function makeTree(name, target, jsonData) {
         var tree_div = jQuery('<div>')
             .appendTo(target);
@@ -174,6 +174,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
      *  protected
      ***********************************************************************/
 
+    // cancel subscriptions before you die
     this.destructor = function() {
         if (pathname && pathname.length>0) {
             model.removeListener(pathname, update);

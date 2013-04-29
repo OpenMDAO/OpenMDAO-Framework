@@ -667,7 +667,8 @@ class Component(Container):
         except KeyError:
             pass
 
-        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+        if trait and trait.iotype == 'in' and trait.trait_type \
+           and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
 
     @rbac(('owner', 'user'))
