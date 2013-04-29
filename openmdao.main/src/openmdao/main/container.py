@@ -7,6 +7,7 @@ import copy
 import pprint
 import socket
 import sys
+import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -54,7 +55,7 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 _copydict = {
     'deep': copy.deepcopy,
     'shallow': copy.copy
-    }
+}
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -998,13 +999,14 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            # TODO: fix this...
             if '[' in path:
                 path, idx = path.replace(']', '').split('[')
-                if path and idx.isdigit():
-                    obj = getattr(self, path, Missing)[int(idx)]
-                else:
-                    return self._get_failed(path, index)
+                if path:
+                    if idx.isdigit():
+                        obj = getattr(self, path, Missing)[int(idx)]
+                    else:
+                        key = re.sub('\'|"', '', str(idx))  # strip any quotes
+                        obj = getattr(self, path, Missing)[key]
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:

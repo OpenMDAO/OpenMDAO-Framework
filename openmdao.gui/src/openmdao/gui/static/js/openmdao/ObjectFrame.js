@@ -1,12 +1,9 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectFrame = function(model,pathname,tabName) {
-    // TODO: hack alert... mangling pathname
+openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     openmdao.ObjectFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/(\.|\[|\])/g,'-'),'Object: '+pathname);
-
-    this.initiallySelected = tabName || 'Inputs';
+        'CE-'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-'),'Object: '+pathname);
 
     /***********************************************************************
      *  private
@@ -15,7 +12,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     // initialize private variables
     var self = this,
         panes = {},
-        tab_order = [
+        tabOrder = [
             'Inputs',
             'Outputs',
             'Parameters',
@@ -30,6 +27,8 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
         ];
 
     self.elm.css({'overflow':'hidden'});
+
+    selectTabName = selectTabName || 'Inputs';
 
     /** load the table with the given properties */
     function loadTabs(properties) {
@@ -48,21 +47,23 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
         tabbed_pane.append(tabs);
 
         // sort the properties by the desired tab order
-        var names = [];
-        for (var name in properties) {
+        var name,
+            names = [];
+        for (name in properties) {
             if (properties.hasOwnProperty(name)) {
                 names.push(name);
             }
         }
         names.sort(function(a, b){
-            tab_a = tab_order.indexOf(a);
-            tab_b = tab_order.indexOf(b);
+            tab_a = tabOrder.indexOf(a);
+            tab_b = tabOrder.indexOf(b);
             return (tab_a == tab_b) ? 0 : (tab_a > tab_b) ? 1 : -1;
-        })
+        });
 
         for (var i=0; i<names.length; i++) {
-            var name = names[i],
-                val = properties[name];
+            name = names[i];
+
+            var val = properties[name];
 
             if (name === 'type') {
                 if (self.elm.parent().hasClass('ui-dialog')) {
@@ -86,12 +87,12 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 tabs.append(tab);
                 tabbed_pane.append(contentPane);
                 getContent(contentPane,name,val);
-                if (self.initiallySelected === name) {
+                if (selectTabName === name) {
                     selected = tabcount;
                 }
                 tabcount = tabcount + 1;
             }
-        };
+        }
 
         self.elm.height(400);
         self.elm.width(640);
@@ -241,14 +242,14 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
     };
 
     this.destructor = function() {
-        for (paneName in panes){
+        for (var paneName in panes){
             if((panes[paneName].hasOwnProperty('destructor')) &&
                 (typeof panes[paneName].destructor === 'function')){
                 panes[paneName].destructor();
             }
         }
 
-        
+
         if (self.pathname && self.pathname.length>0) {
             model.removeListener(self.pathname, handleMessage);
         }

@@ -334,26 +334,9 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-
-    /** get attributes of all components of an assembly */
-    this.getAllAttributes= function(name,callback,errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'get_all_attributes/'+name,
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            });
-        }
-    };
-
-    /** get attributes of all components of an assembly */
-    this.getPassthroughs= function(name, callback, errorHandler) {
+    /** get the inputs and outputs of the assembly's child components and
+        an indicator for each whether or not it is a passthrough variable */
+    this.getPassthroughs = function(name, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
