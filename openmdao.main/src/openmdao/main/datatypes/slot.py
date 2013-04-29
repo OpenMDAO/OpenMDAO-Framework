@@ -47,8 +47,8 @@ class Slot(Variable):
         self._allow_none = allow_none
         self.klass = klass
 
-        if has_interface(klass, IContainer) or (isclass(klass) and \
-                                            IContainer.implementedBy(klass)):
+        if has_interface(klass, IContainer) or \
+           (isclass(klass) and IContainer.implementedBy(klass)):
             self._is_container = True
         else:
             self._is_container = False

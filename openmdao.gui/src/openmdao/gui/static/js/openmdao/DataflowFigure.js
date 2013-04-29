@@ -322,7 +322,7 @@ openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
 
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){
-    editor = new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
+    new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
 };
 
 /** hook into setWorkflow to add input & ouput ports */
