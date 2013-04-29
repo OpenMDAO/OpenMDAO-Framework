@@ -294,15 +294,15 @@
         var var_name = args.item['name'];
         var grid = args.grid;
         var input = [];	    
-        var $container = $("<div />");
+        var $container = $("<div id = '"+var_name+"-editor' style='padding: 0px 0px 2px;'/>");
         var win = "<div id = 'array-editor-dialog-"+var_name+"'/>";
-        var lbracketSVG = '<svg height="30" width="15">    '
-                        + '<text x="5" y="25" font-size="25" style="fill:gray">[</text>'
+        var lbracketSVG = '<svg height="15" width="8">'
+                        + '<text x="4" y="13" font-size="10" style="fill:gray">[</text>'
                         + '</svg>',
-            rbracketSVG = '<svg height="30" width="15">    '
-                        + '<text x="5" y="25" font-size="25" style="fill:gray">]</text>'
+            rbracketSVG = '<svg height="15" width="8">'
+                        + '<text x="4" y="13" font-size="10" style="fill:gray">]</text>'
                         + '</svg>',
-            spacerSVG   = '<svg height="30" width="15"></svg>'
+            spacerSVG   = '<svg height="15" width="8"></svg>'
                         
         var $editor_dialog = $(win).dialog({
             width: "auto",
