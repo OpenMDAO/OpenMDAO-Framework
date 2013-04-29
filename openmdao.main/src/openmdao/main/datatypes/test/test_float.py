@@ -197,8 +197,6 @@ class FloatTestCase(unittest.TestCase):
     def test_attributes(self):
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
-        for item in input_attrs:
-            print item
         self.assertEqual(len(input_attrs), 3)
         self.assertTrue({'name': 'float1',
                          'type': 'float',

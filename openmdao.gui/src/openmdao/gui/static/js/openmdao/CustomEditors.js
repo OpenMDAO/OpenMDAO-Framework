@@ -296,6 +296,14 @@
         var input = [];	    
         var $container = $("<div />");
         var win = "<div id = 'array-editor-dialog-"+var_name+"'/>";
+        var lbracketSVG = '<svg height="30" width="15">    '
+                        + '<text x="5" y="25" font-size="25" style="fill:gray">[</text>'
+                        + '</svg>',
+            rbracketSVG = '<svg height="30" width="15">    '
+                        + '<text x="5" y="25" font-size="25" style="fill:gray">]</text>'
+                        + '</svg>',
+            spacerSVG   = '<svg height="30" width="15"></svg>'
+                        
         var $editor_dialog = $(win).dialog({
             width: "auto",
             modal: "true",
@@ -363,15 +371,30 @@
             length = parsed.length;
         
             ndim = dim.length;
+            jQuery(lbracketSVG).appendTo($container);
+            if (ndim == 2) {
+                jQuery(lbracketSVG).appendTo($container);
+            }
+            
             default_length = length;
             for (var i = 0; i< length; i++) {
                 input.push($("<INPUT type=text class='editor-text' size = 6/>").appendTo($container));
                 
                 // New row gets a new line.
                 if (ndim>1 && dim[0] > 1 && (i+1)%dim[1] == 0) { 
-                    $('<br>').appendTo($container);
+                    if (i<length-1) {
+                        jQuery(rbracketSVG).appendTo($container);
+                        jQuery('<br />').appendTo($container);
+                        jQuery(spacerSVG).appendTo($container);
+                        jQuery(lbracketSVG).appendTo($container);
+                    }
                 }
             }
+            jQuery(rbracketSVG).appendTo($container);
+            if (ndim == 2) {
+                jQuery(rbracketSVG).appendTo($container);
+            }
+            jQuery('<br />').appendTo($container);
 
             // For now, you can only extend/contract a 1D array.
             if (ndim == 1) {
