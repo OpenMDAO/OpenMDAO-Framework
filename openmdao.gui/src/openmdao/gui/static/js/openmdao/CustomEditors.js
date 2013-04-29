@@ -326,9 +326,13 @@
 
         $container.appendTo($editor_dialog);
         var length;
-        var dim;
         var default_length;
-
+        var dim = args.item['dim'].split(',');
+        for (var i=0; i<dim.length; i++) {
+            dim[i] = parseFloat(dim[i]);
+        }
+        console.log(dim)
+        
         // Button to extend array        
         var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
         $add_button.click( function () {
@@ -338,6 +342,7 @@
                 for (var i = 0; i< length; i++) {
                     jQuery(input[i]).appendTo($container);
             }
+            dim[0] += 1;
         });
         
         // Button to contract array
@@ -356,38 +361,29 @@
         this.init = function() {
             parsed = this.splitData(args.item['value']);
             length = parsed.length;
-            dim = [this.getDim(args.item['value'])];
-            dim.push(length / dim[0]);
         
+            ndim = dim.length;
             default_length = length;
             for (var i = 0; i< length; i++) {
                 input.push($("<INPUT type=text class='editor-text' size = 6/>").appendTo($container));
                 
                 // New row gets a new line.
-                if (dim[0] > 1 && (i+1)%dim[1] == 0) { 
+                if (ndim>1 && dim[0] > 1 && (i+1)%dim[1] == 0) { 
                     $('<br>').appendTo($container);
                 }
             }
 
-            if (dim[0] == 1) {
+            // For now, you can only extend/contract a 1D array.
+            if (ndim == 1) {
                 $add_button.appendTo($editor_dialog);
                 $subtract_button.appendTo($editor_dialog);
             }
         };
 
-        this.getDim = function(input_data) {
-            // This counts the number of dimensions of our submatrix by counting 
-            // the depth of brackets.
-            step1 = input_data.split("[").length;
-            if (step1 > 2) {return step1 - 2;}
-            else {return 1;}
-        }
-    
         this.splitData = function (input_data) {
             // Split out all numerical values from the array.
             var step1 = input_data.replace(/\[/g, '').replace(/\]/g, '');
-            var parsed = step1.trim().split(/[ ,]+/); 
-            return parsed
+            return step1.trim().split(/[ ,]+/); 
         }
 
         this.destroy = function() {
@@ -424,35 +420,41 @@
         };
 
         this.serializeValue = function() {
-            state = [];
+            // Turns the values in the boxes into a valid python array.
             
+            if (input.length == 0) {
+                return;
+            }                
+            
+            state = [];
             for (var i = 0; i< length; i++) {
                 state.push(input[i].val());
             }
             
             state[0] = "["+state[0];
             state[length-1] = state[length-1] + "]";
+            
+            ndim = dim.length;
 
-            if (dim[0] > 1) {
-                new_state = [];
-                row = [];
-                for (var i = 0; i < state.length; i++) {
-                    row.push(state[i]);
-                    if ((i+1)%dim[1] == 0) { 
-                        row[0] = "["+row[0];
-                        row[row.length-1] = row[row.length-1] + "]";
-                        row = row.join(", ");
-                        new_state.push(row);
-                        row = [];
-                    }
+            new_state = [];
+            row = [];
+            for (var i = 0; i < state.length; i++) {
+                row.push(state[i]);
+                if (ndim>1 && (i+1)%dim[1] == 0) { 
+                    row[0] = "["+row[0];
+                    row[row.length-1] = row[row.length-1] + "]";
+                    row = row.join(", ");
+                    new_state.push(row);
+                    row = [];
                 }
-                new_state = new_state.join(", ");
-                return new_state;
-            }				
-            else {
-                return state.join(",  ");
             }
-        };
+            if (ndim==1) {
+                row = row.join(", ");
+                new_state.push(row);
+            }
+            new_state = new_state.join(", ");
+            return new_state;
+        }
 
         this.applyValue = function(item,state) {
             item[args.column.field] = state;

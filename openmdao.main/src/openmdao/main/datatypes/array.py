@@ -220,10 +220,7 @@ class Array(TraitArray):
         attr['value'] = str(value).replace('[ ', '[').replace('  ', ', ') \
                                   .replace('\n', ',')
         
-        # We may someday want to send the shape, instead of determining it
-        # in the array's custom editor, but for now, i'll leave this line
-        # commented out
-        #attr['dim'] = str(value.shape).strip('()')
+        attr['dim'] = str(value.shape).strip('()').rstrip(',')
         
         for field in meta:
             if field not in gui_excludes:

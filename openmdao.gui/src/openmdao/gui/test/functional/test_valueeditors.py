@@ -62,8 +62,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[7].cells[1].click()
-    inputs[7][1] = "abcd"
+    inputs.rows[8].cells[1].click()
+    inputs[8][1] = "abcd"
     time.sleep(1)
 
     #enum editor - set to 3
@@ -81,7 +81,7 @@ def _test_value_editors(browser):
 
     #bool editor - set to true
     inputs = props.inputs
-    inputs.rows[8].cells[1].click()
+    inputs.rows[9].cells[1].click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
@@ -120,17 +120,27 @@ def _test_value_editors(browser):
     submit_path = '//*[@id="array-edit-Y2-submit"]'
     browser.find_element_by_xpath(submit_path).click()
 
+    # array 2d editor - special case for a bug - set to [[99]]
+    inputs = props.inputs
+    inputs.rows[6].cells[1].click()
+    cell_path = '//*[@id="array-editor-dialog-Y3"]/div/input[1]'
+    cell_input = browser.find_element_by_xpath(cell_path)
+    cell_input.clear()
+    cell_input.send_keys(str(99))
+    submit_path = '//*[@id="array-edit-Y3-submit"]'
+    browser.find_element_by_xpath(submit_path).click()
+
     #list editor - set to [1, 2, 3, 4, 5]
     inputs = props.inputs
-    eq(inputs[6][1].startswith("["), True)
-    eq(inputs[6][1].endswith("]"), True)
-    values = [int(value.strip()) for value in inputs[6][1].strip("[]").split(",")]
+    eq(inputs[7][1].startswith("["), True)
+    eq(inputs[7][1].endswith("]"), True)
+    values = [int(value.strip()) for value in inputs[7][1].strip("[]").split(",")]
     eq(len(values), 4)
     eq(values, [1, 2, 3, 4])
 
     values.append(5)
     values = str([value for value in values])
-    inputs[6][1] = values
+    inputs[7][1] = values
 
     props.close()
 
@@ -168,6 +178,11 @@ def _test_value_editors(browser):
     output = workspace_page.history.split("\n")
     eq(output[-2], "[[5]")
     eq(output[-1], " [7]]")
+
+    #separate check for 2d arrays
+    workspace_page.do_command("top.p1.Y3")
+    output = workspace_page.history.split("\n")
+    eq(output[-1], "[[99]]")
 
     # Clean up.
     closeout(project_dict, workspace_page)

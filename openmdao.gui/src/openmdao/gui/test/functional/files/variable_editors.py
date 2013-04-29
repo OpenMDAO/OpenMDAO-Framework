@@ -9,6 +9,7 @@ class dummy_comp(Component):
     X = Array([0,1,2,3], iotype = 'in')
     Y = Array([[0,1],[2,3]], iotype = 'in')
     Y2 = Array([[5],[8]], iotype = 'in')
+    Y3 = Array([[1]], iotype = 'in')
     Z = List([1,2,3,4], iotype='in')
     
     def execute(self):
