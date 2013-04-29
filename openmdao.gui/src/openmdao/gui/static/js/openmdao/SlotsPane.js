@@ -49,7 +49,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                     var lbraceSVG = '<svg height="60" width="35">'
                         + '    <text x="0" y="45" font-size="60" style="fill:gray">{</text>'
                         + '</svg>',
-                    commSVG = '<svg height="60" width="20">'
+                        commSVG = '<svg height="60" width="20">'
                         + '    <text x="0" y="45" font-size="60" style="fill:gray">,</text>'
                         + '</svg>',
                         rbraceSVG = '<svg height="60" width="30">' 
