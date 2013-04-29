@@ -175,7 +175,6 @@
         else {var values = args.item.values;}
         var this_item = args.item;
         var value_types = args.item.value_types;
-        var scope = this;
         var select_id = "editor-enum-"+var_name;
         this.init = function() {
             $select = $("<SELECT tabIndex='0' id='editor-enum-"+var_name+"'/>");
@@ -240,7 +239,6 @@
         var $select;
         var var_name = args.item['name'];
         var defaultValue;
-        var scope = this;
         var grid = args.grid;
 
         this.init = function() {
@@ -295,8 +293,6 @@
     ArrayEditor : function(args) {
         var var_name = args.item['name'];
         var grid = args.grid;
-        var var_item = args.item;
-        var var_editor = this;
         var input = [];	    
         var $container = $("<div />");
         var win = "<div id = 'array-editor-dialog-"+var_name+"'/>";
@@ -329,13 +325,12 @@
         });
 
         $container.appendTo($editor_dialog);
-        var scope = this;
         var length;
         var dim;
         var default_length;
+
+        // Button to extend array        
         var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
-        var $subtract_button = $("<button id = 'array-edit-add-"+var_name+"'>-</button>").button();
-        
         $add_button.click( function () {
             input.push($("<INPUT type=text class='editor-text' value = '0.' size = 6/>"));
             length = input.length;
@@ -344,6 +339,9 @@
                     jQuery(input[i]).appendTo($container);
             }
         });
+        
+        // Button to contract array
+        var $subtract_button = $("<button id = 'array-edit-add-"+var_name+"'>-</button>").button();
         $subtract_button.click( function () {
             if (length > 1) {
                 input = input.slice(0,length-1);
