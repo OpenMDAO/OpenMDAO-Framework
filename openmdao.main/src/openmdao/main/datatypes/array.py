@@ -217,7 +217,10 @@ class Array(TraitArray):
         
         attr['name'] = name
         attr['type'] = "ndarray"
-        attr['value'] = str(value)
+        attr['value'] = str(value).replace('[ ', '[').replace('  ', ', ') \
+                                  .replace('\n', ',')
+        
+        attr['dim'] = str(value.shape).strip('()').rstrip(',')
         
         for field in meta:
             if field not in gui_excludes:
