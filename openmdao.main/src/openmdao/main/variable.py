@@ -28,6 +28,13 @@ def is_legal_name(name):
     return name not in ['parent', 'self']
 
 
+def json_default(obj):
+    """A function to be passed to json.dumps to handle objects that aren'try:
+    JSON serializable by default.
+    """
+    return repr(obj)
+
+
 class Variable(TraitType):
     """An OpenMDAO-specific trait type that serves as a common base
     class for framework visible inputs and outputs.

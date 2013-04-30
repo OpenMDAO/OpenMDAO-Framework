@@ -15,6 +15,7 @@ except ImportError:
 
 from pkg_resources import working_set
 from openmdao.util.log import logger
+from openmdao.main.variable import json_default
 from pyV3D.handlers import WV_Wrapper
 
 _lock = RLock()
@@ -93,13 +94,7 @@ class Publisher(object):
                     except Exception:
                         logger.error("ERROR: %s" % traceback.format_exc())
                 else:
-                    # try to json encode the [topic, obj] list. If that fails,
-                    # assume we can't encode the obj and just send across a json
-                    # encoded list of [topic, obj_type_name]
-                    try:
-                        msg = json.dumps([topic.encode('utf-8'), value])
-                    except TypeError:
-                        msg = json.dumps([topic.encode('utf-8'), str(type(value))])
+                    msg = json.dumps([topic.encode('utf-8'), value], default=json_default)
                     self._sender.send_multipart([msg])
                 if hasattr(self._sender, 'flush'):
                     self._sender.flush()

@@ -14,6 +14,7 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.vartree import VariableTree
+from openmdao.main.variable import json_default
 
 from openmdao.main.project import Project, ProjFinder, \
                                   _clear_insts, _match_insts
@@ -330,7 +331,8 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return json.dumps(self._get_components(self.proj._model_globals))
+        return json.dumps(self._get_components(self.proj._model_globals),
+                          default=json_default)
 
     def get_connections(self, pathname, src_name, dst_name):
         ''' Get list of source variables, destination variables, and the
@@ -552,7 +554,7 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return json.dumps(conns)
+        return json.dumps(conns, default=json_default)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -586,7 +588,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['parameters'] = []
             dataflow['constraints'] = []
             dataflow['objectives'] = []
-        return json.dumps(dataflow)
+        return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
         ''' Serve a list of events that are available to a driver.
@@ -596,7 +598,7 @@ class ConsoleServer(cmd.Cmd):
             drvr, root = self.get_container(pathname)
             events = drvr.list_available_events()
 
-        return json.dumps(events)
+        return json.dumps(events, default=json_default)
 
     def get_workflow(self, pathname):
         ''' get the workflow for the specified driver or assembly
@@ -644,19 +646,19 @@ class ConsoleServer(cmd.Cmd):
                                 'valid':    comp.is_valid()
                             })
                     flows.append(flow)
-        return json.dumps(flows)
+        return json.dumps(flows, default=json_default)
 
     def get_attributes(self, pathname):
         ''' get the attributes of the specified object
         '''
         attr = {}
         comp, root = self.get_container(pathname)
-        if comp:
-            try:
+        try:
+            if comp:
                 attr = comp.get_attributes(io_only=False)
-            except Exception as err:
-                self._error(err, sys.exc_info())
-        return json.dumps(attr)
+            return json.dumps(attr, default=json_default)
+        except Exception as err:
+            self._error(err, sys.exc_info())
 
     def get_passthroughs(self, pathname):
         ''' get the inputs and outputs of the assembly's child components
@@ -664,7 +666,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         asm, root = self.get_container(pathname)
         passthroughs = asm.get_passthroughs()
-        return json.dumps(passthroughs)
+        return json.dumps(passthroughs, default=json_default)
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
