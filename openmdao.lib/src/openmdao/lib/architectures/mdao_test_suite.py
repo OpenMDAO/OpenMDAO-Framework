@@ -38,7 +38,7 @@ def build_arch_list(include=[], exclude=[]):
         raise ValueError("Can't set both include and exlude")
     
     startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),
-                 os.path.dirname(component.__file__)]
+                 os.path.dirname(openmdao.main.component.__file__)]
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
     archs = []
@@ -74,7 +74,7 @@ def build_optproblem_list(include=[], exclude=[]):
         raise ValueError("Can't set both include and exlude for OptProblems")
     
     startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),
-                 os.path.dirname(component.__file__)]
+                 os.path.dirname(openmdao.main.component.__file__)]
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     opt_problems = psta.find_inheritors("openmdao.main.problem_formulation.OptProblem")
     
