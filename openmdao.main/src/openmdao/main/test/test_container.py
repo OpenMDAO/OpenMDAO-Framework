@@ -9,7 +9,7 @@ import copy
 
 from enthought.traits.api import HasTraits
 
-import openmdao.util.eggsaver as constants
+from openmdao.util import eggsaver as constants
 from openmdao.main.container import Container, deep_hasattr, \
                                     get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \

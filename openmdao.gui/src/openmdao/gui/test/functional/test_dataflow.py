@@ -504,7 +504,7 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
+        ['', 'x_in', '[ 1., 1., 1., 1.]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
@@ -522,7 +522,7 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['', 'scaler', '1', '', ''],
-        ['', 'x_in', '[ 1. 1. 1. 1.]', '', ''],
+        ['', 'x_in', '[ 1., 1., 1., 1.]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
