@@ -944,6 +944,7 @@ class FactoryAllocator(ResourceAllocator):
     """
     def __init__(self, name, authkey=None, allow_shell=False):
         super(FactoryAllocator, self).__init__(name)
+        self._deployed_servers = []
 
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
@@ -991,12 +992,15 @@ class FactoryAllocator(ResourceAllocator):
         credentials = get_credentials()
         allowed_users = {credentials.user: credentials.public_key}
         try:
-            return self.factory.create(typname='', allowed_users=allowed_users,
-                                       name=name)
+            server = self.factory.create(typname='', name=name,
+                                         allowed_users=allowed_users)
         # Shouldn't happen...
         except Exception as exc:  #pragma no cover
             self._logger.error('create failed: %r', exc)
             return None
+
+        self._deployed_servers.append(server)
+        return server
 
     @rbac(('owner', 'user'))
     def release(self, server):
@@ -1007,6 +1011,7 @@ class FactoryAllocator(ResourceAllocator):
             Previously deployed server to be shut down.
         """
         self.factory.release(server)
+        self._deployed_servers.remove(server)
 
 
 class LocalAllocator(FactoryAllocator):
@@ -1168,6 +1173,9 @@ class LocalAllocator(FactoryAllocator):
             'max_load'   : self.max_load
         }
         if (loadavgs[0] / self.total_cpus) < self.max_load:
+            return (0, criteria)
+        elif len(self._deployed_servers) == 0:
+            # Ensure progress by always allowing 1 server.
             return (0, criteria)
         # Tests force max_load high to avoid other issues.
         else:  #pragma no cover
@@ -1335,27 +1343,20 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
 
         for host in self.cluster:
             manager = host.manager
-            try:
-                la_name = manager._name
-            except AttributeError:
-                la_name = 'localhost'
-                host_ip = '127.0.0.1'
-            else:
-                # 'host' is 'Host-<ipaddr>:<port>
-                dash = la_name.index('-')
-                colon = la_name.index(':')
-                host_ip = la_name[dash+1:colon]
-                la_name = la_name.replace('-', '_')
-                la_name = la_name.replace('.', '')
-                la_name = la_name.replace(':', '_')
+            la_name = host.hostname
+            if '@' in la_name:
+                la_name = la_name.split('@')[1]
+            for char in ('-', '.'):
+                la_name = la_name.replace(char, '_')
 
-            if host_ip not in self._allocators:
+            if la_name in self._allocators:
+                self._logger.warning('skipping duplicate %s', la_name)
+            else:
                 allocator = \
                     manager.openmdao_main_resource_LocalAllocator(name=la_name,
                                                   allow_shell=self._allow_shell)
-                self._allocators[host_ip] = allocator
-                self._logger.debug('%s allocator %r pid %s', host.hostname,
-                                   la_name, allocator.pid)
+                self._allocators[la_name] = allocator
+                self._logger.debug('allocator %r pid %s', la_name, allocator.pid)
 
     def __getitem__(self, i):
         return self._allocators[i]

@@ -9,6 +9,7 @@ intervention for passwords or passphrases is required.
 import atexit
 import copy
 import cPickle
+import errno
 import getpass
 import logging
 import os
@@ -26,7 +27,8 @@ from multiprocessing import current_process, managers
 from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
-                                     register, decode_public_key, keytype
+                                     OpenMDAO_Proxy, register, \
+                                     decode_public_key, keytype
 from openmdao.main.mp_util import setup_tunnel, setup_reverse_tunnel
 from openmdao.main.rbac import get_credentials, set_credentials
 
@@ -82,8 +84,8 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
             Path to optional identity file to pass to ssh tunnel.
         """
         if tunnel:
-            _LOGGER.debug('Client setting up tunnel at %s for %s',
-                          address, hostname)
+            _LOGGER.debug('Client setting up tunnel for %s:%s',
+                          hostname, address[1])
             address, cleanup = setup_tunnel(hostname, address[1],
                                             identity=identity_filename)
         else:
@@ -107,13 +109,16 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
     @staticmethod
     def _finalize_host(address, authkey, name, cleanup):
         """ Sends a shutdown message. """
-        conn = connection.Client(address, authkey=authkey)
-        try:
-            retval = managers.dispatch(conn, None, 'shutdown')
-        finally:
-            conn.close()
+        retval = None
+        mgr_ok = OpenMDAO_Proxy.manager_is_alive(address)
+        if mgr_ok:
+            conn = connection.Client(address, authkey=authkey)
+            try:
+                retval = managers.dispatch(conn, None, 'shutdown')
+            finally:
+                conn.close()
         if cleanup is not None:
-            cleanup[0](*cleanup[1:])
+            cleanup[0](*cleanup[1:], **dict(keep_log=not mgr_ok))
         return retval
 
     def __repr__(self):
@@ -137,6 +142,8 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
         in created servers. Use with caution!
+
+    Once started, available hosts may be accessed via sequence operations.
     """
 
     def __init__(self, hostlist, modules=None, authkey=None, allow_shell=False):
@@ -164,13 +171,20 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         return len(self._up)
 
     def start(self):
-        """ Start this manager and all remote managers. """
+        """
+        Start this manager and all remote managers. If some managers fail to
+        start, errors are logged and the corresponding host's state is set to
+        ``failed``. You can use ``len(cluster)`` to determine how many remote
+        managers are available.
+
+        A :class:`RuntimeError` will be raised if no managers were successfully
+        started.
+        """
         super(Cluster, self).start()
         hostname = socket.getfqdn()
         listener = connection.Listener(address=(hostname, 0),
                                        authkey=self._authkey,
                                        backlog=5)  # Default is 1.
-# TODO: support multiple addresses if multiple networks are attached.
 
         # Start managers in separate thread to avoid losing connections.
         starter = threading.Thread(target=self._start_hosts,
@@ -189,23 +203,35 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     # Accept conection from *any* host.
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
-                    # accept() will hang if server doesn't receive our address.
-                    conn = listener.accept()
-                    # Comment-out the line above and use this equivalent
-                    # to debug connectivity issues.
-                    #conn = listener._listener.accept()
-                    #_LOGGER.critical('connection attempt from %s',
-                    #                 listener.last_accepted)
-                    #if listener._authkey:
-                    #    connection.deliver_challenge(conn, listener._authkey)
-                    #    connection.answer_challenge(conn, listener._authkey)
+                    # Normal accept() can hang.
+                    retval = []
+                    accepter = threading.Thread(target=self._accept,
+                                                args=(listener, retval),
+                                                name='ClusterAccepter')
+                    accepter.daemon = True
+                    accepter.start()
+                    accepter.join(30)
+                    if accepter.is_alive():
+                        msg = 'timeout waiting for reply from %s' \
+                              % [host.hostname for host in self._hostlist
+                                               if host.state == 'started']
+                        _LOGGER.error(msg)
+                        for host in self._hostlist:
+                            if host.state == 'started':
+                                if host.proc is not None:
+                                    host.proc.terminate()
+                                host.state = 'failed'
+                        continue
 
+                    conn = retval[0]
                     i, address, pubkey_text = conn.recv()
                     conn.close()
+
                     other_host = self._hostlist[i]
                     if address is None:
                         _LOGGER.error('Host %s died: %s', other_host.hostname,
                                       pubkey_text)  # Exception text.
+                        other_host.state = 'failed'
                         continue
                     try:
                         other_host.manager = \
@@ -216,6 +242,9 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     except Exception as exc:
                         _LOGGER.error("Can't start manager for %s: %s",
                                       other_host.hostname, str(exc) or repr(exc))
+                        if other_host.proc is not None:
+                            other_host.proc.terminate()
+                        other_host.state = 'failed'
                         continue
                     else:
                         other_host.state = 'up'
@@ -254,6 +283,21 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         # installed shutdown().
         self._base_shutdown = self.shutdown
         del self.shutdown
+
+    def _accept(self, listener, retval):
+        """
+        Accept connection on `listener`. `retval` is an empty list that
+        will have the accepted connection appended to it.
+        """
+        retval.append(listener.accept())
+        # Comment-out the line above and use this equivalent
+        # to debug connectivity issues.
+        #retval.append(listener._listener.accept())
+        #_LOGGER.critical('connection attempt from %s',
+        #                 listener.last_accepted)
+        #if listener._authkey:
+        #    connection.deliver_challenge(conn, listener._authkey)
+        #    connection.answer_challenge(conn, listener._authkey)
 
     def _start_hosts(self, address, credentials):
         """
@@ -443,7 +487,6 @@ class Host(object):  #pragma no cover
 
         cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
-# TODO: put timeout in accept() to avoid this hack.
         time.sleep(1)  # Give the proc time to register startup problems.
         self.poll()
         if self.state != 'failed':
@@ -466,9 +509,15 @@ class Host(object):  #pragma no cover
         """ Check basic communication with `hostname`. """
         cmd = self._ssh_cmd()
         cmd.extend([self.hostname, 'date'])
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        for retry in range(100):  # ~10 seconds based on sleep() below.
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+        except Exception as exc:
+            msg = "Can't start %r: %s" % (' '.join(cmd), str(exc) or repr(exc))
+            _LOGGER.error(msg)
+            raise RuntimeError(msg)
+ 
+        for retry in range(150):  # ~15 seconds based on sleep() below.
             proc.poll()
             if proc.returncode is None:
                 time.sleep(0.1)
@@ -610,7 +659,20 @@ def main():  #pragma no cover
     # Report server address and public key back to parent.
     print '%s connecting to parent at %s' % (ident, data['parent_address'])
     sys.stdout.flush()
-    conn = connection.Client(data['parent_address'], authkey=authkey)
+    for retry in range(10):
+        try:
+            conn = connection.Client(data['parent_address'], authkey=authkey)
+        except socket.error as sock_exc:
+            print '%s %s' % (ident, sock_exc)
+            if retry < 9 and (sock_exc.args[0] == errno.ECONNREFUSED or \
+                              sock_exc.args[0] == errno.ENOENT):
+                print '%s retrying...' % ident
+                time.sleep(1)
+            else:
+                print '%s exiting' % ident
+                sys.exit(1)
+        else:
+            break
     if exc:
         conn.send((data['index'], None, str(exc)))
     else:

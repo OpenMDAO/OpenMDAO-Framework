@@ -29,6 +29,10 @@ from openmdao.util.shellproc import ShellProc, STDOUT
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
 
 
+# Mapping from remote addresses to local tunnel addresses.
+_TUNNEL_MAP = {}
+
+
 def keytype(authkey):
     """
     Just returns a string showing the type of `authkey`.
@@ -132,14 +136,20 @@ def setup_tunnel(address, port, user=None, identity=None):
     Returns ``((local_address, local_port), (cleanup-info))``, where
     `cleanup-info` contains a cleanup function and its arguments.
     """
-    args = ['-T', '-L', '%d:localhost:%d' % (port, port)]
+    # Try to grab an unused local port.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    local_port = sock.getsockname()[1]
+    sock.close()
+
+    args = ['-T', '-L', '%d:localhost:%d' % (local_port, port)]
     cleanup_info = None
     try:
         cleanup_info = _start_tunnel(address, port, args, user, identity,
                                      'ftunnel')
         tunnel_proc = cleanup_info[1]
         sock = socket.socket(socket.AF_INET)
-        local_address = ('127.0.0.1', port)
+        local_address = ('127.0.0.1', local_port)
         for retry in range(20):
             exitcode = tunnel_proc.poll()
             if exitcode is not None:
@@ -156,13 +166,14 @@ def setup_tunnel(address, port, user=None, identity=None):
             else:
                 sock.close()
                 connected = True
+                register_tunnel(('127.0.0.1', port), local_address)
                 return (local_address, cleanup_info)
         raise RuntimeError('Timeout trying to connect through tunnel to %s:%s'
                            % (address, port))
     except Exception:
         logging.error("Can't setup tunnel to %s:%s", address, port)
         if cleanup_info is not None:
-            cleanup_info[0](*cleanup_info[1:])
+            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
         raise
 
 def setup_reverse_tunnel(remote_address, local_address, port, user=None,
@@ -201,6 +212,8 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     except Exception:
         logging.error("Can't setup reverse tunnel from %s to %s:%s",
                       remote_address, local_address, port)
+        if cleanup_info is not None:
+            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
         raise
     return (('localhost', port), cleanup_info)
 
@@ -240,18 +253,26 @@ def _start_tunnel(address, port, args, user, identity, prefix):
 
     return (_cleanup_tunnel, tunnel_proc, stdout, logname, os.getpid())
 
-def _cleanup_tunnel(tunnel_proc, stdout, logname, pid):
+def _cleanup_tunnel(tunnel_proc, stdout, logname, pid, keep_log=False):
     """ Try to terminate `tunnel_proc` if it's still running. """
     if pid != os.getpid():
         return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
     stdout.close()
-    if os.path.exists(logname):
+    if not keep_log and os.path.exists(logname):
         try:
             os.remove(logname)
         except Exception as exc:
             logging.warning("Can't remove tunnel logfile: %s", exc)
+
+def register_tunnel(remote, local):
+    """ Register `local` as the address to use to access `remote`. """
+    _TUNNEL_MAP[remote] = local
+
+def tunnel_address(remote):
+    """ Return address to use to access `remote`. """
+    return _TUNNEL_MAP.get(remote, remote)
 
 
 def encrypt(obj, session_key):

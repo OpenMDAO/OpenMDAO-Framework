@@ -20,7 +20,7 @@ from openmdao.main.datatypes.api import Float
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import ClusterAllocator, ClusterHost
 
-from openmdao.lib.casehandlers.api import CSVCaseRecorder
+from openmdao.lib.casehandlers.api import CSVCaseRecorder, DumpCaseRecorder
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial
@@ -68,42 +68,47 @@ class GPOptimization(Assembly):
         doe.DOEgenerator = FullFactorial(5)
         doe.case_outputs = ['gp_fun.f', 'gp_fun.x1', 'gp_fun.x2',
                             'gp_fun.exec_count']
-        doe.recorders = [CSVCaseRecorder()]
+        doe.recorders = [CSVCaseRecorder(), DumpCaseRecorder()]
 
 
 def main():
     """ Configure a cluster and use it. """
-    if USE_EC2:
-        # EC2 hosts in the form user@host.
-        hostnames = [
-            'ubuntu@ec2-23-20-107-190.compute-1.amazonaws.com',
-        ]
-        # Path to OpenMDAO Python executable (assumed same on all hosts).
-        python = 'setowns1_2013-04-26_10.06.38.732008' \
-                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python'
-        # It's assumed that both ends are firewalled.
-        tunnel = True
-        # The identity file used to access EC2 via ssh.
-        identity_filename = '/home/setowns1/.ssh/lovejoykey.pem'
-    else:
-        # Trivial local 'cluster' for debugging without remote host issues.
-        hostnames = [socket.getfqdn()]
-        python = sys.executable
-        tunnel = False
-        identity_filename = None
-
-    enable_console(logging.DEBUG)
-    logging.getLogger().setLevel(logging.DEBUG)
+    enable_console(logging.INFO)
+    logging.getLogger().setLevel(0)
     print 'Client PID', os.getpid()
 
     # Configure cluster.
     cluster_name = 'EC2Cluster'
     machines = []
-    for hostname in hostnames:
-        machines.append(ClusterHost(hostname=hostname, python=python,
-                                    tunnel_incoming=tunnel,
-                                    tunnel_outgoing=tunnel,
-                                    identity_filename=identity_filename))
+    if USE_EC2:
+        # The identity file used to access EC2 via ssh.
+        identity_filename = '/home/setowns1/.ssh/lovejoykey.pem'
+
+        machines.append(ClusterHost(
+            hostname='ubuntu@ec2-54-224-157-32.compute-1.amazonaws.com',
+            python = 'setowns1_2013-04-29_08.34.30.229009' \
+                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='ubuntu@ec2-184-72-74-253.compute-1.amazonaws.com',
+            python = 'setowns1_2013-04-29_08.34.19.007584' \
+                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='ubuntu@ec2-54-225-19-113.compute-1.amazonaws.com',
+            python = 'setowns1_2013-04-29_08.34.19.006042' \
+                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+    else:
+        # Trivial local 'cluster' for debugging without remote host issues.
+        machines.append(ClusterHost(hostname=socket.getfqdn(),
+                                    python = sys.executable))
+
     # Start it.
     cluster = ClusterAllocator(cluster_name, machines, allow_shell=True)
     print 'Cluster initialized'
