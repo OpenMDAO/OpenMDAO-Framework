@@ -51,4 +51,5 @@ class TestArchTestSuite(unittest.TestCase):
         self.assertFalse(MDF in [a.__class__ for a in archs])    
         
    
-        
+if __name__ == '__main__':
+    unittest.main()
