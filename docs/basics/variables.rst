@@ -11,8 +11,8 @@ component.
 
 You can create a variable for a component in two ways. The first way is to
 declare it in the component's class definition as illustrated in the examples
-that follow. The second way is to add them using a component's `add` function.
-This way should only be used it a variable needs to be added after the component
+that follow. The second way is to add it using a component's ``add`` function.
+Use the second way only if a variable needs to be added after the component
 is instantiated.
 
 A simple component that takes a floating point number as an input and

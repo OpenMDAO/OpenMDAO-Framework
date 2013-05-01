@@ -532,8 +532,8 @@ class Component(Container):
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
-                        not obj_has_interface(self, IAssembly) and \
-                        not obj_has_interface(self, IDriver):
+                       not obj_has_interface(self, IAssembly) and \
+                       not obj_has_interface(self, IDriver):
 
                         tracing.TRACER.debug(self.get_itername())
 
@@ -667,7 +667,8 @@ class Component(Container):
         except KeyError:
             pass
 
-        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+        if trait and trait.iotype == 'in' and trait.trait_type \
+           and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
 
     @rbac(('owner', 'user'))
@@ -1590,7 +1591,7 @@ class Component(Container):
     def get_attributes(self, io_only=True):
         """ Get attributes of component. Includes inputs and ouputs and, if
         *io_only* is not true, a dictionary of attributes for each interface
-        implemented by the component.  Used by the GUI.
+        implemented by the component.
 
         io_only: Bool
             Set to true if we only want to populate the input and output
@@ -1658,11 +1659,11 @@ class Component(Container):
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
 
             io_attr['id'] = name
-            
-            # Framework variables 
+
+            # Framework variables
             if 'framework_var' in meta:
                 io_attr['id'] = '~' + name
-                
+
             io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]
@@ -1688,8 +1689,7 @@ class Component(Container):
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
 
-            # Let the GUI know that this var is the top element of a
-            # variable tree
+            # indicate that this var is the top element of a variable tree
             if io_attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
@@ -1742,13 +1742,11 @@ class Component(Container):
         if len(events) > 0:
             attrs['Events'] = events
 
-        # Object Editor has additional panes for Workflow, Dataflow,
-        # Objectives, Parameters, Constraints, and Slots.
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if name not in io_list and (value.is_trait_type(Slot) \
-                                            or value.is_trait_type(List) \
+                if name not in io_list and (value.is_trait_type(Slot)
+                                            or value.is_trait_type(List)
                                             or value.is_trait_type(Dict)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
