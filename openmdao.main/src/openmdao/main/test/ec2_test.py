@@ -11,7 +11,7 @@ an example of how an EC2-based cluster might be utilized.
 """
 
 import logging
-import os
+import os.path
 import socket
 import sys
 
@@ -82,24 +82,25 @@ def main():
     machines = []
     if USE_EC2:
         # The identity file used to access EC2 via ssh.
-        identity_filename = '/home/setowns1/.ssh/lovejoykey.pem'
+        identity_filename = os.path.expanduser('~/.ssh/lovejoykey')
+        identity_filename += '.ppk' if sys.platform == 'win32' else '.pem'
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-54-224-157-32.compute-1.amazonaws.com',
+            hostname='ubuntu@ec2-23-23-36-2.compute-1.amazonaws.com',
             python = 'setowns1_2013-04-29_08.34.30.229009' \
                  '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-184-72-74-253.compute-1.amazonaws.com',
+            hostname='ubuntu@ec2-54-235-16-61.compute-1.amazonaws.com',
             python = 'setowns1_2013-04-29_08.34.19.007584' \
                  '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-54-225-19-113.compute-1.amazonaws.com',
+            hostname='ubuntu@ec2-50-17-128-5.compute-1.amazonaws.com',
             python = 'setowns1_2013-04-29_08.34.19.006042' \
                  '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,

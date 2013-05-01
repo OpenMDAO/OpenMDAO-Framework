@@ -852,8 +852,12 @@ class ResourceAllocator(object):
                 if missing:
                     return (-2, {key: 'missing %s' % missing})
             elif key == 'python_version':
-                if sys.version[:3] != value:
-                    return (-2, {key : 'want %s, have %s' % (value, sys.version[:3])})
+                # Require major match, minor request <= system.
+                req_ver = float(value)
+                sys_ver = float(sys.version[:3])
+                if int(sys_ver) != int(req_ver) or \
+                   sys_ver < req_ver:
+                    return (-2, {key : 'want %s, have %s' % (req_ver, sys_ver)})
             elif key == 'exclude':
                 if socket.gethostname() in value:
                     return (-2, {key : 'excluded host %s' % socket.gethostname()})

@@ -64,7 +64,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         self._name = 'Host-unknown'
 
     @classmethod
-    def from_address(cls, address, authkey, tunnel, hostname, identity_filename):
+    def from_address(cls, address, authkey, host):
         """
         Return manager given an address.
 
@@ -74,20 +74,14 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         authkey: string
             Authorization key.
 
-        tunnel: bool
-            True if we need to set up an ssh tunnel to `hostname`.
-
-        hostname: string
-            Host to tunnel to.
-
-        identity_filename: string
-            Path to optional identity file to pass to ssh tunnel.
+        host: :class:`Host`
+            Host we're managing.
         """
-        if tunnel:
+        if host.tunnel_outgoing:
             _LOGGER.debug('Client setting up tunnel for %s:%s',
-                          hostname, address[1])
-            address, cleanup = setup_tunnel(hostname, address[1],
-                                            identity=identity_filename)
+                          host.hostname, address[1])
+            address, cleanup = setup_tunnel(host.hostname, address[1],
+                                            identity=host.identity_filename)
         else:
             cleanup = None
 
@@ -102,24 +96,26 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         manager._name = 'Host-%s:%s' % manager.address
         manager.shutdown = util.Finalize(
             manager, HostManager._finalize_host,
-            args=(manager._address, manager._authkey, manager._name, cleanup),
+            args=(manager._address, manager._authkey, manager._name,
+                  cleanup, host.reverse_cleanup),
             exitpriority=-10)
         return manager
 
     @staticmethod
-    def _finalize_host(address, authkey, name, cleanup):
-        """ Sends a shutdown message. """
+    def _finalize_host(address, authkey, name, fcleanup, rcleanup):
+        """ Sends a shutdown message and cleans-up tunnels. """
         retval = None
         mgr_ok = OpenMDAO_Proxy.manager_is_alive(address)
         if mgr_ok:
             conn = connection.Client(address, authkey=authkey)
             try:
-                retval = managers.dispatch(conn, None, 'shutdown')
+                managers.dispatch(conn, None, 'shutdown')
             finally:
                 conn.close()
-        if cleanup is not None:
-            cleanup[0](*cleanup[1:], **dict(keep_log=not mgr_ok))
-        return retval
+        if fcleanup is not None:
+            fcleanup[0](*fcleanup[1:], **dict(keep_log=not mgr_ok))
+        if rcleanup is not None:
+            rcleanup[0](*rcleanup[1:], **dict(keep_log=not mgr_ok))
 
     def __repr__(self):
         return '<Host(%s)>' % self._name
@@ -236,9 +232,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     try:
                         other_host.manager = \
                             HostManager.from_address(address, self._authkey,
-                                                     other_host.tunnel_outgoing,
-                                                     other_host.hostname,
-                                                     other_host.identity_filename)
+                                                     other_host)
                     except Exception as exc:
                         _LOGGER.error("Can't start manager for %s: %s",
                                       other_host.hostname, str(exc) or repr(exc))
@@ -283,6 +277,9 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         # installed shutdown().
         self._base_shutdown = self.shutdown
         del self.shutdown
+
+        if len(self._up) < 1:
+            raise RuntimeError('No hosts successfully started')
 
     def _accept(self, listener, retval):
         """
@@ -398,6 +395,7 @@ class Host(object):  #pragma no cover
         self.state = 'init'
         self.proc = None
         self.tempdir = None
+        self.reverse_cleanup = None
 
     def _ssh_cmd(self):
         """ Return leading part of ssh command as a list. """
@@ -455,7 +453,7 @@ class Host(object):  #pragma no cover
             address, cleanup = \
                 setup_reverse_tunnel(self.hostname, address[0], address[1], 
                                      identity=self.identity_filename)
-            atexit.register(*cleanup)
+            self.reverse_cleanup = cleanup
 
         cmd = self._ssh_cmd()
         cmd.extend([self.hostname, self.python, '-c',
