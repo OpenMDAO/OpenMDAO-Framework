@@ -108,7 +108,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
         n_servers, criteria = \
-            self.cluster.max_servers({'python_version': 'bad-version'})
+            self.cluster.max_servers({'python_version': '2.999'})
         self.assertEqual(n_servers, 0)
 
     def test_max_servers(self):
@@ -129,7 +129,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(n_servers, 0)
 
         n_servers, criteria = \
-            self.local.max_servers({'python_version': 'bad-version'})
+            self.local.max_servers({'python_version': '2.999'})
         self.assertEqual(n_servers, 0)
 
     def test_hostnames(self):
@@ -159,7 +159,7 @@ class TestCase(unittest.TestCase):
         result = RAM.allocate({'orphan_modules': ['xyzzy']})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'python_version': 'xyzzy'})
+        result = RAM.allocate({'python_version': '2.999'})
         self.assertEqual(result, (None, None))
 
         start_time = datetime.datetime(2012, 2, 8, 16, 42)
