@@ -214,6 +214,8 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                             if host.state == 'started':
                                 if host.proc is not None:
                                     host.proc.terminate()
+                                if host.reverse_cleanup is not None:
+                                    host.reverse_cleanup[0](*host.reverse_cleanup[1:])
                                 host.state = 'failed'
                         continue
 
