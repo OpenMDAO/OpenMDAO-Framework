@@ -6,7 +6,6 @@ This code assumes `ssh` has been set-up on all hosts such that no user
 intervention for passwords or passphrases is required.
 """
 
-import atexit
 import copy
 import cPickle
 import errno
@@ -96,15 +95,14 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
         manager._name = 'Host-%s:%s' % manager.address
         manager.shutdown = util.Finalize(
             manager, HostManager._finalize_host,
-            args=(manager._address, manager._authkey, manager._name,
+            args=(manager._address, manager._authkey,
                   cleanup, host.reverse_cleanup),
             exitpriority=-10)
         return manager
 
     @staticmethod
-    def _finalize_host(address, authkey, name, fcleanup, rcleanup):
+    def _finalize_host(address, authkey, fcleanup, rcleanup):
         """ Sends a shutdown message and cleans-up tunnels. """
-        retval = None
         mgr_ok = OpenMDAO_Proxy.manager_is_alive(address)
         if mgr_ok:
             conn = connection.Client(address, authkey=authkey)
@@ -345,6 +343,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
             msg = '%s\n%s' % (exc, traceback.format_exc())
             _LOGGER.error('starter for %s caught exception: %s',
                           host.hostname, msg)
+            host.state = 'failed'
         return host
 
     def shutdown(self):
@@ -439,7 +438,7 @@ class Host(object):  #pragma no cover
         """
         try:
             self._check_ssh()
-        except Exception:
+        except RuntimeError:
             self.state = 'failed'
             return
 
@@ -506,7 +505,7 @@ class Host(object):  #pragma no cover
     def _check_ssh(self):
         """ Check basic communication with `hostname`. """
         cmd = self._ssh_cmd()
-        cmd.extend([self.hostname, 'date'])
+        cmd.extend([self.hostname, 'echo', 'Hello', 'World'])
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)
@@ -519,15 +518,15 @@ class Host(object):  #pragma no cover
             proc.poll()
             if proc.returncode is None:
                 time.sleep(0.1)
-            elif proc.returncode == 0:
-                return
             else:
-                msg = "ssh to %r failed, returncode %s" \
-                      % (self.hostname, proc.returncode)
-                _LOGGER.error(msg)
-                for line in proc.stdout:
-                    _LOGGER.error('   >%s', line.rstrip())
-                raise RuntimeError(msg)
+                output = ''.join(proc.stdout)
+                if proc.returncode == 0 and 'Hello World' in output:
+                    return
+                else:
+                    msg = "ssh to %r failed, returncode %s" \
+                          % (self.hostname, proc.returncode)
+                    _LOGGER.error('%s:\n%s', msg, output)
+                    raise RuntimeError(msg)
 
         # Timeout.  Kill process and log error.
         proc.kill()
@@ -535,18 +534,17 @@ class Host(object):  #pragma no cover
             proc.poll()
             if proc.returncode is None:
                 time.sleep(1)
-            msg = "ssh to %r timed-out, returncode %s" \
-                  % (self.hostname, proc.returncode)
-            _LOGGER.error(msg)
-            for line in proc.stdout:
-                _LOGGER.error('   >%s', line.rstrip())
-            raise RuntimeError(msg)
+            else:
+                output = ''.join(proc.stdout)
+                msg = "ssh to %r timed-out, returncode %s" \
+                      % (self.hostname, proc.returncode)
+                _LOGGER.error('%s:\n%s', msg, output)
+                raise RuntimeError(msg)
 
         # Total zombie...
+        output = ''.join(proc.stdout)
         msg = "ssh to %r is a zombie, PID %s" % (self.hostname, proc.pid)
-        _LOGGER.error(msg)
-        for line in proc.stdout:
-            _LOGGER.error('   >%s', line.rstrip())
+        _LOGGER.error('%s:\n%s', msg, output)
         raise RuntimeError(msg)
 
     def _copy_to_remote(self, files):

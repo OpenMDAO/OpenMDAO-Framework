@@ -3,6 +3,7 @@ Multiprocessing support utilities.
 """
 
 import ConfigParser
+import copy
 import cPickle
 import errno
 import getpass
@@ -31,6 +32,8 @@ SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
 
 # Mapping from remote addresses to local tunnel addresses.
 _TUNNEL_MAP = {}
+# Log files that haven't been cleanup up yet due to Windows issue.
+_TUNNEL_PENDING = []
 
 
 def keytype(authkey):
@@ -255,16 +258,34 @@ def _start_tunnel(address, port, args, user, identity, prefix):
 
 def _cleanup_tunnel(tunnel_proc, stdout, logname, pid, keep_log=False):
     """ Try to terminate `tunnel_proc` if it's still running. """
+    logging.debug('cleanup %s PID %s', os.path.basename(logname),
+                  tunnel_proc.pid)
+
     if pid != os.getpid():
         return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
     stdout.close()
+
+    # Cleanup of log files is problematic on Windows. Reverse tunnel logs
+    # are somehow 'in use by another process' (due to multiprocessing?).
+    # It appears the last tunnel cleanup is able to actually remove the logs.
     if not keep_log and os.path.exists(logname):
         try:
             os.remove(logname)
-        except Exception as exc:
-            logging.warning("Can't remove tunnel logfile: %s", exc)
+        except WindowsError:
+            _TUNNEL_PENDING.append(logname)
+
+    for logname in copy.copy(_TUNNEL_PENDING):
+        if os.path.exists(logname):
+            try:
+                os.remove(logname)
+            except WindowsError:
+                pass
+            else:
+                _TUNNEL_PENDING.remove(logname)
+        else:
+            _TUNNEL_PENDING.remove(logname)
 
 def register_tunnel(remote, local):
     """ Register `local` as the address to use to access `remote`. """
