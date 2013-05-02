@@ -466,8 +466,9 @@ Glossary
         Database Abstraction Library
 
 
-      **Slot**
-        A placeholder for a plugin within a :term:`Component`.
+      **Slot** 
+        A Slot is a variable that requires any value assigned to it to be either an instance of
+	a specific class or an implementation of a specific Interface.
 
       
       **SlotList**
