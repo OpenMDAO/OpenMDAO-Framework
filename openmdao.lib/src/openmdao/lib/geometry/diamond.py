@@ -146,7 +146,7 @@ else:
 
 
     try:
-        from pyV3D.handlers import WV_Sender
+        from pyV3D.sender import WV_Sender
     except ImportError:
         pass
     else:

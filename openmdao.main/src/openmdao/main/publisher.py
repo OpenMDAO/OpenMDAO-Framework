@@ -16,7 +16,7 @@ except ImportError:
 from pkg_resources import working_set
 from openmdao.util.log import logger
 from openmdao.main.variable import json_default
-from pyV3D.handlers import WV_Wrapper
+from pyV3D import WV_Wrapper
 
 _lock = RLock()
 _binpub_types = None # classes for sending complex binary reps of objects

@@ -4,7 +4,7 @@ from numpy import array, float32
 import sys
 import numpy as np
 
-from pyV3D.handlers import WV_Sender
+from pyV3D.sender import WV_Sender
 
 from openmdao.main.interfaces import IParametricGeometry, implements
 

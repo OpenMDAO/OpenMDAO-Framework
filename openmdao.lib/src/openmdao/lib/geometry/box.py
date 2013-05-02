@@ -5,7 +5,7 @@ from numpy import array, float32, int32
 from openmdao.main.geom import ParametricGeometry
 from openmdao.main.interfaces import IStaticGeometry, implements
 
-from pyV3D.handlers import WV_Sender
+from pyV3D.sender import WV_Sender
 
 
 class BoxParametricGeometry(ParametricGeometry):
