@@ -386,8 +386,8 @@ The attribute *required* is used to indicate whether the object that plugs into
 a Slot is required. If ``required`` is True, then an exception will be raised
 if the component is executed when that object is not present.
 
-You can also use a class name to define what is permitted in the slot. In this
-code sample, we've specified that the ``recorder`` slot can only contain an
+You can also use a class name to define what is permitted in the Slot. In this
+code sample, we've specified that the ``recorder`` Slot can contain only an
 object of class ``CSVCaseRecorder```.
 
 .. testcode:: instance_example
@@ -403,7 +403,7 @@ object of class ``CSVCaseRecorder```.
         recorder = Slot(CSVCaseRecorder, desc='Something to append() to.',
                           required=True)
                           
-We can also declare a pre-filled slot by passing an instance instead of the class
+We can also declare a pre-filled Slot by passing an instance instead of the class
 name. This is a shortcut for adding it later.
 
 .. testcode:: instance_example
@@ -548,7 +548,7 @@ three variables that define two flight conditions:
 
 .. note::
 
-    It's important to create a VarTree variable (which is much like a Slot)
+    It's important to create a VarTree variable (which is much like a :term:`Slot`)
     for each VariableTree object contained in your component if you intend to
     connect it to variables in other components.
     Also make sure to set the *iotype* attribute in the VarTree.  If you don't, changes 
