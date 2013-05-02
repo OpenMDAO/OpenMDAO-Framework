@@ -999,8 +999,8 @@ class FactoryAllocator(ResourceAllocator):
             server = self.factory.create(typname='', name=name,
                                          allowed_users=allowed_users)
         # Shouldn't happen...
-        except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %r', exc)
+        except Exception:  #pragma no cover
+            self._logger.exception('create failed:')
             return None
 
         self._deployed_servers.append(server)
@@ -1622,11 +1622,17 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     best_criteria = criteria
                     best_allocator = allocator
                 elif (best_estimate == 0 and estimate == 0):
-                    best_load = best_criteria['loadavgs'][0]
-                    if load < best_load:
-                        best_estimate = estimate
-                        best_criteria = criteria
-                        best_allocator = allocator
+                    if 'loadavgs' in best_criteria:
+                        best_load = best_criteria['loadavgs'][0]
+                        if load < best_load:
+                            best_estimate = estimate
+                            best_criteria = criteria
+                            best_allocator = allocator
+                    else:
+                        if 'loadavgs' in criteria:  # Prefer non-Windows.
+                            best_estimate = estimate
+                            best_criteria = criteria
+                            best_allocator = allocator
 
             # If no alternative, repeat use of previous allocator.
             if best_estimate < 0 and prev_estimate >= 0:
@@ -1695,8 +1701,12 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             criteria = None
         else:
             if estimate == 0:
-                self._logger.debug('%r returned %g (%g)', allocator.name,
-                                   estimate, criteria['loadavgs'][0])
+                if 'loadavgs' in criteria:
+                    load = '%g' % criteria['loadavgs'][0]
+                else:
+                    load = 'None'
+                self._logger.debug('%r returned %g (%s)', allocator.name,
+                                   estimate, load)
             else:
                 self._logger.debug('%r returned %g', allocator.name, estimate)
 

@@ -275,11 +275,16 @@ class ObjServerFactory(Factory):
             orig_main = None
             if sys.platform == 'win32':  #pragma no cover
                 scripts = ('openmdao-script.py', 'openmdao_test-script.py')
-                if sys.modules['__main__'].__file__.endswith(scripts):
-                    orig_main = sys.modules['__main__'].__file__
-                    sys.modules['__main__'].__file__ = \
-                        pkg_resources.resource_filename('openmdao.main',
-                                                        'objserverfactory.py')
+                try:
+                    main_file = sys.modules['__main__'].__file__
+                except AttributeError:
+                    pass
+                else:
+                    if main_file.endswith(scripts):
+                        orig_main = main_file
+                        sys.modules['__main__'].__file__ = \
+                            pkg_resources.resource_filename('openmdao.main',
+                                                            'objserverfactory.py')
             owner = get_credentials()
             self._logger.log(LOG_DEBUG2, '%s starting server %r in dir %s',
                              owner, name, root_dir)

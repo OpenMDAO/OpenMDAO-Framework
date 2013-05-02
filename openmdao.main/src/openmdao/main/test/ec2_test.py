@@ -73,7 +73,7 @@ class GPOptimization(Assembly):
 
 def main():
     """ Configure a cluster and use it. """
-    enable_console(logging.INFO)
+    enable_console(0) #logging.INFO)
     logging.getLogger().setLevel(0)
     print 'Client PID', os.getpid()
 
@@ -86,23 +86,37 @@ def main():
         identity_filename += '.ppk' if sys.platform == 'win32' else '.pem'
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-23-23-36-2.compute-1.amazonaws.com',
-            python = 'setowns1_2013-04-29_08.34.30.229009' \
-                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            hostname='ubuntu@ec2-184-73-146-195.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-01_15.27.22.338789' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-54-235-16-61.compute-1.amazonaws.com',
-            python = 'setowns1_2013-04-29_08.34.19.007584' \
-                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            hostname='ubuntu@ec2-107-21-194-143.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-01_15.27.07.281750' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
-            hostname='ubuntu@ec2-50-17-128-5.compute-1.amazonaws.com',
-            python = 'setowns1_2013-04-29_08.34.19.006042' \
-                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            hostname='ubuntu@ec2-50-16-115-8.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-01_15.26.59.674355' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='Administrator@ec2-54-225-22-248.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-01_15.30.48.015178' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='Administrator@ec2-23-22-165-31.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-01_15.31.11.969267' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
     else:

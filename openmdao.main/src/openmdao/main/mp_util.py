@@ -145,7 +145,7 @@ def setup_tunnel(address, port, user=None, identity=None):
     local_port = sock.getsockname()[1]
     sock.close()
 
-    args = ['-T', '-L', '%d:localhost:%d' % (local_port, port)]
+    args = ['-x', '-T', '-L', '%d:localhost:%d' % (local_port, port)]
     cleanup_info = None
     try:
         cleanup_info = _start_tunnel(address, port, args, user, identity,
@@ -208,7 +208,7 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     Returns ``((local_address, local_port), (cleanup-info))`` where
     `cleanup-info` contains a cleanup function and its arguments.
     """
-    args = ['-T', '-R', '%d:%s:%d' % (port, local_address, port)]
+    args = ['-x', '-T', '-R', '%d:%s:%d' % (port, local_address, port)]
     try:
         cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
                                      'rtunnel')

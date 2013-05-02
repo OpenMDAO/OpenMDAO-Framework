@@ -6,6 +6,7 @@ This code assumes `ssh` has been set-up on all hosts such that no user
 intervention for passwords or passphrases is required.
 """
 
+import base64
 import copy
 import cPickle
 import errno
@@ -108,6 +109,8 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
             conn = connection.Client(address, authkey=authkey)
             try:
                 managers.dispatch(conn, None, 'shutdown')
+            except EOFError:
+                pass
             finally:
                 conn.close()
         if fcleanup is not None:
@@ -403,6 +406,7 @@ class Host(object):  #pragma no cover
         cmd = copy.copy(_SSH)
         if self.identity_filename:
             cmd.extend(['-i', self.identity_filename])
+        cmd.extend(['-x', '-T'])
         return cmd
 
     def register(self, cls):
@@ -484,7 +488,11 @@ class Host(object):  #pragma no cover
             parent_address=address, registry=self.registry,
             keep_dirs=os.environ.get('OPENMDAO_KEEPDIRS', '0'))
 
-        cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
+        # Windows can't handle binary on stdin.
+        dump = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
+        dump = base64.b64encode(dump)
+        _LOGGER.debug('sending %s config info (%s)', self.hostname, len(dump))
+        self.proc.stdin.write(dump)
         self.proc.stdin.close()
         time.sleep(1)  # Give the proc time to register startup problems.
         self.poll()
@@ -556,18 +564,20 @@ class Host(object):  #pragma no cover
                     '-c', _UNZIP_CODE.replace('\n', ';')])
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')
+        # Can't 'w|gz'/'r|gz', Windows can't handle binary on stdin.
+        archive = tarfile.open(fileobj=proc.stdin, mode='w|')
         for name in files:
             archive.add(name, os.path.basename(name))
         archive.close()
         proc.stdin.close()
-        return proc.stdout.read().rstrip()
+        return proc.stdout.read().rstrip().replace('\\', '/')
 
 _UNZIP_CODE = '''"import tempfile, os, sys, tarfile
 tempdir = tempfile.mkdtemp(prefix='omdao-')
 os.chdir(tempdir)
-tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
+tf = tarfile.open(fileobj=sys.stdin, mode='r|')
 tf.extractall()
+tf.close()
 print tempdir"'''
 
 
@@ -593,9 +603,10 @@ def main():  #pragma no cover
     sys.stdout.flush()
 
     # Get data from parent over stdin.
-    data = cPickle.load(sys.stdin)
+    dump = sys.stdin.read()
     sys.stdin.close()
-    print '%s data received' % ident
+    print '%s data received (%s)' % (ident, len(dump))
+    data = cPickle.loads(base64.b64decode(dump))
 
     hostname = data['hostname']
     print '%s using hostname %s' % (ident, hostname)
@@ -694,7 +705,10 @@ def main():  #pragma no cover
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
         if not keep_dirs and os.path.exists(directory):
             print '%s removing directory %s' % (ident, directory)
-            shutil.rmtree(directory, onerror=onerror)
+            try:
+                shutil.rmtree(directory, onerror=onerror)
+            except WindowsError as exc:
+                print '%s %s' % (ident, exc)
         print '%s shutting down host manager' % ident
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
