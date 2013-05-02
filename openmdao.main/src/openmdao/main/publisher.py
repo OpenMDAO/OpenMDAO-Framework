@@ -25,7 +25,9 @@ _binpubs = {}  # [count, sender] corresponding to specific topics
 
 
 class Pub_WV_Wrapper(WV_Wrapper):
-    """A wrapper for the wv library that sends updates to the Publisher."""
+    """A wrapper for the wv library that is used by a Sender to
+    send updates to the Publisher.
+    """
     
     def __init__(self, name):
         super(Pub_WV_Wrapper, self).__init__()
