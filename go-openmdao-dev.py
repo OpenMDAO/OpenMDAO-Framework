@@ -1990,7 +1990,6 @@ def _update_activate(bindir):
     }
     libpathvname = _lpdict.get(sys.platform)
     if libpathvname:
-        libfiles = []
         if sys.platform.startswith('win'):
             activate_base = 'activate.bat'
         else:
@@ -2010,12 +2009,30 @@ def _update_activate(bindir):
         with open(activate_fname, 'w') as out:
             out.write(content)
             
+def _copy_winlibs(home_dir):
+    # On windows, builds using numpy.distutils.Configuration will
+    # fail when built in a virtualenv 
+    # (still broken as of virtualenv 1.9.1, under python 2.7.4)
+    # because distutils looks for libpython?.?.lib under sys.prefix/libs.
+    # virtualenv does not (at this time) create a libs directory.
+    
+    import fnmatch
+    libsdir = os.path.join(home_dir, 'libs')
+    if not os.path.isdir(libsdir):
+        os.mkdir(libsdir)
+    sysdir = os.path.join(os.path.dirname(sys.executable), 'libs')
+    names = os.listdir(sysdir)
+    for pat in ['*python*', '*msvc*']:
+        for name in fnmatch.filter(names, pat):
+            if not os.path.isfile(os.path.join(libsdir, name)):
+                shutil.copyfile(os.path.join(sysdir, name), 
+                                os.path.join(libsdir, name))
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['SetupDocs==1.0.5', 'networkx==1.3', 'Pyevolve==0.6', 'slsqp==1.0.1', 'virtualenv==1.8.4', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'conmin==1.0.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'jsonpickle==0.4.0', 'pycrypto==2.3']
-    guireqs = ['pyzmq-static==2.1.11.1', 'PyYAML==3.10', 'pathtools==0.1.2', 'tornado==2.2.1', 'argh==0.15.1', 'watchdog==0.6.0']
+    reqs = ['SetupDocs==1.0.5', 'networkx==1.3', 'Pyevolve==0.6', 'slsqp==1.0.1', 'virtualenv==1.8.4', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'tornado==2.2.1', 'conmin==1.0.1', 'pycrypto==2.3', 'pyV3D==0.4']
+    guireqs = ['argh==0.15.1', 'pyzmq-static==2.1.11.1', 'pathtools==0.1.2', 'watchdog==0.6.0', 'PyYAML==3.10']
     guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
     
     if options.findlinks is None:
@@ -2045,7 +2062,9 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if sys.platform != 'win32':
+    if sys.platform == 'win32':
+        _copy_winlibs(home_dir)
+    else:
         # Put lib64_path at front of paths rather than end.
         # As of virtualenv 1.8.2 this fix had not made it in the release.
         patched = False

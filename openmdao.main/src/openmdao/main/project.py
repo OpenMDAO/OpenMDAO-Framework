@@ -535,6 +535,10 @@ description =
                 pass
 
         if err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logger.error("command '%s' generated an exception:\n %s",
+                         cmd, ''.join(lines))
             raise
         else:
             if not self._cmds_to_save:

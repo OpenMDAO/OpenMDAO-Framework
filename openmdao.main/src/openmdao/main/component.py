@@ -13,6 +13,7 @@ import pkg_resources
 import sys
 import weakref
 
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
@@ -39,8 +40,10 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+from openmdao.util.log import logger
 import openmdao.util.log as tracing
 
+__missing__ = object()
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -193,7 +196,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count
+        self._publish_vars = {}  # dict of varname to subscriber count        
 
     @property
     def dir_context(self):
@@ -1540,52 +1543,57 @@ class Component(Container):
         self._logger.level = level
 
     def register_published_vars(self, names, publish=True):
+        logger.error("registering pub vars: %s" % names)
         if isinstance(names, basestring):
             names = [names]
         for name in names:
-            # TODO: allow wildcard naming at lowest level
-            parts = name.split('.')
+            obj = None
+            parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
-                    if not hasattr(self, name):
+                    obj = getattr(self, name, __missing__)
+                    if obj is __missing__:
                         self.raise_exception("%s has no attribute named '%s'"
                                               % (self.get_pathname(), name),
                                              NameError)
                     else:
-                        obj = getattr(self, name)
                         if has_interface(obj, IComponent):
+                            logger.error("obj is an IComponent")
                             obj.register_published_vars(__attributes__, publish)
                             return
 
                 if publish:
+                    logger.error("calling Publisher.register for %s" % name)
+                    Publisher.register('.'.join([self.get_pathname(), name]),
+                                       obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
+                    Publisher.unregister('.'.join([self.get_pathname(), name]))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
                             del self._publish_vars[name]
             else:
                 obj = getattr(self, parts[0])
-                obj.register_published_vars('.'.join(parts[1:]), publish)
+                obj.register_published_vars(parts[1], publish)
 
     def publish_vars(self):
         pub = Publisher.get_instance()
         if pub:
             pub_vars = self._publish_vars.keys()
+            logger.error("=== for comp %s, pub vars = %s" %(self.get_pathname(),
+                                                         pub_vars))
             if len(pub_vars) > 0:
                 pname = self.get_pathname()
                 lst = []
                 for var in pub_vars:
                     if var == __attributes__:
-                        key = pname
-                        val = self.get_attributes()
+                        lst.append((pname, self.get_attributes()))
                     else:
-                        key = '.'.join([pname, var])
-                        val = getattr(self, var)
-                    lst.append((key, val))
+                        lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
@@ -1713,9 +1721,9 @@ class Component(Container):
                                                    parent=name,
                                                    valid=io_attr['valid'])
                 if name in self.list_inputs():
-                    inputs += vt_attrs['Inputs']
+                    inputs += vt_attrs.get('Inputs', [])
                 else:
-                    outputs += vt_attrs['Outputs']
+                    outputs += vt_attrs.get('Outputs', [])
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs

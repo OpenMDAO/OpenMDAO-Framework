@@ -45,6 +45,7 @@ openmdao.Model=function(listeners_ready) {
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
         var callbacks = subscribers.outstream;
+        console.debug(message);
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -73,6 +74,20 @@ openmdao.Model=function(listeners_ready) {
             catch(err) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
+        }
+        else { // binary message, assume it uses our simple framing protocol
+            // framing protocol is: msg starts with a null padded routing string of size NAME_SIZE,
+            // followed by the actual binary msg
+            var namearr = new Uint8Array(message, 0, openmdao.NAME_SIZE-1);
+            var name = String.fromCharCode.apply(null, namearr);
+            var idx = name.indexOf("\0");
+            if (idx > 0) {
+                name = name.substr(0, idx);
+            }
+
+            console.debug("publishing ArrayBuffer for name = "+name);
+            //var msg = whole.subarray(g.NAME_SIZE);
+            self.publish([name, message]);  // send the whole message to save on some copying later...
         }
     }
 
@@ -105,6 +120,7 @@ openmdao.Model=function(listeners_ready) {
         Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
+        console.debug("added a listener for topic "+topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -146,13 +162,17 @@ openmdao.Model=function(listeners_ready) {
     /** publish message to subscribed listeners.
     */
     this.publish = function(message) {
-        var topic = message[0],
+        var i, topic = message[0],
             callbacks;
+        console.debug("in Model.publish.  for topic "+topic);
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
             callbacks = subscribers[topic].slice();
+            console.debug("len subs = ");
+            console.debug(callbacks.length);
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
+                    console.debug("calling callback");
                     callbacks[i](message);
                 }
                 else {
