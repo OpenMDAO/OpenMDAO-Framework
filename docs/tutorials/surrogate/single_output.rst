@@ -43,13 +43,13 @@ created an assembly, the MetaModel component needs to be instantiated. In this e
 the MetaModel was instantiated as ``sin_meta_model``, making it easy to identify.
 
 Once the MetaModel component is in place, the first step is to tell the MetaModel which component
-it should create an approximation for.  We do this by placing the component in the :term:`slot`
+it should create an approximation for.  We do this by placing the component in the :term:`Slot`
 called `model`.  For this case we are looking at the Sin component created earlier, so this is
-what's  placed in the model slot. The MetaModel will now have the  same inputs and outputs as our
+what's  placed in the model Slot. The MetaModel will now have the  same inputs and outputs as our
 ``sine`` component (an input named `x` and an output named `f_x` copied directly from the names in
 the Sine component). 
 
-The next step is to fill the ``default_surrogate`` slot. In this case we set it to
+The next step is to fill the ``default_surrogate`` Slot. In this case we set it to
 KrigingSurrogate, meaning that all outputs will be modeled  with Kriging surrogate models, unless
 otherwise specified. Specific surrogate models can be specified for  specific output variables. We
 cover that in the next tutorial.
@@ -64,7 +64,7 @@ cover that in the next tutorial.
             self.sin_meta_model.default_surrogate = KrigingSurrogate()
             self.sin_meta_model.model = Sin()
 
-Once the `model` and ``default_surrogate`` slots of the MetaModel have been filled, the MetaModel
+Once the `model` and ``default_surrogate`` Slots of the MetaModel have been filled, the MetaModel
 is ready for training. 
 
  .. testcode:: MetaModel_parts
