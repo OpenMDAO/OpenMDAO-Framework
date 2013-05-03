@@ -139,13 +139,13 @@ def setup_tunnel(address, port, user=None, identity=None):
     Returns ``((local_address, local_port), (cleanup-info))``, where
     `cleanup-info` contains a cleanup function and its arguments.
     """
-    # Try to grab an unused local port.
+    # Try to grab an unused local port (ssh doesn't support allocation here).
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost', 0))
     local_port = sock.getsockname()[1]
     sock.close()
 
-    args = ['-x', '-T', '-L', '%d:localhost:%d' % (local_port, port)]
+    args = ['-L', '%d:localhost:%d' % (local_port, port)]
     cleanup_info = None
     try:
         cleanup_info = _start_tunnel(address, port, args, user, identity,
@@ -185,7 +185,6 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     Setup reverse tunnel to `local_address`:`port` from `remote_address`
     assuming:
 
-    - `port` is available on the remote host.
     - 'plink' is available on Windows, 'ssh' on other platforms.
     - No user interaction is required to connect via 'plink'/'ssh'.
 
@@ -196,7 +195,7 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
         IPv4 address of tunnel.
 
     port: int
-        Local port, used at both ends of tunnel.
+        Local port.
 
     user: string
         Remote username, if different than local name.
@@ -205,10 +204,10 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     identity: string
         Path to optional identity file.
 
-    Returns ``((local_address, local_port), (cleanup-info))`` where
+    Returns ``(('localhost', remote_port), (cleanup-info))`` where
     `cleanup-info` contains a cleanup function and its arguments.
     """
-    args = ['-x', '-T', '-R', '%d:%s:%d' % (port, local_address, port)]
+    args = ['-R', '%d:%s:%d' % (0, local_address, port)]
     try:
         cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
                                      'rtunnel')
@@ -218,7 +217,23 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
         if cleanup_info is not None:
             cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
         raise
-    return (('localhost', port), cleanup_info)
+
+    # Look for the port allocated by ssh. Hopefully this is portable.
+    with open(cleanup_info[3], 'r') as out:
+        for line in out:
+            if line.startswith('Allocated port'):
+                remote_port = int(line.split()[2])
+                logging.debug('Allocated remote port %s on %s',
+                              remote_port, remote_address)
+                break
+        else:
+            msg = 'setup_rtunnel: no remote port allocated by ssh for %s' \
+                  % remote_address
+            logging.error(msg)
+            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
+            raise RuntimeError(msg)
+
+    return (('localhost', remote_port), cleanup_info)
 
 def _start_tunnel(address, port, args, user, identity, prefix):
     """ Start an ssh tunnel process. """
@@ -236,6 +251,7 @@ def _start_tunnel(address, port, args, user, identity, prefix):
     ssh += ['-l', user]
     if identity:
         ssh += ['-i', identity]
+    ssh += ['-N', '-n', '-x', '-T']
     args = ssh + args + [host]
 
     logname = '%s-%s-%s.log' % (prefix, host, port)

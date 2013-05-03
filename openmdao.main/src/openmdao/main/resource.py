@@ -1287,11 +1287,8 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
     name: string
         Name of allocator, used in log messages, etc.
 
-    machines: list(dict)
-        Dictionaries providing configuration data for each machine in the
-        cluster.  At a minimum, each dictionary must specify a host
-        address in 'hostname' and the path to the OpenMDAO Python command in
-        'python'.
+    machines: list(:class:`ClusterHost`)
+        Hosts to allocate from.
 
     authkey: string
         Authorization key to be passed-on to remote servers.

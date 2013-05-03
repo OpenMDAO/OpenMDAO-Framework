@@ -2,8 +2,13 @@
 This module is based on the *distributing.py* file example which was
 (temporarily) posted with the multiprocessing module documentation.
 
-This code assumes `ssh` has been set-up on all hosts such that no user
-intervention for passwords or passphrases is required.
+This code uses ssh (or plink on Windows) to access remote haosts and assumes
+authorization has been set-up on all hosts such that no user intervention for
+passwords or passphrases is required.
+
+Also, it's assumed that connections to remote hosts will access a UNIX-like
+shell.  Remote Windows hosts will need to be configured for cygwin or
+something similar.
 """
 
 import base64
@@ -449,6 +454,9 @@ class Host(object):  #pragma no cover
             return
 
         self.tempdir = self._copy_to_remote(files)
+        if not self.tempdir:
+            self.state = 'failed'
+            return
         _LOGGER.debug('startup files copied to %s:%s',
                       self.hostname, self.tempdir)
 
@@ -562,7 +570,8 @@ class Host(object):  #pragma no cover
         cmd = self._ssh_cmd()
         cmd.extend([self.hostname, self.python,
                     '-c', _UNZIP_CODE.replace('\n', ';')])
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, universal_newlines=True,
+                                stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Can't 'w|gz'/'r|gz', Windows can't handle binary on stdin.
         archive = tarfile.open(fileobj=proc.stdin, mode='w|')
@@ -570,15 +579,25 @@ class Host(object):  #pragma no cover
             archive.add(name, os.path.basename(name))
         archive.close()
         proc.stdin.close()
-        return proc.stdout.read().rstrip().replace('\\', '/')
+        output = proc.stdout.read()
+        for line in output.split('\n'):
+            if line.startswith('tempdir'):
+                tempdir = line.split()[1]
+                return tempdir.replace('\\', '/')
+        else:
+            _LOGGER.error("Couldn't copy files to remote %s:\n%s",
+                          self.hostname, output)
+            return None
 
+# FIXME: this currently won't work for Windows if ssh doesn't connect to a
+# UNIX-like shell (cygwin, etc.)
 _UNZIP_CODE = '''"import tempfile, os, sys, tarfile
 tempdir = tempfile.mkdtemp(prefix='omdao-')
 os.chdir(tempdir)
 tf = tarfile.open(fileobj=sys.stdin, mode='r|')
 tf.extractall()
 tf.close()
-print tempdir"'''
+print 'tempdir', tempdir"'''
 
 
 # Runs on the remote host.
