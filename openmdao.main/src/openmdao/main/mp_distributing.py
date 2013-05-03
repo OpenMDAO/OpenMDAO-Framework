@@ -585,8 +585,9 @@ class Host(object):  #pragma no cover
                 tempdir = line.split()[1]
                 return tempdir.replace('\\', '/')
         else:
-            _LOGGER.error("Couldn't copy files to remote %s:\n%s",
-                          self.hostname, output)
+            _LOGGER.error("Couldn't copy files to remote %s:\n"
+                          "[stdout]\n%s\n[stderr]\n%s",
+                          self.hostname, output, proc.stderr.read())
             return None
 
 # FIXME: this currently won't work for Windows if ssh doesn't connect to a

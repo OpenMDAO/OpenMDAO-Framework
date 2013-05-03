@@ -207,30 +207,31 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     Returns ``(('localhost', remote_port), (cleanup-info))`` where
     `cleanup-info` contains a cleanup function and its arguments.
     """
-    args = ['-R', '%d:%s:%d' % (0, local_address, port)]
-    try:
-        cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
-                                     'rtunnel')
-    except Exception:
-        logging.error("Can't setup reverse tunnel from %s to %s:%s",
-                      remote_address, local_address, port)
-        raise
+    if sys.platform != 'win32':  # Windows/plink doesn't report anything :-(
+        args = ['-R', '%d:%s:%d' % (0, local_address, port)]
+        try:
+            cleanup_info = _start_tunnel(remote_address, port, args, user,
+                                         identity, 'rtunnel')
+        except Exception:
+            logging.error("Can't setup reverse tunnel from %s to %s:%s",
+                          remote_address, local_address, port)
+            raise
 
-    # Look for the port allocated by ssh. Hopefully this is portable.
-    with open(cleanup_info[3], 'r') as out:
-        for line in out:
-            if line.startswith('Allocated port'):
-                remote_port = int(line.split()[2])
-                logging.debug('Allocated remote port %s on %s',
-                              remote_port, remote_address)
-                return (('localhost', remote_port), cleanup_info)
+        # Look for the port allocated by ssh. Hopefully this is portable.
+        with open(cleanup_info[3], 'r') as out:
+            for line in out:
+                if line.startswith('Allocated port'):
+                    remote_port = int(line.split()[2])
+                    logging.debug('Allocated remote port %s on %s',
+                                  remote_port, remote_address)
+                    return (('localhost', remote_port), cleanup_info)
 
-    # Apparently nothing allocated. Retry with explicit port.
-    logging.debug('No remote port allocated by ssh for %s (output in %s)',
-                  remote_address, cleanup_info[3])
-    cleanup_info[0](*cleanup_info[1:]) #, **dict(keep_log=True))
+        # Apparently nothing allocated. Retry with explicit port.
+        logging.debug('No remote port allocated by ssh for %s (output in %s)',
+                      remote_address, cleanup_info[3])
+        cleanup_info[0](*cleanup_info[1:]) #, **dict(keep_log=True))
 
-    remote_port = _unused_remote_port(local_address, port, user, identity)
+    remote_port = _unused_remote_port(remote_address, port, user, identity)
     args = ['-R', '%d:%s:%d' % (remote_port, local_address, port)]
     try:
         cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
@@ -243,7 +244,7 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     return (('localhost', remote_port), cleanup_info)
 
 def _unused_remote_port(address, port, user, identity):
-    """ Return a (currently) unused port on `address`, `port`. """
+    """ Return a (currently) unused port on `address`, default to `port`. """
     if '@' in address:
         user, host = address.split('@')
     else:
@@ -251,15 +252,17 @@ def _unused_remote_port(address, port, user, identity):
         host = address
 
     if sys.platform == 'win32':  # pragma no cover
-        ssh = ['plink', '-batch', '-ssh']
+        cmd = ['plink', '-batch', '-ssh']
     else:
-        ssh = ['ssh']
+        cmd = ['ssh']
 
-    ssh += ['-l', user]
+    cmd += ['-l', user]
     if identity:
-        ssh += ['-i', identity]
-    ssh += ['-x', '-T']
+        cmd += ['-i', identity]
+    cmd += ['-x', '-T']
 
+# FIXME: this currently won't work for Windows if ssh doesn't connect to a
+# UNIX-like shell (cygwin, etc.)
     code = '''"import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('localhost', 0))
@@ -267,12 +270,12 @@ port = sock.getsockname()[1]
 sock.close()
 print 'port', port"'''
 
-    ssh += [host, 'python', '-c', code.replace('\n', ';')]
+    cmd += [host, 'python', '-c', code.replace('\n', ';')]
     try:
-        proc = ShellProc(ssh, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        proc = ShellProc(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     except Exception as exc:
-        logging.warning("Can't get unused port via %s (forcing %s): %s",
-                        ssh, port, exc)
+        logging.warning("Can't get unused port on %s from %s (forcing %s): %s",
+                        host, cmd, port, exc)
         return port
 
     output = proc.stdout.read()
@@ -282,8 +285,9 @@ print 'port', port"'''
             logging.debug('Unused remote port %s on %s', remote_port, host)
             return remote_port
     else:
-        logging.warning("Can't get unused port on %s (forcing %s):\n%s",
-                        host, port, output)
+        logging.warning("Can't get unused port on %s from %s (forcing %s):\n"
+                        "[stdout]\n%s\n[stderr]\n%s",
+                        host, cmd, port, output, proc.stderr.read())
         return port
 
 def _start_tunnel(address, port, args, user, identity, prefix):
@@ -295,15 +299,15 @@ def _start_tunnel(address, port, args, user, identity, prefix):
         host = address
 
     if sys.platform == 'win32':  # pragma no cover
-        ssh = ['plink', '-batch', '-ssh']
+        cmd = ['plink', '-batch', '-ssh']
     else:
-        ssh = ['ssh']
+        cmd = ['ssh']
 
-    ssh += ['-l', user]
+    cmd += ['-l', user]
     if identity:
-        ssh += ['-i', identity]
-    ssh += ['-N', '-n', '-x', '-T']
-    args = ssh + args + [host]
+        cmd += ['-i', identity]
+    cmd += ['-N', '-n', '-x', '-T']
+    cmd += args + [host]
 
     logname = '%s-%s-%s.log' % (prefix, host, port)
     logname = os.path.join(os.getcwd(), logname)
@@ -311,15 +315,16 @@ def _start_tunnel(address, port, args, user, identity, prefix):
 
     tunnel_proc = None
     try:
-        tunnel_proc = ShellProc(args, stdout=stdout, stderr=STDOUT)
+        tunnel_proc = ShellProc(cmd, stdout=stdout, stderr=STDOUT)
     except Exception as exc:
         raise RuntimeError("Can't create ssh tunnel process from %s: %s"
-                           % (args, exc))
+                           % (cmd, exc))
     time.sleep(1)
     exitcode = tunnel_proc.poll()
     if exitcode is not None:
-        raise RuntimeError('ssh tunnel process for %s:%s exited with exitcode %d,'
-                           ' output in %s' % (address, port, exitcode, logname))
+        raise RuntimeError('ssh tunnel process for %s:%s exited with exitcode'
+                           ' %d, output in %s'
+                           % (address, port, exitcode, logname))
 
     return (_cleanup_tunnel, tunnel_proc, stdout, logname, os.getpid())
 
