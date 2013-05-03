@@ -72,19 +72,16 @@ class ZmqCompWrapper(object):
         try:
             funct = deep_getattr(self._comp, parts[0])
             ret = funct(*parts[1], **parts[2])
-        except Exception as err:
+        except Exception:
+            ret = traceback.format_exc()
             logging.exception('handle_req %s %s %s',
                               parts[0], parts[1], parts[2])
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            ret = traceback.format_exc(exc_traceback)
         if debug:
             DEBUG('returning %s' % ret)
         try:
             self._repstream.send_multipart([self._encoder(ret)])
         except Exception:
-            strio = StringIO.StringIO()
-            traceback.print_exc(file=strio)
-            print "Error handling request: %s: %s" % (msg, strio.getvalue())
+            print "Error handling request: %s: %s" % (msg, traceback.format_exc())
         
     @staticmethod
     def serve(top, context=None, wspub=None, wscmd=None, port=8888,
@@ -94,11 +91,11 @@ class ZmqCompWrapper(object):
             context = zmq.Context()
 
         loop = ioloop.IOLoop.instance()
-        actor = ZmqCompWrapper(context, top, rep_url)
+        ZmqCompWrapper(context, top, rep_url)
         
         # initialize the publisher
         from openmdao.main.publisher import Publisher
-        pub = Publisher.init(context, pub_url)
+        Publisher.init(context, pub_url)
             
         if wspub or wscmd:
             from openmdao.main.zmqws import CmdWebSocketHandler, PubWebSocketHandler
@@ -153,7 +150,7 @@ def main(args=None):
     try:
         mod = sys.modules[modpath]
         ctor = getattr(mod, parts[-1])
-    except KeyError, AttributeError:
+    except (KeyError, AttributeError):
         print "can't locate %s" % options.classpath
         sys.exit(-1)
         

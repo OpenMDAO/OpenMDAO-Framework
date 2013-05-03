@@ -2,11 +2,11 @@
 Test Dependency Functions
 """
 
-import os, sys
+import os
 import unittest
 from nose import SkipTest
 
-from openmdao.util.dep import PythonSourceFileAnalyser, PythonSourceTreeAnalyser
+from openmdao.util.dep import PythonSourceTreeAnalyser
 
 class DepTestCase(unittest.TestCase):
 

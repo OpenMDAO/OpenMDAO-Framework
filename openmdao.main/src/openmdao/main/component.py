@@ -1543,7 +1543,6 @@ class Component(Container):
         self._logger.level = level
 
     def register_published_vars(self, names, publish=True):
-        logger.error("registering pub vars: %s" % names)
         if isinstance(names, basestring):
             names = [names]
         for name in names:
@@ -1558,12 +1557,10 @@ class Component(Container):
                                              NameError)
                     else:
                         if has_interface(obj, IComponent):
-                            logger.error("obj is an IComponent")
                             obj.register_published_vars(__attributes__, publish)
                             return
 
                 if publish:
-                    logger.error("calling Publisher.register for %s" % name)
                     Publisher.register('.'.join([self.get_pathname(), name]),
                                        obj)
                     if name in self._publish_vars:
@@ -1584,8 +1581,6 @@ class Component(Container):
         pub = Publisher.get_instance()
         if pub:
             pub_vars = self._publish_vars.keys()
-            logger.error("=== for comp %s, pub vars = %s" %(self.get_pathname(),
-                                                         pub_vars))
             if len(pub_vars) > 0:
                 pname = self.get_pathname()
                 lst = []
