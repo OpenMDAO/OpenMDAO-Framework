@@ -227,8 +227,7 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
                     return (('localhost', remote_port), cleanup_info)
 
         # Apparently nothing allocated. Retry with explicit port.
-        logging.debug('No remote port allocated by ssh for %s (output in %s)',
-                      remote_address, cleanup_info[3])
+        logging.debug('No remote port allocated by ssh for %s', remote_address)
         cleanup_info[0](*cleanup_info[1:]) #, **dict(keep_log=True))
 
     remote_port = _unused_remote_port(remote_address, port, user, identity)
@@ -306,7 +305,7 @@ def _start_tunnel(address, port, args, user, identity, prefix):
     cmd += ['-l', user]
     if identity:
         cmd += ['-i', identity]
-    cmd += ['-N', '-n', '-x', '-T']
+    cmd += ['-N', '-x', '-T']  # plink doesn't support '-n' (no stdin)
     cmd += args + [host]
 
     logname = '%s-%s-%s.log' % (prefix, host, port)

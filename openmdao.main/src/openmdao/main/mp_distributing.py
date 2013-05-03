@@ -145,13 +145,20 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
         in created servers. Use with caution!
 
+    hostname: string
+        Fully qualified domain name for this host. Normally :meth:socket.getfqdn
+        is used, but on some systems it doesn't report an externally usable
+        address. This is the address remote hosts will use to connect back to.
+
     Once started, available hosts may be accessed via sequence operations.
     """
 
-    def __init__(self, hostlist, modules=None, authkey=None, allow_shell=False):
+    def __init__(self, hostlist, modules=None, authkey=None, allow_shell=False,
+                 hostname=None):
         super(Cluster, self).__init__(authkey=authkey)
         self._hostlist = hostlist
         self._allow_shell = allow_shell
+        self._hostname = hostname or socket.getfqdn()
         modules = modules or []
         if __name__ not in modules:
             modules.append(__name__)
@@ -183,8 +190,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         started.
         """
         super(Cluster, self).start()
-        hostname = socket.getfqdn()
-        listener = connection.Listener(address=(hostname, 0),
+        listener = connection.Listener(address=(self._hostname, 0),
                                        authkey=self._authkey,
                                        backlog=5)  # Default is 1.
 
