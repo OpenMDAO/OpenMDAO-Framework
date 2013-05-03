@@ -43,7 +43,8 @@ class ShellProc(subprocess.Popen):
         Environment variables for the command.
     """
 
-    def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None):
+    def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None,
+                 universal_newlines=False):
         environ = os.environ.copy()
         if env:
             environ.update(env)
@@ -72,7 +73,8 @@ class ShellProc(subprocess.Popen):
         try:
             subprocess.Popen.__init__(self, args, stdin=self._inp,
                                       stdout=self._out, stderr=self._err,
-                                      shell=shell, env=environ)
+                                      shell=shell, env=environ,
+                                      universal_newlines=universal_newlines)
         except Exception:
             self.close_files()
             raise

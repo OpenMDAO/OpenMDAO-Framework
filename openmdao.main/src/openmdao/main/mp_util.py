@@ -24,7 +24,7 @@ from openmdao.main.rbac import rbac_methods
 from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
-from openmdao.util.shellproc import ShellProc, STDOUT
+from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
 
 # Names of attribute access methods requiring special handling.
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
@@ -214,8 +214,6 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
     except Exception:
         logging.error("Can't setup reverse tunnel from %s to %s:%s",
                       remote_address, local_address, port)
-        if cleanup_info is not None:
-            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
         raise
 
     # Look for the port allocated by ssh. Hopefully this is portable.
@@ -225,15 +223,68 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
                 remote_port = int(line.split()[2])
                 logging.debug('Allocated remote port %s on %s',
                               remote_port, remote_address)
-                break
-        else:
-            msg = 'setup_rtunnel: no remote port allocated by ssh for %s' \
-                  % remote_address
-            logging.error(msg)
-            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
-            raise RuntimeError(msg)
+                return (('localhost', remote_port), cleanup_info)
+
+    # Apparently nothing allocated. Retry with explicit port.
+    logging.debug('No remote port allocated by ssh for %s (output in %s)',
+                  remote_address, cleanup_info[3])
+    cleanup_info[0](*cleanup_info[1:]) #, **dict(keep_log=True))
+
+    remote_port = _unused_remote_port(local_address, port, user, identity)
+    args = ['-R', '%d:%s:%d' % (remote_port, local_address, port)]
+    try:
+        cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
+                                     'rtunnel2')
+    except Exception:
+        logging.error("Can't setup reverse tunnel from %s to %s:%s",
+                      remote_address, local_address, port)
+        raise
 
     return (('localhost', remote_port), cleanup_info)
+
+def _unused_remote_port(address, port, user, identity):
+    """ Return a (currently) unused port on `address`, `port`. """
+    if '@' in address:
+        user, host = address.split('@')
+    else:
+        user = user or getpass.getuser()
+        host = address
+
+    if sys.platform == 'win32':  # pragma no cover
+        ssh = ['plink', '-batch', '-ssh']
+    else:
+        ssh = ['ssh']
+
+    ssh += ['-l', user]
+    if identity:
+        ssh += ['-i', identity]
+    ssh += ['-x', '-T']
+
+    code = '''"import socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind(('localhost', 0))
+port = sock.getsockname()[1]
+sock.close()
+print 'port', port"'''
+
+    ssh += [host, 'python', '-c', code.replace('\n', ';')]
+    try:
+        proc = ShellProc(ssh, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    except Exception as exc:
+        logging.warning("Can't get unused port via %s (forcing %s): %s",
+                        ssh, port, exc)
+        return port
+
+    output = proc.stdout.read()
+    for line in output.split('\n'):
+        if line.startswith('port'):
+            remote_port = int(line.split()[1])
+            logging.debug('Unused remote port %s on %s', remote_port, host)
+            return remote_port
+    else:
+        logging.warning("Can't get unused port on %s (forcing %s):\n%s",
+                        host, port, output)
+        return port
 
 def _start_tunnel(address, port, args, user, identity, prefix):
     """ Start an ssh tunnel process. """
