@@ -20,8 +20,6 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-    debug.info('SlotFigure',pathname,slot);
-
     var self = this,
         id = 'SlotFigure-' + pathname.replace(/\.|\[|\]|\"|\'/g, '-'),
         slotDiv = '<div class="SlotFigure">',
@@ -192,7 +190,6 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
 
     /* update the figure to represent the filled state of the slot */
     this.setState = function(value) {
-        debug.info('SlotFigure.setState',pathname,value);
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
