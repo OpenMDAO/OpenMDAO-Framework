@@ -88,7 +88,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
     function fill(newContents) {
         var cmd;
         if (slot.containertype === 'list') {
-            if (pathname.lastIndexOf('[') > 0) {
+            if (pathname.lastIndexOf('[') >= 0) {
                 // replace existing list item
                 cmd = pathname + '=' + newContents;
             }
@@ -292,7 +292,7 @@ openmdao.SlotListFigure=function(elm, model, pathname, slot) {
     });
 
     // add an empty slot to the end of the list as a drop target
-    openmdao.SlotFigure(listDiv, model, pathname+'["'+counter+'"]', {
+    openmdao.SlotFigure(listDiv, model, pathname, {
         containertype: "list",
         desc: slot.desc,
         filled: false,
