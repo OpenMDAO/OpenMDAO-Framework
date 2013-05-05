@@ -45,11 +45,15 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
         }) ;
 
         jQuery.each(json, function(idx, slot) {
+            var slotName = pathname+'.'+slot.name;
             if (slot.containertype === 'dict') {
-                openmdao.SlotDictFigure(slotsDiv, model, pathname+'.'+slot.name, slot);
+                openmdao.SlotDictFigure(slotsDiv, model, slotName, slot);
+            }
+            else if (slot.containertype === 'list') {
+                openmdao.SlotListFigure(slotsDiv, model, slotName, slot);
             }
             else {
-                openmdao.SlotFigure(slotsDiv, model, pathname+'.'+slot.name, slot);
+                openmdao.SlotFigure(slotsDiv, model, slotName, slot);
             }
         });
     }
