@@ -23,11 +23,20 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
     var self = this,
         slotsID = pathname.replace(/\./g,'-')+"-slots",
         slotsDiv = jQuery('<div style="position:relative; background-color:black;">')
-            .appendTo(elm);
+            .appendTo(elm),
+        contextMenu = jQuery("<ul id="+slotsID+"-menu class='context-menu'>")
+            .appendTo(elm),
+        slotsData = {};
 
     self.pathname = pathname;
 
     elm.css({'overflow':'auto'});
+
+    contextMenu.append(jQuery('<li title="Toggle autosizing of slots">Toggle Autosizing</li>').click(function(e) {
+        openmdao.preferences.SlotFigure.resize = ! openmdao.preferences.SlotFigure.resize;
+        self.loadData(slotsData);
+    }));
+    ContextMenu.set(contextMenu.attr('id'), elm.attr('id'));
 
     /** update slots by recreating figures from JSON slots data */
     function updateFigures(json) {
@@ -91,9 +100,10 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
 
     /** update slots diagram */
     this.loadData = function(json) {
+        slotsData = json;
         slotsDiv.html('');
         if (Object.keys(json).length > 0) {
-            updateFigures(json);
+            updateFigures(slotsData);
         }
     };
 };

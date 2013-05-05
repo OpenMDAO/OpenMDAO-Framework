@@ -264,7 +264,7 @@ openmdao.SlotListFigure=function(elm, model, pathname, slot) {
         rbrktSVG = '<svg height="60" width="25">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">]</text>'
                  + '</svg>',
-        contDiv  = jQuery('<div style="width:100%;margin:10px;">')
+        contDiv  = jQuery('<div style="width:100%;margin:10px;">'),
         listDiv  = jQuery('<div style="margin:0px; clear:both;">'),
         slotCnt  = Object.keys(slot.filled).length,
         slotName = openmdao.Util.getName(pathname),
@@ -327,9 +327,9 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
         rcrlySVG = '<svg height="60" width="30">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">}</text>'
                  + '</svg>',
-        contDiv  = jQuery('<div style="width:100%;margin:10px;">')
+        contDiv  = jQuery('<div style="width:100%;margin:10px;">'),
         nameDiv  = jQuery('<div style="color:gray;margin:0px">'
-                 + openmdao.Util.getName(pathname)+':</div>')
+                 + openmdao.Util.getName(pathname)+':</div>'),
         dictDiv  = jQuery('<div style="margin:0px; clear:both;">'),
         slotCnt  = Object.keys(slot.filled).length;
 
