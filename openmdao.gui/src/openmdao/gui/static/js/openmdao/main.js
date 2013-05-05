@@ -17,10 +17,6 @@ jQuery(function() {
     openmdao.ValueEditor.registerEditor("enum", EnumEditor);
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
-    
-    //setup prefernces
-    //these are a temporary solution
-    openmdao.preferences = { gui : { compeditor : {} } }    
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
