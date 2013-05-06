@@ -4,6 +4,7 @@ which support various operations such as creating objects, loading models via
 egg files, remote execution, and remote file access.
 """
 
+import atexit
 import logging
 import optparse
 import os.path
@@ -274,11 +275,16 @@ class ObjServerFactory(Factory):
             orig_main = None
             if sys.platform == 'win32':  #pragma no cover
                 scripts = ('openmdao-script.py', 'openmdao_test-script.py')
-                if sys.modules['__main__'].__file__.endswith(scripts):
-                    orig_main = sys.modules['__main__'].__file__
-                    sys.modules['__main__'].__file__ = \
-                        pkg_resources.resource_filename('openmdao.main',
-                                                        'objserverfactory.py')
+                try:
+                    main_file = sys.modules['__main__'].__file__
+                except AttributeError:
+                    pass
+                else:
+                    if main_file.endswith(scripts):
+                        orig_main = main_file
+                        sys.modules['__main__'].__file__ = \
+                            pkg_resources.resource_filename('openmdao.main',
+                                                            'objserverfactory.py')
             owner = get_credentials()
             self._logger.log(LOG_DEBUG2, '%s starting server %r in dir %s',
                              owner, name, root_dir)
@@ -714,7 +720,8 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
     except KeyError:
         # Requires ssh setup.
         if tunnel:  # pragma no cover
-            location = setup_tunnel(address, port)
+            location, cleanup = setup_tunnel(address, port)
+            atexit.register(*cleanup)
         else:
             location = key
         via = ' (via tunnel)' if tunnel else ''
