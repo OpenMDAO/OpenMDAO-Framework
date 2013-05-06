@@ -39,24 +39,23 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             { id:"type",  name: "Type",       field:"type",   width:30   },
             { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
             { id:"hi",    name: "High",       field:"high",   width:30   },
-            { id:"low",    name: "Low",        field:"low",   width:30   },
+            { id:"low",   name: "Low",        field:"low",    width:30   },
             { id:"units", name:"Units",       field:"units",  width:60   },
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
 
         var compName = pathname.replace(".", "-", "g");
 
-        if(!(compName in openmdao.preferences.gui.compeditor)){
-            openmdao.preferences.gui.compeditor[compName] = {};
+        if(!(compName in openmdao.preferences.PropertiesPane)){
+            openmdao.preferences.PropertiesPane[compName] = {};
         }
 
-
-        if(!(name.toLowerCase() in openmdao.preferences.gui.compeditor[compName])){
-            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()] = {};
+        if(!(name.toLowerCase() in openmdao.preferences.PropertiesPane[compName])){
+            openmdao.preferences.PropertiesPane[compName][name.toLowerCase()] = {};
         }
 
-        if(!("columns" in openmdao.preferences.gui.compeditor[compName][name.toLowerCase()])){
-            openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns = {
+        if(!("columns" in openmdao.preferences.PropertiesPane[compName][name.toLowerCase()])){
+            openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns = {
                 info : true,
                 name : true,
                 type : false,
@@ -271,7 +270,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         if(meta){
             var columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
 
-            var visibility = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+            var visibility = openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns;
             var visibleColumns = [];
 
             for(i =0; i<columns.length; i++){
@@ -312,7 +311,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             });
 
             props.onBeforeDestroy.subscribe(function(e, args){
-                var visibility = openmdao.preferences.gui.compeditor[compName][name.toLowerCase()].columns;
+                var visibility = openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns;
                 var visibleColumns = args.grid.getColumns();
                 var visibleColumnIds = {};
 
