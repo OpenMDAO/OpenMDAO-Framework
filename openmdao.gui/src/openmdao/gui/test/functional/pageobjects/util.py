@@ -127,6 +127,7 @@ class NotifierPage(object):
                 logging.warning('NotifierPage: timeout')
             except WebDriverException as err:
                 logging.warning('NotifierPage:' + traceback.format_exc())
+                raise err
         raise err
 
 
