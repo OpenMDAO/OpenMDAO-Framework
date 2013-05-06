@@ -86,50 +86,50 @@ def main():
         identity_filename = os.path.expanduser('~/.ssh/lovejoykey')
         identity_filename += '.ppk' if sys.platform == 'win32' else '.pem'
 
-#        machines.append(ClusterHost(
-#            hostname='ubuntu@ec2-184-73-146-195.compute-1.amazonaws.com',
-#            python = 'setowns1_2013-05-01_15.27.22.338789' \
-#                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
-#            tunnel_incoming=True, tunnel_outgoing=True,
-#            identity_filename=identity_filename))
-#
-#        machines.append(ClusterHost(
-#            hostname='ubuntu@ec2-107-21-194-143.compute-1.amazonaws.com',
-#            python = 'setowns1_2013-05-01_15.27.07.281750' \
-#                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
-#            tunnel_incoming=True, tunnel_outgoing=True,
-#            identity_filename=identity_filename))
-#
-#        machines.append(ClusterHost(
-#            hostname='ubuntu@ec2-50-16-115-8.compute-1.amazonaws.com',
-#            python = 'setowns1_2013-05-01_15.26.59.674355' \
-#                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
-#            tunnel_incoming=True, tunnel_outgoing=True,
-#            identity_filename=identity_filename))
-#
-#        machines.append(ClusterHost(
-#            hostname='Administrator@ec2-54-225-22-248.compute-1.amazonaws.com',
-#            python = 'setowns1_2013-05-01_15.30.48.015178' \
-#                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
-#            tunnel_incoming=True, tunnel_outgoing=True,
-#            identity_filename=identity_filename))
-#
-#        machines.append(ClusterHost(
-#            hostname='Administrator@ec2-23-22-165-31.compute-1.amazonaws.com',
-#            python = 'setowns1_2013-05-01_15.31.11.969267' \
-#                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
-#            tunnel_incoming=True, tunnel_outgoing=True,
-#            identity_filename=identity_filename))
         machines.append(ClusterHost(
-            hostname='viper.grc.nasa.gov',
-            python = 'OpenMDAO-Framework/devenv/bin/python',
+            hostname='ubuntu@ec2-23-22-84-182.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-06_09.17.04.529682' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
-            identity_filename=None))
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='ubuntu@ec2-54-224-216-106.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-06_09.17.03.113077' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='ubuntu@ec2-54-235-234-97.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-06_09.17.05.434412' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='Administrator@ec2-50-19-1-69.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-06_09.20.17.379627' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+        machines.append(ClusterHost(
+            hostname='Administrator@ec2-174-129-138-250.compute-1.amazonaws.com',
+            python = 'setowns1_2013-05-06_09.19.49.348885' \
+                '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
+            tunnel_incoming=True, tunnel_outgoing=True,
+            identity_filename=identity_filename))
+
+#        machines.append(ClusterHost(
+#            hostname='viper.grc.nasa.gov',
+#            python = 'OpenMDAO-Framework/devenv/bin/python',
+#            tunnel_incoming=True, tunnel_outgoing=True,
+#            identity_filename=None))
     else:
         # Trivial local 'cluster' for debugging without remote host issues.
         machines.append(ClusterHost(hostname=socket.getfqdn(),
                                     python = sys.executable))
-
     # Start it.
     cluster = ClusterAllocator(cluster_name, machines, allow_shell=True)
     print 'Cluster initialized'

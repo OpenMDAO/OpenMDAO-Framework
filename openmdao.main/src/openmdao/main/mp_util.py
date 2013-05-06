@@ -173,8 +173,8 @@ def setup_tunnel(address, port, user=None, identity=None):
                 return (local_address, cleanup_info)
         raise RuntimeError('Timeout trying to connect through tunnel to %s:%s'
                            % (address, port))
-    except Exception:
-        logging.error("Can't setup tunnel to %s:%s", address, port)
+    except Exception as exc:
+        logging.error("Can't setup tunnel to %s:%s: %s", address, port, exc)
         if cleanup_info is not None:
             cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
         raise
@@ -212,9 +212,9 @@ def setup_reverse_tunnel(remote_address, local_address, port, user=None,
         try:
             cleanup_info = _start_tunnel(remote_address, port, args, user,
                                          identity, 'rtunnel')
-        except Exception:
-            logging.error("Can't setup reverse tunnel from %s to %s:%s",
-                          remote_address, local_address, port)
+        except Exception as exc:
+            logging.error("Can't setup reverse tunnel from %s to %s:%s: %s",
+                          remote_address, local_address, port, exc)
             raise
 
         # Look for the port allocated by ssh. Hopefully this is portable.
