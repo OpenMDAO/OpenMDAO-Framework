@@ -2,8 +2,8 @@
 Multiprocessing support utilities.
 """
 
-import atexit
 import ConfigParser
+import copy
 import cPickle
 import errno
 import getpass
@@ -24,10 +24,16 @@ from openmdao.main.rbac import rbac_methods
 from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
-from openmdao.util.shellproc import ShellProc, STDOUT
+from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
 
 # Names of attribute access methods requiring special handling.
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
+
+
+# Mapping from remote addresses to local tunnel addresses.
+_TUNNEL_MAP = {}
+# Log files that haven't been cleaned up yet due to Windows issue.
+_TUNNEL_PENDING = []
 
 
 def keytype(authkey):
@@ -109,11 +115,10 @@ def read_server_config(filename):
     return cfg
 
 
-def setup_tunnel(address, port):
+def setup_tunnel(address, port, user=None, identity=None):
     """
     Setup tunnel to `address` and `port` assuming:
 
-    - The remote login name matches the local login name.
     - `port` is available on the local host.
     - 'plink' is available on Windows, 'ssh' on other platforms.
     - No user interaction is required to connect via 'plink'/'ssh'.
@@ -124,79 +129,242 @@ def setup_tunnel(address, port):
     port: int
         Port at `address` to tunnel to.
 
-    Returns ``(local_address, local_port)``.
+    user: string
+        Remote username, if different than local name.
+        Not needed if `address` is of the form ``user@host``.
+
+    identity: string
+        Path to optional identity file.
+
+    Returns ``((local_address, local_port), (cleanup-info))``, where
+    `cleanup-info` contains a cleanup function and its arguments.
     """
-    logname = 'tunnel-%s-%d.log' % (address, port)
-    logname = os.path.join(os.getcwd(), logname)
-    stdout = open(logname, 'w')
+    # Try to grab an unused local port (ssh doesn't support allocation here).
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    local_port = sock.getsockname()[1]
+    sock.close()
 
-    user = getpass.getuser()
-    if sys.platform == 'win32':  # pragma no cover
-        stdin = open('nul:', 'r')
-        args = ['plink', '-batch', '-ssh', '-l', user,
-                '-L', '%d:localhost:%d' % (port, port), address]
-    else:
-        stdin = open('/dev/null', 'r')
-        args = ['ssh', '-l', user,
-                '-L', '%d:localhost:%d' % (port, port), address]
-
-    tunnel_proc = None
-    connected = False
+    args = ['-L', '%d:localhost:%d' % (local_port, port)]
+    cleanup_info = None
     try:
-        try:
-            tunnel_proc = ShellProc(args, stdin=stdin,
-                                    stdout=stdout, stderr=STDOUT)
-        except Exception as exc:
-            msg = "Can't create ssh tunnel process from %s: %s" % (args, exc)
-            raise RuntimeError(msg)
-
+        cleanup_info = _start_tunnel(address, port, args, user, identity,
+                                     'ftunnel')
+        tunnel_proc = cleanup_info[1]
         sock = socket.socket(socket.AF_INET)
-        address = ('127.0.0.1', port)
+        local_address = ('127.0.0.1', local_port)
         for retry in range(20):
-            time.sleep(.5)
             exitcode = tunnel_proc.poll()
             if exitcode is not None:
-                msg = 'ssh tunnel process exited with exitcode %d,' \
-                      ' output in %s' % (exitcode, logname)
-                raise RuntimeError(msg)
+                raise RuntimeError('ssh tunnel %s:%s process exited with'
+                                   ' exitcode %s' % (address, port, exitcode))
             try:
-                sock.connect(address)
+                sock.connect(local_address)
             except socket.error as exc:
                 if exc.args[0] != errno.ECONNREFUSED and \
                    exc.args[0] != errno.ENOENT:
-                    msg = "Can't connect to ssh tunnel: %s, output in %s" \
-                          % (exc, logname)
-                    raise RuntimeError(msg)
+                    raise RuntimeError("Can't connect to ssh tunnel %s:%s: %s"
+                                       % (address, port, exc))
+                time.sleep(.5)
             else:
-                atexit.register(_cleanup_tunnel, tunnel_proc, stdin, stdout,
-                                logname, os.getpid())
                 sock.close()
                 connected = True
-                return address
-    finally:
-        if not connected:
-            if tunnel_proc is not None:  # Cleanup but keep logfile.
-                _cleanup_tunnel(tunnel_proc, stdin, stdout, None, os.getpid())
-                msg = 'Timeout trying to connect through tunnel to %s,' \
-                      ' output in %s' % (address, logname)
-                raise RuntimeError(msg)
-            else:
-                stdin.close()
-                stdout.close()
+                register_tunnel(('127.0.0.1', port), local_address)
+                return (local_address, cleanup_info)
+        raise RuntimeError('Timeout trying to connect through tunnel to %s:%s'
+                           % (address, port))
+    except Exception as exc:
+        logging.error("Can't setup tunnel to %s:%s: %s", address, port, exc)
+        if cleanup_info is not None:
+            cleanup_info[0](*cleanup_info[1:], **dict(keep_log=True))
+        raise
 
-def _cleanup_tunnel(tunnel_proc, stdin, stdout, logname, pid):
+def setup_reverse_tunnel(remote_address, local_address, port, user=None,
+                         identity=None):
+    """
+    Setup reverse tunnel to `local_address`:`port` from `remote_address`
+    assuming:
+
+    - 'plink' is available on Windows, 'ssh' on other platforms.
+    - No user interaction is required to connect via 'plink'/'ssh'.
+
+    remote_address: string
+        IPv4 address connecting to tunnel.
+
+    local_address: string
+        IPv4 address of tunnel.
+
+    port: int
+        Local port.
+
+    user: string
+        Remote username, if different than local name.
+        Not needed if `remote_address` is of the form ``user@host``.
+
+    identity: string
+        Path to optional identity file.
+
+    Returns ``(('localhost', remote_port), (cleanup-info))`` where
+    `cleanup-info` contains a cleanup function and its arguments.
+    """
+    if sys.platform != 'win32':  # Windows/plink doesn't report anything :-(
+        args = ['-R', '%d:%s:%d' % (0, local_address, port)]
+        try:
+            cleanup_info = _start_tunnel(remote_address, port, args, user,
+                                         identity, 'rtunnel')
+        except Exception as exc:
+            logging.error("Can't setup reverse tunnel from %s to %s:%s: %s",
+                          remote_address, local_address, port, exc)
+            raise
+
+        # Look for the port allocated by ssh. Hopefully this is portable.
+        with open(cleanup_info[3], 'r') as out:
+            for line in out:
+                if line.startswith('Allocated port'):
+                    remote_port = int(line.split()[2])
+                    logging.debug('Allocated remote port %s on %s',
+                                  remote_port, remote_address)
+                    return (('localhost', remote_port), cleanup_info)
+
+        # Apparently nothing allocated. Retry with explicit port.
+        logging.debug('No remote port allocated by ssh for %s', remote_address)
+        cleanup_info[0](*cleanup_info[1:]) #, **dict(keep_log=True))
+
+    remote_port = _unused_remote_port(remote_address, port, user, identity)
+    args = ['-R', '%d:%s:%d' % (remote_port, local_address, port)]
+    try:
+        cleanup_info = _start_tunnel(remote_address, port, args, user, identity,
+                                     'rtunnel2')
+    except Exception:
+        logging.error("Can't setup reverse tunnel from %s to %s:%s",
+                      remote_address, local_address, port)
+        raise
+
+    return (('localhost', remote_port), cleanup_info)
+
+def _unused_remote_port(address, port, user, identity):
+    """ Return a (currently) unused port on `address`, default to `port`. """
+    if '@' in address:
+        user, host = address.split('@')
+    else:
+        user = user or getpass.getuser()
+        host = address
+
+    if sys.platform == 'win32':  # pragma no cover
+        cmd = ['plink', '-batch', '-ssh']
+    else:
+        cmd = ['ssh']
+
+    cmd += ['-l', user]
+    if identity:
+        cmd += ['-i', identity]
+    cmd += ['-x', '-T']
+
+# FIXME: this currently won't work for Windows if ssh doesn't connect to a
+# UNIX-like shell (cygwin, etc.)
+    code = '''"import socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind(('localhost', 0))
+port = sock.getsockname()[1]
+sock.close()
+print 'port', port"'''
+
+    cmd += [host, 'python', '-c', code.replace('\n', ';')]
+    try:
+        proc = ShellProc(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    except Exception as exc:
+        logging.warning("Can't get unused port on %s from %s (forcing %s): %s",
+                        host, cmd, port, exc)
+        return port
+
+    output = proc.stdout.read()
+    for line in output.split('\n'):
+        if line.startswith('port'):
+            remote_port = int(line.split()[1])
+            logging.debug('Unused remote port %s on %s', remote_port, host)
+            return remote_port
+    else:
+        logging.warning("Can't get unused port on %s from %s (forcing %s):\n"
+                        "[stdout]\n%s\n[stderr]\n%s",
+                        host, cmd, port, output, proc.stderr.read())
+        return port
+
+def _start_tunnel(address, port, args, user, identity, prefix):
+    """ Start an ssh tunnel process. """
+    if '@' in address:
+        user, host = address.split('@')
+    else:
+        user = user or getpass.getuser()
+        host = address
+
+    if sys.platform == 'win32':  # pragma no cover
+        cmd = ['plink', '-batch', '-ssh']
+    else:
+        cmd = ['ssh']
+
+    cmd += ['-l', user]
+    if identity:
+        cmd += ['-i', identity]
+    cmd += ['-N', '-x', '-T']  # plink doesn't support '-n' (no stdin)
+    cmd += args + [host]
+
+    logname = '%s-%s-%s.log' % (prefix, host, port)
+    logname = os.path.join(os.getcwd(), logname)
+    stdout = open(logname, 'w')
+
+    tunnel_proc = None
+    try:
+        tunnel_proc = ShellProc(cmd, stdout=stdout, stderr=STDOUT)
+    except Exception as exc:
+        raise RuntimeError("Can't create ssh tunnel process from %s: %s"
+                           % (cmd, exc))
+    time.sleep(1)
+    exitcode = tunnel_proc.poll()
+    if exitcode is not None:
+        raise RuntimeError('ssh tunnel process for %s:%s exited with exitcode'
+                           ' %d, output in %s'
+                           % (address, port, exitcode, logname))
+
+    return (_cleanup_tunnel, tunnel_proc, stdout, logname, os.getpid())
+
+def _cleanup_tunnel(tunnel_proc, stdout, logname, pid, keep_log=False):
     """ Try to terminate `tunnel_proc` if it's still running. """
+    logging.debug('cleanup %s PID %s', os.path.basename(logname),
+                  tunnel_proc.pid)
+
     if pid != os.getpid():
         return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
-    stdin.close()
     stdout.close()
-    if logname is not None and os.path.exists(logname):
+
+    # Cleanup of log files is problematic on Windows. Reverse tunnel logs
+    # are somehow 'in use by another process' (due to multiprocessing?).
+    # It appears the last tunnel cleanup is able to actually remove the logs.
+    if not keep_log and os.path.exists(logname):
         try:
             os.remove(logname)
-        except Exception as exc:
-            logging.warning("Can't remove tunnel logfile: %s", exc)
+        except WindowsError:
+            _TUNNEL_PENDING.append(logname)
+
+    for logname in copy.copy(_TUNNEL_PENDING):
+        if os.path.exists(logname):
+            try:
+                os.remove(logname)
+            except WindowsError:
+                pass
+            else:
+                _TUNNEL_PENDING.remove(logname)
+        else:
+            _TUNNEL_PENDING.remove(logname)
+
+def register_tunnel(remote, local):
+    """ Register `local` as the address to use to access `remote`. """
+    _TUNNEL_MAP[remote] = local
+
+def tunnel_address(remote):
+    """ Return address to use to access `remote`. """
+    return _TUNNEL_MAP.get(remote, remote)
 
 
 def encrypt(obj, session_key):

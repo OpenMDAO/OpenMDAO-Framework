@@ -62,7 +62,7 @@ from enthought.traits.trait_handlers import TraitDictObject
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \
                                   keytype, make_typeid, public_methods, \
-                                  SPECIALS
+                                  tunnel_address, SPECIALS
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                need_proxy, Credentials, \
                                get_credentials, set_credentials
@@ -156,7 +156,7 @@ class OpenMDAO_Server(Server):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
-        Ignored if `allowed_users` is specified.
+        Optional if `allowed_users` is specified.
 
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
@@ -164,35 +164,44 @@ class OpenMDAO_Server(Server):
         The host portions of user strings are used for address patterns.
 
     allow_tunneling: bool
-        If True, allow connections from 127.0.0.1 (localhost), even if not
-        listed otherwise.
+        If True, allow connections from the local host, even if not listed
+        otherwise.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
                  allowed_hosts=None, allowed_users=None, allow_tunneling=False):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
-        self.name = name or 'OMS_%d' % os.getpid()
+        self.name = name or ('OMS_%d' % os.getpid())
+        self._logger = logging.getLogger(self.name)
+        self._logger.info('OpenMDAO_Server process %d started, %r',
+                          os.getpid(), keytype(authkey))
+
         self.host = socket.gethostname()
         self._allowed_users = allowed_users
         if self._allowed_users is not None:
             hosts = set()
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
-                hosts.add(socket.gethostbyname(host))
-                if host == socket.gethostname():
-                    hosts.add('127.0.0.1')
+                try:
+                    ip_addr = socket.gethostbyname(host)
+                except socket.gaierror:
+                    self._logger.warning('No address for %r', host)
+                else:
+                    hosts.add(ip_addr)
+                if host == socket.getfqdn() or host == socket.gethostname():
+                    hosts.add('127.0.0.1')  # localhost
+            if allowed_hosts:
+                hosts |= set(allowed_hosts)
             self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
 
         self._allow_tunneling = allow_tunneling
-        if allow_tunneling and '127.0.0.1' not in self._allowed_hosts:
-            self._allowed_hosts.append('127.0.0.1')
+        if allow_tunneling:
+            self._allowed_hosts.append('127.0.0.1')  # localhost
+            self._allowed_hosts.append(socket.gethostbyname(address[0]))
 
-        self._logger = logging.getLogger(name)
-        self._logger.info('OpenMDAO_Server process %d started, %r',
-                          os.getpid(), keytype(authkey))
         if self._allowed_users is None:
             self._logger.warning('    allowed_users: ANY')
         else:
@@ -250,6 +259,15 @@ class OpenMDAO_Server(Server):
                 while not self.stop:
                     try:
                         conn = self.listener.accept()
+                        # Comment-out the line above and use this equivalent
+                        # to debug connectivity issues.
+                        #conn = self.listener._listener.accept()
+                        #self._logger.critical('connection attempt from %r',
+                        #                      self.listener.last_accepted)
+                        #if self.listener._authkey:
+                        #    connection.deliver_challenge(conn, self.listener._authkey)
+                        #    connection.answer_challenge(conn, self.listener._authkey)
+
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
                         if self.stop:
@@ -934,28 +952,31 @@ class OpenMDAO_Manager(BaseManager):
 
         writer.close()
         start = time.time()
+        error_msg = None
         for retry in range(timeout):
             if reader.poll(1):
                 break
             if not self._process.is_alive():
-                raise RuntimeError('Server process %d exited: %s'
-                                   % (pid, self._process.exitcode))
+                error_msg = 'Server process %d exited: %s' \
+                            % (pid, self._process.exitcode)
+                break
         # Hard to cause a timeout.
         else:  #pragma no cover
-            et = time.time() - start
-            self._process.terminate()
-            raise RuntimeError('Server process %d startup timed-out in %.2f' \
-                               % (pid, et))
-        error_msg = None
-        try:
-            reply = reader.recv()
-        except Exception as exc:  # str(Exception()) is null, repr() isn't.
-            error_msg = 'Server process %d read failed: %s' \
-                        % (pid, (str(exc) or repr(exc)))
-        else:
-            if isinstance(reply, Exception):
-                error_msg = 'Server process %d startup failed: %s' \
-                             % (pid, (str(reply) or repr(reply)))
+            if error_msg is None:
+                et = time.time() - start
+                self._process.terminate()
+                error_msg = 'Server process %d startup timed-out in %.2f' \
+                            % (pid, et)
+        if error_msg is None:
+            try:
+                reply = reader.recv()
+            except Exception as exc:  # str(Exception()) is null, repr() isn't.
+                error_msg = 'Server process %d read failed: %s' \
+                            % (pid, str(exc) or repr(exc))
+            else:
+                if isinstance(reply, Exception):
+                    error_msg = 'Server process %d startup failed: %s' \
+                                 % (pid, str(reply) or repr(reply))
         if error_msg:
             logging.error(error_msg)
             if cwd:
@@ -1194,6 +1215,17 @@ class OpenMDAO_Proxy(BaseProxy):
         else:
             self._pubkey = self._manager._pubkey
 
+    def _connect(self):
+        """ This version translates tunneled addresses. """
+        util.debug('making connection to manager')
+        name = current_process().name
+        if threading.current_thread().name != 'MainThread':
+            name += '|' + threading.current_thread().name
+        address = tunnel_address(self._token.address)
+        conn = self._Client(address, authkey=self._authkey)
+        dispatch(conn, None, 'accept_connection', (name,))
+        self._tls.connection = conn
+
     def _callmethod(self, methodname, args=None, kwds=None):
         """
         Try to call a method of the referrent and return a copy of the result.
@@ -1389,6 +1421,7 @@ class OpenMDAO_Proxy(BaseProxy):
             elif addr_type == 'AF_UNIX':
                 sock = socket.socket(socket.AF_UNIX)
 
+            address = tunnel_address(address)
             try:
                 sock.connect(address)
             except socket.error as exc:
@@ -1537,8 +1570,13 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
     """
     ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
                                  exposed)
-    proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
-                      incref=incref, pubkey=pubkey)
+    try:
+        proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
+                          incref=incref, pubkey=pubkey)
+    except Exception:
+        logging.exception('Auto proxy creation failed for %s at %s:',
+                          token.typeid, token.address)
+        raise
     proxy._isauto = True
     return proxy
 
@@ -1548,6 +1586,7 @@ def _get_connection(_client, address, authkey):
     Get client connection to `address` using `authkey`.
     Avoids dying on 'Interrupted system call'. (Should be in lower layer)
     """
+    address = tunnel_address(address)
     for retry in range(3):
         try:
             conn = _client(address, authkey=authkey)

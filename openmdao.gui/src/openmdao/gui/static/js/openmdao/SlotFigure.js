@@ -8,20 +8,18 @@
  * a list slot figure will add an object of that type to the list slot.
  *
  *  Arguments:
- *      elm:      the parent element in the DOM for this figure
- *      model:    object that provides access to the openmdao model
- *      pathname: the pathname of the slot
- *      slot:     the contents of the slot
- *      inDict:   true if this slot is in a dictionary
+ *      elm:       the parent element in the DOM for this figure
+ *      model:     object that provides access to the openmdao model
+ *      pathname:  the pathname of the slot
+ *      slot:      the attributes/contents of the slot
  ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
+openmdao.SlotFigure=function(elm, model, pathname, slot) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-
     var self = this,
         id = 'SlotFigure-' + pathname.replace(/\.|\[|\]|\"|\'/g, '-'),
         slotDiv = '<div class="SlotFigure">',
@@ -30,17 +28,8 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
                 + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
                 + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
                 + '</svg>',
-        lbrkSVG = '<svg height="60" width="25">'
-                + '    <text x="0" y="48" font-size="60" style="fill:gray">[</text>'
-                + '</svg>',
-        commSVG = '<svg height="60" width="20">'
-                + '    <text x="0" y="48" font-size="60" style="fill:gray">,</text>'
-                + '</svg>',
-        rbrkSVG = '<svg height="60" width="25">'
-                + '    <text x="0" y="48" font-size="60" style="fill:gray">]</text>'
-                + '</svg>',
-        singletonCSS = {'margin': '10px', 'clear': 'both'},
-        dictionaryCSS = {'margin': '10px', 'display': 'inline-block'},
+        singletonCSS = {'margin': '5px', 'clear': 'both'},
+        collectionCSS = {'margin': '5px', 'display': 'inline-block'},
         filledRectCSS = {'stroke-width': 4, 'stroke-dasharray': 'none', 'stroke': '#0b93d5', 'fill': 'gray'},
         filledTextCSS = {'fill': 'black'},
         unfilledRectCSS = {'stroke-width': 2, 'stroke-dasharray': 8, 'stroke': 'gray', 'fill': 'none'},
@@ -51,82 +40,91 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
             .appendTo(fig);
 
     if (slot.containertype === 'singleton') {
-        if (inDict) {
-            fig.css(dictionaryCSS);
-        }
-        else {
-            fig.css(singletonCSS);
-        }
-        fig.append(slotSVG);
-    }
-    else if (slot.containertype === 'list') {
         fig.css(singletonCSS);
-        fig.append(lbrkSVG).append(slotSVG).append(rbrkSVG);
     }
+    else {
+        fig.css(collectionCSS);
+    }
+    fig.append(slotSVG);
 
     // set name, id, and title
     fig.find('#name').text(slot.name);
     fig.attr('id',id);
     fig.attr('title',slot.desc);
 
-    // create context menu
-    contextMenu.append(jQuery('<li title="Edit object">Edit</li>').click(function(e) {
+    // open object editor for the object in the slot
+    function edit() {
+        var editor;
         if (fig.hasClass('filled')) {
-            var figOffset,
-                idx,
-                editor;
-            if (slot.containertype === 'list') {
-                figOffset = fig.offset();
-                idx = Math.floor((e.pageX - figOffset.left) / 120);
-                editor = new openmdao.ObjectFrame(model, pathname+'['+ idx+']');
-            }
-            else {
-                editor = new openmdao.ObjectFrame(model, pathname);
-            }
+            editor = new openmdao.ObjectFrame(model, pathname);
         }
         else {
             openmdao.Util.notify('Slot is empty!');
         }
-    }));
-    contextMenu.append(jQuery('<li title="Remove object from slot">Remove</li>').click(function(e) {
+    }
+
+    // remove the contents of the slot
+    function empty() {
+        var cmd;
         if (fig.hasClass('filled')) {
-            var figOffset,
-                idx,
-                cmd;
             if (slot.containertype === 'list') {
-                figOffset = fig.offset();
-                idx = Math.floor((e.pageX - figOffset.left) / 120);
-                cmd = 'del '+pathname+'['+ idx+']';
+                cmd = 'del '+pathname;
+            }
+            else if (slot.containertype === 'dict') {
+                cmd = pathname + " = None";
             }
             else {
-                if (inDict) {
-                    cmd = pathname + " = None";
-                }
-                else {
-                    cmd = openmdao.Util.getPath(pathname)
-                        + ".remove('"+openmdao.Util.getName(pathname)+"')";
-                }
+                cmd = openmdao.Util.getPath(pathname)
+                    + ".remove('"+openmdao.Util.getName(pathname)+"')";
             }
             model.issueCommand(cmd);
         }
         else {
             openmdao.Util.notify('Slot is already empty!');
         }
+    }
+
+    // fill the slot
+    function fill(newContents) {
+        var cmd;
+        if (slot.containertype === 'list') {
+            if (pathname.lastIndexOf('[') >= 0) {
+                // replace existing list item
+                cmd = pathname + '=' + newContents;
+            }
+            else {
+                cmd = pathname+'.append('+newContents+')';
+            }
+        }
+        else {
+            var slotParent = openmdao.Util.getPath(pathname);
+            if (slot.filled) {
+                cmd = slotParent+'.replace("'+slot.name+'", '+newContents+')';
+            }
+            else {
+                if (slot.containertype === 'dict') {
+                    cmd = pathname + '=' + newContents;
+                }
+                else {
+                    cmd = slotParent+'.add("'+slot.name+'", '+newContents+')';
+                }
+            }
+        }
+        model.issueCommand(cmd);
+    }
+
+    // create context menu
+    contextMenu.append(jQuery('<li title="Edit object">Edit</li>').click(function(e) {
+        edit();
+    }));
+    contextMenu.append(jQuery('<li title="Remove object from slot">Remove</li>').click(function(e) {
+        empty();
     }));
     ContextMenu.set(contextMenu.attr('id'), fig.attr('id'));
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
-        if (fig.hasClass('filled')) {
-            if (slot.containertype === 'singleton') {
-                new openmdao.ObjectFrame(model, pathname);
-            }
-            else if (slot.containertype === 'list') {
-                var figOffset = fig.offset();
-                    idx = Math.floor((e.pageX - figOffset.left) / 100);
-                new openmdao.ObjectFrame(model, pathname+'['+idx+']');
-            }
-        }
+        edit();
     });
 
     /** Highlight figure when cursor is over it and it can accept a drop */
@@ -176,53 +174,11 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
                 if (signature.args.length) {
                     var prompt = 'Enter arguments for new '+droppedName;
                     openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        var cmd = 'create("'+droppedPath+'"'+args+')';
-                        if (slot.containertype === 'list') {
-                            cmd = pathname+'.append('+cmd+')';
-                        }
-                        else {
-                            var slotParent = openmdao.Util.getPath(pathname);
-                            if (slot.containertype === 'singleton' && slot.filled !== null) {
-                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
-                            }
-                            else {
-                                if (inDict) {
-                                    cmd = pathname + '=' + cmd;
-                                }
-                                else {
-                                    cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
-                                }
-                            }
-                        }
-                        model.issueCommand(cmd);
+                        fill('create("'+droppedPath+'"'+args+')');
                     }, true);
                 }
                 else {
-                    var cmd = 'create("'+droppedPath+'")';
-                    if (slot.containertype === 'list') {
-                        cmd = pathname+'.append('+cmd+')';
-                    }
-                    else {
-                        var slotParent = openmdao.Util.getPath(pathname),
-                            realSlotParent = inDict ? pathname.slice(0,-slot.name.length - 1 ) : undefined;
-                        if (slot.containertype === 'singleton' && slot.filled !== null) {
-                            if (inDict) {
-                                cmd = pathname + '=' + cmd;
-                            }
-                            else {
-                                cmd = slotParent+'.replace("'+slot.name+'", '+cmd+')';
-                            }
-                        }
-                        else {
-                            if (inDict) {
-                                cmd = pathname + '=' + cmd;
-                            }
-                            else {
-                                cmd = slotParent+'.add("'+slot.name+'", '+cmd+')';
-                            }
-                        }
-                    }
-                    model.issueCommand(cmd);
+                    fill('create("'+droppedPath+'")');
                 }
             });
         }
@@ -237,66 +193,23 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
-            filled = (slot.containertype === 'singleton' && value !== null) ||
-                     (slot.containertype === 'list' && value.length > 0);
+            filled = (value !== null && value.length > 0);
 
         if (filled) {
             fig.addClass('filled');
-            if (slot.containertype === 'singleton') {
-                r.css(filledRectCSS);
-                n.css(filledTextCSS);
-                k.css(filledTextCSS).text(value.split(".").pop());
-                fig.height(60);
-                fig.width(100);
-            }
-            else if (slot.containertype === 'list') {
-                // rebuild figure with a rect for each filled list entry
-                fig.find('svg').remove();
-                fig.append(lbrkSVG);
-
-                var i = 0;
-                while(i < value.length) {
-                    fig.append(slotSVG);
-                    fig.find('#name').filter(':last').text(slot.name+'['+i+']');
-                    fig.find('#klass').filter(':last').text(value[i]);
-                    i = i + 1;
-                    fig.append(commSVG);
-                }
-
-                fig.append(slotSVG);  // add empty spot for adding to list
-                fig.append(rbrkSVG);
-
-                // set all to filled
-                r = fig.find('rect').css(filledRectCSS);
-                n = fig.find('#name').css(filledTextCSS);
-                k = fig.find('#klass').css(filledTextCSS);
-
-                // set last to unfilled
-                r.filter(':last').css(unfilledRectCSS);
-                n.filter(':last').css(unfilledTextCSS).text(slot.name);
-                k.filter(':last').css(unfilledTextCSS).text(slot.klass);
-
-                fig.height(60);
-                fig.width(120*(value.length+1)+50);
-            }
-            else {
-                debug.warn('SlotFigure - Unrecognized slot type:',slot.containertype);
-            }
+            r.css(filledRectCSS);
+            n.css(filledTextCSS);
+            k.css(filledTextCSS).text(value.split(".").pop());
+            fig.height(60);
+            fig.width(100);
         }
-        else { // if not filled
+        else {
             fig.removeClass('filled');
             r.css(unfilledRectCSS);
             n.css(unfilledTextCSS).text(slot.name);
-            if (slot.containertype === 'list') {
-                k.css(unfilledTextCSS).text(slot.klass);
-                fig.height(60);
-                fig.width(170);
-            }
-            else {
-                k.css(unfilledTextCSS).text(slot.klass);
-                fig.height(60);
-                fig.width(100);
-            }
+            k.css(unfilledTextCSS).text(slot.klass);
+            fig.height(60);
+            fig.width(100);
         }
     };
 
@@ -317,15 +230,84 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
         fig.width(rect_width + 45);
     };
 
-    // set initial state & resize it
+    // set initial state
     this.setState(slot.filled);
-    // this.resize();
+
+    // resize it per user preference
+    if (openmdao.preferences.hasOwnProperty('SlotFigure') &&
+        openmdao.preferences.SlotFigure.hasOwnProperty('resize') &&
+        openmdao.preferences.SlotFigure.resize) {
+        this.resize();
+    }
 };
+
+/***********************************************************************
+ * SlotListFigure: A graphical representation of a list of slots.
+ *
+ * A list of slots is represented as a comma separated list of
+ * singleton slot figures in square brackets.
+ *
+ *  Arguments:
+ *      elm:      the parent element in the DOM for this figure
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the slot
+ *      slot:     the contents of the slot list
+ ***********************************************************************/
+
+openmdao.SlotListFigure=function(elm, model, pathname, slot) {
+    var lbrktSVG = '<svg height="60" width="25">'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">[</text>'
+                 + '</svg>',
+        commaSVG = '<svg height="60" width="20">'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">,</text>'
+                 + '</svg>',
+        rbrktSVG = '<svg height="60" width="25">'
+                 + '    <text x="0" y="48" font-size="60" style="fill:gray">]</text>'
+                 + '</svg>',
+        contDiv  = jQuery('<div style="width:100%;margin:10px;">'),
+        listDiv  = jQuery('<div style="margin:0px; clear:both;">'),
+        slotCnt  = Object.keys(slot.filled).length,
+        slotName = openmdao.Util.getName(pathname),
+        counter  = 0;
+
+    elm.append(contDiv);
+    contDiv.append(listDiv);
+
+    listDiv.append(lbrktSVG);
+
+    // ad a slot figure for each item in the list
+    jQuery.each(slot.filled, function(idx, val) {
+        var slot_info = {
+            containertype: "list",
+            desc: slot.desc,
+            filled: val,
+            klass: val ? val : slot.klass,
+            name: slotName+'['+idx+']'
+        };
+
+        openmdao.SlotFigure(listDiv, model, pathname+'['+idx+']', slot_info);
+
+        listDiv.append(commaSVG);
+        counter = counter + 1;
+    });
+
+    // add an empty slot to the end of the list as a drop target
+    openmdao.SlotFigure(listDiv, model, pathname, {
+        containertype: "list",
+        desc: slot.desc,
+        filled: false,
+        klass: slot.klass,
+        name: slotName
+    });
+
+    listDiv.append(rbrktSVG);
+};
+
 
 /***********************************************************************
  * SlotDictFigure: A graphical representation of a dictionary of slots.
  *
- * A dictionary of slots is represented as a comma saparated list of
+ * A dictionary of slots is represented as a comma separated list of
  * singleton slot figures in curly brackets.
  *
  *  Arguments:
@@ -336,9 +318,6 @@ openmdao.SlotFigure=function(elm, model, pathname, slot, inDict) {
  ***********************************************************************/
 
 openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
-    /***********************************************************************
-     *  private
-     ***********************************************************************/
     var lcrlySVG = '<svg height="60" width="30">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">{</text>'
                  + '</svg>',
@@ -348,9 +327,9 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
         rcrlySVG = '<svg height="60" width="30">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">}</text>'
                  + '</svg>',
-        contDiv  = jQuery('<div style="width:100%;margin:10px;">')
+        contDiv  = jQuery('<div style="width:100%;margin:10px;">'),
         nameDiv  = jQuery('<div style="color:gray;margin:0px">'
-                 + openmdao.Util.getName(pathname)+':</div>')
+                 + openmdao.Util.getName(pathname)+':</div>'),
         dictDiv  = jQuery('<div style="margin:0px; clear:both;">'),
         slotCnt  = Object.keys(slot.filled).length;
 
@@ -364,7 +343,7 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
 
         jQuery.each(slot.filled, function(key, val) {
             var slot_info = {
-                containertype: "singleton",
+                containertype: "dict",
                 desc: slot.desc + ": " + key,
                 filled: val,
                 klass: val ? val : slot.klass,
@@ -381,5 +360,4 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
 
         dictDiv.append(rcrlySVG);
     }
-
 };

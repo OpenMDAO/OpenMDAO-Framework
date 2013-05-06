@@ -129,72 +129,50 @@ def _test_list_slot(browser):
     recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
     workspace_page.fill_slot_from_library(recorders_slot, 'DumpCaseRecorder')
 
-    # refresh and check that slot is now filled
+    # refresh and check that there is now a DumpCaseRecorder in the first slot
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
     eq(True, recorders_slot.filled,
         "DumpCaseRecorder did not drop into recorders slot")
-
-    # check that recorders fig now has one filled and one empty rect
-    rects = recorders_slot.root.find_elements_by_css_selector('rect')
-    eq(len(rects), 2)
-    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
-        "Filled slot element should be outlined in blue")
-    eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
-        "Unfilled slot element should be outlined in gray")
-
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
     eq(klass[0].text, 'DumpCaseRecorder',
         "Filled slot element should show the correct type (DumpCaseRecorder)")
-    eq(klass[1].text, 'ICaseRecorder',
+
+    # check that there is still an unfilled slot in the list
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    eq(False, recorders_slot.filled,
+        "recorders slot is not showing an unfilled slot")
+    klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'ICaseRecorder',
         "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # drop another CaseRecorder onto the recorders slot
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
     workspace_page.fill_slot_from_library(recorders_slot, 'CSVCaseRecorder')
-
-    # refresh and check for change (it should not change... still filled)
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[1]', prefix='top.driver')
     eq(True, recorders_slot.filled,
         "CSVCaseRecorder did not drop into recorders slot")
 
-    # check that recorders fig now has two filled and one empty rect
-    rects = recorders_slot.root.find_elements_by_css_selector('rect')
-    eq(len(rects), 3)
-    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
-        "Filled slot element should be outlined in blue")
-    eq(True, ('stroke: #0b93d5' in rects[1].get_attribute('style')),
-        "Filled slot element should be outlined in blue")
-    eq(True, ('stroke: #808080' in rects[2].get_attribute('style')),
-        "Unfilled slot element should be outlined in gray")
-
+    # check that there is still an unfilled slot in the list
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    eq(False, recorders_slot.filled,
+        "recorders slot is not showing an unfilled slot")
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
-    eq(klass[0].text, 'DumpCaseRecorder',
-        "Filled slot element should show the correct type (DumpCaseRecorder)")
-    eq(klass[1].text, 'CSVCaseRecorder',
-        "Filled slot element should show the correct type (CSVCaseRecorder)")
-    eq(klass[2].text, 'ICaseRecorder',
+    eq(klass[0].text, 'ICaseRecorder',
         "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
-    # drop another CaseRecorder onto the recorders slot
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
-    workspace_page.fill_slot_from_library(recorders_slot, 'DBCaseRecorder')
-
-    # refresh and check that recorders fig now has four total rects
-    time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
-    rects = recorders_slot.root.find_elements_by_css_selector('rect')
-    eq(len(rects), 4)
-
-    # remove an item from the list (TODO: test removing a specific item)
+    # remove the DumpCaseRecorder from the first slot in the list
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
     recorders_slot.remove()
 
-    # check that recorders fig now has only three rect
+    # check that the CSVCaseRecorder is now in the first filled slot
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
-    rects = recorders_slot.root.find_elements_by_css_selector('rect')
-    eq(len(rects), 3)
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
+    eq(True, recorders_slot.filled,
+        "CSVCaseRecorder did not drop into recorders slot")
+    klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'CSVCaseRecorder',
+        "Filled slot element should show the correct klass (CSVCaseRecorder)")
 
     # Clean up.
     editor.close()
