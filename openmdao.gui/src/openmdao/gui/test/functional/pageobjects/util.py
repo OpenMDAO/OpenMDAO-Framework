@@ -123,11 +123,11 @@ class NotifierPage(object):
                 message = msg.text
                 ok.click()
                 return message
-            except TimeoutException:
+            except TimeoutException as err:
                 logging.warning('NotifierPage: timeout')
             except WebDriverException as err:
                 logging.warning('NotifierPage:' + traceback.format_exc())
-                raise err
+        raise err
 
 
 class SafeBase(object):
