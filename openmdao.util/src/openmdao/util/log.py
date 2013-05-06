@@ -416,10 +416,10 @@ class _LogListener(object):
         """ Listen for log messages. """
         self._server = _LogServer((hostname, 0), _LogHandler)
         self._port = self._server.server_address[1]
-        self._started.set()
         logging.info('Listening for log messages at %s:%s',
                      hostname, self._port)
         atexit.register(self._stop, os.getpid())
+        self._started.set()
         self._server.service_loop()
 
     def _stop(self, pid):
