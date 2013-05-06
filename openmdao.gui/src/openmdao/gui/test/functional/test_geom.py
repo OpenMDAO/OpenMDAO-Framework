@@ -11,8 +11,8 @@ from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 from openmdao.gui.test.functional.util import main, \
-				 setup_server, teardown_server, generate, \
-                 startup, closeout, put_element_on_grid
+                setup_server, teardown_server, generate, \
+                startup, closeout, put_element_on_grid
 
 from openmdao.gui.test.functional.pageobjects.slot import SlotFigure
 
