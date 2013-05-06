@@ -14,7 +14,7 @@ from openmdao.gui.test.functional.util import main, \
                 setup_server, teardown_server, generate, \
                 startup, closeout, put_element_on_grid
 
-from openmdao.gui.test.functional.pageobjects.slot import SlotFigure
+from openmdao.gui.test.functional.pageobjects.slot import SlotFigure, find_slot_figure
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -36,8 +36,10 @@ def _test_view_geom(browser):
     geom_comp_editor.show_slots()
 
     # Plug BoxParametricGeometry into parametric_geometry
-    slot = SlotFigure(workspace_page, geom_comp_name + '.parametric_geometry')
-    slot.fill_from_library('BoxParametricGeometry')
+    slot = SlotFigure(workspace_page.browser, workspace_page.port, geom_comp_name + '.parametric_geometry')
+    #slot.fill_from_library('BoxParametricGeometry')
+    slot = find_slot_figure(workspace_page, geom_comp_name + '.parametric_geometry')
+    workspace_page.fill_slot_from_library(slot, 'BoxParametricGeometry')
 
     # Should be one window before we open the geom window
     eq(len(browser.window_handles), 1)
