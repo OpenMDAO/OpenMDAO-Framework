@@ -2,11 +2,12 @@ import Queue
 import threading
 import time
 import logging
+import traceback
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -122,9 +123,11 @@ class NotifierPage(object):
                 message = msg.text
                 ok.click()
                 return message
+            except TimeoutException:
+                logging.warning('NotifierPage: timeout')
             except WebDriverException as err:
-                logging.warning('NotifierPage:' + str(err))
-        raise err
+                logging.warning('NotifierPage:' + traceback.format_exc())
+                raise err
 
 
 class SafeBase(object):
