@@ -1,6 +1,7 @@
 """
 Exercise an EC2-based ClusterAllocator by performing a global optimization of
-the Goldstein-Price via DOEdriver setting sarting points for CONMINdriver.
+the Goldstein-Price function via a DOEdriver setting sarting points for a
+CONMINdriver.
 
 While this was written for testing an EC2-based cluster, ClusterAllocator is
 generic, it can be used with any collection of hosts accessible via ssh without

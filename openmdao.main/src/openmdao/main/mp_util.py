@@ -32,7 +32,7 @@ SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
 
 # Mapping from remote addresses to local tunnel addresses.
 _TUNNEL_MAP = {}
-# Log files that haven't been cleanup up yet due to Windows issue.
+# Log files that haven't been cleaned up yet due to Windows issue.
 _TUNNEL_PENDING = []
 
 

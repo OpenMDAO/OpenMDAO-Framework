@@ -2,7 +2,7 @@
 This module is based on the *distributing.py* file example which was
 (temporarily) posted with the multiprocessing module documentation.
 
-This code uses ssh (or plink on Windows) to access remote haosts and assumes
+This code uses ssh (or plink on Windows) to access remote hosts and assumes
 authorization has been set-up on all hosts such that no user intervention for
 passwords or passphrases is required.
 
