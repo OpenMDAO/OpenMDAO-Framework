@@ -6,7 +6,7 @@ import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -108,9 +108,12 @@ class NotifierPage(object):
 
     @staticmethod
     def wait(parent, timeout=TMO, base_id=None, retries=5):
-        """ Wait for notification. Returns notification message. """
-        for retry in range(retries):
-            time.sleep(0.5)  # Pacing.
+        """
+        Wait for notification. Returns notification message.
+        If `retries` <= 0 then we're checking for something we anticipate
+        won't be there, so don't worry if it isn't.
+        """
+        for retry in range(max(retries, 1)):
             base_id = base_id or 'notify'
             msg_id = base_id + '-msg'
             ok_id  = base_id + '-ok'
@@ -123,8 +126,12 @@ class NotifierPage(object):
                 ok.click()
                 return message
             except WebDriverException as err:
-                logging.warning('NotifierPage:' + str(err))
-        raise err
+                if retries > 0 or not isinstance(err, TimeoutException):
+                    logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+                if retry < (retries-1):
+                    time.sleep(0.5)  # Pacing.
+                elif retries > 0:
+                    raise err
 
 
 class SafeBase(object):
