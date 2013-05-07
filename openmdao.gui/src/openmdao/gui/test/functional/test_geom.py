@@ -2,6 +2,7 @@
 Tests of overall workspace functions.
 """
 
+import os
 import time
 import filecmp
 
@@ -14,7 +15,7 @@ from openmdao.gui.test.functional.util import main, \
                 setup_server, teardown_server, generate, \
                 startup, closeout, put_element_on_grid
 
-from openmdao.gui.test.functional.pageobjects.slot import SlotFigure, find_slot_figure
+from openmdao.gui.test.functional.pageobjects.slot import find_slot_figure
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -60,10 +61,15 @@ def _test_view_geom(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/box-geom-screenshot.png')
 
-    # FIXME: figure out how to hide the framerate status line (class = .fps) 
-    #        so our PNGs have at least some hope of being equal.
-    #browser.save_screenshot( "geom.png")
-    #assert filecmp.cmp( "geom.png", file_path)
+    # hide the framerate status line
+    browser.execute_script( 'document.getElementById("statusline").style.display = "none"')
+    browser.save_screenshot( "geom.png")
+    assert filecmp.cmp( "geom.png", file_path)
+
+    try:
+        os.remove("geom.png")
+    except IOError:
+        pass
 
     # Need to do this otherwise the close out fails
     workspace_window = browser.window_handles[0]
