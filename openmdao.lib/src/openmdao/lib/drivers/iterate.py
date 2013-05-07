@@ -12,8 +12,8 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Float, Int, Bool, Enum, List, Str
-from openmdao.main.api import Driver, Case, ExprEvaluator
+from openmdao.lib.datatypes.api import Float, Int, Bool, Enum
+from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
@@ -40,7 +40,7 @@ class FixedPointIterator(Driver):
                                             'tolerance between iterations.')
     
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
-                       desc = 'For multivariable iteration, type of norm '
+                       desc='For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
 
@@ -86,7 +86,7 @@ class FixedPointIterator(Driver):
             if self.current_iteration >= self.max_iteration-1:
                 self.history = history[:self.current_iteration+1, :]
                 
-                self._logger.warning('Max iterations exceeded without ' + \
+                self._logger.warning('Max iterations exceeded without ' +
                                      'convergence.')
                 return
                 
@@ -151,7 +151,7 @@ class IterateUntil(Driver):
         
         self.record_case()
         
-        if self.iteration<1 and self.run_at_least_once:
+        if self.iteration < 1 and self.run_at_least_once:
             self.iteration += 1
             return True
 

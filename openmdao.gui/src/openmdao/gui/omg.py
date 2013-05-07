@@ -73,7 +73,7 @@ class App(web.Application):
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
             web.url(r'/docs/plugins/(.*)', PluginDocsHandler, {'route': '/docs/plugins/'}),
-            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'})
+            web.url(r'/docs/(.*)', web.StaticFileHandler, {'path': docpath, 'default_filename': 'index.html'}),
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
@@ -260,6 +260,7 @@ def main():
     ''' Process command line arguments and run.
     '''
     enable_console()
+ 
     parser = AppServer.get_argument_parser()
     options, args = parser.parse_known_args()
     run(parser, options, args)

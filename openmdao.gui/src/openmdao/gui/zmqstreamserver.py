@@ -4,17 +4,15 @@ import traceback
 import subprocess
 
 from optparse import OptionParser
-
+    
 import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-import jsonpickle
-
 debug = True
-
+NAME_SIZE = 256  # this must agree with NAME_SIZE in Model.js
 
 def DEBUG(msg):
     if debug:
@@ -37,28 +35,7 @@ def make_unicode(content):
 class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
-
-    def __init__(self, application, request, **kwargs):
-        addr = kwargs.get('addr')
-        version = request.headers.get('Sec-Websocket-Version')
-        msg = 'Warning: %s WebSocket protocol version %s from %s'
-        if version is None:
-            print msg % ('unknown', '', addr)
-        else:
-            try:
-                version = int(version)
-            except ValueError:
-                print msg % ('invalid', version, addr)
-            else:
-                if version < 13:
-                    print msg % ('obsolete', version, addr)
-        sys.stdout.flush()
-        super(ZMQStreamHandler, self).__init__(application, request, **kwargs)
-
-    def allow_draft76(self):
-        ''' Not recommended, but enabled so we can display in __init__(). '''
-        return True
-
+    
     def initialize(self, addr):
         self.addr = addr
 
@@ -80,36 +57,34 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        if len(message) == 1:
-            message = message[0]
-            message = make_unicode(message)  # tornado websocket wants unicode
-            self.write_message(message)
-
-        elif len(message) == 2:
-            topic = message[0]
-            content = message[1]
-
-            # package topic and content into a single json object
+        if len(message) == 1:  # assume message[0] is some json object
+            binary = False
             try:
-                content = jsonpickle.decode(content)
-                message = jsonpickle.encode([topic, content])
+                message = message[0]
+            except Exception as err:
+                exc_type, exc_value, exc_traceback = sys.exc_info
+                print 'ZMQStreamHandler ERROR converting message to unicode:', str(message), err
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return
+
+        elif len(message) == 2:  # it's a msg of the form [topic, binary_value]
+            binary = True
+            try:
+                if len(message[0]) > NAME_SIZE:
+                    raise RuntimeError("topic field of message is longer than %d characters" % NAME_SIZE)
+                if not isinstance(message[1], bytes):
+                    raise TypeError("message value must be of type 'bytes', not type '%s'" %
+                                    str(type(message[1])))
+                #padded = bytes(message[0])+(NAME_SIZE-len(message[0]))*b'\0'  # 0 padded object name in bytes
+                message = message[0].ljust(NAME_SIZE, '\0') + message[1]  # FIXME: message is copied here
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
+                print 'ZMQStreamHandler ERROR:', str(message), err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
-            # convert to unicode (tornado websocket wants unicode)
-            try:
-                message = make_unicode(message)
-            except Exception, err:
-                exc_type, exc_value, exc_traceback = sys.exc_info
-                print 'ZMQStreamHandler ERROR converting message to unicode:', topic, err
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                return
-
-            # write message to websocket
-            self.write_message(message)
+        # write message to websocket
+        self.write_message(message, binary=binary)
 
     def on_message(self, message):
         pass

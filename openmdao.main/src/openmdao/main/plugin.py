@@ -6,7 +6,10 @@ import tarfile
 import shutil
 
 import urllib2
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
