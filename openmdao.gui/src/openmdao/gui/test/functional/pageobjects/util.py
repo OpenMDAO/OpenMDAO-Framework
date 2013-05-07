@@ -124,10 +124,9 @@ class NotifierPage(object):
                 ok.click()
                 return message
             except TimeoutException as err:
-                logging.warning('NotifierPage: timeout')
+                logging.warning('NotifierPage: timeout=%s, base_id=%s' % (timeout, base_id))
             except WebDriverException as err:
-                logging.warning('NotifierPage:' + traceback.format_exc())
-                raise err
+                logging.warning('NotifierPage: %s' % err)
         raise err
 
 
