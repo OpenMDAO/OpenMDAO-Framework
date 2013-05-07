@@ -114,6 +114,7 @@ class NotifierPage(object):
         won't be there, so don't worry if it isn't.
         """
         for retry in range(max(retries, 1)):
+            time.sleep(0.5)  # Pacing.
             base_id = base_id or 'notify'
             msg_id = base_id + '-msg'
             ok_id  = base_id + '-ok'
@@ -128,10 +129,8 @@ class NotifierPage(object):
             except WebDriverException as err:
                 if retries > 0 or not isinstance(err, TimeoutException):
                     logging.warning('NotifierPage.wait(%s): %r', base_id, err)
-                if retry < (retries-1):
-                    time.sleep(0.5)  # Pacing.
-                elif retries > 0:
-                    raise err
+        if retries > 0 or not isinstance(err, TimeoutException):
+            raise err
 
 
 class SafeBase(object):
