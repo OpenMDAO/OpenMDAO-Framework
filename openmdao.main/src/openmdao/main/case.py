@@ -257,10 +257,8 @@ class Case(object):
             for name,value in self._inputs.items():
                 expr = self._exprs.get(name)
                 if expr:
-                    print "applying input: %s=%s" % (expr, value)
                     expr.set(value, scope)
                 else:
-                    print "applying input: %s=%s" % (name, value)
                     scope.set(name, value)
         else:
             for name,value in self._inputs.items():

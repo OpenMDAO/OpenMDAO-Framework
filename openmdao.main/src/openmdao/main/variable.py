@@ -29,7 +29,7 @@ def is_legal_name(name):
 
 
 def json_default(obj):
-    """A function to be passed to json.dumps to handle objects that aren'try:
+    """A function to be passed to json.dumps to handle objects that aren't:
     JSON serializable by default.
     """
     return repr(obj)
