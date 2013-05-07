@@ -55,7 +55,7 @@ class ParametricGeometry(object):
         """
 
         # the commented out section below shows an example of how you would report 
-        # the existence of an input named 'model_file' to the OpenMDAO GUI.        
+        # the existence of an input named 'model_file' to the OpenMDAO GUI. 
         return {
             'type': type(self).__name__,
             'Inputs': [

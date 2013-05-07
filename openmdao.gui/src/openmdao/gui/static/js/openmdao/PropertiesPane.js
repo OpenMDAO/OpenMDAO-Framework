@@ -1,6 +1,10 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
+
+
+
+
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
@@ -11,7 +15,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             { id:"name",  name:"Name",  field:"name",  width:80, formatter:VarTableFormatter },
-            { id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor }
+            { id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor, formatter:VarValueFormatter }
         ],
         options = {
             asyncEditorLoading: false,
@@ -36,10 +40,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             { id:"info",  name:"",            field:"info",   width:30,  formatter:InfoFormatter },
             { id:"name",  name:"Name",        field:"name",   width:100, formatter:VarTableFormatter, sortable:true },
-            { id:"type",  name: "Type",       field:"type",   width:30   },
-            { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor },
-            { id:"hi",    name: "High",       field:"high",   width:30   },
-            { id:"low",   name: "Low",        field:"low",    width:30   },
+            { id:"type",  name: "Type",       field:"type",   width:30  },
+            { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor, formatter:VarValueFormatter },
+            { id:"hi",    name: "High",       field:"high",   width:30  },
+            { id:"low",    name: "Low",        field:"low",    width:30 },
             { id:"units", name:"Units",       field:"units",  width:60   },
             { id:"desc",  name:"Description", field:"desc",   width:300  }
         ];
@@ -428,7 +432,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 e.stopImmediatePropagation();
             }
+
+			if ( dataView.getItem(cell.row).value === "Geometry" ) {
+				var p = self.pathname + ".geom_out" ;
+		        openmdao.Util.popupWindow('geometry?path=' + p,'Geometry of ' + p);         
+			}
         });
+
 
         props.onCellChange.subscribe(function (e, args) {
             dataView.updateItem(args.item.id, args.item);
@@ -474,6 +484,15 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             return spacer + "<span class='toggle'></span>" + value;
         }
     }
+
+	function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
+		if ( dataContext.value === "Geometry"){
+			return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' + 
+			        'role="button" aria-disabled="false">View Geom</button>' ;
+		}	
+		return value ;
+	};
+
 
     function expansionFilter(item, args){
         var idx, parent;

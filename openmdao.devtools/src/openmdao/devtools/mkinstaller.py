@@ -233,7 +233,6 @@ def _update_activate(bindir):
     }
     libpathvname = _lpdict.get(sys.platform)
     if libpathvname:
-        libfiles = []
         if sys.platform.startswith('win'):
             activate_base = 'activate.bat'
         else:
@@ -253,6 +252,24 @@ def _update_activate(bindir):
         with open(activate_fname, 'w') as out:
             out.write(content)
             
+def _copy_winlibs(home_dir):
+    # On windows, builds using numpy.distutils.Configuration will
+    # fail when built in a virtualenv 
+    # (still broken as of virtualenv 1.9.1, under python 2.7.4)
+    # because distutils looks for libpython?.?.lib under sys.prefix/libs.
+    # virtualenv does not (at this time) create a libs directory.
+    
+    import fnmatch
+    libsdir = os.path.join(home_dir, 'libs')
+    if not os.path.isdir(libsdir):
+        os.mkdir(libsdir)
+    sysdir = os.path.join(os.path.dirname(sys.executable), 'libs')
+    names = os.listdir(sysdir)
+    for pat in ['*python*', '*msvc*']:
+        for name in fnmatch.filter(names, pat):
+            if not os.path.isfile(os.path.join(libsdir, name)):
+                shutil.copyfile(os.path.join(sysdir, name), 
+                                os.path.join(libsdir, name))
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
@@ -288,7 +305,9 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if sys.platform != 'win32':
+    if sys.platform == 'win32':
+        _copy_winlibs(home_dir)
+    else:
         # Put lib64_path at front of paths rather than end.
         # As of virtualenv 1.8.2 this fix had not made it in the release.
         patched = False

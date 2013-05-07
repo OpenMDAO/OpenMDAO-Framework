@@ -835,15 +835,15 @@ def _test_logviewer(browser):
     initial = [msg[16:] for msg in msgs
                         if "Shouldn't have handled a send event" not in msg]
     eq(initial,
-       ['W root: warning 1',
-        'E root: error 1',
-        'C root: critical 1',
-        'W root: warning 2',
-        'E root: error 2',
-        'C root: critical 2',
-        'W root: warning 3',
-        'E root: error 3',
-        'C root: critical 3'])
+       [u'W root: warning 1',
+        u'E root: error 1',
+        u'C root: critical 1',
+        u'W root: warning 2',
+        u'E root: error 2',
+        u'C root: critical 2',
+        u'W root: warning 3',
+        u'E root: error 3',
+        u'C root: critical 3'])
 
     # Turn off errors.
     dialog = viewer.filter()
@@ -853,12 +853,12 @@ def _test_logviewer(browser):
     msgs = viewer.get_messages()
     filtered = [msg[16:] for msg in msgs]  # Drop timestamp.
     eq(filtered,
-       ['W root: warning 1',
-        'C root: critical 1',
-        'W root: warning 2',
-        'C root: critical 2',
-        'W root: warning 3',
-        'C root: critical 3'])
+       [u'W root: warning 1',
+        u'C root: critical 1',
+        u'W root: warning 2',
+        u'C root: critical 2',
+        u'W root: warning 3',
+        u'C root: critical 3'])
 
     # Pop-out to separate window.
     workspace_window = browser.current_window_handle

@@ -190,8 +190,8 @@ def _get_openmdao_parser():
                                  ' (WARNING: Not Safe or Secure!!)')
         parser.set_defaults(func=gui.run)
 
-    except ImportError:
-        pass
+    except ImportError as err:
+        print str(err)
 
     return top_parser
 
