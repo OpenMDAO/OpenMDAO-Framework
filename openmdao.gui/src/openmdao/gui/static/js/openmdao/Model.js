@@ -700,6 +700,7 @@ openmdao.Model=function(listeners_ready) {
 
     /** add window to window list. */
     this.addWindow = function(win) {
+        console.debug("CALLING ADD WINDOW! ", win)
         if (! windows) {
             windows = [];
         }
