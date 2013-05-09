@@ -109,8 +109,12 @@ class NotifierPage(object):
 
     @staticmethod
     def wait(parent, timeout=TMO, base_id=None, retries=5):
-        """ Wait for notification. Returns notification message. """
-        for retry in range(retries):
+        """
+        Wait for notification. Returns notification message.
+        If `retries` <= 0 then we're checking for something we anticipate
+        won't be there, so don't worry if it isn't.
+        """
+        for retry in range(max(retries, 1)):
             time.sleep(0.5)  # Pacing.
             base_id = base_id or 'notify'
             msg_id = base_id + '-msg'
@@ -123,11 +127,11 @@ class NotifierPage(object):
                 message = msg.text
                 ok.click()
                 return message
-            except TimeoutException as err:
-                logging.warning('NotifierPage: timeout=%s, base_id=%s' % (timeout, base_id))
             except WebDriverException as err:
-                logging.warning('NotifierPage: %s' % err)
-        raise err
+                if retries > 0 or not isinstance(err, TimeoutException):
+                    logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+        if retries > 0 or not isinstance(err, TimeoutException):
+            raise err
 
 
 class SafeBase(object):

@@ -1,10 +1,6 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-
-
-
-
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
@@ -434,8 +430,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
 
 			if ( dataView.getItem(cell.row).value === "Geometry" ) {
-				var p = self.pathname + ".geom_out" ;
-		        openmdao.Util.popupWindow('geometry?path=' + p,'Geometry of ' + p);         
+                var p = self.pathname + '.' + dataView.getItem(cell.row).id;
+                openmdao.viewGeometry(p);          
 			}
         });
 
@@ -456,12 +452,18 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
         if (editable) {
             props.onCellChange.subscribe(function(e,args) {
-                // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-                model.setVariableValue(self.pathname + '.' + args.item.name,
-                                       args.item.value, args.item.type );
                 // Need to clear mouse selection so that slickgrid doesn't launch
                 // the editor for the next variable down (a la Excel)
                 e.stopImmediatePropagation();
+
+                // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+                var subpath = args.item.id;
+                if (subpath.charAt(0) === '~') {
+                    // Drop prefix seen on framework vars.
+                    subpath = subpath.substr(1);
+                }
+                model.setVariableValue(self.pathname + '.' + subpath,
+                                       args.item.value, args.item.type);
             });
         }
     }
@@ -485,14 +487,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
 
-	function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
-		if ( dataContext.value === "Geometry"){
-			return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' + 
-			        'role="button" aria-disabled="false">View Geom</button>' ;
-		}	
-		return value ;
-	};
-
+    function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
+        if ( dataContext.value === "Geometry"){
+            return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' + 
+                   'role="button" aria-disabled="false">View Geom</button>' ;
+        }
+        return value ;
+    };
 
     function expansionFilter(item, args){
         var idx, parent;
