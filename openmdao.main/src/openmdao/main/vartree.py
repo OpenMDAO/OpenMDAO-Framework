@@ -248,10 +248,10 @@ class VariableTree(Container):
 
                 if self._iotype == 'in':
                     # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in \
+                    attr['connected'] = str([src for src, dst in 
                                             connections]).replace('@xin.', '')
                 else:
-                    attr['connected'] = str([dst for src, dst in \
+                    attr['connected'] = str([dst for src, dst in 
                                             connections]).replace('@xout.', '')
             variables.append(attr)
 
