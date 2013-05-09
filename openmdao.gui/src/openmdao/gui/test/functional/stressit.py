@@ -24,9 +24,8 @@ def main():
     logfile = open('stressit.log', 'w')
 
     for trial in range(options.trials):
-        for stop in ('STOP', 'STOP.txt'):
-            if os.path.exists(stop):
-                break
+        if os.path.exists('STOP') or os.path.exists('STOP.txt'):
+            break
     
         if sys.platform == 'win32':
             msg = 'Trial %s:' % (trial+1)
