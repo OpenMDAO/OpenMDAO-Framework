@@ -17,6 +17,7 @@ from openmdao.gui.test.functional.util import main, \
 
 from openmdao.gui.test.functional.pageobjects.slot import find_slot_figure
 
+
 @with_setup(setup_server, teardown_server)
 def test_generator():
     for _test, browser in generate(__name__):
@@ -42,13 +43,13 @@ def _test_view_geom(browser):
 
     # Should be one window before we open the geom window
     eq(len(browser.window_handles), 1)
-    
+
     # Open the geom window
     geom_comp_editor('outputs_tab').click()
     outputs = geom_comp_editor.get_outputs()
     outputs.rows[0].cells[2].click()
 
-    time.sleep(2) # wait to make sure it is displayed
+    time.sleep(2)  # wait to make sure it is displayed
 
     # Should be two windows now
     eq(len(browser.window_handles), 2)
@@ -64,7 +65,7 @@ def _test_view_geom(browser):
     # FIXME: there are still problems with diffing the PNG files.  Not sure
     # if there are differences due to platform or what.  Also on windows
     # document.getElementById("statusline") returns null (could be just a timing thing)
-    #  For now, just commenting all of this out until someone has time to 
+    #  For now, just commenting all of this out until someone has time to
     #  fix it and verify it works on all 3 platforms
     # hide the framerate status line
     #browser.execute_script( 'document.getElementById("statusline").style.display = "none"')
