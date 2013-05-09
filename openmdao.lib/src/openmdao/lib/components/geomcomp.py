@@ -85,7 +85,8 @@ class GeomComponent(Component):
 
     def _update_iovar_set(self):
         """Determine the set of input and output variables for the
-        current parametric geometry.
+        current parametric geometry and create Variable objects
+        at the component level.
         """
         old_in = self._input_var_names
         old_out = self._output_var_names
@@ -171,8 +172,15 @@ class GeomComponent(Component):
         #     return False
         return True
 
-    def _input_updated(self, name):
+    def _input_updated(self, name, fullpath=None):
+        if fullpath is None:
+            attr = getattr(self, name)
+        else:
+            name = fullpath
+            attr = self
+            for part in fullpath.split('.'):
+                attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
-            self.parametric_geometry.set_parameter(name, getattr(self, name))
+            self.parametric_geometry.set_parameter(name, attr)
         super(GeomComponent, self)._input_updated(name)
 
