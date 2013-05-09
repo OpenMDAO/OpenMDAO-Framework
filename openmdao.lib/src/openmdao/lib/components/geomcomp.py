@@ -4,6 +4,7 @@ from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom
 from openmdao.util.log import logger
 from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Array
+from openmdao.util.nameutil import partition_names_by_comp
 
 _ttdict = {
     float: Float,
@@ -141,6 +142,7 @@ class GeomComponent(Component):
             if inter:
                 logger.warning("the following variables already exist in "
                                "GeomComponent and will be ignored: %s" % inter)
+
         ins = []
         outs = []
         for p in params:
