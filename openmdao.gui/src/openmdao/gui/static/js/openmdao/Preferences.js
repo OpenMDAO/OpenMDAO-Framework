@@ -13,6 +13,6 @@ openmdao.preferences = {
     },
 
     SlotFigure: {
-        resize: false   // resize figure width to accommodate long name
+        resize: true   // resize figure width to accommodate long name
     }
 };
