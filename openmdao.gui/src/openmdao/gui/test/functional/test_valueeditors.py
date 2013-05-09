@@ -311,7 +311,7 @@ def _test_Avartrees(browser):
 #FIXME sometimes row 2 gets a value of '' because slickgrid is editing it.
 #    for i, row in enumerate(inputs.value):
 #        eq(row, expected[i])
-    eq(row[1], expected[1])
+    eq(inputs.value[1], expected[1])
 
     # Contract first vartree
     inputs.rows[0].cells[0].click()

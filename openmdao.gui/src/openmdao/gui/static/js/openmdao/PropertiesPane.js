@@ -452,6 +452,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
         if (editable) {
             props.onCellChange.subscribe(function(e,args) {
+                // Need to clear mouse selection so that slickgrid doesn't launch
+                // the editor for the next variable down (a la Excel)
+                e.stopImmediatePropagation();
+
                 // TODO: better way to do this (e.g. model.setProperty(path,name,value)
                 var subpath = args.item.id;
                 if (subpath.charAt(0) === '~') {
@@ -460,9 +464,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 model.setVariableValue(self.pathname + '.' + subpath,
                                        args.item.value, args.item.type);
-                // Need to clear mouse selection so that slickgrid doesn't launch
-                // the editor for the next variable down (a la Excel)
-                e.stopImmediatePropagation();
             });
         }
     }
