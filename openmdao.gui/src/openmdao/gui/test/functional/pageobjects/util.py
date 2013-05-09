@@ -1,10 +1,13 @@
 import Queue
 import threading
 import time
+import logging
+import traceback
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import WebDriverException, TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -62,6 +65,18 @@ class ArgsPrompt(BasePageObject):
         arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
         arg_inputs[index].send_keys(text)
 
+    def argument_count(self):
+        self.browser.implicitly_wait(1)
+        try:
+            table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        finally:
+            self.browser.implicitly_wait(TMO)
+        if table:
+            arg_inputs = table[0].find_elements(By.XPATH, 'tbody/tr/td/input')
+            return len(arg_inputs)
+        else:
+            return 0
+
     def click_ok(self):
         self('ok_button').click()
 
@@ -93,19 +108,26 @@ class NotifierPage(object):
     """
 
     @staticmethod
-    def wait(parent, timeout=TMO, base_id=None):
+    def wait(parent, timeout=TMO, base_id=None, retries=5):
         """ Wait for notification. Returns notification message. """
-        time.sleep(0.5)  # Pacing.
-        base_id = base_id or 'notify'
-        msg_id = base_id + '-msg'
-        ok_id  = base_id + '-ok'
-        msg = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, msg_id))
-        ok = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, ok_id))
-        message = msg.text
-        ok.click()
-        return message
+        for retry in range(retries):
+            time.sleep(0.5)  # Pacing.
+            base_id = base_id or 'notify'
+            msg_id = base_id + '-msg'
+            ok_id  = base_id + '-ok'
+            try:
+                msg = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, msg_id))
+                ok = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, ok_id))
+                message = msg.text
+                ok.click()
+                return message
+            except TimeoutException as err:
+                logging.warning('NotifierPage: timeout=%s, base_id=%s' % (timeout, base_id))
+            except WebDriverException as err:
+                logging.warning('NotifierPage: %s' % err)
+        raise err
 
 
 class SafeBase(object):

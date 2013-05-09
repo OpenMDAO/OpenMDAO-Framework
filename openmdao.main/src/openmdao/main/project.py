@@ -121,7 +121,7 @@ def add_init_monitors(node):
     node.body = [
         ast.copy_location(
             text_to_node('from openmdao.main.project import _register_inst'), node)
-        ] + node.body
+    ] + node.body
     return node
 
 
@@ -535,6 +535,10 @@ description =
                 pass
 
         if err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logger.error("command '%s' generated an exception:\n %s",
+                         cmd, ''.join(lines))
             raise
         else:
             if not self._cmds_to_save:
@@ -549,7 +553,6 @@ description =
             self.load_macro(self.macro)
         else:
             self.command("# Auto-generated file - MODIFY AT YOUR OWN RISK")
-            self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it

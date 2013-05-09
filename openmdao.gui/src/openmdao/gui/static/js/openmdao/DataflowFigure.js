@@ -7,7 +7,7 @@ openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfac
     this.name = openmdao.Util.getName(pathname);
     this.type = type || '';
     this.valid = valid;
-    
+
     if (arguments.length < 5) { // Refresh doesn't pass all arguments.
         this.baseType = pathname === '' ? 'Component' : 'Assembly';
     }
@@ -240,12 +240,13 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.data('pathname', this.pathname);
         elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };
         elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
-        
+
         // Boxes can be dragged into workflow list.
-        elm.draggable({ appendTo: 'body',
-                        helper: 'clone',
-                        opacity: 0.15
-                      });
+        elm.draggable({
+            appendTo: 'body',
+            helper: 'clone',
+            opacity: 0.15
+        });
 
         // Component names can be dropped into the diagram.
         elm.droppable ({
@@ -321,7 +322,7 @@ openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
 
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){
-    editor = new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
+    new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
 };
 
 /** hook into setWorkflow to add input & ouput ports */

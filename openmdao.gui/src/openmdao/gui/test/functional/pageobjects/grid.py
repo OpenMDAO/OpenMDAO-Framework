@@ -62,6 +62,10 @@ class Grid(object):
     def value(self):
         return [row.value for row in self.rows]
 
+    @property
+    def displayed(self):
+       return self._root.is_displayed()
+
     def __len__(self):
         return len(self.rows)
 
@@ -90,6 +94,46 @@ class GridHeader(object):
     @property
     def value(self):
         return self._root.find_element(By.CLASS_NAME, "slick-column-name").text
+
+    def click(self):
+        self._root.click()
+
+    def context_click(self):
+        #Todo: action chain
+        chain = ActionChains(self._browser)
+        chain.context_click(self._root).perform()
+
+class GridColumnPicker(object):
+    """ Represents a slickColumnPicker at `root` """
+    def __init__(self, browser, root):
+        self._browser = browser
+        self._root = root
+
+    @property
+    def displayed(self):
+        return self._root.is_displayed()
+
+    @property
+    def options(self):
+        return [GridColumnPickerOption(self._browser, option) for option in self._root.find_elements(By.XPATH, "li")]
+
+    def get_option(self, option_name):
+        for option in self.options:
+            if(option.text == option_name):
+                return option
+        
+class GridColumnPickerOption(object):
+    """ """
+    def __init__(self, browser, root):
+        self._browser = browser
+        self._root = root
+
+    @property
+    def text(self):
+        return self._root.find_element(By.XPATH, "label").text
+
+    def click(self):
+        self._root.find_element(By.XPATH, "label/input").click()
 
 class GridRow(object):
     """ Represents a SlickRow at `root`. """

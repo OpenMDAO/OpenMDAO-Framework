@@ -1,7 +1,19 @@
+/***********************************************************************
+ *  SlotsPane: A pane that shows a collection of slots.
+ *
+ * Slots are rendered as rows of dash-outlined component-like figures.
+ *
+ *  Arguments:
+ *      elm:      the parent element in the DOM for this pane
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the object containing the Slots
+ *      name:     not used
+ *      editable: not used
+ ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
+openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
 
     /***********************************************************************
      *  private
@@ -9,22 +21,28 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
 
     // initialize private variables
     var self = this,
-        figures = {},
         slotsID = pathname.replace(/\./g,'-')+"-slots",
         slotsDiv = jQuery('<div style="position:relative; background-color:black;">')
-            .appendTo(elm);
+            .appendTo(elm),
+        contextMenu = jQuery("<ul id="+slotsID+"-menu class='context-menu'>")
+            .appendTo(elm),
+        slotsData = {};
 
     self.pathname = pathname;
 
     elm.css({'overflow':'auto'});
 
-    /** update slots by recreating figures from JSON slots data
-     *  TODO: prob just want to iterate through & update existing figures
-     */
+    contextMenu.append(jQuery('<li title="Toggle autosizing of slots">Toggle Autosizing</li>').click(function(e) {
+        openmdao.preferences.SlotFigure.resize = ! openmdao.preferences.SlotFigure.resize;
+        self.loadData(slotsData);
+    }));
+    ContextMenu.set(contextMenu.attr('id'), elm.attr('id'));
+
+    /** update slots by recreating figures from JSON slots data */
     function updateFigures(json) {
 
         // Sort slots by name
-        json.sort(function(a, b){
+        json.sort(function(a, b) {
             var nameA=a.name.toLowerCase(), nameB=b.name.toLowerCase() ;
             if (nameA < nameB) {  //sort string ascending
                 return -1;
@@ -35,18 +53,16 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             return 0;
         }) ;
 
-        jQuery.each(json, function(idx,slot) {
-            if (figures[slot.name]) {
-                // update existing slot figure
-                figures[slot.name].setState(slot.filled);
+        jQuery.each(json, function(idx, slot) {
+            var slotName = pathname+'.'+slot.name;
+            if (slot.containertype === 'dict') {
+                openmdao.SlotDictFigure(slotsDiv, model, slotName, slot);
+            }
+            else if (slot.containertype === 'list') {
+                openmdao.SlotListFigure(slotsDiv, model, slotName, slot);
             }
             else {
-                // create a new slot figure
-                var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name, slot),
-                    figMenu = fig.getContextMenu();
-                figures[slot.name] = fig;
-                slotsDiv.append(fig);
-                ContextMenu.set(figMenu.attr('id'), fig.attr('id'));
+                openmdao.SlotFigure(slotsDiv, model, slotName, slot);
             }
         });
     }
@@ -61,15 +77,20 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
-            /* divs could be in front of divs and the div that gets the drop
-               event might not be the one that is in front visibly and therefore
-               is not the div the user wants the drop to occur on */
-            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            /* call the method on the correct div to handle the drop */
+            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             if (top_div) {
-                var drop_function = top_div.droppable('option','actualDropHandler');
-                drop_function(ev,ui);
+                // getting some intermittent errors here.. catch and log a warning
+                try {
+                    var drop_function = top_div.droppable('option', 'actualDropHandler');
+                    drop_function(ev,ui);
+                }
+                catch (err) {
+                    debug.warn('Unexpected error in openmdao.SlotsPane.droppable',
+                               'top_div:', top_div, 'drop_function:', drop_function);
+                }
             }
+        },
+        actualDropHandler: function(ev,ui) {
         }
     });
 
@@ -79,10 +100,10 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
 
     /** update slots diagram */
     this.loadData = function(json) {
+        slotsData = json;
         slotsDiv.html('');
-        figures = {};
         if (Object.keys(json).length > 0) {
-            updateFigures(json);
+            updateFigures(slotsData);
         }
     };
 };

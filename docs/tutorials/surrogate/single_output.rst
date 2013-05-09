@@ -7,11 +7,11 @@ Using a MetaModel Component
 
 This tutorial is a demonstration of how to construct a MetaModel of a component using a
 Kriging surrogate. Generally, MetaModel capabilities are used to construct a 
-low computational cost replacement for an expensive component. A more detailed description of 
-this class can be found under the source documentation for :ref:`MetaModel`. 
+low computational cost replacement for an expensive component. (A more detailed description of 
+this class can be found under the source documentation for :ref:`MetaModel`.) 
 
 For this example, a component was written for the ``sine`` function. This component 
-has only one input and output, which will be mimicked by the MetaModel. Had 
+has only one input and one output, which will be mimicked by the MetaModel. Had 
 there been additional variables, access to those would also be available 
 through the MetaModel.
 
@@ -42,18 +42,17 @@ To create a MetaModel, we first define an assembly to work in. After we have
 created an assembly, the MetaModel component needs to be instantiated. In this example, 
 the MetaModel was instantiated as ``sin_meta_model``, making it easy to identify.
 
-Once the MetaModel component is in place, the first step is to tell the MetaModel which 
-component it should create an approximation for. 
-This is done by placing the component in the slot called `model`. 
-For this case we are looking at the Sin component created earlier, so this is what's 
-placed in the model slot. The MetaModel will now have the 
-same inputs and outputs as our ``sine`` component (an input named `x` and an output named `f_x`
-copied directly from the names in the Sine component). 
+Once the MetaModel component is in place, the first step is to tell the MetaModel which component
+it should create an approximation for.  We do this by placing the component in the :term:`Slot`
+called `model`.  For this case we are looking at the Sin component created earlier, so this is
+what's  placed in the model Slot. The MetaModel will now have the  same inputs and outputs as our
+``sine`` component (an input named `x` and an output named `f_x` copied directly from the names in
+the Sine component). 
 
-The next step is to fill the `default_surrogate` slot. 
-In this case we set it to KrigingSurrogate, meaning that all outputs would be modeled 
-with Kriging surrogate models, unless otherwise specified. Specific surrogate models can be specified for 
-specific output variables. We cover that in the next tutorial.
+The next step is to fill the ``default_surrogate`` Slot. In this case we set it to
+KrigingSurrogate, meaning that all outputs will be modeled  with Kriging surrogate models, unless
+otherwise specified. Specific surrogate models can be specified for  specific output variables. We
+cover that in the next tutorial.
 
 .. testcode:: MetaModel_parts
 
@@ -65,7 +64,7 @@ specific output variables. We cover that in the next tutorial.
             self.sin_meta_model.default_surrogate = KrigingSurrogate()
             self.sin_meta_model.model = Sin()
 
-Once the `model` and `default_surrogate` slots of the MetaModel have been filled, the MetaModel
+Once the `model` and ``default_surrogate`` Slots of the MetaModel have been filled, the MetaModel
 is ready for training. 
 
  .. testcode:: MetaModel_parts

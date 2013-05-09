@@ -1,162 +1,193 @@
+/***********************************************************************
+ *  PassthroughsFrame: A frame that shows all the inputs and outputs of
+ *                     of an assembly and enables creating and removing
+ *                     of passthroughs.
+ *
+ *  There is an Inputs tree and an Outputs tree, with a checkbox next
+ *  to each variable. Toggling the checkbox will create of remove that
+ *  variable as a passthrough variable.
+ *
+ *  Arguments:
+ *      model:    object that provides access to the openmdao model
+ *      pathname: the pathname of the assembly
+ ***********************************************************************/
+
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
+openmdao.PassthroughsFrame = function(model, pathname) {
     var id = ('PassthroughsFrame-'+pathname).replace(/\./g,'-');
-    var table_id_input = id+'-passthrough-input-table';
-    var tree_dep = {};
-    var pathname = pathname;
-    var table_id_output = id+'-passthrough-output-table';
     openmdao.PassthroughsFrame.prototype.init.call(this, id,
-        'Edit passthroughs: '+openmdao.Util.getName(pathname));
-    var self = this;
-        // component selectors
-    var modified = "";
+        'Passthroughs: ' + pathname);
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-    
-    
-    this.handleCbClick = function(e, d) { 
-        var tagName = d.args[0].tagName;
-        var refreshing = d.inst.data.core.refreshing;
+
+    var self = this,
+        table_id_input  = id+'-inputs',
+        table_id_output = id+'-outputs',
+        passthroughHTML = '<div id='+id+'-passthroughdiv style = "overflow:auto;height:100%;background:gray">'
+                        + '  <table><tr>'
+                        + '    <td valign = "top">INPUTS:<div id='+table_id_input+'></div></td>'
+                        + '    <td valign = "top">OUTPUTS:<div id='+table_id_output+'></div></td>'
+                        + '  </tr></table>'
+                        + '</div>',
+        passthroughDiv = jQuery(passthroughHTML)
+            .appendTo(self.elm),
+        div_input = passthroughDiv.find("#"+table_id_input),
+        div_output = passthroughDiv.find("#"+table_id_output);
+
+    /** create passthrough */
+    function createPassthrough(path) {
+        var parts = path.split("."),
+            assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]),
+            comp_path = parts.slice(assembly_idx + 1).join("."),
+            cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
+
+        model.issueCommand(cmd);
+    }
+
+    /** remove passthrough */
+    function removePassthrough(path) {
+        var parts = path.split("."),
+            assembly = parts[0],
+            vname = parts[parts.length - 1],
+            cmd = "_ = " + pathname +".remove('"+vname+"')";
+
+        model.issueCommand(cmd);
+    }
+
+    /** create or remove passthrough when checkbox is clicked */
+    handleCbClick = function(e, d) {
+        var tagName = d.args[0].tagName,
+            refreshing = d.inst.data.core.refreshing;
+
         if ((tagName == "A" || tagName == "INS") &&
-          (refreshing != true && refreshing != "undefined")) {
-        
-        cobj = jQuery(d.rslt[0])
-        var this_path = cobj.attr("path");
-        var status = cobj.attr("class").split(' ').pop();
-        
-        if (status == "jstree-checked") {
-            self.makePassthrough(this_path);
+            (refreshing !== true && refreshing !== "undefined")) {
+
+            var cobj = jQuery(d.rslt[0]),
+                this_path = cobj.attr("path"),
+                status = cobj.attr("class").split(' ').pop();
+
+            if (status == "jstree-checked") {
+                createPassthrough(this_path);
             }
-        else {
-            self.removePassthrough(this_path);
-             }
-        
-        
-        }}
-
-    this.successHandler = function(e, u) {
-        self.makeTables();
-    }
-    
-    this.doneHandler = function(e, u) {
-        //self.makeTables();
-    }
-    
-    this.errorHandler = function(jqXHR, textStatus, errorThrown) {
-
-    }
-    
-    this.makePassthrough = function(path) {
-        var parts = path.split(".");
-        var assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]);
-        var comp_path = parts.slice(assembly_idx + 1).join(".");
-        var cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
-
-        model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
-    }
-        
-    this.removePassthrough = function(path) {
-
-        var parts = path.split(".");
-        var assembly = parts[0];
-        var vname = parts[parts.length - 1];
-
-        var cmd = "_ = " + pathname +".remove('"+vname+"')";
-
-        model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
-    }    
-    
-    var pathname = pathname;
-    var input_data = {};
-    var output_data = {};
-    
-    tree_dep = {};
-
-    /** handle message about the assembly */
-    function handleMessage(message) {
-
-    }
-    
-    
-    
-    function makeTree(name, target, jsonData) {        
-        this_name = name+'-tree_container';
-        treeHTML = '<div id = '+ this_name + '/>'
-        jQuery(treeHTML).appendTo(target);
-        
-        tree_input = jQuery("#" + this_name); 
-        tree_input.jstree({
-            "core" : { 
-                    "animation" : false 
-            }, 
-            "plugins" :     [ "json_data", "sort", "themes", "types", "ui","crrm","checkbox" ],
-            "json_data"   : { "data" : jsonData },
-            "themes"      : { "theme":  "openmdao", "icons" : false  },
-            "checkbox": {real_checkboxes :true},
-            "types" : {
-                 "types": {
-                 "disabled" : { 
-                       "check_node" : false, 
-                       "uncheck_node" : false 
-                     }, 
-                 "enabled" : { 
-                       "check_node" : true, 
-                       "uncheck_node" : true 
-                     } 
-                 }
-             }
-        })
-        
-        tree_input.bind("change_state.jstree", self.handleCbClick);
-        
-        
-        }
-    this.makeTables = function() {
-        jQuery("#"+id+'-passthroughdiv').empty().remove();
-
-        passthroughHTML = '<div id = '+id+'-passthroughdiv style = "overflow:auto;overflow-y:auto;background:gray"><table><tr><td valign = "top">INPUTS:<div id = '+table_id_input+'-div>'
-                       + '</div></td>'
-                       +   '<td valign = "top">OUTPUTS:<div id = '+table_id_output+'-div>'
-                       + '</div></table>'      
-        passthroughDiv = jQuery(passthroughHTML).appendTo(self.elm);
-        div_input = jQuery("#" + table_id_input+'-div');
-        div_output = jQuery("#" + table_id_output+'-div');  
-        
-        var all_inputs = [];
-        var all_outputs = []; 
-        var top_inputs = [];
-        var top_outputs = [];
-        
-        var input_targets = [];
-        var output_targets = [];
-
-        model.getAllAttributes(pathname, function(attributes,e) { //assembly-level: collect existing input passthroughs       
-            inputs = attributes.inputs
-            outputs = attributes.outputs
-            jQuery.each(inputs, function(idx,component) {
-                makeTree(component.data + "input", div_input, component)
-
-            })
-            jQuery.each(outputs, function(idx,component) {
-                makeTree(component.data + "output", div_output, component)
-
-            })
-                
-        }); //end getComponent assembly-level call
-        
-    }       
-
-    this.destructor = function() {
-        if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
+            else {
+                removePassthrough(this_path);
+            }
         }
     };
 
-        self.makeTables();
-        model.addListener(pathname, handleMessage);
-}
+    /** create jstree on the target element with the given json data */
+    function makeTree(name, target, jsonData) {
+        var tree_div = jQuery('<div>')
+            .appendTo(target);
+
+        tree_div.jstree({
+            "core" : {
+                "animation" : false
+            },
+            "plugins":   [ "json_data", "sort", "themes", "types", "ui", "crrm", "checkbox" ],
+            "json_data": { "data" : jsonData },
+            "themes":    { "theme": "openmdao", "icons": false },
+            "checkbox":  { real_checkboxes: true },
+            "types" : {
+                "types": {
+                    "disabled" : {
+                        "check_node" : false,
+                        "uncheck_node" : false
+                    },
+                    "enabled" : {
+                        "check_node" : true,
+                        "uncheck_node" : true
+                    }
+                }
+             }
+        });
+
+        tree_div.bind("change_state.jstree", handleCbClick);
+    }
+
+    /** (re)create the input and output passthrough trees with the given passthrough data */
+    function updateTrees(passthroughs) {
+        var treeData = {},
+            openNodes = [];
+
+        // update inputs
+        div_input.find("li.jstree-open").each(function () {
+            openNodes.push(this.id);
+        });
+        div_input.empty();
+        jQuery.each(passthroughs.inputs, function(compName, compVars) {
+            treeData.data = compName;
+            treeData.attr = { 'id': compName, 'rel': 'disabled' };
+            treeData.state = openNodes.indexOf(compName) >= 0 ? 'open' : 'closed';
+            treeData.children = [];
+            jQuery.each(compVars, function(varName, alias) {
+                treeData.children.push({
+                    'data': varName,
+                    'attr': {
+                        'id': varName,
+                        'path': compName + '.' + varName,
+                        'class': alias ? 'jstree-checked' : 'jstree-unchecked'
+                    }
+                });
+            });
+            makeTree(compName+"-input", div_input, treeData);
+        });
+
+        treeData = {};
+        openNodes = [];
+
+        // update outputs
+        div_output.find("li.jstree-open").each(function () {
+            openNodes.push(this.id);
+        });
+        div_output.empty();
+        jQuery.each(passthroughs.outputs, function(compName, compVars) {
+            treeData.data = compName;
+            treeData.attr = { 'id': compName, 'rel': 'disabled' };
+            treeData.state = openNodes.indexOf(compName) >= 0 ? 'open' : 'closed';
+            treeData.children = [];
+            jQuery.each(compVars, function(varName, alias) {
+                treeData.children.push({
+                    'data': varName,
+                    'attr': {
+                        'id': varName,
+                        'path': compName + '.' + varName,
+                        'class': alias ? 'jstree-checked' : 'jstree-unchecked'
+                    }
+                });
+            });
+            makeTree(compName+"-output", div_output, treeData);
+        });
+    }
+
+    /** get passthrough data and update the input and output passthrough trees */
+    function update() {
+        model.getPassthroughs(pathname, updateTrees, function(err) {
+            debug.error('Error getting passthrough data:', err);
+        });
+    }
+
+    /***********************************************************************
+     *  protected
+     ***********************************************************************/
+
+    // cancel subscriptions before you die
+    this.destructor = function() {
+        if (pathname && pathname.length>0) {
+            model.removeListener(pathname, update);
+        }
+    };
+
+    // populate the inputs/outputs trees
+    update();
+
+    // update when there is a change to the assembly
+    model.addListener(pathname, update);
+};
+
 /** set prototype */
 openmdao.PassthroughsFrame.prototype = new openmdao.BaseFrame();
 openmdao.PassthroughsFrame.prototype.constructor = openmdao.PassthroughsFrame;

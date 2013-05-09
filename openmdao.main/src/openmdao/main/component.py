@@ -13,6 +13,7 @@ import pkg_resources
 import sys
 import weakref
 
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
@@ -33,14 +34,16 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+from openmdao.util.log import logger
 import openmdao.util.log as tracing
 
+__missing__ = object()
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -119,24 +122,25 @@ class Component(Container):
     implements(IComponent)
 
     directory = Str('', desc='If non-blank, the directory to execute in.',
-                    iotype='in')
+                    framework_var=True, iotype='in')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
                                ' by this component.')
-    force_execute = Bool(False, iotype='in',
+    force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, iotype='out',
+    exec_count = Int(0, iotype='out', framework_var=True,
                      desc='Number of times this Component has been executed.')
 
-    derivative_exec_count = Int(0, iotype='out',
+    derivative_exec_count = Int(0, iotype='out', framework_var=True,
                      desc="Number of times this Component's derivative "
                           "function has been executed.")
 
-    itername = Str('', iotype='out', desc='Iteration coordinates.')
+    itername = Str('', iotype='out', desc='Iteration coordinates.',
+                   framework_var=True)
 
     create_instance_dir = Bool(False)
 
@@ -192,7 +196,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count
+        self._publish_vars = {}  # dict of varname to subscriber count        
 
     @property
     def dir_context(self):
@@ -531,8 +535,8 @@ class Component(Container):
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
-                        not obj_has_interface(self, IAssembly) and \
-                        not obj_has_interface(self, IDriver):
+                       not obj_has_interface(self, IAssembly) and \
+                       not obj_has_interface(self, IDriver):
 
                         tracing.TRACER.debug(self.get_itername())
 
@@ -666,7 +670,8 @@ class Component(Container):
         except KeyError:
             pass
 
-        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+        if trait and trait.iotype == 'in' and trait.trait_type \
+           and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
 
     @rbac(('owner', 'user'))
@@ -1541,33 +1546,36 @@ class Component(Container):
         if isinstance(names, basestring):
             names = [names]
         for name in names:
-            # TODO: allow wildcard naming at lowest level
-            parts = name.split('.')
+            obj = None
+            parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
-                    if not hasattr(self, name):
+                    obj = getattr(self, name, __missing__)
+                    if obj is __missing__:
                         self.raise_exception("%s has no attribute named '%s'"
                                               % (self.get_pathname(), name),
                                              NameError)
                     else:
-                        obj = getattr(self, name)
                         if has_interface(obj, IComponent):
                             obj.register_published_vars(__attributes__, publish)
                             return
 
                 if publish:
+                    Publisher.register('.'.join([self.get_pathname(), name]),
+                                       obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
+                    Publisher.unregister('.'.join([self.get_pathname(), name]))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
                             del self._publish_vars[name]
             else:
                 obj = getattr(self, parts[0])
-                obj.register_published_vars('.'.join(parts[1:]), publish)
+                obj.register_published_vars(parts[1], publish)
 
     def publish_vars(self):
         pub = Publisher.get_instance()
@@ -1578,18 +1586,15 @@ class Component(Container):
                 lst = []
                 for var in pub_vars:
                     if var == __attributes__:
-                        key = pname
-                        val = self.get_attributes()
+                        lst.append((pname, self.get_attributes()))
                     else:
-                        key = '.'.join([pname, var])
-                        val = getattr(self, var)
-                    lst.append((key, val))
+                        lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
         """ Get attributes of component. Includes inputs and ouputs and, if
         *io_only* is not true, a dictionary of attributes for each interface
-        implemented by the component.  Used by the GUI.
+        implemented by the component.
 
         io_only: Bool
             Set to true if we only want to populate the input and output
@@ -1657,6 +1662,11 @@ class Component(Container):
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
 
             io_attr['id'] = name
+
+            # Framework variables
+            if 'framework_var' in meta:
+                io_attr['id'] = '~' + name
+
             io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]
@@ -1682,9 +1692,8 @@ class Component(Container):
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
 
-            # Let the GUI know that this var is the top element of a
-            # variable tree
-            if slot_attr is not None:
+            # indicate that this var is the top element of a variable tree
+            if io_attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
                     io_attr['vt'] = 'vt'
@@ -1703,15 +1712,13 @@ class Component(Container):
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in io_attr:
-
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
                                                    parent=name,
                                                    valid=io_attr['valid'])
-
                 if name in self.list_inputs():
-                    inputs += vt_attrs['Inputs']
+                    inputs += vt_attrs.get('Inputs', [])
                 else:
-                    outputs += vt_attrs['Outputs']
+                    outputs += vt_attrs.get('Outputs', [])
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
@@ -1738,12 +1745,12 @@ class Component(Container):
         if len(events) > 0:
             attrs['Events'] = events
 
-        # Object Editor has additional panes for Workflow, Dataflow,
-        # Objectives, Parameters, Constraints, and Slots.
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if name not in io_list and (value.is_trait_type(Slot) or value.is_trait_type(List)):
+                if name not in io_list and (value.is_trait_type(Slot)
+                                            or value.is_trait_type(List)
+                                            or value.is_trait_type(Dict)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
                     value = getattr(self, name)

@@ -21,7 +21,7 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, put_element_on_grid
 
 from pageobjects.basepageobject import TMO
-from pageobjects.slot import SlotFigure
+from pageobjects.slot import find_slot_figure
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.workspace import WorkspacePage
 
@@ -161,6 +161,7 @@ def _test_palette_update(browser):
             % (expected_file_names, file_names))
 
     # Make sure there are only two dataflow figures (top & driver)
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
@@ -245,6 +246,7 @@ def _test_menu(browser):
     eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
     workspace_page('project_menu').click()
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
@@ -304,6 +306,7 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Add some Foo instances.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     time.sleep(2)  # Wait for it to get registered.
     workspace_page.set_library_filter('In Project')
@@ -405,6 +408,8 @@ def _test_properties(browser):
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+
     # Check default 'top.driver'.
     workspace_page('properties_tab').click()
     obj = workspace_page.get_dataflow_figure('top')
@@ -414,16 +419,18 @@ def _test_properties(browser):
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
-    eq(inputs.value, [['directory',     ''],
+    eq(inputs.value, [['printvars',     '[]'],
+                      ['directory',     ''],
                       ['force_execute', 'True'],
-                      ['printvars',     '']])  # FIXME: printvars is really an empty list...
+                      ])  # FIXME: printvars is really an empty list...
     # Clean up.
     closeout(project_dict, workspace_page)
+
 
 # This test no longer needed because there is no longer a component panel that
 # tracks the minimize/maximize behavior of the dataflow. The collapse/expand
 # behavior is alrady tested in test_dataflow. -- KTM
-
+# Correction: has nothing to do with dataflow.. just tests the object tree.
 #def _test_objtree(browser):
     ## Toggles maxmimize/minimize button on assemblies.
     #project_dict, workspace_page = startup(browser)
@@ -513,9 +520,6 @@ def _test_editable_inputs(browser):
     workspace_page.add_file(file_path_one)
     workspace_page.add_file(file_path_two)
 
-    # Replace 'top' with Vehicle ThreeSim  top.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     assembly_name = "sim"
     workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
                                                 assembly_name)
@@ -557,11 +561,12 @@ def _test_console_errors(browser):
     project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
-    inputs.rows[2].cells[2].click()
-    inputs[2][2] = '42'  # printvars
+    inputs.rows[0].cells[2].click()
+    inputs[0][2] = '42'  # printvars
     expected = "TraitError: The 'printvars' trait of a "     \
                "Run_Once instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
@@ -620,6 +625,7 @@ def _test_driver_config(browser):
     project_dict, workspace_page = startup(browser)
 
     # Add MetaModel so we can test events.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
@@ -737,10 +743,12 @@ def _test_remove(browser):
     project_dict, workspace_page = startup(browser)
 
     # Show assembly information.
-    # Lots of futzing here to handle short screens (EC2 Windows).
+    top = workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.select_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
+
+    # open various views on the top assembly
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
     editor.move(100, 200)
@@ -754,6 +762,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    # make sure all the views on the top assembly go away
     time.sleep(1)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
@@ -767,6 +776,7 @@ def _test_noslots(browser):
     project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode to assembly.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     ext = workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.external_code.ExternalCode', 'ext',
@@ -780,6 +790,7 @@ def _test_noslots(browser):
     eq(editor('outputs_tab').is_present, True)
 
     # Clean up.
+    editor.close()
     closeout(project_dict, workspace_page)
 
 
@@ -824,15 +835,15 @@ def _test_logviewer(browser):
     initial = [msg[16:] for msg in msgs
                         if "Shouldn't have handled a send event" not in msg]
     eq(initial,
-       ['W root: warning 1',
-        'E root: error 1',
-        'C root: critical 1',
-        'W root: warning 2',
-        'E root: error 2',
-        'C root: critical 2',
-        'W root: warning 3',
-        'E root: error 3',
-        'C root: critical 3'])
+       [u'W root: warning 1',
+        u'E root: error 1',
+        u'C root: critical 1',
+        u'W root: warning 2',
+        u'E root: error 2',
+        u'C root: critical 2',
+        u'W root: warning 3',
+        u'E root: error 3',
+        u'C root: critical 3'])
 
     # Turn off errors.
     dialog = viewer.filter()
@@ -842,12 +853,12 @@ def _test_logviewer(browser):
     msgs = viewer.get_messages()
     filtered = [msg[16:] for msg in msgs]  # Drop timestamp.
     eq(filtered,
-       ['W root: warning 1',
-        'C root: critical 1',
-        'W root: warning 2',
-        'C root: critical 2',
-        'W root: warning 3',
-        'C root: critical 3'])
+       [u'W root: warning 1',
+        u'C root: critical 1',
+        u'W root: warning 2',
+        u'C root: critical 2',
+        u'W root: warning 3',
+        u'C root: critical 3'])
 
     # Pop-out to separate window.
     workspace_window = browser.current_window_handle
@@ -914,6 +925,8 @@ def _test_arguments(browser):
     # Check that objects requiring constructor arguments are handled.
     project_dict, workspace_page = startup(browser)
 
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
@@ -923,34 +936,31 @@ def _test_arguments(browser):
     mm_editor.move(-200, 0)
 
     # Plug ListCaseIterator into warm_start_data.
-    slot = SlotFigure(workspace_page, 'top.mm.warm_start_data')
-    slot.fill_from_library('ListCaseIterator')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.set_argument(0, '[]')
-    args_page.click_ok()
+    slot = find_slot_figure(workspace_page, 'warm_start_data', prefix='top.mm')
+    args = ['[]']
+    workspace_page.fill_slot_from_library(slot, 'ListCaseIterator', args)
 
     # Plug ListCaseRecorder into recorder.
-    slot = SlotFigure(workspace_page, 'top.mm.recorder')
-    slot.fill_from_library('ListCaseRecorder')
+    slot = find_slot_figure(workspace_page, 'recorder', prefix='top.mm')
+    workspace_page.fill_slot_from_library(slot, 'ListCaseRecorder')
 
     # Plug ExecComp into model.
-    slot = SlotFigure(workspace_page, 'top.mm.model')
-    slot.fill_from_library('ExecComp')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.set_argument(0, "('z = x * y',)")
-    args_page.click_ok()
+    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
+    args = ["('z = x * y',)"]
+    workspace_page.fill_slot_from_library(slot, 'ExecComp', args)
 
     # Check that inputs were created from expression.
+    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
     exe_editor = slot.editor_page()
     exe_editor.move(-100, 0)
     inputs = exe_editor.get_inputs()
     expected = [
-        ['', 'directory',  '',  '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'x',             '0',     '',  ''],
         ['', 'y',             '0',     '',  ''],
+        ['', 'directory',  '',  '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
     ]
 
     for i, row in enumerate(inputs.value):

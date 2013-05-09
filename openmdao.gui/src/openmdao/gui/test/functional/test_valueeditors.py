@@ -7,6 +7,7 @@ import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
+from unittest import TestCase
 from selenium.webdriver import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
@@ -28,8 +29,6 @@ def _test_value_editors(browser):
                                                 'files/variable_editors.py')
     workspace_page.add_file(file_path)
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('variable_editors.Topp', 'top')
 
     paraboloid = workspace_page.get_dataflow_figure('p1', 'top')
@@ -63,33 +62,33 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[1].cells[1].click()
-    inputs[1][1] = "abcd"
+    inputs.rows[8].cells[1].click()
+    inputs[8][1] = "abcd"
     time.sleep(1)
-
-    #bool editor - set to true
-    inputs = props.inputs
-    inputs.rows[3].cells[1].click()
-    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
-    browser.find_element_by_xpath(selection_path).click()
-    time.sleep(0.5)
 
     #enum editor - set to 3
     inputs = props.inputs
-    inputs.rows[2].cells[1].click()
+    inputs.rows[1].cells[1].click()
     selection_path = '//*[@id="editor-enum-e"]/option[4]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
     # float editor - set to 2.71
     inputs = props.inputs
-    inputs.rows[5].cells[1].click()
-    inputs[5][1] = '2.71'
+    inputs.rows[3].cells[1].click()
+    inputs[3][1] = '2.71'
+    time.sleep(0.5)
+
+    #bool editor - set to true
+    inputs = props.inputs
+    inputs.rows[9].cells[1].click()
+    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
+    browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
     #array 1d editor - add element, set to 4
     inputs = props.inputs
-    inputs.rows[4].cells[1].click()
+    inputs.rows[2].cells[1].click()
     add_path = '//*[@id="array-edit-add-X"]'
     browser.find_element_by_xpath(add_path).click()
     new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
@@ -102,7 +101,7 @@ def _test_value_editors(browser):
 
     # array 2d editor - set to [[1, 4],[9, 16]]
     inputs = props.inputs
-    inputs.rows[6].cells[1].click()
+    inputs.rows[4].cells[1].click()
     for i in range(1, 5):
         cell_path = '//*[@id="array-editor-dialog-Y"]/div/input[' + str(i) + ']'
         cell_input = browser.find_element_by_xpath(cell_path)
@@ -111,12 +110,57 @@ def _test_value_editors(browser):
     submit_path = '//*[@id="array-edit-Y-submit"]'
     browser.find_element_by_xpath(submit_path).click()
 
+    # array 2d editor - special case for a bug - set to [[5],[7]]
+    inputs = props.inputs
+    inputs.rows[5].cells[1].click()
+    cell_path = '//*[@id="array-editor-dialog-Y2"]/div/input[2]'
+    cell_input = browser.find_element_by_xpath(cell_path)
+    cell_input.clear()
+    cell_input.send_keys(str(7))
+    submit_path = '//*[@id="array-edit-Y2-submit"]'
+    browser.find_element_by_xpath(submit_path).click()
+
+    # array 2d editor - special case for a bug - set to [[99]]
+    inputs = props.inputs
+    inputs.rows[6].cells[1].click()
+    cell_path = '//*[@id="array-editor-dialog-Y3"]/div/input[1]'
+    cell_input = browser.find_element_by_xpath(cell_path)
+    cell_input.clear()
+    cell_input.send_keys(str(99))
+    submit_path = '//*[@id="array-edit-Y3-submit"]'
+    browser.find_element_by_xpath(submit_path).click()
+
+    #list editor - set to [1, 2, 3, 4, 5]
+    inputs = props.inputs
+    eq(inputs[7][1].startswith("["), True)
+    eq(inputs[7][1].endswith("]"), True)
+    values = [int(value.strip()) for value in inputs[7][1].strip("[]").split(",")]
+    eq(len(values), 4)
+    eq(values, [1, 2, 3, 4])
+
+    values.append(5)
+    values = str([value for value in values])
+    inputs[7][1] = values
+
     props.close()
 
     #check that all values were set correctly by the editors
-    commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute",
-                "top.p1.e", "top.p1.x", "top.p1.X", "top.p1.directory"]
-    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]", "abcd"]
+    commands = ["top.p1.d['pi']", 
+                "top.p1.d['phi']", 
+                "top.p1.force_execute",
+                "top.p1.e", 
+                "top.p1.x", 
+                "top.p1.X", 
+                "top.p1.directory", 
+                "top.p1.Z"]
+    values = ["3.0", 
+              "1.61", 
+              "True", 
+              "3", 
+              "2.71", 
+              "[ 0.  1.  2.  3.  4.]", 
+              "abcd", 
+              "[1, 2, 3, 4, 5]"]
 
     for cmd_str, check_val in zip(commands, values):
         workspace_page.do_command(cmd_str)
@@ -128,6 +172,17 @@ def _test_value_editors(browser):
     output = workspace_page.history.split("\n")
     eq(output[-2], "[[ 1  4]")
     eq(output[-1], " [ 9 16]]")
+
+    #separate check for 2d arrays
+    workspace_page.do_command("top.p1.Y2")
+    output = workspace_page.history.split("\n")
+    eq(output[-2], "[[5]")
+    eq(output[-1], " [7]]")
+
+    #separate check for 2d arrays
+    workspace_page.do_command("top.p1.Y3")
+    output = workspace_page.history.split("\n")
+    eq(output[-1], "[[99]]")
 
     # Clean up.
     closeout(project_dict, workspace_page)
@@ -141,9 +196,6 @@ def _test_Avartrees(browser):
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-
     workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "top")
 
     comp = workspace_page.get_dataflow_figure('p1', "top")
@@ -154,7 +206,7 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
+        ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
     ]
 
@@ -187,7 +239,8 @@ def _test_Avartrees(browser):
     except IndexError:
         pass
     else:
-        self.fail('Exception expected: Slot value should not be settable on inputs.')
+        raise TestCase.failureException(
+            'Exception expected: VarTree value should not be settable on inputs.')
 
     # Contract first vartree
     inputs.rows[0].cells[1].click()
@@ -196,7 +249,7 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '', 
+        ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
     ]
 

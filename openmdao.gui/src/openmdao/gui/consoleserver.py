@@ -1,5 +1,8 @@
 import cmd
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import logging
 import os.path
 import sys
@@ -11,10 +14,11 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.vartree import VariableTree
+from openmdao.main.variable import json_default
 
 from openmdao.main.project import Project, ProjFinder, \
                                   _clear_insts, _match_insts
-from openmdao.main.publisher import publish
+from openmdao.main.publisher import publish, Publisher
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, \
@@ -249,7 +253,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         try:
             self.proj.command("execfile('%s', '%s')" %
-                                 (filename, file_md5(filename)))
+                              (filename, file_md5(filename)))
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -272,11 +276,6 @@ class ConsoleServer(cmd.Cmd):
         ''' Return this server's :attr:`_recorded_cmds`.
         '''
         return self._recorded_cmds[:]
-
-    def get_JSON(self):
-        ''' Return current state as JSON.
-        '''
-        return jsonpickle.encode(self.proj._model_globals)
 
     def get_container(self, pathname, report=True):
         ''' Get the container with the specified pathname.
@@ -332,7 +331,8 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return jsonpickle.encode(self._get_components(self.proj._model_globals))
+        return json.dumps(self._get_components(self.proj._model_globals),
+                          default=json_default)
 
     def get_connections(self, pathname, src_name, dst_name):
         ''' Get list of source variables, destination variables, and the
@@ -554,7 +554,7 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return jsonpickle.encode(conns)
+        return json.dumps(conns, default=json_default)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -588,7 +588,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['parameters'] = []
             dataflow['constraints'] = []
             dataflow['objectives'] = []
-        return jsonpickle.encode(dataflow)
+        return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
         ''' Serve a list of events that are available to a driver.
@@ -598,9 +598,13 @@ class ConsoleServer(cmd.Cmd):
             drvr, root = self.get_container(pathname)
             events = drvr.list_available_events()
 
-        return jsonpickle.encode(events)
+        return json.dumps(events, default=json_default)
 
     def get_workflow(self, pathname):
+        ''' get the workflow for the specified driver or assembly
+            if no driver or assembly is specified, get the workflows for
+            all of the top-level assemblies
+        '''
         flows = []
         if pathname:
             drvr, root = self.get_container(pathname)
@@ -642,102 +646,27 @@ class ConsoleServer(cmd.Cmd):
                                 'valid':    comp.is_valid()
                             })
                     flows.append(flow)
-        return jsonpickle.encode(flows)
+        return json.dumps(flows, default=json_default)
 
     def get_attributes(self, pathname):
+        ''' get the attributes of the specified object
+        '''
         attr = {}
         comp, root = self.get_container(pathname)
-        if comp:
-            try:
-                attr = comp.get_attributes(io_only=False)
-            except Exception as err:
-                self._error(err, sys.exc_info())
-        return jsonpickle.encode(attr)
-
-    def _nested_put(self, cdict, vardict, parent):
-        for inp in cdict["children"]:
-            if inp["attr"]["id"] == parent:
-                inp["children"].append(vardict)
-                return cdict
-            elif inp["attr"]["id"] in parent:
-                cdict2 = self._nested_put(inp, vardict, parent)
-                if len(cdict2["children"]) > len(inp["children"]):
-                    return cdict2
-        return cdict
-
-    def _hide_childleaf(self, parent_path, passthroughs):
-        for name in passthroughs:
-            if name in parent_path:
-                return False
-        return True
-
-    def _process_input_output(self, compname, data, comp_dict,
-                              existing_passthroughs, top_names):
-        for this_variable in data:
-            name = this_variable["name"]
-            this_id = this_variable["id"]
-            this_path = compname + '.' + this_id
-            tree_d = {"data": name}
-            tree_d["attr"] = {"id": this_id,
-                               "path": this_path}
-            tree_d["children"] = []
-
-            if this_path in existing_passthroughs:
-                tree_d["attr"]["class"] = "jstree-checked"
-            elif name in top_names:
-                continue
-
-            if "parent" in this_variable.keys():
-                parent = this_variable["parent"]
-                if self._hide_childleaf(compname + '.' + parent,
-                                        existing_passthroughs):
-                    comp_dict = self._nested_put(comp_dict, tree_d, parent)
-            else:
-                comp_dict["children"].append(tree_d)
-        return comp_dict
-
-    def _get_existing_passthroughs(self, top_vars):
-        passthrough_ids = []
-        for var in top_vars:
-            if "target" in var.keys():
-                passthrough_ids.append(var["target"])
-        return passthrough_ids
-
-    def get_all_attributes(self, pathname):
-        asm, root = self.get_container(pathname)
-        input_tree, output_tree = [], []
-        top_level = asm.get_attributes(io_only=False)
-        top_names = [var["name"] for var in top_level['Inputs'] + top_level['Outputs']]
-        inputs_passthroughs = self._get_existing_passthroughs(top_level['Inputs'])
-        output_passthroughs = self._get_existing_passthroughs(top_level['Outputs'])
-        for compname in asm.list_components():
-            comp_id = compname
-            input_comp = {"data": compname}
-            input_comp["attr"] = {"id": comp_id,
-                                  "rel": "disabled"}
-            input_comp["children"] = []
-
-            output_comp = {"data": compname}
-            output_comp["attr"] = {"id": comp_id,
-                                   "rel": "disabled"}
-            output_comp["children"] = []
-
-            comp, root = self.get_container(pathname + '.' + compname)
+        try:
             if comp:
-                full_attributes = comp.get_attributes(io_only=False)
-                Inputs = full_attributes["Inputs"]
-                Outputs = full_attributes["Outputs"]
+                attr = comp.get_attributes(io_only=False)
+            return json.dumps(attr, default=json_default)
+        except Exception as err:
+            self._error(err, sys.exc_info())
 
-                input_comp = self._process_input_output(compname, Inputs,
-                                                        input_comp, inputs_passthroughs, top_names)
-                output_comp = self._process_input_output(compname, Outputs,
-                                                         output_comp, output_passthroughs, top_names)
-
-                input_tree.append(input_comp)
-                output_tree.append(output_comp)
-
-        return jsonpickle.encode({"top": top_level, "inputs": input_tree,
-                                  "outputs": output_tree})
+    def get_passthroughs(self, pathname):
+        ''' get the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable
+        '''
+        asm, root = self.get_container(pathname)
+        passthroughs = asm.get_passthroughs()
+        return json.dumps(passthroughs, default=json_default)
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
@@ -749,10 +678,15 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
+        ''' get a dictionary of types available for creation
+        '''
         return packagedict(get_available_types())
 
     @modifies_model
     def load_project(self, projdir):
+        ''' activate the project in the specified directory,
+            instantiate a file manager and projdirfactory
+        '''
         _clear_insts()
         self.cleanup()
 
@@ -922,12 +856,17 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
+        elif pathname.startswith('/'): # treat it as a filename
+            if publish:
+                Publisher.register(pathname, pathname[1:])
+            else:
+                Publisher.unregister(pathname)
         else:
-            parts = pathname.split('.')
+            parts = pathname.split('.', 1)
             if len(parts) > 1:
                 root = self.proj.get(parts[0])
                 if root:
-                    rest = '.'.join(parts[1:])
+                    rest = parts[1]
                     root.register_published_vars(rest, publish)
 
             cont, root = self.get_container(pathname)

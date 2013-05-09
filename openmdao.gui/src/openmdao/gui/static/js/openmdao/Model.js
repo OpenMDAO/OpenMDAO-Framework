@@ -74,6 +74,20 @@ openmdao.Model=function(listeners_ready) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
+        else { // binary message, assume it uses our simple framing protocol
+            // framing protocol is: msg starts with a null padded routing string of size 
+            // openmdao.NAME_SIZE, followed by the actual binary msg
+            var namearr = new Uint8Array(message, 0, openmdao.NAME_SIZE-1);
+            var name = String.fromCharCode.apply(null, namearr);
+            var idx = name.indexOf("\0");
+            if (idx > 0) {
+                name = name.substr(0, idx);
+            }
+
+            console.debug("publishing ArrayBuffer for name = "+name);
+            //var msg = whole.subarray(g.NAME_SIZE);
+            self.publish([name, message]);  // send the whole message to save on some copying later...
+        }
     }
 
     var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
@@ -105,6 +119,7 @@ openmdao.Model=function(listeners_ready) {
         Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
+        console.debug("added a listener for topic "+topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -146,7 +161,7 @@ openmdao.Model=function(listeners_ready) {
     /** publish message to subscribed listeners.
     */
     this.publish = function(message) {
-        var topic = message[0],
+        var i, topic = message[0],
             callbacks;
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
@@ -313,17 +328,17 @@ openmdao.Model=function(listeners_ready) {
             });
         }
     };
-    
-    
-    /** get attributes of all components of an assembly */
-    this.getAllAttributes= function(name,callback,errorHandler) {
+
+    /** get the inputs and outputs of the assembly's child components and
+        an indicator for each whether or not it is a passthrough variable */
+    this.getPassthroughs = function(name, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
         else {
             jQuery.ajax({
                 type: 'GET',
-                url:  'get_all_attributes/'+name,
+                url:  'passthroughs/'+name,
                 dataType: 'json',
                 data: {},
                 success: callback,

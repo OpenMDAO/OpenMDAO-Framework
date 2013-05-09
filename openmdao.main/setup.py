@@ -1,6 +1,7 @@
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -43,12 +44,12 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
-          'jsonpickle',
           'networkx==1.3',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
           'pyparsing==1.5.2',
+          'pyV3D',
           'setuptools',
           'Sphinx',
           'sympy',
@@ -76,20 +77,21 @@ setup(name='openmdao.main',
       openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
       
       [openmdao.variable]
-      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
-      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
+      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
+      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
+      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
       openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
       openmdao.main.datatypes.geom.Geom = openmdao.main.datatypes.geom:Geom
       openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
-      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
-      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
-      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
-      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
-      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
+      openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       
       """,
     )

@@ -4,15 +4,19 @@
 Working with Variables
 ======================
 
-In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
+In OpenMDAO, a *variable* is a piece of data that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
 model must use variables to declare the inputs and outputs for each
 component.
 
-You can create a variable for a component in two ways. The first is to
-declare it in the component's class definition. A simple component that takes
-a floating point number as an input and provides a floating point number as an
-output would look like this:
+You can create a variable for a component in two ways. The first way is to
+declare it in the component's class definition as illustrated in the examples
+that follow. The second way is to add it using a component's ``add`` function.
+Use the second way only if a variable needs to be added after the component
+is instantiated.
+
+A simple component that takes a floating point number as an input and
+provides a floating point number as an output would look like this:
 
 .. testcode:: creating_public_variables_1
 
@@ -330,8 +334,12 @@ by `FileMetadata`, which supports arbitrary user metadata.
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
 
-The *path* must be a descendant of the parent component's path. The *binary* flag can be used to
-mark a file as binary. 
+The *path* must be a descendant of the parent component's path.
+The *binary* flag can be used to mark a file as binary. This can be important
+when transferring files between Windows and OS X or Linux.  The default value
+is False, signifying a text file which needs newline translation between
+different systems.  If newline translation is applied to a binary file it will
+corrupt the data.
 
 .. todo::
 
@@ -378,8 +386,8 @@ The attribute *required* is used to indicate whether the object that plugs into
 a Slot is required. If ``required`` is True, then an exception will be raised
 if the component is executed when that object is not present.
 
-You can also use a class name to define what is permitted in the slot. In this
-code sample, we've specified that the ``recorder`` slot can only contain an
+You can also use a class name to define what is permitted in the Slot. In this
+code sample, we've specified that the ``recorder`` Slot can contain only an
 object of class ``CSVCaseRecorder```.
 
 .. testcode:: instance_example
@@ -395,7 +403,7 @@ object of class ``CSVCaseRecorder```.
         recorder = Slot(CSVCaseRecorder, desc='Something to append() to.',
                           required=True)
                           
-We can also declare a pre-filled slot by passing an instance instead of the class
+We can also declare a pre-filled Slot by passing an instance instead of the class
 name. This is a shortcut for adding it later.
 
 .. testcode:: instance_example
@@ -510,8 +518,8 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import Component, VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
     class FlightCondition(VariableTree):
         """Container of variables"""
@@ -524,22 +532,13 @@ three variables that define two flight conditions:
     class AircraftSim(Component):
         """This component contains variables in a VariableTree"""
     
-        # create Slots to handle updates to our FlightCondition attributes
-        fcc1 = Slot(FlightCondition, iotype='in')
-        fcc2 = Slot(FlightCondition, iotype='out')
+        # create VarTrees to handle updates to our FlightCondition attributes
+        fcc1 = VarTree(FlightCondition(), iotype='in')
+        fcc2 = VarTree(FlightCondition(), iotype='out')
         
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
 
-        def __init__(self):
-            """Instantiate variable containers here"""
-
-            super(AircraftSim, self).__init__()
-        
-            # Instantiate and add our variable containers.
-            self.add('fcc1', FlightCondition())
-            self.add('fcc2', FlightCondition())
-    
         def execute(self):
             """Do something."""
         
@@ -549,13 +548,13 @@ three variables that define two flight conditions:
 
 .. note::
 
-    It's important to create a Slot variable for each VariableTree object contained
-    in your component if you intend to connect it to variables in other components.
-    Also make sure to set the *iotype* attribute in the Slot.  If you don't, changes 
+    It's important to create a VarTree variable (which is much like a :term:`Slot`)
+    for each VariableTree object contained in your component if you intend to
+    connect it to variables in other components.
+    Also make sure to set the *iotype* attribute in the VarTree.  If you don't, changes 
     to variables within the VariableTree object won't properly notify the component.
-    If you have a nested VariableTree, it's only necessary to create a Slot in the
-    component that contains it.  Adding Slots for VariableTrees inside of another
-    VariableTree is not necessary.
+    If you have a nested VariableTree, it's necessary to create a VarTree in the
+    VariableTree that contains it.
     
     
 Here, we defined the class ``FlightCondition``, containing three variables.
@@ -569,12 +568,13 @@ another VariableTree, so any level of nesting is possible.  For example:
 
 .. testsetup:: nested_vartree
 
-    from openmdao.main.api import VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
+    class FlightCondition(VariableTree):
+        pass
     
 .. testcode:: nested_vartree
-
 
     class MyNestedVars(VariableTree):
         """A nested container of variables"""
@@ -582,10 +582,7 @@ another VariableTree, so any level of nesting is possible.  For example:
         f1 = Float(120.0)
         f2 = Float(0.0)
         
-        def __init__(self):
-            super(MyNestedVars, self).__init__()
-            self.add('sub_vartree', FlightCondition())
-            
+        sub_vartree = VarTree(FlightCondition())
         
     
 An interesting thing about this example is that we've

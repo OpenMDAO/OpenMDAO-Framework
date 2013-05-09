@@ -131,9 +131,9 @@ We currently have five architectures implemented:
  #. BLISS-2000
  
  
-All instances of ArchitectureAssembly have a slot called `architecture` that lets you configure a specific 
-MDAO architecture. This is how you configure a specific architecture. To test this out yourself, add 
-the following code to the bottom of the file where you defined the SellarProblem class from above: 
+All instances of ArchitectureAssembly have a :term:`Slot` called `architecture` that lets you configure a
+specific  MDAO architecture. To test this out yourself, add  the following code to the bottom of the file
+where you defined the SellarProblem class from above: 
 
 ::
 

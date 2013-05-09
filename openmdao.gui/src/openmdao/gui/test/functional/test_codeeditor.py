@@ -196,6 +196,7 @@ f_x = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Drag over Plane.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 

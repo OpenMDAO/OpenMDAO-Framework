@@ -605,6 +605,7 @@ openmdao.Util = {
         function connect() {
             if (socket === null || socket.readyState > 0) {
                 socket = new WebSocket(addr);
+                socket.binaryType = "arraybuffer"; // when binary msgs are received, treat as ArrayBuffers
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
                     defrd.resolve(socket);
@@ -708,3 +709,17 @@ openmdao.Util = {
         childObject.prototype.superClass = parentObject.prototype;
     }
 };
+
+openmdao.viewGeometry = function(pathname) {
+    function popupGeom(pathname) {
+        openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);         
+    }
+    if (typeof pathname === "undefined" || !pathname) {
+        openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
+                                       popupGeom);
+    }
+    else {
+        popupGeom(pathname); 
+    }
+};
+
