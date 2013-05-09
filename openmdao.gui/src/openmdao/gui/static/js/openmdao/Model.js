@@ -119,7 +119,7 @@ openmdao.Model=function(listeners_ready) {
         Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
-        console.debug("added a listener for topic "+topic);
+        //console.debug("added a listener for topic "+topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }

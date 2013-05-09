@@ -434,8 +434,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
 
 			if ( dataView.getItem(cell.row).value === "Geometry" ) {
-				var p = self.pathname + ".geom_out" ;
-		        openmdao.Util.popupWindow('geometry?path=' + p,'Geometry of ' + p);         
+                var p = self.pathname + '.' + dataView.getItem(cell.row).id;
+                openmdao.viewGeometry(p);          
 			}
         });
 
