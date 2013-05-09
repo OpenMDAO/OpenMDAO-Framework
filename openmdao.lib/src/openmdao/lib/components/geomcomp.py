@@ -1,10 +1,10 @@
 from openmdao.main.component import Component
 from openmdao.main.container import Container
+from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
-from openmdao.main.datatypes.api import Slot, Geom
+from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List
 from openmdao.util.log import logger
-from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Array
-from openmdao.util.nameutil import partition_names_by_comp
 
 _ttdict = {
     float: Float,
@@ -13,6 +13,7 @@ _ttdict = {
     str: Str,
     unicode: Str,
     list: List,
+    'enum': Enum,
 }
 
 try:
@@ -21,6 +22,41 @@ except ImportError:
     pass
 else:
     _ttdict[numpy.ndarray] = Array
+
+def _get_trait_from_meta(meta):
+    """Create a Variable object based on the contents
+    of meta, which contains a 'value', plus possibly
+    other information, e.g., 'type'.
+    """
+    meta = meta.copy()
+    val = meta['value']
+    # if 'type' is provided in the metadata, use that
+    if 'type' in meta:
+        typ = _ttdict.get(meta['type'])
+    else:  # otherwise just infer the Variable type from the value type
+        typ = _ttdict.get(type(val))
+    del meta['value']  # don't include value in trait metadata
+    if typ is None:
+        logger.warning("no Variable type found for value of type %s, using Python Variable type, which performs no validation" % type(val))
+        typ = Python   # FIXME
+    return typ(val, **meta)
+
+def _create_trait(parent, name, meta):
+    """Create a trait based on the type of value and
+    the contents of name.  If name contains dots, create
+    VarTrees to represent non-leaf nodes of the tree.
+    """
+    if '.' in name:
+        iotype = meta.get('iotype')
+        # see if the necessary VarTree parents exist yet
+        parts = name.split('.')
+        for part in parts[:-1]:
+            if not hasattr(parent, part):
+                parent.add(part, VarTree(VariableTree(), iotype=iotype))
+            parent = getattr(parent, part)
+        parent.add(parts[-1], _get_trait_from_meta(meta))
+    else:  # just a simple variable
+        parent.add(name, _get_trait_from_meta(meta))
 
 
 class GeomComponent(Component):
@@ -83,6 +119,11 @@ class GeomComponent(Component):
                 setattr(self, name, out)
         self.geom_out = self.parametric_geometry.get_static_geometry()
 
+    def _var_cleanup(self, names):
+        for name in names:
+            if '.' not in name:
+                self._remove_var(name)
+
     def _update_iovar_set(self):
         """Determine the set of input and output variables for the
         current parametric geometry and create Variable objects
@@ -93,6 +134,8 @@ class GeomComponent(Component):
 
         inps, outps = self._get_io_info()
 
+        # these are flattened lists of names, so they 
+        # may contain dots
         self._input_var_names = set([p[0] for p in inps])
         self._output_var_names = set([p[0] for p in outps])
 
@@ -102,21 +145,23 @@ class GeomComponent(Component):
         removed_ins = old_in - self._input_var_names
         removed_outs = old_out - self._output_var_names
 
-        for name in removed_ins:
-            self._remove_var(name)
-        for name in removed_outs:
-            self._remove_var(name)
+        # get names of any vartrees that have been removed from or added to
+        vtnames = set([p.split('.')[0] for p in 
+                      added_ins|added_outs|removed_ins|removed_outs 
+                      if '.' in p])
+
+        # clean up modified vartrees
+        self._var_cleanup(vtnames)
+
+        # now cleanup any regular (non-vartree) variables
+        self._var_cleanup(removed_ins)
+        self._var_cleanup(removed_outs)
 
         for plist in (inps, outps):
             for name, meta in plist:
-                if name in added_ins or name in added_outs:
-                    meta = meta.copy()
+                if name in added_ins or name in added_outs or '.' in name:
                     val = meta['value']
-                    typ = _ttdict.get(type(val))
-                    del meta['value']  # don't include value in trait metadata
-                    if typ is None:
-                        typ = Python   # FIXME
-                    self.add_trait(name, typ(val, **meta))
+                    _create_trait(self, name, meta)
                     if meta['iotype'] == 'in':
                         setattr(self, name, val)
 
@@ -182,5 +227,5 @@ class GeomComponent(Component):
                 attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
-        super(GeomComponent, self)._input_updated(name)
+        super(GeomComponent, self)._input_updated(name.split('.',1)[0])
 
