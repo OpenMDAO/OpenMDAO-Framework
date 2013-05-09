@@ -175,6 +175,9 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
     function loadData(ifaces) {
         var nIfaces = 0;
+        if (typeof ifaces === 'ArrayBuffer' || ifaces instanceof ArrayBuffer) {
+            return;    // FIXME: hack to ignore ArrayBuffer (binary) messages
+        }
         jQuery.each(ifaces,function (name,props) {
             ++nIfaces;
             if (panes[name]) {

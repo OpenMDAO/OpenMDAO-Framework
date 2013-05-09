@@ -2,24 +2,27 @@
 Test Dependency Functions
 """
 
-import os, sys
+import os
 import unittest
 from nose import SkipTest
 
-from openmdao.util.dep import PythonSourceFileAnalyser, PythonSourceTreeAnalyser
+from openmdao.util.dep import PythonSourceTreeAnalyser
 
 class DepTestCase(unittest.TestCase):
 
     def setUp(self):
         try:
-            import openmdao.main
-            import openmdao.lib
+            # on windows, if we just do 'import openmdao.main and import openmdao.lib', 
+            # we get errors like 'module has no attribute "main".  Importing specific'
+            # files within main and lib fixes it.
+            from openmdao.main import component
+            from openmdao.lib import releaseinfo
         except ImportError:
             # don't perform this test if openmdao.main 
             # and openmdao.lib aren't present
             raise SkipTest("this test requires openmdao.main and openmdao.lib")
-        self.startdirs = [os.path.dirname(openmdao.main.__file__), 
-                          os.path.dirname(openmdao.lib.__file__)]
+        self.startdirs = [os.path.dirname(component.__file__), 
+                          os.path.dirname(releaseinfo.__file__)]
         
     def test_PythonSourceTreeAnalyser(self):
        

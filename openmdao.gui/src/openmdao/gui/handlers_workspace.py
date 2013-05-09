@@ -2,7 +2,10 @@ import sys
 import os
 import re
 
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 from tornado import web
 
@@ -189,9 +192,9 @@ class ComponentsHandler(ReqHandler):
         cserver = self.get_server()
         self.content_type = 'application/javascript'
         for retry in range(3):
-            json = cserver.get_components()
+            json_comps = cserver.get_components()
             try:
-                self.write(json)
+                self.write(json_comps)
             except AssertionError as exc:
                 # Have had issues with `json` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "ComponentsHandler: Can't write %r: %s" \
@@ -232,13 +235,13 @@ class DataflowHandler(ReqHandler):
         cserver = self.get_server()
         self.content_type = 'application/javascript'
         for retry in range(3):
-            json = cserver.get_dataflow(name)
+            json_dflow = cserver.get_dataflow(name)
             try:
-                self.write(json)
+                self.write(json_dflow)
             except AssertionError as exc:
                 # Have had issues with `json` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "DataflowHandler: Can't write %r: %s" \
-                                    % (json, str(exc) or repr(exc))
+                                    % (json_dflow, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
@@ -327,9 +330,9 @@ class FilesHandler(ReqHandler):
     def get(self):
         cserver = self.get_server()
         filedict = cserver.get_files()
-        json = jsonpickle.encode(filedict)
+        json_files = json.dumps(filedict)
         self.content_type = 'application/javascript'
-        self.write(json)
+        self.write(json_files)
 
 
 class GeometryHandler(ReqHandler):
@@ -338,9 +341,11 @@ class GeometryHandler(ReqHandler):
     def get(self):
         ''' geometry viewer
         '''
-        filename = self.get_argument('path')
-        self.render('workspace/o3dviewer.html', filename=filename)
-
+        path = self.get_argument('path')
+        #self.render('workspace/o3dviewer.html', filename=path)
+        if path.startswith('file/'):
+            path = path[4:]  # leave the '/' at the beginning of filename
+        self.render('workspace/wvclient.html', geom_name=path)
 
 class ModelHandler(ReqHandler):
     ''' POST: get a new model (delete existing console server).
@@ -352,12 +357,12 @@ class ModelHandler(ReqHandler):
         self.delete_server()
         self.redirect('/')
 
-    @web.authenticated
-    def get(self):
-        cserver = self.get_server()
-        json = cserver.get_JSON()
-        self.content_type = 'application/javascript'
-        self.write(json)
+    #@web.authenticated
+    #def get(self):
+        #cserver = self.get_server()
+        #json_model = cserver.get_JSON()
+        #self.content_type = 'application/javascript'
+        #self.write(json_model)
 
 
 class OutstreamHandler(ReqHandler):
@@ -401,7 +406,6 @@ class ProjectLoadHandler(ReqHandler):
             path = self.get_secure_cookie('projpath')
         if path:
             cserver = self.get_server()
-            #path = os.path.join(self.get_project_dir(), path)
             cserver.load_project(path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
@@ -540,7 +544,7 @@ class SignatureHandler(ReqHandler):
         cserver = self.get_server()
         signature = cserver.get_signature(typename)
         self.content_type = 'application/javascript'
-        self.write(jsonpickle.encode(signature))
+        self.write(json.dumps(signature))
 
 
 class TypesHandler(ReqHandler):
@@ -552,7 +556,7 @@ class TypesHandler(ReqHandler):
         cserver = self.get_server()
         types = cserver.get_types()
         self.content_type = 'application/javascript'
-        self.write(jsonpickle.encode(types))
+        self.write(json.dumps(types))
 
 
 class UploadHandler(ReqHandler):
@@ -639,13 +643,13 @@ class WorkflowHandler(ReqHandler):
         cserver = self.get_server()
         self.content_type = 'application/javascript'
         for retry in range(3):
-            json = cserver.get_workflow(name)
+            json_wflow = cserver.get_workflow(name)
             try:
-                self.write(json)
+                self.write(json_wflow)
             except AssertionError as exc:
                 # Have had issues with `json` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "WorkflowHandler: Can't write %r: %s" \
-                                    % (json, str(exc) or repr(exc))
+                                    % (json_wflow, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:

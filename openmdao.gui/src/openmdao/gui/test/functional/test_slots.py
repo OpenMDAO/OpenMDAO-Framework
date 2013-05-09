@@ -352,7 +352,7 @@ def _test_dict_slot(browser):
     model_slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
     workspace_page.fill_slot_from_library(model_slot, 'InandOutTree')
 
-    # There should two surrogates slots
+    # There should 3 surrogates slots
     time.sleep(2)  # give it a bit to update the figure
     surrogates = browser.find_elements_by_xpath("//div[starts-with( @id,'SlotFigure-top-mm-surrogates')]")
     eq(3, len(surrogates),
@@ -376,7 +376,7 @@ def _test_dict_slot(browser):
     eq(1, num_surrogates_filled,
        "Exactly one surrogate slot should be filled but %d are filled" % num_surrogates_filled)
 
-    # Fill the outs.zzz surrogate slot with KrigingSurrogate
+    # Fill the zzz surrogate slot with KrigingSurrogate
     surrogate_slot = find_slot_figure(workspace_page, 'zzz', prefix='top.mm.surrogates')
     workspace_page.fill_slot_from_library(surrogate_slot, 'KrigingSurrogate')
 

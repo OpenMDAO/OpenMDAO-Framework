@@ -230,6 +230,17 @@ def _test_Avartrees(browser):
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
 
+    # While expanded, verify that 'v1' is editable.
+    inputs.rows[1].cells[2].click()
+    inputs = editor.get_inputs()
+    inputs[1][2] = "42"
+    expected[1][2] = "42"
+
+    time.sleep(0.5)
+    inputs = editor.get_inputs()
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
     # While expanded, verify that cell that became the 2nd vartree is now
     # uneditable
     inputs.rows[3].cells[1].click()
@@ -279,7 +290,7 @@ def _test_Avartrees(browser):
     inputs = workspace_page.props_inputs
     expected = [
         [' cont_in',      ''],
-        ['v1', '1'],
+        ['v1', '42'],
         ['v2', '2'],
         [' vt2', ''],
         ['directory',     ''],
@@ -288,6 +299,19 @@ def _test_Avartrees(browser):
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
+
+    # While expanded, verify that 'v1' is editable.
+    inputs.rows[1].cells[1].click()
+    inputs = workspace_page.props_inputs
+    inputs[1][1] = "43"
+    expected[1][1] = "43"
+
+    time.sleep(1)
+    inputs = workspace_page.props_inputs
+#FIXME sometimes row 2 gets a value of '' because slickgrid is editing it.
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+    eq(row[1], expected[1])
 
     # Contract first vartree
     inputs.rows[0].cells[0].click()

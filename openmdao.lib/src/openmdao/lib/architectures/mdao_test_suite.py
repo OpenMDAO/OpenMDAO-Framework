@@ -9,7 +9,9 @@ import openmdao.lib.optproblems
 import openmdao.lib.architectures
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 
-import openmdao.main
+from openmdao.main.api import set_as_top
+# because accessing __file__ on openmdao.main directly can fail under nose on Windows
+from openmdao.main import component  
 #from openmdao.main.arch import Architecture
 #from openmdao.main.problem_formulation import OptProblem
 
@@ -36,7 +38,7 @@ def build_arch_list(include=[], exclude=[]):
         raise ValueError("Can't set both include and exlude")
     
     startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),
-                 os.path.dirname(openmdao.main.__file__)]
+                 os.path.dirname(component.__file__)]
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
     archs = []
@@ -72,7 +74,7 @@ def build_optproblem_list(include=[], exclude=[]):
         raise ValueError("Can't set both include and exlude for OptProblems")
     
     startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),
-                 os.path.dirname(openmdao.main.__file__)]
+                 os.path.dirname(component.__file__)]
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     opt_problems = psta.find_inheritors("openmdao.main.problem_formulation.OptProblem")
     
@@ -107,7 +109,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         converge_file = open('%s_convergence_data.py'%prob_name,'w')
         
         for a in arch:
-            prob = openmdao.main.api.set_as_top(p.__class__())
+            prob = set_as_top(p.__class__())
             arch_name = a.__class__.__name__
             
             prob.architecture = a.__class__()

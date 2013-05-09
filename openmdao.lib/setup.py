@@ -1,6 +1,7 @@
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -15,7 +16,7 @@ setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
       long_description="""\
-Component, Driver, and Variable plugins for OpenMDAO
+Component, Driver, Variable and other plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -96,7 +97,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 
-      
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
@@ -134,5 +134,15 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.architectures.co.CO = openmdao.lib.architectures.co:CO
       openmdao.lib.architectures.ego.EGO = openmdao.lib.architectures.ego:EGO
       openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
+
+      [openmdao.parametric_geometry]
+      openmdao.lib.geometry.diamond.GEMParametricGeometry = openmdao.lib.geometry.diamond:GEMParametricGeometry
+      openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.geometry.box:BoxParametricGeometry
+
+      [openmdao.binpub]
+      openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
+      openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
+      openmdao.lib.geometry.box.BoxSender = openmdao.lib.geometry.box:BoxSender
+
       """,
       )

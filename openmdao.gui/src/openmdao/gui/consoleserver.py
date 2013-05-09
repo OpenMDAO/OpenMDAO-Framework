@@ -1,5 +1,8 @@
 import cmd
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import logging
 import os.path
 import sys
@@ -11,10 +14,11 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.vartree import VariableTree
+from openmdao.main.variable import json_default
 
 from openmdao.main.project import Project, ProjFinder, \
                                   _clear_insts, _match_insts
-from openmdao.main.publisher import publish
+from openmdao.main.publisher import publish, Publisher
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, \
@@ -273,11 +277,6 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self._recorded_cmds[:]
 
-    def get_JSON(self):
-        ''' Return current state as JSON.
-        '''
-        return jsonpickle.encode(self.proj._model_globals)
-
     def get_container(self, pathname, report=True):
         ''' Get the container with the specified pathname.
             Returns the container and the name of the root object.
@@ -332,7 +331,8 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return jsonpickle.encode(self._get_components(self.proj._model_globals))
+        return json.dumps(self._get_components(self.proj._model_globals),
+                          default=json_default)
 
     def get_connections(self, pathname, src_name, dst_name):
         ''' Get list of source variables, destination variables, and the
@@ -554,7 +554,7 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return jsonpickle.encode(conns)
+        return json.dumps(conns, default=json_default)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -588,7 +588,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['parameters'] = []
             dataflow['constraints'] = []
             dataflow['objectives'] = []
-        return jsonpickle.encode(dataflow)
+        return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
         ''' Serve a list of events that are available to a driver.
@@ -598,7 +598,7 @@ class ConsoleServer(cmd.Cmd):
             drvr, root = self.get_container(pathname)
             events = drvr.list_available_events()
 
-        return jsonpickle.encode(events)
+        return json.dumps(events, default=json_default)
 
     def get_workflow(self, pathname):
         ''' get the workflow for the specified driver or assembly
@@ -646,19 +646,19 @@ class ConsoleServer(cmd.Cmd):
                                 'valid':    comp.is_valid()
                             })
                     flows.append(flow)
-        return jsonpickle.encode(flows)
+        return json.dumps(flows, default=json_default)
 
     def get_attributes(self, pathname):
         ''' get the attributes of the specified object
         '''
         attr = {}
         comp, root = self.get_container(pathname)
-        if comp:
-            try:
+        try:
+            if comp:
                 attr = comp.get_attributes(io_only=False)
-            except Exception as err:
-                self._error(err, sys.exc_info())
-        return jsonpickle.encode(attr)
+            return json.dumps(attr, default=json_default)
+        except Exception as err:
+            self._error(err, sys.exc_info())
 
     def get_passthroughs(self, pathname):
         ''' get the inputs and outputs of the assembly's child components
@@ -666,7 +666,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         asm, root = self.get_container(pathname)
         passthroughs = asm.get_passthroughs()
-        return jsonpickle.encode(passthroughs)
+        return json.dumps(passthroughs, default=json_default)
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
@@ -856,12 +856,17 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
+        elif pathname.startswith('/'): # treat it as a filename
+            if publish:
+                Publisher.register(pathname, pathname[1:])
+            else:
+                Publisher.unregister(pathname)
         else:
-            parts = pathname.split('.')
+            parts = pathname.split('.', 1)
             if len(parts) > 1:
                 root = self.proj.get(parts[0])
                 if root:
-                    rest = '.'.join(parts[1:])
+                    rest = parts[1]
                     root.register_published_vars(rest, publish)
 
             cont, root = self.get_container(pathname)
