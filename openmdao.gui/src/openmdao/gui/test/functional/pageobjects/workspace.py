@@ -150,7 +150,8 @@ class WorkspacePage(BasePageObject):
         else:
             self.browser.implicitly_wait(1)
             try:
-                NotifierPage.wait(self, timeout=1, base_id='ws_closed')
+                NotifierPage.wait(self, timeout=1, base_id='ws_closed',
+                                  retries=0)
             except TimeoutException:
                 pass  # ws closed dialog may not exist
             finally:
