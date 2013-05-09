@@ -31,7 +31,8 @@ class ProjectsPage(BasePageObject):
         """ Clicks the 'new' button. Returns :class:`NewDialog`. """
         self('new_button').click()
         page = NewDialog(self.browser, self.port, (By.ID, "newProjectModal"))
-        time.sleep(1)  # Wait for silly fade-in.
+        WebDriverWait(self.browser, TMO).until(
+                      lambda browser: page.modal_title[:11] == 'New Project')
         return page
 
     def import_project(self):

@@ -712,14 +712,15 @@ openmdao.Util = {
 
 openmdao.viewGeometry = function(pathname) {
     function popupGeom(pathname) {
-        openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);         
+        w = openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);
+        openmdao.model.addWindow(w);
     }
     if (typeof pathname === "undefined" || !pathname) {
         openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
                                        popupGeom);
     }
     else {
-        popupGeom(pathname); 
+        popupGeom(pathname);
     }
 };
 
