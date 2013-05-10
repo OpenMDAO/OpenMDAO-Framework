@@ -61,6 +61,11 @@ class Workflow(object):
     @property
     def itername(self):
         return self._iterbase('')
+    
+    def check_config(self):
+        """Perform any checks that we need prior to run. Specific workflows
+        should override this.""" 
+        pass
 
     def set_initial_count(self, count):
         """
