@@ -1,6 +1,7 @@
 
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
+from networkx.algorithms.dag import is_directed_acyclic_graph
 
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
@@ -25,6 +26,18 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
+    def check_config(self):
+        """Check for cyclc graph.""" 
+        
+        graph = self._get_collapsed_graph()
+        if not is_directed_acyclic_graph(graph):
+            # do a little extra work here to give more info to the user
+            # in the error message
+            strcon = strongly_connected_components(graph)
+            self.scope.raise_exception('circular dependency found between'
+                                       ' the following: %s'
+                                       % str(strcon[0]), RuntimeError)
+    
     def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the workflow by name. """
         super(Dataflow, self).add(compnames, index, check)
