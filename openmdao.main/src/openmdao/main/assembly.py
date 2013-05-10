@@ -805,7 +805,7 @@ class Assembly(Component):
                     ret[posdict[full]] = val
         return ret
 
-    def _input_updated(self, name):
+    def _input_updated(self, name, fullpath=None):
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=set([name]))
             if ((outs is None) or outs) and self.parent:

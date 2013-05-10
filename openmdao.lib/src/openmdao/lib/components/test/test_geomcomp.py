@@ -8,22 +8,21 @@ import tempfile
 import unittest
 from nose import SkipTest
 
+from openmdao.main.vartree import VariableTree
+from openmdao.main.datatypes.enum import Enum
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.lib.geometry.box import BoxParametricGeometry
-
-from openmdao.main.api import Component
 from openmdao.util.fileutil import onerror
-from openmdao.lib.geometry.box import BoxParametricGeometry
 
+import numpy
 
 class GeomCompTestCase(unittest.TestCase):
 
     def setUp(self):
         self.geomcomp = GeomComponent()
         self.tdir = tempfile.mkdtemp()
-        comp = Component()
-        self.base_inputs = set(comp.list_inputs())
-        self.base_outputs = set(comp.list_outputs())
+        self.base_inputs = set(self.geomcomp.list_inputs())
+        self.base_outputs = set(self.geomcomp.list_outputs())
 
     def tearDown(self):
         shutil.rmtree(self.tdir, onerror=onerror)
@@ -59,9 +58,6 @@ class GeomCompTestCase(unittest.TestCase):
         self.geomcomp.height = 10 
         self.assertFalse(self.geomcomp.is_valid())
         self.assertEquals(self.geomcomp.volume,8)
-
-
-
 
     def test_with_pygem_diamond(self):
         try:
@@ -185,6 +181,7 @@ end
         ins = set(self.geomcomp.list_inputs()) - self.base_inputs
         outs = set(self.geomcomp.list_outputs()) - self.base_outputs
         self.assertEqual(ins, set(['height']))
+        self.assertEqual(outs, set(['volume']))
         height = self.geomcomp.height
         volume = self.geomcomp.volume
         self.assertEqual(volume, 2*2*height)
@@ -192,19 +189,84 @@ end
         self.geomcomp.run()
         self.assertEqual(self.geomcomp.volume, 2*2*5.)
 
-    def test_with_vtbox(self):
+    def test_with_vartrees(self):
         class VTBoxParametricGeometry(BoxParametricGeometry):
-            def __init__(self):
-                super(VTBoxParametricGeometry, self).__init__()
-                self.meta.update({
-                        'myvt.subvt.a': {
-                            'iotype': 'in',
-                            'value': 11.1,
-                        },
-                        
-                    })
+            def _update_meta(self):
+                newmeta = {
+                    'myvt.f': {
+                        'iotype': 'in',
+                        'value': 3.14,
+                    },
+                    'myvt.subvt.f': {
+                        'iotype': 'in',
+                        'value': 11.1,
+                    },
+                    'myvt.subvt.i': {
+                        'iotype': 'in',
+                        'value': 4,
+                    },
+                    'myvt.subvt.s': {
+                        'iotype': 'in',
+                        'value': "foo",
+                    },
+                    'myvt.subvt.arr': {
+                        'iotype': 'in',
+                        'value': numpy.array([1., 2., 3., 4.]),
+                    },
+                    'myvt.subvt.en': {
+                        'iotype': 'in',
+                        'type': 'enum',
+                        'values': ["yes", "no"],
+                        'value': 'yes',
+                    },
+                    'fproduct': {
+                        'iotype': 'out',
+                        'value': 3.14 * 11.1,
+                    },
+                    'concat': {
+                        'iotype': 'out',
+                        'value': 'fooyes'
+                    }
+                }
+                self.meta.update(newmeta)                
 
+            def regen_model(self):
+                super(VTBoxParametricGeometry, self).regen_model()
+                if 'myvt.f' not in self.meta:
+                    self._update_meta()
 
+                self.meta['fproduct']['value'] = self.meta['myvt.f']['value']*self.meta['myvt.subvt.f']['value']
+                self.meta['concat']['value'] = self.meta['myvt.subvt.s']['value']+self.meta['myvt.subvt.en']['value']
+
+        self.geomcomp.add('parametric_geometry', VTBoxParametricGeometry())
+        ins = set(self.geomcomp.list_inputs()) - self.base_inputs
+        outs = set(self.geomcomp.list_outputs()) - self.base_outputs
+
+        # are expected inputs and outputs here?
+        self.assertEqual(ins, set(["height", "myvt"]))
+        self.assertEqual(outs, set(["volume", "fproduct", "concat"]))
+
+        # check types of stuff
+        self.assertTrue(isinstance(self.geomcomp.myvt, VariableTree))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt, VariableTree))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.arr, numpy.ndarray))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.en, basestring))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.trait('en').trait_type, Enum))
+
+        # set some vartree values and see if they update in the geometry
+        self.geomcomp.myvt.f = 6.
+        self.geomcomp.myvt.subvt.f = 7.
+
+        self.geomcomp.run()
+
+        self.assertEqual(self.geomcomp.fproduct, 42.)
+
+        # see if enum is limited to allowed values
+        try:
+            self.geomcomp.myvt.subvt.en = "foo"
+        except Exception as err:
+            self.assertEqual("myvt.subvt: Variable 'en' must be in ['yes', 'no'], but a value of foo <type 'str'> was specified.", 
+                             str(err))
 
 if __name__ == "__main__":
     unittest.main()
