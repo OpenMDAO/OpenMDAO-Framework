@@ -68,26 +68,8 @@ class VariableTree(Container):
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
-        for name, trait in self.traits().items():
-            if not name.startswith('_'):
-                if name not in ('trait_added', 'trait_modified'):
-                    self.on_trait_change(self._trait_modified, name)
-
-        for name, trait in self._added_traits.items():
-            self.on_trait_change(self._trait_modified, name)
-            obj = getattr(self, name)
-            if isinstance(obj, VariableTree) and obj is not self.parent:
-                obj.install_callbacks()
-
-        for name, trait in self.__class__.__dict__['__class_traits__'].items():
-            if name not in ('trait_added', 'trait_modified'):
-                # Component.connect has a line:
-                #     if not srcexpr.refs_parent():
-                # that results in dotted pathnames being put in this dictionary
-                # that need to be skipped.  (This is likely a symtom of
-                # bigger problems regarding copying of VariableTrees)
-                if not hasattr(self, name):
-                    continue
+        for name, trait in self._alltraits().items():
+            if name not in ('trait_added', 'trait_modified') and not name.startswith('_') and hasattr(self, name):
                 self.on_trait_change(self._trait_modified, name)
                 obj = getattr(self, name)
                 if isinstance(obj, VariableTree) and obj is not self.parent:
@@ -136,14 +118,21 @@ class VariableTree(Container):
             obj._iotype = self._iotype
         if self._iotype == 'in':
             p = self
+            path = [name]
             while isinstance(p, VariableTree):
                 vt = p
                 p = p.parent
+                path.append(vt.name)
             # notify parent Component that this VariableTree has been modified
             if p is not None:
                 t = p.trait(vt.name)
                 if t and t.iotype == 'in':
-                    p._input_trait_modified(p, vt.name, vt, vt)
+                    # we need to pass the full pathname of the child that was actually
+                    # modified up to the parent component, and we can't modify the
+                    # arglist of _input_trait_modified, so instead call _input_check
+                    # and _input_updated explicitly
+                    p._input_check(vt.name, vt)
+                    p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
     def get_iotype(self, name):
         """Return the iotype of the Variable with the given name"""
@@ -248,10 +237,10 @@ class VariableTree(Container):
 
                 if self._iotype == 'in':
                     # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in \
+                    attr['connected'] = str([src for src, dst in 
                                             connections]).replace('@xin.', '')
                 else:
-                    attr['connected'] = str([dst for src, dst in \
+                    attr['connected'] = str([dst for src, dst in 
                                             connections]).replace('@xout.', '')
             variables.append(attr)
 
