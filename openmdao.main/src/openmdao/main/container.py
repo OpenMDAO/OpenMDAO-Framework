@@ -116,7 +116,6 @@ class _ContainerDepends(object):
                                    (dst, src))
 
     def connect(self, srcpath, destpath):
-        print srcpath, destpath
         self._srcs[destpath] = srcpath
 
     def disconnect(self, srcpath, destpath):
