@@ -463,11 +463,17 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         
         # Cyclic graphs are permitted in declaration.
-        #self.asm.connect('comp2.rout', 'comp1.r')
+        self.asm.connect('comp2.rout', 'comp1.r')
         
         # However, cyclic graphs should not run with the Dataflow workflow.
-        self.asm.check_configuration()
-        self.asm.run()
+        try:
+            self.asm.check_configuration()
+        except RuntimeError, err:
+            msg = ": circular dependency found between the following: " + \
+                  "['comp2', 'comp1']"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Exception expected')
 
         # Unconnected added twice shouldn't cause exception.
         asm = Assembly()
