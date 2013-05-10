@@ -11,6 +11,7 @@ from nose import SkipTest
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.main.api import Component
 from openmdao.util.fileutil import onerror
+from openmdao.lib.geometry.box import BoxParametricGeometry
 
 
 class GeomCompTestCase(unittest.TestCase):
@@ -27,7 +28,7 @@ class GeomCompTestCase(unittest.TestCase):
 
     def test_with_pygem_diamond(self):
         try:
-            from pygem_diamond.pygem import GEMParametricGeometry
+            from openmdao.lib.geometry.diamond import GEMParametricGeometry
         except ImportError:
             raise SkipTest("pygem_diamond is not installed")
         self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
@@ -131,15 +132,41 @@ end
         self.assertEqual(comp.sph_dist, self.geomcomp.side/2.0)
         self.assertAlmostEqual(comp.volume, comp.side**3.0 - 4./3.*math.pi*comp.radius**3.0)
 
-    def test_with_pygem_quartz(self):
-        try:
-            from pygem_quartz.pygem import GEMParametricGeometry
-        except ImportError:
-            raise SkipTest("pygem_quartz is not installed")
-        self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
-        self.geomcomp.parametric_geometry.model_file = self.model_file
-        self.def_outs = []
-        # add test here...
+    # def test_with_pygem_quartz(self):
+    #     try:
+    #         from pygem_quartz.pygem import GEMParametricGeometry
+    #     except ImportError:
+    #         raise SkipTest("pygem_quartz is not installed")
+    #     self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
+    #     self.geomcomp.parametric_geometry.model_file = self.model_file
+    #     self.def_outs = []
+    #     # add test here...
+
+    def test_with_box(self):
+        self.geomcomp.add('parametric_geometry', 
+                          BoxParametricGeometry())
+        ins = set(self.geomcomp.list_inputs()) - self.base_inputs
+        outs = set(self.geomcomp.list_outputs()) - self.base_outputs
+        self.assertEqual(ins, set(['height']))
+        height = self.geomcomp.height
+        volume = self.geomcomp.volume
+        self.assertEqual(volume, 2*2*height)
+        self.geomcomp.height = 5
+        self.geomcomp.run()
+        self.assertEqual(self.geomcomp.volume, 2*2*5.)
+
+    def test_with_vtbox(self):
+        class VTBoxParametricGeometry(BoxParametricGeometry):
+            def __init__(self):
+                super(VTBoxParametricGeometry, self).__init__()
+                self.meta.update({
+                        'myvt.subvt.a': {
+                            'iotype': 'in',
+                            'value': 11.1,
+                        },
+                        
+                    })
+
 
 
 if __name__ == "__main__":
