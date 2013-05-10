@@ -3,7 +3,7 @@ from openmdao.main.container import Container
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
-from openmdao.main.datatypes.api import Float, Int, Str, Python, List
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Bool
 from openmdao.util.log import logger
 
 _ttdict = {
@@ -68,11 +68,18 @@ class GeomComponent(Component):
     geom_out = Geom(IStaticGeometry, iotype='out',
                   desc='a geometry generated using the set of current input parameters')
 
+    auto_run = Bool(False, iotype="in", desc="When set to True, component will automatically execute whenever any input values are changed")
+
     def __init__(self):
         super(GeomComponent, self).__init__()
         self._class_names = set(self.traits().keys())
         self._input_var_names = set()
         self._output_var_names = set()
+
+        self.on_trait_change(self._auto_run_notify,'auto_run')
+        #self.on_trait_change(self._test_notify,'auto_run')
+
+    
 
     def _parametric_geometry_changed(self, old, new):
         """Called whenever the parametric geometry is set.
@@ -119,6 +126,13 @@ class GeomComponent(Component):
                 setattr(self, name, out)
         self.geom_out = self.parametric_geometry.get_static_geometry()
 
+    def _auto_run_notify(self,new=False): 
+        """adds or removes callbacks from variable changes to call run. new will
+        be value of auto_run variable""" 
+        for var in self._input_var_names: 
+            self.on_trait_change(self.run,name=var,remove=(not new))
+
+
     def _var_cleanup(self, names):
         for name in names:
             if '.' not in name:
@@ -132,12 +146,19 @@ class GeomComponent(Component):
         old_in = self._input_var_names
         old_out = self._output_var_names
 
+        #clear all the callbacks
+        self._auto_run_notify(False)        
+
         inps, outps = self._get_io_info()
 
         # these are flattened lists of names, so they 
         # may contain dots
         self._input_var_names = set([p[0] for p in inps])
         self._output_var_names = set([p[0] for p in outps])
+
+        #if active, turn on auto-run
+        if self.auto_run: 
+            self._auto_run_notify(True)
 
         added_ins = self._input_var_names - old_in
         added_outs = self._output_var_names - old_out

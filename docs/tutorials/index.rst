@@ -10,4 +10,5 @@ OpenMDAO Tutorials
     optimization/index
     surrogate/index
     mdao/index
+    geometry/index
     complex/index        
