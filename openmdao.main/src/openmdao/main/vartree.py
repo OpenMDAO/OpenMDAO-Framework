@@ -136,14 +136,18 @@ class VariableTree(Container):
             obj._iotype = self._iotype
         if self._iotype == 'in':
             p = self
+            path = [name]
             while isinstance(p, VariableTree):
                 vt = p
                 p = p.parent
+                path.append(vt.name)
             # notify parent Component that this VariableTree has been modified
             if p is not None:
                 t = p.trait(vt.name)
                 if t and t.iotype == 'in':
                     p._input_trait_modified(p, vt.name, vt, vt)
+                    p._input_check(name, old)
+                    p._input_updated(name, fullpath='.'.join(path[::-1]))
 
     def get_iotype(self, name):
         """Return the iotype of the Variable with the given name"""
@@ -248,10 +252,10 @@ class VariableTree(Container):
 
                 if self._iotype == 'in':
                     # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in \
+                    attr['connected'] = str([src for src, dst in 
                                             connections]).replace('@xin.', '')
                 else:
-                    attr['connected'] = str([dst for src, dst in \
+                    attr['connected'] = str([dst for src, dst in 
                                             connections]).replace('@xout.', '')
             variables.append(attr)
 
