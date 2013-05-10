@@ -9,6 +9,8 @@ import unittest
 from nose import SkipTest
 
 from openmdao.lib.components.geomcomp import GeomComponent
+from openmdao.lib.geometry.box import BoxParametricGeometry
+
 from openmdao.main.api import Component
 from openmdao.util.fileutil import onerror
 
@@ -24,6 +26,41 @@ class GeomCompTestCase(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tdir, onerror=onerror)
+
+    def test_auto_run_with_box(self): 
+    
+        self.geomcomp.add('parametric_geometry',BoxParametricGeometry())  
+
+        self.geomcomp.height = 2
+        self.geomcomp.auto_run = False
+        self.geomcomp.run()
+
+        self.assertEquals(self.geomcomp.volume,8)
+
+        self.geomcomp.height = 10  
+
+        #check that is has not run yet, and that volume has not changed
+        self.assertFalse(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
+
+        self.geomcomp.run()
+        self.assertTrue(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,40)
+
+
+        self.geomcomp.auto_run = True
+        self.geomcomp.height = 2
+        self.assertTrue(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
+
+        #make sure setting back to false works
+        self.geomcomp.auto_run = False
+        self.geomcomp.height = 10 
+        self.assertFalse(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
+
+
+
 
     def test_with_pygem_diamond(self):
         try:
