@@ -204,7 +204,7 @@ function wvUpdateUI()
   if (g.dragging) 
   {
     // cntrl is down
-    if (g.modifier == 4)
+    if (g.modifier == 3)
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
       var angleY = -(g.startX-g.cursorX)/4.0;
