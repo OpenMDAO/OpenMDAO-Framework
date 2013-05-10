@@ -330,21 +330,6 @@ class DependencyGraph(object):
                 graph.add_edge(srccompname, destcompname, link=link)
             
             link.connect(srcvarname, destvarname)
-            #if is_directed_acyclic_graph(graph):
-                #link.connect(srcvarname, destvarname)
-            #else:   # cycle found
-                ## do a little extra work here to give more info to the user
-                ## in the error message
-                #strongly_connected = strongly_connected_components(graph)
-                #if len(link) == 0:
-                    #graph.remove_edge(srccompname, destcompname)
-                #for strcon in strongly_connected:
-                    #if len(strcon) > 1:
-                        #raise RuntimeError(
-                            #'circular dependency (%s) would be created by connecting %s to %s' %
-                                     #(str(strcon), 
-                                      #'.'.join([srccompname, srcvarname]), 
-                                      #'.'.join([destcompname, destvarname])))
                     
         self._allsrcs[destpath] = srcpath
         
