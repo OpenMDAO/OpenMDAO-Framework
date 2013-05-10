@@ -17,10 +17,12 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.add('arr1',Array(array([98.9]), iotype='in', units='ft'))
         self.hobj.add('arr2', Array(array([13.2]), iotype='out', units='inch'))
         self.hobj.add('arr3', Array(iotype='in', units='kg', desc='stuff'))
+        self.hobj.add('arr99', Array(iotype='in'))
         
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
         self.hobj.arr3 = [1.1]
+        self.hobj.arr99 = [[0, 1, 0.1944, 0.1944], [0, 0, 1, 0]]
                        
         
     def tearDown(self):
@@ -156,11 +158,12 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
         self.hobj.arr3 = [1.1]
-        
+        self.hobj.arr99 = [[0, 1, 0.194435353535353, 0.1944], [0, 0, 1, 0]]
+                
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
-            
-        self.assertEqual(len(input_attrs), 4)
+        
+        self.assertEqual(len(input_attrs), 5)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
                          'dim': '3',
@@ -186,6 +189,17 @@ class ArrayTestCase(unittest.TestCase):
                          'type': 'ndarray',
                          'desc': 'stuff',
                          'indent': 0} in input_attrs)
+        self.assertTrue({'name': 'arr99',
+                         'id': 'arr99',
+                         'dim': '2, 4',
+                         'comparison_mode': 1,
+                         'value': '[[0., 1., 0.19443535, 0.1944], [0., 0., 1., 0.]]',
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)        
         
         output_attrs = attrs['Outputs']
         
