@@ -189,14 +189,19 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
         remotecmd = cmdfname
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
     put(cmdfname, remotecmd)
-    os.remove(cmdfname)  # remove local version
-    retval = run('%s %s' % (py, cmdfname))
-    if (retval.failed):
+    try:
+        retval = run('%s %s' % (py, cmdfname))
+    except SystemExit as err:  # error on remote side calls abort :|
+        retval = None
+    else:
+        err = None
+    if (err or retval.failed):
         #print the stuff
-        print "return code was: %d\n" % retval.return_code
         print "Enjoy the contents of _cmd_.py below!"
-        for i, cmd in cmds:
-            print "%d: %s\n" % (i+1, cmd)
+        with open(cmdfname, 'r') as f:
+            for i,line in enumerate(f):
+                print "%d: %s" % (i+1, line),
+    os.remove(cmdfname)  # remove local version
     return retval
 
 @stub_if_missing_deps('fabric')
