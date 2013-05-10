@@ -5,8 +5,6 @@ Variable meant to contain a VariableTree of a particular type.
 #public symbols
 __all__ = ["VarTree"]
 
-from inspect import isclass
-
 from enthought.traits.api import Instance
 
 from openmdao.main.variable import Variable, gui_excludes
