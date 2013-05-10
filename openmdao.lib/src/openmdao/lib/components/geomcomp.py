@@ -14,6 +14,10 @@ _ttdict = {
     unicode: Str,
     list: List,
     'enum': Enum,
+    'float': Float,
+    'int': Int,
+    'str': Str,
+    'list': List,
 }
 
 try:
@@ -22,6 +26,7 @@ except ImportError:
     pass
 else:
     _ttdict[numpy.ndarray] = Array
+    _ttdict['array'] = Array
 
 def _get_trait_from_meta(meta):
     """Create a Variable object based on the contents
@@ -30,15 +35,18 @@ def _get_trait_from_meta(meta):
     """
     meta = meta.copy()
     val = meta['value']
-    # if 'type' is provided in the metadata, use that
-    if 'type' in meta:
-        typ = _ttdict.get(meta['type'])
-    else:  # otherwise just infer the Variable type from the value type
-        typ = _ttdict.get(type(val))
-    del meta['value']  # don't include value in trait metadata
-    if typ is None:
-        logger.warning("no Variable type found for value of type %s, using Python Variable type, which performs no validation" % type(val))
+    
+    try:
+        # if 'type' is provided in the metadata, use that
+        if 'type' in meta:
+            typ = _ttdict[meta['type']]
+        else:  # otherwise just infer the Variable type from the value type
+            typ = _ttdict[type(val)]
+    except KeyError as err:
+        logger.warning("no Variable type found for key %s, using Python Variable type, which performs no validation" % type(err.message))
         typ = Python   # FIXME
+            
+    del meta['value']  # don't include value in trait metadata
     return typ(val, **meta)
 
 def _create_trait(parent, name, meta):

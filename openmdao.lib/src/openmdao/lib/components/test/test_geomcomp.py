@@ -9,7 +9,7 @@ import unittest
 from nose import SkipTest
 
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.enum import Enum
+from openmdao.main.datatypes.api import Enum, Python
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.util.fileutil import onerror
@@ -226,6 +226,11 @@ end
                     'concat': {
                         'iotype': 'out',
                         'value': 'fooyes'
+                    },
+                    'bogus': {
+                        'iotype': 'out',
+                        'type': 'flarn',  # this should cause a warning and revert trait to a Python trait
+                        'value': object(),
                     }
                 }
                 self.meta.update(newmeta)                
@@ -244,7 +249,7 @@ end
 
         # are expected inputs and outputs here?
         self.assertEqual(ins, set(["height", "myvt"]))
-        self.assertEqual(outs, set(["volume", "fproduct", "concat"]))
+        self.assertEqual(outs, set(["volume", "fproduct", "concat", "bogus"]))
 
         # check types of stuff
         self.assertTrue(isinstance(self.geomcomp.myvt, VariableTree))
@@ -252,6 +257,7 @@ end
         self.assertTrue(isinstance(self.geomcomp.myvt.subvt.arr, numpy.ndarray))
         self.assertTrue(isinstance(self.geomcomp.myvt.subvt.en, basestring))
         self.assertTrue(isinstance(self.geomcomp.myvt.subvt.trait('en').trait_type, Enum))
+        self.assertTrue(isinstance(self.geomcomp.trait('bogus').trait_type, Python))
 
         # set some vartree values and see if they update in the geometry
         self.geomcomp.myvt.f = 6.
