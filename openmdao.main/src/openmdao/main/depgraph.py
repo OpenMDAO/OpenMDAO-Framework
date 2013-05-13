@@ -5,7 +5,6 @@ import sys
 
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
-from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.expreval import ExprEvaluator
@@ -143,13 +142,15 @@ class DependencyGraph(object):
 
         stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
+        
+        # Keep track of the comps we already invalidated, so we
+        # don't keep doing them. This allows us to invalidate loops.
+        invalidated = [] 
+        
         while(stack):
             src, varset = stack.pop()
+            invalidated.append(src)
             for dest, link in self.out_links(src):
-                #if varset is None:
-                #    srcvars = set(link._srcs.keys())
-                #else:
-                #    srcvars = varset
                 if dest == '@bout':
                     bouts = link.get_dests(varset)
                     outset.update(bouts)
@@ -160,7 +161,8 @@ class DependencyGraph(object):
                         comp = getattr(scope, dest)
                         outs = comp.invalidate_deps(varnames=dests, force=force)
                         if (outs is None) or outs:
-                            stack.append((dest, outs))
+                            if dest not in invalidated:
+                                stack.append((dest, outs))
         return outset
 
     def list_connections(self, show_passthrough=True):
@@ -327,21 +329,7 @@ class DependencyGraph(object):
                 link = _Link(srccompname, destcompname)
                 graph.add_edge(srccompname, destcompname, link=link)
             
-            if is_directed_acyclic_graph(graph):
-                link.connect(srcvarname, destvarname)
-            else:   # cycle found
-                # do a little extra work here to give more info to the user
-                # in the error message
-                strongly_connected = strongly_connected_components(graph)
-                if len(link) == 0:
-                    graph.remove_edge(srccompname, destcompname)
-                for strcon in strongly_connected:
-                    if len(strcon) > 1:
-                        raise RuntimeError(
-                            'circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), 
-                                      '.'.join([srccompname, srcvarname]), 
-                                      '.'.join([destcompname, destvarname])))
+            link.connect(srcvarname, destvarname)
                     
         self._allsrcs[destpath] = srcpath
         

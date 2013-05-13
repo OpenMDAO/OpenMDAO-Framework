@@ -21,7 +21,7 @@ outputs, both of which will be mimicked by the MetaModel.
     from openmdao.lib.doegenerators.api import FullFactorial, Uniform
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.casehandlers.api import DBCaseRecorder
-    from openmdao.lib.surrogatemodels.api import LogisticRegression, KrigingSurrogate
+    from openmdao.lib.surrogatemodels.api import LogisticRegression, FloatKrigingSurrogate
     
     
     class Trig(Component): 
@@ -54,7 +54,7 @@ is being evaluated for both outputs.
             self.add("trig_meta_model",MetaModel())
             self.trig_meta_model.model = Trig()
             self.trig_meta_model.surrogates['f_x_sin'] = LogisticRegression()
-            self.trig_meta_model.surrogates['f_x_cos'] = KrigingSurrogate()
+            self.trig_meta_model.surrogates['f_x_cos'] = FloatKrigingSurrogate()
             self.trig_meta_model.recorder = DBCaseRecorder()
 
             #Training the MetaModel
@@ -109,12 +109,12 @@ alternative would be to append ``.sigma`` which would return the standard deviat
         validate_data = sim.DOE_Validate.recorders[0].get_iterator()
         train_inputs = [case['trig_meta_model.x'] for case in train_data]
         train_actual_sin = [case['trig_meta_model.f_x_sin'] for case in train_data]
-        train_actual_cos = [case['trig_meta_model.f_x_cos'].mu for case in train_data]
+        train_actual_cos = [case['trig_meta_model.f_x_cos'] for case in train_data]
         inputs = [case['trig_calc.x'] for case in validate_data]    
         actual_sin = [case['trig_calc.f_x_sin'] for case in validate_data]
         actual_cos = [case['trig_calc.f_x_cos'] for case in validate_data]
         predicted_sin = [case['trig_meta_model.f_x_sin'] for case in validate_data]
-        predicted_cos = [case['trig_meta_model.f_x_cos'].mu for case in validate_data]
+        predicted_cos = [case['trig_meta_model.f_x_cos'] for case in validate_data]
     
         
         for a,b,c,d in zip(actual_sin,predicted_sin,actual_cos,predicted_cos):
