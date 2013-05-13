@@ -1,4 +1,5 @@
 /*
+
  * simple key-stroke & mouse driven UI for WV
  *
  * Notes: g.sceneUpd should be set to 1 if the scene should rerendered
@@ -10,6 +11,11 @@
 //
 // Event Handlers
 
+var NO_MODIFIER = 0;
+var ALT_KEY = 1;
+var SHIFT_KEY = 2;
+var CTRL_KEY = 4;
+
 function getCursorXY(e) 
 {
   if (!e) e = event;
@@ -19,9 +25,9 @@ function getCursorXY(e)
   g.cursorY  = g.height-g.cursorY+g.offTop+1;
 
   g.modifier = 0;
-  if (e.shiftKey) g.modifier |= 1;
-  if (e.altKey)   g.modifier |= 2;
-  if (e.ctrlKey)  g.modifier |= 4;
+  if (e.shiftKey) g.modifier |= SHIFT_KEY;
+  if (e.altKey)   g.modifier |= ALT_KEY;
+  if (e.ctrlKey)  g.modifier |= CTRL_KEY;
 }
  
 
@@ -36,9 +42,9 @@ function getMouseDown(e)
   g.dragging = true;
   g.button   = e.button;
   g.modifier = 0;
-  if (e.shiftKey) g.modifier |= 1;
-  if (e.altKey)   g.modifier |= 2;
-  if (e.ctrlKey)  g.modifier |= 4;
+  if (e.shiftKey) g.modifier |= SHIFT_KEY;
+  if (e.altKey)   g.modifier |= ALT_KEY;
+  if (e.ctrlKey)  g.modifier |= CTRL_KEY;
 }
 
 
@@ -203,8 +209,8 @@ function wvUpdateUI()
   // now mouse movement
   if (g.dragging) 
   {
-    // cntrl is down
-    if (g.modifier == 4)
+    // alt and shift key is down
+    if (g.modifier === (ALT_KEY|SHIFT_KEY) )
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
       var angleY = -(g.startX-g.cursorX)/4.0;
@@ -217,7 +223,7 @@ function wvUpdateUI()
     }
     
     // alt is down
-    if (g.modifier == 2)
+    if (g.modifier === ALT_KEY)
     {
       var xf = g.startX - g.width/2;
       var yf = g.startY - g.height/2;
@@ -240,7 +246,7 @@ function wvUpdateUI()
     }
 
     // shift is down
-    if (g.modifier == 1)
+    if (g.modifier === SHIFT_KEY)
     {
       if (g.cursorY != g.startY)
       {
@@ -252,7 +258,7 @@ function wvUpdateUI()
     }
     
     // no modifier
-    if (g.modifier === 0)
+    if (g.modifier === NO_MODIFIER)
     {
       var transX = (g.cursorX-g.startX)/256.0;
       var transY = (g.cursorY-g.startY)/256.0;
