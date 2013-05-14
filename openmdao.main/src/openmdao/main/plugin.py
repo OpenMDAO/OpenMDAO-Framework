@@ -29,6 +29,7 @@ from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
 from openmdao.util.view_docs import view_docs
+from openmdao.util.log import logger
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
@@ -796,8 +797,8 @@ def get_full_libpath():
                 if d in cache:
                     libfiles.extend(cache[d])
                 else: # find any shared libs that don't have a matching .py bootstrapper
-                    newlibs = [x for x in find_files(d, checker)]
-                    newlibs = [x for x in newlibs if not os.path.isfile(os.path.splitext(x)[0]+'.py')]
+                    newlibs = [x for x in find_files(d, checker) 
+                                     if not os.path.isfile(os.path.splitext(x)[0]+'.py')]
                     cache[d] = newlibs
                     libfiles.extend(newlibs)
 
@@ -817,7 +818,7 @@ def get_full_libpath():
             for base, paths in bases.items():
                 if len(paths) > 1:
                     for p in paths:
-                        d = os.path.dirname(paths[0])
+                        d = os.path.dirname(p)
                         while d:
                             if d in cache:
                                 libfiles.remove(p)
