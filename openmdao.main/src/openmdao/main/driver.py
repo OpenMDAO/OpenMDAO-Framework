@@ -92,9 +92,12 @@ class Driver(Component):
 
     def check_config(self):
         """Verify that our workflow is able to resolve all of its components."""
+        
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
         self._update_workflow()
+        
+        self.workflow.check_config()
         
     def _update_workflow(self):
         """Updates workflow contents based on driver dependencies."""

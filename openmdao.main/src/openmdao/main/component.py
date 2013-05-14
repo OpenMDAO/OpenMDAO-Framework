@@ -236,10 +236,10 @@ class Component(Container):
                 name = n
 
         self._input_check(name, old)
-        self._call_execute = True
         self._input_updated(name)
 
-    def _input_updated(self, name):
+    def _input_updated(self, name, fullpath=None):
+        self._call_execute = True
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
