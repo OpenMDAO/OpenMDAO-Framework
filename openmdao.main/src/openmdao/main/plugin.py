@@ -824,12 +824,7 @@ def get_full_libpath():
                                 break
                             d = os.path.dirname(d)
 
-        added = []
-        libdirs = set([os.path.dirname(n) for n in libfiles])
-        for d in libdirs:
-            if not os.path.isfile(os.path.join(d, '__init__.py')):
-                added.append(d)
-
+        added = [os.path.dirname(n) for n in libfiles]
         final = []
         seen = set()
         for p in added + libpaths:
