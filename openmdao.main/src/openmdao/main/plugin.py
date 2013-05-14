@@ -16,6 +16,7 @@ from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 from subprocess import call, check_call, STDOUT
 import fnmatch
+import cPickle as pickle
 
 from ordereddict import OrderedDict
 
@@ -765,18 +766,43 @@ def get_full_libpath():
     if libpathvname:
         lpcontents = os.environ.get(libpathvname) or ''
         libpaths = [lib for lib in lpcontents.split(os.pathsep) if lib.strip()]
-        topdir = os.path.dirname(os.path.dirname(sys.executable))
+        topdir = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable)))
+        cachefile = os.path.join(topdir, '_libpath_cache')
+
+        libfiles = []
+
+        if os.path.isfile(cachefile):
+            with open(cachefile, "rb") as f:
+                cache = pickle.load(f)
+        else:
+            cache = {}
+
         if sys.platform.startswith('win'):
             pkgdir = os.path.join(topdir, 'Lib',
                                   'site-packages')
-            libfiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.dll')]
+            checker = '*.dll'
         else:
             pkgdir = os.path.join(topdir, 'lib',
                                   'python%s.%s' % sys.version_info[:2],
                                   'site-packages')
-            libfiles = [os.path.abspath(x) for x in find_files(pkgdir, '*.so')]
             if sys.platform == 'darwin':
-                libfiles.extend([os.path.abspath(x) for x in find_files(pkgdir, '*.dylib')])
+                checker = lambda n: n.endswith('.so') or n.endswith('.dylib')
+            else:
+                checker = "*.so"
+
+        for d in os.listdir(pkgdir):
+            d = os.path.join(pkgdir, d)
+            if os.path.isdir(d):
+                if d in cache:
+                    libfiles.extend(cache[d])
+                else: # find any shared libs that don't have a matching .py bootstrapper
+                    newlibs = [x for x in find_files(d, checker)]
+                    newlibs = [x for x in newlibs if not os.path.isfile(os.path.splitext(x)[0]+'.py')]
+                    cache[d] = newlibs
+                    libfiles.extend(newlibs)
+
+        with open(cachefile, "wb") as f:
+            pickle.dump(cache, f, pickle.HIGHEST_PROTOCOL)
 
         # if the same library appears multiple times under the same subdir parent, remove
         # it from the libpath.
@@ -786,22 +812,23 @@ def get_full_libpath():
         bases = {}
         for fname in libfiles:
             bases.setdefault(os.path.basename(fname), []).append(fname)
+
         if len(bases) != len(libfiles):
             for base, paths in bases.items():
                 if len(paths) > 1:
-                    pardirs = [os.path.dirname(os.path.dirname(p)) for p in paths]
-                    for d, p in zip(pardirs, paths):
-                        if pardirs.count(d) > 1:
-                            libfiles.remove(p)
+                    for p in paths:
+                        d = os.path.dirname(paths[0])
+                        while d:
+                            if d in cache:
+                                libfiles.remove(p)
+                                break
+                            d = os.path.dirname(d)
 
         added = []
-        exts = ['.py', '.pyc', '.pyo']
-        for fname in libfiles:
-            for ext in exts:
-                if os.path.exists(os.path.splitext(fname)[0]+ext):
-                    break
-            else:
-                added.append(os.path.dirname(fname))
+        libdirs = set([os.path.dirname(n) for n in libfiles])
+        for d in libdirs:
+            if not os.path.isfile(os.path.join(d, '__init__.py')):
+                added.append(d)
 
         final = []
         seen = set()
