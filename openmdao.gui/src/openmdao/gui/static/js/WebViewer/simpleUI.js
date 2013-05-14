@@ -259,20 +259,8 @@ function wvUpdateUI()
       }
     }
 
-    // shift is down
-    if (g.modifier === SHIFT_KEY)
-    {
-      if (g.cursorY != g.startY)
-      {
-        var scale = Math.exp((g.cursorY-g.startY)/512.0);
-        g.mvMatrix.scale(scale, scale, scale);
-        g.scale   *= scale;
-        g.sceneUpd = 1;
-      }
-    }
-    
     // no modifier
-    /*if (g.modifier === NO_MODIFIER)
+    if (g.modifier === NO_MODIFIER)
     {
       var transX = (g.cursorX-g.startX)/256.0;
       var transY = (g.cursorY-g.startY)/256.0;
@@ -281,7 +269,7 @@ function wvUpdateUI()
         g.mvMatrix.translate(transX, transY, 0.0);
         g.sceneUpd = 1;
       }
-    }*/
+    }
 
     g.startX = g.cursorX;
     g.startY = g.cursorY;
