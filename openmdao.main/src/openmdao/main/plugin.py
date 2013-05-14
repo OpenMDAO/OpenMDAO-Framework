@@ -29,7 +29,6 @@ from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
 from openmdao.util.view_docs import view_docs
-from openmdao.util.log import logger
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
