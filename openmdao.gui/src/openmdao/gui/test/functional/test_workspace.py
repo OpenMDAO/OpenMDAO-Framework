@@ -571,6 +571,7 @@ def _test_console_errors(browser):
                "Run_Once instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."
+    time.sleep(0.5)
     eq(workspace_page.history, expected)
     editor.close()
 
