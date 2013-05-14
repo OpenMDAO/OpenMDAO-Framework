@@ -1056,5 +1056,34 @@ def _test_column_picking(browser):
 
     closeout(project_dict, workspace_page)
 
+
+def _test_remove_tla(browser):
+    # Verify that adding, removing, and adding a top level assembly works.
+    project_dict, workspace_page = startup(browser)
+    eq(len(workspace_page.get_dataflow_figures()), 1)
+
+    # Add component to top.
+    workspace_page.add_library_item_to_dataflow(
+                                      'openmdao.main.assembly.Assembly', 'top1')
+    eq(len(workspace_page.get_dataflow_figures()), 3)
+    workspace_page.add_library_item_to_dataflow(
+                    'openmdao.lib.components.external_code.ExternalCode', 'ext',
+                    prefix='top', offset=(110, 150))
+    eq(len(workspace_page.get_dataflow_figures()), 4)
+
+    # Remove top.
+    top = workspace_page.get_dataflow_figure('top1')
+    top.remove()
+    eq(len(workspace_page.get_dataflow_figures()), 1)
+
+    # Add a new top, verify on screen.
+    workspace_page.add_library_item_to_dataflow(
+                                      'openmdao.main.assembly.Assembly', 'top2')
+    eq(len(workspace_page.get_dataflow_figures()), 3)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
