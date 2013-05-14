@@ -15,7 +15,7 @@ var NO_MODIFIER = 0;
 var ALT_KEY = 1;
 var SHIFT_KEY = 2;
 var CTRL_KEY = 4;
-
+var WHEEL_DELTA = 120;
 function getCursorXY(e) 
 {
   if (!e) e = event;
@@ -60,7 +60,11 @@ function getKeyPress(e)
   g.keyPress = e.charCode;
 }
 
-
+function getMouseWheel(e)
+{
+  if (!e) e=event;
+  g.wheelDelta = e.wheelDelta/WHEEL_DELTA;
+}
 //
 // Required WV functions
 
@@ -89,11 +93,13 @@ function wvInitUI()
   g.offTop   =  0;              // offset to upper-left corner of the canvas
   g.offLeft  =  0;
   g.dragging = false;
+  g.wheelDelta = 0;             // delta for mouse wheel
   
   var canvas = document.getElementById("WebViewer");
     canvas.addEventListener('mousemove',  getCursorXY,  false);
     canvas.addEventListener('mousedown',  getMouseDown, false);
     canvas.addEventListener('mouseup',    getMouseUp,   false);
+    canvas.addEventListener('mousewheel', getMouseWheel, false);
   document.addEventListener('keypress',   getKeyPress,  false);
 
   g.statusline = new StatusLine("statusline");
@@ -205,6 +211,14 @@ function wvUpdateUI()
   g.uiMatrix.load(g.mvMatrix);
   g.mvMatrix.makeIdentity();
 
+  if (g.wheelDelta !== 0)
+  {
+    var scale = Math.exp(g.wheelDelta/128.0);
+    g.mvMatrix.scale(scale, scale, scale);
+    g.scale   *= scale;
+    g.sceneUpd = 1;
+    g.wheelDelta = 0;
+  }
   //
   // now mouse movement
   if (g.dragging) 
@@ -258,7 +272,7 @@ function wvUpdateUI()
     }
     
     // no modifier
-    if (g.modifier === NO_MODIFIER)
+    /*if (g.modifier === NO_MODIFIER)
     {
       var transX = (g.cursorX-g.startX)/256.0;
       var transY = (g.cursorY-g.startY)/256.0;
@@ -267,7 +281,7 @@ function wvUpdateUI()
         g.mvMatrix.translate(transX, transY, 0.0);
         g.sceneUpd = 1;
       }
-    }
+    }*/
 
     g.startX = g.cursorX;
     g.startY = g.cursorY;
