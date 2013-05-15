@@ -101,7 +101,82 @@ function wvInitUI()
 
 function wvUpdateUI()
 {
+    //console.log(g);
+    // if the tree has not been created but the scene graph (possibly) exists...
+    if (g.sgUpdate == 1 && (g.sceneGraph !== undefined)) {
 
+        // ...count number of primitives in the scene graph
+        var count = 0;
+        for (var gprim in g.sceneGraph) {
+
+            // parse the name
+            /*var matches = gprim.split(" ");
+
+            var ibody = Number(matches[1]);
+            if        (matches[2] == "Face") {
+                var iface = matches[3];
+            } else if (matches[2] == "Loop") {
+                var iloop = matches[3];
+            } else if (matches[2] == "Edge") {
+                var iedge = matches[3];
+            } else {
+                alert("unknown type: " + matches[2]);
+                continue;
+            }
+
+            // determine if Body does not exists
+            var knode = -1;
+            /*for (var jnode = 1; jnode < myTree.name.length; jnode++) {
+                if (myTree.name[jnode] == "Body " + ibody) {
+                    knode = jnode;
+                }
+            }
+
+            // if Body does not exist, create it and its Face, Loop, and Edge
+            //    subnodes now
+            var kface, kloop, kedge;
+            if (knode < 0) {
+                postMessage("Processing Body " + ibody);
+
+                myTree.addNode(0, "Body " + ibody, "*");
+                knode = myTree.name.length - 1;
+
+                myTree.addNode(knode, "__Faces", "*");
+                kface = myTree.name.length - 1;
+
+                myTree.addNode(knode, "__Loops", "*");
+                kloop = myTree.name.length - 1;
+
+                myTree.addNode(knode, "__Edges", "*");
+                kedge = myTree.name.length - 1;
+
+            // otherwise, get pointers to the face-group and loop-group nodes
+            } else {
+                kface = myTree.child[knode];
+                kloop = kface + 1;
+                kedge = kloop + 1;
+            }
+
+            // make the tree node
+            if        (matches[2] == "Face") {
+                myTree.addNode(kface, "____face " + iface, gprim);
+            } else if (matches[2] == "Loop") {
+                myTree.addNode(kloop, "____loop " + iloop, gprim);
+            } else if (matches[2] == "Edge") {
+                myTree.addNode(kedge, "____edge " + iedge, gprim);
+            }
+
+            count++;*/
+        }
+
+        // if we had any primitives, we are assuming that we have all of
+        //    them, so build the tree and remember that we have
+        //    built the tree
+        //if (count > 0) {
+        //    myTree.build();
+        //    g.sgUpdate = 0;
+        //}
+    }
   //
   // deal with key presses
   if (g.keyPress != -1) 

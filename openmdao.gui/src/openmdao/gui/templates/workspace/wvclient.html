@@ -14,9 +14,10 @@
 <script type="text/javascript" src="/static/js/WebViewer/wv-draw.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/wv-render.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/wv-gPrim.js"> </script>
-<script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/wv-sGraph.js"> </script>
+<script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
+<script type="text/javascript" src="/static/js/WebViewer/wv-tree.js"> </script>
 
 <script>
     "use strict";
@@ -40,6 +41,7 @@
     };
 
     window.opener.openmdao.model.addListener("{{geom_name}}", handleMsg);
+    //var myTree = new Tree(document, "myTree", "Viz", "on", "Grd", "off", "Trn", "off");
 
     window.onbeforeunload = function() {
         window.opener.openmdao.model.removeListener("{{geom_name}}");
