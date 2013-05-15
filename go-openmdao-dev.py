@@ -1972,8 +1972,10 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = '-Z'
     else:
         extarg = '-NZ'
-    cmdline = [join(bin_dir, 'python'),
-               join(bin_dir, 'easy_install'), extarg ] + cmds + [req]
+    # If there are spaces in the install path, the easy_install script
+    # will have an invalid shebang line (Linux/Mac only).
+    cmdline = [] if sys.platform == 'win32' else [join(bin_dir, 'python')]
+    cmdline += [join(bin_dir, 'easy_install'), extarg ] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %s" % ' '.join(cmdline))
