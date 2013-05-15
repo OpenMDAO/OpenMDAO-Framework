@@ -17,7 +17,6 @@
 <script type="text/javascript" src="/static/js/WebViewer/wv-sGraph.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
-<script type="text/javascript" src="/static/js/WebViewer/wv-tree.js"> </script>
 
 <script>
     "use strict";
@@ -40,6 +39,7 @@
         g.messageQ.push(message[1]);
     };
 
+    var myTree = new Tree(document, "myTree");
     window.opener.openmdao.model.addListener("{{geom_name}}", handleMsg);
     //var myTree = new Tree(document, "myTree", "Viz", "on", "Grd", "off", "Trn", "off");
 
@@ -59,7 +59,9 @@
     }
     canvas {
         /* border: 2px solid black; */
-        display: block;
+        /*display: block;*/
+	float:left;
+	overflow:scroll;
     }
     .text {
         position:absolute;
@@ -71,11 +73,41 @@
     .fps {
         color: white;
     }
+    
+    td {
+    padding-left:               5px;
+    padding-right:              5px;
+    padding-top:                0px;
+    padding-bottom:             0px;
+	background-color: #FFFFDF;
+    }
+	/* real text that looks like a link that is "on" (blue)*/
+	.fakelinkon {
+	    cursor:                 pointer;
+	    font-weight:               bold;
+	    color:                  #0000FF;
+	}
 
+	/* real text that looks like a link that is "off" (red)*/
+	.fakelinkoff {
+	    cursor:                 pointer;
+	    font-weight:               bold;
+	    color:                  #FF0000;
+	}
+	/* frame on top left that contains menus, trees, etc */
+	#leftframe {
+	    width:                    250px;
+	    height:                   600px;
+	    float:                     left;
+	    overflow:                scroll;
+	    font-size:                  9pt;
+	}
 </style>
 </head>
 
 <body onload="wvStart()">
+    <div id='leftframe'>
+    </div>
 <canvas id="WebViewer">
     If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
 </canvas>
