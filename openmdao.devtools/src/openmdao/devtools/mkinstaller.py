@@ -131,7 +131,8 @@ def main(args=None):
         """ % pkgstr
         make_docs = """
         if options.docs:
-            if(os.system('%s %s && openmdao build_docs && deactivate' % (source_command, activate)) != 0):
+            if(os.system('%s %s && %s %s build_docs && deactivate'
+                         % (source_command, activate, python, openmdao)) != 0):
                 print "Failed to build the docs."
         else:
             print "\\nSkipping build of OpenMDAO docs.\\n"
@@ -215,7 +216,8 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = %(extarg1)s
     else:
         extarg = %(extarg2)s
-    cmdline = [join(bin_dir, 'easy_install'), extarg %(dldir)s] + cmds + [req]
+    cmdline = [join(bin_dir, 'python'),
+               join(bin_dir, 'easy_install'), extarg %(dldir)s] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
@@ -366,6 +368,8 @@ def after_install(options, home_dir):
             _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
         activate = os.path.join(bin_dir, 'activate')
+        python = os.path.join(bin_dir, 'python')
+        openmdao = os.path.join(bin_dir, 'openmdao')
         deactivate = os.path.join(bin_dir, 'deactivate')
         source_command = "." if not sys.platform.startswith("win") else ""
         
@@ -384,6 +388,24 @@ def after_install(options, home_dir):
     
     _update_activate(bin_dir)
     
+    # If there are spaces in the install path lots of commands need to be
+    # patched so Python can be found on Linux/Mac.
+    abs_bin = os.path.abspath(bin_dir)
+    if sys.platform != 'win32' and ' ' in abs_bin:
+        import stat
+        shebang = '#!"%%s"\\n' %% os.path.join(abs_bin, 'python')
+        print '\\nFixing scripts for spaces in install path'
+        for path in sorted(glob.glob(os.path.join(bin_dir, '*'))):
+            with open(path, 'r') as script:
+                lines = script.readlines()
+            if lines[0] == shebang:
+                mode = os.stat(path).st_mode
+                os.rename(path, path+'.orig')
+                lines[0] = '#!/usr/bin/env python\\n'
+                with open(path, 'w') as script:
+                    script.writelines(lines)
+                os.chmod(path, mode)
+
     abshome = os.path.abspath(home_dir)
     
     if failures:
