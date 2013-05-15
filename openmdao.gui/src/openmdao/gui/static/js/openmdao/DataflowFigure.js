@@ -251,7 +251,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         // Component names can be dropped into the diagram.
         elm.droppable ({
             accept: '.IComponent',
-            greedy: true,
             out: function(ev,ui){
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
