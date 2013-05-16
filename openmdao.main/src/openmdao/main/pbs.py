@@ -441,13 +441,18 @@ class PBS_Server(ObjServer):
                 # This can potentially cause problems...
                 self._logger.warning('work %r not a descendant of home %r',
                                      work, home)
+            if ' ' in work:
+                work = '"%s"' % work
             script.write('cd %s\n' % work)
 
             script.write(self._fix_path(resource_desc['remote_command']))
 
             if 'args' in resource_desc:
                 for arg in resource_desc['args']:
-                    script.write(' %s' % self._fix_path(arg))
+                    arg = self._fix_path(arg)
+                    if ' ' in arg and arg[0] not in ('"', "'"):
+                        arg = '"%s"' % arg
+                    script.write(' %s' % arg)
 
             script.write(' <%s' % (inp or DEV_NULL))
             script.write(' >%s' % (out or '%s.stdout' % base))
@@ -504,8 +509,12 @@ class PBS_Server(ObjServer):
         """ Translates special prefixes. """
         if path.startswith(HOME_DIRECTORY):
             path = os.path.join(self.home_dir, path[len(HOME_DIRECTORY):])
+            if ' ' in path:
+                path = '"%s"' % path
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
+            if ' ' in path:
+                path = '"%s"' % path
         return path
 
     @staticmethod

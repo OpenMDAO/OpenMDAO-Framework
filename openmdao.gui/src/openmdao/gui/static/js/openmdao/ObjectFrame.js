@@ -2,8 +2,18 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ObjectFrame = function(model, pathname, selectTabName) {
-    openmdao.ObjectFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-'),'Object: '+pathname);
+    var div_id = 'CE-'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-') ;
+    // Is there an existing object with this pathname?
+    // If yes, just bring it to the front
+    var object_frame = document.getElementById( div_id ) ;
+    if ( object_frame !== null ) { 
+        if (jQuery( object_frame ).is(':data(dialog)')) {
+            jQuery( object_frame ).dialog( "moveToTop" ) ;
+        }
+        return;
+    }
+
+    openmdao.ObjectFrame.prototype.init.call(this, div_id,'Object: '+pathname);
 
     /***********************************************************************
      *  private
@@ -99,6 +109,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
         self.elm.tabs({selected: selected})
             .on('tabsshow', function(event, ui) {
+                console.log("in tabsshow" ) ;
                 if (ui.tab.text === 'Workflow') {
                     self.elm.find('.WorkflowFigure').trigger('setBackground');
                 }
