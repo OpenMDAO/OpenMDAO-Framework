@@ -124,12 +124,18 @@ class NotifierPage(object):
                           lambda browser: browser.find_element(By.ID, msg_id))
                 ok = WebDriverWait(parent.browser, timeout).until(
                           lambda browser: browser.find_element(By.ID, ok_id))
-                message = msg.text
-                ok.click()
-                return message
             except WebDriverException as err:
                 if retries > 0 or not isinstance(err, TimeoutException):
                     logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+            else:
+                # Sometimes the 'Ok' button is temporarily obscured.
+                try:
+                    message = msg.text
+                    ok.click()
+                    return message
+                except WebDriverException as err:
+                    logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+
         if retries > 0 or not isinstance(err, TimeoutException):
             raise err
 
