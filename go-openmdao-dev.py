@@ -1899,6 +1899,8 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 openmdao_prereqs = ['numpy', 'scipy']
 
+_WINDOWS = sys.platform.startswith('win')
+
 
 
 def extend_parser(parser):

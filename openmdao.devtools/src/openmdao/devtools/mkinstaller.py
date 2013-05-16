@@ -52,8 +52,6 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
 openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
                          ]
 
-_WINDOWS = sys.platform.startswith('win')
-
 def _get_adjust_options(options, version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
@@ -158,6 +156,8 @@ def main(args=None):
     script_str = """
 
 openmdao_prereqs = %(openmdao_prereqs)s
+
+_WINDOWS = sys.platform.startswith('win')
 
 %(mkdir_pkg)s
 
