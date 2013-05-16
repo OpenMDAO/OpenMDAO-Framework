@@ -12,6 +12,13 @@
 
 import sys, os
 
+def _sys_path_add(toadd=None):
+    if toadd:
+        distdir = os.path.dirname(os.path.dirname(__file__))
+        sys.path = [distdir] + [os.path.join(distdir, p) for p in toadd] + sys.path
+
+_sys_path_add(%(add_to_sys_path)s)
+
 # General configuration
 # ---------------------
 

@@ -29,6 +29,7 @@ from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
 from openmdao.util.view_docs import view_docs
+from openmdao.util.log import logger
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
@@ -120,10 +121,10 @@ def _load_templates():
     return templates, class_templates, test_template
 
 
-def _get_srcdocs(destdir, name):
+def _get_srcdocs(destdir, name, srcdir='src'):
     """ Return RST for source docs. """
     startdir = os.getcwd()
-    srcdir = os.path.join(destdir, 'src')
+    srcdir = os.path.join(destdir, srcdir)
     if os.path.exists(srcdir):
         os.chdir(srcdir)
         try:
@@ -294,6 +295,17 @@ def _get_src_modules(topdir):
     rel = [f[len(topdir)+1:] for f in noexts]
     return ['.'.join(f.split(os.sep)) for f in rel]
 
+def _get_dirs(start):
+    dirs = []
+    for root, dirlist, filelist in os.walk(start):
+        newdlist = []
+        for d in dirlist:
+            if d.startswith('.') or d.endswith('.egg-info') or d in ['docs', 'build', 'dists', 'sphinx_build']:
+                continue
+            newdlist.append(d)
+        dirlist[:] = newdlist
+        dirs.extend([os.path.join(root[len(start)+1:], d) for d in dirlist])
+    return dirs
 
 def _get_template_options(distdir, cfg, **kwargs):
     """ Return dictionary of options for template substitution. """
@@ -319,7 +331,8 @@ def _get_template_options(distdir, cfg, **kwargs):
     template_options = {
         'copyright': '',
         'summary': '',
-        'setup_options': _pretty(setup_options)
+        'setup_options': _pretty(setup_options),
+        'add_to_sys_path': _get_dirs(distdir),
     }
 
     template_options.update(setup_options)
@@ -897,7 +910,7 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
         shutil.rmtree(tdir, ignore_errors=True)
 
 
-def _plugin_build_docs(destdir, cfg):
+def _plugin_build_docs(destdir, cfg, src='src'):
     """Builds the Sphinx docs for the plugin distribution, assuming it has
     a structure like the one created by plugin quickstart.
     """
@@ -907,10 +920,11 @@ def _plugin_build_docs(destdir, cfg):
     path_added = False
     try:
         docdir = os.path.join(destdir, 'docs')
-        srcdir = os.path.join(destdir, 'src')
+        srcdir = os.path.abspath(os.path.join(destdir, src))
 
         # have to add srcdir to sys.path or autodoc won't find source code
         if srcdir not in sys.path:
+            logger.error("adding %s to sys.path" % srcdir)
             sys.path[0:0] = [srcdir]
             path_added = True
 
@@ -942,14 +956,19 @@ def plugin_build_docs(parser, options, args=None):
     else:
         dist_dir = '.'
     dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(dist_dir)))
-    _verify_dist_dir(dist_dir)
+
+    try:
+        _verify_dist_dir(dist_dir)
+    except Exception as err:
+        logger.error("Failed to build plugin docs: %s" % err)
+        return
 
     cfgfile = os.path.join(dist_dir, 'setup.cfg')
     cfg = SafeConfigParser(dict_type=OrderedDict)
     cfg.readfp(open(cfgfile, 'r'), cfgfile)
 
     cfg.set('metadata', 'entry_points',
-            _get_entry_points(os.path.join(dist_dir, 'src')))
+            _get_entry_points(os.path.join(dist_dir, options.srcdir)))
 
     templates, class_templates, test_template = _load_templates()
     template_options = _get_template_options(dist_dir, cfg)
@@ -958,12 +977,12 @@ def plugin_build_docs(parser, options, args=None):
         'docs': {
             'conf.py': templates['conf.py'] % template_options,
             'pkgdocs.rst': _get_pkgdocs(cfg),
-            'srcdocs.rst': _get_srcdocs(dist_dir, template_options['name']),
+            'srcdocs.rst': _get_srcdocs(dist_dir, template_options['name'], srcdir=options.srcdir),
         },
     }
 
     build_directory(dirstruct, force=True, topdir=dist_dir)
-    _plugin_build_docs(dist_dir, cfg)
+    _plugin_build_docs(dist_dir, cfg, src=options.srcdir)
     return 0
 
 
@@ -1101,8 +1120,11 @@ def _get_plugin_parser():
     parser = subparsers.add_parser('build_docs',
                                    help="build sphinx doc files for a plugin")
     parser.usage = "plugin build_docs <dist_dir_path>"
-    parser.add_argument('dist_dir_path',
+    parser.add_argument('dist_dir_path', default='.',
                         help='path to distribution source directory')
+    parser.add_argument("-s", "--srcdir", action="store", type=str,
+                        dest='srcdir', default='src',
+                        help="top directory in the distribution where python source is located")
     parser.set_defaults(func=plugin_build_docs)
 
     parser = subparsers.add_parser('docs',
@@ -1150,3 +1172,4 @@ def plugin():  # pragma no cover
     parser = _get_plugin_parser()
     options, args = parser.parse_known_args()
     sys.exit(options.func(parser, options, args))
+
