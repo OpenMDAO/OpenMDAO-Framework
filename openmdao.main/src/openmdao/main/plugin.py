@@ -120,14 +120,15 @@ def _load_templates():
     return templates, class_templates, test_template
 
 
-def _get_srcdocs(destdir, name):
+def _get_srcdocs(destdir, name, srcdir='src'):
     """ Return RST for source docs. """
     startdir = os.getcwd()
-    srcdir = os.path.join(destdir, 'src')
+    srcdir = os.path.join(destdir, srcdir)
     if os.path.exists(srcdir):
         os.chdir(srcdir)
         try:
-            srcmods = _get_src_modules('.')
+            srcmods = _get_src_modules('.', 
+                                       dirpred=lambda d: not d.startswith('_') and d not in ['docs'])
         finally:
             os.chdir(startdir)
     else:
@@ -203,7 +204,7 @@ def _get_pkgdocs(cfg):
     return ''.join(lines)
 
 
-def _get_setup_options(distdir, metadata):
+def _get_setup_options(distdir, metadata, srcdir='src'):
     """ Return dictionary of setup options. """
     # a set of names of variables that are supposed to be lists
     lists = set([
@@ -237,7 +238,7 @@ def _get_setup_options(distdir, metadata):
     # populate the package data with sphinx docs
     # we have to list all of the files because setuptools doesn't
     # handle nested directories very well
-    pkgdir = os.path.join(distdir, 'src', metadata['name'])
+    pkgdir = os.path.abspath(os.path.join(distdir, srcdir, metadata['name']))
     plen = len(pkgdir)+1
     sphinxdir = os.path.join(pkgdir, 'sphinx_build', 'html')
     testdir = os.path.join(pkgdir, 'test')
@@ -254,7 +255,7 @@ def _get_setup_options(distdir, metadata):
             #'sphinx_build/html/_static/*',
             #]
         },
-        'package_dir': {'': 'src'},
+        'package_dir': {'': srcdir},
         'zip_safe': False,
         'include_package_data': True,
     }
@@ -278,22 +279,34 @@ def _pretty(obj):
     return sio.getvalue()
 
 
-def _get_py_files(distdir):
-    def _pred(fname):
-        parts = fname.split(os.sep)
-        if parts[-1] in ['setup.py', '__init__.py'] or 'test' in parts:
-            return False
-        return fname.endswith('.py')
-    return list(find_files(distdir, _pred))
+def _get_py_files(distdir, pred=None, dirpred=None):
+    if pred is None:
+        def pred(fname):
+            parts = fname.split(os.sep)
+            if parts[-1] in ['setup.py', '__init__.py'] or 'test' in parts:
+                return False
+            return fname.endswith('.py')
+    return list(find_files(distdir, match=pred, dirmatch=dirpred))
 
 
-def _get_src_modules(topdir):
+def _get_src_modules(topdir, pred=None, dirpred=None):
     topdir = os.path.abspath(os.path.expandvars(os.path.expanduser(topdir)))
-    pyfiles = _get_py_files(topdir)
+    pyfiles = _get_py_files(topdir, pred, dirpred)
     noexts = [os.path.splitext(f)[0] for f in pyfiles]
     rel = [f[len(topdir)+1:] for f in noexts]
     return ['.'.join(f.split(os.sep)) for f in rel]
 
+def _get_dirs(start):
+    dirs = []
+    for root, dirlist, filelist in os.walk(start):
+        newdlist = []
+        for d in dirlist:
+            if d.startswith('.') or d.endswith('.egg-info') or d in ['docs', 'build', 'dists', 'sphinx_build']:
+                continue
+            newdlist.append(d)
+        dirlist[:] = newdlist
+        dirs.extend([os.path.join(root[len(start)+1:], d) for d in dirlist])
+    return dirs
 
 def _get_template_options(distdir, cfg, **kwargs):
     """ Return dictionary of options for template substitution. """
@@ -314,12 +327,14 @@ def _get_template_options(distdir, cfg, **kwargs):
     else:
         metadata['packages'] = [metadata['name']]
 
-    setup_options = _get_setup_options(distdir, metadata)
+    setup_options = _get_setup_options(distdir, metadata,
+                                       srcdir=kwargs.get('srcdir', 'src'))
 
     template_options = {
         'copyright': '',
         'summary': '',
-        'setup_options': _pretty(setup_options)
+        'setup_options': _pretty(setup_options),
+        'add_to_sys_path': _get_dirs(distdir),
     }
 
     template_options.update(setup_options)
@@ -421,7 +436,7 @@ def _verify_dist_dir(dpath):
     if not os.path.isdir(dpath):
         raise IOError("directory '%s' does not exist" % dpath)
 
-    expected = ['src', 'docs', 'setup.py', 'setup.cfg', 'MANIFEST.in',
+    expected = ['docs', 'setup.py', 'setup.cfg', 'MANIFEST.in',
                 os.path.join('docs', 'conf.py'),
                 os.path.join('docs', 'index.rst'),
                 os.path.join('docs', 'srcdocs.rst')]
@@ -474,7 +489,7 @@ def _get_entry_points(startdir):
     return entrypoints.getvalue()
 
 
-def plugin_makedist(parser, options, args=None, capture=None):
+def plugin_makedist(parser, options, args=None, capture=None, srcdir='src'):
     """A command line script (plugin makedist) points to this.  It creates a
     source distribution containing Sphinx documentation for the specified
     distribution directory.  If no directory is specified, the current directory
@@ -502,10 +517,10 @@ def plugin_makedist(parser, options, args=None, capture=None):
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
 
         print "collecting entry point information..."
-        cfg.set('metadata', 'entry_points', _get_entry_points('src'))
+        cfg.set('metadata', 'entry_points', _get_entry_points(srcdir))
 
         template_options = _get_template_options(options.dist_dir_path, cfg,
-                                                 packages=find_packages('src'))
+                                                 packages=find_packages(srcdir))
 
         dirstruct = {
             'setup.py': templates['setup.py'] % template_options,
@@ -897,32 +912,22 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
         shutil.rmtree(tdir, ignore_errors=True)
 
 
-def _plugin_build_docs(destdir, cfg):
+def _plugin_build_docs(destdir, cfg, src='src'):
     """Builds the Sphinx docs for the plugin distribution, assuming it has
     a structure like the one created by plugin quickstart.
     """
     name = cfg.get('metadata', 'name')
     version = cfg.get('metadata', 'version')
 
-    path_added = False
-    try:
-        docdir = os.path.join(destdir, 'docs')
-        srcdir = os.path.join(destdir, 'src')
+    docdir = os.path.join(destdir, 'docs')
+    srcdir = os.path.abspath(os.path.join(destdir, src))
 
-        # have to add srcdir to sys.path or autodoc won't find source code
-        if srcdir not in sys.path:
-            sys.path[0:0] = [srcdir]
-            path_added = True
-
-        sphinx.main(argv=['', '-E', '-a', '-b', 'html',
-                          '-Dversion=%s' % version,
-                          '-Drelease=%s' % version,
-                          '-d', os.path.join(srcdir, name, 'sphinx_build', 'doctrees'),
-                          docdir,
-                          os.path.join(srcdir, name, 'sphinx_build', 'html')])
-    finally:
-        if path_added:
-            sys.path.remove(srcdir)
+    sphinx.main(argv=['', '-E', '-a', '-b', 'html',
+                      '-Dversion=%s' % version,
+                      '-Drelease=%s' % version,
+                      '-d', os.path.join(srcdir, name, 'sphinx_build', 'doctrees'),
+                      docdir,
+                      os.path.join(srcdir, name, 'sphinx_build', 'html')])
 
 
 def plugin_build_docs(parser, options, args=None):
@@ -942,28 +947,35 @@ def plugin_build_docs(parser, options, args=None):
     else:
         dist_dir = '.'
     dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(dist_dir)))
+
     _verify_dist_dir(dist_dir)
+
+    pfiles = fnmatch.filter(os.listdir(options.srcdir), '*.py')
+    if not pfiles:
+        options.srcdir = dist_dir
 
     cfgfile = os.path.join(dist_dir, 'setup.cfg')
     cfg = SafeConfigParser(dict_type=OrderedDict)
     cfg.readfp(open(cfgfile, 'r'), cfgfile)
 
     cfg.set('metadata', 'entry_points',
-            _get_entry_points(os.path.join(dist_dir, 'src')))
+            _get_entry_points(os.path.join(dist_dir, options.srcdir)))
 
     templates, class_templates, test_template = _load_templates()
-    template_options = _get_template_options(dist_dir, cfg)
+    template_options = _get_template_options(dist_dir, cfg, srcdir=options.srcdir)
 
     dirstruct = {
         'docs': {
             'conf.py': templates['conf.py'] % template_options,
             'pkgdocs.rst': _get_pkgdocs(cfg),
-            'srcdocs.rst': _get_srcdocs(dist_dir, template_options['name']),
+            'srcdocs.rst': _get_srcdocs(dist_dir, 
+                                        template_options['name'], 
+                                        srcdir=options.srcdir),
         },
     }
 
     build_directory(dirstruct, force=True, topdir=dist_dir)
-    _plugin_build_docs(dist_dir, cfg)
+    _plugin_build_docs(dist_dir, cfg, src=options.srcdir)
     return 0
 
 
@@ -1101,8 +1113,11 @@ def _get_plugin_parser():
     parser = subparsers.add_parser('build_docs',
                                    help="build sphinx doc files for a plugin")
     parser.usage = "plugin build_docs <dist_dir_path>"
-    parser.add_argument('dist_dir_path',
+    parser.add_argument('dist_dir_path', default='.',
                         help='path to distribution source directory')
+    parser.add_argument("-s", "--srcdir", action="store", type=str,
+                        dest='srcdir', default='src',
+                        help="top directory in the distribution where python source is located")
     parser.set_defaults(func=plugin_build_docs)
 
     parser = subparsers.add_parser('docs',
@@ -1140,6 +1155,9 @@ def _get_plugin_parser():
                         default='.',
                         help='directory where plugin distribution is found'
                              ' (defaults to current dir')
+    parser.add_argument("-s", "--srcdir", action="store", type=str,
+                        dest='srcdir', default='src',
+                        help="top directory in the distribution where python source is located")
     parser.set_defaults(func=plugin_makedist)
 
     return top_parser
@@ -1150,3 +1168,4 @@ def plugin():  # pragma no cover
     parser = _get_plugin_parser()
     options, args = parser.parse_known_args()
     sys.exit(options.func(parser, options, args))
+
