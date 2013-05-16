@@ -93,7 +93,7 @@ openmdao.DragAndDropManager=function() {
                 max_topmost_zindex = topmost_zindex;
                 max_count = count;
             }
-            else if ( topmost_zindex === max_topmost_zindex ) {
+            else if (topmost_zindex === max_topmost_zindex) {
                 /* Use the count to break the tie */
                 if (count > max_count) {
                     max_zindex = calculated_zindex;

@@ -15,7 +15,7 @@ openmdao.BaseFrame = function() {
     this.menu  = null;  // an optional menu
 };
 
-openmdao.BaseFrame.prototype.init = function (id,title,menu) {
+openmdao.BaseFrame.prototype.init = function(id,title,menu) {
 /*  initialize a BaseFrame on the element with the given ID
     if the element doesn't exist it will be created as a popup
     any existing HTML under the element will be deleted
@@ -70,7 +70,7 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
     }
 };
 
-openmdao.BaseFrame.prototype.popup = function (title) {
+openmdao.BaseFrame.prototype.popup = function(title) {
     /* put this frame in a popup */
     var dlg = this.elm;
     dlg.dialog({
@@ -168,7 +168,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 
 };
 
-openmdao.BaseFrame.prototype.setTitle = function (title) {
+openmdao.BaseFrame.prototype.setTitle = function(title) {
     if (title) {
         this.title = title;
         if (this.elm.is(':data(dialog)')) {
@@ -177,11 +177,7 @@ openmdao.BaseFrame.prototype.setTitle = function (title) {
     }
 };
 
-openmdao.BaseFrame.prototype.close = function () {
-    if ((this.hasOwnProperty('destructor')) &&
-        (typeof this.destructor === 'function')) {
-        this.destructor();
-    }
+openmdao.BaseFrame.prototype.close = function() {
     // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
     if (this.par) {
         this.elm.dialog('destroy');
@@ -189,6 +185,10 @@ openmdao.BaseFrame.prototype.close = function () {
         this.elm.show();
     }
     else {
+        if ((this.hasOwnProperty('destructor')) &&
+            (typeof this.destructor === 'function')) {
+            this.destructor();
+        }
         this.elm.dialog('destroy');
         this.elm.remove();
     }
