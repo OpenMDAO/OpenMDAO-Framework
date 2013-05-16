@@ -79,6 +79,11 @@ if sys.platform.startswith("linux"):
                 raise SkipTest("java is needed to do the "
                                "GUI JavaScript unit testing")
 
+            # Can't seem to pass a path with spaces in it correctly,
+            # quoting isn't honored at receiver.
+            if ' ' in jstestdriver_path:
+                raise SkipTest('Install directory has spaces in path')
+
             # run headless if xvfb is available
             if find_executable("xvfb-run"):
                 java_cmd = "xvfb-run java"

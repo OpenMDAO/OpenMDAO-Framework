@@ -6,7 +6,6 @@ Trait for numpy array variables, with optional units.
 __all__ = ["Array"]
 
 import logging
-import re
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.units import PhysicalQuantity
@@ -218,15 +217,7 @@ class Array(TraitArray):
         
         attr['name'] = name
         attr['type'] = "ndarray"
-        attr['value'] = str(value).replace('[ ', '[').replace(']\n', '] ')
-
-        # Most of this Regex stuff is so that we can put in commas for
-        # readability.
-        reg1 = re.compile(r"\s+")
-        reg2 = re.compile(r"\s+\]")
-        attr['value'] = reg2.sub(']', attr['value'])
-        attr['value'] = reg1.sub(', ', attr['value'])
-        
+        attr['value'] = str(value.tolist())
         attr['dim'] = str(value.shape).strip('()').rstrip(',')
         
         for field in meta:

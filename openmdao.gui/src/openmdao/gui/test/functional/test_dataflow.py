@@ -504,7 +504,7 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['', 'x_in', '[1., 1., 1., 1.]', '', ''],
+        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
@@ -522,7 +522,7 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['', 'scaler', '1', '', ''],
-        ['', 'x_in', '[1., 1., 1., 1.]', '', ''],
+        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
@@ -609,6 +609,7 @@ def _test_replace(browser):
     args_page.click_ok()
     expected = "RuntimeError: top: Can't connect 'comp.result' to" \
                " 'postproc.result_in': top: Can't find 'comp.result'"
+    time.sleep(0.5)
     assert workspace_page.history.endswith(expected)
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
