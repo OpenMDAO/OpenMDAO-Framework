@@ -6,7 +6,6 @@ Trait for numpy array variables, with optional units.
 __all__ = ["Array"]
 
 import logging
-import re
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.units import PhysicalQuantity
