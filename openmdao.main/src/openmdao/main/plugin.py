@@ -1155,6 +1155,9 @@ def _get_plugin_parser():
                         default='.',
                         help='directory where plugin distribution is found'
                              ' (defaults to current dir')
+    parser.add_argument("-s", "--srcdir", action="store", type=str,
+                        dest='srcdir', default='src',
+                        help="top directory in the distribution where python source is located")
     parser.set_defaults(func=plugin_makedist)
 
     return top_parser

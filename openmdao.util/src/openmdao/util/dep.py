@@ -251,7 +251,8 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                     cinfo.meta['ifaces'] = list(set(cinfo.meta['ifaces']))
 
 class PythonSourceTreeAnalyser(object):
-    def __init__(self, startdir=None, exclude=None, mod_excludes=None):
+    def __init__(self, startdir=None, exclude=None, mod_excludes=None,
+                 direxclude=None):
         self.files_count = 0 # number of files analyzed
 
         # inheritance graph. It's a directed graph with base classes
@@ -277,7 +278,8 @@ class PythonSourceTreeAnalyser(object):
         self.fileinfo = {} # maps filenames to (PythonSourceFileAnalyzer, modtime)
         self.class_map = {} # map of classname to ClassInfo for the class
 
-        for pyfile in find_files(self.startdirs, "*.py", exclude):
+        for pyfile in find_files(self.startdirs, "*.py", exclude=exclude,
+                                 direxclude=direxclude):
             self.analyze_file(pyfile)
 
     def dump(self, out, options):
