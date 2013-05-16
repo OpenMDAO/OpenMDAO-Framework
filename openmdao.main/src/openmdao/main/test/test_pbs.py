@@ -180,9 +180,10 @@ class TestCase(unittest.TestCase):
 
 # Skip varification of location-dependent working directory.
 
+        generated_echo = '"%s"' % echo if ' ' in echo else echo
         self.assertTrue(script.endswith("""\
 python %s hello world <echo.in >echo.out 2>&1
-""" % echo))
+""" % generated_echo))
 
         # error_path.
         server.execute_command(dict(remote_command='python',
@@ -196,7 +197,7 @@ python %s hello world <echo.in >echo.out 2>&1
         logging.debug(script)
         self.assertTrue(script.endswith("""\
 python %s hello world <%s >echo.out 2>echo.err
-""" % (echo, DEV_NULL)))
+""" % (generated_echo, DEV_NULL)))
 
         # HOME_DIRECTORY, WORKING_DIRECTORY.
         home_dir = os.path.expanduser('~')
