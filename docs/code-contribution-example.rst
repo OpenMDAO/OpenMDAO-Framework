@@ -1,3 +1,5 @@
+.. _`dev-checklist`:
+
 Code Contribution Tutorial & Checklist
 ======================================
 
