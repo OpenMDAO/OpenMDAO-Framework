@@ -204,8 +204,6 @@ def _get_openmdao_parser():
 def openmdao():
     parser = _get_openmdao_parser()
     options, args = parser.parse_known_args()
-    print 'options', options
-    print 'args', args
 
     sys.exit(options.func(parser, options, args))
 
