@@ -609,6 +609,7 @@ def _test_replace(browser):
     args_page.click_ok()
     expected = "RuntimeError: top: Can't connect 'comp.result' to" \
                " 'postproc.result_in': top: Can't find 'comp.result'"
+    time.sleep(0.5)
     assert workspace_page.history.endswith(expected)
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
