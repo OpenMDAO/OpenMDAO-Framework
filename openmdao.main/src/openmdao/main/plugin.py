@@ -238,7 +238,7 @@ def _get_setup_options(distdir, metadata, srcdir='src'):
     # populate the package data with sphinx docs
     # we have to list all of the files because setuptools doesn't
     # handle nested directories very well
-    pkgdir = os.path.join(distdir, srcdir, metadata['name'])
+    pkgdir = os.path.abspath(os.path.join(distdir, srcdir, metadata['name']))
     plen = len(pkgdir)+1
     sphinxdir = os.path.join(pkgdir, 'sphinx_build', 'html')
     testdir = os.path.join(pkgdir, 'test')
@@ -919,25 +919,15 @@ def _plugin_build_docs(destdir, cfg, src='src'):
     name = cfg.get('metadata', 'name')
     version = cfg.get('metadata', 'version')
 
-    path_added = False
-    try:
-        docdir = os.path.join(destdir, 'docs')
-        srcdir = os.path.abspath(os.path.join(destdir, src))
+    docdir = os.path.join(destdir, 'docs')
+    srcdir = os.path.abspath(os.path.join(destdir, src))
 
-        # # have to add srcdir to sys.path or autodoc won't find source code
-        # if srcdir not in sys.path:
-        #     sys.path[0:0] = [srcdir]
-        #     path_added = True
-
-        sphinx.main(argv=['', '-E', '-a', '-b', 'html',
-                          '-Dversion=%s' % version,
-                          '-Drelease=%s' % version,
-                          '-d', os.path.join(srcdir, name, 'sphinx_build', 'doctrees'),
-                          docdir,
-                          os.path.join(srcdir, name, 'sphinx_build', 'html')])
-    finally:
-        if path_added:
-            sys.path.remove(srcdir)
+    sphinx.main(argv=['', '-E', '-a', '-b', 'html',
+                      '-Dversion=%s' % version,
+                      '-Drelease=%s' % version,
+                      '-d', os.path.join(srcdir, name, 'sphinx_build', 'doctrees'),
+                      docdir,
+                      os.path.join(srcdir, name, 'sphinx_build', 'html')])
 
 
 def plugin_build_docs(parser, options, args=None):
@@ -959,6 +949,10 @@ def plugin_build_docs(parser, options, args=None):
     dist_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(dist_dir)))
 
     _verify_dist_dir(dist_dir)
+
+    pfiles = fnmatch.filter(os.listdir(options.srcdir), '*.py')
+    if not pfiles:
+        options.srcdir = dist_dir
 
     cfgfile = os.path.join(dist_dir, 'setup.cfg')
     cfg = SafeConfigParser(dict_type=OrderedDict)
