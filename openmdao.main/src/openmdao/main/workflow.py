@@ -1,4 +1,4 @@
-""" Workflow class definition """
+""" Base class for all workflows. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
