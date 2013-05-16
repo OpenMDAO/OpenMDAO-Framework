@@ -841,8 +841,8 @@ def _test_column_sorting(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130, 90))
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(version=Version.NEW)
 
     test_sorting(
@@ -948,13 +948,9 @@ def _test_taborder(browser):
 def _test_column_picking(browser):
     project_dict, workspace_page = startup(browser)
 
-    #Test that changes did not affect other component editors.
-
-    #During interactive testing, and on occassion, selenium decides that it likes
-    #to miss the drop, and drops the item on the dataflow grid, rather than in top.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page()
 
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
@@ -983,7 +979,6 @@ def _test_column_picking(browser):
     eq(input_column_names, expected_column_names)
 
     #Test that low, high and type are added
-    #column_picker = editor.inputs.headers[0].get_column_picker()
     editor.toggle_column_visibility("Low")
     editor.toggle_column_visibility("High")
     editor.toggle_column_visibility("Type")

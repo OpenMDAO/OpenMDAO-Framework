@@ -2,18 +2,15 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ObjectFrame = function(model, pathname, selectTabName) {
-    var div_id = 'CE-'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-') ;
-    // Is there an existing object with this pathname?
-    // If yes, just bring it to the front
-    var object_frame = document.getElementById( div_id ) ;
-    if ( object_frame !== null ) { 
-        if (jQuery( object_frame ).is(':data(dialog)')) {
-            jQuery( object_frame ).dialog( "moveToTop" ) ;
-        }
+    var divID = 'ObjectFrame_'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-');
+
+    // if there's an existing frame with this id, then just bring it to the front
+    if (openmdao.frames.hasOwnProperty(divID)) {
+        openmdao.frames[divID].moveToTop();
         return;
     }
 
-    openmdao.ObjectFrame.prototype.init.call(this, div_id,'Object: '+pathname);
+    openmdao.ObjectFrame.prototype.init.call(this, divID, 'Object: '+pathname);
 
     /***********************************************************************
      *  private
@@ -21,7 +18,10 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
     // initialize private variables
     var self = this,
-        panes = {},
+        tabbedPane = jQuery('<div id="'+self.id+'_tabs">')
+            .appendTo(self.elm),
+        tabs = jQuery('<ul>')
+            .appendTo(tabbedPane),
         tabOrder = [
             'Inputs',
             'Outputs',
@@ -34,7 +34,10 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             'Dataflow',
             'Workflow',
             'Slots'
-        ];
+        ],
+        panes = {},
+        tabcount = 0,
+        selected = 0;
 
     self.elm.css({'overflow':'hidden'});
 
@@ -43,18 +46,9 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     /** load the table with the given properties */
     function loadTabs(properties) {
         if (!properties || properties.length === 0) {
-            alert('No properties found for ',self.pathname);
+            alert('No properties found for ', pathname);
             return;
         }
-
-        var tabbed_pane = jQuery('<div id="'+self.id+'_tabs">'),
-            tabs = jQuery('<ul>'),
-            tabcount = 0,
-            selected = 0;
-
-        self.elm.html("");
-        self.elm.append(tabbed_pane);
-        tabbed_pane.append(tabs);
 
         // sort the properties by the desired tab order
         var name,
@@ -76,9 +70,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             var val = properties[name];
 
             if (name === 'type') {
-                if (self.elm.parent().hasClass('ui-dialog')) {
-                    self.elm.dialog("option","title",val+': '+self.pathname);
-                }
+                self.setTitle(val+': '+pathname);
             }
             // Don't show empty slots tab.
             else if (name !== 'Slots' || val.length) {
@@ -95,8 +87,8 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
                     contentPane = jQuery('<div id="'+contentID+'" style="overflow:auto"></div>');
 
                 tabs.append(tab);
-                tabbed_pane.append(contentPane);
-                getContent(contentPane,name,val);
+                tabbedPane.append(contentPane);
+                getContent(contentPane, name, val);
                 if (selectTabName === name) {
                     selected = tabcount;
                 }
@@ -109,14 +101,13 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
         self.elm.tabs({selected: selected})
             .on('tabsshow', function(event, ui) {
-                console.log("in tabsshow" ) ;
                 if (ui.tab.text === 'Workflow') {
                     self.elm.find('.WorkflowFigure').trigger('setBackground');
                 }
             });
 
         if (typeof openmdao_test_mode !== 'undefined') {
-            openmdao.Util.notify(self.pathname+' loaded');
+            openmdao.Util.notify(pathname+' loaded');
         }
     }
 
@@ -124,132 +115,116 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     function getContent(contentPane, name, val) {
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name === 'Inputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,
-                                self.pathname,name,true,true);
+            panes[name] = new openmdao.PropertiesPane(contentPane, model,
+                                pathname, name, true, true);
             panes[name].loadData(val);
         }
         else if (name === 'Outputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,
-                                self.pathname,name,false,true);
+            panes[name] = new openmdao.PropertiesPane(contentPane, model,
+                                pathname, name, false, true);
             panes[name].loadData(val);
         }
         else if (name === 'CouplingVars') {
-            panes[name] = new openmdao.CouplingVarsPane(contentPane,model,
-                                self.pathname,name,true);
+            panes[name] = new openmdao.CouplingVarsPane(contentPane, model,
+                                pathname, name, true);
             panes[name].loadData(val);
         }
         else if (name === 'Objectives') {
-            panes[name] = new openmdao.ObjectivesPane(contentPane,model,
-                                self.pathname,name,true);
+            panes[name] = new openmdao.ObjectivesPane(contentPane, model,
+                                pathname, name, true);
             panes[name].loadData(val);
         }
         else if (name === 'Parameters') {
-            panes[name] = new openmdao.ParametersPane(contentPane,model,
-                                self.pathname,name,true);
+            panes[name] = new openmdao.ParametersPane(contentPane, model,
+                                pathname, name, true);
             panes[name].loadData(val);
         }
         else if (name === 'Constraints') {
-            panes[name] = new openmdao.ConstraintsPane(contentPane,model,
-                                self.pathname,name,true);
+            panes[name] = new openmdao.ConstraintsPane(contentPane, model,
+                                pathname, name, true);
             panes[name].loadData(val);
         }
         else if (name === 'Workflow') {
-            panes[name] = new openmdao.WorkflowPane(contentPane,model,
-                                self.pathname,name);
+            panes[name] = new openmdao.WorkflowPane(contentPane, model,
+                                pathname, name);
             panes[name].loadData(val);
         }
         else if (name === 'Dataflow') {
-            panes[name] = new openmdao.DataflowPane(contentPane,model,
-                                self.pathname,name);
+            panes[name] = new openmdao.DataflowPane(contentPane ,model,
+                                pathname, name);
             panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            panes[name] = new openmdao.SlotsPane(contentPane,model,
-                                self.pathname,name,false);
+            panes[name] = new openmdao.SlotsPane(contentPane, model,
+                                pathname, name, false);
             panes[name].loadData(val);
         }
         else if (name === 'Triggers') {
             panes[name] = new openmdao.TriggersPane(contentPane, model,
-                                                  self.pathname, name);
+                                                    pathname, name);
             panes[name].loadData(val);
         }
         else if (name === 'Events') {
             panes[name] = new openmdao.EventsPane(contentPane, model,
-                                                  self.pathname, name);
+                                                  pathname, name);
             panes[name].loadData(val);
         }
         else {
             debug.warn("ObjectFrame.getContent: Unexpected object",
-                       self.pathname, name);
+                       pathname, name);
         }
     }
 
-    function loadData(ifaces) {
-        var nIfaces = 0;
-        if (typeof ifaces === 'ArrayBuffer' || ifaces instanceof ArrayBuffer) {
+    function loadData(data) {
+        var n = 0;
+        if (typeof data === 'ArrayBuffer' || data instanceof ArrayBuffer) {
             return;    // FIXME: hack to ignore ArrayBuffer (binary) messages
         }
-        jQuery.each(ifaces,function (name,props) {
-            ++nIfaces;
+        jQuery.each(data, function(name, props) {
+            ++n;
             if (panes[name]) {
                 panes[name].loadData(props);
             }
             else if (name !== 'type' && props) {
+
                 debug.warn("ObjectFrame.loadData: Unexpected interface",
-                           self.pathname, name, props);
+                           pathname, name, props);
             }
         });
-        if (!nIfaces) {  // If no data assume we've been removed.
+        if (n == 0) {  // If no data assume we've been removed.
             self.close();
         }
     }
 
     function handleMessage(message) {
-        if (message.length !== 2 || message[0] !== self.pathname) {
-            debug.warn('Invalid object data for:',self.pathname,message);
-            debug.warn('message length',message.length,'topic',message[0]);
+        if (message.length !== 2 || message[0] !== pathname) {
+            debug.warn('Invalid object data for:', pathname, message);
+            debug.warn('message length', message.length, 'topic', message[0]);
         }
         else {
             loadData(message[1]);
         }
     }
 
+    model.getObject(pathname, loadTabs, function(jqXHR, textStatus, error) {
+        debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
+        // assume component has been deleted, so close frame
+        self.close();
+    });
+
+    model.addListener(pathname, handleMessage);
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
-    /** if there is an object loaded, update it from the model */
-    this.update = function() {
-        // TODO: should just update existing panes rather than recreate them
-        if (self.pathname && self.pathname.length>0) {
-            self.editObject(self.pathname);
-        }
-    };
-
     /** get the specified object from model, load properties into tabs */
-    this.editObject = function(path) {
-        var callback = loadTabs;
-        if (self.pathname !== path) {
-           if (self.pathname) {
-                model.removeListener(self.pathname, handleMessage);
-            }
-
-            self.pathname = path;
-            callback = loadTabs;    // recreate tabs
-
-            // listen for messages and update object properties accordingly
-            model.addListener(self.pathname, handleMessage);
-        }
-
-        model.getObject(path, callback,
-            function(jqXHR, textStatus, errorThrown) {
-                debug.warn('ObjectFrame.editObject() Error:',
-                            jqXHR, textStatus, errorThrown);
-                // assume component has been deleted, so close frame
-                self.close();
-            }
-        );
-        return this;
+    this.update = function() {
+        model.getObject(pathname, loadData, function(jqXHR, textStatus, error) {
+            debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
+            // assume component has been deleted, so close frame
+            self.close();
+        });
     };
 
     this.destructor = function() {
@@ -260,13 +235,10 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             }
         }
 
-
-        if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
+        if (pathname && pathname.length>0) {
+            model.removeListener(pathname, handleMessage);
         }
     };
-
-    this.editObject(pathname);
 
 };
 

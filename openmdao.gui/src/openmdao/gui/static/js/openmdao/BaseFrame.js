@@ -2,7 +2,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.update = function() {
     // tell all openmdao frames to update themselves
-    jQuery.each(this.frames,function(id,frame) {
+    jQuery.each(openmdao.frames, function(id, frame) {
         frame.update();
     });
 };
@@ -15,7 +15,7 @@ openmdao.BaseFrame = function() {
     this.menu  = null;  // an optional menu
 };
 
-openmdao.BaseFrame.prototype.init = function(id,title,menu) {
+openmdao.BaseFrame.prototype.init = function(id, title, menu) {
 /*  initialize a BaseFrame on the element with the given ID
     if the element doesn't exist it will be created as a popup
     any existing HTML under the element will be deleted
@@ -138,11 +138,6 @@ openmdao.BaseFrame.prototype.popup = function(title) {
         this.elm.width(window.innerWidth*0.8);
     }
 
-    //if (typeof openmdao_test_mode !== 'undefined') {
-    //    // reliably set position to be fully in window for testing
-    //    dlg.dialog({ position: [100, 10] });
-    //}
-
     // give it a few ms to render then check for being out of bounds
     setTimeout(function() {
         var off  = dlg.offset(),
@@ -177,6 +172,12 @@ openmdao.BaseFrame.prototype.setTitle = function(title) {
     }
 };
 
+openmdao.BaseFrame.prototype.moveToTop = function() {
+    if (this.elm.is(':data(dialog)')) {
+        this.elm.dialog('moveToTop');
+    }
+};
+
 openmdao.BaseFrame.prototype.close = function() {
     // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
     if (this.par) {
@@ -191,6 +192,7 @@ openmdao.BaseFrame.prototype.close = function() {
         }
         this.elm.dialog('destroy');
         this.elm.remove();
+        delete openmdao.frames[this.id];
     }
 };
 
