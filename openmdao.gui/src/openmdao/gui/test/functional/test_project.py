@@ -5,6 +5,8 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
+from openmdao.main.releaseinfo import __version__
+
 from util import main, setup_server, teardown_server, generate, \
                  begin, new_project, edit_project, import_project, \
                  get_browser_download_location_path
@@ -22,6 +24,7 @@ def _test_new_project(browser):
     browser_download_location_path = get_browser_download_location_path(browser)
 
     projects_page = begin(browser)
+    eq(projects_page.welcome_text, 'Welcome to OpenMDAO %s' % __version__)
 
     # Create a project.
     projects_page, project_dict = new_project(projects_page.new_project(),
