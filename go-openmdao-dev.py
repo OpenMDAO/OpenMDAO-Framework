@@ -1974,7 +1974,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = '-NZ'
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
-    cmdline = [] if sys.platform == 'win32' else [join(bin_dir, 'python')]
+    cmdline = [] if _WINDOWS else [join(bin_dir, 'python')]
     cmdline += [join(bin_dir, 'easy_install'), extarg ] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
@@ -1993,7 +1993,7 @@ def _update_activate(bindir):
     }
     libpathvname = _lpdict.get(sys.platform)
     if libpathvname:
-        if sys.platform.startswith('win'):
+        if _WINDOWS:
             activate_base = 'activate.bat'
         else:
             activate_base = 'activate'
@@ -2004,7 +2004,7 @@ def _update_activate(bindir):
             content = inp.read()
             
         if 'get_full_libpath' not in content:
-            if sys.platform.startswith('win'):
+            if _WINDOWS:
                 content += '''\nfor /f "delims=" %%A in ('get_full_libpath') do @set PATH=%%A\n\n'''
             else:
                 content += "\n%s=$(get_full_libpath)\nexport %s\n\n" % (libpathvname, libpathvname)
@@ -2055,7 +2055,7 @@ def after_install(options, home_dir):
     else:
         openmdao_url = url
     etc = join(home_dir, 'etc')
-    if sys.platform == 'win32':
+    if _WINDOWS:
         lib_dir = join(home_dir, 'Lib')
         bin_dir = join(home_dir, 'Scripts')
     else:
@@ -2065,7 +2065,7 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if sys.platform == 'win32':
+    if _WINDOWS:
         _copy_winlibs(home_dir)
     else:
         # Put lib64_path at front of paths rather than end.
@@ -2157,10 +2157,15 @@ def after_install(options, home_dir):
             _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
         activate = os.path.join(bin_dir, 'activate')
-        python = os.path.join(bin_dir, 'python')
-        openmdao = os.path.join(bin_dir, 'openmdao')
         deactivate = os.path.join(bin_dir, 'deactivate')
-        source_command = "." if not sys.platform.startswith("win") else ""
+        if _WINDOWS:
+            source_command = ''
+            python = ''
+            openmdao = 'openmdao'
+        else:
+            source_command = '.'
+            python = os.path.join(bin_dir, 'python')
+            openmdao = os.path.join(bin_dir, 'openmdao')
         
 
         if options.docs:
@@ -2170,7 +2175,7 @@ def after_install(options, home_dir):
         else:
             print "\nSkipping build of OpenMDAO docs.\n"
         
-        if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
+        if _WINDOWS: # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls()
             except Exception as err:
@@ -2187,7 +2192,7 @@ def after_install(options, home_dir):
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
-    if sys.platform != 'win32' and ' ' in abs_bin:
+    if not _WINDOWS and ' ' in abs_bin:
         import stat
         shebang = '#!"%s"\n' % os.path.join(abs_bin, 'python')
         print '\nFixing scripts for spaces in install path'
@@ -2212,7 +2217,7 @@ def after_install(options, home_dir):
         failmsg = '.'
     print '\n\nThe OpenMDAO virtual environment has been installed in\n %s%s' % (abshome, failmsg)
     print '\nFrom %s, type:\n' % abshome
-    if sys.platform == 'win32':
+    if _WINDOWS:
         print r'Scripts\activate'
     else:
         print '. bin/activate'
