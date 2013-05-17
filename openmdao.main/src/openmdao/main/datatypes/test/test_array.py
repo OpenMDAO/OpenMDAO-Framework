@@ -163,6 +163,8 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.arr99 = [[0, 1, 0.194435353535353, 0.1944], [0, 0, 1, 0]]
                 
         # Python is sometimes off by 1 bit. Let's make sure we match.
+        arr3 = str(self.hobj.arr3.tolist())
+        arr98 = str(self.hobj.arr98.tolist())
         arr99 = str(self.hobj.arr99.tolist())
         
         attrs = self.hobj.get_attributes(io_only=False)
@@ -185,7 +187,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr3',
                          'dim': '1',
                          'comparison_mode': 1,
-                         'value': '[1.1]',
+                         'value': arr3,
                          'implicit': '',
                          'connected': '',
                          'valid': True,
@@ -209,7 +211,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr98',
                          'dim': '2, 4',
                          'comparison_mode': 1,
-                         'value': '[[0.0, 1.0, 0.1944, 0.1944], [0.0, 33.0, 1.0, 0.0]]',
+                         'value': arr98,
                          'implicit': '',
                          'connected': '',
                          'valid': True,
