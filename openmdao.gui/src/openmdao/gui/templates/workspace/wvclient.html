@@ -18,6 +18,10 @@
 <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
 
+<link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+
+
 <script>
     "use strict";
 
@@ -59,12 +63,11 @@
     }
     canvas {
         /* border: 2px solid black; */
-        /*display: block;*/
-	float:left;
-	overflow:scroll;
+        display: block;
     }
+
     .text {
-        position:absolute;
+        /*position:absolute;*/
         top:100px;
         left:20px;
         font-size:2em;
@@ -95,23 +98,39 @@
 	    color:                  #FF0000;
 	}
 	/* frame on top left that contains menus, trees, etc */
-	#leftframe {
+	/*#leftframe {
 	    width:                    250px;
 	    height:                   600px;
 	    float:                     left;
-	    overflow:                scroll;
+	    overflow:                auto;
 	    font-size:                  9pt;
-	}
+	}*/
+	
+	/*#riteframe {
+	    float:left;
+	    width: 100%;
+	    height: 100%;
+	}*/
 </style>
 </head>
 
 <body onload="wvStart()">
-    <div id='leftframe'>
+    <div class="row"> 
+        <div class="span3" id='leftframe'>
+        </div>
+        <div class="span11">
+            <div class="row">
+                <div class="span11" id='riteframe'>
+            	<canvas id="WebViewer">
+                		If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
+            	</canvas>
+                </div>
+            </div>
+            <div class="row">
+                <div id="statusline" class="fps span11"></div>
+            </div>
+        </div>
     </div>
-<canvas id="WebViewer">
-    If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
-</canvas>
-<div id="statusline" class="fps"></div>
 </body>
 
 </html>
