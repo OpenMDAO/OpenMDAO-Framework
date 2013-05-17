@@ -97,10 +97,6 @@ def _test_connect(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with connect.py's top.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
@@ -188,10 +184,6 @@ def _test_connections(browser):
                                                'vehicle_singlesim.py')
     workspace_page.add_file(filename)
 
-    # Replace 'top' with VehicleSim.
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
@@ -337,10 +329,6 @@ def _test_connect_nested(browser):
                                                 'files/bem.py')
     workspace_page.add_file(file_path)
 
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with bem.BEM
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
 
     # get connection frame
@@ -436,10 +424,7 @@ def _test_driverflows(browser):
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
+
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -488,10 +473,6 @@ def _test_replace(browser):
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -577,8 +558,7 @@ def _test_replace(browser):
     editor.close()
 
     # Replace driver with an SLSQPdriver.
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
     editor.move(-400, 0)
@@ -930,8 +910,7 @@ def _test_taborder(browser):
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
     # Replace driver with an SLSQPdriver.
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
 
