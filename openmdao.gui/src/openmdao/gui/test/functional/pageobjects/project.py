@@ -12,7 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement
+from elements import ButtonElement, InputElement, TextElement
 from dialog import DialogPage, BootstrapModal
 
 
@@ -22,6 +22,7 @@ class ProjectsPage(BasePageObject):
     url = '/projects'
     title_prefix = 'Projects'
 
+    welcome_text = TextElement((By.XPATH, "//h3/strong"))
     search_input = InputElement((By.XPATH, "//div[@id='project_table_filter']/label/input"))
     import_button = ButtonElement((By.LINK_TEXT, 'Import Project'))
     new_button = ButtonElement((By.LINK_TEXT, 'New Project'))
