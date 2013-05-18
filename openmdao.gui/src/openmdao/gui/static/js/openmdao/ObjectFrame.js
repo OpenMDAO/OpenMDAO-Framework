@@ -109,7 +109,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             _panes[name].loadData(val);
         }
         else {
-            debug.warn("ObjectFrame.createTab: Unexpected object",
+            debug.warn("ObjectFrame.createTab: Unexpected interface",
                        pathname, name);
         }
     }
@@ -157,7 +157,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
         names = getSortedNames(properties);
 
         // if object has no interfaces, assume it's been removed
-        if (names.length == 0) {
+        if (names.length === 0) {
             _self.close();
         }
 
@@ -186,7 +186,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             var tabLI, divID;
             if (! properties.hasOwnProperty(tab.text)) {
                 tabLI = jQuery(tab).closest('li');
-                divID = tabLI.attr('aria-controls')
+                divID = tabLI.attr('aria-controls');
                 tabLI.remove();
                 _self.elm.find('#'+divID).remove();
                 removePane(tab.text);
