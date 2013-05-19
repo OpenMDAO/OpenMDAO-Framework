@@ -197,13 +197,19 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
         _self.elm.tabs('refresh');
     }
 
+    /** update with data from incoming message */
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== pathname) {
             debug.warn('Invalid object data for:', pathname, message);
             debug.warn('message length', message.length, 'topic', message[0]);
         }
         else {
-            loadData(message[1]);
+            if (Object.keys(message[1]).length > 0) {
+                loadData(message[1]);
+            }
+            else {
+                _self.close();  // no data means the object was deleted
+            }
         }
     }
 
@@ -230,20 +236,14 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
         }
     }
 
-    // initial call to get data and populate the frame
-    model.getObject(pathname, init, function(jqXHR, textStatus, error) {
-        debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
-        // assume component has been deleted, so close frame
-        _self.close();
-    });
-
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     /** get the object properties from model, load data into tabbed panes */
-    this.update = function() {
-        model.getObject(pathname, loadData, function(jqXHR, textStatus, error) {
+    this.update = function(callback) {
+        callback = callback || loadData;
+        model.getObject(pathname, callback, function(jqXHR, textStatus, error) {
             debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
             // assume component has been deleted, so close frame
             _self.close();
@@ -258,6 +258,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
         _self.elm.tabs('option', 'active', tabIndex);
     };
 
+    /** destroy all panes and unsubscribe to messages */
     this.destructor = function() {
         for (var paneName in _panes){
             removePane(paneName);
@@ -267,6 +268,8 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
         }
     };
 
+    // initialize
+    _self.update(init);
 };
 
 /** set prototype */

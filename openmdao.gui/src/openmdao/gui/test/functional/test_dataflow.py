@@ -1042,7 +1042,7 @@ def _test_remove_tla(browser):
     eq(len(workspace_page.get_dataflow_figures()), 3)
     workspace_page.add_library_item_to_dataflow(
                     'openmdao.lib.components.external_code.ExternalCode', 'ext',
-                    prefix='top', offset=(110, 150))
+                    prefix='top')
     eq(len(workspace_page.get_dataflow_figures()), 4)
 
     # Remove top.
