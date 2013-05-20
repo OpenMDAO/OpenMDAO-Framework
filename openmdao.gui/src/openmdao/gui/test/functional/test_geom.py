@@ -13,9 +13,10 @@ from nose.tools import with_setup
 
 from openmdao.gui.test.functional.util import main, \
                 setup_server, teardown_server, generate, \
-                startup, closeout, put_element_on_grid
+                startup, closeout
 
 from openmdao.gui.test.functional.pageobjects.slot import find_slot_figure
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -27,7 +28,7 @@ def _test_view_geom(browser):
     project_dict, workspace_page = startup(browser)
 
     #drop 'GeomComponent' onto the grid
-    geom_comp_name = put_element_on_grid(workspace_page, "GeomComponent")
+    geom_comp_name = workspace_page.put_element_on_grid('GeomComponent')
 
     #find it on the page
     geom_comp = workspace_page.get_dataflow_figure(geom_comp_name)
@@ -42,13 +43,13 @@ def _test_view_geom(browser):
 
     # Should be one window before we open the geom window
     eq(len(browser.window_handles), 1)
-    
+
     # Open the geom window
     geom_comp_editor('outputs_tab').click()
     outputs = geom_comp_editor.get_outputs()
     outputs.rows[0].cells[2].click()
 
-    time.sleep(2) # wait to make sure it is displayed
+    time.sleep(2)  # wait to make sure it is displayed
 
     # Should be two windows now
     eq(len(browser.window_handles), 2)
@@ -57,15 +58,16 @@ def _test_view_geom(browser):
     geom_window = browser.window_handles[-1]
     browser.switch_to_window(geom_window)
 
-    # Compare it to what we expect to get
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/box-geom-screenshot.png')
-
     # FIXME: there are still problems with diffing the PNG files.  Not sure
     # if there are differences due to platform or what.  Also on windows
     # document.getElementById("statusline") returns null (could be just a timing thing)
-    #  For now, just commenting all of this out until someone has time to 
+    #  For now, just commenting all of this out until someone has time to
     #  fix it and verify it works on all 3 platforms
+
+    # Compare it to what we expect to get
+    # file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+    #                                             'files/box-geom-screenshot.png')
+
     # hide the framerate status line
     #browser.execute_script( 'document.getElementById("statusline").style.display = "none"')
     #browser.save_screenshot( "geom.png")

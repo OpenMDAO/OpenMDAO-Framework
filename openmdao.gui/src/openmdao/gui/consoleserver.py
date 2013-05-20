@@ -583,11 +583,11 @@ class ConsoleServer(cmd.Cmd):
                         'interfaces': inames,
                         'python_id': id(v)
                     })
-            dataflow['components'] = components
+            dataflow['components']  = components
             dataflow['connections'] = []
-            dataflow['parameters'] = []
+            dataflow['parameters']  = []
             dataflow['constraints'] = []
-            dataflow['objectives'] = []
+            dataflow['objectives']  = []
         return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
@@ -856,7 +856,7 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
-        elif pathname.startswith('/'): # treat it as a filename
+        elif pathname.startswith('/'):  # treat it as a filename
             if publish:
                 Publisher.register(pathname, pathname[1:])
             else:

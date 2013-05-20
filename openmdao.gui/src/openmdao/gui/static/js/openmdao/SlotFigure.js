@@ -145,6 +145,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
     // set up as drop target
     fig.droppable ({
         accept: '.'+slot.klass,
+        tolerance: 'pointer',
         greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(fig);
@@ -153,11 +154,12 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
             openmdao.drag_and_drop_manager.draggableOver(fig);
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
-                drop_function = top_div.droppable('option', 'actualDropHandler');
-            drop_function(ev, ui);
+            var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+            if (dropTarget) {
+                dropTarget.droppable('option', 'dropHandler')(ev, ui);
+            }
         },
-        actualDropHandler: function(ev,ui) {
+        dropHandler: function(ev,ui) {
             // could get same event multiple times if drop triggers for sibling targets
             if (this.dropEvent && this.dropEvent === ev.originalEvent) {
                 return;  // already handled this drop event
@@ -168,7 +170,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
 
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            openmdao.drag_and_drop_manager.reset();
 
             openmdao.model.getSignature(droppedPath, function(signature) {
                 if (signature.args.length) {
