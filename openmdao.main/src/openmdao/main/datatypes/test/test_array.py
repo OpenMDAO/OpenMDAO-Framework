@@ -17,11 +17,13 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.add('arr1',Array(array([98.9]), iotype='in', units='ft'))
         self.hobj.add('arr2', Array(array([13.2]), iotype='out', units='inch'))
         self.hobj.add('arr3', Array(iotype='in', units='kg', desc='stuff'))
+        self.hobj.add('arr98', Array(iotype='in'))
         self.hobj.add('arr99', Array(iotype='in'))
         
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
         self.hobj.arr3 = [1.1]
+        self.hobj.arr98 = [[0., 1., 0.1944, 0.1944], [0., 33., 1., 0.]];
         self.hobj.arr99 = [[0, 1, 0.1944, 0.1944], [0, 0, 1, 0]]
                        
         
@@ -160,15 +162,20 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.arr3 = [1.1]
         self.hobj.arr99 = [[0, 1, 0.194435353535353, 0.1944], [0, 0, 1, 0]]
                 
+        # Python is sometimes off by 1 bit. Let's make sure we match.
+        arr3 = str(self.hobj.arr3.tolist())
+        arr98 = str(self.hobj.arr98.tolist())
+        arr99 = str(self.hobj.arr99.tolist())
+        
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
-        
-        self.assertEqual(len(input_attrs), 5)
+        print input_attrs
+        self.assertEqual(len(input_attrs), 6)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
                          'dim': '3',
                          'comparison_mode': 1,
-                         'value': '[1., 2., 3.]',
+                         'value': '[1.0, 2.0, 3.0]',
                          'implicit': '',
                          'connected': '',
                          'valid': True,
@@ -180,7 +187,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr3',
                          'dim': '1',
                          'comparison_mode': 1,
-                         'value': '[1.1]',
+                         'value': arr3,
                          'implicit': '',
                          'connected': '',
                          'valid': True,
@@ -193,7 +200,18 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr99',
                          'dim': '2, 4',
                          'comparison_mode': 1,
-                         'value': '[[0., 1., 0.19443535, 0.1944], [0., 0., 1., 0.]]',
+                         'value': arr99,
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)        
+        self.assertTrue({'name': 'arr98',
+                         'id': 'arr98',
+                         'dim': '2, 4',
+                         'comparison_mode': 1,
+                         'value': arr98,
                          'implicit': '',
                          'connected': '',
                          'valid': True,
@@ -207,7 +225,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr2',
                          'dim': '2, 2',
                          'comparison_mode': 1,
-                         'value': '[[1., 2.], [3., 4.]]',
+                         'value': '[[1.0, 2.0], [3.0, 4.0]]',
                          'implicit': '',
                          'connected': '',
                          'valid': False,
