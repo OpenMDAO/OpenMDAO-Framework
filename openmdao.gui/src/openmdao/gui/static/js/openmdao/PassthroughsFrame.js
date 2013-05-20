@@ -23,19 +23,19 @@ openmdao.PassthroughsFrame = function(model, pathname) {
      *  private
      ***********************************************************************/
 
-    var self = this,
-        table_id_input  = id+'-inputs',
-        table_id_output = id+'-outputs',
-        passthroughHTML = '<div id='+id+'-passthroughdiv style = "overflow:auto;height:100%;background:gray">'
-                        + '  <table><tr>'
-                        + '    <td valign = "top">INPUTS:<div id='+table_id_input+'></div></td>'
-                        + '    <td valign = "top">OUTPUTS:<div id='+table_id_output+'></div></td>'
-                        + '  </tr></table>'
-                        + '</div>',
-        passthroughDiv = jQuery(passthroughHTML)
-            .appendTo(self.elm),
-        div_input = passthroughDiv.find("#"+table_id_input),
-        div_output = passthroughDiv.find("#"+table_id_output);
+    var _self = this,
+        _table_id_input  = id+'-inputs',
+        _table_id_output = id+'-outputs',
+        _passthroughHTML = '<div id='+id+'-passthroughdiv style="overflow:auto;height:100%;background:gray">'
+                         + '  <table><tr>'
+                         + '    <td valign="top">INPUTS:<div id='+_table_id_input+'></div></td>'
+                         + '    <td valign="top">OUTPUTS:<div id='+_table_id_output+'></div></td>'
+                         + '  </tr></table>'
+                         + '</div>',
+        _passthroughDiv = jQuery(_passthroughHTML)
+            .appendTo(_self.elm),
+        _div_input = _passthroughDiv.find("#"+_table_id_input),
+        _div_output = _passthroughDiv.find("#"+_table_id_output);
 
     /** create passthrough */
     function createPassthrough(path) {
@@ -114,10 +114,10 @@ openmdao.PassthroughsFrame = function(model, pathname) {
             openNodes = [];
 
         // update inputs
-        div_input.find("li.jstree-open").each(function () {
+        _div_input.find("li.jstree-open").each(function () {
             openNodes.push(this.id);
         });
-        div_input.empty();
+        _div_input.empty();
         jQuery.each(passthroughs.inputs, function(compName, compVars) {
             treeData.data = compName;
             treeData.attr = { 'id': compName, 'rel': 'disabled' };
@@ -133,17 +133,17 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                     }
                 });
             });
-            makeTree(compName+"-input", div_input, treeData);
+            makeTree(compName+"-input", _div_input, treeData);
         });
 
         treeData = {};
         openNodes = [];
 
         // update outputs
-        div_output.find("li.jstree-open").each(function () {
+        _div_output.find("li.jstree-open").each(function () {
             openNodes.push(this.id);
         });
-        div_output.empty();
+        _div_output.empty();
         jQuery.each(passthroughs.outputs, function(compName, compVars) {
             treeData.data = compName;
             treeData.attr = { 'id': compName, 'rel': 'disabled' };
@@ -159,7 +159,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
                     }
                 });
             });
-            makeTree(compName+"-output", div_output, treeData);
+            makeTree(compName+"-output", _div_output, treeData);
         });
     }
 
@@ -168,6 +168,22 @@ openmdao.PassthroughsFrame = function(model, pathname) {
         model.getPassthroughs(pathname, updateTrees, function(err) {
             debug.error('Error getting passthrough data:', err);
         });
+    }
+
+    /** update when notified of change in assembly */
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== pathname) {
+            debug.warn('Invalid object data for:', pathname, message);
+            debug.warn('message length', message.length, 'topic', message[0]);
+        }
+        else {
+            if (Object.keys(message[1]).length > 0) {
+                update();
+            }
+            else {
+                _self.close();  // no data means the assembly was deleted
+            }
+        }
     }
 
     /***********************************************************************
@@ -184,8 +200,8 @@ openmdao.PassthroughsFrame = function(model, pathname) {
     // populate the inputs/outputs trees
     update();
 
-    // update when there is a change to the assembly
-    model.addListener(pathname, update);
+    // listen for changes to the assembly
+    model.addListener(pathname, handleMessage);
 };
 
 /** set prototype */

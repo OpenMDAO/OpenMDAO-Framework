@@ -249,8 +249,10 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         });
 
         // Component names can be dropped into the diagram.
-        elm.droppable ({
+        elm.droppable({
             accept: '.IComponent',
+            tolerance: 'pointer',
+            // greedy: true,
             out: function(ev,ui){
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
@@ -258,13 +260,12 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.draggableOver(elm);
             },
             drop: function(ev,ui) {
-                var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-                if (top_div) {
-                    var drop_function = top_div.droppable('option', 'actualDropHandler');
-                    drop_function(ev, ui);
+                var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+                if (dropTarget) {
+                    dropTarget.droppable('option', 'dropHandler')(ev, ui);
                 }
             },
-            actualDropHandler: function(ev,ui) {
+            dropHandler: function(ev,ui) {
                 // could get same event multiple times if drop triggers for sibling targets
                 if (this.dropEvent && this.dropEvent === ev.originalEvent) {
                     return;  // already handled this drop event
@@ -275,7 +276,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                     droppedName = droppedObject.text(),
                     droppedPath = droppedObject.attr("modpath");
 
-                openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+                openmdao.drag_and_drop_manager.reset();
 
                 if (maxmin !== '') {
                     openmdao.Util.addComponent(droppedPath, droppedName,
@@ -605,15 +606,17 @@ openmdao.DataflowFigure.prototype.toggle = function() {
 };
 
 /* show the minimized version of the figure, just a box with the type name */
-openmdao.DataflowFigure.prototype.minimize=function(){
+openmdao.DataflowFigure.prototype.minimize=function(force){
     // remove all child figures
     var self = this,
         workflow = this.getWorkflow();
 
-    if (self.maxmin === '-') {
+    if (self.maxmin === '-' || force) {
         self.maxmin = '+';
-        var circleIMG = "url(/static/images/circle-plus.png)";
-        self.top_right.style.background=circleIMG+" no-repeat top right";
+        if (self.hasOwnProperty('top_right')) {
+            var circleIMG = "url(/static/images/circle-plus.png)";
+            self.top_right.style.background=circleIMG+" no-repeat top right";
+        }
 
         jQuery.each(self.figures,function(name,fig) {
             this.removeComponent(fig);

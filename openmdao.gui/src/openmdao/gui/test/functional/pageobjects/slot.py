@@ -46,13 +46,13 @@ class SlotFigure(BasePageObject):
                     raise
             else:
                 break
-        editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % self.pathname.replace('.', '-')
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
     def edit(self, offset=15):
         """ Remove this component. """
         self._context_click('edit_button', offset)
-        editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % self.pathname.replace('.', '-')
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
     def remove(self, offset=15):
