@@ -530,14 +530,20 @@ class WorkspacePage(BasePageObject):
         return docs_window
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
-                                     check=True, offset=None, prefix=None,
+                                     target_name=None, check=True,
+                                     offset=None, prefix=None,
                                      args=None):
         """ Add component `item_name`, with name `instance_name`. """
-        offset = offset or (50, 50)
-        xpath = "//*[@id='-dataflow']"
         library_item = self.get_library_item(item_name)
-        target = WebDriverWait(self.browser, TMO).until(
+
+        if target_name:
+            target = self.get_dataflow_figure(target_name).get_drop_targets()[0]
+            offset = offset or (2, 2)  # top left corner of target content area
+        else:
+            xpath = "//*[@id='-dataflow']"
+            target = WebDriverWait(self.browser, TMO).until(
                            lambda browser: browser.find_element_by_xpath(xpath))
+            offset = offset or (50, 50)
 
         for retry in range(3):
             try:

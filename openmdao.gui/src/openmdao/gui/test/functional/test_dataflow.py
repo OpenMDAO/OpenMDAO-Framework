@@ -1029,30 +1029,32 @@ def _test_column_picking(browser):
 
 
 def _test_remove_tla(browser):
-    # Verify that adding, removing, and adding a top level assembly works.
+    # verify that adding, removing, and adding a top level assembly works.
     project_dict, workspace_page = startup(browser)
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add component to top.
+    # create a top assembly and check number of figures
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top1')
+        'openmdao.main.assembly.Assembly', 'top1')
     eq(len(workspace_page.get_dataflow_figures()), 3)
+
+    # add component to top assembly and check for additional figure
     workspace_page.add_library_item_to_dataflow(
                     'openmdao.lib.components.external_code.ExternalCode', 'ext',
-                    offset=(90, 90), prefix='top')
+                    target_name='top1')
     eq(len(workspace_page.get_dataflow_figures()), 4)
 
-    # Remove top.
+    # remove top and check that it and it's child figures are gone
     top = workspace_page.get_dataflow_figure('top1')
     top.remove()
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add a new top, verify on screen.
+    # add a new top, verify on screen.
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top2')
+        'openmdao.main.assembly.Assembly', 'top2')
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
-    # Clean up.
+    # clean up
     closeout(project_dict, workspace_page)
 
 
