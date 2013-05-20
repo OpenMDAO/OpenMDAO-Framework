@@ -29,6 +29,7 @@ from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
+from openmdao.util.dep import plugin_groups
 
 from openmdao.gui.util import packagedict
 from openmdao.gui.filemanager import FileManager
@@ -680,7 +681,12 @@ class ConsoleServer(cmd.Cmd):
     def get_types(self):
         ''' get a dictionary of types available for creation
         '''
-        return packagedict(get_available_types())
+        #Don't want to get variable types showing up, so we exclude 
+        #'openmdao.variable' from this list.
+        keyset = set(plugin_groups.keys())
+        exclset = set(['openmdao.variable'])
+        groups = list(keyset - exclset)
+        return packagedict(get_available_types(groups))
 
     @modifies_model
     def load_project(self, projdir):
