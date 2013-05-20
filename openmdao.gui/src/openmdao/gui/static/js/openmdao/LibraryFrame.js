@@ -196,7 +196,8 @@ openmdao.LibraryFrame = function(id,model) {
                          + '  </svg>'
                          + '</div>';
                 return jQuery(html);
-            }
+            },
+            cursorAt: {left: 0, top: 0}
         });
         // TODO: Could not get this to work if the cursor was for .objtype in mdao-style.css
         //        For some reason this does not override that during the drag

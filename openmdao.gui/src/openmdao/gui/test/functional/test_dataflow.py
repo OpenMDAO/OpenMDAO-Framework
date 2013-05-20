@@ -11,7 +11,7 @@ from nose.tools import with_setup
 from selenium.webdriver.common.action_chains import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout, release
+                 startup, closeout
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.component import ComponentPage
 
@@ -254,12 +254,13 @@ def _test_connections(browser):
     # reconnect transmission torque to chassis torque by dragging
     # conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
     conn_page.show_all_variables()
+    time.sleep(0.5)
     torque_vars = conn_page.find_variable_name('torque_ratio')
     eq(len(torque_vars), 2)
     chain = ActionChains(browser)
     chain.click_and_hold(torque_vars[0])
     chain.move_to_element(torque_vars[1])
-    release(chain)
+    chain.release(on_element=None).perform()
     time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
     conn_page.show_connected_variables()
@@ -656,10 +657,9 @@ def _test_io_filter_without_vartree(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
-    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
-    editor = conmin.editor_page()
+    workspace_page.replace_driver('top', 'CONMINdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page()
 
     #Test filtering inputs
 
@@ -729,9 +729,6 @@ def _test_io_filter_with_vartree(browser):
     project_dict, workspace_page = startup(browser)
 
     #Test filtering variable trees
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
@@ -1042,7 +1039,7 @@ def _test_remove_tla(browser):
     eq(len(workspace_page.get_dataflow_figures()), 3)
     workspace_page.add_library_item_to_dataflow(
                     'openmdao.lib.components.external_code.ExternalCode', 'ext',
-                    prefix='top')
+                    offset=(90, 90), prefix='top')
     eq(len(workspace_page.get_dataflow_figures()), 4)
 
     # Remove top.

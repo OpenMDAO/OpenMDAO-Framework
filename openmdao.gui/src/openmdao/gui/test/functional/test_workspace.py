@@ -18,7 +18,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, \
                                        WebDriverException
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout, put_element_on_grid
+                 startup, closeout
 
 from pageobjects.basepageobject import TMO
 from pageobjects.slot import find_slot_figure
@@ -36,7 +36,7 @@ def _test_slots_sorted_by_name(browser):
     project_dict, workspace_page = startup(browser)
 
     #drop 'metamodel' onto the grid
-    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    meta_name = workspace_page.put_element_on_grid('MetaModel')
     #find it on the page
     metamodel = workspace_page.get_dataflow_figure(meta_name)
 

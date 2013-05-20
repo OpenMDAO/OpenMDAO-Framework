@@ -533,7 +533,7 @@ class WorkspacePage(BasePageObject):
                                      check=True, offset=None, prefix=None,
                                      args=None):
         """ Add component `item_name`, with name `instance_name`. """
-        offset = offset or (90, 90)
+        offset = offset or (50, 50)
         xpath = "//*[@id='-dataflow']"
         library_item = self.get_library_item(item_name)
         target = WebDriverWait(self.browser, TMO).until(
@@ -596,8 +596,6 @@ class WorkspacePage(BasePageObject):
                 chain.move_to_element(button)
                 chain.click_and_hold(button)
                 chain.move_to_element(slot.root)
-                offset = int(slot.root.value_of_css_property('width')[:-2]) / 2
-                chain.move_by_offset(offset, 1)
                 chain.release(None)
                 chain.perform()
             except StaleElementReferenceException:
@@ -661,7 +659,7 @@ class WorkspacePage(BasePageObject):
 
         chain = ActionChains(self.browser)
         chain.click_and_hold(library_item)
-        chain.move_to_element_with_offset(target, 125, 30)
+        chain.move_to_element(target)
         chain.release(None)
         chain.perform()
 
@@ -779,17 +777,17 @@ class WorkspacePage(BasePageObject):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-closed')
         toggler.click()
 
-    def drag_element_to(self, element, drag_to, centerx):
+    def drag_element_to(self, element, drag_to, center):
         '''Drag one element over to another element'''
         chain = ActionChains(self.browser)
         chain.move_to_element(element)
         chain.click_and_hold(element)
-        chain.move_to_element(drag_to)
-        if centerx:
-            offset = int(drag_to.value_of_css_property('width')[:-2]) / 2
-            chain.move_by_offset(offset, 1)
+        if center:
+            # move to center of element
+            chain.move_to_element(drag_to)
         else:
-            chain.move_by_offset(5, 1)
+            # move to offset from top left of element
+            chain.move_to_element_with_offset(drag_to, 2, 2)
         chain.perform()
         return chain
 
@@ -891,26 +889,27 @@ class WorkspacePage(BasePageObject):
 
         return None
 
-    def put_element_on_grid(self, element_str):
-        '''find and get the 'assembly', and the div for the grid object'''
+    def put_element_on_grid(self, type_str):
+        '''find 'type_str' in the Library, drag and drop it onto the grid'''
         browser = self.browser
+
+        grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
 
         for retry in range(3):
             try:
-                assembly = self.find_library_button(element_str)
+                objtype = self.find_library_button(type_str)
                 chain = ActionChains(browser)
-                chain.click_and_hold(assembly)
-                chain.move_by_offset(-100, 0).perform()
+                chain.click_and_hold(objtype)
+                chain.move_to_element_with_offset(grid, 10, 10).perform()
             except StaleElementReferenceException:
                 if retry < 2:
                     logging.warning('put_element_on_grid %s:'
-                                    ' StaleElementReferenceException', element_str)
+                                    ' StaleElementReferenceException', type_str)
                 else:
                     raise
             else:
                 break
 
-        grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
         self.check_highlighting(grid, True, "Grid")
         self.release(chain)
 
@@ -919,7 +918,7 @@ class WorkspacePage(BasePageObject):
 
         # make sure it is on the grid
         self.ensure_names_in_workspace([name],
-            "Dragging '" + element_str +
+            "Dragging '" + type_str +
             "' to grid did not produce a new element on page")
 
         return name
