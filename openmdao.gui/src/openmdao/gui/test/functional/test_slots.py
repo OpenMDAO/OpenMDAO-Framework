@@ -444,8 +444,6 @@ def slot_reset(workspace_page, editor=None, metamodel=None, remove_old=False):
     editor.move(-250, 0)
     editor.show_slots()
 
-    #resize_editor(workspace_page, editor)
-
     #find the slots (this is both the drop target and highlight area)
     browser = workspace_page.browser
     slot_id = 'SlotFigure-' + meta_name + '-%s'

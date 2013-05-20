@@ -98,7 +98,7 @@ class DataflowFigure(BasePageObject):
             chain.double_click(self.root).perform()
         else:
             self._context_click('edit_button')
-        editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % self.pathname.replace('.', '-')
         chain.release(None).perform()
         if base_type == 'Assembly':
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
@@ -125,7 +125,7 @@ class DataflowFigure(BasePageObject):
         chain.context_click(self.input_port).perform()
         time.sleep(0.5)
         self('edit_driver').click()
-        editor_id = 'CE-%s' % driver_pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
 
     def output_edit_driver(self, driver_pathname):
@@ -135,7 +135,7 @@ class DataflowFigure(BasePageObject):
         chain.context_click(self.output_port).perform()
         time.sleep(0.5)
         self('edit_driver').click()
-        editor_id = 'CE-%s' % driver_pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
 
     def run(self):

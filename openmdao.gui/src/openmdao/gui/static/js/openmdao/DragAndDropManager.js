@@ -11,20 +11,21 @@
  * remove the highlighting from all other drop targets. Note that a
  * droppable must implement both the "highlightAsDropTarget()" and
  * "unhighlightAsDropTarget()" functions to be a valid drop target.
+ * The 'reset' method will clear all highlighting and set the drop
+ * target back to null.
  ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DragAndDropManager=function() {
 
-    var self = this,
-        droppables= {};
-
-    self.drop_target = null;
+    var _self = this,
+        _droppables= {},
+        _drop_target = null;
 
     // get the current drop target, which is the highlighted target
-    this.getTopDroppableForDropEvent = function(ev, ui) {
-        return self.drop_target;
+    this.getDropTarget = function() {
+        return _drop_target;
     };
 
     // remove the droppable with the given id from the valid drop targets
@@ -32,24 +33,25 @@ openmdao.DragAndDropManager=function() {
         if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
             droppable.unhighlightAsDropTarget();
         }
-        delete droppables[droppable.attr('id')];
+        delete _droppables[droppable.attr('id')];
         openmdao.drag_and_drop_manager.updateHighlighting();
     };
 
     // add a valid drop target with the given id
     this.draggableOver = function(droppable) {
-        droppables[droppable.attr('id')] = droppable;
+        _droppables[droppable.attr('id')] = droppable;
         openmdao.drag_and_drop_manager.updateHighlighting();
     };
 
     // clear all drop targets
-    this.clearHighlightingDroppables = function() {
-        jQuery.each(droppables, function(id, droppable) {
+    this.reset = function() {
+        jQuery.each(_droppables, function(id, droppable) {
             if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
                 droppable.unhighlightAsDropTarget();
             }
         });
-        droppables = {};
+        _droppables = {};
+        _drop_target = null;
     };
 
     // find the valid drop target with the highest z-index, highlight it and
@@ -60,7 +62,7 @@ openmdao.DragAndDropManager=function() {
             max_topmost_zindex = -10000,
             max_id = "";
 
-        jQuery.each(droppables, function(id, droppable) {
+        jQuery.each(_droppables, function(id, droppable) {
             var div_object = jQuery('#'+id),
                 tmp_elm = div_object,
                 calculated_zindex,
@@ -93,7 +95,7 @@ openmdao.DragAndDropManager=function() {
                 max_topmost_zindex = topmost_zindex;
                 max_count = count;
             }
-            else if ( topmost_zindex === max_topmost_zindex ) {
+            else if (topmost_zindex === max_topmost_zindex) {
                 /* Use the count to break the tie */
                 if (count > max_count) {
                     max_zindex = calculated_zindex;
@@ -110,14 +112,14 @@ openmdao.DragAndDropManager=function() {
             }
         });
 
-        self.drop_target = null;
+        _drop_target = null;
 
         // Now only highlight the top one & set it as the drop target
-        jQuery.each(droppables, function(id, droppable) {
+        jQuery.each(_droppables, function(id, droppable) {
             if (id === max_id) {
                 if (droppable.hasOwnProperty("highlightAsDropTarget")) {
                     droppable.highlightAsDropTarget();
-                    self.drop_target = droppable;
+                    _drop_target = droppable;
                 }
             }
             else if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {

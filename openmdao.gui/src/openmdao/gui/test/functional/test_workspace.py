@@ -18,7 +18,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, \
                                        WebDriverException
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout, put_element_on_grid
+                 startup, closeout
 
 from pageobjects.basepageobject import TMO
 from pageobjects.slot import find_slot_figure
@@ -36,7 +36,7 @@ def _test_slots_sorted_by_name(browser):
     project_dict, workspace_page = startup(browser)
 
     #drop 'metamodel' onto the grid
-    meta_name = put_element_on_grid(workspace_page, "MetaModel")
+    meta_name = workspace_page.put_element_on_grid('MetaModel')
     #find it on the page
     metamodel = workspace_page.get_dataflow_figure(meta_name)
 
@@ -247,7 +247,7 @@ def _test_menu(browser):
     workspace_page('project_menu').click()
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.replace('driver', 'openmdao.main.driver.Run_Once')
+    workspace_page.replace_driver('top', 'Run_Once')
     args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
     args_page.click_ok()
 
@@ -632,8 +632,7 @@ def _test_driver_config(browser):
         'openmdao.lib.components.metamodel.MetaModel', 'mm')
 
     # Replace default driver with CONMIN and edit.
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
+    workspace_page.replace_driver('top', 'CONMINdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
     editor.move(-100, -40)  # Make viewable on small screen.

@@ -48,18 +48,17 @@ openmdao.ConsoleFrame = function(id,model) {
     });
 
     // create context menu for history
-    contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
+    contextMenu.append(jQuery('<li title="Show stack trace for last error">Trace</li>').click(function(ev) {
         model.issueCommand('trace');
     }));
-    contextMenu.append(jQuery('<li>Clear</li>').click(function(ev) {
+    contextMenu.append(jQuery('<li title="Clear console history">Clear</li>').click(function(ev) {
         history.html('');
     }));
-    contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
+    contextMenu.append(jQuery('<li title="Open history in new window">Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    contextMenu.append(jQuery('<li>Pop Out</li>').click(function(ev) {
-        var init_fn = "jQuery(function(){openmdao.PopoutConsoleFrame()})";
-        openmdao.Util.popupScript('Console',init_fn);
+    contextMenu.append(jQuery('<li title="Open a pop-out console window">Pop Out</li>').click(function(ev) {
+        openmdao.Util.popupScript('Console', 'jQuery(function(){openmdao.PopoutConsoleFrame()})');
     }));
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
@@ -136,7 +135,7 @@ openmdao.PopoutConsoleFrame = function() {
     openmdao.model = opener.openmdao.model;
     openmdao.model.addWindow(window);
     jQuery('body').append('<div id="console"></div>');
-    frame = new openmdao.ConsoleFrame("console",  openmdao.model);
+    new openmdao.ConsoleFrame("console",  openmdao.model);
     window.document.title='OpenMDAO Console';
 };
 

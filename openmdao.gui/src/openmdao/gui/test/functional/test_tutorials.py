@@ -31,18 +31,16 @@ def _test_MDAO_MDF(browser):
     # Add Disciplines to assembly.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'sellar.Discipline1', 'dis1')
-    workspace_page.add_library_item_to_dataflow(
-        'sellar.Discipline2', 'dis2')
+    workspace_page.add_library_item_to_dataflow('sellar.Discipline1', 'dis1')
+    workspace_page.add_library_item_to_dataflow('sellar.Discipline2', 'dis2')
 
     # Replace Run_Once with SLSQP
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+
     # Add Solver
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.drivers.iterate.FixedPointIterator',
-        'solver', offset=(150, 50))
+        'solver')
 
     # One data connection
     dis1 = workspace_page.get_dataflow_figure('dis1', 'top')

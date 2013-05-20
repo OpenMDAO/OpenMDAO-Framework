@@ -74,18 +74,16 @@ openmdao.Model=function(listeners_ready) {
                 debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
-        else { // binary message, assume it uses our simple framing protocol
-            // framing protocol is: msg starts with a null padded routing string of size 
-            // openmdao.NAME_SIZE, followed by the actual binary msg
-            var namearr = new Uint8Array(message, 0, openmdao.NAME_SIZE-1);
-            var name = String.fromCharCode.apply(null, namearr);
-            var idx = name.indexOf("\0");
+        else {
+            // binary message, assume it uses our simple framing protocol:
+            //      msg starts with a null padded routing string of size
+            //      openmdao.NAME_SIZE, followed by the actual binary msg
+            var namearr = new Uint8Array(message, 0, openmdao.NAME_SIZE-1),
+                name = String.fromCharCode.apply(null, namearr),
+                idx = name.indexOf("\0");
             if (idx > 0) {
                 name = name.substr(0, idx);
             }
-
-            console.debug("publishing ArrayBuffer for name = "+name);
-            //var msg = whole.subarray(g.NAME_SIZE);
             self.publish([name, message]);  // send the whole message to save on some copying later...
         }
     }
@@ -124,7 +122,7 @@ openmdao.Model=function(listeners_ready) {
             subscribers[topic].push(callback);
         }
         else {
-            subscribers[topic] = [ callback ];
+            subscribers[topic] = [callback];
         }
         // tell server there's a new subscriber to the topic
         if (topic !== 'outstream' && topic.length > 0 &&
@@ -158,11 +156,11 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-    /** publish message to subscribed listeners.
-    */
+    /** publish message to subscribed listeners. */
     this.publish = function(message) {
-        var i, topic = message[0],
-            callbacks;
+        var topic = message[0],
+            callbacks,
+            i;
         if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
             // Need a copy in case subscriber removes itself during callback.
             callbacks = subscribers[topic].slice();

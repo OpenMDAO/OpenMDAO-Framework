@@ -184,7 +184,21 @@ openmdao.LibraryFrame = function(id,model) {
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
 
         // make everything draggable
-        objtypes.draggable({ helper: 'clone', appendTo: 'body' } ) ;
+        objtypes.draggable({
+            appendTo: 'body',
+            opacity: 0.5,
+            helper: function() {
+                // a helper that looks like a semi-transparent object
+                var html = '<div class="ObjTypeHelper">'
+                         + '  <svg height="60" width="100">'
+                         + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15" style="fill:gray;stroke-width:2;stroke:black;" />'
+                         + '    <text id="klass" x="50" y="33" font-style="italic" text-anchor="middle">'+this.innerText+'</text>'
+                         + '  </svg>'
+                         + '</div>';
+                return jQuery(html);
+            },
+            cursorAt: {left: 0, top: 0}
+        });
         // TODO: Could not get this to work if the cursor was for .objtype in mdao-style.css
         //        For some reason this does not override that during the drag
         //        But for now it all looks pretty good with just an open hand for the hover

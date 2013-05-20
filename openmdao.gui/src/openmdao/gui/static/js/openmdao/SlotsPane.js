@@ -70,6 +70,7 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
     // this is just to prevent drops from falling thru to underlying panes
     elm.droppable ({
         accept: '.objtype',
+        tolerance: 'pointer',
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(elm);
         },
@@ -77,20 +78,17 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
             openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            if (top_div) {
-                // getting some intermittent errors here.. catch and log a warning
-                try {
-                    var drop_function = top_div.droppable('option', 'actualDropHandler');
-                    drop_function(ev,ui);
-                }
-                catch (err) {
-                    debug.warn('Unexpected error in openmdao.SlotsPane.droppable',
-                               'top_div:', top_div, 'drop_function:', drop_function);
-                }
+            var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+            // getting some intermittent errors here.. catch and log a warning
+            try {
+                dropTarget.droppable('option', 'dropHandler')(ev,ui);
+            }
+            catch (err) {
+                debug.warn('Unexpected error in openmdao.SlotsPane.droppable',
+                           'dropTarget:', dropTarget);
             }
         },
-        actualDropHandler: function(ev,ui) {
+        dropHandler: function(ev,ui) {
         }
     });
 
