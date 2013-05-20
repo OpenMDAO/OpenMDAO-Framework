@@ -50,7 +50,7 @@ class SlotFigure(BasePageObject):
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
     def edit(self, offset=15):
-        """ Remove this component. """
+        """ Edit this component. """
         self._context_click('edit_button', offset)
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
