@@ -75,11 +75,14 @@ class CyclicWorkflow(SequentialWorkflow):
                     
                 except nx.NetworkXUnfeasible:
                     strong = strongly_connected_components(graph)
-                    print strong
-                    # Only deal with one loop for now
+                    
+                    # We may have multiple loops. We only deal with one at
+                    # a time because multiple loops create some non-unique
+                    # paths.
                     strong = strong[0]
                     
-                    # Break one edge of the loop
+                    # Break one edge of the loop.
+                    # For now, just the first edge.
                     graph.remove_edge(strong[0], strong[-1])
                 
         return self._topsort
