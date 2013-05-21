@@ -112,3 +112,9 @@ class CyclicWorkflow(SequentialWorkflow):
         self._collapsed_graph = collapsed_graph.subgraph(cnames)
         return self._collapsed_graph
     
+    def get_residuals(self):
+        """Returns a numpy array that contains all residuals in the 
+        workflow."""
+        
+        pass
+    
