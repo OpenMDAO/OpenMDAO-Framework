@@ -83,7 +83,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     
                     # Break one edge of the loop.
                     # For now, just the first edge.
-                    graph.remove_edge(strong[0], strong[-1])
+                    graph.remove_edge(strong[-1], strong[0])
                 
         return self._topsort
     

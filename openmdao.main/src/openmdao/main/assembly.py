@@ -770,7 +770,6 @@ class Assembly(Component):
                 # the responsibility of the solver to properly execute
                 # the comps in its loop.
                 elif self._graph_loops:
-                    print self._graph_loops
                     for loop in self._graph_loops:
                         if compname in loop and cname in loop:
                             break
