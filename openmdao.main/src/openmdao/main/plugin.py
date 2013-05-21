@@ -1123,6 +1123,7 @@ def _get_plugin_parser():
     parser = subparsers.add_parser('docs',
                                    help="display docs for a plugin")
     parser.usage = "plugin docs <plugin_dist_name>"
+    
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str,
                         dest='browser', choices=webbrowser._browsers.keys(),
