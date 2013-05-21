@@ -83,8 +83,6 @@ openmdao.LibraryFrame = function(id,model) {
                     "Optimizer",
                     "Solver",
                     "Surrogate",
-                    //"UncertainVariable",
-                    "Variable"
                 ];
         var input_obj = self.elm.find('#objtt-select');
 
