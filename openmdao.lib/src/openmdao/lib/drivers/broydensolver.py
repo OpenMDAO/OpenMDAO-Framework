@@ -1,5 +1,5 @@
 """
-    ``broyednsolver.py`` -- Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
+    ``broydensolver.py`` -- Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
        
 """
 
