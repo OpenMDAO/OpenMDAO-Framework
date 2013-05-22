@@ -168,5 +168,5 @@ Five parameters control the solution process in the BroydenSolver.
 
     self.driver.alphamax = 1.0
     
-*Source Documentation for broyensolver.py*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Source Documentation for broydensolver.py*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
