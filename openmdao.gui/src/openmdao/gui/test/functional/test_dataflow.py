@@ -14,6 +14,7 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.component import ComponentPage
+from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -1056,6 +1057,40 @@ def _test_remove_tla(browser):
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
     # clean up
+    closeout(project_dict, workspace_page)
+
+def _test_display_differentiator(browser):
+    # Verify that we can display a differentiator (based on Container).
+    project_dict, workspace_page = startup(browser)
+    eq(len(workspace_page.get_dataflow_figures()), 1)
+
+    # Create assembly with an SLSQPdriver.
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+    editor.move(-400, 0)
+
+    # Display & verify differentiator.
+    editor.show_slots()
+    diff = find_slot_figure(workspace_page, 'differentiator',
+                            prefix='top.driver')
+    diff_editor = diff.edit()
+    inputs = diff_editor.get_inputs()
+    expected = [
+        ['', 'default_stepsize', '0.000001', '',
+         'Default finite difference step size.'],
+        ['', 'form', 'central', '',
+         'Finite difference form (central, forward, backward).'],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    # Clean up.
+    diff_editor.close()
+    editor.close()
     closeout(project_dict, workspace_page)
 
 
