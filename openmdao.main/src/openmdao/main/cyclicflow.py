@@ -118,3 +118,11 @@ class CyclicWorkflow(SequentialWorkflow):
         
         pass
     
+    def get_interior_edges(self):
+        """ Returns an alphabetical list of all output edges that are
+        interior to the set of components supplied."""
+        
+        names = self.get_names()
+        edge_list = self._parent.parent._depgraph.get_interior_edges(names)
+        return sorted(list(edge_list))
+    
