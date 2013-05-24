@@ -20,10 +20,12 @@ else:
     npnorm = numpy.linalg.norm
     def norm(a, ord=None):
         return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+
+from scipy.sparse.linalg import gmres, LinearOperator
     
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
-from openmdao.main.datatypes.api import Float, Int
+from openmdao.main.datatypes.api import Float, Int, Bool
 from openmdao.util.decorators import stub_if_missing_deps
 
 
@@ -33,6 +35,9 @@ class MDASolver(Driver):
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
+    
+    use_Jacobian = Bool(False, iotype='in', desc='Set to True to use a ' + \
+                    'Newton method.')
     
     def __init__(self):
         
@@ -56,7 +61,7 @@ class MDASolver(Driver):
         edges = self.workflow.get_interior_edges()
         
         nEdge = 0
-        bounds = {}
+        self.bounds = {}
         for edge in edges:
             
             src = edge[0]
@@ -75,11 +80,17 @@ class MDASolver(Driver):
                       "This type is not supported by the MDA Solver."
                 self.raise_exception(msg, RuntimeError)
                 
-            bounds[edge] = (nEdge, nEdge+width)
+            self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
             
         print nEdge
-        res = numpy.zeros((nEdge, 1))
+        self.res = numpy.zeros((nEdge, 1))
+        
+        if self.use_Jacobian:
+            self.arg = numpy.zeros((nEdge, 1))
+            A = LinearOperator((nEdge, nEdge),
+                               matvec=self.matvecFWD,
+                               dtype=float)
             
         # Initial Run
         self.workflow.run()
@@ -90,20 +101,32 @@ class MDASolver(Driver):
             src_val = self.parent.get(src)
             target_val = self.parent.get(target)
             
-            i1, i2 = bounds[edge]
-            res[i1:i2] = src_val - target_val
+            i1, i2 = self.bounds[edge]
+            self.res[i1:i2] = src_val - target_val
             
-        print "Residual vector:\n", res
-        norm = numpy.linalg.norm(res)
+        print "Residual vector:\n", self.res
+        norm = numpy.linalg.norm(self.res)
         
         # Loop until convergence of residuals
         iter_num = 0
         while (norm > self.tolerance) and (iter_num < self.max_iteration):
             
+            # Next step determined by Jacobian
+            if self.use_Jacobian:
+
+                # Each comp calculates its own derivatives
+                for comp in self.workflow.__iter__():
+                    comp.linearize()
+                
+                dv, info = gmres(A, -self.res,
+                                 maxiter=100)
+                print "dv", dv
+                
             # Apply residuals to the model
-            for edge in edges:
-                src, target = edge
-                self.parent.set(target, self.parent.get(src), force=True)
+            else:
+                for edge in edges:
+                    src, target = edge
+                    self.parent.set(target, self.parent.get(src), force=True)
             
             self.workflow.run()
             
@@ -113,11 +136,29 @@ class MDASolver(Driver):
                 src_val = self.parent.get(src)
                 target_val = self.parent.get(target)
                 
-                i1, i2 = bounds[edge]
-                res[i1:i2] = src_val - target_val
+                i1, i2 = self.bounds[edge]
+                self.res[i1:i2] = src_val - target_val
                 
-            print "Residual vector:\n", res
-            norm = numpy.linalg.norm(res)
+            print "Residual vector:\n", self.res
+            norm = numpy.linalg.norm(self.res)
             
             iter_num += 1
+            
+    def matvecFWD(self, x):
+        '''Callback function for performing the matrix vector product.'''
+        
+        self.arg = numpy.copy(self.res)
+        
+        for comp in self.workflow.__iter__():
+            print comp.name
+            
+            return self.res
+        
+        #for edge in self.workflow.get_interior_edges():
+            #src, target = edge
+            #src_val = self.parent.get(src)
+            #target_val = self.parent.get(target)
+            #comp = self.parent.get(
+            #i1, i2 = self.bounds[edge]
+            
             
