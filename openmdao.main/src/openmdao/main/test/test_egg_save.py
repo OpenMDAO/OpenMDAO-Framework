@@ -14,7 +14,7 @@ import unittest
 import nose
 
 from openmdao.main.api import Assembly, Component, Container, set_as_top
-from openmdao.main.filevar import FileMetadata
+from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 

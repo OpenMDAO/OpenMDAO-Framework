@@ -6,7 +6,7 @@ import copy
 import os.path
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.filevar import FileMetadata, RemoteFile
+from openmdao.main.file_supp import FileMetadata, RemoteFile
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable
 
