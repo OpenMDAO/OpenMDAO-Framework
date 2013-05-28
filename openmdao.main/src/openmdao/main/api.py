@@ -27,7 +27,7 @@ from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.interfaces import implements, Attribute, Interface
 
-from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.filevar import FileMetadata
 
 from openmdao.main.case import Case
 
