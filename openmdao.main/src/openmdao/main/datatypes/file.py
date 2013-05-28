@@ -171,8 +171,8 @@ class FileRef(FileMetadata):
             except AttributeError:
                 owner = _get_valid_owner(self.owner)
                 if owner is None:
-                    raise ValueError('Path %r is absolute and no path checker'
-                                     ' is available.' % path)
+                    raise ValueError("Path '%s' is absolute and no path checker"
+                                     " is available." % path)
                 self.owner = owner
                 self.owner.check_path(path)
         else:
@@ -181,8 +181,8 @@ class FileRef(FileMetadata):
             except AttributeError:
                 owner = _get_valid_owner(self.owner)
                 if owner is None:
-                    raise ValueError('Path %r is relative and no absolute'
-                                     ' directory is available.' % path)
+                    raise ValueError("Path '%s' is relative and no absolute"
+                                     " directory is available." % path)
                 self.owner = owner
                 directory = self.owner.get_abs_directory()
             path = os.path.join(directory, path)
