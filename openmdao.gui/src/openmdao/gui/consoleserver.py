@@ -623,28 +623,7 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Assembly):
                     v = v.get('driver')
                 if is_instance(v, Driver):
-                    flow = {}
-                    flow['pathname'] = v.get_pathname()
-                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
-                    flow['workflow'] = []
-                    flow['valid'] = v.is_valid()
-                    for comp in v.workflow:
-                        pathname = comp.get_pathname()
-                        if is_instance(comp, Assembly) and comp.driver:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'driver':   comp.driver.get_workflow(),
-                                'valid':    comp.is_valid()
-                            })
-                        elif is_instance(comp, Driver):
-                            flow['workflow'].append(comp.get_workflow())
-                        else:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'valid':    comp.is_valid()
-                            })
+                    flow = v.get_workflow()
                     flows.append(flow)
         return json.dumps(flows, default=json_default)
 

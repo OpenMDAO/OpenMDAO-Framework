@@ -40,10 +40,11 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import logger
+
 import openmdao.util.log as tracing
 
 __missing__ = object()
+
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -111,6 +112,7 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+# this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
 
@@ -196,7 +198,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count        
+        self._publish_vars = {}  # dict of varname to subscriber count
 
     @property
     def dir_context(self):
@@ -1762,7 +1764,7 @@ class Component(Container):
                             slots.append(slot_attr)
 
             if has_interface(self, IAssembly):
-                attrs['Dataflow'] = self.get_dataflow()
+                attrs['Dataflow'] = dataflow if dataflow else self.get_dataflow()
 
             if has_interface(self, IDriver):
                 attrs['Workflow'] = self.get_workflow()
@@ -1810,10 +1812,10 @@ class Component(Container):
                 attrs['Parameters'] = parameters
 
             constraints = []
-            constraint_pane = False
+            has_constraints = False
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasEqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1825,7 +1827,7 @@ class Component(Container):
 
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasIneqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1835,7 +1837,7 @@ class Component(Container):
                     attr['adder']   = con.adder
                     constraints.append(attr)
 
-            if constraint_pane:
+            if has_constraints:
                 attrs['Constraints'] = constraints
 
             if has_interface(self, IHasEvents):
