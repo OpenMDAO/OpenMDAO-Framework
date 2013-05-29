@@ -14,6 +14,7 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.component import ComponentPage
+from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -486,7 +487,7 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['', 'x_in', '[1., 1., 1., 1.]', '', ''],
+        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
@@ -504,7 +505,7 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['', 'scaler', '1', '', ''],
-        ['', 'x_in', '[1., 1., 1., 1.]', '', ''],
+        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
@@ -590,6 +591,7 @@ def _test_replace(browser):
     args_page.click_ok()
     expected = "RuntimeError: top: Can't connect 'comp.result' to" \
                " 'postproc.result_in': top: Can't find 'comp.result'"
+    time.sleep(0.5)
     assert workspace_page.history.endswith(expected)
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
@@ -1029,30 +1031,66 @@ def _test_column_picking(browser):
 
 
 def _test_remove_tla(browser):
-    # Verify that adding, removing, and adding a top level assembly works.
+    # verify that adding, removing, and adding a top level assembly works.
     project_dict, workspace_page = startup(browser)
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add component to top.
+    # create a top assembly and check number of figures
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top1')
+        'openmdao.main.assembly.Assembly', 'top1')
     eq(len(workspace_page.get_dataflow_figures()), 3)
+
+    # add component to top assembly and check for additional figure
     workspace_page.add_library_item_to_dataflow(
                     'openmdao.lib.components.external_code.ExternalCode', 'ext',
-                    offset=(90, 90), prefix='top')
+                    target_name='top1')
     eq(len(workspace_page.get_dataflow_figures()), 4)
 
-    # Remove top.
+    # remove top and check that it and it's child figures are gone
     top = workspace_page.get_dataflow_figure('top1')
     top.remove()
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add a new top, verify on screen.
+    # add a new top, verify on screen.
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top2')
+        'openmdao.main.assembly.Assembly', 'top2')
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
+    # clean up
+    closeout(project_dict, workspace_page)
+
+def _test_display_differentiator(browser):
+    # Verify that we can display a differentiator (based on Container).
+    project_dict, workspace_page = startup(browser)
+    eq(len(workspace_page.get_dataflow_figures()), 1)
+
+    # Create assembly with an SLSQPdriver.
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+    editor.move(-400, 0)
+
+    # Display & verify differentiator.
+    editor.show_slots()
+    diff = find_slot_figure(workspace_page, 'differentiator',
+                            prefix='top.driver')
+    diff_editor = diff.edit()
+    inputs = diff_editor.get_inputs()
+    expected = [
+        ['', 'default_stepsize', '0.000001', '',
+         'Default finite difference step size.'],
+        ['', 'form', 'central', '',
+         'Finite difference form (central, forward, backward).'],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
     # Clean up.
+    diff_editor.close()
+    editor.close()
     closeout(project_dict, workspace_page)
 
 

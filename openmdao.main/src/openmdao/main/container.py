@@ -829,15 +829,17 @@ class Container(SafeHasTraits):
                                                 self._alltraits(type=Slot).keys()):
 
             trait = self.get_trait(name)
-            ttype = trait.trait_type
-
-            attr = {}
-
             meta = self.get_metadata(name)
             value = getattr(self, name)
+            ttype = trait.trait_type
 
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            if 'framework_var' in meta:
+                attr['id'] = '~' + name
+            else:
+                attr['id'] = name
+            attr['indent'] = 0
 
             # Container variables are not connectable
             attr['connected'] = ''

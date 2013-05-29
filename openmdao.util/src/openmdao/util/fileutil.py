@@ -95,25 +95,61 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
     return find_in_dir_list(fname, pathvar.split(sep), exts)
 
 
-def _file_gen(dname):
-    """A generator returning all files under the given directory."""
-    for path, dirlist, filelist in os.walk(dname):
-        for name in filelist:
-            yield join(path, name)
+def _file_gen(dname, fmatch=bool, dmatch=None):
+    """A generator returning files under the given directory, with optional
+    file and directory filtering.
 
+    fmatch: predicate funct
+        A predicate function that returns True on a match.
+        This is used to match files only.
 
-def _file_dir_gen(dname):
-    """A generator returning all files and directories under
-    the given directory.
+    dmatch: predicate funct
+        A predicate function that returns True on a match.
+        This is used to match directories only.
     """
+    if dmatch is not None and not dmatch(dname):
+        return
+
     for path, dirlist, filelist in os.walk(dname):
-        for name in filelist:
+        if dmatch is not None: # prune directories to search
+            newdl = [d for d in dirlist if dmatch(d)]
+            if len(newdl) != len(dirlist):
+                dirlist[:] = newdl # replace contents of dirlist to cause pruning
+
+        for name in [f for f in filelist if fmatch(f)]:
             yield join(path, name)
+
+
+def _file_dir_gen(dname, fmatch=bool, dmatch=None):
+    """A generator returning files and directories under
+    the given directory, with optional file and directory filtering..
+
+    fmatch: predicate funct
+        A predicate function that returns True on a match.
+        This is used to match files only.
+
+    dmatch: predicate funct
+        A predicate function that returns True on a match.
+        This is used to match directories only.
+    """
+    if dmatch is not None and not dmatch(dname):
+        return
+
+    for path, dirlist, filelist in os.walk(dname):
+        if dmatch is not None: # prune directories to search
+            newdl = [d for d in dirlist if dmatch(d)]
+            if len(newdl) != len(dirlist):
+                dirlist[:] = newdl # replace contents of dirlist to cause pruning
+
+        for name in [f for f in filelist if fmatch(f)]:
+            yield join(path, name)
+
         for name in dirlist:
             yield join(path, name)
 
 
-def find_files(start, match=None, exclude=None, showdirs=False):
+def find_files(start, match=None, exclude=None, 
+               showdirs=False, dirmatch=None, direxclude=None):
     """Return filenames (using a generator).
 
     start: str or list of str
@@ -122,15 +158,29 @@ def find_files(start, match=None, exclude=None, showdirs=False):
     match: str or predicate funct
         Either a string containing a glob pattern to match
         or a predicate function that returns True on a match.
+        This is used to match files only.
 
     exclude: str or predicate funct
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
+        This is used to exclude files only.
 
     showdirs: bool
         If True, return names of files AND directories.
 
-    Walks all subdirectories below each specified starting directory.
+    dirmatch: str or predicate funct
+        Either a string containing a glob pattern to match
+        or a predicate function that returns True on a match.
+        This is used to match directories only.
+
+    direxclude: str or predicate funct
+        Either a string containing a glob pattern to exclude
+        or a predicate function that returns True to exclude.
+        This is used to exclude directories only.
+
+    Walks all subdirectories below each specified starting directory,
+    subject to directory filtering.
+    
     """
     startdirs = [start] if isinstance(start, basestring) else start
     if len(startdirs) == 0:
@@ -144,6 +194,13 @@ def find_files(start, match=None, exclude=None, showdirs=False):
     else:
         matcher = match
 
+    if dirmatch is None:
+        dmatcher = bool
+    elif isinstance(dirmatch, basestring):
+        dmatcher = lambda name: fnmatch(name, dirmatch)
+    else:
+        dmatcher = dirmatch
+
     if isinstance(exclude, basestring):
         fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
     elif exclude is not None:
@@ -151,7 +208,14 @@ def find_files(start, match=None, exclude=None, showdirs=False):
     else:
         fmatch = matcher
 
-    iters = [itertools.ifilter(fmatch, gen(d)) for d in startdirs]
+    if isinstance(direxclude, basestring):
+        dmatch = lambda name: dmatcher(name) and not fnmatch(name, direxclude)
+    elif direxclude is not None:
+        dmatch = lambda name: dmatcher(name) and not direxclude(name)
+    else:
+        dmatch = dmatcher
+
+    iters = [gen(d, fmatch=fmatch, dmatch=dmatch) for d in startdirs]
     if len(iters) > 1:
         return itertools.chain(*iters)
     else:
