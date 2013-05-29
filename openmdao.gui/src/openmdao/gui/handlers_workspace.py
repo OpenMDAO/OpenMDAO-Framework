@@ -609,7 +609,7 @@ class VariableHandler(ReqHandler):
         rhs = self.get_argument('rhs', default=None)
         vtype = self.get_argument('type', default=None)
         if (lhs and rhs and vtype):
-            obj, dot, attr = lhs.rpartition('.')
+            obj, dot, attr = lhs.partition('.')
             if vtype == 'str':
                 command = '%s.set(%r, %r)' % (obj, attr, rhs)
             else:
