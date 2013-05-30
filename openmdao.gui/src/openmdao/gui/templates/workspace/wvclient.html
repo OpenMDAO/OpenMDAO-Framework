@@ -8,6 +8,10 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
+<link href="/static/css/mdao-styles.css" rel="stylesheet" media="screen">
+<script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"> </script>
+<script type="text/javascript" src="/static/js/jquery.jstree.js"> </script>
+<script>jQuery.jstree._themes = "/static/css/jstree-themes/";                   </script>
 <script type="text/javascript" src="/static/js/WebViewer/webgl-utils.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/webgl-debug.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/J3DIMath.js"> </script>
@@ -19,6 +23,25 @@
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
 
 <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+<body onload="wvStart()">
+    <div class="row"> 
+        <div class="span3" id='leftframe'>
+        </div>
+        <div class="span11">
+            <div class="row">
+                <div class="span11" id='riteframe'>
+            	<canvas id="WebViewer">
+                		If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
+            	</canvas>
+                </div>
+            </div>
+            <div class="row">
+                <div id="statusline" class="fps span11"></div>
+            </div>
+        </div>
+    </div>
+</body>
 
 
 
@@ -43,7 +66,28 @@
         g.messageQ.push(message[1]);
     };
 
-    var myTree = new Tree(document, "myTree");
+    //var myTree = new Tree(document, "myTree");
+    var myTree = jQuery("#leftframe").jstree({
+        "plugins" : ["json_data", "themes", "ui"],
+        "json_data" : {
+            "data" : [
+                {
+                    "attr" : { 
+                        "id" : "display_root",
+                        "class" : "jstree-geom",
+                    },
+                    "data" : "Display",
+                    "state" : "open",
+                    "children" : [],
+                },
+            ],
+        },
+        "themes" : { 
+            "theme" : "openmdao",
+        },
+
+    });
+
     window.opener.openmdao.model.addListener("{{geom_name}}", handleMsg);
     //var myTree = new Tree(document, "myTree", "Viz", "on", "Grd", "off", "Trn", "off");
 
@@ -113,24 +157,4 @@
 	}*/
 </style>
 </head>
-
-<body onload="wvStart()">
-    <div class="row"> 
-        <div class="span3" id='leftframe'>
-        </div>
-        <div class="span11">
-            <div class="row">
-                <div class="span11" id='riteframe'>
-            	<canvas id="WebViewer">
-                		If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
-            	</canvas>
-                </div>
-            </div>
-            <div class="row">
-                <div id="statusline" class="fps span11"></div>
-            </div>
-        </div>
-    </div>
-</body>
-
 </html>

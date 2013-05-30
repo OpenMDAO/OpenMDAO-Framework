@@ -122,7 +122,7 @@ function wvUpdateUI()
 
         // if there was a previous Tree, keep track of whether or not
         //    the Parameters, Branches, and Display was open
-        var pmtrsOpen = 0;
+        /*var pmtrsOpen = 0;
         var brchsOpen = 0;
 
         if (myTree.opened.length > 3) {
@@ -135,7 +135,7 @@ function wvUpdateUI()
         // put the group headers into the Tree
         //myTree.addNode(0, "Parameters", "", addPmtr, "pmtr1_cmenu");
         //myTree.addNode(0, "Branches",   "", addBrch, "brch1_cmenu");
-        myTree.addNode(0, "Display",    "", null,    ""           );
+        myTree.addNode(0, "Display",    "", null,    ""           );*/
 
         /*// put the Parameters into the Tree
         for (var ipmtr = 0; ipmtr < pmtr.length; ipmtr++) {
@@ -197,7 +197,7 @@ function wvUpdateUI()
         //}
 
         // put the Display attributes into the Tree
-        for (var gprim in g.sceneGraph) {
+        /*for (var gprim in g.sceneGraph) {
 	  
             // parse the name
             var matches = gprim.split(" ");
@@ -261,7 +261,7 @@ function wvUpdateUI()
         g.sgUpdate = 0;
 
         // convert the abstract Tree Nodes into an HTML table
-        myTree.build();
+        myTree.build();*/
     }
   //
   // deal with key presses
@@ -502,7 +502,7 @@ function jack(gl, x,y,z, delta)
   
 }
 
-function toggleViz(e) {
+/*function toggleViz(e) {
     // alert("in toggleViz("+e+")");
 
     // get the Tree Node
@@ -585,7 +585,7 @@ function toggleOri(e) {
         alert("illegal Ori property:"+myTree.valu3[inode]);
         return;
     }
-}
+}*/
 
 function Tree(doc, treeId) {
     // alert("in Tree("+doc+","+treeId+")");
