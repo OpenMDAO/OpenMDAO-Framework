@@ -5,8 +5,8 @@ import unittest
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
-                              set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, File, List, VarTree
+                              set_as_top, SimulationRoot
+from openmdao.main.datatypes.api import Float, File, FileRef, List, VarTree
 from openmdao.main.case import flatten_obj
 
 from openmdao.util.testutil import assert_raises

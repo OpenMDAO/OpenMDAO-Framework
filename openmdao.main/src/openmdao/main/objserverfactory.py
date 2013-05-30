@@ -23,7 +23,7 @@ from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types, \
                                          get_signature
-from openmdao.main.filevar import RemoteFile
+from openmdao.main.file_supp import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
                                   read_server_config, write_server_config
