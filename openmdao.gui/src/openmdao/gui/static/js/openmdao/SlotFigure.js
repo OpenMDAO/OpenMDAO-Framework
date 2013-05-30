@@ -236,9 +236,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
     this.setState(slot.filled);
 
     // resize it per user preference
-    if (openmdao.preferences.hasOwnProperty('SlotFigure') &&
-        openmdao.preferences.SlotFigure.hasOwnProperty('resize') &&
-        openmdao.preferences.SlotFigure.resize) {
+    if (openmdao.preferences.SlotFigure.resize) {
         this.resize();
     }
 };
