@@ -124,6 +124,7 @@ class GeomComponent(Component):
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
+                raise
             self._update_comp_outputs()
 
     def _update_comp_outputs(self):
