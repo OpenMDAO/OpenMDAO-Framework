@@ -138,8 +138,15 @@ class MDASolver(Driver):
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
         
+        print "Workflow iteration order"
+        for item in self.workflow.__iter__():
+            print item.name
+            
         # Find dimension of our problem.
         edges = self.workflow.get_interior_edges()
+        
+        print "all edges", edges
+        print "cut edges", self.workflow._severed_edges
         
         nEdge = 0
         self.bounds = {}
@@ -199,6 +206,7 @@ class MDASolver(Driver):
                              tol=self.tolerance,
                              maxiter=100)
             print "dv", dv
+            print "info", info
             
             # Apply new state to model
             for edge in edges:
@@ -210,6 +218,9 @@ class MDASolver(Driver):
                     else:
                         new_val = self.parent.get(target) + float(dv[i1:i2])
                         
+                    print self.parent.get(src), new_val
+                    self.parent.set(src, new_val, force=True)
+                    print self.parent.get(src), new_val
                     self.parent.set(target, new_val, force=True)
             
             self.workflow.run()
@@ -256,6 +267,7 @@ class MDASolver(Driver):
             var_name = '.'.join(parts[1:])
             
             outputs[comp_name][var_name] = arg[i1:i2]
+            inputs[comp_name][var_name] = arg[i1:i2]
             
             parts = target.split('.')
             comp_name = parts[0]

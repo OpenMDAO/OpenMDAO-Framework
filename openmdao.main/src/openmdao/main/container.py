@@ -1104,7 +1104,7 @@ class Container(SafeHasTraits):
                         self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
-            elif iotype == 'out':
+            elif iotype == 'out' and not force:
                 self.raise_exception('Cannot set output %r' % path,
                                      RuntimeError)
             elif index:  # array index specified
