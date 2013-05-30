@@ -13,15 +13,14 @@ import nose
 
 from multiprocessing.managers import RemoteError
 
-from openmdao.main.api import Assembly, FileRef, FileMetadata, SimulationRoot, \
-                              set_as_top
+from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.main.objserverfactory import ObjServerFactory
 from openmdao.main.rbac import Credentials, get_credentials
 
 from openmdao.lib.components.external_code import ExternalCode
-from openmdao.lib.datatypes.api import Int, File, Str
+from openmdao.lib.datatypes.api import Int, File, FileRef, Str
 
 from openmdao.test.cluster import init_cluster
 
@@ -46,7 +45,7 @@ class Sleeper(ExternalCode):
     delay = Int(1, units='s', iotype='in')
     env_filename = Str(iotype='in')
     infile = File(iotype='in', local_path='input')
-    outfile = File(iotype='out', path='output')
+    outfile = File(FileRef('output'), iotype='out')
 
     def __init__(self):
         super(Sleeper, self).__init__()
@@ -75,7 +74,7 @@ class Model(Assembly):
     """ Run multiple `Unique` component instances. """
 
     infile = File(iotype='in', local_path='input')
-    outfile = File(iotype='out', path='output')
+    outfile = File(FileRef('output'), iotype='out')
 
     def configure(self):
         self.add('a', Unique())
