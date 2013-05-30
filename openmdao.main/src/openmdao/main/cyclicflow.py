@@ -28,6 +28,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """
         self._collapsed_graph = None
         self._topsort = None
+        self._severed_edges = None
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
@@ -67,6 +68,7 @@ class CyclicWorkflow(SequentialWorkflow):
             graph = nx.DiGraph(self._get_collapsed_graph())
             
             cyclic = True
+            self._severed_edges = []
             while cyclic:
                 
                 try:
@@ -84,6 +86,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Break one edge of the loop.
                     # For now, just the first edge.
                     graph.remove_edge(strong[-1], strong[0])
+                    
+                    depgraph = self._parent.parent._depgraph
+                    self._severed_edges += list(depgraph.get_interior_edges([strong[-1], 
+                                                                             strong[0]]))
                 
         return self._topsort
     

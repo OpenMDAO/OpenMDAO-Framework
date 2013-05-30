@@ -202,14 +202,15 @@ class MDASolver(Driver):
             
             # Apply new state to model
             for edge in edges:
-                src, target = edge
-                i1, i2 = self.bounds[edge]
-                if i2-i1 > 1:
-                    new_val = self.parent.get(target) + dv[i1:i2]
-                else:
-                    new_val = self.parent.get(target) + float(dv[i1:i2])
-                    
-                self.parent.set(target, new_val, force=True)
+                if edge in self.workflow._severed_edges:
+                    src, target = edge
+                    i1, i2 = self.bounds[edge]
+                    if i2-i1 > 1:
+                        new_val = self.parent.get(target) + dv[i1:i2]
+                    else:
+                        new_val = self.parent.get(target) + float(dv[i1:i2])
+                        
+                    self.parent.set(target, new_val, force=True)
             
             self.workflow.run()
             
