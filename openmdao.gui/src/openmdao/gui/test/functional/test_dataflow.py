@@ -11,9 +11,10 @@ from nose.tools import with_setup
 from selenium.webdriver.common.action_chains import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout, release
+                 startup, closeout
 from pageobjects.util import ArgsPrompt, NotifierPage
 from pageobjects.component import ComponentPage
+from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -97,10 +98,6 @@ def _test_connect(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with connect.py's top.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
@@ -188,10 +185,6 @@ def _test_connections(browser):
                                                'vehicle_singlesim.py')
     workspace_page.add_file(filename)
 
-    # Replace 'top' with VehicleSim.
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
@@ -262,12 +255,13 @@ def _test_connections(browser):
     # reconnect transmission torque to chassis torque by dragging
     # conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
     conn_page.show_all_variables()
+    time.sleep(0.5)
     torque_vars = conn_page.find_variable_name('torque_ratio')
     eq(len(torque_vars), 2)
     chain = ActionChains(browser)
     chain.click_and_hold(torque_vars[0])
     chain.move_to_element(torque_vars[1])
-    release(chain)
+    chain.release(on_element=None).perform()
     time.sleep(1.0)
     eq(conn_page.count_variable_connections(), 1)
     conn_page.show_connected_variables()
@@ -337,10 +331,6 @@ def _test_connect_nested(browser):
                                                 'files/bem.py')
     workspace_page.add_file(file_path)
 
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with bem.BEM
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('bem.BEM', 'top')
 
     # get connection frame
@@ -436,10 +426,7 @@ def _test_driverflows(browser):
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
+
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -488,10 +475,6 @@ def _test_replace(browser):
                                                'files/rosen_suzuki.py')
     workspace_page.add_file(filename)
 
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    # Replace 'top' with Simulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -577,8 +560,7 @@ def _test_replace(browser):
     editor.close()
 
     # Replace driver with an SLSQPdriver.
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
     editor.move(-400, 0)
@@ -677,10 +659,9 @@ def _test_io_filter_without_vartree(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow('openmdao.lib.drivers.conmindriver.CONMINdriver', "conmin", prefix="top")
-    conmin = workspace_page.get_dataflow_figure('conmin', 'top')
-    editor = conmin.editor_page()
+    workspace_page.replace_driver('top', 'CONMINdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page()
 
     #Test filtering inputs
 
@@ -750,9 +731,6 @@ def _test_io_filter_with_vartree(browser):
     project_dict, workspace_page = startup(browser)
 
     #Test filtering variable trees
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
@@ -842,8 +820,8 @@ def _test_column_sorting(browser):
 
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(130, 90))
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(version=Version.NEW)
 
     test_sorting(
@@ -931,8 +909,7 @@ def _test_taborder(browser):
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
     # Replace driver with an SLSQPdriver.
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
 
@@ -949,13 +926,9 @@ def _test_taborder(browser):
 def _test_column_picking(browser):
     project_dict, workspace_page = startup(browser)
 
-    #Test that changes did not affect other component editors.
-
-    #During interactive testing, and on occassion, selenium decides that it likes
-    #to miss the drop, and drops the item on the dataflow grid, rather than in top.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    driver = workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'a', prefix='top', offset=(120, 90))
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page()
 
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
@@ -984,7 +957,6 @@ def _test_column_picking(browser):
     eq(input_column_names, expected_column_names)
 
     #Test that low, high and type are added
-    #column_picker = editor.inputs.headers[0].get_column_picker()
     editor.toggle_column_visibility("Low")
     editor.toggle_column_visibility("High")
     editor.toggle_column_visibility("Type")
@@ -1059,30 +1031,66 @@ def _test_column_picking(browser):
 
 
 def _test_remove_tla(browser):
-    # Verify that adding, removing, and adding a top level assembly works.
+    # verify that adding, removing, and adding a top level assembly works.
     project_dict, workspace_page = startup(browser)
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add component to top.
+    # create a top assembly and check number of figures
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top1')
+        'openmdao.main.assembly.Assembly', 'top1')
     eq(len(workspace_page.get_dataflow_figures()), 3)
+
+    # add component to top assembly and check for additional figure
     workspace_page.add_library_item_to_dataflow(
                     'openmdao.lib.components.external_code.ExternalCode', 'ext',
-                    prefix='top', offset=(110, 150))
+                    target_name='top1')
     eq(len(workspace_page.get_dataflow_figures()), 4)
 
-    # Remove top.
+    # remove top and check that it and it's child figures are gone
     top = workspace_page.get_dataflow_figure('top1')
     top.remove()
     eq(len(workspace_page.get_dataflow_figures()), 1)
 
-    # Add a new top, verify on screen.
+    # add a new top, verify on screen.
     workspace_page.add_library_item_to_dataflow(
-                                      'openmdao.main.assembly.Assembly', 'top2')
+        'openmdao.main.assembly.Assembly', 'top2')
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
+    # clean up
+    closeout(project_dict, workspace_page)
+
+def _test_display_differentiator(browser):
+    # Verify that we can display a differentiator (based on Container).
+    project_dict, workspace_page = startup(browser)
+    eq(len(workspace_page.get_dataflow_figures()), 1)
+
+    # Create assembly with an SLSQPdriver.
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+    editor.move(-400, 0)
+
+    # Display & verify differentiator.
+    editor.show_slots()
+    diff = find_slot_figure(workspace_page, 'differentiator',
+                            prefix='top.driver')
+    diff_editor = diff.edit()
+    inputs = diff_editor.get_inputs()
+    expected = [
+        ['', 'default_stepsize', '0.000001', '',
+         'Default finite difference step size.'],
+        ['', 'form', 'central', '',
+         'Finite difference form (central, forward, backward).'],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
     # Clean up.
+    diff_editor.close()
+    editor.close()
     closeout(project_dict, workspace_page)
 
 

@@ -1,6 +1,6 @@
 .. index:: geometry
 
-.. _`working with geometry`:
+.. _`working-with-geometry`:
 
 Basic Geometry
 ===========================
@@ -57,7 +57,7 @@ When you're done, it should look like this
    :align: center
 
    Dropping BoxParametricGeometry into the slot
-
+   
 Want to see what your newly added geometry model of a box looks like? Click 
 on the outputs tab of the editor window, and then click the ``View Geom``
 button next to the "geom_out" variable. This will bring up the 3D viewer in a separate 
@@ -75,13 +75,59 @@ window, and you should see the "height" variable. Set it to a new value,
 like 10. Now, go back to the 3D editor window. Nothing changed! 
 ``GeomComponent`` is just like any other OpenMDAO Component, it needs to be 
 run in order for the new outputs to be calculated with the new input values. 
-So right click on "geom" and select ``run``. Now the viewer will automatically
+So right click on "geom" and select ``run``. Now the viewer will 
 update with the new geometry and you can see how it got much taller. 
 
 .. figure:: box_viewer_2.png
    :align: center
 
    Box with height=10
+
+
+Auto Run
+-------------
+
+Sometimes when you're working with geometry the extra step of calling ``run`` 
+will be a bit tedious. In the inputs tab, there is an input called ``auto_run``
+which you can set to True. When this is done, the component will run itself 
+whenever a new value is set for one of it's parameters. The viewer will update
+automatically as well. This makes it nice for playing with parameters and seeing 
+the result quickly, but for any kind of actual optimization this can cause a lot of
+extra executions of your geometry component as different variables are set at different 
+times, so make sure that you set ``auto_run`` to False before you do any kind of 
+DOE or optimization work. 
+
+Working with a Script
+------------------------
+
+Below you can see how you would set up this tutorial in a script. It's pretty 
+strait forward, but as we said before, you won't be able to render the geometry 
+in the viewer this way. 
+
+
+.. testcode:: box_geom_model
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.components.api import GeomComponent
+    from openmdao.lib.geometry.box import BoxParametricGeometry
+        
+    class GeomAsmb(Assembly): 
+
+        def configure(self): 
+            self.add('geom', GeomComponent())
+            self.geom.add('parametric_geometry', BoxParametricGeometry())
+            self.driver.workflow.add('geom')
+
+    if __name__ == "__main__": 
+    
+        top = GeomAsmb()
+        top.run()
+        print "box volume: %3.2f"%top.geom.volume   
+
+        top.geom.height = 10
+        top.run()
+        print "new box volume: %3.2f"%top.geom.volume 
+
 
 
 Next Steps

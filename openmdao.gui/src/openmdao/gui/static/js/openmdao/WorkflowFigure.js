@@ -180,6 +180,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
 
     flow_div.droppable ({
         accept: '.component, .IComponent, .DataflowFigure',
+        tolerance: 'pointer',
         greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(flow_div);
@@ -193,8 +194,8 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dragged_parent;
 
             if (dragged_object.hasClass('DataflowFigure')) {
-                var dragged_pathname = jQuery(ui.draggable).attr('pathname'),
-                    dragged_parent = openmdao.Util.getPath(dragged_pathname);
+                dragged_pathname = jQuery(ui.draggable).attr('pathname');
+                dragged_parent = openmdao.Util.getPath(dragged_pathname);
                 if (dragged_parent === target_parent) {
                     openmdao.drag_and_drop_manager.draggableOver(flow_div);
                 }
@@ -211,20 +212,19 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             }
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            if (top_div) {
-                var drop_function = top_div.droppable('option', 'actualDropHandler');
-                drop_function(ev, ui);
+            var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+            if (dropTarget) {
+                dropTarget.droppable('option', 'dropHandler')(ev, ui);
             }
         },
-        actualDropHandler: function(ev,ui) {
+        dropHandler: function(ev,ui) {
             // could get same event multiple times if drop triggers for sibling targets
             if (this.dropEvent && this.dropEvent === ev.originalEvent) {
                 return;  // already handled this drop event
             }
             this.dropEvent = ev.originalEvent;
 
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            openmdao.drag_and_drop_manager.reset();
 
             var target_pathname = flow_div.data('pathname'),
                 target_parent = openmdao.Util.getPath(target_pathname),
@@ -307,10 +307,13 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
         // Traverse server workflow checking for a match in figure list.
         jQuery.each(json, function(idx, comp) {
             var match = false,
-                remove = 0;
+                remove = 0,
+                comp_fig,
+                comp_pathname;
+
             if (comp_figs.length > idx) {
-                var comp_fig = comp_figs[idx],
-                    comp_pathname = comp_fig.getPathname();
+                comp_fig = comp_figs[idx];
+                comp_pathname = comp_fig.getPathname();
                 if (comp.driver && comp.driver.pathname === comp_pathname) {
                     // comp is an assembly (figure is a WorkflowFigure)
                     comp_fig.update(comp.driver);
