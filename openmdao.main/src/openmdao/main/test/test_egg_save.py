@@ -293,6 +293,13 @@ class TestCase(unittest.TestCase):
             # Wonderful Windows sometimes doesn't remove...
             shutil.rmtree('Egg', onerror=self.onerror)
 
+        # Not always added, but we need to ensure the egg is not in sys.path.
+        if self.egg_name is not None:
+            for i, path in enumerate(sys.path):
+                if path.endswith(self.egg_name):
+                    del sys.path[i]
+                    break
+
     def onerror(self, function, path, excinfo):
         """ Called by shutil.rmtree() if 'Egg' tree removal has problems. """
         logging.error('onerror: function %s, path %s, excinfo %s',
