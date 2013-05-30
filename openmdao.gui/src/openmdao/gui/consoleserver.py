@@ -29,6 +29,7 @@ from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
+from openmdao.util.dep import plugin_groups
 
 from openmdao.gui.util import packagedict
 from openmdao.gui.filemanager import FileManager
@@ -583,11 +584,11 @@ class ConsoleServer(cmd.Cmd):
                         'interfaces': inames,
                         'python_id': id(v)
                     })
-            dataflow['components'] = components
+            dataflow['components']  = components
             dataflow['connections'] = []
-            dataflow['parameters'] = []
+            dataflow['parameters']  = []
             dataflow['constraints'] = []
-            dataflow['objectives'] = []
+            dataflow['objectives']  = []
         return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
@@ -680,7 +681,12 @@ class ConsoleServer(cmd.Cmd):
     def get_types(self):
         ''' get a dictionary of types available for creation
         '''
-        return packagedict(get_available_types())
+        #Don't want to get variable types showing up, so we exclude 
+        #'openmdao.variable' from this list.
+        keyset = set(plugin_groups.keys())
+        exclset = set(['openmdao.variable'])
+        groups = list(keyset - exclset)
+        return packagedict(get_available_types(groups))
 
     @modifies_model
     def load_project(self, projdir):
@@ -856,7 +862,7 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
-        elif pathname.startswith('/'): # treat it as a filename
+        elif pathname.startswith('/'):  # treat it as a filename
             if publish:
                 Publisher.register(pathname, pathname[1:])
             else:
