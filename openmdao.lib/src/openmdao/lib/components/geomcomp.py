@@ -13,11 +13,13 @@ _ttdict = {
     str: Str,
     unicode: Str,
     list: List,
+    bool: Bool,
     'enum': Enum,
     'float': Float,
     'int': Int,
     'str': Str,
     'list': List,
+    'bool': Bool,
 }
 
 try:
@@ -28,7 +30,7 @@ else:
     _ttdict[numpy.ndarray] = Array
     _ttdict['array'] = Array
 
-def _get_trait_from_meta(meta):
+def _get_trait_from_meta(name, meta):
     """Create a Variable object based on the contents
     of meta, which contains a 'value', plus possibly
     other information, e.g., 'type'.
@@ -43,7 +45,7 @@ def _get_trait_from_meta(meta):
         else:  # otherwise just infer the Variable type from the value type
             typ = _ttdict[type(val)]
     except KeyError as err:
-        logger.warning("no Variable type found for key %s, using Python Variable type, which performs no validation" % type(err.message))
+        logger.warning("no Variable type found for key of type %s (value=%s), using Python Variable type, which performs no validation" % (type(val),val))
         typ = Python   # FIXME
             
     del meta['value']  # don't include value in trait metadata
@@ -62,9 +64,9 @@ def _create_trait(parent, name, meta):
             if not hasattr(parent, part):
                 parent.add(part, VarTree(VariableTree(), iotype=iotype))
             parent = getattr(parent, part)
-        parent.add(parts[-1], _get_trait_from_meta(meta))
+        parent.add(parts[-1], _get_trait_from_meta(name, meta))
     else:  # just a simple variable
-        parent.add(name, _get_trait_from_meta(meta))
+        parent.add(name, _get_trait_from_meta(name, meta))
 
 
 class GeomComponent(Component):
@@ -122,6 +124,7 @@ class GeomComponent(Component):
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
+                raise
             self._update_comp_outputs()
 
     def _update_comp_outputs(self):
@@ -257,4 +260,20 @@ class GeomComponent(Component):
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
         super(GeomComponent, self)._input_updated(name.split('.',1)[0])
+
+    def _set_failed(self, path, value, index=None, src=None, force=False):
+        # check to see if dest attribute is inside of our parametric_geometry
+        # object
+        obj = self
+        try:
+            parts = path.split('.')
+            if len(parts) > 1:
+                for name in parts[:-1]:
+                    obj = getattr(obj, name)
+            if index is None:
+                setattr(obj, parts[-1], value)
+            else:
+                raise RuntimeError('index not supported')
+        except AttributeError as err:
+            super(GeomComponent, self)._set_failed(path, value, index, src, force)
 
