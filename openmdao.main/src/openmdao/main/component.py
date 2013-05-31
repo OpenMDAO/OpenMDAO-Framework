@@ -40,7 +40,6 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import logger
 import openmdao.util.log as tracing
 
 __missing__ = object()
