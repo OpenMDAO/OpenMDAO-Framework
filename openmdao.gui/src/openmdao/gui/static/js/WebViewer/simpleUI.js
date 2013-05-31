@@ -196,6 +196,66 @@ function wvUpdateUI()
          //   myTree.opened[2] = 1;
         //}
 
+        function addBody(bodyIndex){
+            jQuery("#leftframe").jstree("create_node", jQuery("#geom_display_body"), "inside", {
+                "attr" : { 
+                    "id" : "geom_display_body_" + bodyIndex
+                },
+                "data" : "" + bodyIndex,
+                "state" : "closed",
+                "children" : [], 
+            }null, true);
+
+            /*jQuery("#leftframe").jstree("create", "#geom_display_body_" + bodyIndex, "inside", {
+                "attr" : { "id" : "geom_display_body_" + bodyIndex + "_face"},
+                "data" : "Faces",
+                "state" : "closed",
+                "children" : null, 
+            });
+
+            jQuery("#leftframe").jstree("create", "#geom_display_body_" + bodyIndex, "inside", {
+                "attr" : { "id" : "geom_display_body_" + bodyIndex + "_edge"},
+                "data" : "Edges",
+                "state" : "closed",
+                "children" : null, 
+            });*/
+        }
+
+        /*function addFace(bodyIndex, faceIndex){
+            jQuery("#leftframe").jstree("create", "#geom_display_body_" +bodyIndex, faceIndex, {
+                "attr" : { "id" : "geom_display_body_" + bodyIndex + "_face_" + faceIndex},
+                "data" : faceIndex,
+                "state" : "closed" 
+            });
+        }
+
+        function addEdge(bodyIndex, edgeIndex){
+            jQuery("#leftframe").jstree("create", "#geom_display_body_"+bodyIndex, edgeIndex, {
+                "attr" : { "id" : "geom_display_body_" + bodyIndex + "_edge_" + edgeIndex},
+                "data" : edgeIndex,
+                "state" : "closed" 
+            });
+        }*/
+
+        var ibody = 0;
+        if(jQuery("#geom_display_body_" + ibody) === []){
+            addBody(0);
+        }
+
+        for (var gprim in g.sceneGraph){
+            //var matches = gprim.split(" ");
+            //var ibody = 0;
+
+
+            /*if (matches[0] === "Face"){
+                addFace(ibody, parseInt(matches[1], 10));
+            }
+
+            else if(matches[0] === "Edge"){
+                addEdge(ibody, parseInt(matches[1], 10));
+            }*/
+        }
+
         // put the Display attributes into the Tree
         /*for (var gprim in g.sceneGraph) {
 	  
