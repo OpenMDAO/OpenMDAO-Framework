@@ -35,11 +35,11 @@ from enthought.traits.trait_base import not_none
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry
 from openmdao.main.index import process_index_entry, get_indexed_value, \
@@ -828,15 +828,17 @@ class Container(SafeHasTraits):
                                      self._alltraits(type=Slot).keys()):
 
             trait = self.get_trait(name)
-            ttype = trait.trait_type
-
-            attr = {}
-
             meta = self.get_metadata(name)
             value = getattr(self, name)
+            ttype = trait.trait_type
 
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            if 'framework_var' in meta:
+                attr['id'] = '~' + name
+            else:
+                attr['id'] = name
+            attr['indent'] = 0
 
             # Container variables are not connectable
             attr['connected'] = ''
@@ -845,7 +847,6 @@ class Container(SafeHasTraits):
 
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
-
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] is False:
                     slots.append(slot_attr)
