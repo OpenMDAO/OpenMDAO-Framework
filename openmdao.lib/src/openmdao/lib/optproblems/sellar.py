@@ -76,6 +76,25 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
         #print "(%f, %f, %f)" % (z1, z2, x1)        
 
+    def linearize(self):
+        """ Calculate the Jacobian """
+        
+        self.J = numpy.zeros([1, 5])
+        
+        self.J[0, 0] = 1.0
+        self.J[0, 1] = -0.2
+        self.J[0, 2] = 2.0*self.z1
+        self.J[0, 3] = 1.0
+        self.J[0, 4] = -1.0
+        
+    def applyJ(self, arg):
+        """Multiply an input vector by the Jacobian"""
+        
+        return {'y1' : self.J[0, 0]*arg['x1'] + \
+                       self.J[0, 1]*arg['y2'] + \
+                       self.J[0, 2]*arg['z1'] + \
+                       self.J[0, 3]*arg['z2'] + \
+                       self.J[0, 4]*arg['y1'] }
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -102,7 +121,25 @@ class Discipline2(Component):
         
         self.y2 = y1**(.5) + z1 + z2
         
+    def linearize(self):
+        """ Calculate the Jacobian """
         
+        self.J = numpy.zeros([1, 4])
+        
+        self.J[0, 0] = .5*(abs(self.y1))**-0.5
+        self.J[0, 1] = 1.0
+        self.J[0, 2] = 1.0
+        self.J[0, 3] = -1.0        
+
+    def applyJ(self, arg):
+        """Multiply an input vector by the Jacobian"""
+        
+        return {'y2' : self.J[0, 0]*arg['y1'] + \
+                       self.J[0, 1]*arg['z1'] + \
+                       self.J[0, 2]*arg['z2'] + \
+                       self.J[0, 3]*arg['y2'] }        
+    
+    
 class Discipline2_WithDerivatives(ComponentWithDerivatives):
     """Component containing Discipline 2."""
     

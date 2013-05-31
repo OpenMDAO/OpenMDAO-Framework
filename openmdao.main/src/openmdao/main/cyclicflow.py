@@ -58,9 +58,9 @@ class CyclicWorkflow(SequentialWorkflow):
         # resolve all of the components up front so if there's a problem it'll
         # fail early and not waste time running components
         scope = self.scope
-        return [getattr(scope, n) for n in self._get_sort()].__iter__()
+        return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
-    def _get_sort(self):
+    def _get_topsort(self):
         """ Return a sorted list of components in the workflow.
         """
         
@@ -84,12 +84,22 @@ class CyclicWorkflow(SequentialWorkflow):
                     strong = strong[0]
                     
                     # Break one edge of the loop.
-                    # For now, just the first edge.
+                    # For now, just break the first edge.
+                    # TODO: smarter ways to choose edge to break.
                     graph.remove_edge(strong[-1], strong[0])
                     
+                    # Keep a list of the edges we break, so that a solver
+                    # can use them as its independents/dependents.
                     depgraph = self._parent.parent._depgraph
-                    self._severed_edges += list(depgraph.get_interior_edges([strong[-1], 
-                                                                             strong[0]]))
+                    edge_set = depgraph.get_interior_edges([strong[-1], 
+                                                            strong[0]])
+                    
+                    out_set = set(depgraph.var_edges(strong[-1]))
+                    
+                    # Our cut is directional, so only include that direction.
+                    edges = edge_set.intersection(out_set)      
+                
+                    self._severed_edges += list(edges)
                 
         return self._topsort
     

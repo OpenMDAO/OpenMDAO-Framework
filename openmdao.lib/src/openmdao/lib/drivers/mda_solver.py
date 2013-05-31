@@ -36,7 +36,7 @@ class MDASolver(Driver):
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
     
-    use_Jacobian = Bool(False, iotype='in', desc='Set to True to use a ' + \
+    Newton = Bool(False, iotype='in', desc='Set to True to use a ' + \
                     'Newton method.')
     
     def __init__(self):
@@ -57,11 +57,10 @@ class MDASolver(Driver):
     def execute(self):
         """ Pick our solver method. """
         
-        if self.use_Jacobian:
+        if self.Newton:
             self.execute_Newton()
         else:
             self.execute_Gauss_Seidel()
-            
             
     def execute_Gauss_Seidel(self):
         """ Solver execution loop: fixed point iteration. """
@@ -114,10 +113,11 @@ class MDASolver(Driver):
         while (norm > self.tolerance) and (iter_num < self.max_iteration):
             
             # Apply residuals to the model
-            for edge in edges:
+            for edge in self.workflow._severed_edges:
                 src, target = edge
                 self.parent.set(target, self.parent.get(src), force=True)
             
+            # Run all components
             self.workflow.run()
             
             # Get residuals
@@ -138,15 +138,8 @@ class MDASolver(Driver):
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
         
-        print "Workflow iteration order"
-        for item in self.workflow.__iter__():
-            print item.name
-            
         # Find dimension of our problem.
         edges = self.workflow.get_interior_edges()
-        
-        print "all edges", edges
-        print "cut edges", self.workflow._severed_edges
         
         nEdge = 0
         self.bounds = {}
@@ -171,7 +164,6 @@ class MDASolver(Driver):
             self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
             
-        print nEdge
         self.res = numpy.zeros((nEdge, 1))
         self.arg = numpy.zeros((nEdge, 1))
         A = LinearOperator((nEdge, nEdge),
@@ -202,11 +194,10 @@ class MDASolver(Driver):
             for comp in self.workflow.__iter__():
                 comp.linearize()
             
+            # Call GMRES to solve the linear system
             dv, info = gmres(A, -self.res,
                              tol=self.tolerance,
                              maxiter=100)
-            print "dv", dv
-            print "info", info
             
             # Apply new state to model
             for edge in edges:
@@ -218,10 +209,18 @@ class MDASolver(Driver):
                     else:
                         new_val = self.parent.get(target) + float(dv[i1:i2])
                         
-                    print self.parent.get(src), new_val
-                    self.parent.set(src, new_val, force=True)
-                    print self.parent.get(src), new_val
                     self.parent.set(target, new_val, force=True)
+                    
+                    # Prevent OpenMDAO from stomping on our poked input.
+                    parts = target.split('.')
+                    comp_name = parts[0]
+                    var_name = '.'.join(parts[1:])
+                    comp = self.parent.get(comp_name)
+                    valids = comp._valid_dict
+                    valids[var_name] = True
+                    
+                    #(An alternative way to prevent the stomping)
+                    #self.parent.set(src, new_val, force=True)
             
             self.workflow.run()
             
@@ -242,7 +241,6 @@ class MDASolver(Driver):
             
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product.'''
-        print "arg from GMRES", arg
         
         # Bookkeeping dictionaries
         inputs = {}
@@ -293,7 +291,6 @@ class MDASolver(Driver):
             
             result[i1:i2] = results[comp_name][var_name]
         
-        print "matvec result", result
         return result
         
             
