@@ -305,7 +305,7 @@ def _update_easy_manifest(home_dir):
     bindir = os.path.join(home_dir, 'Scripts')
     manifest = os.path.join(bindir, 'easy_install.exe.manifest')
     if not os.path.isfile(manifest):
-        with open(manifest, 'r') as f:
+        with open(manifest, 'w') as f:
             f.write(template)
         # 'touch' the easy_install executable
         os.utime(os.path.join(bindir, 'easy_install.exe'), None)
