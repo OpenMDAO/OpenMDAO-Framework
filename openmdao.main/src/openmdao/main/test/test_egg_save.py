@@ -14,12 +14,12 @@ import unittest
 import nose
 
 from openmdao.main.api import Assembly, Component, Container, set_as_top
-from openmdao.main.filevar import FileMetadata
+from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File
+from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 from openmdao.util.fileutil import onerror
@@ -53,7 +53,7 @@ def next_egg():
     return str(EGG_VERSION)
 
 
-class Source(Assembly):
+class Source(Component):
     """
     Produces files. A fair amount of stuff happens in Component.save_to_egg()
     in relation to handling external files and file variables.
@@ -61,7 +61,7 @@ class Source(Assembly):
 
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
-    text_file = File(path='source.txt', iotype='out')
+    text_file = File(iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -72,7 +72,6 @@ class Source(Assembly):
     def configure(self):
         """ Called once we have a valid hierarchy above us. """
         self.add('sub', Subcontainer())
-        self.create_passthrough('sub.binary_file')
 
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
@@ -118,23 +117,25 @@ class Source(Assembly):
         """ Write test data to files. """
         if self.write_files:
             cwd = os.getcwd()
-            self._logger.debug("opening file '%s' in %s" %
-                       (self.text_file.path, cwd))
-            with open(self.text_file.path, 'w') as out:
-                out.write(self.text_data)
 
-            self._logger.debug("opening file '%s' in %s" %
-                       (self.sub.binary_file.path, cwd))
-            with open(self.sub.binary_file.path, 'wb') as out:
+            path = 'source.txt'
+            self._logger.debug("opening file '%s' in %s", path, cwd)
+            with open(path, 'w') as out:
+                out.write(self.text_data)
+            self.text_file = FileRef(path)
+
+            path = os.path.join('..', 'sub', 'source.bin')
+            self._logger.debug("opening file '%s' in %s", path, cwd)
+            with open(path, 'wb') as out:
                 cPickle.dump(self.sub.binary_data, out, 2)
+            self.sub.binary_file = FileRef(path, binary=True)
 
 
 class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
     binary_data = Array(dtype='d', iotype='in')
-    binary_file = File(path=os.path.join('..', 'sub', 'source.bin'),
-                            iotype='out', binary=True)
+    binary_file = File(iotype='out')
 
 
 class DataObj(object):
@@ -262,7 +263,7 @@ class Model(Assembly):
         self.driver.workflow.add(['Source', 'Oddball', 'Sink'])
 
         self.connect('Source.text_file', 'Sink.text_file')
-        self.connect('Source.binary_file', 'Sink.binary_file')
+        self.connect('Source.sub.binary_file', 'Sink.binary_file')
 
         self.connect('Oddball.executions', 'Sink.executions')
 
@@ -291,6 +292,13 @@ class TestCase(unittest.TestCase):
         if os.path.exists('Egg'):
             # Wonderful Windows sometimes doesn't remove...
             shutil.rmtree('Egg', onerror=self.onerror)
+
+        # Not always added, but we need to ensure the egg is not in sys.path.
+        if self.egg_name is not None:
+            for i, path in enumerate(sys.path):
+                if path.endswith(self.egg_name):
+                    del sys.path[i]
+                    break
 
     def onerror(self, function, path, excinfo):
         """ Called by shutil.rmtree() if 'Egg' tree removal has problems. """
@@ -588,7 +596,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_filevar')
 
         # Set file trait path outside model root.
-        self.model.Source.text_file.path = '/illegal'
+        self.model.Source.text_file = FileRef('/illegal')
         code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
         msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
         assert_raises(self, code, globals(), locals(), ValueError, msg)

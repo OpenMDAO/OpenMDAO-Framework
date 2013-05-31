@@ -35,11 +35,11 @@ from enthought.traits.trait_base import not_none
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry
 from openmdao.main.index import process_index_entry, get_indexed_value, \
