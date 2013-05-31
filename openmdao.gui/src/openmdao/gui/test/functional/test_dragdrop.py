@@ -325,9 +325,6 @@ def _test_drop_onto_layered_div(browser):
     eq(len(driver_editor.get_workflow_component_figures()), 5)
     eq(len(workspace_page.get_workflow_component_figures()), 22)
 
-    # Drop onto the object editor's workflow figure is no longer supported.
-    # -- KTM
-
     # Drag paraboloid component into sim_EPA_city workflow
     workspace_page('dataflow_tab').click()
     workspace_page.add_object_to_workflow_figure(

@@ -6,11 +6,15 @@ import cPickle
 import logging
 import os.path
 import shutil
+import sys
 import unittest
 
-from openmdao.main.api import Assembly, Component, set_as_top, FileRef
-from openmdao.main.datatypes.api import Bool, File, Str, List
+from enthought.traits.api import TraitError
+
+from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.datatypes.api import Bool, File, FileRef, Str, List
 from openmdao.util.fileutil import onerror
+from openmdao.util.testutil import assert_raises
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -22,9 +26,9 @@ class Source(Component):
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
     binary_data = List([1.0], iotype='in')
-    text_file = File(path='source.txt', iotype='out', content_type='txt')
-    binary_file = File(path='source.bin', iotype='out', binary=True,
-                            extra_stuff='Hello world!')
+    text_file = File(FileRef('source.txt', content_type='txt'), iotype='out')
+    binary_file = File(FileRef('source.bin', binary=True,
+                               extra_stuff='Hello world!'), iotype='out')
 
     def execute(self):
         """ Write test data to files. """
@@ -40,11 +44,10 @@ class Source(Component):
 
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
-    text_in = File(iotype='in', local_path='tout',
-                        legal_types=['xyzzy', 'txt'])
+    text_in = File(iotype='in', local_path='tout', legal_types=['xyzzy', 'txt'])
     binary_in = File(iotype='in', local_path='bout')
-    text_out = File(path='tout', iotype='out')
-    binary_out = File(path='bout', iotype='out', binary=True)
+    text_out = File(FileRef('tout'), iotype='out')
+    binary_out = File(FileRef('bout', binary=True), iotype='out')
 
     def execute(self):
         """ File copies are performed implicitly. """
@@ -114,9 +117,9 @@ class Model(Assembly):
             os.path.join(self.middle.passthrough.get_abs_directory(),
                          self.middle.passthrough.get_trait('text_in').local_path)
 
-        self.middle.passthrough.get_trait('text_out').trait_type._metadata['path'] = \
+        self.middle.passthrough.text_out.path = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.get_trait('text_out').path)
+                         self.middle.passthrough.text_out.path)
 
 
 class TestCase(unittest.TestCase):
@@ -165,7 +168,7 @@ class TestCase(unittest.TestCase):
         self.model.source.write_files = False
         try:
             self.model.run()
-        except IOError, exc:
+        except RuntimeError as exc:
             if 'source.txt' not in str(exc) and 'source.bin' not in str(exc):
                 self.fail("Wrong message '%s'" % exc)
         else:
@@ -177,14 +180,10 @@ class TestCase(unittest.TestCase):
 
         # Set illegal path (during execution of sink), verify error message.
         self.model.sink.bogus_path = '/illegal'
-        try:
-            self.model.run()
-        except ValueError, exc:
-            msg = "middle.passthrough (1-2.1-1): Illegal path '/illegal'," \
-                  " not a descendant of"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected ValueError')
+        code = 'self.model.run()'
+        msg = "middle.passthrough (1-2.1-1): Illegal path '/illegal'," \
+              " not a descendant of"
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_legal_types(self):
         logging.debug('')
@@ -192,120 +191,77 @@ class TestCase(unittest.TestCase):
 
         # Set mismatched type and verify error message.
         self.model.source.text_file.content_type = 'invalid'
-        try:
-            self.model.run()
-        except Exception, exc:
-            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-                  " Content type 'invalid' not one of ['xyzzy', 'txt']"
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected Exception')
+        code = 'self.model.run()'
+        msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+              " Content type 'invalid' not one of ['xyzzy', 'txt']"
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
         # Set null type and verify error message.
         self.model.source.text_file.content_type = ''
-        try:
-            self.model.run()
-        except Exception, exc:
-            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-                  " Content type '' not one of ['xyzzy', 'txt']"
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected Exception')
+        code = 'self.model.run()'
+        msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+              " Content type '' not one of ['xyzzy', 'txt']"
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_formatting(self):
         logging.debug('')
         logging.debug('test_formatting')
         msg = "{'big_endian': False, 'binary': True, 'content_type': ''," \
               " 'desc': '', 'extra_stuff': 'Hello world!'," \
-              " 'integer_8': False, 'path': 'source.bin'," \
+              " 'integer_8': False, 'path': 'source.bin', 'platform': %r," \
               " 'recordmark_8': False, 'single_precision': False," \
-              " 'unformatted': False}"
+              " 'unformatted': False}" % sys.platform
         self.assertEqual(str(self.model.source.binary_file), msg)
 
     def test_no_owner(self):
         logging.debug('')
         logging.debug('test_no_owner')
 
-        # Absolute FileRef.
+        # No owner.
         path = os.path.join(os.sep, 'xyzzy')
         ref = FileRef(path)
-        try:
-            ref.open()
-        except ValueError, exc:
-            msg = "Path '%s' is absolute and no path checker is available." \
-                  % path
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected ValueError')
+        msg = 'abspath() failed: no owner specified for FileRef'
+        assert_raises(self, 'ref.open()', globals(), locals(), ValueError, msg)
+
+        # Absolute FileRef.
+        path = os.path.join(os.sep, 'xyzzy')
+        ref = FileRef(path, self)
+        code = 'ref.open()'
+        msg = "Path '%s' is absolute and no path checker is available." % path
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
         # Relative FileRef.
         path = 'xyzzy'
-        ref = FileRef(path)
-        try:
-            ref.open()
-        except ValueError, exc:
-            msg = "Path '%s' is relative and no absolute directory is available." \
-                  % path
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected ValueError')
+        ref = FileRef(path, self)
+        msg = "Path '%s' is relative and no absolute directory is available." % path
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_bad_trait(self):
         logging.debug('')
         logging.debug('test_bad_trait')
 
-        try:
-            File(42)
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             'File default value must be a FileRef.')
-        else:
-            self.fail('Expected Exception')
+        code = 'File(42)'
+        msg = 'File default value must be a FileRef.'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
 
-        try:
-            File(iotype='out')
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "Output File must have 'path' defined.")
-        else:
-            self.fail('Expected Exception')
+        code = "File(iotype='out', path='xyzzy', legal_types=42)"
+        msg = "'legal_types' invalid for output File."
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
-        try:
-            File(iotype='out', path='xyzzy', legal_types=42)
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "'legal_types' invalid for output File.")
-        else:
-            self.fail('Expected Exception')
-
-        try:
-            File(iotype='out', path='xyzzy', local_path=42)
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "'local_path' invalid for output File.")
-        else:
-            self.fail('Expected Exception')
-
-        try:
-            File(iotype='in', path='xyzzy')
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "'path' invalid for input File.")
-        else:
-            self.fail('Expected Exception')
+        code = "File(iotype='out', path='xyzzy', local_path=42)"
+        msg = "'local_path' invalid for output File."
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_bad_value(self):
         logging.debug('')
         logging.debug('test_bad_value')
-        try:
-            self.model.source.text_file = 42
-        except Exception, exc:
-            msg = "The 'text_file' trait of a Source instance must be" \
-                  " a legal value, but a value of 42 <type 'int'> was" \
-                  " specified."
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected Exception')
+
+        code = 'self.model.source.text_file = 42'
+        msg = "The 'text_file' trait of a Source instance must be" \
+              " a legal value, but a value of 42 <type 'int'> was" \
+              " specified."
+        assert_raises(self, code, globals(), locals(), TraitError, msg,
+                      use_exec=True)
 
 
 if __name__ == '__main__':
@@ -313,3 +269,4 @@ if __name__ == '__main__':
     import sys
     sys.argv.append('--cover-package=openmdao.main')
     nose.runmodule()
+

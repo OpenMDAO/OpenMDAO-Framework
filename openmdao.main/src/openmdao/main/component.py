@@ -30,11 +30,11 @@ from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.file_supp import FileMetadata
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, FileRef
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -1550,8 +1550,9 @@ class Component(Container):
             parts = name.split('.', 1)
             if len(parts) == 1:
                 if not name == __attributes__:
-                    obj = getattr(self, name, __missing__)
-                    if obj is __missing__:
+                    try:
+                        obj = self.get(name)
+                    except AttributeError:
                         self.raise_exception("%s has no attribute named '%s'"
                                               % (self.get_pathname(), name),
                                              NameError)

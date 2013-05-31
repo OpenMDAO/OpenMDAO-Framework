@@ -68,8 +68,7 @@ def _test_update(browser):
     # Create model with CONMIN and ExecComp.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
+    workspace_page.replace_driver('top', 'CONMINdriver')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.test.execcomp.ExecComp', 'exe', args=["('z = x * y',)"])
 

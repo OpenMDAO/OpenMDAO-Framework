@@ -99,6 +99,8 @@ class IntTestCase(unittest.TestCase):
         attrs = self.hobj.get_attributes(True)
         attr = attrs['Inputs']
         self.assertTrue( { 'name' : 'e1',
+                           'id' : 'e1',
+                           'indent' : 0,
                            'values' : ('red', 'green', 3),
                            'value_types' : ['str', 'str', 'int'],
                            'value' : 'red',
