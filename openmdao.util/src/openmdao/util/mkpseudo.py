@@ -5,6 +5,8 @@ import shutil
 import subprocess
 from optparse import OptionParser
 
+from pkg_resources import working_set, Requirement
+
 from openmdao.util.fileutil import build_directory, onerror
 
 _setup_py_template = '''
@@ -101,8 +103,11 @@ def mkpseudo(argv=None):
     for i, nm in enumerate(names[:-1]):
         nspkgs.append('.'.join(names[:i+1]))
 
+    dists = working_set.resolve([Requirement.parse(r) for r in options.reqs])
+    dset = set([("%s" % d).replace(' ','==') for d in dists])
+
     setup_options = {
-        'requires': options.reqs,
+        'requires': list(dset),
         'name': name,
         'version': version,
         'deplinks': options.deplinks,

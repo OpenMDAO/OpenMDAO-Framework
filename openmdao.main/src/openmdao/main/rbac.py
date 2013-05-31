@@ -87,7 +87,12 @@ class Credentials(object):
         object.
     """
 
-    user_host = '%s@%s' % (getpass.getuser(), socket.getfqdn())
+    try:  # Ensure we can at least connect to ourselves.
+        socket.gethostbyaddr(socket.getfqdn())
+    except (socket.gaierror, socket.herror) as err:
+        user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
+    else:
+        user_host = '%s@%s' % (getpass.getuser(), socket.getfqdn())
 
     def __init__(self, encoded=None):
         # We don't use cPickle to create or parse .data because we'd rather not

@@ -437,10 +437,8 @@ def read_authorized_keys(filename=None, logger=None):
             try:
                 ip_addr = socket.gethostbyname(host)
             except socket.gaierror:
-                logger.error('unknown host %r', host)
-                logger.error(line)
-                errors += 1
-                continue
+                logger.warning('unknown host %r', host)
+                logger.warning(line)
 
             data = base64.b64decode(key_data)
             start = 0
