@@ -3,7 +3,7 @@ from openmdao.main.container import Container
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
-from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Bool
+from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Dict, Bool
 from openmdao.util.log import logger
 
 _ttdict = {
@@ -14,11 +14,13 @@ _ttdict = {
     unicode: Str,
     list: List,
     bool: Bool,
+    dict: Dict,
     'enum': Enum,
     'float': Float,
     'int': Int,
     'str': Str,
     'list': List,
+    'dict': Dict,
     'bool': Bool,
 }
 
@@ -44,9 +46,14 @@ def _get_trait_from_meta(name, meta):
             typ = _ttdict[meta['type']]
         else:  # otherwise just infer the Variable type from the value type
             typ = _ttdict[type(val)]
-    except KeyError as err:
-        logger.warning("no Variable type found for key of type %s (value=%s), using Python Variable type, which performs no validation" % (type(val),val))
-        typ = Python   # FIXME
+    except KeyError:
+        if isinstance(val, list):
+            typ = List
+        elif isinstance(val, dict):
+            typ = Dict
+        else:
+            logger.warning("no Variable type found for key of type %s (value=%s), using Python Variable type, which performs no validation" % (type(val),val))
+            typ = Python   # FIXME
             
     del meta['value']  # don't include value in trait metadata
     return typ(val, **meta)
