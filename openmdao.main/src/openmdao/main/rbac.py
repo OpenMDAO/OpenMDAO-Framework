@@ -89,7 +89,7 @@ class Credentials(object):
 
     try:  # Ensure we can at least connect to ourselves.
         socket.gethostbyaddr(socket.getfqdn())
-    except socket.gaierror:
+    except (socket.gaierror, socket.herror) as err:
         user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
     else:
         user_host = '%s@%s' % (getpass.getuser(), socket.getfqdn())
