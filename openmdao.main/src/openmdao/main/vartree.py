@@ -218,8 +218,7 @@ class VariableTree(Container):
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
             attr['valid'] = valid
 
-            # Let the GUI know that this var is the top element of a
-            # variable tree
+            # if this var is the top element of a variable tree, add 'vt' attribute
             if attr.get('ttype') == 'vartree':
                 vartable = self.get(name)
                 if isinstance(vartable, VariableTree):
@@ -237,10 +236,10 @@ class VariableTree(Container):
 
                 if self._iotype == 'in':
                     # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in 
+                    attr['connected'] = str([src for src, dst in
                                             connections]).replace('@xin.', '')
                 else:
-                    attr['connected'] = str([dst for src, dst in 
+                    attr['connected'] = str([dst for src, dst in
                                             connections]).replace('@xout.', '')
             variables.append(attr)
 
@@ -255,12 +254,16 @@ class VariableTree(Container):
                 else:
                     variables += vt_attrs['Outputs']
 
-        if self._iotype == 'in':
-            panel = 'Inputs'
-        else:
-            panel = 'Outputs'
+        # if iotype was not specified but parent has iotype, then use parent's
+        _iotype = self._iotype
+        if _iotype not in ['in', 'out'] and self.parent.iotype in ['in', 'out']:
+            _iotype = self.parent.iotype
 
-        attrs[panel] = variables
+        if _iotype == 'in':
+            attrs['Inputs'] = variables
+        else:
+            attrs['Outputs'] = variables
+
         return attrs
 
 
