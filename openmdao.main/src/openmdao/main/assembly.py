@@ -501,9 +501,9 @@ class Assembly(Component):
 
         # Copy trait value according to 'copy' attribute in the trait
         val = self.get(pathname)
+
         ttype = trait.trait_type
         if ttype.copy:
-
             # Variable trees need to point to a new parent.
             # Also, let's not deepcopy the outside universe
             if isinstance(val, Container):
