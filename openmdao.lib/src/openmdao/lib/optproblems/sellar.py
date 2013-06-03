@@ -91,13 +91,18 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     def applyJ(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
-        result['y1'] = self.J[0, 0]*arg['x1'] + \
-                       self.J[0, 1]*arg['y2'] + \
-                       self.J[0, 2]*arg['z1'] + \
-                       self.J[0, 3]*arg['z2'] + \
-                       self.J[0, 4]*arg['y1']
-        
-        return
+        for key in result:
+            result[key] = self.J[0, 4]*arg['y1']
+
+            if 'x1' in arg:
+                result[key] += self.J[0, 0]*arg['x1']
+            if 'y2' in arg:
+                result[key] += self.J[0, 1]*arg['y2']
+            if 'z1' in arg:
+                result[key] += self.J[0, 2]*arg['z1']
+            if 'z2' in arg:
+                result[key] += self.J[0, 3]*arg['z2']
+                
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -178,12 +183,16 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     def applyJ(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
-        result['y2'] = self.J[0, 0]*arg['y1'] + \
-                       self.J[0, 1]*arg['z1'] + \
-                       self.J[0, 2]*arg['z2'] + \
-                       self.J[0, 3]*arg['y2'] 
-    
-        return
+        for key in result:
+            result[key] = self.J[0, 3]*arg['y2']
+
+            if 'y1' in arg:
+                result[key] += self.J[0, 0]*arg['y1']
+            if 'z1' in arg:
+                result[key] += self.J[0, 1]*arg['z1']
+            if 'z2' in arg:
+                result[key] += self.J[0, 2]*arg['z2']
+                
 
            
 class SellarProblem(OptProblem):

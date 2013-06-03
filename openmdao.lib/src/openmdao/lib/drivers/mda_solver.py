@@ -66,53 +66,20 @@ class MDASolver(Driver):
         """ Solver execution loop: fixed point iteration. """
         
         # Find dimension of our problem.
-        edges = self.workflow.get_interior_edges()
-        
-        nEdge = 0
-        self.bounds = {}
-        for edge in edges:
-            
-            src = edge[0]
-            
-            val = self.parent.get(src)
-            if isinstance(val, float):
-                width = 1
-            elif isinstance(val, numpy.ndarray):
-                shape = val.shape
-                if len(shape) == 2:
-                    width = shape[0]*shape[1]
-                else:
-                    width = shape[0]
-            else:
-                msg = "Variable %s is of type %s. " % (src, type(val)) + \
-                      "This type is not supported by the MDA Solver."
-                self.raise_exception(msg, RuntimeError)
-                
-            self.bounds[edge] = (nEdge, nEdge+width)
-            nEdge += width
-            
-        self.res = numpy.zeros((nEdge, 1))
+        self.workflow.get_dimensions()
         
         # Initial Run
         self.workflow.run()
         
         # Initial residuals
-        for edge in edges:
-            src, target = edge
-            src_val = self.parent.get(src)
-            target_val = self.parent.get(target)
-            
-            i1, i2 = self.bounds[edge]
-            self.res[i1:i2] = src_val - target_val
-            
-        print "Residual vector:\n", self.res
-        norm = numpy.linalg.norm(self.res)
+        norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+        print "Residual vector norm:\n", norm
         
-        # Loop until convergence of residuals
+        # Loop until the residuals converge
         iter_num = 0
         while (norm > self.tolerance) and (iter_num < self.max_iteration):
             
-            # Apply residuals to the model
+            # Pull values across severed edges
             for edge in self.workflow._severed_edges:
                 src, target = edge
                 self.parent.set(target, self.parent.get(src), force=True)
@@ -120,17 +87,9 @@ class MDASolver(Driver):
             # Run all components
             self.workflow.run()
             
-            # Get residuals
-            for edge in edges:
-                src, target = edge
-                src_val = self.parent.get(src)
-                target_val = self.parent.get(target)
-                
-                i1, i2 = self.bounds[edge]
-                self.res[i1:i2] = src_val - target_val
-                
-            print "Residual vector:\n", self.res
-            norm = numpy.linalg.norm(self.res)
+            # New residuals
+            norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+            print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()
@@ -139,32 +98,8 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Find dimension of our problem.
-        edges = self.workflow.get_interior_edges()
+        _, nEdge, self.bounds = self.workflow.get_dimensions()
         
-        nEdge = 0
-        self.bounds = {}
-        for edge in edges:
-            
-            src = edge[0]
-            
-            val = self.parent.get(src)
-            if isinstance(val, float):
-                width = 1
-            elif isinstance(val, numpy.ndarray):
-                shape = val.shape
-                if len(shape) == 2:
-                    width = shape[0]*shape[1]
-                else:
-                    width = shape[0]
-            else:
-                msg = "Variable %s is of type %s. " % (src, type(val)) + \
-                      "This type is not supported by the MDA Solver."
-                self.raise_exception(msg, RuntimeError)
-                
-            self.bounds[edge] = (nEdge, nEdge+width)
-            nEdge += width
-            
-        self.res = numpy.zeros((nEdge, 1))
         self.arg = numpy.zeros((nEdge, 1))
         A = LinearOperator((nEdge, nEdge),
                            matvec=self.matvecFWD,
@@ -174,16 +109,8 @@ class MDASolver(Driver):
         self.workflow.run()
         
         # Initial residuals
-        for edge in edges:
-            src, target = edge
-            src_val = self.parent.get(src)
-            target_val = self.parent.get(target)
-            
-            i1, i2 = self.bounds[edge]
-            self.res[i1:i2] = src_val - target_val
-            
-        print "Residual vector:\n", self.res
-        norm = numpy.linalg.norm(self.res)
+        norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+        print "Residual vector norm:\n", norm
         
         # Loop until convergence of residuals
         iter_num = 0
@@ -195,54 +122,45 @@ class MDASolver(Driver):
                 comp.linearize()
             
             # Call GMRES to solve the linear system
-            dv, info = gmres(A, -self.res,
+            dv, info = gmres(A, -self.workflow.res,
                              tol=self.tolerance,
                              maxiter=100)
             
             # Apply new state to model
-            deflatten = False
-            for edge in edges:
-                if edge in self.workflow._severed_edges:
-                    src, target = edge
-                        
-                    i1, i2 = self.bounds[edge]
-                    if i2-i1 > 1:
-                        old_val = self.parent.get(target)
-                        if old_val.shape[0] > old_val.shape[1]:
-                            old_val = old_val.T[0]
-                            deflatten = True
-                        new_val = old_val + dv[i1:i2]
-                    else:
-                        new_val = self.parent.get(target) + float(dv[i1:i2])
-                        
-                    if deflatten:
-                        new_val = new_val.reshape([i2-i1, 1])
-                    self.parent.set(target, new_val, force=True)
+            for edge in self.workflow._severed_edges:
+                deflatten = False
+                src, target = edge
                     
-                    # Prevent OpenMDAO from stomping on our poked input.
-                    parts = target.split('.')
-                    comp_name = parts[0]
-                    var_name = '.'.join(parts[1:])
-                    comp = self.parent.get(comp_name)
-                    valids = comp._valid_dict
-                    valids[var_name] = True
+                i1, i2 = self.bounds[edge]
+                if i2-i1 > 1:
+                    old_val = self.parent.get(target)
+                    if old_val.shape[0] > old_val.shape[1]:
+                        old_val = old_val.T[0]
+                        deflatten = True
+                    new_val = old_val + dv[i1:i2]
+                else:
+                    new_val = self.parent.get(target) + float(dv[i1:i2])
                     
-                    #(An alternative way to prevent the stomping)
-                    #self.parent.set(src, new_val, force=True)
+                if deflatten:
+                    new_val = new_val.reshape([i2-i1, 1])
+                self.parent.set(target, new_val, force=True)
+                
+                # Prevent OpenMDAO from stomping on our poked input.
+                parts = target.split('.')
+                comp_name = parts[0]
+                var_name = '.'.join(parts[1:])
+                comp = self.parent.get(comp_name)
+                valids = comp._valid_dict
+                valids[var_name] = True
+                
+                #(An alternative way to prevent the stomping)
+                #self.parent.set(src, new_val, force=True)
             
             self.workflow.run()
             
-            # Get residuals
-            for edge in edges:
-                src, target = edge
-                src_val = self.parent.get(src)
-                target_val = self.parent.get(target)
-                
-                i1, i2 = self.bounds[edge]
-                self.res[i1:i2] = src_val - target_val
-                
-            print "Residual vector:\n", self.res
-            norm = numpy.linalg.norm(self.res)
+            # New residuals
+            norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+            print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()
@@ -257,10 +175,7 @@ class MDASolver(Driver):
         # Start with zero-valued dictionaries cotaining keys for all inputs
         for comp in self.workflow.__iter__():
             name = comp.name
-            val = 0.0
-            inputs[name] = {key : val for key in \
-                            comp.list_inputs()+comp.list_outputs()}
-            
+            inputs[name] = {}
             outputs[name] = {}
             
         # Fill input dictionaries with values from input arg.

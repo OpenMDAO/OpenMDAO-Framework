@@ -4,6 +4,12 @@ required to converge this workflow in order to execute it. """
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 
+try:
+    from numpy import ndarray, zeros
+except ImportError as err:
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import ndarray, zeros
+    
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.seqentialflow import SequentialWorkflow
@@ -29,6 +35,8 @@ class CyclicWorkflow(SequentialWorkflow):
         self._collapsed_graph = None
         self._topsort = None
         self._severed_edges = None
+        self.res = None
+        self.bounds = None
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
@@ -128,12 +136,6 @@ class CyclicWorkflow(SequentialWorkflow):
         self._collapsed_graph = collapsed_graph.subgraph(cnames)
         return self._collapsed_graph
     
-    def get_residuals(self):
-        """Returns a numpy array that contains all residuals in the 
-        workflow."""
-        
-        pass
-    
     def get_interior_edges(self):
         """ Returns an alphabetical list of all output edges that are
         interior to the set of components supplied."""
@@ -142,3 +144,50 @@ class CyclicWorkflow(SequentialWorkflow):
         edge_list = self._parent.parent._depgraph.get_interior_edges(names)
         return sorted(list(edge_list))
     
+    def get_dimensions(self):
+        """Returns some bookkeeping items that describe the dimension of the
+        interior edge connections. Also creates the residual array.
+        """
+        edges = self.get_interior_edges()
+        
+        nEdge = 0
+        self.bounds = {}
+        for edge in edges:
+            
+            src = edge[0]
+            
+            val = self._parent.parent.get(src)
+            if isinstance(val, float):
+                width = 1
+            elif isinstance(val, ndarray):
+                shape = val.shape
+                if len(shape) == 2:
+                    width = shape[0]*shape[1]
+                else:
+                    width = shape[0]
+            else:
+                msg = "Variable %s is of type %s. " % (src, type(val)) + \
+                      "This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+                
+            self.bounds[edge] = (nEdge, nEdge+width)
+            nEdge += width
+            
+        if self.res is None:
+            self.res = zeros((nEdge, 1))
+            
+        return edges, nEdge, self.bounds
+    
+    def calculate_residuals(self):
+        """Caclulate and return the vector of residuals based on the current
+        state of the system in our workflow."""
+        
+        for edge in self.get_interior_edges():
+            src, target = edge
+            src_val = self._parent.parent.get(src)
+            target_val = self._parent.parent.get(target)
+            
+            i1, i2 = self.bounds[edge]
+            self.res[i1:i2] = src_val - target_val
+    
+        return self.res

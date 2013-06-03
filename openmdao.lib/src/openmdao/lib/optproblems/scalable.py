@@ -62,14 +62,24 @@ class Discipline(Component):
     def linearize(self):
         """ Calculate the Jacobian """
         
-        self.J = self.C_y/self.c_y_out
+        self.Jx = self.C_x/self.c_y_out
+        self.Jy = self.C_y/self.c_y_out
+        self.Jz = self.C_z/self.c_y_out
         
         
     def applyJ(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
-        result['y_out'] = self.J.dot(arg['y_in']) - arg['y_out']
-        
+        for key in result:
+            result[key] = -arg['y_out']
+
+            if 'x' in arg:
+                result[key] += self.Jx.dot(arg['x'])
+            if 'y_in' in arg:
+                result[key] += self.Jy.dot(arg['y_in'])
+            if 'z' in arg:
+                result[key] += self.Jz.dot(arg['z'])
+                              
         return
     
     
