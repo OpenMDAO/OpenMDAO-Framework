@@ -30,20 +30,20 @@ from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.file_supp import FileMetadata
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, FileRef
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import logger
 import openmdao.util.log as tracing
 
 __missing__ = object()
+
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -196,7 +196,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count        
+        self._publish_vars = {}  # dict of varname to subscriber count
 
     @property
     def dir_context(self):
@@ -1641,8 +1641,10 @@ class Component(Container):
         outputs = []
         slots = []
 
-        # Add all inputs and outputs
-        io_list = self.list_inputs() + self.list_outputs()
+        inputs_list  = self.list_inputs()
+        outputs_list = self.list_outputs()
+        io_list      = inputs_list + outputs_list
+
         for name in io_list:
 
             #for variable trees
@@ -1699,7 +1701,7 @@ class Component(Container):
                 if isinstance(vartable, VariableTree):
                     io_attr['vt'] = 'vt'
 
-            if name in self.list_inputs():
+            if name in inputs_list:
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
@@ -1716,7 +1718,7 @@ class Component(Container):
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
                                                    parent=name,
                                                    valid=io_attr['valid'])
-                if name in self.list_inputs():
+                if name in inputs_list:
                     inputs += vt_attrs.get('Inputs', [])
                 else:
                     outputs += vt_attrs.get('Outputs', [])
