@@ -49,7 +49,6 @@ class Discipline(Component):
                                    desc="local variable constants",
                                    shape=(prob_size,prob_size)))
     
-            
     def execute(self):    
         Cz = matrix(self.C_z)  
         z = matrix(self.z)
@@ -60,6 +59,20 @@ class Discipline(Component):
         
         self.y_out = array(-1/self.c_y_out*(Cz*z+Cx*x-Cy*y)) 
         
+    def linearize(self):
+        """ Calculate the Jacobian """
+        
+        self.J = self.C_y/self.c_y_out
+        
+        
+    def applyJ(self, arg, result):
+        """Multiply an input vector by the Jacobian"""
+        
+        result['y_out'] = self.J.dot(arg['y_in']) - arg['y_out']
+        
+        return
+    
+    
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,prob_size=3): 
         self.solution = {}
