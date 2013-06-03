@@ -4,11 +4,17 @@ import shutil
 import json
 import time
 import tempfile
+import math
 
 from openmdao.gui.consoleserver import ConsoleServer
+from openmdao.gui.zmqservermanager import ZMQServerManager
+from openmdao.gui.outstream import OutStreamRedirector
+
 from openmdao.main.publisher import Publisher
 from openmdao.main.project import project_from_archive
 from openmdao.util.fileutil import onerror
+
+from nose.plugins.skip import SkipTest
 
 
 class ConsoleServerTestCase(unittest.TestCase):
@@ -233,6 +239,46 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         self.cserver.cleanup()
         os.remove(proj_copy)
+
+    def test_ZMQServerManager(self):
+        ''' create a ZMQServer for simple model, run & query it
+        '''
+        # FIXME: comment out SkipTest for manual testing, will have to Ctrl-C
+        raise SkipTest("ZMQServerManager doesn't shut down it's threads cleanly")
+
+        server_id = 'OptimizationUnconstrained'
+        classpath = 'openmdao.examples.simple.optimization_unconstrained.OptimizationUnconstrained'
+        mgr = ZMQServerManager(classpath)
+        srv = mgr.server(server_id)
+        assert srv is not None
+
+        out_url = mgr.get_out_socket_url(server_id)
+        out_rdr = OutStreamRedirector('OPT OUT', out_url, 'OptimizationUnconstrained.out')
+        out_rdr.start()
+
+        pub_url = mgr.get_pub_socket_url(server_id)
+        pub_rdr = OutStreamRedirector('OPT PUB', pub_url, 'OptimizationUnconstrained.pub')
+        pub_rdr.start()
+
+        time.sleep(5)   # give them time to start up
+
+        assert math.floor(srv.get('paraboloid.x')) == 0
+        assert math.floor(srv.get('paraboloid.y')) == 0
+        assert math.floor(srv.get('paraboloid.f_xy')) == 0
+
+        srv.dir()
+        srv.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
+        srv.run()
+
+        assert math.floor(srv.get('paraboloid.x')) == 6         # 6.6666666687
+        assert math.floor(srv.get('paraboloid.y')) == -8        # -7.3333343338
+        assert math.floor(srv.get('paraboloid.f_xy')) == -28    # -27.3333333333
+
+        # time.sleep(5)   # give it time to finish
+        mgr.delete_server('OptimizationUnconstrained')
+        out_rdr.terminate()
+        pub_rdr.terminate()
+        mgr.cleanup()
 
 
 if __name__ == "__main__":
