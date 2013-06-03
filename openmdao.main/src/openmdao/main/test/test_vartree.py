@@ -401,6 +401,11 @@ class NestedVTTestCase(unittest.TestCase):
     def test_nested_iotype(self):
         # nested tree
         comp = NestedTreeComp()
+        
+        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, '')
+        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, 'in')
+        
         attr = comp.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])
         self.assertEqual(outputs, [])
@@ -423,6 +428,7 @@ class NestedVTTestCase(unittest.TestCase):
         asm = set_as_top(Assembly())
         comp = asm.add("comp", NestedTreeComp())
         asm.create_passthrough('comp.top_tree_in')
+        
         attr = asm.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])
         self.assertEqual(outputs, [])
