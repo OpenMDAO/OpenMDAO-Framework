@@ -37,6 +37,8 @@ class VariableTree(Container):
 
     @property
     def iotype(self):
+        if not self._iotype and isinstance(self.parent, VariableTree):
+            self._iotype = self.parent.iotype
         return self._iotype
 
     @rbac(('owner', 'user'))
@@ -53,10 +55,10 @@ class VariableTree(Container):
     @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):
         if metaname == 'iotype':
-            return self._iotype
+            return self.iotype
         elif metaname is None:
             meta = super(VariableTree, self).get_metadata(traitpath, metaname)
-            meta['iotype'] = self._iotype
+            meta['iotype'] = self.iotype
             return meta
         else:
             return super(VariableTree, self).get_metadata(traitpath, metaname)
@@ -138,7 +140,7 @@ class VariableTree(Container):
         """Return the iotype of the Variable with the given name"""
         if self.get_trait(name) is None:
             self.raise_exception("'%s' not found" % name)
-        return self._iotype
+        return self.iotype
 
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form
@@ -255,9 +257,7 @@ class VariableTree(Container):
                     variables += vt_attrs['Outputs']
 
         # if iotype was not specified but parent has iotype, then use parent's
-        _iotype = self._iotype
-        if _iotype not in ['in', 'out'] and self.parent.iotype in ['in', 'out']:
-            _iotype = self.parent.iotype
+        _iotype = self.iotype
 
         if _iotype == 'in':
             attrs['Inputs'] = variables
