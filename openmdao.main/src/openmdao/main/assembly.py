@@ -19,6 +19,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
+from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import Slot
 from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
@@ -501,9 +502,9 @@ class Assembly(Component):
 
         # Copy trait value according to 'copy' attribute in the trait
         val = self.get(pathname)
+
         ttype = trait.trait_type
         if ttype.copy:
-
             # Variable trees need to point to a new parent.
             # Also, let's not deepcopy the outside universe
             if isinstance(val, Container):
@@ -736,7 +737,6 @@ class Assembly(Component):
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        parent = self.parent
         expr_info = []
         invalids = []
 
@@ -1034,6 +1034,226 @@ class Assembly(Component):
         return {'components': components, 'connections': connections,
                 'parameters': parameters, 'constraints': constraints,
                 'objectives': objectives}
+
+    def get_connections(self, src_name, dst_name):
+        ''' Get a list of the outputs from the component *src_name* (sources),
+            the inputs to the component *dst_name* (destinations) and the
+            connections between them.
+        '''
+        conns = {}
+
+        # outputs
+        sources = []
+        if src_name:
+            src = self.get(src_name)
+        else:
+            src = self
+        connected = src.list_outputs(connected=True)
+        for name in src.list_outputs():
+            var = src.get(name)
+            vtype = type(var).__name__
+            if not '.' in name:  # vartree vars handled separately
+                units = ''
+                meta = src.get_metadata(name)
+                if meta and 'units' in meta:
+                    units = meta['units']
+                valid = src.get_valid([name])[0]
+                sources.append({
+                    'name': name,
+                    'type': vtype,
+                    'valid': valid,
+                    'units': units,
+                    'connected': (name in connected)
+                })
+            if isinstance(var, VariableTree):
+                for var_name in var.list_vars():
+                    vt_var = var.get(var_name)
+                    vt_var_name = name + '.' + var_name
+                    units = ''
+                    meta = var.get_metadata(var_name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    sources.append({
+                        'name': vt_var_name,
+                        'type':  type(vt_var).__name__,
+                        'valid': valid,
+                        'units': units,
+                        'connected': (vt_var_name in connected)
+                    })
+            elif vtype == 'ndarray':
+                for idx in range(0, len(var)):
+                    vname = name + '[' + str(idx) + ']'
+                    dtype = type(var[0]).__name__
+                    units = ''
+                    sources.append({
+                        'name': vname,
+                        'type': dtype,
+                        'valid': valid,
+                        'units': units,
+                        'connected': (vname in connected)
+                    })
+
+        # connections to assembly can be passthrough (input to input)
+        if src is self:
+            connected = src.list_inputs(connected=True)
+            for name in src.list_inputs():
+                var = src.get(name)
+                vtype = type(var).__name__
+                if not '.' in name:  # vartree vars handled separately
+                    units = ''
+                    meta = src.get_metadata(name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    sources.append({
+                        'name': name,
+                        'type': vtype,
+                        'valid': src.get_valid([name])[0],
+                        'units': units,
+                        'connected': (name in connected)
+                    })
+                if isinstance(var, VariableTree):
+                    for var_name in var.list_vars():
+                        vt_var = var.get(var_name)
+                        vt_var_name = name + '.' + var_name
+                        units = ''
+                        meta = var.get_metadata(var_name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        sources.append({
+                            'name': vt_var_name,
+                            'type':  type(vt_var).__name__,
+                            'valid': valid,
+                            'units': units,
+                            'connected': (vt_var_name in connected)
+                        })
+                elif vtype == 'ndarray':
+                    for idx in range(0, len(var)):
+                        vname = name + '[' + str(idx) + ']'
+                        dtype = type(var[0]).__name__
+                        units = ''
+                        sources.append({
+                            'name': vname,
+                            'type': dtype,
+                            'valid': valid,
+                            'units': units,
+                            'connected': (vname in connected)
+                        })
+
+        conns['sources'] = sorted(sources, key=lambda d: d['name'])
+
+        # inputs
+        dests = []
+        if dst_name:
+            dst = self.get(dst_name)
+        else:
+            dst = self
+        connected = dst.list_inputs(connected=True)
+        for name in dst.list_inputs():
+            var = dst.get(name)
+            vtype = type(var).__name__
+            if not '.' in name:  # vartree vars handled separately
+                units = ''
+                meta = dst.get_metadata(name)
+                if meta and 'units' in meta:
+                    units = meta['units']
+                dests.append({
+                    'name': name,
+                    'type': vtype,
+                    'valid': dst.get_valid([name])[0],
+                    'units': units,
+                    'connected': (name in connected)
+                })
+            if isinstance(var, VariableTree):
+                for var_name in var.list_vars():
+                    vt_var = var.get(var_name)
+                    vt_var_name = name + '.' + var_name
+                    units = ''
+                    meta = var.get_metadata(var_name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    dests.append({
+                        'name': vt_var_name,
+                        'type': type(vt_var).__name__,
+                        'valid': valid,
+                        'units': units,
+                        'connected': (vt_var_name in connected)
+                    })
+            elif vtype == 'ndarray':
+                for idx in range(0, len(var)):
+                    vname = name + '[' + str(idx) + ']'
+                    dtype = type(var[0]).__name__
+                    units = ''
+                    dests.append({
+                        'name': vname,
+                        'type': dtype,
+                        'valid': valid,
+                        'units': units,
+                        'connected': (vname in connected)
+                    })
+
+        # connections to assembly can be passthrough (output to output)
+        if dst == self:
+            connected = dst.list_outputs(connected=True)
+            for name in dst.list_outputs():
+                var = dst.get(name)
+                vtype = type(var).__name__
+                if not '.' in name:  # vartree vars handled separately
+                    units = ''
+                    meta = dst.get_metadata(name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    dests.append({
+                        'name': name,
+                        'type': type(var).__name__,
+                        'valid': dst.get_valid([name])[0],
+                        'units': units,
+                        'connected': (name in connected)
+                    })
+                if isinstance(var, VariableTree):
+                    for var_name in var.list_vars():
+                        vt_var = var.get(var_name)
+                        vt_var_name = name + '.' + var_name
+                        units = ''
+                        meta = var.get_metadata(var_name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        dests.append({
+                            'name': vt_var_name,
+                            'type': type(vt_var).__name__,
+                            'valid': valid,
+                            'units': units,
+                            'connected': (vt_var_name in connected)
+                        })
+                elif vtype == 'ndarray':
+                    for idx in range(0, len(var)):
+                        vname = name + '[' + str(idx) + ']'
+                        dtype = type(var[0]).__name__
+                        units = ''
+                        dests.append({
+                            'name': vname,
+                            'type': dtype,
+                            'valid': valid,
+                            'units': units,
+                            'connected': (vname in connected)
+                        })
+
+        conns['destinations'] = sorted(dests, key=lambda d: d['name'])
+
+        # connections
+        connections = []
+        conntuples = self.list_connections(show_passthrough=True)
+        comp_names = self.list_components()
+        for src_var, dst_var in conntuples:
+            src_root = src_var.split('.')[0]
+            dst_root = dst_var.split('.')[0]
+            if (((src_name and src_root == src_name) or
+                 (not src_name and src_root not in comp_names)) and
+                ((dst_name and dst_root == dst_name) or
+                 (not dst_name and dst_root not in comp_names))):
+                connections.append([src_var, dst_var])
+        conns['connections'] = connections
+
+        return conns
 
 
 def dump_iteration_tree(obj):
