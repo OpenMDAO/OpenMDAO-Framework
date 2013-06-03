@@ -200,15 +200,23 @@ class MDASolver(Driver):
                              maxiter=100)
             
             # Apply new state to model
+            deflatten = False
             for edge in edges:
                 if edge in self.workflow._severed_edges:
                     src, target = edge
+                        
                     i1, i2 = self.bounds[edge]
                     if i2-i1 > 1:
-                        new_val = self.parent.get(target) + dv[i1:i2]
+                        old_val = self.parent.get(target)
+                        if old_val.shape[0] > old_val.shape[1]:
+                            old_val = old_val.T[0]
+                            deflatten = True
+                        new_val = old_val + dv[i1:i2]
                     else:
                         new_val = self.parent.get(target) + float(dv[i1:i2])
                         
+                    if deflatten:
+                        new_val = new_val.reshape([i2-i1, 1])
                     self.parent.set(target, new_val, force=True)
                     
                     # Prevent OpenMDAO from stomping on our poked input.
@@ -247,13 +255,13 @@ class MDASolver(Driver):
         outputs = {}
         
         # Start with zero-valued dictionaries cotaining keys for all inputs
-        # and outputs.
         for comp in self.workflow.__iter__():
             name = comp.name
             val = 0.0
             inputs[name] = {key : val for key in \
                             comp.list_inputs()+comp.list_outputs()}
-            outputs[name] = {key : val for key in comp.list_outputs()}
+            
+            outputs[name] = {}
             
         # Fill input dictionaries with values from input arg.
         for edge in self.workflow.get_interior_edges():
@@ -274,10 +282,9 @@ class MDASolver(Driver):
             inputs[comp_name][var_name] = arg[i1:i2]
             
         # Call ApplyJ on each component
-        results = {}
         for comp in self.workflow.__iter__():
             name = comp.name
-            results[name] = comp.applyJ(inputs[name])
+            comp.applyJ(inputs[name], outputs[name])
             
         # Poke results into the return vector
         result = numpy.zeros(len(arg))
@@ -289,7 +296,7 @@ class MDASolver(Driver):
             comp_name = parts[0]
             var_name = '.'.join(parts[1:])
             
-            result[i1:i2] = results[comp_name][var_name]
+            result[i1:i2] = outputs[comp_name][var_name]
         
         return result
         

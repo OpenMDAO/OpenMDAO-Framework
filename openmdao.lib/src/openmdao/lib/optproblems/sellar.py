@@ -7,6 +7,8 @@ From Sellar's analytic problem.
     Aerospace Sciences Meeting and Exhibit, Reno, NV, January 1996.
 """
 
+import numpy
+
 from openmdao.main.api import Component, ComponentWithDerivatives
 from openmdao.main.problem_formulation import OptProblem
 from openmdao.lib.datatypes.api import Float
@@ -63,7 +65,6 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         self.derivatives.set_first_derivative('y1', 'x1', 1.0)
         self.derivatives.set_first_derivative('y1', 'y2', -0.2)
     
-        
     def execute(self):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2."""
@@ -87,14 +88,16 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         self.J[0, 3] = 1.0
         self.J[0, 4] = -1.0
         
-    def applyJ(self, arg):
+    def applyJ(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
-        return {'y1' : self.J[0, 0]*arg['x1'] + \
+        result['y1'] = self.J[0, 0]*arg['x1'] + \
                        self.J[0, 1]*arg['y2'] + \
                        self.J[0, 2]*arg['z1'] + \
                        self.J[0, 3]*arg['z2'] + \
-                       self.J[0, 4]*arg['y1'] }
+                       self.J[0, 4]*arg['y1']
+        
+        return
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -121,24 +124,6 @@ class Discipline2(Component):
         
         self.y2 = y1**(.5) + z1 + z2
         
-    def linearize(self):
-        """ Calculate the Jacobian """
-        
-        self.J = numpy.zeros([1, 4])
-        
-        self.J[0, 0] = .5*(abs(self.y1))**-0.5
-        self.J[0, 1] = 1.0
-        self.J[0, 2] = 1.0
-        self.J[0, 3] = -1.0        
-
-    def applyJ(self, arg):
-        """Multiply an input vector by the Jacobian"""
-        
-        return {'y2' : self.J[0, 0]*arg['y1'] + \
-                       self.J[0, 1]*arg['z1'] + \
-                       self.J[0, 2]*arg['z2'] + \
-                       self.J[0, 3]*arg['y2'] }        
-    
     
 class Discipline2_WithDerivatives(ComponentWithDerivatives):
     """Component containing Discipline 2."""
@@ -166,7 +151,6 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         # y1 should be kept above 0.
         self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1))**-0.5) 
        
-    
     def execute(self):
         """Evaluates the equation  
         y2 = y1**(.5) + z1 + z2."""
@@ -181,6 +165,26 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         
         self.y2 = y1**(.5) + z1 + z2         
         
+    def linearize(self):
+        """ Calculate the Jacobian """
+        
+        self.J = numpy.zeros([1, 4])
+        
+        self.J[0, 0] = .5*(abs(self.y1))**-0.5
+        self.J[0, 1] = 1.0
+        self.J[0, 2] = 1.0
+        self.J[0, 3] = -1.0        
+
+    def applyJ(self, arg, result):
+        """Multiply an input vector by the Jacobian"""
+        
+        result['y2'] = self.J[0, 0]*arg['y1'] + \
+                       self.J[0, 1]*arg['z1'] + \
+                       self.J[0, 2]*arg['z2'] + \
+                       self.J[0, 3]*arg['y2'] 
+    
+        return
+
            
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
