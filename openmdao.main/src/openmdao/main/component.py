@@ -40,6 +40,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+
 import openmdao.util.log as tracing
 
 __missing__ = object()
@@ -111,6 +112,7 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+# this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
 
@@ -1813,10 +1815,10 @@ class Component(Container):
                 attrs['Parameters'] = parameters
 
             constraints = []
-            constraint_pane = False
+            has_constraints = False
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasEqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1828,7 +1830,7 @@ class Component(Container):
 
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasIneqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1838,7 +1840,7 @@ class Component(Container):
                     attr['adder']   = con.adder
                     constraints.append(attr)
 
-            if constraint_pane:
+            if has_constraints:
                 attrs['Constraints'] = constraints
 
             if has_interface(self, IHasEvents):
