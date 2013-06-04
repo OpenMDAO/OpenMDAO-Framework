@@ -423,6 +423,11 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(set([d['name'] for d in outputs]), 
                          set(['topfloat','lev1','lev1float','lev2','lev2float']))
         
+        self.assertEqual(newvt.lev1.lev2.iotype, 'out')
+        newvt._iotype = 'in'
+        self.assertEqual(newvt.iotype, 'in')
+        self.assertEqual(newvt.lev1.lev2.iotype, 'in')
+        
     def test_nested_iotype_passthrough(self):
         # nested tree
         asm = set_as_top(Assembly())

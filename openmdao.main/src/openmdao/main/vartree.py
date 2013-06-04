@@ -64,8 +64,12 @@ class VariableTree(Container):
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
     def copy(self):
-        """Returns a deep copy of this VariableTree."""
-        return copy.deepcopy(self)
+        """Returns a deep copy of this VariableTree, without deepcopying the its parent.
+        Also installs necessary trait callbacks.
+        """
+        cp = super(VariableTree, self).copy()
+        cp.install_callbacks()
+        return cp
 
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
@@ -109,6 +113,7 @@ class VariableTree(Container):
         for k, v in self.__dict__.items():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
+        pass
 
     def _trait_modified(self, obj, name, old, new):
         # handle weird traits side-effect from hasattr call
