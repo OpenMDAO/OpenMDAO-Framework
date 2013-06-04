@@ -14,8 +14,8 @@ class VarTree(Variable):
     """ A Variable for a :class:`VariableTree` of a particular type. """
 
     def __init__(self, default_value, allow_none=True, **metadata):
-        # Break import loop on VariableTree by checking for _iotype.
-        if hasattr(default_value, '_iotype'):
+        from openmdao.main.vartree import VariableTree # Break import loop on VariableTree
+        if isinstance(default_value, VariableTree):
             klass = default_value.__class__
             if 'iotype' in metadata:
                 default_value._iotype = metadata['iotype']

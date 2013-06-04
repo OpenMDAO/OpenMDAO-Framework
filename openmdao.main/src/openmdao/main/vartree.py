@@ -37,13 +37,15 @@ class VariableTree(Container):
 
     @property
     def iotype(self):
+        if not self._iotype and isinstance(self.parent, VariableTree):
+            self._iotype = self.parent.iotype
         return self._iotype
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
         if self.parent:
             if isinstance(self.parent, VariableTree):
-                self._iotype = self.parent._iotype
+                self._iotype = self.parent.iotype
             else:
                 t = self.parent.trait(self.name)
                 if t and t.iotype:
@@ -53,17 +55,21 @@ class VariableTree(Container):
     @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):
         if metaname == 'iotype':
-            return self._iotype
+            return self.iotype
         elif metaname is None:
             meta = super(VariableTree, self).get_metadata(traitpath, metaname)
-            meta['iotype'] = self._iotype
+            meta['iotype'] = self.iotype
             return meta
         else:
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
     def copy(self):
-        """Returns a deep copy of this VariableTree."""
-        return copy.deepcopy(self)
+        """Returns a deep copy of this VariableTree, without deepcopying the its parent.
+        Also installs necessary trait callbacks.
+        """
+        cp = super(VariableTree, self).copy()
+        cp.install_callbacks()
+        return cp
 
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
@@ -138,7 +144,7 @@ class VariableTree(Container):
         """Return the iotype of the Variable with the given name"""
         if self.get_trait(name) is None:
             self.raise_exception("'%s' not found" % name)
-        return self._iotype
+        return self.iotype
 
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form
@@ -153,9 +159,9 @@ class VariableTree(Container):
                 meta_io = metadata['iotype']
                 matches_io = False
                 if type(meta_io) is FunctionType:
-                    if meta_io(self._iotype):
+                    if meta_io(self.iotype):
                         matches_io = True
-                elif meta_io == self._iotype:
+                elif meta_io == self.iotype:
                     matches_io = True
                 if matches_io:
                     newdict = metadata.copy()
@@ -194,6 +200,7 @@ class VariableTree(Container):
 
         attrs = {}
         attrs['type'] = type(self).__name__
+        self_io = self.iotype
 
         # Connection information found in parent comp's parent assy
         if not self.parent or not self.parent._parent or \
@@ -201,7 +208,7 @@ class VariableTree(Container):
             connected = []
         else:
             graph = self.parent._parent._depgraph
-            if self._iotype == 'in':
+            if self_io == 'in':
                 connected = graph.get_connected_inputs()
             else:
                 connected = graph.get_connected_outputs()
@@ -234,7 +241,7 @@ class VariableTree(Container):
             if name in connected:
                 connections = self.parent._depgraph.connections_to(name)
 
-                if self._iotype == 'in':
+                if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
                                             connections]).replace('@xin.', '')
@@ -249,17 +256,12 @@ class VariableTree(Container):
                 vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
                                                    parent=attr['id'],
                                                    valid=valid)
-                if self._iotype == 'in':
+                if self_io == 'in':
                     variables += vt_attrs['Inputs']
                 else:
                     variables += vt_attrs['Outputs']
 
-        # if iotype was not specified but parent has iotype, then use parent's
-        _iotype = self._iotype
-        if _iotype not in ['in', 'out'] and self.parent.iotype in ['in', 'out']:
-            _iotype = self.parent.iotype
-
-        if _iotype == 'in':
+        if self_io == 'in':
             attrs['Inputs'] = variables
         else:
             attrs['Outputs'] = variables

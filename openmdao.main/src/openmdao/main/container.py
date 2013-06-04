@@ -208,7 +208,6 @@ class Container(SafeHasTraits):
                 finally:
                     variable_tree._parent = parent
                 setattr(self, name, new_tree)
-                new_tree.install_callbacks()
 
     @property
     def parent(self):
@@ -596,9 +595,13 @@ class Container(SafeHasTraits):
                 if isinstance(val, Container):
                     old_parent = val.parent
                     val.parent = None
-                    val_copy = _copydict[ttype.copy](val)
-                    val.parent = old_parent
+                    try:
+                        val_copy = _copydict[ttype.copy](val)
+                    finally:
+                        val.parent = old_parent
                     val_copy.parent = self
+                    if hasattr(val_copy, 'install_callbacks'):
+                        val_copy.install_callbacks()
                     val = val_copy
                 else:
                     val = _copydict[ttype.copy](val)
@@ -734,6 +737,19 @@ class Container(SafeHasTraits):
     @rbac(('owner', 'user'))
     def configure(self):
         pass
+
+    @rbac(('owner', 'user'))
+    def copy(self):
+        """Returns a deep copy without deepcopying the parent.
+        """
+        par = self.parent
+        self.parent = None
+        try:
+            cp = copy.deepcopy(self)
+        finally:
+            self.parent = par
+            cp.parent = par
+        return cp
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
