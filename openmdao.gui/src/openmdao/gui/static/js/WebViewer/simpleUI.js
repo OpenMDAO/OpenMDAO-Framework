@@ -197,63 +197,149 @@ function wvUpdateUI()
         //}
 
         function addBody(bodyIndex){
+
             jQuery("#leftframe").jstree("create_node", jQuery("#geom_display_body"), "inside", {
                 "attr" : { 
-                    "id" : "geom_display_body_" + bodyIndex
+                    "id" : "geom_display_body_" + bodyIndex,
                 },
                 "data" : "" + bodyIndex,
                 "state" : "closed",
-                "children" : [], 
-            }null, true);
+            });
 
-            /*jQuery("#leftframe").jstree("create", "#geom_display_body_" + bodyIndex, "inside", {
+            jQuery("#leftframe").jstree("create_node", "#geom_display_body_" + bodyIndex, "inside", {
                 "attr" : { "id" : "geom_display_body_" + bodyIndex + "_face"},
                 "data" : "Faces",
                 "state" : "closed",
-                "children" : null, 
             });
 
-            jQuery("#leftframe").jstree("create", "#geom_display_body_" + bodyIndex, "inside", {
+            jQuery("#leftframe").jstree("create_node", "#geom_display_body_" + bodyIndex, "inside", {
                 "attr" : { "id" : "geom_display_body_" + bodyIndex + "_edge"},
                 "data" : "Edges",
                 "state" : "closed",
-                "children" : null, 
-            });*/
+            });
+
+            bodyId = "#geom_display_body_" + bodyIndex;
+            bodyNode = jQuery(bodyId);
+            facesNode = bodyNode.children("ul").children().eq(1);
+            edgesNode = bodyNode.children("ul").children().eq(0);
+
+            jQuery(bodyId + " ul").before(  "<a class='body btn btn-small' href='#'> <span>Hide</span> <i class='icon-eye-close'></i></a>");
+            facesNode.append( "<a class='faces btn btn-small' href='#'> <span>Hide</span> <i class='icon-eye-close'></i></a>");
+            edgesNode.append( "<a class='edges btn btn-small' href='#'> <span>Hide</span> <i class='icon-eye-close'></i></a>");
         }
 
-        /*function addFace(bodyIndex, faceIndex){
-            jQuery("#leftframe").jstree("create", "#geom_display_body_" +bodyIndex, faceIndex, {
+        function addFace(bodyIndex, faceIndex){
+            var parentId = "#geom_display_body_" + bodyIndex + "_face";
+            var nodeId = parentId + "_" + faceIndex;
+            jQuery("#leftframe").jstree("create_node", "#geom_display_body_" +bodyIndex + "_face", faceIndex, {
                 "attr" : { "id" : "geom_display_body_" + bodyIndex + "_face_" + faceIndex},
-                "data" : faceIndex,
-                "state" : "closed" 
+                "data" : "" + faceIndex + " ",
             });
+
+            node = jQuery(nodeId);
+            node.append("<a class='face btn btn-small' href='#'><span>Hide</span>  <i class='icon-eye-close'></i></a>");
+            node.data("face", "Face " + faceIndex);
         }
 
         function addEdge(bodyIndex, edgeIndex){
-            jQuery("#leftframe").jstree("create", "#geom_display_body_"+bodyIndex, edgeIndex, {
-                "attr" : { "id" : "geom_display_body_" + bodyIndex + "_edge_" + edgeIndex},
-                "data" : edgeIndex,
-                "state" : "closed" 
-            });
-        }*/
+            var parentId = "geom_display_body_" + bodyIndex + "_edge";
+            var nodeId = parentId + "_" + edgeIndex;
 
-        var ibody = 0;
-        if(jQuery("#geom_display_body_" + ibody) === []){
-            addBody(0);
+            jQuery("#leftframe").jstree("create_node", "#" + parentId, edgeIndex, {
+                "attr" : { "id" : nodeId},
+                "data" : "" + edgeIndex + " ",
+            });
+            node = jQuery("#" + nodeId);
+            node.append("<a class='edge btn btn-small' href='#'><span>Hide</span>  <i class='icon-eye-close'></i></a>");
+            node.data("edge", "Edge " + edgeIndex);
         }
 
-        for (var gprim in g.sceneGraph){
-            //var matches = gprim.split(" ");
-            //var ibody = 0;
+        var ibody = 0;
+        
+        if( jQuery("#geom_display_body_" + ibody).length === 0 ){
+            addBody(ibody);
 
+            for (var gprim in g.sceneGraph){
+                var matches = gprim.split(" ");
 
-            /*if (matches[0] === "Face"){
-                addFace(ibody, parseInt(matches[1], 10));
+                if (matches[0] === "Face"){
+                    addFace(ibody, parseInt(matches[1], 10));
+                }
+
+                else if(matches[0] === "Edge"){
+                    addEdge(ibody, parseInt(matches[1], 10));
+                }
             }
 
-            else if(matches[0] === "Edge"){
-                addEdge(ibody, parseInt(matches[1], 10));
-            }*/
+            function handleClick(display){
+                var displays = {
+                    "face" : toggleFace,
+                    "edge" : toggleEdge,
+                    "faces" : toggleFaces,
+                    "edges" : toggleEdges,
+                };
+
+                function toggleDisplay(e){
+                    var button = jQuery(this).is("a") ? jQuery(this) : jQuery(this).parent();
+                    console.log(button);
+                    toggleButton(button);
+
+                    displays[display](button); 
+
+                    g.sceneUpd = 1;
+                };
+
+                return toggleDisplay;
+            }
+
+            function toggleButton(button){
+                var span = button.children("span");
+                var icon = button.children("i");
+
+                if(span.text() === "Hide"){
+                    span.html("Show");
+                    icon.attr("class", "icon-eye-open");
+                }
+
+                else{
+                    span.html("Hide");
+                    icon.attr("class", "icon-eye-close");
+                }
+            }
+
+            function toggleFace(button){
+                g.sceneGraph[button.parent().data("face")].attrs ^= g.plotAttrs.ON;
+            }
+
+            function toggleEdge(button){
+                g.sceneGraph[button.parent().data("edge")].attrs ^= g.plotAttrs.ON;
+            }
+            
+            function toggleFaces(button){
+                var faces = button.siblings("ul").children("li").children("a.face");
+
+                faces.each(function(){
+                    var face = jQuery(this);
+                    toggleButton(face);
+                    toggleFace(jQuery(face));
+                });
+            }
+
+            function toggleEdges(button){
+                var edges = button.siblings("ul").children("li").children("a.edge");
+
+                edges.each(function(){
+                    var edge = jQuery(this);
+                    toggleButton(edge);
+                    toggleEdge(jQuery(edge));
+                });
+            }
+
+            jQuery(".faces").click(handleClick("faces"));
+            jQuery(".edges").click(handleClick("edges"));
+            jQuery(".face").click(handleClick("face"));
+            jQuery(".edge").click(handleClick("edge"));
+
         }
 
         // put the Display attributes into the Tree
