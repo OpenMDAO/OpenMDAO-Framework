@@ -1767,7 +1767,7 @@ class Component(Container):
                             slots.append(slot_attr)
 
             if has_interface(self, IAssembly):
-                attrs['Dataflow'] = dataflow if dataflow else self.get_dataflow()
+                attrs['Dataflow'] = self.get_dataflow()
 
             if has_interface(self, IDriver):
                 attrs['Workflow'] = self.get_workflow()
