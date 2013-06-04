@@ -260,7 +260,7 @@ def _update_activate(bindir):
         with open(activate_fname, 'w') as out:
             out.write(content)
             
-def _copy_winlibs(home_dir):
+def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
     # fail when built in a virtualenv 
     # (still broken as of virtualenv 1.9.1, under python 2.7.4)
@@ -271,7 +271,12 @@ def _copy_winlibs(home_dir):
     libsdir = os.path.join(home_dir, 'libs')
     if not os.path.isdir(libsdir):
         os.mkdir(libsdir)
-    sysdir = os.path.join(os.path.dirname(sys.executable), 'libs')
+    if activated:
+        with open(os.path.join(home_dir, 'Lib', 'orig-prefix.txt')) as inp:
+            prefix = inp.readline().strip()
+    else:
+        prefix = os.path.dirname(sys.executable)
+    sysdir = os.path.join(prefix, 'libs')
     names = os.listdir(sysdir)
     for pat in ['*python*', '*msvc*']:
         for name in fnmatch.filter(names, pat):
@@ -347,7 +352,7 @@ def after_install(options, home_dir, activated=False):
         os.makedirs(etc)
         
     if is_win:
-        _copy_winlibs(home_dir)
+        _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
     else:
         # Put lib64_path at front of paths rather than end.
