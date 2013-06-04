@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.FileTreeFrame = function(id,model,code_fn) {
-    var menu = [
+openmdao.FileTreeFrame = function(id, model, code_fn) {
+    var _menu = [
         {   "text": "File",
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
@@ -14,41 +14,41 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
             ]
         }
     ];
-    openmdao.FileTreeFrame.prototype.init.call(this,id,'Files',menu);
+    openmdao.FileTreeFrame.prototype.init.call(this, id, 'Files', _menu);
 
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     // initialize private variables
-    var self = this,
-        tree = jQuery('<div>')
-            .appendTo(self.elm),
-        filter_beg = '_.',
-        filter_ext = [ 'pyc', 'pyd' ],
-        filter_active = true,
-        contextMenu = jQuery("<ul id="+id+"-context-menu class='context-menu'>")
-            .appendTo(self.elm);
+    var _self = this,
+        _tree = jQuery('<div>')
+            .appendTo(_self.elm),
+        _filter_beg = '_.',
+        _filter_ext = [ 'pyc', 'pyd' ],
+        _filter_active = true,
+        _contextMenu = jQuery("<ul id="+id+"-context-menu class='context-menu'>")
+            .appendTo(_self.elm);
 
     // Enable dropping of files onto file tree frame to add them to project
-    self.elm.bind({
+    _self.elm.bind({
         dragenter: function () {
-            self.elm.addClass('hover ui-state-highlight');
+            _self.elm.addClass('hover ui-state-highlight');
             return false;
         },
         dragover: function () {
             return false;
         },
         dragleave: function () {
-            self.elm.removeClass('hover ui-state-highlight');
+            _self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
         dragend: function () {
-            self.elm.removeClass('hover ui-state-highlight');
+            _self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
         drop: function (e) {
-            self.elm.removeClass('hover ui-state-highlight');
+            _self.elm.removeClass('hover ui-state-highlight');
             e = e || window.event;
             e.preventDefault();
             e = e.originalEvent || e;
@@ -80,7 +80,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
             url = "application/octet-stream:"+name+":file"+path+"'";
 
         var html = '';
-        if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
+        if (!_filter_active || ((_filter_beg.indexOf(name[0])<0 && _filter_ext.indexOf(ext)<0))) {
             html = "<li><a";
             if (typeof val === 'object') {    // a folder
                 html += " class='folder' path='"+path+"'>"+name+"</a>";
@@ -124,8 +124,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
 
     /** toggle the hidden files filter */
     function toggleFilter() {
-        filter_active = !filter_active;
-        self.update();
+        _filter_active = !_filter_active;
+        _self.update();
     }
 
     /** get a context menu for the specified node */
@@ -276,24 +276,26 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
         return menu;
     }
 
-    function highlightFiles(files){
-        tree.html("<div>Updating...</div>")
-            .effect('highlight',{color:'#ffd'},1000);
-    }
     /** update the tree from JSON file structure */
     function updateFiles(files) {
+        // highlight the tree per user preference
+        if (openmdao.preferences.FileTreeFrame.highlightOnUpdate) {
+            _tree.html("<div>Updating...</div>")
+                .effect('highlight', {color:'#ffd'}, 1000);
+        }
+
         // generate HTML for the file tree
         var html = "<ul>";
-        jQuery.each(files,function(path,val) {
+        jQuery.each(files, function(path,val) {
             html += getFileHTML(path,val);
         });
         html += "</ul>";
 
         // replace old html
-        tree.html(html);
+        _tree.html(html);
 
         // convert to a jstree
-        tree.jstree({
+        _tree.jstree({
             "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
             "themes" :      { "theme":  "classic" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
@@ -321,7 +323,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
             });
 
         })
-        .bind("dblclick.jstree", function (e,tree) {
+        .bind("dblclick.jstree", function (e) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
@@ -331,14 +333,14 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
                 // what do, what do
             }
             else {
-                debug.warn("node in file tree does not seem to be a file or a folder:",node);
+                debug.warn("node in file tree does not seem to be a file or a folder:", node);
             }
         });
 
         // enable dragging out to desktop (only supported under chrome)
         // ref: http://www.thecssninja.com/javascript/gmail-dragout
         // FIXME: doesn't work, handlers not getting added??
-        tree.find('.file').bind({
+        _tree.find('.file').bind({
             'dragstart': function(e) {
                 var url = jQuery(this).attr('data-download-url');
                 e.dataTransfer.setData('DownloadURL',url);
@@ -348,28 +350,26 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
     }
 
     // add background pane context menu items
-    contextMenu.append(jQuery('<li>New File</li>').click(function(ev) {
+    _contextMenu.append(jQuery('<li title="Create new file">New File</li>').click(function(e) {
         openmdao.FileTreeFrame.prototype.newFile();
     }));
-    contextMenu.append(jQuery('<li>New Folder</li>').click(function(ev) {
+    _contextMenu.append(jQuery('<li title="Create new folder">New Folder</li>').click(function(e) {
         openmdao.FileTreeFrame.prototype.newFolder();
     }));
-    contextMenu.append(jQuery('<li>Add Files</li>').click(function(ev) {
+    _contextMenu.append(jQuery('<li title="Add existing files to project">Add Files</li>').click(function(e) {
         openmdao.FileTreeFrame.prototype.addFile();
     }));
-    contextMenu.append(jQuery('<li>Toggle Hidden Files</li>').click(function(ev) {
+    _contextMenu.append(jQuery('<li title="Toggle visibility of hidden files">Toggle Hidden Files</li>').click(function(e) {
         toggleFilter();
     }));
-    ContextMenu.set(contextMenu.attr('id'), self.elm.attr('id'));
+    ContextMenu.set(_contextMenu.attr('id'), _self.elm.attr('id'));
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== 'files') {
-            debug.warn('Invalid files data:',message);
+            debug.warn('Invalid files data:', message);
         }
         else {
-            files = message[1];
-            highlightFiles();
-            updateFiles(files);
+            updateFiles(message[1]);
         }
     }
 
@@ -391,7 +391,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn) {
 
     // load initial file data
     model.model_ready.always(function() {
-       self.update();
+       _self.update();
     });
 
 };
@@ -412,12 +412,12 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
                     if (openmdao.model.editor) {
                         openmdao.model.editor.editFile(name);
                     }
-// Depending on browser settings, this may get blocked.  Worse yet, it can
-// put things in a state that other means of opening the editor get blocked.
-// For now just don't even try.
-//                    else {
-//                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
-//                    }
+                    // Depending on browser settings, this may get blocked.  Worse yet, it can
+                    // put things in a state that other means of opening the editor get blocked.
+                    // For now just don't even try.
+                    // else {
+                    //     openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
+                    // }
                     if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify('New file created');
                     }
@@ -448,7 +448,7 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
         xhr.open('POST', 'upload');
         xhr.onload = function () {
             if (xhr.status !== 200) {
-                debug.error('error uploading files',files,path);
+                debug.error('error uploading files', files, path);
             }
         };
         if (path) {

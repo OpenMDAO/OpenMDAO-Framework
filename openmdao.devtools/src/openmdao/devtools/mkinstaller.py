@@ -277,6 +277,39 @@ def _copy_winlibs(home_dir):
                 shutil.copyfile(os.path.join(sysdir, name), 
                                 os.path.join(libsdir, name))
 
+def _update_easy_manifest(home_dir):
+    # distribute requires elevation when run on 32 bit windows,
+    # apparently because Windows assumes that any program with
+    # 'install' in the name should require elevation.  The 
+    # solution is to create a manifest file for easy_install.exe
+    # that tells Windows that it doesn't require elevated 
+    # access.
+    template = \"\"\"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0"
+  processorArchitecture="X86"
+  name="easy_install.exe"
+  type="win32"/>
+  <!-- Identify the application security requirements. -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+  <security>
+  <requestedPrivileges>
+  <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+  </requestedPrivileges>
+  </security>
+  </trustInfo>
+</assembly>
+    \"\"\"
+
+    bindir = os.path.join(home_dir, 'Scripts')
+    manifest = os.path.join(bindir, 'easy_install.exe.manifest')
+    if not os.path.isfile(manifest):
+        with open(manifest, 'w') as f:
+            f.write(template)
+        # 'touch' the easy_install executable
+        os.utime(os.path.join(bindir, 'easy_install.exe'), None)
+
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
@@ -313,6 +346,7 @@ def after_install(options, home_dir):
         
     if _WINDOWS:
         _copy_winlibs(home_dir)
+        _update_easy_manifest(home_dir)
     else:
         # Put lib64_path at front of paths rather than end.
         # As of virtualenv 1.8.2 this fix had not made it in the release.
@@ -418,18 +452,30 @@ def after_install(options, home_dir):
     abshome = os.path.abspath(home_dir)
     
     if failures:
-        failmsg = ' (with failures).'
         failures.sort()
         print '\\n\\n***** The following packages failed to install: %%s.' %% failures
+        print
+        print 'This may be an intermittent network problem and simply retrying'
+        print 'could result in a successfull installation.  Without all'
+        print 'packages at least some tests will likely fail, and without core'
+        print 'packages such as Traits OpenMDAO will not function at all.'
+        print
+        print 'If you would like to try using this installation anyway,'
+        print 'from %%s type:\\n' %% abshome
+        if _WINDOWS:
+            print r'Scripts\\activate'
+        else:
+            print '. bin/activate'
+        print '\\nto activate your environment.'
+
     else:
-        failmsg = '.'
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s%%s' %% (abshome, failmsg)
-    print '\\nFrom %%s, type:\\n' %% abshome
-    if _WINDOWS:
-        print r'Scripts\\activate'
-    else:
-        print '. bin/activate'
-    print "\\nto activate your environment and start using OpenMDAO."
+        print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s' %% abshome
+        print '\\nFrom %%s, type:\\n' %% abshome
+        if _WINDOWS:
+            print r'Scripts\\activate'
+        else:
+            print '. bin/activate'
+        print '\\nto activate your environment and start using OpenMDAO.'
     
     sys.exit(1 if failures else 0)
     """
@@ -520,8 +566,14 @@ def after_install(options, home_dir):
         shutil.copyfile(scriptname, scriptname+'.old'
                         )
     with open(scriptname, 'wb') as f:
-        f.write(virtualenv.create_bootstrap_script(script_str % optdict))
+        # Pin the version of setuptools used.
+        fixline = u"        egg_path = 'setuptools-*-py%s.egg' % sys.version[:3]"
+        for line in virtualenv.create_bootstrap_script(script_str % optdict).split('\n'):
+            if line == fixline:
+                line = line.replace('*', '0.6c11')
+            f.write('%s\n' % line)
     os.chmod(scriptname, 0755)
-    
+ 
+
 if __name__ == '__main__':
     main()

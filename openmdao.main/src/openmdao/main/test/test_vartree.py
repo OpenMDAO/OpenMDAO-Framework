@@ -5,8 +5,8 @@ import unittest
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
-                              set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, File, List, VarTree
+                              set_as_top, SimulationRoot
+from openmdao.main.datatypes.api import Float, File, FileRef, List, VarTree
 from openmdao.main.case import flatten_obj
 
 from openmdao.util.testutil import assert_raises
@@ -88,7 +88,7 @@ class SimpleComp(Component):
             cont.vt2.y,
             cont.vt2.vt3.a,
             cont.vt2.vt3.b,
-            ]
+        ]
 
     def get_files(self, iotype):
         if iotype == 'in':
@@ -99,7 +99,25 @@ class SimpleComp(Component):
             cont.data,
             cont.vt2.data,
             cont.vt2.vt3.data,
-            ]
+        ]
+
+
+class NestedTree(VariableTree):
+
+    float_var = Float()
+
+
+class TopTree(VariableTree):
+
+    nested_tree = VarTree(NestedTree())  # no iotype
+
+
+class NestedTreeTest(Component):
+
+    top_tree = VarTree(TopTree(), iotype='in')
+
+    def execute(self):
+        pass
 
 
 class NamespaceTestCase(unittest.TestCase):
@@ -291,7 +309,7 @@ class NamespaceTestCase(unittest.TestCase):
         # and now this
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
-        
+
         self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
 
@@ -376,6 +394,12 @@ class NamespaceTestCase(unittest.TestCase):
         code = "vt3.add('bad', DumbVT3())"
         msg = ': a VariableTree may only contain Variables or VarTrees'
         assert_raises(self, code, globals(), locals(), TypeError, msg)
+
+    def test_nested_iotype(self):
+        # nested tree
+        comp = NestedTreeTest()
+        attr = comp.top_tree.nested_tree.get_attributes()
+        assert 'Inputs' in attr.keys()
 
 
 class ListConnectTestCase(unittest.TestCase):

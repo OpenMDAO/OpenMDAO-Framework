@@ -60,9 +60,7 @@ Built-in Variable Types
 |          | desc = None, iotype = None, aliases = ()] )``                |
 +----------+--------------------------------------------------------------+
 | File     | ``File( [default_value = None, iotype = None,                |
-|          | desc = None, low = None, high = None, path = None,           |
-|          | content_type = None, binary = False,                         |
-|          | local_path = None] )``                                       |
+|          | desc = None, legal_types = None, local_path = None] )``      |
 +----------+--------------------------------------------------------------+
 | Float    | ``Float( [default_value = None, iotype = None,               |
 |          | desc = None, low = None, high = None,                        |
@@ -318,33 +316,211 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
 *File Variables*
 ++++++++++++++++
 
-The *File* variable contains a reference to an input or output file on disk. It
-is more than just a text string that contains a path and filename; it is
-a *FileReference* that can be passed into other functions expecting
-such an object. FileReferences have methods for copying the reference and
-opening the referenced file for reading. The available `flags` are defined
-by `FileMetadata`, which supports arbitrary user metadata.
+The value of a :class:`File <openmdao.main.datatypes.file.File>` variable is a
+:class:`FileRef <openmdao.main.datatypes.file.FileRef>`, a reference to a file
+on disk (possibly at a remote system) along with various metadata regarding the
+file's format.
+Legal metadata associated with the File variable depends on its iotype.
+File variables with iotype ``in`` may specify *legal_types* and *local_path*
+if desired.
 
+*legal_types* is a list of strings specifying what *content_type* an
+incoming file may be (the strings are arbitrary, but must match exactly).
+If a content_type does not match, a ValueError is raised.
+If not specified, any content_type is valid.
+To connect to an input variable with legal_types specified, the output
+variable must have a default FileRef specified with a matching content_type.
 
-.. testcode:: filevar_example
+If an input variable specifies *local_path*, the incoming file will be
+copied to that path when the input variable is set.
+This is just a convenience for a common operation with external codes.
 
+Usage of an output variable consists of creating the file on disk in whatever
+manner is convenient, creating a FileRef referring to that file with associated
+metadata describing the file, and assigning the FileRef to the File variable.
+
+.. testcode:: filevar_output
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File, FileRef
+
+    class Source(Component):
+        """ Send a greeting. """
+        outfile = File(iotype='out')
+
+        def execute(self):
+            # Create the file.
+            path = 'source.txt'
+            with open(path, 'w') as out:
+                out.write('Hello world!\n')
+            self.outfile = FileRef(path)  # Assign reference to variable.
+
+If the FileRef needs metadata and the metadata doesn't change (which is fairly
+common), an alternative form for the above component may be used:
+
+.. testcode:: filevar_output2
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File, FileRef
+
+    class Source(Component):
+        """ Send a greeting. """
+        outfile = File(FileRef('source.txt', content_type='example'), iotype='out')
+
+        def execute(self):
+            # Create the file.
+            with open(self.outfile.path, 'w') as out:
+                out.write('Hello world!\n')
+            self.outfile = self.outfile.copy(self)  # Force new value.
+
+The last line is necessary so that Traits will perform the downstream
+assignment. Without this, the value of the variable hasn't changed, so Traits
+sees no new data to process. Note that only the FileRef is being copied,
+not the file data.
+
+Usage of an input variable takes one of two forms, depending on whether you
+want to read the file directly in your component, or some other code needs to
+access it by filename.
+
+To access the file directly, simply :meth:`open` the File variable's value.
+The (possibly remote) file will be opened in either text or binary mode as
+appropriate and a :class:`RemoteFile <openmdao.main.file_supp.RemoteFile>`
+object will be returned which acts like other Python file objects.
+
+.. testcode:: filevar_input
+
+    from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import File
-    
-    text_file = File(path='source.txt', iotype='out', content_type='txt')
-    binary_file = File(path='source.bin', iotype='out', binary=True,
-                            extra_stuff='Hello world!')
+
+    class Sink1(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in')
+
+        def execute(self):
+            # Note that this is doing open() on a FileRef.
+            with self.infile.open() as inp:
+                for line in inp:
+                    print line,
+
+If instead the incoming file is to be used by some other code, set the
+local_path attribute on the File variable to where the code expects the
+file to be. When the File variable's value is set, the file data will
+automatically be copied to this location.
+
+.. testcode:: filevar_local
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File
+
+    class Sink2(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in', local_path='input.txt')
+
+        def execute(self):
+            # Note that this is doing a direct open().
+            with open('input.txt', 'rU') as inp:
+                for line in inp:
+                    print line,
+
+FileRefs are an extension of
+:class:`FileMetadata <openmdao.main.file_supp.FileMetadata>`,
+which holds predefined as well as arbitrary user metadata.
+The predefined metadata is used to describe file layout, primarily basic binary
+formats.
 
 The *path* must be a descendant of the parent component's path.
-The *binary* flag can be used to mark a file as binary. This can be important
+This is both a security precaution and it allows for collecting a model into
+a Python egg for transport.
+
+The *binary* flag is used to mark a file as binary. This is important
 when transferring files between Windows and OS X or Linux.  The default value
 is False, signifying a text file which needs newline translation between
 different systems.  If newline translation is applied to a binary file it will
 corrupt the data.
 
-.. todo::
+The :class:`Stream <openmdao.util.stream.Stream>` class can be helpful when
+reading or writing binary formats.  Stream uses :mod:`numpy` internally which
+requires a standard Python file object rather than RemoteFile, so you'll have
+to use the local_path option for input files.
 
-    Provide some examples to demonstrate the options.
-                
+Here's a complete example of a source component sending to two destination
+components.  The source component generates both text and binary files.
+
+.. testcode:: filevar_example
+
+    import random
+
+    from openmdao.main.api import Assembly, Component
+    from openmdao.lib.datatypes.api import File, FileRef
+    from openmdao.util.stream import Stream
+
+    class Source(Component):
+        """ Send a greeting and a Fortran unformatted file of numbers. """
+        txtfile = File(FileRef('source.txt', content_type='example'), iotype='out')
+        binfile = File(FileRef('unformatted.dat', binary=True, unformatted=True,
+                               content_type='data'), iotype='out')
+        def execute(self):
+            # Create the files.
+            with open(self.outfile.path, 'w') as out:
+                out.write('Hello world!\n')
+            self.txtfile = self.txtfile.copy(self)  # Force new value.
+
+            with open(self.binfile.path, 'wb') as out:
+                stream = Stream(out, binary=True, unformatted=True)
+                for i in range(4):
+                    data = [random.random() for j in range(3)]
+                    print data
+                    stream.write_floats(data, full_record=True)
+            self.binfile = self.binfile.copy(self)  # Force new value.
+            print
+
+    class Sink1(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in', legal_types=['text', 'example'])
+
+        def execute(self):
+            # Note that this is doing open() on a FileRef.
+            with self.infile.open() as inp:
+                print self.get_pathname()
+                for line in inp:
+                    print line,
+                print
+
+    class Sink2(Component):
+        """ Receive files and display. """
+        txtfile = File(iotype='in', legal_types=['text', 'example'],
+                       local_path='input.txt')
+        binfile = File(iotype='in', legal_types=['data'], local_path='input.dat')
+
+        def execute(self):
+            # Note that this is doing a direct open().
+            with open('input.txt', 'rU') as inp:
+                print self.get_pathname()
+                for line in inp:
+                    print line,
+
+            with open('input.dat', 'rb') as inp:
+                # Setup stream based on format declared on incoming file.
+                stream = Stream(inp, binary=self.binfile.binary,
+                                unformatted=self.binfile.unformatted)
+                for i in range(4):
+                    data = stream.read_floats(3, full_record=True)
+                    print list(data)  # Use list() just for consistent format.
+                print
+
+    if __name__ == '__main__':
+        top = Assembly()
+        top.add('src', Source())
+        top.add('dst1', Sink1())
+        top.add('dst2', Sink2())
+        top.driver.workflow.add(('src', 'dst1', 'dst2'))
+        top.connect('src.txtfile', ('dst1.infile', 'dst2.txtfile'))
+        top.connect('src.binfile', 'dst2.binfile')
+        top.run()
+        top.src.force_execute = True  # Force another run.
+        top.run()
+
+
 .. index:: Slot Variables
 
 *Slot Variables*

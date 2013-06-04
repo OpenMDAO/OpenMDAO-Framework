@@ -199,6 +199,8 @@ class FloatTestCase(unittest.TestCase):
         input_attrs = attrs['Inputs']
         self.assertEqual(len(input_attrs), 3)
         self.assertTrue({'name': 'float1',
+                         'id': 'float1',
+                         'indent': 0,
                          'type': 'float',
                          'value': 3.1415926,
                          'high': 99.0,

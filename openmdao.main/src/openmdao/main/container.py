@@ -35,11 +35,11 @@ from enthought.traits.trait_base import not_none
 from multiprocessing import connection
 
 from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
-from openmdao.main.filevar import FileRef
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry
 from openmdao.main.index import process_index_entry, get_indexed_value, \
@@ -807,52 +807,55 @@ class Container(SafeHasTraits):
         return [k for k, v in self.items(iotype=not_none)]
 
     def get_attributes(self, io_only=True):
-        """ We use Container as a base class for objects that have traits
-        that need to be edited, but have no iotype. This method returns a
-        dictionary of information that the GUI can use to build the editors.
+        """ Get attributes of this container. Includes all variables ('Inputs')
+            and, if *io_only* is not true, attributes for all slots as well.
 
-        The default behavior is to take all traits and put them on the inputs
-        pane. For different behavior, overload this method.
-
-        io_only: Bool
-            Passed in, but not used in the base class."""
+            Arguments:
+                io_only:  if True then only 'Inputs' are included
+        """
 
         attrs = {}
         attrs['type'] = type(self).__name__
 
-        variables = []
-        slots = []
+        var_attrs = []
+
+        if not io_only:
+            slot_attrs = []
+        else:
+            slot_attrs = None
+
         #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union(
-                                 self._added_traits.keys(),
-                                     self._alltraits(type=Slot).keys()):
+        for name in set(self.list_vars()).union(self._added_traits.keys(),
+                                                self._alltraits(type=Slot).keys()):
 
             trait = self.get_trait(name)
-            ttype = trait.trait_type
-
-            attr = {}
-
             meta = self.get_metadata(name)
             value = getattr(self, name)
+            ttype = trait.trait_type
 
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            if 'framework_var' in meta:
+                attr['id'] = '~' + name
+            else:
+                attr['id'] = name
+            attr['indent'] = 0
 
             # Container variables are not connectable
             attr['connected'] = ''
 
-            variables.append(attr)
+            var_attrs.append(attr)
 
-            # Process singleton and contained slots.
-            if not io_only and slot_attr is not None:
-
-                # We can hide slots (e.g., the Workflow slot in drivers)
+            # Process slots
+            if slot_attrs is not None and slot_attr is not None:
+                # slots can be hidden (e.g. the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] is False:
-                    slots.append(slot_attr)
+                    slot_attrs.append(slot_attr)
 
-        attrs["Inputs"] = variables
-        if slots:
-            attrs['Slots'] = slots
+        attrs['Inputs'] = var_attrs
+
+        if slot_attrs:
+            attrs['Slots'] = slot_attrs
         return attrs
 
     # Can't use items() since it returns a generator (won't pickle).
