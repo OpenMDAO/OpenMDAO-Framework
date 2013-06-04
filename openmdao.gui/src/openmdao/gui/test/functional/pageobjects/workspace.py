@@ -84,6 +84,8 @@ class WorkspacePage(BasePageObject):
                            '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
                            '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
+    delete_files_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
 
     # File context menu.
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -274,6 +276,22 @@ class WorkspacePage(BasePageObject):
         self.find_file(os.path.basename(file_path))  # Verify added.
         time.sleep(1)  # Some extra time for the library update.
 
+    def add_file_to_folder(self, folder_path, file_path):
+        """ Read in `file_path` """
+        if file_path.endswith('.pyc'):
+            file_path = file_path[:-1]
+
+        self('files_tab').click()
+        element = self.find_file(folder_path)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        time.sleep(0.5)
+        self('file_add').click()
+        time.sleep(0.5)
+
+        self.file_chooser = file_path
+        time.sleep(1)  # Some extra time for the file tree update.
+
     def new_file_dialog(self):
         """ bring up the new file dialog """
         self('files_tab').click()
@@ -281,11 +299,23 @@ class WorkspacePage(BasePageObject):
         self('newfile_button').click()
         return ValuePrompt(self.browser, self.port)
 
+    def new_folder_dialog(self):
+        """ bring up the new folder dialog """
+        self('files_tab').click()
+        self('file_menu').click()
+        self('newfolder_button').click()
+        return ValuePrompt(self.browser, self.port)
+
     def new_file(self, filename):
         """ Make a new empty file `filename`. """
         page = self.new_file_dialog()
         page.set_value(filename)
         NotifierPage.wait(self)  # Wait for creation to complete.
+
+    def new_folder(self, foldername):
+        """ Make a new empty folder `foldername`. """
+        page = self.new_folder_dialog()
+        page.set_value(foldername)
 
     def find_file(self, filename, tmo=TMO):
         """ Return element corresponding to `filename`. """
@@ -313,6 +343,30 @@ class WorkspacePage(BasePageObject):
             self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+    def delete_file(self, filename):
+        """ Delete `filename`. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        time.sleep(0.5)
+        self('file_delete').click()
+        time.sleep(0.5)
+
+    def delete_files(self, file_paths):
+        """ Delete all the files in the list `file_paths` """
+
+        # need select all the files given in file_paths
+        self('files_tab').click()
+        for filename in file_paths:
+            element = self.find_file(filename)
+            chain = ActionChains(self.browser)
+            chain.key_down( Keys.CONTROL ).click(element).key_up( Keys.CONTROL ).perform()
+
+        self('files_tab').click()
+        self('file_menu').click()
+        self('delete_files_button').click()
 
     def expand_folder(self, filename):
         """ Expands `filename`. """
