@@ -79,6 +79,10 @@ def adjust_options(options, args):
         sys.exit(-1)
 %s
 
+    # Check if we're running in an activated environment.
+    virtual_env = os.environ.get('VIRTUAL_ENV')
+    if virtual_env:
+        after_install(options, virtual_env, activated=True)
 """ % code
 
 def main(args=None):
@@ -157,8 +161,6 @@ def main(args=None):
 
 openmdao_prereqs = %(openmdao_prereqs)s
 
-_WINDOWS = sys.platform.startswith('win')
-
 %(mkdir_pkg)s
 
 def extend_parser(parser):
@@ -199,7 +201,7 @@ def download(url, dest='.'):
 
 def _get_mingw_dlls():
     # first, check if MinGW/bin is already in PATH
-    for entry in sys.path:
+    for entry in os.environ['PATH'].split(os.pathsep):
         if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
             print 'MinGW is already installed, skipping download.'
             break
@@ -220,7 +222,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = %(extarg2)s
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
-    cmdline = [] if _WINDOWS else [join(bin_dir, 'python')]
+    cmdline = [] if is_win else [join(bin_dir, 'python')]
     cmdline += [join(bin_dir, 'easy_install'), extarg %(dldir)s] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
@@ -239,7 +241,7 @@ def _update_activate(bindir):
     }
     libpathvname = _lpdict.get(sys.platform)
     if libpathvname:
-        if _WINDOWS:
+        if is_win:
             activate_base = 'activate.bat'
         else:
             activate_base = 'activate'
@@ -250,7 +252,7 @@ def _update_activate(bindir):
             content = inp.read()
             
         if 'get_full_libpath' not in content:
-            if _WINDOWS:
+            if is_win:
                 content += '''\\nfor /f "delims=" %%%%A in ('get_full_libpath') do @set PATH=%%%%A\\n\\n'''
             else:
                 content += "\\n%%s=$(get_full_libpath)\\nexport %%s\\n\\n" %% (libpathvname, libpathvname)
@@ -310,7 +312,7 @@ def _update_easy_manifest(home_dir):
         # 'touch' the easy_install executable
         os.utime(os.path.join(bindir, 'easy_install.exe'), None)
 
-def after_install(options, home_dir):
+def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
     
     reqs = %(reqs)s
@@ -334,7 +336,7 @@ def after_install(options, home_dir):
     else:
         openmdao_url = url
     etc = join(home_dir, 'etc')
-    if _WINDOWS:
+    if is_win:
         lib_dir = join(home_dir, 'Lib')
         bin_dir = join(home_dir, 'Scripts')
     else:
@@ -344,7 +346,7 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if _WINDOWS:
+    if is_win:
         _copy_winlibs(home_dir)
         _update_easy_manifest(home_dir)
     else:
@@ -407,7 +409,7 @@ def after_install(options, home_dir):
 
         activate = os.path.join(bin_dir, 'activate')
         deactivate = os.path.join(bin_dir, 'deactivate')
-        if _WINDOWS:
+        if is_win:
             source_command = ''
             python = ''
             openmdao = 'openmdao'
@@ -417,7 +419,7 @@ def after_install(options, home_dir):
             openmdao = os.path.join(bin_dir, 'openmdao')
         
 %(make_docs)s
-        if _WINDOWS: # retrieve MinGW DLLs from server
+        if is_win: # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls()
             except Exception as err:
@@ -434,7 +436,7 @@ def after_install(options, home_dir):
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
-    if not _WINDOWS and ' ' in abs_bin:
+    if not is_win and ' ' in abs_bin:
         import stat
         shebang = '#!"%%s"\\n' %% os.path.join(abs_bin, 'python')
         print '\\nFixing scripts for spaces in install path'
@@ -460,22 +462,24 @@ def after_install(options, home_dir):
         print 'packages at least some tests will likely fail, and without core'
         print 'packages such as Traits OpenMDAO will not function at all.'
         print
-        print 'If you would like to try using this installation anyway,'
-        print 'from %%s type:\\n' %% abshome
-        if _WINDOWS:
-            print r'Scripts\\activate'
-        else:
-            print '. bin/activate'
-        print '\\nto activate your environment.'
+        if not activated:
+            print 'If you would like to try using this installation anyway,'
+            print 'from %%s type:\\n' %% abshome
+            if is_win:
+                print r'Scripts\\activate'
+            else:
+                print '. bin/activate'
+            print '\\nto activate your environment.'
 
     else:
         print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s' %% abshome
-        print '\\nFrom %%s, type:\\n' %% abshome
-        if _WINDOWS:
-            print r'Scripts\\activate'
-        else:
-            print '. bin/activate'
-        print '\\nto activate your environment and start using OpenMDAO.'
+        if not activated:
+            print '\\nFrom %%s, type:\\n' %% abshome
+            if is_win:
+                print r'Scripts\\activate'
+            else:
+                print '. bin/activate'
+            print '\\nto activate your environment and start using OpenMDAO.'
     
     sys.exit(1 if failures else 0)
     """
