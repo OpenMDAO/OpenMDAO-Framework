@@ -452,18 +452,30 @@ def after_install(options, home_dir):
     abshome = os.path.abspath(home_dir)
     
     if failures:
-        failmsg = ' (with failures).'
         failures.sort()
         print '\\n\\n***** The following packages failed to install: %%s.' %% failures
+        print
+        print 'This may be an intermittent network problem and simply retrying'
+        print 'could result in a successfull installation.  Without all'
+        print 'packages at least some tests will likely fail, and without core'
+        print 'packages such as Traits OpenMDAO will not function at all.'
+        print
+        print 'If you would like to try using this installation anyway,'
+        print 'from %%s type:\\n' %% abshome
+        if _WINDOWS:
+            print r'Scripts\\activate'
+        else:
+            print '. bin/activate'
+        print '\\nto activate your environment.'
+
     else:
-        failmsg = '.'
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s%%s' %% (abshome, failmsg)
-    print '\\nFrom %%s, type:\\n' %% abshome
-    if _WINDOWS:
-        print r'Scripts\\activate'
-    else:
-        print '. bin/activate'
-    print "\\nto activate your environment and start using OpenMDAO."
+        print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s' %% abshome
+        print '\\nFrom %%s, type:\\n' %% abshome
+        if _WINDOWS:
+            print r'Scripts\\activate'
+        else:
+            print '. bin/activate'
+        print '\\nto activate your environment and start using OpenMDAO.'
     
     sys.exit(1 if failures else 0)
     """
@@ -554,8 +566,14 @@ def after_install(options, home_dir):
         shutil.copyfile(scriptname, scriptname+'.old'
                         )
     with open(scriptname, 'wb') as f:
-        f.write(virtualenv.create_bootstrap_script(script_str % optdict))
+        # Pin the version of setuptools used.
+        fixline = u"        egg_path = 'setuptools-*-py%s.egg' % sys.version[:3]"
+        for line in virtualenv.create_bootstrap_script(script_str % optdict).split('\n'):
+            if line == fixline:
+                line = line.replace('*', '0.6c11')
+            f.write('%s\n' % line)
     os.chmod(scriptname, 0755)
-    
+ 
+
 if __name__ == '__main__':
     main()
