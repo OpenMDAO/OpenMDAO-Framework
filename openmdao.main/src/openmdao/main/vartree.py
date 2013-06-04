@@ -113,7 +113,6 @@ class VariableTree(Container):
         for k, v in self.__dict__.items():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
-        pass
 
     def _trait_modified(self, obj, name, old, new):
         # handle weird traits side-effect from hasattr call
