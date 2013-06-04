@@ -98,7 +98,7 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Find dimension of our problem.
-        _, nEdge, self.bounds = self.workflow.get_dimensions()
+        nEdge = self.workflow.get_dimensions()
         
         self.arg = numpy.zeros((nEdge, 1))
         A = LinearOperator((nEdge, nEdge),
@@ -126,35 +126,8 @@ class MDASolver(Driver):
                              tol=self.tolerance,
                              maxiter=100)
             
-            # Apply new state to model
-            for edge in self.workflow._severed_edges:
-                deflatten = False
-                src, target = edge
-                    
-                i1, i2 = self.bounds[edge]
-                if i2-i1 > 1:
-                    old_val = self.parent.get(target)
-                    if old_val.shape[0] > old_val.shape[1]:
-                        old_val = old_val.T[0]
-                        deflatten = True
-                    new_val = old_val + dv[i1:i2]
-                else:
-                    new_val = self.parent.get(target) + float(dv[i1:i2])
-                    
-                if deflatten:
-                    new_val = new_val.reshape([i2-i1, 1])
-                self.parent.set(target, new_val, force=True)
-                
-                # Prevent OpenMDAO from stomping on our poked input.
-                parts = target.split('.')
-                comp_name = parts[0]
-                var_name = '.'.join(parts[1:])
-                comp = self.parent.get(comp_name)
-                valids = comp._valid_dict
-                valids[var_name] = True
-                
-                #(An alternative way to prevent the stomping)
-                #self.parent.set(src, new_val, force=True)
+            # Increment the model input edges by dv
+            self.workflow.set_new_state(dv)
             
             self.workflow.run()
             
@@ -181,7 +154,7 @@ class MDASolver(Driver):
         # Fill input dictionaries with values from input arg.
         for edge in self.workflow.get_interior_edges():
             src, target = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.workflow.bounds[edge]
             
             parts = src.split('.')
             comp_name = parts[0]
@@ -205,7 +178,7 @@ class MDASolver(Driver):
         result = numpy.zeros(len(arg))
         for edge in self.workflow.get_interior_edges():
             src, target = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.workflow.bounds[edge]
         
             parts = src.split('.')
             comp_name = parts[0]

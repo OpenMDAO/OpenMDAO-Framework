@@ -98,7 +98,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     
                     # Keep a list of the edges we break, so that a solver
                     # can use them as its independents/dependents.
-                    depgraph = self._parent.parent._depgraph
+                    depgraph = self.scope._depgraph
                     edge_set = depgraph.get_interior_edges([strong[-1], 
                                                             strong[0]])
                     
@@ -141,12 +141,12 @@ class CyclicWorkflow(SequentialWorkflow):
         interior to the set of components supplied."""
         
         names = self.get_names()
-        edge_list = self._parent.parent._depgraph.get_interior_edges(names)
+        edge_list = self.scope._depgraph.get_interior_edges(names)
         return sorted(list(edge_list))
     
     def get_dimensions(self):
-        """Returns some bookkeeping items that describe the dimension of the
-        interior edge connections. Also creates the residual array.
+        """Creates the array that stores the residual. Also returns the
+        number of edges.
         """
         edges = self.get_interior_edges()
         
@@ -156,7 +156,7 @@ class CyclicWorkflow(SequentialWorkflow):
             
             src = edge[0]
             
-            val = self._parent.parent.get(src)
+            val = self.scope.get(src)
             if isinstance(val, float):
                 width = 1
             elif isinstance(val, ndarray):
@@ -173,10 +173,10 @@ class CyclicWorkflow(SequentialWorkflow):
             self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
             
-        if self.res is None:
+        if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
             
-        return edges, nEdge, self.bounds
+        return nEdge
     
     def calculate_residuals(self):
         """Caclulate and return the vector of residuals based on the current
@@ -184,10 +184,51 @@ class CyclicWorkflow(SequentialWorkflow):
         
         for edge in self.get_interior_edges():
             src, target = edge
-            src_val = self._parent.parent.get(src)
-            target_val = self._parent.parent.get(target)
+            src_val = self.scope.get(src)
+            target_val = self.scope.get(target)
             
             i1, i2 = self.bounds[edge]
             self.res[i1:i2] = src_val - target_val
     
         return self.res
+    
+    def set_new_state(self, dv):
+        """Adds a vector of new values to the current model state at the
+        input edges.
+        
+        dv: ndarray (nEdge, 1)
+            Array of values to add to the model inputs.
+        """
+        
+        # Apply new state to model
+        for edge in self._severed_edges:
+            deflatten = False
+            src, target = edge
+                
+            i1, i2 = self.bounds[edge]
+            if i2-i1 > 1:
+                old_val = self.scope.get(target)
+                if old_val.shape[0] > old_val.shape[1]:
+                    old_val = old_val.T[0]
+                    deflatten = True
+                new_val = old_val + dv[i1:i2]
+            else:
+                new_val = self.scope.get(target) + \
+                          float(dv[i1:i2])
+                
+            if deflatten:
+                new_val = new_val.reshape([i2-i1, 1])
+            self.scope.set(target, new_val, force=True)
+            
+            # Prevent OpenMDAO from stomping on our poked input.
+            parts = target.split('.')
+            comp_name = parts[0]
+            var_name = '.'.join(parts[1:])
+            comp = self.scope.get(comp_name)
+            valids = comp._valid_dict
+            valids[var_name] = True
+            
+            #(An alternative way to prevent the stomping. This is more
+            #concise, but setting an output and allowing OpenMDAO to pull it
+            #felt hackish.)
+            #self.scope.set(src, new_val, force=True)
