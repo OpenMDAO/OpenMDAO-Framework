@@ -261,7 +261,7 @@ class VariableTree(Container):
                 else:
                     variables += vt_attrs['Outputs']
 
-        if _self_io == 'in':
+        if self_io == 'in':
             attrs['Inputs'] = variables
         else:
             attrs['Outputs'] = variables
