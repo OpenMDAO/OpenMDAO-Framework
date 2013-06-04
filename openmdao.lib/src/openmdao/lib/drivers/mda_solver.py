@@ -1,7 +1,8 @@
 """
 This solver can converge an MDA that contains a cyclic graph without requiring
-the user to break connections and specify independent and dependent
-variables
+the user to break connections and specify independent and dependent variables.
+Set "newton" to True to use Newton-Krylov, otherwise, set "newton" to False to
+use Gauses-Siedel (aka fixed-point iteration).
 """
 
 # pylint: disable-msg=C0103
@@ -13,36 +14,30 @@ import logging
 
 try:
     import numpy
+    from scipy.sparse.linalg import gmres, LinearOperator
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
-else:
-    # this little funct replaces a dependency on scipy
-    npnorm = numpy.linalg.norm
-    def norm(a, ord=None):
-        return npnorm(numpy.asarray_chkfinite(a), ord=ord)
 
-from scipy.sparse.linalg import gmres, LinearOperator
-    
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
 from openmdao.main.datatypes.api import Float, Int, Bool
 from openmdao.util.decorators import stub_if_missing_deps
 
 
-@stub_if_missing_deps('numpy')
+@stub_if_missing_deps('numpy', 'scipy')
 class MDASolver(Driver):
     
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
     
-    Newton = Bool(False, iotype='in', desc='Set to True to use a ' + \
-                    'Newton method.')
+    newton = Bool(False, iotype='in', desc='Set to True to use a ' + \
+                    'Newton-Krylov method. Defaults to False for ' + \
+                    'Gauss-Siedel.')
     
     def __init__(self):
         
         super(MDASolver, self).__init__()
-        
         self.workflow = CyclicWorkflow()
         
     def check_config(self):
@@ -57,7 +52,7 @@ class MDASolver(Driver):
     def execute(self):
         """ Pick our solver method. """
         
-        if self.Newton:
+        if self.newton:
             self.execute_Newton()
         else:
             self.execute_Gauss_Seidel()
@@ -100,7 +95,6 @@ class MDASolver(Driver):
         # Find dimension of our problem.
         nEdge = self.workflow.get_dimensions()
         
-        self.arg = numpy.zeros((nEdge, 1))
         A = LinearOperator((nEdge, nEdge),
                            matvec=self.matvecFWD,
                            dtype=float)
@@ -139,7 +133,8 @@ class MDASolver(Driver):
             self.record_case()
             
     def matvecFWD(self, arg):
-        '''Callback function for performing the matrix vector product.'''
+        '''Callback function for performing the matrix vector product of the
+        model's full Jacobian with an incoming vector arg.'''
         
         # Bookkeeping dictionaries
         inputs = {}

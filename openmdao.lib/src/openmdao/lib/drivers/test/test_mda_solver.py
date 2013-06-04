@@ -51,7 +51,7 @@ class Scalable_MDA(Assembly):
         
         self.add('driver', MDASolver())
         self.driver.workflow.add(['d1', 'd2'])
-        self.driver.Newton = True
+        self.driver.newton = True
         
 
 class SLSPQdriverTestCase(unittest.TestCase):
@@ -77,7 +77,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         
     def test_newton(self):
         
-        self.top.driver.Newton = True
+        self.top.driver.newton = True
         self.top.run()
         
         assert_rel_error(self, self.top.d1.y1,
