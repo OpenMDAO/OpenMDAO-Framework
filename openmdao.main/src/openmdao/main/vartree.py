@@ -45,7 +45,7 @@ class VariableTree(Container):
     def cpath_updated(self):
         if self.parent:
             if isinstance(self.parent, VariableTree):
-                self._iotype = self.parent._iotype
+                self._iotype = self.parent.iotype
             else:
                 t = self.parent.trait(self.name)
                 if t and t.iotype:
@@ -159,9 +159,9 @@ class VariableTree(Container):
                 meta_io = metadata['iotype']
                 matches_io = False
                 if type(meta_io) is FunctionType:
-                    if meta_io(self._iotype):
+                    if meta_io(self.iotype):
                         matches_io = True
-                elif meta_io == self._iotype:
+                elif meta_io == self.iotype:
                     matches_io = True
                 if matches_io:
                     newdict = metadata.copy()
@@ -200,6 +200,7 @@ class VariableTree(Container):
 
         attrs = {}
         attrs['type'] = type(self).__name__
+        self_io = self.iotype
 
         # Connection information found in parent comp's parent assy
         if not self.parent or not self.parent._parent or \
@@ -207,7 +208,7 @@ class VariableTree(Container):
             connected = []
         else:
             graph = self.parent._parent._depgraph
-            if self._iotype == 'in':
+            if self_io == 'in':
                 connected = graph.get_connected_inputs()
             else:
                 connected = graph.get_connected_outputs()
@@ -240,7 +241,7 @@ class VariableTree(Container):
             if name in connected:
                 connections = self.parent._depgraph.connections_to(name)
 
-                if self._iotype == 'in':
+                if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
                                             connections]).replace('@xin.', '')
@@ -255,15 +256,12 @@ class VariableTree(Container):
                 vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
                                                    parent=attr['id'],
                                                    valid=valid)
-                if self._iotype == 'in':
+                if self_io == 'in':
                     variables += vt_attrs['Inputs']
                 else:
                     variables += vt_attrs['Outputs']
 
-        # if iotype was not specified but parent has iotype, then use parent's
-        _iotype = self.iotype
-
-        if _iotype == 'in':
+        if _self_io == 'in':
             attrs['Inputs'] = variables
         else:
             attrs['Outputs'] = variables
