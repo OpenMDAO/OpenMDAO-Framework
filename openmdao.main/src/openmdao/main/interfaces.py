@@ -301,6 +301,11 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
+    def get_workflow(self):
+        """ Get the driver info and the list of components that make up the
+            driver's workflow; recurse on nested drivers.
+        """
+
 
 class ISolver(IDriver):
     """An interface for drivers that are solvers.
@@ -320,6 +325,12 @@ class IAssembly(IComponent):
     """An interface for objects that contain a driver and its workflow components."""
 
     driver = Attribute("object that manage's the iteration of a workflow")
+
+    def get_dataflow(self):
+        """ Get a dictionary of components and the connections between them
+            that make up the data flow for the assembly;
+            also includes parameter, constraint, and objective flows
+        """
 
 
 class IFactory (Interface):
