@@ -136,15 +136,7 @@ class CyclicWorkflow(SequentialWorkflow):
         self._collapsed_graph = collapsed_graph.subgraph(cnames)
         return self._collapsed_graph
     
-    def get_interior_edges(self):
-        """ Returns an alphabetical list of all output edges that are
-        interior to the set of components supplied."""
-        
-        names = self.get_names()
-        edge_list = self.scope._depgraph.get_interior_edges(names)
-        return sorted(list(edge_list))
-    
-    def get_dimensions(self):
+    def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
@@ -232,3 +224,55 @@ class CyclicWorkflow(SequentialWorkflow):
             #concise, but setting an output and allowing OpenMDAO to pull it
             #felt hackish.)
             #self.scope.set(src, new_val, force=True)
+
+    def matvecFWD(self, arg):
+        '''Callback function for performing the matrix vector product of the
+        workflow's full Jacobian with an incoming vector arg.'''
+        
+        # Bookkeeping dictionaries
+        inputs = {}
+        outputs = {}
+        
+        # Start with zero-valued dictionaries cotaining keys for all inputs
+        for comp in self.__iter__():
+            name = comp.name
+            inputs[name] = {}
+            outputs[name] = {}
+            
+        # Fill input dictionaries with values from input arg.
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+            
+            parts = src.split('.')
+            comp_name = parts[0]
+            var_name = '.'.join(parts[1:])
+            
+            outputs[comp_name][var_name] = arg[i1:i2]
+            inputs[comp_name][var_name] = arg[i1:i2]
+            
+            parts = target.split('.')
+            comp_name = parts[0]
+            var_name = '.'.join(parts[1:])
+            
+            inputs[comp_name][var_name] = arg[i1:i2]
+            
+        # Call ApplyJ on each component
+        for comp in self.__iter__():
+            name = comp.name
+            comp.applyJ(inputs[name], outputs[name])
+            
+        # Poke results into the return vector
+        result = zeros(len(arg))
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+        
+            parts = src.split('.')
+            comp_name = parts[0]
+            var_name = '.'.join(parts[1:])
+            
+            result[i1:i2] = outputs[comp_name][var_name]
+        
+        return result
+        

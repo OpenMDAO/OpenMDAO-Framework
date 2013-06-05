@@ -126,6 +126,14 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
+    def get_interior_edges(self):
+        """ Returns an alphabetical list of all output edges that are
+        interior to the set of components supplied."""
+        
+        names = self.get_names()
+        edge_list = self.scope._depgraph.get_interior_edges(names)
+        return sorted(list(edge_list))
+    
     def calc_derivatives(self, first=False, second=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""

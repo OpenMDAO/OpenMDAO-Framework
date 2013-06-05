@@ -61,7 +61,7 @@ class MDASolver(Driver):
         """ Solver execution loop: fixed point iteration. """
         
         # Find dimension of our problem.
-        self.workflow.get_dimensions()
+        self.workflow.initialize_residual()
         
         # Initial Run
         self.workflow.run()
@@ -93,10 +93,10 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Find dimension of our problem.
-        nEdge = self.workflow.get_dimensions()
+        nEdge = self.workflow.initialize_residual()
         
         A = LinearOperator((nEdge, nEdge),
-                           matvec=self.matvecFWD,
+                           matvec=self.workflow.matvecFWD,
                            dtype=float)
             
         # Initial Run
@@ -132,56 +132,5 @@ class MDASolver(Driver):
             iter_num += 1
             self.record_case()
             
-    def matvecFWD(self, arg):
-        '''Callback function for performing the matrix vector product of the
-        model's full Jacobian with an incoming vector arg.'''
-        
-        # Bookkeeping dictionaries
-        inputs = {}
-        outputs = {}
-        
-        # Start with zero-valued dictionaries cotaining keys for all inputs
-        for comp in self.workflow.__iter__():
-            name = comp.name
-            inputs[name] = {}
-            outputs[name] = {}
-            
-        # Fill input dictionaries with values from input arg.
-        for edge in self.workflow.get_interior_edges():
-            src, target = edge
-            i1, i2 = self.workflow.bounds[edge]
-            
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
-            outputs[comp_name][var_name] = arg[i1:i2]
-            inputs[comp_name][var_name] = arg[i1:i2]
-            
-            parts = target.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
-            inputs[comp_name][var_name] = arg[i1:i2]
-            
-        # Call ApplyJ on each component
-        for comp in self.workflow.__iter__():
-            name = comp.name
-            comp.applyJ(inputs[name], outputs[name])
-            
-        # Poke results into the return vector
-        result = numpy.zeros(len(arg))
-        for edge in self.workflow.get_interior_edges():
-            src, target = edge
-            i1, i2 = self.workflow.bounds[edge]
-        
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
-            result[i1:i2] = outputs[comp_name][var_name]
-        
-        return result
-        
             
             
