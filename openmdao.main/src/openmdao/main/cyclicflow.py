@@ -165,6 +165,8 @@ class CyclicWorkflow(SequentialWorkflow):
             self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
             
+        # Initialize the residual vector on the first time through, and also
+        # if for some reason the number of edges has changed.
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
             
