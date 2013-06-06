@@ -208,7 +208,6 @@ class Container(SafeHasTraits):
                 finally:
                     variable_tree._parent = parent
                 setattr(self, name, new_tree)
-                new_tree.install_callbacks()
 
     @property
     def parent(self):
@@ -596,9 +595,13 @@ class Container(SafeHasTraits):
                 if isinstance(val, Container):
                     old_parent = val.parent
                     val.parent = None
-                    val_copy = _copydict[ttype.copy](val)
-                    val.parent = old_parent
+                    try:
+                        val_copy = _copydict[ttype.copy](val)
+                    finally:
+                        val.parent = old_parent
                     val_copy.parent = self
+                    if hasattr(val_copy, 'install_callbacks'):
+                        val_copy.install_callbacks()
                     val = val_copy
                 else:
                     val = _copydict[ttype.copy](val)
@@ -736,6 +739,19 @@ class Container(SafeHasTraits):
         pass
 
     @rbac(('owner', 'user'))
+    def copy(self):
+        """Returns a deep copy without deepcopying the parent.
+        """
+        par = self.parent
+        self.parent = None
+        try:
+            cp = copy.deepcopy(self)
+        finally:
+            self.parent = par
+            cp.parent = par
+        return cp
+
+    @rbac(('owner', 'user'))
     def cpath_updated(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
@@ -807,25 +823,26 @@ class Container(SafeHasTraits):
         return [k for k, v in self.items(iotype=not_none)]
 
     def get_attributes(self, io_only=True):
-        """ We use Container as a base class for objects that have traits
-        that need to be edited, but have no iotype. This method returns a
-        dictionary of information that the GUI can use to build the editors.
+        """ Get attributes of this container. Includes all variables ('Inputs')
+            and, if *io_only* is not true, attributes for all slots as well.
 
-        The default behavior is to take all traits and put them on the inputs
-        pane. For different behavior, overload this method.
-
-        io_only: Bool
-            Passed in, but not used in the base class."""
+            Arguments:
+                io_only:  if True then only 'Inputs' are included
+        """
 
         attrs = {}
         attrs['type'] = type(self).__name__
 
-        variables = []
-        slots = []
+        var_attrs = []
+
+        if not io_only:
+            slot_attrs = []
+        else:
+            slot_attrs = None
+
         #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union(
-                                 self._added_traits.keys(),
-                                     self._alltraits(type=Slot).keys()):
+        for name in set(self.list_vars()).union(self._added_traits.keys(),
+                                                self._alltraits(type=Slot).keys()):
 
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
@@ -843,17 +860,18 @@ class Container(SafeHasTraits):
             # Container variables are not connectable
             attr['connected'] = ''
 
-            variables.append(attr)
+            var_attrs.append(attr)
 
-            # Process singleton and contained slots.
-            if not io_only and slot_attr is not None:
-                # We can hide slots (e.g., the Workflow slot in drivers)
+            # Process slots
+            if slot_attrs is not None and slot_attr is not None:
+                # slots can be hidden (e.g. the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] is False:
-                    slots.append(slot_attr)
+                    slot_attrs.append(slot_attr)
 
-        attrs["Inputs"] = variables
-        if slots:
-            attrs['Slots'] = slots
+        attrs['Inputs'] = var_attrs
+
+        if slot_attrs:
+            attrs['Slots'] = slot_attrs
         return attrs
 
     # Can't use items() since it returns a generator (won't pickle).

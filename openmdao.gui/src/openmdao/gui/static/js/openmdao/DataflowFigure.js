@@ -50,9 +50,10 @@ openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfac
 
     this.setDimension(this.getMinWidth(),this.getMinHeight());
 
-    // do not allow moving or resizing
+    // do not allow moving, resizing or deleting
     this.setCanDrag(false);
     this.setResizeable(false);
+    this.setDeleteable(false);
 
     // allow selection?
     this.setSelectable(true);

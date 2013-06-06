@@ -79,6 +79,10 @@ def adjust_options(options, args):
         sys.exit(-1)
 %s
 
+    # Check if we're running in an activated environment.
+    virtual_env = os.environ.get('VIRTUAL_ENV')
+    if virtual_env:
+        after_install(options, virtual_env, activated=True)
 """ % code
 
 def main(args=None):
@@ -157,8 +161,6 @@ def main(args=None):
 
 openmdao_prereqs = %(openmdao_prereqs)s
 
-_WINDOWS = sys.platform.startswith('win')
-
 %(mkdir_pkg)s
 
 def extend_parser(parser):
@@ -199,7 +201,7 @@ def download(url, dest='.'):
 
 def _get_mingw_dlls():
     # first, check if MinGW/bin is already in PATH
-    for entry in sys.path:
+    for entry in os.environ['PATH'].split(os.pathsep):
         if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
             print 'MinGW is already installed, skipping download.'
             break
@@ -220,7 +222,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = %(extarg2)s
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
-    cmdline = [] if _WINDOWS else [join(bin_dir, 'python')]
+    cmdline = [] if is_win else [join(bin_dir, 'python')]
     cmdline += [join(bin_dir, 'easy_install'), extarg %(dldir)s] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
@@ -239,7 +241,7 @@ def _update_activate(bindir):
     }
     libpathvname = _lpdict.get(sys.platform)
     if libpathvname:
-        if _WINDOWS:
+        if is_win:
             activate_base = 'activate.bat'
         else:
             activate_base = 'activate'
@@ -250,7 +252,7 @@ def _update_activate(bindir):
             content = inp.read()
             
         if 'get_full_libpath' not in content:
-            if _WINDOWS:
+            if is_win:
                 content += '''\\nfor /f "delims=" %%%%A in ('get_full_libpath') do @set PATH=%%%%A\\n\\n'''
             else:
                 content += "\\n%%s=$(get_full_libpath)\\nexport %%s\\n\\n" %% (libpathvname, libpathvname)
@@ -258,7 +260,7 @@ def _update_activate(bindir):
         with open(activate_fname, 'w') as out:
             out.write(content)
             
-def _copy_winlibs(home_dir):
+def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
     # fail when built in a virtualenv 
     # (still broken as of virtualenv 1.9.1, under python 2.7.4)
@@ -269,7 +271,12 @@ def _copy_winlibs(home_dir):
     libsdir = os.path.join(home_dir, 'libs')
     if not os.path.isdir(libsdir):
         os.mkdir(libsdir)
-    sysdir = os.path.join(os.path.dirname(sys.executable), 'libs')
+    if activated:
+        with open(os.path.join(home_dir, 'Lib', 'orig-prefix.txt')) as inp:
+            prefix = inp.readline().strip()
+    else:
+        prefix = os.path.dirname(sys.executable)
+    sysdir = os.path.join(prefix, 'libs')
     names = os.listdir(sysdir)
     for pat in ['*python*', '*msvc*']:
         for name in fnmatch.filter(names, pat):
@@ -277,7 +284,40 @@ def _copy_winlibs(home_dir):
                 shutil.copyfile(os.path.join(sysdir, name), 
                                 os.path.join(libsdir, name))
 
-def after_install(options, home_dir):
+def _update_easy_manifest(home_dir):
+    # distribute requires elevation when run on 32 bit windows,
+    # apparently because Windows assumes that any program with
+    # 'install' in the name should require elevation.  The 
+    # solution is to create a manifest file for easy_install.exe
+    # that tells Windows that it doesn't require elevated 
+    # access.
+    template = \"\"\"
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity version="1.0.0.0"
+  processorArchitecture="X86"
+  name="easy_install.exe"
+  type="win32"/>
+  <!-- Identify the application security requirements. -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+  <security>
+  <requestedPrivileges>
+  <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+  </requestedPrivileges>
+  </security>
+  </trustInfo>
+</assembly>
+    \"\"\"
+
+    bindir = os.path.join(home_dir, 'Scripts')
+    manifest = os.path.join(bindir, 'easy_install.exe.manifest')
+    if not os.path.isfile(manifest):
+        with open(manifest, 'w') as f:
+            f.write(template)
+        # 'touch' the easy_install executable
+        os.utime(os.path.join(bindir, 'easy_install.exe'), None)
+
+def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
     
     reqs = %(reqs)s
@@ -301,7 +341,7 @@ def after_install(options, home_dir):
     else:
         openmdao_url = url
     etc = join(home_dir, 'etc')
-    if _WINDOWS:
+    if is_win:
         lib_dir = join(home_dir, 'Lib')
         bin_dir = join(home_dir, 'Scripts')
     else:
@@ -311,8 +351,9 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if _WINDOWS:
-        _copy_winlibs(home_dir)
+    if is_win:
+        _copy_winlibs(home_dir, activated)
+        _update_easy_manifest(home_dir)
     else:
         # Put lib64_path at front of paths rather than end.
         # As of virtualenv 1.8.2 this fix had not made it in the release.
@@ -373,7 +414,7 @@ def after_install(options, home_dir):
 
         activate = os.path.join(bin_dir, 'activate')
         deactivate = os.path.join(bin_dir, 'deactivate')
-        if _WINDOWS:
+        if is_win:
             source_command = ''
             python = ''
             openmdao = 'openmdao'
@@ -383,7 +424,7 @@ def after_install(options, home_dir):
             openmdao = os.path.join(bin_dir, 'openmdao')
         
 %(make_docs)s
-        if _WINDOWS: # retrieve MinGW DLLs from server
+        if is_win: # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls()
             except Exception as err:
@@ -400,7 +441,7 @@ def after_install(options, home_dir):
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
-    if not _WINDOWS and ' ' in abs_bin:
+    if not is_win and ' ' in abs_bin:
         import stat
         shebang = '#!"%%s"\\n' %% os.path.join(abs_bin, 'python')
         print '\\nFixing scripts for spaces in install path'
@@ -418,18 +459,32 @@ def after_install(options, home_dir):
     abshome = os.path.abspath(home_dir)
     
     if failures:
-        failmsg = ' (with failures).'
         failures.sort()
         print '\\n\\n***** The following packages failed to install: %%s.' %% failures
+        print
+        print 'This may be an intermittent network problem and simply retrying'
+        print 'could result in a successfull installation.  Without all'
+        print 'packages at least some tests will likely fail, and without core'
+        print 'packages such as Traits OpenMDAO will not function at all.'
+        print
+        if not activated:
+            print 'If you would like to try using this installation anyway,'
+            print 'from %%s type:\\n' %% abshome
+            if is_win:
+                print r'Scripts\\activate'
+            else:
+                print '. bin/activate'
+            print '\\nto activate your environment.'
+
     else:
-        failmsg = '.'
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s%%s' %% (abshome, failmsg)
-    print '\\nFrom %%s, type:\\n' %% abshome
-    if _WINDOWS:
-        print r'Scripts\\activate'
-    else:
-        print '. bin/activate'
-    print "\\nto activate your environment and start using OpenMDAO."
+        print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s' %% abshome
+        if not activated:
+            print '\\nFrom %%s, type:\\n' %% abshome
+            if is_win:
+                print r'Scripts\\activate'
+            else:
+                print '. bin/activate'
+            print '\\nto activate your environment and start using OpenMDAO.'
     
     sys.exit(1 if failures else 0)
     """
@@ -520,8 +575,14 @@ def after_install(options, home_dir):
         shutil.copyfile(scriptname, scriptname+'.old'
                         )
     with open(scriptname, 'wb') as f:
-        f.write(virtualenv.create_bootstrap_script(script_str % optdict))
+        # Pin the version of setuptools used.
+        fixline = u"        egg_path = 'setuptools-*-py%s.egg' % sys.version[:3]"
+        for line in virtualenv.create_bootstrap_script(script_str % optdict).split('\n'):
+            if line == fixline:
+                line = line.replace('*', '0.6c11')
+            f.write('%s\n' % line)
     os.chmod(scriptname, 0755)
-    
+ 
+
 if __name__ == '__main__':
     main()

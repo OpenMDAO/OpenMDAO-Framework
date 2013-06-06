@@ -7,7 +7,7 @@ try:
 except ImportError:
     import json
 
-from tornado import web
+from tornado import web, escape
 
 from openmdao.gui.handlers import ReqHandler as BaseHandler
 from openmdao.gui.projectdb import Projects
@@ -335,6 +335,18 @@ class FilesHandler(ReqHandler):
         self.write(json_files)
 
 
+    @web.authenticated
+    def delete(self):
+
+        filepaths = escape.json_decode(self.request.body)[ 'filepaths' ]
+        
+        cserver = self.get_server()
+        self.content_type = 'text/html'
+        success = True
+        for filename in filepaths:
+            success = success and cserver.delete_file(filename)
+        self.write(str(success))
+
 class GeometryHandler(ReqHandler):
 
     @web.authenticated
@@ -609,7 +621,7 @@ class VariableHandler(ReqHandler):
         rhs = self.get_argument('rhs', default=None)
         vtype = self.get_argument('type', default=None)
         if (lhs and rhs and vtype):
-            obj, dot, attr = lhs.rpartition('.')
+            obj, dot, attr = lhs.partition('.')
             if vtype == 'str':
                 command = '%s.set(%r, %r)' % (obj, attr, rhs)
             else:

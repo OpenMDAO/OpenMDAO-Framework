@@ -88,7 +88,7 @@ class SimpleComp(Component):
             cont.vt2.y,
             cont.vt2.vt3.a,
             cont.vt2.vt3.b,
-            ]
+        ]
 
     def get_files(self, iotype):
         if iotype == 'in':
@@ -99,7 +99,7 @@ class SimpleComp(Component):
             cont.data,
             cont.vt2.data,
             cont.vt2.vt3.data,
-            ]
+        ]
 
 
 class NamespaceTestCase(unittest.TestCase):
@@ -291,7 +291,7 @@ class NamespaceTestCase(unittest.TestCase):
         # and now this
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
-        
+
         self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         self.asm.disconnect('scomp1.cont_out', 'scomp2.cont_in')
 
@@ -377,6 +377,88 @@ class NamespaceTestCase(unittest.TestCase):
         msg = ': a VariableTree may only contain Variables or VarTrees'
         assert_raises(self, code, globals(), locals(), TypeError, msg)
 
+
+class Level2Tree(VariableTree):
+    lev2float = Float()
+
+class Level1Tree(VariableTree):
+    lev1float = Float()
+    lev2 = VarTree(Level2Tree()) # no iotype
+
+class TopTree(VariableTree):
+    lev1 = VarTree(Level1Tree())  # no iotype
+    topfloat = Float()
+
+
+class NestedTreeComp(Component):
+    top_tree_in = VarTree(TopTree(), iotype='in')
+
+    def execute(self):
+        pass
+
+class NestedVTTestCase(unittest.TestCase):
+    
+    def test_nested_iotype(self):
+        # nested tree
+        comp = NestedTreeComp()
+        
+        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, '')
+        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, 'in')
+        
+        attr = comp.top_tree_in.get_attributes()
+        outputs = attr.get('Outputs', [])
+        self.assertEqual(outputs, [])
+        inputs = attr['Inputs']
+        self.assertEqual(set([d['name'] for d in inputs]), 
+                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+        
+        newvt = comp.top_tree_in.copy()
+        newvt._iotype = 'out'
+        
+        attr = newvt.get_attributes()
+        inputs = attr.get('Inputs', [])
+        outputs = attr.get('Outputs', [])
+        self.assertEqual(inputs, [])
+        self.assertEqual(set([d['name'] for d in outputs]), 
+                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+        
+        self.assertEqual(newvt.lev1.lev2.iotype, 'out')
+        newvt._iotype = 'in'
+        self.assertEqual(newvt.iotype, 'in')
+        self.assertEqual(newvt.lev1.lev2.iotype, 'in')
+        
+    def test_nested_iotype_passthrough(self):
+        # nested tree
+        asm = set_as_top(Assembly())
+        comp = asm.add("comp", NestedTreeComp())
+        asm.create_passthrough('comp.top_tree_in')
+        
+        attr = asm.top_tree_in.get_attributes()
+        outputs = attr.get('Outputs', [])
+        self.assertEqual(outputs, [])
+        inputs = attr['Inputs']
+        self.assertEqual(set([d['name'] for d in inputs]), 
+                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+        
+
+        newvt = asm.top_tree_in.copy()
+        newvt._iotype = 'out'
+        
+        attr = newvt.get_attributes()
+        inputs = attr.get('Inputs', [])
+        outputs = attr.get('Outputs', [])
+        self.assertEqual(inputs, [])
+        self.assertEqual(set([d['name'] for d in outputs]), 
+                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+        
+        attr = comp.top_tree_in.get_attributes()
+        outputs = attr.get('Outputs', [])
+        self.assertEqual(outputs, [])
+        inputs = attr['Inputs']
+        self.assertEqual(set([d['name'] for d in inputs]), 
+                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+        
 
 class ListConnectTestCase(unittest.TestCase):
 

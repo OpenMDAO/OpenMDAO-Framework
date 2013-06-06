@@ -40,10 +40,11 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import logger
+
 import openmdao.util.log as tracing
 
 __missing__ = object()
+
 
 class SimulationRoot(object):
     """Singleton object used to hold root directory."""
@@ -111,6 +112,7 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+# this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
 
@@ -196,7 +198,7 @@ class Component(Container):
         self.ffd_order = 0
         self._case_id = ''
 
-        self._publish_vars = {}  # dict of varname to subscriber count        
+        self._publish_vars = {}  # dict of varname to subscriber count
 
     @property
     def dir_context(self):
@@ -1641,8 +1643,10 @@ class Component(Container):
         outputs = []
         slots = []
 
-        # Add all inputs and outputs
-        io_list = self.list_inputs() + self.list_outputs()
+        inputs_list  = self.list_inputs()
+        outputs_list = self.list_outputs()
+        io_list      = inputs_list + outputs_list
+
         for name in io_list:
 
             #for variable trees
@@ -1699,7 +1703,7 @@ class Component(Container):
                 if isinstance(vartable, VariableTree):
                     io_attr['vt'] = 'vt'
 
-            if name in self.list_inputs():
+            if name in inputs_list:
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
@@ -1716,7 +1720,7 @@ class Component(Container):
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
                                                    parent=name,
                                                    valid=io_attr['valid'])
-                if name in self.list_inputs():
+                if name in inputs_list:
                     inputs += vt_attrs.get('Inputs', [])
                 else:
                     outputs += vt_attrs.get('Outputs', [])
@@ -1811,10 +1815,10 @@ class Component(Container):
                 attrs['Parameters'] = parameters
 
             constraints = []
-            constraint_pane = False
+            has_constraints = False
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasEqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1826,7 +1830,7 @@ class Component(Container):
 
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasIneqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1836,7 +1840,7 @@ class Component(Container):
                     attr['adder']   = con.adder
                     constraints.append(attr)
 
-            if constraint_pane:
+            if has_constraints:
                 attrs['Constraints'] = constraints
 
             if has_interface(self, IHasEvents):
