@@ -111,9 +111,8 @@ class MDASolver(Driver):
         while (norm > self.tolerance) and (iter_num < self.max_iteration):
             
             # Each comp calculates its own derivatives at the current
-            # point.
-            for comp in self.workflow.__iter__():
-                comp.linearize()
+            # point. (i.e., linearizes)
+            self.workflow.calc_derivatives(first=True)
             
             # Call GMRES to solve the linear system
             dv, info = gmres(A, -self.workflow.res,

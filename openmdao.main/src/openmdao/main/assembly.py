@@ -891,12 +891,12 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Overides the component's version of this function. An assembly
         must initiate the call of calc_derivatives on all components in its
         driver's workflow."""
 
-        self.driver.calc_derivatives(first, second)
+        self.driver.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each

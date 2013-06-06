@@ -134,13 +134,13 @@ class Workflow(object):
         edge_list = self.scope._depgraph.get_interior_edges(names)
         return sorted(list(edge_list))
     
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
 
         self._stop = False
         for node in self.__iter__():
-            node.calc_derivatives(first, second)
+            node.calc_derivatives(first, second, savebase)
             if self._stop:
                 raise RunStopped('Stop requested')
 

@@ -9,7 +9,7 @@ From Sellar's analytic problem.
 
 import numpy
 
-from openmdao.main.api import Component, ComponentWithDerivatives
+from openmdao.main.api import Component
 from openmdao.main.problem_formulation import OptProblem
 from openmdao.lib.datatypes.api import Float
 
@@ -38,7 +38,7 @@ class Discipline1(Component):
         #print "(%f, %f, %f)" % (z1, z2, x1)
         
         
-class Discipline1_WithDerivatives(ComponentWithDerivatives):
+class Discipline1_WithDerivatives(Component):
     """Component containing Discipline 1."""
     
     # pylint: disable-msg=E1101
@@ -130,7 +130,7 @@ class Discipline2(Component):
         self.y2 = y1**(.5) + z1 + z2
         
     
-class Discipline2_WithDerivatives(ComponentWithDerivatives):
+class Discipline2_WithDerivatives(Component):
     """Component containing Discipline 2."""
     
     # pylint: disable-msg=E1101

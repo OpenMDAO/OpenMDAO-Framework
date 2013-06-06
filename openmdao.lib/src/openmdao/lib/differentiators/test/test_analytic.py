@@ -10,7 +10,7 @@ from openmdao.lib.datatypes.api import Float, Int
 from openmdao.lib.differentiators.analytic import Analytic
 from openmdao.lib.differentiators.api import FiniteDifference
 from openmdao.lib.drivers.api import FixedPointIterator, BroydenSolver
-from openmdao.main.api import ComponentWithDerivatives, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
@@ -19,7 +19,7 @@ from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
-class Comp(ComponentWithDerivatives):
+class Comp(Component):
     """ Evaluates the equation y=x^2"""
     
     # set up interface to the framework  
@@ -60,7 +60,7 @@ class Comp(ComponentWithDerivatives):
         self.derivatives.set_first_derivative('v', 'u', dv_du)
 
         
-class CompFoot(ComponentWithDerivatives):
+class CompFoot(Component):
     """ Evaluates the equation y=x^2"""
     
     # set up interface to the framework  
@@ -86,7 +86,7 @@ class CompFoot(ComponentWithDerivatives):
         dy_dx = 2.0
         self.derivatives.set_first_derivative('y', 'x', dy_dx)
         
-class CompInch(ComponentWithDerivatives):
+class CompInch(Component):
     """ Evaluates the equation y=x^2"""
     
     # set up interface to the framework  
