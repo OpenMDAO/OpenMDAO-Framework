@@ -7,7 +7,10 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
                 { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
-                { "text": "Add Files",  "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
+                { "text": "Add Files",  "onclick": "openmdao.FileTreeFrame.prototype.addFile();" },
+                { "text": "Delete Files",  "onclick": "openmdao.FileTreeFrame.prototype.deleteFiles();" },
+                { "text": "Toggle Hidden Files",  "onclick": "openmdao.FileTreeFrame.prototype.toggleFilter();" }
+
             ]
         }
     ];
@@ -159,41 +162,43 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
         // now create the menu
         var menu = {};
 
-        // if they clicked on a folder then create new files inside that folder
-        menu.createFile = {
-            "label"  : 'New File',
-            "action" : function(node) {
-                           if (isFolder) {
-                              openmdao.FileTreeFrame.prototype.newFile(path);
-                           }
-                           else {
-                              openmdao.FileTreeFrame.prototype.newFile();
-                           }
-                       }
-        };
-        menu.createFolder = {
-            "label"  : 'New Folder',
-            "action" : function(node) {
-                           if (isFolder) {
-                               openmdao.FileTreeFrame.prototype.newFolder(path);
-                           }
-                           else {
-                               openmdao.FileTreeFrame.prototype.newFolder();
-                           }
-                       }
-        };
+        if (isFolder) {
+            // if they clicked on a folder then create new files inside that folder
+            menu.createFile = {
+                "label"  : 'New File',
+                "action" : function(node) {
+                    if (isFolder) {
+                        openmdao.FileTreeFrame.prototype.newFile(path);
+                    }
+                    else {
+                        openmdao.FileTreeFrame.prototype.newFile();
+                    }
+                }
+            };
+            menu.createFolder = {
+                "label"  : 'New Folder',
+                "action" : function(node) {
+                    if (isFolder) {
+                        openmdao.FileTreeFrame.prototype.newFolder(path);
+                    }
+                    else {
+                        openmdao.FileTreeFrame.prototype.newFolder();
+                    }
+                }
+            };
 
-        menu.addFile = {
-            "label"  : 'Add Files',
-            "action" : function(node) {
-                           if (isFolder) {
-                               openmdao.FileTreeFrame.prototype.addFile(path);
-                           }
-                           else {
-                               openmdao.FileTreeFrame.prototype.addFile();
-                           }
-                       }
-        };
+            menu.addFile = {
+                "label"  : 'Add Files',
+                "action" : function(node) {
+                    if (isFolder) {
+                        openmdao.FileTreeFrame.prototype.addFile(path);
+                    }
+                    else {
+                        openmdao.FileTreeFrame.prototype.addFile();
+                    }
+                }
+            };
+        }
 
         // if it's not a folder
         if (!isFolder) {
@@ -388,6 +393,7 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
     model.model_ready.always(function() {
        _self.update();
     });
+
 };
 
 /** set prototype */
@@ -471,5 +477,17 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
         filechooser.click();
         filechooser.hide();
     }
+};
+
+/** delete selected files **/
+openmdao.FileTreeFrame.prototype.deleteFiles = function(path) {
+
+    var filepaths = [] ;
+
+    jQuery('#' + 'ftree_pane' + ' a.jstree-clicked').each(function () {
+        filepaths.push( this.getAttribute("path")) ;
+    });
+    openmdao.model.removeFiles(filepaths);
+
 };
 
