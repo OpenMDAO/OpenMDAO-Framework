@@ -1709,13 +1709,16 @@ class Component(Container):
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
 
-            if name in connected_inputs:
-                connections = self._depgraph._var_connections(name)
-                # there can be only one connection to an input
-                io_attr['connected'] = \
-                    str([src for src, dst in connections]).replace('@xin.', '')
+            connected = []
+            for inp in connected_inputs:
+                cname = inp.split('[')[0]  # Could be 'inp[0]'.
+                if cname == name:
+                    connections = self._depgraph._var_connections(inp)
+                    connected.extend([src for src, dst in connections])
+            if connected:
+                io_attr['connected'] = str(connected).replace('@xin.', '')
 
-            if name in connected_outputs:
+            if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
