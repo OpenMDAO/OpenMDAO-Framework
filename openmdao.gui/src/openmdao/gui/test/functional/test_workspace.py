@@ -248,8 +248,6 @@ def _test_menu(browser):
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace_driver('top', 'Run_Once')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
 
     workspace_page('project_menu').click()
     time.sleep(0.5)
@@ -1059,8 +1057,11 @@ def _test_removefiles(browser):
 
     # Test deleting a file in a folder
     workspace_page.new_folder( "test_folder" )
+    time.sleep(1.0)
     workspace_page.add_file_to_folder( "test_folder", paraboloidPath )
+    time.sleep(1.0)
     workspace_page.expand_folder( 'test_folder' )
+    time.sleep(1.0)
     workspace_page.delete_files( [ 'test_folder/paraboloid.py', ] )
 
     # Check to make sure the file was deleted

@@ -45,9 +45,9 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-    def __init__(self, doc=None):
+    def __init__(self):
         self._iter = None
-        super(Driver, self).__init__(doc=doc)
+        super(Driver, self).__init__()
         self.workflow = Dataflow(self)
         self.force_execute = True
 

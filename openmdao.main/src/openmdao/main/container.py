@@ -165,7 +165,7 @@ class Container(SafeHasTraits):
 
     implements(IContainer)
 
-    def __init__(self, doc=None):
+    def __init__(self):
         super(Container, self).__init__()
 
         self._call_cpath_updated = True
@@ -180,9 +180,6 @@ class Container(SafeHasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
-
-        if doc is not None:
-            self.__doc__ = doc
 
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
