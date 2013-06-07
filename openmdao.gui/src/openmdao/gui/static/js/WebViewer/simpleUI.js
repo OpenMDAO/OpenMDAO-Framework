@@ -110,24 +110,34 @@ function wvInitUI()
   g.debug = true;
 }
 
-function getDisplayControl(display, isSet){
-    var iconClass = isSet ? "icon-eye-close" : "icon-eye-open";
-    var html ="<a class='" + display + " btn btn-small' href='#'><span>" + display + "  </span><i class='" + iconClass + "'></i></a>";
+function getDisplayControl(display, isActive){
+    var span = jQuery("<span></span>");
+    span.html(display);
 
-    return html;
+    var button = jQuery("<button></button>");
+    button.addClass("btn btn-primary btn-small");
+    button.addClass(display);
+    button.attr("type", "button");
+    button.data("controlType", display);
+
+    if(isActive){
+        button.addClass("active");
+    }
+
+    button.append(span);
+
+    return button
 }
 
 function getDisplayControls(attrs){
-    var html = "<div class='btn-group'>";
+    var html = jQuery("<div></div>");
+    html.addClass("btn-group");
+    html.attr("data-toggle", "buttons-checkbox");
 
-    html = html + getDisplayControl("viz", isAttributeSet(attrs, g.plotAttrs.ON));
-    html = html + getDisplayControl("grd", isAttributeSet(attrs, g.plotAttrs.LINES | g.plotAttrs.POINTS));
-    html = html + getDisplayControl("trn", isAttributeSet(attrs, g.plotAttrs.TRANSPARENT));
-    html = html + getDisplayControl("ori", isAttributeSet(attrs, g.plotAttrs.ORIENTATION));
-
-    html = html + "</div>";
-    
-    html = jQuery(html);
+    html.append(getDisplayControl("viz", isAttributeSet(attrs, g.plotAttrs.ON)));
+    html.append(getDisplayControl("grd", isAttributeSet(attrs, g.plotAttrs.LINES | g.plotAttrs.POINTS)));
+    html.append(getDisplayControl("trn", isAttributeSet(attrs, g.plotAttrs.TRANSPARENT)));
+    html.append(getDisplayControl("ori", isAttributeSet(attrs, g.plotAttrs.ORIENTATION)));
 
     return html;    
 }
@@ -185,6 +195,20 @@ function addVisual(bodyIndex, visualType, visualIndex, gprim){
     node.append(controls);
 }
 
+function getData(button, key){
+    return button.parent().data(key);
+}
+
+function setData(button, key, value){
+    button.parent().data(key, value);
+}
+
+function getChildren(root, controlType){
+    var tagName = root.prop("tagName");
+    return root.parent().siblings("ul").children("li").children("div").children(tagName + "." + controlType)
+    
+}
+
 function handleClick(attribute){
     var plotAttrs = {
         "viz" : g.plotAttrs.ON,
@@ -192,13 +216,13 @@ function handleClick(attribute){
         "trn" : g.plotAttrs.TRANSPARENT,
         "ori" : g.plotAttrs.ORIENTATION,
     };
-   
+  
     return function(e){
-        var button = jQuery(this).is("a") ? jQuery(this) : jQuery(this).parent();
+        var button = jQuery(this).is("button") ? jQuery(this) : jQuery(this).parent();
         var attrMask = plotAttrs[attribute];
-        var attrs = button.parent().data("gprim") ? button.parent().data("gprim").attrs : button.parent().data("attrs");
+        var attrs = getData(button, "gprim") ? getData(button, "gprim").attrs : getData(button, "attrs");
         var attributeIsSet = isAttributeSet(attrMask, attrs);
-        
+       
         var setAttr = function(attributes){
             return setAttribute(attributes, attrMask, attrMask);
         };
@@ -207,33 +231,35 @@ function handleClick(attribute){
             return setAttribute(attributes, attrMask, 0);
         };
 
-        var iconSetter = attributeIsSet ? setIcon : resetIcon;
+        var buttonActivator = attributeIsSet ? deactivateButton : activateButton;
         var attributeSetter = attributeIsSet ? resetAttr : setAttr;
 
-        toggleElement(button, attributeSetter, iconSetter);
+        console.log(buttonActivator);
+
+        toggleElement(button, attribute, attributeSetter, buttonActivator);
 
         g.sceneUpd = 1;
     };
 }
 
-function toggleElement(root, attributeSetter, iconSetter){
+function toggleElement(root, controlType, attributeSetter, iconSetter){
     if( hasChildren(root) ){
-        var cls = root.attr("class").replace(/ /g,".");
-        var buttons = root.parent().siblings("ul").children("li").children("div").children("a." + cls);
-        root.parent().data("attrs", attributeSetter(root.parent().data("attrs")));
-
-        buttons.each(function(){
+        setData(root, "attrs", attributeSetter(getData(root, "attrs")));
+        getChildren(root, controlType).each(function(){
             var button  = jQuery(this);
-            toggleElement(button, attributeSetter, iconSetter);
+            if(button.data("controlType") === root.data("controlType")){
+                iconSetter(button);
+                toggleElement(button, controlType, attributeSetter, iconSetter);
+            }
         });
     } 
     
     else{
-        var gprim = root.parent().data("gprim");
+        var gprim = getData(root, "gprim");
         gprim.attrs = attributeSetter(gprim.attrs); 
+        setData(root, "gprim", gprim);
     }
         
-    iconSetter(root.children("i"));
 }
 
 function isAttributeSet(setValue, currentValue){
@@ -241,15 +267,19 @@ function isAttributeSet(setValue, currentValue){
 } 
 
 function setAttribute(attributes, mask, value){
+    console.log("Attributes: " + attributes);
+    console.log("Mask: " + mask);
+    console.log("Value: " + value);
+
     return (attributes & (~mask)) | (value & mask);
 }
 
-function setIcon(icon){
-    icon.attr("class", "icon-eye-open");
+function activateButton(button){
+    button.addClass("active");
 }
 
-function resetIcon(icon){
-    icon.attr("class", "icon-eye-close");
+function deactivateButton(button){
+    button.removeClass("active");
 }
 
 function hasChildren(button){
