@@ -80,7 +80,7 @@ class MDASolver(Driver):
                 self.parent.set(target, self.parent.get(src), force=True)
             
             # Run all components
-            self.workflow.run()
+            self.run_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
@@ -122,7 +122,8 @@ class MDASolver(Driver):
             # Increment the model input edges by dv
             self.workflow.set_new_state(dv)
             
-            self.workflow.run()
+            # Run all components
+            self.run_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())

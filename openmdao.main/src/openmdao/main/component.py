@@ -471,7 +471,6 @@ class Component(Container):
         if first and hasattr(self, 'linearize'):
             self.linearize()
             self.derivative_exec_count += 1
-            return
             
         # Calculate first derivatives in user-defined function
         if first and hasattr(self, 'calculate_first_derivatives'):
