@@ -243,7 +243,7 @@ is a block of code as would be found in a Python script:
 .. testcode::
 
     from openmdao.examples.enginedesign.engine import Engine
-    my_engine = Engine("new_engine")
+    my_engine = Engine()
     
 The second type of code example is a copy of an interactive shell session:
 

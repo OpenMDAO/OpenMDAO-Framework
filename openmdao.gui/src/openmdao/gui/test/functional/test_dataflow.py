@@ -587,8 +587,6 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
     expected = "RuntimeError: top: Can't connect 'comp.result' to" \
                " 'postproc.result_in': top: Can't find 'comp.result'"
     time.sleep(0.5)

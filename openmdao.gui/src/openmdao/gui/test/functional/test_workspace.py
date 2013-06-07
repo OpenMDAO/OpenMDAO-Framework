@@ -248,8 +248,6 @@ def _test_menu(browser):
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.replace_driver('top', 'Run_Once')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
 
     workspace_page('project_menu').click()
     time.sleep(0.5)
