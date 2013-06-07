@@ -64,7 +64,7 @@ class MDASolver(Driver):
         self.workflow.initialize_residual()
         
         # Initial Run
-        self.workflow.run()
+        self.run_iteration()
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
@@ -100,7 +100,7 @@ class MDASolver(Driver):
                            dtype=float)
             
         # Initial Run
-        self.workflow.run()
+        self.run_iteration()
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())

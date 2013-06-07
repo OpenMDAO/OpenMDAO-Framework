@@ -147,16 +147,21 @@ class CyclicWorkflow(SequentialWorkflow):
         for edge in edges:
             
             src = edge[0]
-            
             val = self.scope.get(src)
+            
+            # Floats get 1 element
             if isinstance(val, float):
                 width = 1
+                
+            # Arrays are the product of their dimensions
             elif isinstance(val, ndarray):
                 shape = val.shape
                 if len(shape) == 2:
                     width = shape[0]*shape[1]
                 else:
                     width = shape[0]
+                    
+            # Nothing else is supported.
             else:
                 msg = "Variable %s is of type %s. " % (src, type(val)) + \
                       "This type is not supported by the MDA Solver."
@@ -196,22 +201,28 @@ class CyclicWorkflow(SequentialWorkflow):
         
         # Apply new state to model
         for edge in self._severed_edges:
-            deflatten = False
             src, target = edge
                 
             i1, i2 = self.bounds[edge]
+            old_val = self.scope.get(target)
+            
+            # Arrays
             if i2-i1 > 1:
-                old_val = self.scope.get(target)
-                if old_val.shape[0] > old_val.shape[1]:
-                    old_val = old_val.T[0]
-                    deflatten = True
-                new_val = old_val + dv[i1:i2]
-            else:
-                new_val = self.scope.get(target) + \
-                          float(dv[i1:i2])
                 
-            if deflatten:
-                new_val = new_val.reshape([i2-i1, 1])
+                # Arrays that are 2D column vectors
+                if old_val.shape[0] > old_val.shape[1]:
+                    new_val = old_val.T + dv[i1:i2]
+                    new_val = new_val.T
+                    
+                # 2D Row vectors
+                else:
+                    new_val = old_val + dv[i1:i2]
+                
+            # Floats
+            else:
+                new_val = old_val + float(dv[i1:i2])
+                
+            # Poke new value into the input end of the edge.
             self.scope.set(target, new_val, force=True)
             
             # Prevent OpenMDAO from stomping on our poked input.
