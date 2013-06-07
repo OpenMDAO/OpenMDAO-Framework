@@ -146,8 +146,8 @@ class Component(Container):
 
     create_instance_dir = Bool(False)
 
-    def __init__(self, doc=None, directory=''):
-        super(Component, self).__init__(doc)
+    def __init__(self):
+        super(Component, self).__init__()
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
@@ -184,13 +184,6 @@ class Component(Container):
         self._expr_sources = None
         self._connected_inputs = None
         self._connected_outputs = None
-
-        self.exec_count = 0
-        self.derivative_exec_count = 0
-        self.itername = ''
-        self.create_instance_dir = False
-        if directory:
-            self.directory = directory
 
         self._dir_stack = []
         self._dir_context = None

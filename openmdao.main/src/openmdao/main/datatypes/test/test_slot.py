@@ -72,7 +72,7 @@ class SlotTestCase(unittest.TestCase):
 
     def test_wrong_interface(self):
         try:
-            self.sc.iterator = Component('dummy')
+            self.sc.iterator = Component()
         except TypeError, exc:
             self.assertEqual(str(exc), ": iterator must provide interface 'ICaseIterator'")
         else:
