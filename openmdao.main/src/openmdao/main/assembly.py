@@ -268,6 +268,7 @@ class Assembly(Component):
         super(Assembly, self).__init__()
 
         self._exprmapper = ExprMapper(self)
+        self._graph_loops = []
 
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
@@ -685,6 +686,11 @@ class Assembly(Component):
         # dependencies may have changed
         if self.driver is not None:
             self.driver.config_changed(update_parent=False)
+            
+        # Detect and save any loops in the graph.
+        if hasattr(self, '_depgraph'):
+            graph = self._depgraph._graph
+            self._graph_loops = nx.strongly_connected_components(graph)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
@@ -758,6 +764,18 @@ class Assembly(Component):
                 if cname is None:
                     if self.parent:
                         self.parent.update_inputs(self.name, vnames)
+                        
+                # If our source component is in a loop with us, don't
+                # run it. Otherwise you have infinite recursion. It is
+                # the responsibility of the solver to properly execute
+                # the comps in its loop.
+                elif self._graph_loops:
+                    for loop in self._graph_loops:
+                        if compname in loop and cname in loop:
+                            break
+                    else:
+                        getattr(self, cname).update_outputs(vnames)
+                        
                 else:
                     getattr(self, cname).update_outputs(vnames)
                     #self.set_valid(vnames, True)
@@ -873,12 +891,12 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Overides the component's version of this function. An assembly
         must initiate the call of calc_derivatives on all components in its
         driver's workflow."""
 
-        self.driver.calc_derivatives(first, second)
+        self.driver.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each

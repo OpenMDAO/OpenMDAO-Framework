@@ -34,7 +34,7 @@ Four steps are involved in specifying derivatives for a component:
 
 :: 
  
-  1. Inherit from ComponentWithDerivatives instead of Component
+  1. Inherit from Component (ComponentWithDerivatives is deprecated)
   2. Declare derivatives in the "__init__" method
   3. Calculate the first derivatives in the "calculate_first_derivatives" method
   4. Calculate the second derivatives in the "calculate_second_derivatives" method (if needed)
@@ -58,14 +58,14 @@ calculation, but the burden is on the component developer to make sure not
 to miss a declaration of a derivative for an important output pair.
 
 You can add analytical derivatives to the Paraboloid component by following
-the steps mentioned above. First, we must inherit from ComponentWithDerivatives.
+the steps mentioned above. Starting with the original code:
 
 .. testcode:: Paraboloid_derivative
 
-    from openmdao.main.api import ComponentWithDerivatives
+    from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-    class ParaboloidDerivative(ComponentWithDerivatives):
+    class ParaboloidDerivative(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
         # set up interface to the framework  

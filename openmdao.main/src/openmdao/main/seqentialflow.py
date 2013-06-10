@@ -1,3 +1,5 @@
+""" A workflow that allows the user to explicitly specify the execution
+order. """
 
 from openmdao.main.workflow import Workflow
 

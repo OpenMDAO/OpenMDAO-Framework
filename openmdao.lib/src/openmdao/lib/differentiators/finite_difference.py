@@ -145,7 +145,7 @@ class FiniteDifference(Container):
         # Each component runs its calc_derivatives method.
         # We used to do this in the driver instead, but we've moved it in
         # here to make the interface more uniform.
-        self._parent.calc_derivatives(first=True)
+        self._parent.calc_derivatives(first=True, savebase=True)
         
         self.setup()
 
@@ -239,7 +239,7 @@ class FiniteDifference(Container):
         # Each component runs its calc_derivatives method.
         # We used to do this in the driver instead, but we've moved it in
         # here to make the interface more uniform.
-        self._parent.calc_derivatives(second=True)
+        self._parent.calc_derivatives(second=True, savebase=True)
         
         self.setup()
         

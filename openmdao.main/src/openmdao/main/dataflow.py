@@ -1,3 +1,5 @@
+""" A workflow where the execution order is automatically inferred from the
+data connections."""
 
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
