@@ -43,7 +43,7 @@ import numpy
 #     really can import
 # pylint: disable-msg=F0401,E0611
 
-from openmdao.main.api import Assembly, Component, set_as_top, ComponentWithDerivatives
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
@@ -635,7 +635,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
             
-class OptRosenSuzukiComponent_Deriv(ComponentWithDerivatives):
+class OptRosenSuzukiComponent_Deriv(Component):
     """ From the NEWSUMT User's Manual:
     EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
     

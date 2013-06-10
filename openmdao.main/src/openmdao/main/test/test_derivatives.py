@@ -5,15 +5,15 @@ Test of the derivatives capability.
 import unittest
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, Assembly, ComponentWithDerivatives, \
-                              SequentialWorkflow, DriverUsesDerivatives, set_as_top
+from openmdao.main.api import Component, Assembly, DriverUsesDerivatives, \
+                              SequentialWorkflow, set_as_top
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.util.testutil import assert_rel_error
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
 
-class Paraboloid_Derivative(ComponentWithDerivatives):
+class Paraboloid_Derivative(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
     # set up interface to the framework  
@@ -97,7 +97,7 @@ class TopAssembly(Assembly):
         self.add('assy1', BottomAssembly())
         self.driver.workflow.add(['assy1'])
         
-class A(ComponentWithDerivatives):
+class A(Component):
     """ Simple Comp with no Deriv """
 
     x1 = Float(0.0, iotype='in', desc='The variable x1')
@@ -204,7 +204,7 @@ class DerivativesTestCase(unittest.TestCase):
     def test_first_derivative(self):
 
         eps = 1000.0
-        self.comp.calc_derivatives(first=True, second=False)
+        self.comp.calc_derivatives(first=True, second=False, savebase=True)
 
         self.comp.x = 3.0 + eps
         self.comp.run(ffd_order=1)
@@ -232,7 +232,7 @@ class DerivativesTestCase(unittest.TestCase):
         f0 = self.comp.f_xy
         
         eps = 1000.0
-        self.comp.calc_derivatives(first=False, second=True)
+        self.comp.calc_derivatives(first=False, second=True, savebase=True)
         
         self.comp.y = 5.0
         self.comp.x = 3.0 + eps
@@ -377,7 +377,7 @@ class DerivativesTestCase(unittest.TestCase):
             
     def test_unsupported_order(self):
         
-        self.comp.calc_derivatives(first=True, second=False)
+        self.comp.calc_derivatives(first=True, second=False, savebase=True)
         try:
             self.comp.derivatives.calculate_output('f_xy', 3)
         except NotImplementedError, err:
@@ -401,7 +401,7 @@ class DerivativesTestCase(unittest.TestCase):
         simple.comp1.ran_real = False
         
         eps = 1000.0
-        simple.calc_derivatives(first=True, second=False)
+        simple.calc_derivatives(first=True, second=False, savebase=True)
 
         simple.comp1.x = 3.0 + eps
         simple.run(ffd_order=1)
@@ -433,7 +433,7 @@ class DerivativesTestCase(unittest.TestCase):
         simple.assy1.comp1.ran_real = False
         
         eps = 1000.0
-        simple.calc_derivatives(first=True, second=False)
+        simple.calc_derivatives(first=True, second=False, savebase=True)
 
         simple.assy1.x = 3.0 + eps
         simple.run(ffd_order=1)
@@ -462,7 +462,7 @@ class DerivativesTestCase(unittest.TestCase):
         comp.A1.x1 = base1 = 1.0
         comp.A1.x2 = base2 = 2.0
         comp.run()
-        comp.calc_derivatives(first=True, second=False)
+        comp.calc_derivatives(first=True, second=False, savebase=True)
         
         eps = 0.01
         order = 1

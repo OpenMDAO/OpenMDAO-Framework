@@ -1,4 +1,4 @@
-""" Workflow class definition """
+""" Base class for all workflows. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
@@ -126,25 +126,29 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
-    def calc_derivatives(self, first=False, second=False):
+    def get_interior_edges(self):
+        """ Returns an alphabetical list of all output edges that are
+        interior to the set of components supplied."""
+        
+        names = self.get_names()
+        edge_list = self.scope._depgraph.get_interior_edges(names)
+        return sorted(list(edge_list))
+    
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
 
         self._stop = False
-        self._iterator = self.__iter__()
-        for node in self._iterator:
-            node.calc_derivatives(first, second)
+        for node in self.__iter__():
+            node.calc_derivatives(first, second, savebase)
             if self._stop:
                 raise RunStopped('Stop requested')
-        self._iterator = None
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ Run check_derivatives on all components in workflow."""
 
-        self._iterator = self.__iter__()
-        for node in self._iterator:
+        for node in self.__iter__():
             node.check_derivatives(order, driver_inputs, driver_outputs)
-        self._iterator = None
 
     def stop(self):
         """

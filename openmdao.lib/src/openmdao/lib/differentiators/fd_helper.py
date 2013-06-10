@@ -117,7 +117,7 @@ class FDhelper(object):
             
         # Calculate finite differences.
         # FFAD mode is supported.
-        self.model.driver.calc_derivatives(first=True)
+        self.model.driver.calc_derivatives(first=True, savebase=True)
         self.model.run()
         
         # Return all needed derivatives

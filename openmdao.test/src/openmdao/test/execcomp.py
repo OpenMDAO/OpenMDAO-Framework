@@ -3,7 +3,7 @@ expressions."""
 
 import re, time
 
-from openmdao.main.api import Component, ComponentWithDerivatives
+from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator, _expr_dict
 
@@ -72,7 +72,7 @@ class ExecComp(Component):
             time.sleep(self.sleep)            
 
 
-class ExecCompWithDerivatives(ComponentWithDerivatives):
+class ExecCompWithDerivatives(Component):
     """ Works as ExecComp, except derivatives can also be defined.
     
     Given a list of assignment statements, this component creates

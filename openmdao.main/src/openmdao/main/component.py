@@ -19,6 +19,7 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import Derivatives
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -34,7 +35,8 @@ from openmdao.main.file_supp import FileMetadata
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, FileRef
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
+                                        FileRef
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -192,6 +194,9 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
+        
+        # Derivatives helper object. Mostly used for the older differentiators.
+        self.derivatives = Derivatives(self)
 
     @property
     def dir_context(self):
@@ -425,30 +430,56 @@ class Component(Container):
         This method approximates the output using a Taylor series expansion
         about the saved baseline point.
 
-        This function is overridden by ComponentWithDerivatives.
-
         ffd_order: int
             Order of the derivatives to be used (1 or 2).
         """
 
-        pass
+        for name in self.derivatives.out_names:
+            setattr(self, name,
+                    self.derivatives.calculate_output(name, ffd_order))
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives and saving the current state as the baseline. The user
-        must supply *calculate_first_derivatives()* and/or
-        *calculate_second_derivatives()* in the component.
-
-        This function is overridden by ComponentWithDerivatives
-
+        derivatives, and saving the current state as the baseline if
+        requested. The user must supply *calculate_first_derivatives()*
+        and/or *calculate_second_derivatives()* in the component.
+        
+        This function should not be overriden.
+        
         first: Bool
             Set to True to calculate first derivatives.
-
+        
         second: Bool
             Set to True to calculate second derivatives.
+            
+        savebase: Bool
+            If set to true, then we save our baseline state for fake finite
+            difference.
         """
-
-        pass
+        
+        executed = False
+        
+        # Calculate first derivatives using the new API.
+        # TODO: unify linearize & calculate_first_derivatives'
+        if first and hasattr(self, 'linearize'):
+            self.linearize()
+            self.derivative_exec_count += 1
+            
+        # Calculate first derivatives in user-defined function
+        if first and hasattr(self, 'calculate_first_derivatives'):
+            self.calculate_first_derivatives()
+            self.derivative_exec_count += 1
+            executed = True
+            
+        # Calculate second derivatives in user-defined function
+        if second and hasattr(self, 'calculate_second_derivatives'):
+            self.calculate_second_derivatives()
+            self.derivative_exec_count += 1
+            executed = True
+            
+        # Save baseline state
+        if savebase and executed:
+            self.derivatives.save_baseline(self)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ComponentsWithDerivatives overloads this function to check for
@@ -1847,6 +1878,16 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
+    
+    #----------------------------------------------------
+    # Experimental API for CADRE-like solution
+    #----------------------------------------------------
+    
+    def calc_residual(self, res):
+        """Returns the residual vector for this component. Override this if
+        your component calculates residuals internally."""
+        
+        pass
 
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover

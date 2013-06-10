@@ -368,7 +368,7 @@ class CONMINdriver(DriverUsesDerivatives):
             if self.cnmn1.igoto == 3:
                 # Save baseline states and calculate derivatives
                 if self.baseline_point:
-                    self.calc_derivatives(first=True)
+                    self.calc_derivatives(first=True, savebase=True)
                 self.baseline_point = False
                 
                 # update the parameters in the model
