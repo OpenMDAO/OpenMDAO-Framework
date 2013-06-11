@@ -31,17 +31,17 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     if (meta) {
         options.autoHeight = false;
 
-        elm.append(jQuery("<div id='inlineFilter' style='float:right;padding:10px;'>Filter <input type='text' id='" + name + "_variableFilter' style='width:100px;'></div>"));
+        elm.append(jQuery("<div id='inlineFilter' style='float:right;padding:10px;'>Filter <input type='text' id='"+name+"_variableFilter' style='width:100px;'><button id='"+name+"_clear'>X</button></div>"));
         propsDiv=jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none; height:360px; width:620px;'>");
         columns = [
             { id:"info",  name:"",            field:"info",   width:30,  formatter:InfoFormatter },
             { id:"name",  name:"Name",        field:"name",   width:100, formatter:VarTableFormatter, sortable:true },
-            { id:"type",  name: "Type",       field:"type",   width:30  },
+            { id:"type",  name:"Type",        field:"type",   width:30 },
             { id:"value", name:"Value",       field:"value",  width:100, editor:openmdao.ValueEditor, formatter:VarValueFormatter },
-            { id:"hi",    name: "High",       field:"high",   width:30  },
-            { id:"low",    name: "Low",        field:"low",    width:30 },
-            { id:"units", name:"Units",       field:"units",  width:60   },
-            { id:"desc",  name:"Description", field:"desc",   width:300  }
+            { id:"hi",    name:"High",        field:"high",   width:30 },
+            { id:"low",   name:"Low",         field:"low",    width:30 },
+            { id:"units", name:"Units",       field:"units",  width:60 },
+            { id:"desc",  name:"Description", field:"desc",   width:300 }
         ];
 
         var compName = pathname.replace(".", "-", "g");
@@ -72,7 +72,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     SetupTable();
 
     //function to convert array to object
-   function oc(a)
+    function oc(a)
     {
         var o = {};
         for(var i=0;i<a.length;i++)
@@ -130,7 +130,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
        }
 
        return format(key, value);
-
     };
 
     var fieldNameToString = function(fieldName){
@@ -140,11 +139,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
        }
 
        var formatters = {
-            "high-low" : highLowToString
+           "high-low" : highLowToString
        };
 
        function hasFormatter(key){
-         return key in formatters;
+           return key in formatters;
        }
 
        function format(key){
@@ -156,7 +155,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
        }
 
        return format(fieldName);
-
     };
 
     var weightedSort = function(a, b){
@@ -174,7 +172,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         };
 
         return getWeight(b) - getWeight(a);
-
     };
 
     var ItemFormatter = function(){
@@ -186,7 +183,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             }
 
             return newItem;
-
         };
 
         this.groupFields = function(fields, groupName, item){
@@ -218,7 +214,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         };
 
         this.removeFields = function(item, excludes){
-           newItem = this.cloneItem(item);
+           var newItem = this.cloneItem(item);
            for (var field in newItem){
                 if( excludeField(field, excludes)){
                     delete newItem[field];
@@ -248,7 +244,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
 
-        for(i=0; i<fields.length; i++){
+        for(var i=0; i<fields.length; i++){
             field = fields[i];
 
             formattedField = fieldNameToString(field);
@@ -273,7 +269,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             var visibility = openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns;
             var visibleColumns = [];
 
-            for(i =0; i<columns.length; i++){
+            for(var i=0; i<columns.length; i++){
                 if(visibility[columns[i].id]){
                    visibleColumns.push(columns[i]);
                 }
@@ -284,16 +280,16 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             // Sorting for the first column
             props.onSort.subscribe(function (e, args) {
 
-                asc = args.sortAsc ? 1 : -1;
+                var asc = args.sortAsc ? 1 : -1;
                 dataView.sort(function(rowa, rowb) {
-                    a = rowa.id;
-                    b = rowb.id;
+                    var a = rowa.id;
+                    var b = rowb.id;
 
-                    na = a.split('.');
-                    nb = b.split('.');
-                    min_dots = Math.min(a.length, b.length);
+                    var na = a.split('.');
+                    var nb = b.split('.');
+                    var min_dots = Math.min(a.length, b.length);
 
-                    for (idx=0; idx<min_dots; idx++) {
+                    for (var idx=0; idx<min_dots; idx++) {
                         if (na[idx] > nb[idx]) {
                             return asc;
                         }
@@ -331,46 +327,16 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 columnpicker.destroy();
             });
 
-            jQuery("#" + name + "_variableFilter").keyup(function (e) {
+            var variableFilter = jQuery('#'+name+'_variableFilter');
+            variableFilter.keyup(function (e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
+                self.refreshFilter(variableFilter.val());
+            });
 
-                searchString = this.value.toLowerCase();
-                items = dataView.getItems();
-                _filter = {};
-                for (i=items.length - 1; i>=0; i--){
-                    name = (items[i].name) ? items[i].name.toLowerCase() : "";
-                    units = (items[i].units) ? items[i].units.toLowerCase() : "";
-                    description = (items[i].desc) ? items[i].desc.toLowerCase() : "";
-
-                    if( searchString === ""){
-                        _filter[items[i].id] = true;
-                    }
-
-                    else if( _filter[items[i].id] === true){
-                        if( items[i].parent !== null ){
-                            _filter[items[i].parent] = true;
-                            _collapsed[items[i].parent] = false;
-                        }
-                    }
-
-                    else if(name.indexOf(searchString) !== -1 || units.indexOf(searchString) !== -1 || description.indexOf(searchString) !== -1) {
-                        _filter[items[i].id] = true;
-                        _collapsed[items[i].id] = false;
-                        if(items[i].parent !== null){
-                            _filter[items[i].parent] = true;
-                            _collapsed[items[i].parent] = false;
-                        }
-                    }
-
-                    else {
-                        _filter[items[i].id] = false;
-                        _collapsed[items[i].id] = true;
-                    }
-
-                }
-                dataView.refresh();
-                highlightCells();
-                jQuery(this).trigger('dialogresizestop');
+            var clrButton = jQuery('#'+name+'_clear');
+            clrButton.click(function() {
+                variableFilter.val('');
+                self.refreshFilter('');
             });
 
             //TODO: On hover of variable icon should bring up tool tip with information for that row
@@ -412,7 +378,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
         props.onClick.subscribe(function (e) {
             var cell = props.getCellFromEvent(e);
-            name_col_index = (meta) ? 1 : 0;
+            var name_col_index = (meta) ? 1 : 0;
             if (cell.cell === name_col_index) {
                 var item = dataView.getItem(cell.row);
                 if (item.hasOwnProperty("vt")) {
@@ -429,12 +395,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 e.stopImmediatePropagation();
             }
 
-			if ( dataView.getItem(cell.row).value === "Geometry" ) {
+            if ( dataView.getItem(cell.row).value === "Geometry" ) {
                 var p = self.pathname + '.' + dataView.getItem(cell.row).id;
                 openmdao.viewGeometry(p);          
-			}
+            }
         });
-
 
         props.onCellChange.subscribe(function (e, args) {
             dataView.updateItem(args.item.id, args.item);
@@ -510,7 +475,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
 
         return true;
-
     }
 
     function textboxFilter(item, args){
@@ -543,6 +507,48 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     propsDiv.bind('resizeCanvas', function() {
         props.resizeCanvas();
     });
+
+    this.refreshFilter = function(searchString) {
+        searchString = searchString.toLowerCase();
+        var items = dataView.getItems();
+        _filter = {};
+        for (var i=items.length - 1; i>=0; i--){
+            var name = (items[i].name) ? items[i].name.toLowerCase() : "";
+            var units = (items[i].units) ? items[i].units.toLowerCase() : "";
+            var description = (items[i].desc) ? items[i].desc.toLowerCase() : "";
+
+            if( searchString === ""){
+                _filter[items[i].id] = true;
+            }
+
+            else if( _filter[items[i].id] === true){
+                if( items[i].parent !== null ){
+                    _filter[items[i].parent] = true;
+                    _collapsed[items[i].parent] = false;
+                }
+            }
+
+            else if(name.indexOf(searchString) !== -1 ||
+                    units.indexOf(searchString) !== -1 ||
+                    description.indexOf(searchString) !== -1) {
+                _filter[items[i].id] = true;
+                _collapsed[items[i].id] = false;
+                if(items[i].parent !== null){
+                    _filter[items[i].parent] = true;
+                    _collapsed[items[i].parent] = false;
+                }
+            }
+
+            else {
+                _filter[items[i].id] = false;
+                _collapsed[items[i].id] = true;
+            }
+
+        }
+        dataView.refresh();
+        highlightCells();
+        jQuery(this).trigger('dialogresizestop');
+    }
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -604,7 +610,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                 }
                 value.info = "";
-
             });
 
             dataView.beginUpdate();
@@ -613,6 +618,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             dataView.endUpdate();
             props.invalidate();
 
+            var searchString = jQuery('#'+name+'_variableFilter').val();
+            if (searchString) {
+                self.refreshFilter(searchString);
+            }
         }
         else {
             props.setData([]);
