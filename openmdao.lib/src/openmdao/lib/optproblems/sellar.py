@@ -180,11 +180,10 @@ class Discipline2_WithDerivatives(Component):
         self.J[0, 2] = 1.0
         self.J[0, 3] = -1.0        
 
-    def applyJ(self, arg, result):
+    def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
         for key in result:
-            result[key] = self.J[0, 3]*arg['y2']
 
             if 'y1' in arg:
                 result[key] += self.J[0, 0]*arg['y1']

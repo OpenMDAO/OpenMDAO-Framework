@@ -1879,6 +1879,18 @@ class Component(Container):
 
         return attrs
 
+    def applyJ(self, arg, result):
+        """Multiply an input vector by the Jacobian. For an Explicit Component,
+        this automatically forms the "fake" residual, and calls into the
+        function hook "apply_der.
+        """
+        
+        for key in result:
+            result[key] = -arg[key]
+        
+        return self.apply_deriv(arg, result)
+        
+
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
