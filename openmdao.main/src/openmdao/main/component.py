@@ -1878,17 +1878,6 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
-    
-    #----------------------------------------------------
-    # Experimental API for CADRE-like solution
-    #----------------------------------------------------
-    
-    def calc_residual(self, res):
-        """Returns the residual vector for this component. Override this if
-        your component calculates residuals internally."""
-        
-        pass
-
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
