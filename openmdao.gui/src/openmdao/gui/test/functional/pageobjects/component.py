@@ -55,7 +55,10 @@ class ComponentPage(DialogPage):
     outputs = GridElement((By.ID, 'Outputs_props'))
 
     inputs_filter = InputElement((By.ID, 'Inputs_variableFilter'))
+    inputs_clear = ButtonElement((By.ID, 'Inputs_clear'))
+
     outputs_filter = InputElement((By.ID, 'Outputs_variableFilter'))
+    outputs_clear = ButtonElement((By.ID, 'Outputs_clear'))
 
     def __init__(self, browser, port, locator, version=Version.OLD):
         super(ComponentPage, self).__init__(browser, port, locator)
@@ -91,13 +94,13 @@ class ComponentPage(DialogPage):
         """ Filter out output variables from grid using `filter_text`. """
         self.outputs_filter = filter_text
 
-    #This does not work. May have to send backspaces to clear filter
     def clear_inputs_filter(self):
-        self.inputs_filter = ""
+        """ Clear input variable filter. """
+        self('inputs_clear').click()
 
-    #This does not work. May have to send backspaces to clear filter
     def clear_outputs_filter(self):
-        self.outputs_filter = ""
+        """ Clear output variable filter. """
+        self('outputs_clear').click()
 
     def _sort_column(self, grid, column_name, sort_order, tab):
         """ Sorts the variables in column `column_name`"""
