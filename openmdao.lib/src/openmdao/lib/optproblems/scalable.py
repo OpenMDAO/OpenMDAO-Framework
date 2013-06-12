@@ -67,11 +67,10 @@ class Discipline(Component):
         self.Jz = self.C_z/self.c_y_out
         
         
-    def applyJ(self, arg, result):
+    def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
         for key in result:
-            result[key] = -arg['y_out']
 
             if 'x' in arg:
                 result[key] += self.Jx.dot(arg['x'])

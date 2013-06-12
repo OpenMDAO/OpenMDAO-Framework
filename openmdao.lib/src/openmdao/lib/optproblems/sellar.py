@@ -86,9 +86,8 @@ class Discipline1_WithDerivatives(Component):
         self.J[0, 1] = -0.2
         self.J[0, 2] = 2.0*self.z1
         self.J[0, 3] = 1.0
-        self.J[0, 4] = -1.0
         
-    def applyJ(self, arg, result):
+    def Zapply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
         for key in result:
@@ -102,6 +101,20 @@ class Discipline1_WithDerivatives(Component):
                 result[key] += self.J[0, 2]*arg['z1']
             if 'z2' in arg:
                 result[key] += self.J[0, 3]*arg['z2']
+                
+    def provideJ(self):
+        """Experimental interface/alternative specification."""
+        
+        #input_keys = [('x1', 1),
+        #              ('y2', 1),
+        #              ('z1', 1),
+        #              ('z2', 1)]
+        input_keys = ['x1', 'y2', 'z1', 'z2']
+        
+        #output_keys = [('y1', 1)]
+        output_keys = ['y1']
+        
+        return input_keys, output_keys, self.J
                 
 
 class Discipline2(Component):
@@ -180,11 +193,10 @@ class Discipline2_WithDerivatives(Component):
         self.J[0, 2] = 1.0
         self.J[0, 3] = -1.0        
 
-    def applyJ(self, arg, result):
+    def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
         for key in result:
-            result[key] = self.J[0, 3]*arg['y2']
 
             if 'y1' in arg:
                 result[key] += self.J[0, 0]*arg['y1']
