@@ -1961,7 +1961,10 @@ class Component(Container):
                     i2 = ibounds[ikey][1]
                     o1 = obounds[okey][0]
                     o2 = obounds[okey][1]
-                    Jsub = J[o1:o2][i1:i2]
+                    if (i2-i1)==1 and (o2-o1)==1:
+                        Jsub = float(J[o1,i1])
+                    else:
+                        Jsub = J[o1:o2, i1:i2]
                     print J, Jsub, ikey, okey, i1, i2, o1, o2
                     result[okey] += Jsub*arg[ikey]
 
