@@ -1882,7 +1882,7 @@ class Component(Container):
     def applyJ(self, arg, result):
         """Multiply an input vector by the Jacobian. For an Explicit Component,
         this automatically forms the "fake" residual, and calls into the
-        function hook "apply_der.
+        function hook "apply_deriv.
         """
         
         for key in result:
