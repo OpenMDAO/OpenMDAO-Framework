@@ -1888,9 +1888,84 @@ class Component(Container):
         for key in result:
             result[key] = -arg[key]
         
-        return self.apply_deriv(arg, result)
+        if hasattr(self, 'apply_deriv'):
+            self.apply_deriv(arg, result)
+            return
         
+        # Optional specification of the Jacobian
+        
+        input_keys, output_keys, J = self.provideJ()
+        
+        ibounds = {}
+        nvar = 0
+        for key in input_keys:
+            
+            val = self.get(key)
+            
+            # Floats get 1 element
+            if isinstance(val, float):
+                width = 1
+                
+            # Arrays are the product of their dimensions
+            elif isinstance(val, ndarray):
+                shape = val.shape
+                if len(shape) == 2:
+                    width = shape[0]*shape[1]
+                else:
+                    width = shape[0]
+            
+            # Nothing else is supported.
+            else:
+                msg = "Variable %s is of type %s. " % (src, type(val)) + \
+                      "This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+            
+            ibounds[key] = (nvar, nvar+width)
+            nvar += width
+            
+        print nvar, J.shape[1]
 
+        obounds = {}
+        nvar = 0
+        for key in output_keys:
+            
+            val = self.get(key)
+            
+            # Floats get 1 element
+            if isinstance(val, float):
+                width = 1
+                
+            # Arrays are the product of their dimensions
+            elif isinstance(val, ndarray):
+                shape = val.shape
+                if len(shape) == 2:
+                    width = shape[0]*shape[1]
+                else:
+                    width = shape[0]
+            
+            # Nothing else is supported.
+            else:
+                msg = "Variable %s is of type %s. " % (src, type(val)) + \
+                      "This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+                
+            obounds[key] = (nvar, nvar+width)
+            nvar += width
+            
+        print nvar, J.shape[0]
+
+        for okey in result:
+            for ikey in arg:
+                if ikey != okey:
+                    i1 = ibounds[ikey][0]
+                    i2 = ibounds[ikey][1]
+                    o1 = obounds[okey][0]
+                    o2 = obounds[okey][1]
+                    Jsub = J[o1:o2][i1:i2]
+                    print J, Jsub, ikey, okey, i1, i2, o1, o2
+                    result[okey] += Jsub*arg[ikey]
+
+            
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
