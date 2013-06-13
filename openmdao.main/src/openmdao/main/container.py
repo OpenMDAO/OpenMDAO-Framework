@@ -1020,6 +1020,14 @@ class Container(SafeHasTraits):
                 if path:
                     if idx.isdigit():
                         obj = getattr(self, path, Missing)[int(idx)]
+                    elif idx.startswith('('):  # ndarray index
+                        obj = getattr(self, path, Missing)
+                        if obj is Missing:
+                            return self._get_failed(path, index)
+                        idx = idx[1:-1].split(',')
+                        for i in idx:
+                            obj = obj[int(i)]
+                        return obj
                     else:
                         key = re.sub('\'|"', '', str(idx))  # strip any quotes
                         obj = getattr(self, path, Missing)[key]

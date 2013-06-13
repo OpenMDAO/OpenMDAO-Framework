@@ -170,7 +170,6 @@ class SequentialWorkflow(Workflow):
             vals = []
             for key in sorted(val.list_vars()):  # Force repeatable order.
                 value = getattr(val, key)
-                print '   ', key, value
                 vals.extend(self._flatten('.'.join((name, key)), value))
             return array(vals)
         else:

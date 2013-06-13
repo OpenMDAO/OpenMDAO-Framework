@@ -232,6 +232,36 @@ class TestCase_Residuals(unittest.TestCase):
         for j in range(len(expected)):
             self.assertEqual(res[j], expected[j])
 
+    def test_matrix_element(self):
+        # Array element to scalar.
+
+        self.model.c1.add('y_a', Array(iotype='out'))
+        self.model.c1.y_a = array([[1.0, 2.0], [3.0, 4.0]])
+        self.model.c2.x = 7.0
+
+        self.model.connect('c1.y_a[0, 0]', 'c2.x')
+        self.model.connect('c2.y', 'c1.x')
+
+        self.model.driver.workflow.initialize_residual()
+
+        res = self.model.driver.workflow.calculate_residuals()
+        print 'matrix element res', res
+        expected = array([[-6.0], [0]])
+
+        # Note, running zeros the residuals on sliced edges
+        self.model.run()
+        for j in range(len(expected)):
+            self.assertEqual(res[j], expected[j])
+
+        dv = array([3.0, 0.0])
+        self.model.driver.workflow.set_new_state(dv)
+        res = self.model.driver.workflow.calculate_residuals()
+        print res
+        expected = array([[-3.0], [0.0]])
+
+        for j in range(len(expected)):
+            self.assertEqual(res[j], expected[j])
+
     def test_vtree(self):
         self.model.c1.add('vt_out', Tree1(iotype='out'))
 
