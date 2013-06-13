@@ -30,19 +30,19 @@ class FileMetadata(object):
     Metadata related to a file, specified by keyword arguments (except for
     'path').  By default, the metadata includes:
 
-    - 'path', a string, no default value. It may be a :mod:`glob`-style \
+    - 'path' -- a string, no default value. It may be a :mod:`glob`-style \
       pattern in the case of an external file description. Non-absolute paths \
       are relative to their owning component's directory.
-    - 'desc', a string, default null.
-    - 'content_type', a string, default null.
-    - 'platform', string, default is the value of :mod:`sys.platform`.
-    - 'binary', boolean, default False.
-    - 'big_endian', boolean, default set from :mod:`sys.byteorder`. \
+    - 'desc' -- a string, default null.
+    - 'content_type' -- a string, default null.
+    - 'platform' -- string, default is the value of :mod:`sys.platform`.
+    - 'binary' -- boolean, default False.
+    - 'big_endian' -- boolean, default set from :mod:`sys.byteorder`. \
       Only meaningful if binary.
-    - 'single_precision', boolean, default False. Only meaningful if binary.
-    - 'integer_8', boolean, default False. Only meaningful if binary.
-    - 'unformatted', boolean, default False. Only meaningful if binary.
-    - 'recordmark_8', boolean, default False. Only meaningful if unformatted.
+    - 'single_precision' -- boolean, default False. Only meaningful if binary.
+    - 'integer_8' -- boolean, default False. Only meaningful if binary.
+    - 'unformatted' -- boolean, default False. Only meaningful if binary.
+    - 'recordmark_8' -- boolean, default False. Only meaningful if unformatted.
 
     In addition, external files have defined behavior for:
 

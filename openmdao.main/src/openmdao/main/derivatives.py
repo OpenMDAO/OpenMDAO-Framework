@@ -31,7 +31,7 @@ def _check_var(comp, var_name, iotype):
     
 def derivative_name(input_name, output_name):
     """ Assemble the name string for a derivative output based on its input
-    and output name. This name string is used in several places, and is 
+    and output name. This name string is used in several places and is 
     considered part of the API."""
     
     # Sometimes a parameter is connected to multiple inputs.

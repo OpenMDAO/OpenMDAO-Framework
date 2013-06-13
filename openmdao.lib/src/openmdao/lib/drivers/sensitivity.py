@@ -3,7 +3,7 @@
     it as a driver output. 
     
     SensitivityDriver includes a differentiator slot where the differentiation
-    method can be plugged. Fake finite difference is supported.
+    method can be plugged. Fake Finite Difference is supported.
 """
 
 # pylint: disable-msg=C0103
@@ -31,7 +31,7 @@ class SensitivityDriver(DriverUsesDerivatives):
     inputs (Parameters) to all outputs (Objectives and Constraints).
     
     SensitivityDriver includes a differentiator slot where the differentiation
-    method can be plugged. Fake finite difference is supported.
+    method can be plugged. Fake Finite Difference is supported.
     """
 
     implements(IHasParameters, IHasObjectives, IHasConstraints)

@@ -275,7 +275,7 @@ class DependencyGraph(object):
         """ Returns the set of all output edges that are interior to the set
         of components supplied. For example, you may want the set of all 
         outputs in a driver's workflow that are connected to other comps in
-        that workflow, and hence need derivatives.
+        that workflow and, hence, need derivatives.
         
         comps: list of str
             List of component names

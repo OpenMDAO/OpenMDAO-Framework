@@ -102,7 +102,7 @@ specified when added to the assembly's driver:
 ::
 
     self.driver.add_parameter('paraboloid.x', low=-1000., high=1000., scaler=0.001)
-    self.driver.add_parameter('paraboloid.y', low=-1000., high=1000., scaler=1000)     
+    self.driver.add_parameter('paraboloid.y', low=-1000., high=1000., scaler=1000.0)     
     
 Running the assembly with these specifications for `x` and `y` gives:
 
@@ -206,7 +206,7 @@ So, consider specifying both scaler and adder values for `x` and `y` when adding
 ::
 
     self.driver.add_parameter('paraboloid.x', low=-1000000., high=1000000., scaler=0.001)
-    self.driver.add_parameter('paraboloid.y', low=-1000000., high=1000000., scaler=1000, adder=-1000)   
+    self.driver.add_parameter('paraboloid.y', low=-1000000., high=1000000., scaler=1000.0, adder=-1000.0)   
 
 Running the assembly now gives:
 

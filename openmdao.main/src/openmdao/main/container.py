@@ -1633,7 +1633,7 @@ def deep_hasattr(obj, pathname):
 
 def deep_getattr(obj, pathname):
     """Returns the attrbute indicated by the given pathname or raises
-    and exception if it doesn't exist.
+    an exception if it doesn't exist.
     """
     for name in pathname.split('.'):
         obj = getattr(obj, name)
@@ -1669,16 +1669,16 @@ def create_io_traits(cont, obj_info, iotype='in'):
     that contains strings and/or tuples.  The information is used to specify
     the "internal" and "external" names of the variable.
     The "internal" name uses the naming scheme within the Container.
-    The "external name is the one that will be used to access the trait
-    from outside the Container, it must not contain any '.' characters.
+    The "external" name is the one that will be used to access the trait
+    from outside the Container; it must not contain any '.' characters.
 
     A string specifies the "internal" name for the variable.  The "external"
     name will be the "internal" name with any '.' characters replaced by '_'.
 
-    Tuples must contain the "internal" name followed by the "external" name,
+    Tuples must contain the "internal" name followed by the "external" name
     and may optionally contain an iotype and a validation trait. If the iotype
-    is a dictionary rather than a string it is used for trait metadata (it may
-    include the ``iotype`` key, but does not have to).
+    is a dictionary rather than a string, it is used for trait metadata (it may
+    include the ``iotype`` key but does not have to).
 
     `iotype` is the default I/O type to be used.
 

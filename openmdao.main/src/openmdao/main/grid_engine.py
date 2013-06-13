@@ -168,8 +168,8 @@ class GridEngineAllocator(FactoryAllocator):
         resource_desc: dict
             Description of required resources.
 
-        Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        Returns ``(retcode, info)``. If compatible, then `retcode` is zero
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
         `resource_desc` and value provides data regarding the incompatibility.
         """

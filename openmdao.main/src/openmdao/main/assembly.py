@@ -138,7 +138,7 @@ class ExprMapper(object):
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
 
     def remove(self, compname):
-        """Remove any connections referring to the given component"""
+        """Remove any connections referring to the given component."""
         refs = self.find_referring_exprs(compname)
         if refs:
             self._exprgraph.remove_nodes_from(refs)
@@ -530,9 +530,9 @@ class Assembly(Component):
         return newtrait
 
     def get_passthroughs(self):
-        ''' get all the inputs and outputs of the assembly's child components
-            and indicate for each whether or not it is a passthrough variable
-            and if it is a passthrough, the assembly's name for the variable
+        ''' Get all the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable.
+            If it is a passthrough, provide the assembly's name for the variable.
         '''
         inputs = {}
         outputs = {}
@@ -594,7 +594,7 @@ class Assembly(Component):
             Source expression string.
 
         dest: str or list(str)
-            destination expression string(s).
+            Destination expression string(s).
         """
         src = eliminate_expr_ws(src)
 
@@ -924,7 +924,7 @@ class Assembly(Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def list_components(self):
-        ''' list the components in the assembly
+        ''' List the components in the assembly.
         '''
         names = [name for name in self.list_containers()
                      if isinstance(self.get(name), Component)]
@@ -933,7 +933,7 @@ class Assembly(Component):
     def get_dataflow(self):
         ''' Get a dictionary of components and the connections between them
             that make up the data flow for the assembly;
-            also includes parameter, constraint, and objective flows
+            also includes parameter, constraint, and objective flows.
         '''
         components = []
         connections = []
