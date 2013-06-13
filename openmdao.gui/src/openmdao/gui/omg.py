@@ -222,7 +222,7 @@ class AppServer(object):
 
     @staticmethod
     def get_argument_parser():
-        ''' create a parser for command line arguments
+        ''' Create a parser for command-line arguments.
         '''
         parser = ArgumentParser(description='launch the graphical user interface')
         parser.add_argument('-p', '--port', type=int, dest='port', default=0,

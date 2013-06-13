@@ -22,9 +22,9 @@ The ``FiniteDifference`` differentiator also supports Finite Difference with
 Analytical Derivatives (FDAD), wherein a component's analytical derivatives can
 be used to speed up that component under finite difference.
 
-The ``FiniteDifference`` differentiator can be used with any optimizer that can
-usegradients, including the CONMIN, NEWSUMT, and SLSQP drivers.
-optimizer by plugging it into the differentiator socket.
+The ``FiniteDifference`` differentiator can be used with any optimizer that can use gradients,
+including the CONMIN, NEWSUMT, and SLSQP optimizers, by plugging the selected optimizer into the
+differentiator socket.
 
 .. testcode:: FD
 

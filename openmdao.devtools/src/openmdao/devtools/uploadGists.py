@@ -115,7 +115,7 @@ def upload (OpenMDAO_version):
     
 def getUsernamePass():
 
-    """returns successfull authorization"""
+    """Returns successfull authorization."""
 
     print "Default username to upload gists to github:"
     print username
@@ -158,7 +158,7 @@ def getUsername():
 
 
 def getPass():
-    """returns boolean successfull password"""
+    """Returns boolean successful password."""
     global password
 
     password = raw_input('Input password for ' + username + ' on github:')
@@ -189,7 +189,7 @@ def authOK():
 
 def getUploadFiles(directory, tutorialName):
     """
-    Returns a list of files to upload to the tutorial gist
+    Returns a list of files to upload to the tutorial gist.
     """
 
     "filter out the files that we dont' want, retun the goodies"
@@ -199,7 +199,7 @@ def getUploadFiles(directory, tutorialName):
 
 def shouldUpload(f):
 
-    "Returns if the file should be uploaded to the gist"
+    "Returns if the file should be uploaded to the gist."
     filename, extension = os.path.splitext(f)
 
     return extension in allowFiletype and not (filename in ignoreFilename)
@@ -272,7 +272,7 @@ def createGist(name, directory, files, OpenMDAO_version):
     """
     Posts a new gist to GitHub on behalf of 'username' field.
 
-    Notify Cookbook of our existance.
+    Notify Cookbook of our existence.
     """
 
     print"Uploading " + name + '...',
