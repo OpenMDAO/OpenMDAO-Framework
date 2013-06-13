@@ -25,24 +25,21 @@ class Simple(Component):
         
 
 def _nested_model():
+    # just hierarchy, no connections
     top = set_as_top(Assembly())
-    top.add('sub', Assembly())
-    top.add('comp7', Simple())
-    top.add('comp8', Simple())
-    sub = top.sub
-    sub.add('comp1', Simple())
-    sub.add('comp2', Simple())
-    sub.add('comp3', Simple())
-    sub.add('comp4', Simple())
-    sub.add('comp5', Simple())
-    sub.add('comp6', Simple())
+    top.add('comp1', Simple())
+    top.add('asm', Assembly())
+    top.add('comp2', Simple())
+    asm = top.asm
+    asm.add('comp1', Simple())
+    asm.add('comp2', Simple())
+    asm.add('comp3', Simple())
 
-    top.driver.workflow.add(['comp7', 'sub', 'comp8'])
-    sub.driver.workflow.add(['comp1','comp2','comp3',
-                             'comp4','comp5','comp6'])
+    top.driver.workflow.add(['comp1', 'asm', 'comp2'])
+    asm.driver.workflow.add(['comp1','comp2','comp3'])
 
-    sub.create_passthrough('comp1.a', 'a1')
-    sub.create_passthrough('comp4.c', 'c4')
+    asm.create_passthrough('comp1.a', 'a1')
+    asm.create_passthrough('comp3.c', 'c3')
     
     return top
 
@@ -53,16 +50,22 @@ class PseudoCompTestCase(unittest.TestCase):
         pass
 
     def test_basic_units(self):
-        asm = Assembly()
-        asm.add("comp1", Simple())
-        asm.add("comp2", Simple())
-        asm.connect("comp1.c", "comp2.a")
-        self.assertEqual(asm._depgraph.list_connections(show_pseudo=True),
-                         [])
+        top = _nested_model()
+        top.asm.connect("comp1.c", "comp2.a")
+        self.assertTrue('#1' in top.asm._depgraph)
+        # self.assertEqual(asm._depgraph.list_connections(show_pseudo=True),
+        #                  [])
 
-    def test_connect1(self):
-        "comp1.c+comp2.d"
-        
+    # connect('comp1.c*comp2.d', 'comp3.a')
+    # disconnect() for a var in an expr
+    # disconnect() for an exact expr (src and dest)
+    # connect('a1+comp2.c', 'comp3.b')
+    # disconnect() for a boundary var in an expr  
+    # invlidation through a pseudocomp
+    # listing connections with pseudocomps
+    # listing connections without pseudocomps (will have multiple srcs connected to one dest)
+    # expr with array index ref
+       
 
 
 

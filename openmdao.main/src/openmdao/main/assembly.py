@@ -461,6 +461,9 @@ class Assembly(Component):
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
 
+        src = srcexpr.text  # may have changed is pseudocomp was created
+        dest = destexpr.text # may have changed 
+
         # Check if src is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
             comp = self.get(item)
@@ -734,6 +737,12 @@ class Assembly(Component):
 
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
+
+    def get_failed(self, path, index):
+        parts = path.split('.', 1)
+        if parts and parts[0] == '_pseudo_': # it's a pseudocomp
+            return getattr(self._exprmapper._pseudos, path[1])
+        super(Assembly, self).get_failed(path, index)
 
     def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Overides the component's version of this function. An assembly

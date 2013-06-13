@@ -1,6 +1,7 @@
 
 import networkx as nx
 from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.units import PhysicalQuantity
 
 
 class ExprMapper(object):
@@ -142,15 +143,19 @@ class ExprMapper(object):
                                            if src in src_exprs and dest in dest_exprs])
 
     def check_connect(self, src, dest, scope):
-        """Check validity of connecting a source expression to a destination expression."""
+        """Check validity of connecting a source expression to a destination expression, and
+        determine if we need to create links to pseudocomps.
+        """
 
         if self.get_source(dest) is not None:
-            scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
-                                  RuntimeError)
+            scope.raise_exception("'%s' is already connected to source '%s'" % 
+                                  (dest, self.get_source(dest)), RuntimeError)
 
         destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr',
                                           is_dest=True)
+        destmeta = destexpr.get_metadata('units')
         srcexpr = ConnectedExprEvaluator(src, scope, getter='get_wrapped_attr')
+        srcmeta = srcexpr.get_metadata('units')
 
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = destexpr.get_referenced_compnames()

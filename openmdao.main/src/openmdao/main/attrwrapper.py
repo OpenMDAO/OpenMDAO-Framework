@@ -1,8 +1,6 @@
 
 __all__ = ['AttrWrapper']
 
-import operator
-
 from openmdao.units import PhysicalQuantity
 
 class AttrWrapper(object):
@@ -76,4 +74,10 @@ class UnitsAttrWrapper(AttrWrapper):
         if isinstance(wrapper, UnitsAttrWrapper):
             return wrapper.pq.convert_value(self.pq.unit)
         raise ValueError("incompatible AttrWrapper objects")
-        
+
+
+def create_attr_wrapper(value, **meta):
+    if 'units' in meta:
+        return UnitsAttrWrapper(value, **meta)
+    else:
+        return AttrWrapper(value, **meta)

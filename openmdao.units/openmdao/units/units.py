@@ -130,8 +130,8 @@ class PhysicalQuantity(object):
         return str(self.value) + ' ' + self.unit.name()
   
     def __repr__(self):
-        return (self.__class__.__name__ + '(' + `self.value` + ',' +
-                `self.unit.name()` + ')')
+        return (self.__class__.__name__ + '(' + repr(self.value) + ',' +
+                repr(self.unit.name()) + ')')
 
 
     def _sum(self, other, sign1, sign2):
