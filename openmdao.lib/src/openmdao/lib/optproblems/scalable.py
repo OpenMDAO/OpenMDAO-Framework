@@ -15,7 +15,7 @@ from numpy import array, matrix, identity, zeros, ones
 class Discipline(Component): 
     
     c_y_out = Float(1.0,iotype="in",
-                    desc="coefficient for the output variables")
+                    desc="Coefficient for the output variables.")
     
     def __init__(self,prob_size=1): 
         super(Discipline,self).__init__()        

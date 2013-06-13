@@ -5,7 +5,7 @@ class LazyComponent(Component):
     """
     Base Component Class for situations where you want your component to calculate 
     only the output values that are connected to something else in the model. This 
-    behavior makes the component 'lazy' since some of it's outputs won't be valid 
+    behavior makes the component "lazy" since some of its outputs won't be valid 
     even though it has executed. 
 
     The component provides an attribute which can be used in the 'execute' method

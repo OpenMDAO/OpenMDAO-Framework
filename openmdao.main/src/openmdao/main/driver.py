@@ -73,7 +73,7 @@ class Driver(Component):
 
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our variables is invalid, or if the parameters,
+        if any of our variables is invalid, or if the parameters,
         constraints, or objectives have changed.
         """
         if super(Driver, self).is_valid() is False:
@@ -236,7 +236,7 @@ class Driver(Component):
             changed. (Default is False)
 
         ffd_order: int
-            Order of the derivatives to be used when finite differncing (1 for first
+            Order of the derivatives to be used when finite differencing (1 for first
             derivatives, 2 for second derivativse). During regular execution,
             ffd_order should be 0. (Default is 0)
 
@@ -353,7 +353,7 @@ class Driver(Component):
         the driver should call this function once per iteration and may also
         need to call it at the conclusion.
 
-        All paramters, objectives, and constraints are included in the Case
+        All parameters, objectives, and constraints are included in the Case
         output, along with all extra variables listed in self.printvars.
         """
 

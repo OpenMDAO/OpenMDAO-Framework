@@ -44,7 +44,7 @@ class ReqHandler(BaseHandler):
 
 
 class AddOnsHandler(BaseHandler):
-    ''' Addon installation utility.
+    ''' Add-on installation utility.
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
     '''
@@ -52,7 +52,7 @@ class AddOnsHandler(BaseHandler):
 
     @web.authenticated
     def post(self):
-        ''' Easy_install the POSTed addon.
+        ''' Easy_install the POSTed add-on.
         '''
         pass
 
@@ -351,7 +351,7 @@ class GeometryHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        ''' geometry viewer
+        ''' Geometry viewer.
         '''
         path = self.get_argument('path')
         #self.render('workspace/o3dviewer.html', filename=path)
@@ -389,7 +389,7 @@ class OutstreamHandler(ReqHandler):
 
 
 class PassthroughsHandler(ReqHandler):
-    ''' Get the passthrough variables for the named assembly
+    ''' Get the passthrough variables for the named assembly.
     '''
 
     @web.authenticated
@@ -572,7 +572,7 @@ class TypesHandler(ReqHandler):
 
 
 class UploadHandler(ReqHandler):
-    ''' File upload utility
+    ''' File upload utility.
     '''
 
     @web.authenticated
@@ -599,7 +599,7 @@ class UploadHandler(ReqHandler):
 
 class ValueHandler(ReqHandler):
     ''' GET: get a value for the given pathname.
-        TODO: combine with ComponentHandler? handle Containers as well?
+        TODO: combine with ComponentHandler? Handle Containers as well?
     '''
 
     @web.authenticated
@@ -669,7 +669,7 @@ class WorkflowHandler(ReqHandler):
 
 
 class WorkspaceHandler(ReqHandler):
-    ''' render the workspace
+    ''' Render the workspace.
     '''
 
     @web.authenticated

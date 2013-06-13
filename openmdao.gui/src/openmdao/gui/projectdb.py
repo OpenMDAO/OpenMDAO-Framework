@@ -1,4 +1,4 @@
-''' The Projects object provides a basic interface for interacting with the
+''' The Project's object provides a basic interface for interacting with the
 project database used by the GUI. '''
 
 import sys
@@ -96,7 +96,7 @@ class Projects(object):
         ''' Get a dictionary containing the fields for a project id.
 
             project_id: int
-                unique id for requested project.
+                Unique id for requested project.
         '''
 
         con = self._get_connection()
@@ -135,7 +135,7 @@ class Projects(object):
             a project with a specific path.
 
             path: str (valid path)
-                path for requested project
+                Path for requested project.
         '''
         con = self._get_connection()
         con.row_factory = sqlite3.Row
@@ -169,7 +169,7 @@ class Projects(object):
     def predict_next_rowid(self):
         ''' Predict what the next auto-inserted rowid will be.
         This is here because the GUI handlers need to know the
-        project_id even before the row is inserted.'''
+        project_id `before` the row is inserted.'''
 
         con = self._get_connection()
         con.row_factory = sqlite3.Row
@@ -275,7 +275,7 @@ class Projects(object):
         'modified' to the current time/date.
 
         project_id: int
-            unique id for requested project.
+            Unique id for requested project.
         '''
 
         modified = str(datetime.now())
