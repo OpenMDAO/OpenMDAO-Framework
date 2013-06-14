@@ -2,13 +2,15 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
+from openmdao.main.api import VariableTree
 from openmdao.main.workflow import Workflow
 
 try:
-    from numpy import ndarray, zeros
+    from numpy import array, ndarray, zeros
 except ImportError as err:
+    import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros
+    from openmdao.main.numpy_fallback import array, ndarray, zeros
 
 __all__ = ['SequentialWorkflow']
 
@@ -128,103 +130,133 @@ class SequentialWorkflow(Workflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
-        edges = self.get_interior_edges()
-        
         nEdge = 0
         self.bounds = {}
-        for edge in edges:
-            
+        for edge in self.get_interior_edges():
             src = edge[0]
             val = self.scope.get(src)
-            
-            # Floats get 1 element
-            if isinstance(val, float):
-                width = 1
-                
-            # Arrays are the product of their dimensions
-            elif isinstance(val, ndarray):
-                shape = val.shape
-                if len(shape) == 2:
-                    width = shape[0]*shape[1]
-                else:
-                    width = shape[0]
-                    
-            # Nothing else is supported.
-            else:
-                msg = "Variable %s is of type %s. " % (src, type(val)) + \
-                      "This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
-                
+            width = self._flatten(src, val).size
             self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
-            
+
         # Initialize the residual vector on the first time through, and also
         # if for some reason the number of edges has changed.
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
-            
+
         return nEdge
-    
+
     def calculate_residuals(self):
         """Caclulate and return the vector of residuals based on the current
         state of the system in our workflow."""
-        
         for edge in self.get_interior_edges():
             src, target = edge
             src_val = self.scope.get(src)
+            src_val = self._flatten(src, src_val).reshape(-1, 1)
             target_val = self.scope.get(target)
-            
+            target_val = self._flatten(target, target_val).reshape(-1, 1)
             i1, i2 = self.bounds[edge]
             self.res[i1:i2] = src_val - target_val
-    
+
         return self.res
-    
+
+    def _flatten(self, name, val):
+        """ Return 'flattened' value for `val`. """
+        if isinstance(val, float):
+            return array([val])
+        elif isinstance(val, ndarray):
+            return val.flatten()
+        elif isinstance(val, VariableTree):
+            vals = []
+            for key in sorted(val.list_vars()):  # Force repeatable order.
+                value = getattr(val, key)
+                vals.extend(self._flatten('.'.join((name, key)), value))
+            return array(vals)
+        else:
+            msg = "Variable %s is of type %s." % (name, type(val)) + \
+                  " This type is not supported by the MDA Solver."
+            self.scope.raise_exception(msg, RuntimeError)
+
     def set_new_state(self, dv):
         """Adds a vector of new values to the current model state at the
         input edges.
-        
+
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        
-        # Apply new state to model
         for edge in self._severed_edges:
             src, target = edge
-                
             i1, i2 = self.bounds[edge]
             old_val = self.scope.get(target)
-            
-            # Arrays
-            if i2-i1 > 1:
-                
-                # Arrays that are 2D column vectors
-                if old_val.shape[0] > old_val.shape[1]:
-                    new_val = old_val.T + dv[i1:i2]
-                    new_val = new_val.T
-                    
-                # 2D Row vectors
+
+            if isinstance(old_val, float):
+                new_val = old_val + float(dv[i1:i2])
+            elif isinstance(old_val, ndarray):
+                shape = old_val.shape
+                if len(shape) > 1:
+                    # Arrays that are 2D column vectors
+                    if shape[0] > shape[1]:
+                        new_val = old_val.T + dv[i1:i2]
+                        new_val = new_val.T
+                    # 2D Row vector or matrix
+                    else:
+                        new_val = old_val.flatten() + dv[i1:i2]
+                        new_val.reshape(shape)
                 else:
                     new_val = old_val + dv[i1:i2]
-                
-            # Floats
+            elif isinstance(old_val, VariableTree):
+                new_val = old_val.copy()
+                self._update(target, new_val, dv[i1:i2])
             else:
-                new_val = old_val + float(dv[i1:i2])
-                
+                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+
             # Poke new value into the input end of the edge.
             self.scope.set(target, new_val, force=True)
-            
+
             # Prevent OpenMDAO from stomping on our poked input.
-            parts = target.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
+            comp_name, dot, var_name = target.partition('.')
             comp = self.scope.get(comp_name)
-            valids = comp._valid_dict
-            valids[var_name] = True
-            
+            comp._valid_dict[var_name] = True
+
             #(An alternative way to prevent the stomping. This is more
             #concise, but setting an output and allowing OpenMDAO to pull it
             #felt hackish.)
             #self.scope.set(src, new_val, force=True)
+
+    def _update(self, name, vtree, dv, i1=0):
+        """ Update VariableTree `name` value `vtree` from `dv`. """
+        for key in sorted(vtree.list_vars()):  # Force repeatable order.
+            value = getattr(vtree, key)
+            if isinstance(value, float):
+                setattr(vtree, key, value + float(dv[i1]))
+                i1 += 1
+            elif isinstance(value, ndarray):
+                shape = value.shape
+                size = value.size
+                i2 = i1 + size
+                if len(shape) > 1:
+                    # Arrays that are 2D column vectors
+                    if shape[0] > shape[1]:
+                        value = value.T + dv[i1:i2]
+                        value = value.T
+                    # 2D Row vector or matrix
+                    else:
+                        value = value.flatten() + dv[i1:i2]
+                        value.reshape(shape)
+                else:
+                    value = value + dv[i1:i2]
+                setattr(vtree, key, value)
+                i1 += size
+            elif isinstance(value, VariableTree):
+                i1 = self._update('.'.join((name, key)), value, dv, i1)
+            else:
+                msg = "Variable %s is of type %s." % (name, type(value)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+
+        return i1
 
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the

@@ -1,5 +1,5 @@
 """
-A simple iteration driver. Basically runs a workflow, passing the output
+This is a simple iteration driver that basically runs a workflow, passing the output
 to the input for the next iteration. Relative change and number of iterations
 are used as termination criteria.
 """

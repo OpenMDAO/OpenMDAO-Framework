@@ -370,7 +370,7 @@ class Component(Container):
 
     def _pre_execute(self, force=False):
         """Prepares for execution by calling *cpath_updated()* and *check_config()* if
-        their "dirty" flags are set, and by requesting that the parent Assembly
+        their "dirty" flags are set and by requesting that the parent Assembly
         update this Component's invalid inputs.
 
         Overrides of this function must call this version.
@@ -512,7 +512,7 @@ class Component(Container):
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
-        """Run this object. This should include fetching input variables if necessary,
+        """Run this object. This should include fetching input variables (if necessary),
         executing, and updating output variables. Do not override this function.
 
         force: bool
@@ -1042,10 +1042,10 @@ class Component(Container):
         should be specified relative to this component.
 
         name: string
-            Name for egg, must be an alphanumeric string.
+            Name for egg; must be an alphanumeric string.
 
         version: string
-            Version for egg, must be an alphanumeric string.
+            Version for egg; must be an alphanumeric string.
 
         py_dir: string
             The (root) directory for local Python files. It defaults to
@@ -1054,7 +1054,7 @@ class Component(Container):
         require_relpaths: bool
             If True, any path (directory attribute, external file, or file
             trait) which cannot be made relative to this component's directory
-            will raise ValueError. Otherwise such paths generate a warning and
+            will raise ValueError. Otherwise, such paths generate a warning and
             the file is skipped.
 
         child_objs: list

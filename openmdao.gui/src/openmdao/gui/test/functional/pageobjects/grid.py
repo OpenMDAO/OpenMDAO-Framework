@@ -195,7 +195,6 @@ class GridCell(object):
         self._browser = browser
         self._root = root
 
-
     @property
     def value(self):
         return self._root.text
@@ -218,6 +217,18 @@ class GridCell(object):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
         element.send_keys(value + Keys.RETURN)
+
+    def select(self, index):
+        """ Sets a ``select`` element to `index` . """
+        chain = ActionChains(self._browser)
+        chain.double_click(self._root).perform()
+        element = self._root.find_elements(By.XPATH, 'select')[0]
+        WebDriverWait(self._browser, 5).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, 5).until(
+            lambda browser: element.is_enabled())
+        option = element.find_elements(By.XPATH, 'option')[index]
+        option.click()
 
     @property
     def editable(self):
