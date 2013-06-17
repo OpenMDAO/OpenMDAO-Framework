@@ -3,7 +3,7 @@ This module is based on the *distributing.py* file example which was
 (temporarily) posted with the multiprocessing module documentation.
 
 This code uses ssh (or plink on Windows) to access remote hosts and assumes
-authorization has been set-up on all hosts such that no user intervention for
+authorization has been set up on all hosts in such a way that no user intervention for
 passwords or passphrases is required.
 
 Also, it's assumed that connections to remote hosts will access a UNIX-like
@@ -108,7 +108,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
 
     @staticmethod
     def _finalize_host(address, authkey, fcleanup, rcleanup):
-        """ Sends a shutdown message and cleans-up tunnels. """
+        """ Sends a shutdown message and cleans up tunnels. """
         mgr_ok = OpenMDAO_Proxy.manager_is_alive(address)
         if mgr_ok:
             conn = connection.Client(address, authkey=authkey)
@@ -139,7 +139,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         Names of modules to be sent to each host.
 
     authkey: string
-        Authorization key, passed to :class:`OpenMDAO_Manager`.
+        Authorization key; passed to :class:`OpenMDAO_Manager`.
 
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
