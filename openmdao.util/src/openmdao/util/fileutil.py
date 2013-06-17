@@ -267,7 +267,7 @@ def get_module_path(fpath):
 def find_module(name, path=None, py=True):
     """Return the pathname of the Python file corresponding to the
     given module name, or None if it can't be found. If path is set, search in
-    path for the file; otherwise search in sys.path. If py is True, the
+    path for the file; otherwise, search in sys.path. If py is True, the
     file must be an uncompiled Python (.py) file.
     """
     if path is None:
@@ -349,7 +349,7 @@ def build_directory(dct, force=False, topdir='.'):
 
 
 def get_cfg_file():
-    """Attempts to get the /OpenMDAO-Framework/config/testhosts.cfg first, then
+    """Attempts to get the /OpenMDAO-Framework/config/testhosts.cfg first; then
     gets the ~/.openmdao/testhosts.cfg next."""
     bindir = os.path.dirname(sys.executable)
     branchdir = os.path.dirname(os.path.dirname(bindir))
