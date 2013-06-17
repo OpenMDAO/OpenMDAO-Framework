@@ -5,7 +5,7 @@ import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 from networkx.algorithms.dag import is_directed_acyclic_graph
 
-from openmdao.main.seqentialflow import SequentialWorkflow
+from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 

@@ -20,7 +20,7 @@ from openmdao.main.assembly import Assembly, set_as_top, dump_iteration_tree
 from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.seqentialflow import SequentialWorkflow
+from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.variable import Variable
 
