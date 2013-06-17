@@ -193,10 +193,10 @@ class VariableTree(Container):
             Recursion level (for collapsing tables).
 
         parent: str
-            ID name of parent table line
+            ID name of parent table line.
 
         valid: str
-            Validity state of the parent table"""
+            Validity state of the parent table."""
 
         attrs = {}
         attrs['type'] = type(self).__name__

@@ -239,9 +239,9 @@ def _meta_from_zipped_egg(path):
 
 def get_metadata(path):
     """Retrieve metadata from a file or directory specified by path,
-    or from the name of a distribution that happens to be installed.
-    path can be an installed egg, a zipped egg file, or a 
-    zipped or unzipped tar file of a python distutils or setuptools
+    or from the name of a distribution that happens to be installed. 
+    `path` can be an installed egg, a zipped egg file, or a 
+    zipped or unzipped tar file of a Python distutils or setuptools
     source distribution.
     
     Returns a dict.

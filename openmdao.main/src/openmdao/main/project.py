@@ -59,7 +59,7 @@ def _match_insts(classes):
 
 def parse(contents, fname, mode='exec'):
     """Wrapper for ast.parse() that cleans the contents of CRs and ensures
-    it ends with a newline"""
+    it ends with a newline."""
     contents = contents.replace('\r', '')  # py26 barfs on CRs
     if not contents.endswith('\n'):
         contents += '\n'  # to make ast.parse happy :(
@@ -126,7 +126,7 @@ def add_init_monitors(node):
 
 
 class ProjFinder(object):
-    """A finder class for custom imports from an OpenMDAO project. In order for
+    """A finder class for custom imports from an OpenMDAO project. For
     this to work, an entry must be added to sys.path of the form
     ``top_dir+PROJ_DIR_EXT``, where `top_dir` is the top directory of the project
     where Python files are kept.
@@ -146,7 +146,7 @@ class ProjFinder(object):
 
     def find_module(self, modpath, path=None):
         """This looks within the project for the specified module, returning a
-        loader if the module is found, and None if it isn't.
+        loader if the module is found and None if it isn't.
         """
         if path is None:
             path = self.path_entry
@@ -244,7 +244,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None,
         reside. Defaults to the directory where the archive is located.
 
     create: bool (optional)
-        If True, create and return a Project object. Otherwise just unpack the
+        If True, create and return a Project object. Otherwise, just unpack the
         project directory.
     """
     archive_name = expand_path(archive_name)

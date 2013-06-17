@@ -466,7 +466,7 @@ class ResourceAllocationManager(object):
 
         server: proxy for a remote server
             The server whose allocators are to be added.
-            It must support :meth:`get_ram` which should return the server's
+            It must support :meth:`get_ram`, which should return the server's
             `ResourceAllocationManager` and a `host` attribute.
 
         prefix: string
@@ -754,7 +754,7 @@ class ResourceAllocator(object):
     resource and can deploy on that resource.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
         Must be alphanumeric (underscore also allowed).
     """
 
@@ -835,9 +835,9 @@ class ResourceAllocator(object):
 
         Returns ``(retcode, info)``.  If `retcode` is zero, then `info`
         is a list of keys in `recource_desc` that have not been processed.
-        Otherwise `retcode` will be -2 and `info` will be a single-entry
+        Otherwise, `retcode` will be -2 and `info` will be a single-entry
         dictionary whose key is the incompatible key in `resource_desc`
-        and value provides data regarding the incompatibility.
+        and whose value provides data regarding the incompatibility.
         """
         keys = []
         for key, value in resource_desc.items():
@@ -937,7 +937,7 @@ class FactoryAllocator(ResourceAllocator):
     Base class for allocators using :class:`ObjServerFactory`.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -1023,11 +1023,11 @@ class LocalAllocator(FactoryAllocator):
     Purely local resource allocator.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     total_cpus: int
         If >0, then that is taken as the number of cpus/cores available.
-        Otherwise the number is taken from :meth:`multiprocessing.cpu_count`.
+        Otherwise, the number is taken from :meth:`multiprocessing.cpu_count`.
 
     max_load: float
         Specifies the maximum cpu-adjusted load (obtained from
@@ -1114,8 +1114,8 @@ class LocalAllocator(FactoryAllocator):
     @rbac('*')
     def max_servers(self, resource_desc):
         """
-        Returns `total_cpus` * `max_load` if `resource_desc` is supported,
-        otherwise zero.
+        Returns `total_cpus` * `max_load` if `resource_desc` is supported;
+        otherwise, zero.
 
         resource_desc: dict
             Description of required resources.
@@ -1193,9 +1193,9 @@ class LocalAllocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(LocalAllocator, self).check_compatibility(resource_desc)
@@ -1285,7 +1285,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
     of :class:`LocalAllocator`, one for each machine in the cluster.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     machines: list(:class:`ClusterHost`)
         Hosts to allocate from.
