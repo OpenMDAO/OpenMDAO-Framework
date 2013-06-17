@@ -95,11 +95,6 @@ class CommandHandler(ReqHandler):
         self.content_type = 'text/html'
         self.write(history)
 
-    @web.authenticated
-    def get(self):
-        self.content_type = 'text/html'
-        self.write('')  # not used for now, could render a form
-
 
 class ComponentHandler(ReqHandler):
     ''' Add, get, or remove a component.
@@ -181,40 +176,29 @@ class EditorHandler(ReqHandler):
         self.render('workspace/editor.html', filename=filename)
 
 
-class ExecHandler(ReqHandler):
-    ''' If a filename is POSTed, have the cserver execute the file;
-        otherwise, just run() the project.
-    '''
-
-    @web.authenticated
-    def post(self):
-        result = ''
-        cserver = self.get_server()
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            try:
-                result = cserver.execfile(filename)
-            except Exception as exc:
-                print exc
-                result = result + str(sys.exc_info()) + '\n'
-        else:
-            pathname = self.get_argument('pathname', default='')
-            try:
-                cserver.run(pathname)
-            except Exception as exc:
-                print exc
-                result = result + str(sys.exc_info()) + '\n'
-        if result:
-            self.content_type = 'text/html'
-            self.write(result)
-
-
 class FileHandler(ReqHandler):
-    ''' Get/set the specified file/folder.
+    ''' GET:    Get the contents of a file.
+
+        PUT:    Write contents to a file.
+
+        DELETE: delete a file.
+
+        POST:   execute a file.
     '''
 
     @web.authenticated
-    def post(self, filename):
+    def get(self, filename):
+        cserver = self.get_server()
+        self.content_type = 'application/octet-stream'
+        download = self.get_argument('download', default=False)
+        if download:
+            self.set_header('Content-Disposition',
+                            'attachment; filename="' + filename + '"')
+            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
+        self.write(str(cserver.get_file(filename)))
+
+    @web.authenticated
+    def put(self, filename):
         cserver = self.get_server()
         isFolder = self.get_argument('isFolder', default=None)
         if isFolder:
@@ -231,18 +215,21 @@ class FileHandler(ReqHandler):
     def delete(self, filename):
         cserver = self.get_server()
         self.content_type = 'text/html'
-        self.write(str(cserver.delete_file(filename)))
+        if str(cserver.delete_file(filename)):
+            self.set_status(204)  # successful, no data in response
+            self.write()
 
     @web.authenticated
-    def get(self, filename):
+    def post(self, filename):
+        result = ''
         cserver = self.get_server()
-        self.content_type = 'application/octet-stream'
-        download = self.get_argument('download', default=False)
-        if download:
-            self.set_header('Content-Disposition',
-                            'attachment; filename="' + filename + '"')
-            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
-        self.write(str(cserver.get_file(filename)))
+        try:
+            result = cserver.execfile(filename)
+        except Exception as exc:
+            print exc
+            result = result + str(sys.exc_info()) + '\n'
+        self.content_type = 'text/html'
+        self.write(result)
 
 
 class FilesHandler(ReqHandler):
@@ -283,33 +270,23 @@ class GeometryHandler(ReqHandler):
         self.render('workspace/wvclient.html', geom_name=path)
 
 
-class ModelHandler(ReqHandler):
-    ''' POST: get a new model (delete existing console server).
-        GET:  get JSON representation of the model.
-    '''
-
-    @web.authenticated
-    def post(self):
-        self.delete_server()
-        self.redirect('/')
-
-    #@web.authenticated
-    #def get(self):
-        #cserver = self.get_server()
-        #json_model = cserver.get_JSON()
-        #self.content_type = 'application/javascript'
-        #self.write(json_model)
-
-
 class ObjectHandler(ReqHandler):
-    ''' Get the attributes of an object.
-        param is optional and can be one of:
-            dataflow, workflow, events, passthroughs, connections
+    ''' GET:    Get the attributes of an object.
+                param is optional and can be one of:
+                    dataflow, workflow, events, passthroughs, connections
+
+        PUT:    replace an object.
+                required arguments are:
+                    type - the type of the new replacement object
+                    args - arguments required to create the replacement object
+
+        POST:   execute an object.
+
+        DELETE: delete an object.
     '''
 
     @web.authenticated
     def get(self, pathname, param):
-        # TODO: handle invalid requests nicely
         if pathname.lower() == 'none':
             pathname = None
         cserver = self.get_server()
@@ -330,13 +307,15 @@ class ObjectHandler(ReqHandler):
                         source = self.get_argument('source', default=None)
                         target = self.get_argument('target', default=None)
                         attr = cserver.get_connections(pathname, source, target)
+                    else:
+                        self.send_error(400)  # bad request
                 else:
                     attr = cserver.get_attributes(pathname)
 
                 self.content_type = 'application/javascript'
                 self.write(attr)
             except AssertionError as exc:
-                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                # Have had issues with `attr` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "ObjectHandler: Can't write %r: %s" \
                                     % (attr, str(exc) or repr(exc))
                 if retry >= 2:
@@ -344,15 +323,67 @@ class ObjectHandler(ReqHandler):
             else:
                 break
 
+    @web.authenticated
+    def put(self, pathname, param):
+        arg_keys = self.request.arguments.keys()
+        if not 'type' in arg_keys:
+            self.send_error(400)  # bad request
+            return
 
-class OutstreamHandler(ReqHandler):
-    ''' Return the url of the zmq outstream server.
+        type = self.get_argument('type')
+
+        if 'args' in arg_keys:
+            args = self.get_argument('args')
+        else:
+            args = ''
+
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.replace_object(pathname, type, args)
+        except Exception as exc:
+            print exc
+            result = str(sys.exc_info())
+        self.content_type = 'text/html'
+        self.write(result)
+
+    @web.authenticated
+    def post(self, pathname, param):
+        cserver = self.get_server()
+        result = ''
+        try:
+            cserver.run(pathname)
+        except Exception as exc:
+            print >>sys.stderr, "ObjectHandler: Error executing %r: %s" \
+                                % (pathname, str(exc) or repr(exc))
+            result = result + str(sys.exc_info()) + '\n'
+        if result:
+            self.content_type = 'text/html'
+            self.write(result)
+
+    @web.authenticated
+    def delete(self, pathname, param):
+        cserver = self.get_server()
+        result = ''
+        try:
+            result = cserver.onecmd('del ' + pathname)
+        except Exception as exc:
+            print >>sys.stderr, "ObjectHandler: Error deleting %r: %s" \
+                                % (pathname, str(exc) or repr(exc))
+            result = str(sys.exc_info())
+        self.content_type = 'text/html'
+        self.write(result)
+
+
+class StreamHandler(ReqHandler):
+    ''' Return the url of the zmq stream server for `stream_name`.
     '''
 
     @web.authenticated
-    def get(self):
+    def get(self, stream_name):
         url = self.application.server_manager.\
-              get_out_server_url(self.get_sessionid(), '/workspace/outstream')
+              get_websocket_url(self.get_sessionid(), stream_name,
+                                '/workspace/'+stream_name+'_stream')
         self.write(url)
 
 
@@ -420,18 +451,6 @@ class ProjectHandler(ReqHandler):
             self.redirect('/')
 
 
-class PlotHandler(ReqHandler):
-    ''' GET: open a websocket server to supply updated values for the
-             specified variable.
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        port = cserver.get_varserver(name)
-        self.write(port)
-
-
 class PublishHandler(ReqHandler):
     ''' GET: tell the server to publish the specified topic/variable.
     '''
@@ -443,17 +462,6 @@ class PublishHandler(ReqHandler):
         publish = publish in [True, 'true', 'True']
         cserver = self.get_server()
         cserver.add_subscriber(topic, publish)
-
-
-class PubstreamHandler(ReqHandler):
-    ''' Return the url of the zmq publisher server.
-    '''
-
-    @web.authenticated
-    def get(self):
-        url = self.application.server_manager.\
-              get_pub_server_url(self.get_sessionid(), '/workspace/pubstream')
-        self.write(url)
 
 
 class RenameHandler(ReqHandler):
@@ -468,28 +476,6 @@ class RenameHandler(ReqHandler):
         try:
             cserver = self.get_server()
             cserver.rename_file(oldpath, newname)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
-        self.write(result)
-
-
-class ReplaceHandler(ReqHandler):
-    ''' Replace a component.
-    '''
-
-    @web.authenticated
-    def post(self, pathname):
-        type = self.get_argument('type')
-        if 'args' in self.request.arguments.keys():
-            args = self.get_argument('args')
-        else:
-            args = ''
-        result = ''
-        try:
-            cserver = self.get_server()
-            cserver.replace_component(pathname, type, args)
         except Exception as exc:
             print exc
             result = str(sys.exc_info())
@@ -549,8 +535,8 @@ class UploadHandler(ReqHandler):
 
 
 class ValueHandler(ReqHandler):
-    ''' GET: get a value for the given pathname.
-        TODO: combine with ComponentHandler? Handle Containers as well?
+    ''' GET:    get a value for the given pathname.
+        TODO:   combine with ComponentHandler? Handle Containers as well?
     '''
 
     @web.authenticated
@@ -610,84 +596,68 @@ class WorkspaceHandler(ReqHandler):
         self.render('workspace/workspace.html', project=project)
 
 
-class TestHandler(ReqHandler):
-    ''' Initialize the server manager & render the workspace.
-    '''
-
-    @web.authenticated
-    def get(self):
-        self.render('workspace/test.html')
-
-
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/base/?',           ReqHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/command',          CommandHandler),
     web.url(r'/workspace/variable',         VariableHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/editor/?',         EditorHandler),
-    web.url(r'/workspace/exec/?',           ExecHandler),
-    web.url(r'/workspace/file/(.*)',        FileHandler),
-    web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),
-    web.url(r'/workspace/model/?',          ModelHandler),
-    web.url(r'/workspace/outstream/?',      OutstreamHandler),
-    web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
-    web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/rename',           RenameHandler),
-    web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
     web.url(r'/workspace/signature/?',      SignatureHandler),
-    web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),
-    web.url(r'/workspace/test/?',           TestHandler),
 
-    web.url(r"/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?", ObjectHandler),
+    # new, better
+    web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/files/?',          FilesHandler),
+    web.url(r'/workspace/file/(.*)',        FileHandler),
+    web.url(r"/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?",  ObjectHandler),
+    web.url(r"/workspace/stream/(.*)",      StreamHandler),
+    web.url(r'/workspace/types/?',          TypesHandler),
 ]
 
 
 """
-GET    types
-GET    type
+# GET    types
 
-GET    files
-GET    file/name
-PUT    file/name, {contents: new_contents}
-POST   file/name, {name: new_name, contents: new_contents}
-DELETE file/name
+# GET    files
+# DELETE files, {filepaths: [file1, file2, ...]}
+# GET    file/name
+# PUT    file/name, {contents: new_contents}
+# POST   file/name
+# DELETE file/name
 
 GET    objects
 POST   objects/name, {parent: parent, type: type, args: args}
 
-GET    object/name
-GET    object/name/connections
-GET    object/name/dataflow
-GET    object/name/workflow
-GET    object/name/events
-GET    object/name/passthroughs
+# GET    object/name
+# GET    object/name/connections
+# GET    object/name/dataflow
+# GET    object/name/workflow
+# GET    object/name/events
+# GET    object/name/passthroughs
 PUT    object/name, {type: new_type}
-DELETE object/name
-POST   object/name/exec
+# DELETE object/name
+# POST   object/name   (exec)
 
 GET    variable/name
 PUT    variable/name, {value: value}
 POST   variable/name, {parent: parent} ??
 
-GET    stream/pub
-GET    stream/out
-GET    stream/var/name
+# GET    stream/pub
+# GET    stream/out
 
 GET    subscription/name
 DELETE subscription/name
 
-POST   command, {command: command}
+# POST   command, {command: command}
 
 GET    project/id
 POST   project/id, {version: previous_version} # no version means commit

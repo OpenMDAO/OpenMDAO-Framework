@@ -3,7 +3,6 @@
       "items": [
         { "text": "Commit",        "id": "project-commit",  "onclick": "openmdao.model.commit();" },
         { "text": "Revert",        "id": "project-revert",  "onclick": "openmdao.model.revert();" },
-        { "text": "Run",           "id": "project-run",     "onclick": "openmdao.model.runModel();" },
         { "text": "Reload",        "id": "project-reload",  "onclick": "openmdao.model.reload();" },
         { "text": "Close",         "id": "project-close",   "onclick": "openmdao.model.close();" },
         { "text": "Exit",          "id": "project-exit",    "onclick": "openmdao.model.exit();" }

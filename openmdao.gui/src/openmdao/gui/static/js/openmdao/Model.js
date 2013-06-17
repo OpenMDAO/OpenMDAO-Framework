@@ -18,12 +18,12 @@ openmdao.Model=function(listeners_ready) {
     this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
-           url:        the URL of the address on which to open the websocket
-           handler:    the message handler for the websocket
+           stream_name: the name of the stream for which to open the websocket
+           handler:     the message handler for the websocket
     */
-    function open_websocket(url,handler) {
+    function open_websocket(stream_name, handler) {
         // make ajax call (to url) to get the address of the websocket
-       return jQuery.ajax({ type: 'GET', url:  url })
+       return jQuery.ajax({ type: 'GET', url:  'stream/'+stream_name })
                .fail(function(jqXHR, textStatus, err) {
                    debug.error('Error getting websocket url',jqXHR,textStatus,err);
                })
@@ -31,7 +31,7 @@ openmdao.Model=function(listeners_ready) {
                    return openmdao.Util.openWebSocket(addr,handler);
                })
                .done(function(sock) {
-                   sockets[url] = sock;
+                   sockets[stream_name] = sock;
                });
     }
 
@@ -88,8 +88,8 @@ openmdao.Model=function(listeners_ready) {
         }
     }
 
-    var ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
-                               open_websocket('pubstream', handlePubMessage));
+    var ws_ready = jQuery.when(open_websocket('out', handleOutMessage),
+                               open_websocket('pub', handlePubMessage));
 
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();
@@ -312,23 +312,6 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-    /** get  attributes of a component */
-    this.getComponent = function(name,callback,errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'component/'+name,
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            });
-        }
-    };
-
     /** get the inputs and outputs of the assembly's child components and
         an indicator for each whether or not it is a passthrough variable */
     this.getPassthroughs = function(name, callback, errorHandler) {
@@ -461,8 +444,8 @@ openmdao.Model=function(listeners_ready) {
     this.replaceComponent = function(pathname, typepath, args,
                                      callback, errorHandler) {
         jQuery.ajax({
-            type: 'POST',
-            url:  'replace/'+pathname,
+            type: 'PUT',
+            url:  'object/'+pathname,
             data: {'type': typepath, 'args': args},
             success: callback,
             error: errorHandler
@@ -554,7 +537,7 @@ openmdao.Model=function(listeners_ready) {
     /** set the contents of the specified file */
     this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
         jQuery.ajax({
-            type: 'POST',
+            type: 'PUT',
             url:  'file/'+filepath.replace(/\\/g,'/'),
             data: { 'contents': contents, 'force': force },
             success: callback,
@@ -566,10 +549,10 @@ openmdao.Model=function(listeners_ready) {
         self.setModified(true);
     };
 
-    /** create new folder with  specified path in the model working directory */
+    /** create new folder with specified path in the model working directory */
     this.createFolder = function(folderpath, callback, errorHandler) {
         jQuery.ajax({
-            type: 'POST',
+            type: 'PUT',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
             data: { 'isFolder': true},
             success: callback,
@@ -653,18 +636,12 @@ openmdao.Model=function(listeners_ready) {
             self.setModified(true);
     };
 
-    /** execute the model */
-    this.runModel = function() {
-        self.runComponent('');
-    };
-
     /** execute a component */
     this.runComponent = function(pathname) {
         // make the call
         jQuery.ajax({
             type: 'POST',
-            url:  'exec',
-            data: { 'pathname': pathname },
+            url:  'object/'+pathname,
             success: function(data, textStatus, jqXHR) {
                          if (typeof openmdao_test_mode !== 'undefined') {
                              openmdao.Util.notify('Run complete: '+textStatus);
@@ -688,8 +665,7 @@ openmdao.Model=function(listeners_ready) {
         // make the call
         jQuery.ajax({
             type: 'POST',
-            url:  'exec',
-            data: { 'filename': path },
+            url:  'file/'+path,
             success: callback
         });
         self.setModified(true);

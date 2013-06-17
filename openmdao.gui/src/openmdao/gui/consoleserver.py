@@ -547,7 +547,7 @@ class ConsoleServer(cmd.Cmd):
                               ' "%s" is not a valid identifier' % name)
 
     @modifies_model
-    def replace_component(self, pathname, classname, args):
+    def replace_object(self, pathname, classname, args):
         ''' Replace existing component with component of the given type.
         '''
         pathname = pathname.encode('utf8')
