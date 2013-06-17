@@ -308,4 +308,11 @@ class SequentialWorkflow(Workflow):
             result[i1:i2] = outputs[comp_name][var_name]
         
         return result
+    
+    def calc_gradient(self):
+        """Returns the gradient of the given outputs with respect to all 
+        parameters. The returned output is in the form of a dictionary of
+        dictionaries where the 
+        """
+        pass
         
