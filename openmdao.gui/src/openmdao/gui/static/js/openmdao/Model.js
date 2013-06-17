@@ -257,16 +257,18 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
-
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
         else {
+            if (!pathname) {
+                pathname = 'None';
+            }
             jQuery.ajax({
                 type: 'GET',
-                url:  'workflow/'+pathname,
+                url:  'object/'+pathname+'/workflow',
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
@@ -281,11 +283,11 @@ openmdao.Model=function(listeners_ready) {
         }
         else {
             if (!pathname) {
-                pathname = '';
+                pathname = 'None';
             }
             jQuery.ajax({
                 type: 'GET',
-                url:  'dataflow/'+pathname,
+                url:  'object/'+pathname+'/dataflow',
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
@@ -336,7 +338,7 @@ openmdao.Model=function(listeners_ready) {
         else {
             jQuery.ajax({
                 type: 'GET',
-                url:  'passthroughs/'+name,
+                url:  'object/'+pathname+'/passthroughs',
                 dataType: 'json',
                 data: {},
                 success: callback,
@@ -370,7 +372,7 @@ openmdao.Model=function(listeners_ready) {
         else {
             jQuery.ajax({
                 type: 'GET',
-                url:  'events/'+name,
+                url:  'object/'+pathname+'/events',
                 dataType: 'json',
                 data: {},
                 success: callback,
@@ -405,14 +407,14 @@ openmdao.Model=function(listeners_ready) {
             // (no src or dst means the src or dst is the assembly itself)
             var args = {};
             if (src_name) {
-                args.src_name = src_name;
+                args.source = src_name;
             }
             if (dst_name) {
-                args.dst_name = dst_name;
+                args.target = dst_name;
             }
             jQuery.ajax({
                 type: 'GET',
-                url:  'connections/'+pathname,
+                url:  'object/'+pathname+'/connections',
                 dataType: 'json',
                 data: args,
                 success: callback,

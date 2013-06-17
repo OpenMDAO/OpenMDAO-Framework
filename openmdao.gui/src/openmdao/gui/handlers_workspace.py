@@ -151,40 +151,6 @@ class ComponentHandler(ReqHandler):
         self.write(attr)
 
 
-class AvailableEventsHandler(ReqHandler):
-    ''' Get a list of events that are available to a driver.
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        attr = {}
-        try:
-            attr = cserver.get_available_events(name)
-        except Exception as exc:
-            print 'Error getting events on', name, ':', exc
-            attr = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(attr)
-
-
-class ObjectHandler(ReqHandler):
-    ''' Get the data for a slotable object (including components).
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        attr = {}
-        try:
-            attr = cserver.get_attributes(name)
-        except Exception as exc:
-            print 'Error getting attributes on', name, ':', exc
-            attr = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(attr)
-
-
 class ComponentsHandler(ReqHandler):
 
     @web.authenticated
@@ -199,49 +165,6 @@ class ComponentsHandler(ReqHandler):
                 # Have had issues with `json` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "ComponentsHandler: Can't write %r: %s" \
                                     % (json, str(exc) or repr(exc))
-                if retry >= 2:
-                    raise
-            else:
-                break
-
-
-class ConnectionsHandler(ReqHandler):
-    ''' Get connections between two components in an assembly.
-    '''
-
-    @web.authenticated
-    def get(self, pathname):
-        cserver = self.get_server()
-        connects = {}
-        try:
-            src_name = self.get_argument('src_name', default=None)
-            dst_name = self.get_argument('dst_name', default=None)
-            connects = cserver.get_connections(pathname, src_name, dst_name)
-        except Exception as exc:
-            print exc
-            connects = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(connects)
-
-
-class DataflowHandler(ReqHandler):
-    ''' Get the structure of the specified assembly or of the global
-        namespace if no pathname is specified; consists of the list of
-        components and the connections between them (i.e., the dataflow).
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        self.content_type = 'application/javascript'
-        for retry in range(3):
-            json_dflow = cserver.get_dataflow(name)
-            try:
-                self.write(json_dflow)
-            except AssertionError as exc:
-                # Have had issues with `json` being ZMQ_RPC.invoke args.
-                print >>sys.stderr, "DataflowHandler: Can't write %r: %s" \
-                                    % (json_dflow, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
@@ -334,18 +257,18 @@ class FilesHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(json_files)
 
-
     @web.authenticated
     def delete(self):
 
-        filepaths = escape.json_decode(self.request.body)[ 'filepaths' ]
-        
+        filepaths = escape.json_decode(self.request.body)['filepaths']
+
         cserver = self.get_server()
         self.content_type = 'text/html'
         success = True
         for filename in filepaths:
             success = success and cserver.delete_file(filename)
         self.write(str(success))
+
 
 class GeometryHandler(ReqHandler):
 
@@ -358,6 +281,7 @@ class GeometryHandler(ReqHandler):
         if path.startswith('file/'):
             path = path[4:]  # leave the '/' at the beginning of filename
         self.render('workspace/wvclient.html', geom_name=path)
+
 
 class ModelHandler(ReqHandler):
     ''' POST: get a new model (delete existing console server).
@@ -377,6 +301,50 @@ class ModelHandler(ReqHandler):
         #self.write(json_model)
 
 
+class ObjectHandler(ReqHandler):
+    ''' Get the attributes of an object.
+        param is optional and can be one of:
+            dataflow, workflow, events, passthroughs, connections
+    '''
+
+    @web.authenticated
+    def get(self, pathname, param):
+        # TODO: handle invalid requests nicely
+        if pathname.lower() == 'none':
+            pathname = None
+        cserver = self.get_server()
+        attr = {}
+        for retry in range(3):
+            try:
+                if param:
+                    param = param.lower()
+                    if param == 'dataflow':
+                        attr = cserver.get_dataflow(pathname)
+                    elif param == 'workflow':
+                        attr = cserver.get_workflow(pathname)
+                    elif param == 'events':
+                        attr = cserver.get_available_events(pathname)
+                    elif param == 'passthroughs':
+                        attr = cserver.get_passthroughs(pathname)
+                    elif param == 'connections':
+                        source = self.get_argument('source', default=None)
+                        target = self.get_argument('target', default=None)
+                        attr = cserver.get_connections(pathname, source, target)
+                else:
+                    attr = cserver.get_attributes(pathname)
+
+                self.content_type = 'application/javascript'
+                self.write(attr)
+            except AssertionError as exc:
+                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                print >>sys.stderr, "ObjectHandler: Can't write %r: %s" \
+                                    % (attr, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
+
+
 class OutstreamHandler(ReqHandler):
     ''' Return the url of the zmq outstream server.
     '''
@@ -386,23 +354,6 @@ class OutstreamHandler(ReqHandler):
         url = self.application.server_manager.\
               get_out_server_url(self.get_sessionid(), '/workspace/outstream')
         self.write(url)
-
-
-class PassthroughsHandler(ReqHandler):
-    ''' Get the passthrough variables for the named assembly.
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        attr = {}
-        try:
-            attr = cserver.get_passthroughs(name)
-        except Exception as exc:
-            print 'Error getting passthroughs for', name, ':', exc
-            attr = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(attr)
 
 
 class ProjectLoadHandler(ReqHandler):
@@ -648,26 +599,6 @@ class VariableHandler(ReqHandler):
         self.write('')  # not used for now, could render a form
 
 
-class WorkflowHandler(ReqHandler):
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        self.content_type = 'application/javascript'
-        for retry in range(3):
-            json_wflow = cserver.get_workflow(name)
-            try:
-                self.write(json_wflow)
-            except AssertionError as exc:
-                # Have had issues with `json` being ZMQ_RPC.invoke args.
-                print >>sys.stderr, "WorkflowHandler: Can't write %r: %s" \
-                                    % (json_wflow, str(exc) or repr(exc))
-                if retry >= 2:
-                    raise
-            else:
-                break
-
-
 class WorkspaceHandler(ReqHandler):
     ''' Render the workspace.
     '''
@@ -697,18 +628,13 @@ handlers = [
     web.url(r'/workspace/variable',         VariableHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
-    web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
-    web.url(r'/workspace/dataflow/(.*)/?',  DataflowHandler),
-    web.url(r'/workspace/events/(.*)',      AvailableEventsHandler),
     web.url(r'/workspace/editor/?',         EditorHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/model/?',          ModelHandler),
-    web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
-    web.url(r'/workspace/passthroughs/(.*)', PassthroughsHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
@@ -721,6 +647,59 @@ handlers = [
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),
-    web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
+
+    web.url(r"/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?", ObjectHandler),
 ]
+
+
+"""
+GET    types
+GET    type
+
+GET    files
+GET    file/name
+PUT    file/name, {contents: new_contents}
+POST   file/name, {name: new_name, contents: new_contents}
+DELETE file/name
+
+GET    objects
+POST   objects/name, {parent: parent, type: type, args: args}
+
+GET    object/name
+GET    object/name/connections
+GET    object/name/dataflow
+GET    object/name/workflow
+GET    object/name/events
+GET    object/name/passthroughs
+PUT    object/name, {type: new_type}
+DELETE object/name
+POST   object/name/exec
+
+GET    variable/name
+PUT    variable/name, {value: value}
+POST   variable/name, {parent: parent} ??
+
+GET    stream/pub
+GET    stream/out
+GET    stream/var/name
+
+GET    subscription/name
+DELETE subscription/name
+
+POST   command, {command: command}
+
+GET    project/id
+POST   project/id, {version: previous_version} # no version means commit
+
+
+
+/// utils
+
+GET editor
+GET upload
+GET addons
+GET close
+GET test
+GET base
+"""
