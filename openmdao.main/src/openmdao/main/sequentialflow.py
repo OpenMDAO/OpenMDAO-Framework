@@ -147,7 +147,7 @@ class SequentialWorkflow(Workflow):
         return nEdge
 
     def calculate_residuals(self):
-        """Caclulate and return the vector of residuals based on the current
+        """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
         for edge in self.get_interior_edges():
             src, target = edge

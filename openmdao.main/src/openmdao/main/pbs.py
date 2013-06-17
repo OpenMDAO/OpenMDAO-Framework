@@ -31,7 +31,7 @@ class PBS_Allocator(FactoryAllocator):
     Uses :class:`PBS_Server` instead of :class:`ObjServer` when deploying.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     accounting_id: string
         Default value for the ``accounting_id`` resource key.
@@ -138,9 +138,9 @@ class PBS_Allocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(PBS_Allocator, self).check_compatibility(resource_desc)
@@ -263,7 +263,7 @@ class PBS_Server(ObjServer):
 
         Where `value` is the corresponding resource value.
 
-        In order to support a working directory other than HOME or a
+        To support a working directory other than HOME or a
         PBS-generated scratch directory, a short script is written with
         PBS directives in the header. The script will change to the working
         directory and then run the command.
