@@ -94,6 +94,9 @@ def _find_common_interface(obj1, obj2):
             return iface
     return None
 
+class Pseudos(object):
+    """An object to keep pseudocomponents in"""
+    pass
 
 class Assembly(Component):
     """This is a container of Components. It understands how to connect inputs
@@ -112,6 +115,7 @@ class Assembly(Component):
         super(Assembly, self).__init__()
 
         self._exprmapper = ExprMapper(self)
+        self._pseudos = Pseudos()
         self._graph_loops = []
 
         # default Driver executes its workflow once
@@ -449,22 +453,23 @@ class Assembly(Component):
             dst = eliminate_expr_ws(dst)
             self._connect(src, dst)
 
-    def _connect(self, src, dest):
+    def _connect(self, src, dest, recurse=True):
         """Handle one connection destination. This should only be called via the connect()
         function, never directly.
         """
 
         # Among other things, check if already connected.
         try:
-            srcexpr, destexpr = self._exprmapper.check_connect(src, dest, self)
+            srcexpr, destexpr, pseudocomp = \
+                       self._exprmapper.check_connect(src, dest, self)
         except Exception as err:
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
 
-        src = srcexpr.text  # may have changed is pseudocomp was created
+        src = srcexpr.text  # may have changed if pseudocomp was created
         dest = destexpr.text # may have changed 
 
-        # Check if src is declared as a parameter in any driver in the assembly
+        # Check if dest is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and \
@@ -475,7 +480,11 @@ class Assembly(Component):
                            "driver '%s'." % comp.name
                     self.raise_exception(msg, RuntimeError)
 
-        super(Assembly, self).connect(src, dest)
+        if pseudocomp is None:
+            super(Assembly, self).connect(src, dest)
+        else:
+            setattr(self, pseudocomp.name, pseudocomp)
+            pseudocomp.make_connections(self)
 
         try:
             self._exprmapper.connect(srcexpr, destexpr, self)
@@ -738,11 +747,11 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def get_failed(self, path, index):
-        parts = path.split('.', 1)
-        if parts and parts[0] == '_pseudo_': # it's a pseudocomp
-            return getattr(self._exprmapper._pseudos, path[1])
-        super(Assembly, self).get_failed(path, index)
+    #def get_failed(self, path, index):
+        #parts = path.split('.', 1)
+        #if parts and parts[0] == '_pseudo_': # it's a pseudocomp
+            #return getattr(self._exprmapper._pseudos, path[1])
+        #return super(Assembly, self).get_failed(path, index)
 
     def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Overides the component's version of this function. An assembly

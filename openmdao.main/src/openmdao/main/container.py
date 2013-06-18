@@ -934,7 +934,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            elif is_instance(obj, Container):
+            elif hasattr(obj, 'get_metadata'):
                 return obj.get_metadata(restofpath, metaname)
             else:
                 # if the thing being accessed is an attribute of a Variable's

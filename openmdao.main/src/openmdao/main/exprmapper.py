@@ -1,7 +1,7 @@
 
 import networkx as nx
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.units import PhysicalQuantity
+from openmdao.main.pseudocomp import PseudoComponent
 
 
 class ExprMapper(object):
@@ -9,6 +9,7 @@ class ExprMapper(object):
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
+        self._pseudo_count = 0
 
     def get_output_exprs(self):
         """Return all destination expressions at the output boundary"""
@@ -71,17 +72,18 @@ class ExprMapper(object):
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
         desttrait = None
 
-        if not destvar.startswith('parent.'):
+        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.'):
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
                     srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
-                    src_io = 'in' if srccomp is scope else 'out'
-                    srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
-                    if desttrait is None:
-                        dest_io = 'out' if destcomp is scope else 'in'
-                        desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
+                    if not isinstance(srccomp, PseudoComponent):
+                        src_io = 'in' if srccomp is scope else 'out'
+                        srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
+                        if desttrait is None:
+                            dest_io = 'out' if destcomp is scope else 'in'
+                            desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
 
-            if not srcexpr.refs_parent() and desttrait is not None:
+            if not isinstance(srccomp, PseudoComponent) and not srcexpr.refs_parent() and desttrait is not None:
                 # punt if dest is not just a simple var name.
                 # validity will still be checked at execution time
                 if destvar == destexpr.text:
@@ -109,7 +111,8 @@ class ExprMapper(object):
         """Returns a list of expression strings that reference the given name, which
         can refer to either a variable or a component.
         """
-        return [node for node, data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
+        return [node for node, data in self._exprgraph.nodes(data=True) 
+                       if data['expr'].refers_to(name)]
 
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
@@ -153,14 +156,44 @@ class ExprMapper(object):
 
         destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr',
                                           is_dest=True)
-        destmeta = destexpr.get_metadata('units')
         srcexpr = ConnectedExprEvaluator(src, scope, getter='get_wrapped_attr')
-        srcmeta = srcexpr.get_metadata('units')
 
         srccomps = srcexpr.get_referenced_compnames()
-        destcomps = destexpr.get_referenced_compnames()
+        destcomps = list(destexpr.get_referenced_compnames())
 
-        if destcomps and destcomps.pop() in srccomps:
+        if destcomps and destcomps[0] in srccomps:
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src, dest))
-        return srcexpr, destexpr
+
+        return srcexpr, destexpr, self._make_pseudo(srcexpr, destexpr)
+
+    def _get_pseudo_name(self):
+        name = "_%d" % self._pseudo_count
+        self._pseudo_count += 1
+        return name
+
+    def _make_pseudo(self, srcexpr, destexpr):
+        """Possibly create a pseudo-component if srcexpr and destexpr require it.
+        Otherwise, return None.
+        """
+        srcrefs = list(srcexpr.refs())
+        if srcrefs and srcrefs[0] != srcexpr.text:
+            # expression is more than just a simple variable reference, so we need a pseudocomp
+            return PseudoComponent(self._get_pseudo_name(), 
+                                   srcexpr, destexpr)
+
+        destmeta = destexpr.get_metadata('units')
+        srcmeta = srcexpr.get_metadata('units')
+
+        srcunit = srcmeta[0][1] if srcmeta else None
+        destunit = destmeta[0][1] if destmeta else None
+
+        if destunit and srcunit and destunit != srcunit:
+            return PseudoComponent(self._get_pseudo_name(), 
+                                   srcexpr, destexpr)
+
+        return None
+
+
+
+
 

@@ -1,6 +1,4 @@
 
-import threading
-
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.printexpr import transform_expression
 from openmdao.main.attrwrapper import create_attr_wrapper
@@ -12,33 +10,13 @@ class PseudoComponent(object):
     along with 'real' components.
     """
 
-    _lock = threading.RLock()
-    _count = 0
-
-    def __init__(self, srcexpr, destexpr):
-        with self._lock:
-            self.name = '_%d' % self._count
-            self._count += 1
+    def __init__(self, name, srcexpr, destexpr):
+        self.name = name
 
         self._mapping = {}
         self._meta = {}
 
-        if isinstance(srcexpr, basestring):
-            srcexpr = ConnectedExprEvaluator(srcexpr, getter='get_wrapped_attr',
-                                             scope=self)
-        else:
-            srcexpr.scope = self
-
-        if isinstance(destexpr, basestring):
-            destexpr = ConnectedExprEvaluator(destexpr, getter='get_wrapped_attr',
-                                              is_dest=True, scope=self)
-        else:
-            destexpr.scope = self
-
         for name, meta in srcexpr.get_metadata():
-            self._meta[name] = meta
-
-        for name, meta in destexpr.get_metadata():
             self._meta[name] = meta
 
         for i,ref in enumerate(srcexpr.refs()):
@@ -46,7 +24,9 @@ class PseudoComponent(object):
             self._mapping[ref] = in_name
             setattr(self, in_name, None)
 
-        refs = destexpr.refs()
+        self._outdest = destexpr.text
+
+        refs = list(destexpr.refs())
         if refs:
             if len(refs) == 1:
                 setattr(self, 'out0', None)
@@ -57,6 +37,10 @@ class PseudoComponent(object):
         newmeta = {}
         for key, val in self._meta.items():
             newmeta[self._mapping[key]] = val
+            
+        for name, meta in destexpr.get_metadata():
+            self._meta[name] = meta
+            
         newmeta['out0'] = self._meta[refs[0]]
         self._meta = newmeta
 
@@ -66,14 +50,22 @@ class PseudoComponent(object):
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
         self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
 
-    def make_connections(self, depgraph):
+        # this is just the equation string (for debugging)
+        self._eqn = "%s = %s" % (self._destexpr.text, self._srcexpr.text)
+
+    def make_connections(self, parent):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
-        pass
+        for src, dest in self._mapping.items():
+            parent._connect(src, '.'.join([self.name, dest]))
+        parent._connect('.'.join([self.name, 'out0']), self._outdest)
 
-    def invalidate_deps(varnames, force=False):
+    def invalidate_deps(self, varnames=None, force=False):
         return None
+
+    def connect(self, src, dest):
+        pass  # do nothing
 
     def run(self):
         # do we assume inputs are valid here?
@@ -99,3 +91,13 @@ class PseudoComponent(object):
             raise RuntimeError("pseudocomponent attr accessed using an index")
         return create_attr_wrapper(getattr(self, name), self._meta[name])
 
+    def get_metadata(self, traitpath, metaname=None):
+        """Retrieve the metadata associated with the trait found using
+        traitpath.  If metaname is None, return the entire metadata dictionary
+        for the specified trait. Otherwise, just return the specified piece
+        of metadata.  If the specified piece of metadata is not part of
+        the trait, None is returned.
+        """
+        if metaname is None:
+            return {}
+        return None
