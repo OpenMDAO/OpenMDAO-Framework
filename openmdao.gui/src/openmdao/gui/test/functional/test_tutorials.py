@@ -11,6 +11,8 @@ from nose.tools import with_setup
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 
+from pageobjects.util import NotifierPage
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -125,7 +127,10 @@ def _test_MDAO_MDF(browser):
     editor.close()
 
     # Run the model
-    workspace_page.run()
+    top = workspace_page.get_dataflow_figure('top')
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
 
     # Verify implicitly connected output has been updated with valid result.
     editor = dis1_fig.editor_page()

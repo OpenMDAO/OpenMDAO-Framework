@@ -22,7 +22,7 @@ from util import main, setup_server, teardown_server, generate, \
 
 from pageobjects.basepageobject import TMO
 from pageobjects.slot import find_slot_figure
-from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.util import NotifierPage
 from pageobjects.workspace import WorkspacePage
 
 
@@ -262,13 +262,6 @@ def _test_menu(browser):
     eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
     eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
     workspace_page('project_menu').click()
-
-    # Project-Run.
-    workspace_page.run()
-    expected = ['Executing...', 'Execution complete.']
-    eq(workspace_page.history.split('\n')[-2:], expected)
-    top_figure = workspace_page.get_dataflow_figure('top')
-    eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
     #FIXME: These need to verify that the request has been performed.
     # View menu.
@@ -1001,6 +994,7 @@ def _test_rename_file(browser):
     #closeout(projects_page, project_info_page, project_dict, workspace_page)
     closeout(project_dict, workspace_page)
 
+
 def _test_removefiles(browser):
     # Adds multiple files to the project.
     project_dict, workspace_page = startup(browser)
@@ -1024,7 +1018,7 @@ def _test_removefiles(browser):
 
     # delete using context menu the file paraboloid.py
     workspace_page.delete_file('paraboloid.py')
-    
+
     # Check to make sure the file was deleted
     time.sleep(0.5)
     file_names = workspace_page.get_files()
@@ -1044,30 +1038,30 @@ def _test_removefiles(browser):
 
     # Test deleting the paraboloid and opt files at one time using the delete files pick
     #   on the Files menu
-    workspace_page.delete_files( [ 'vehicle_singlesim.py', 'optimization_unconstrained.py' ] )
+    workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'])
 
     # Check to make sure the files were deleted
     time.sleep(0.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py' ]
+    expected_file_names = ['basic_model.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
 
     # Test deleting a file in a folder
-    workspace_page.new_folder( "test_folder" )
+    workspace_page.new_folder("test_folder")
     time.sleep(1.0)
-    workspace_page.add_file_to_folder( "test_folder", paraboloidPath )
+    workspace_page.add_file_to_folder("test_folder", paraboloidPath)
     time.sleep(1.0)
-    workspace_page.expand_folder( 'test_folder' )
+    workspace_page.expand_folder('test_folder')
     time.sleep(1.0)
-    workspace_page.delete_files( [ 'test_folder/paraboloid.py', ] )
+    workspace_page.delete_files(['test_folder/paraboloid.py', ])
 
     # Check to make sure the file was deleted
     time.sleep(1.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py' ]
+    expected_file_names = ['basic_model.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"

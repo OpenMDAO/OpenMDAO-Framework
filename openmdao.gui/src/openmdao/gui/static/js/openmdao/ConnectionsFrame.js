@@ -595,7 +595,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        model.getComponent(path, loadComponentData,
+        model.getObject(path, loadComponentData,
             function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',
                             jqXHR, textStatus, errorThrown);

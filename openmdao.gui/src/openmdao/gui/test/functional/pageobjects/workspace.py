@@ -36,7 +36,6 @@ class WorkspacePage(BasePageObject):
     project_menu      = ButtonElement((By.ID, 'project-menu'))
     commit_button     = ButtonElement((By.ID, 'project-commit'))
     revert_button     = ButtonElement((By.ID, 'project-revert'))
-    run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
     exit_button       = ButtonElement((By.ID, 'project-exit'))
@@ -191,12 +190,6 @@ class WorkspacePage(BasePageObject):
         if delay:
             time.sleep(delay)
         return element
-
-    def run(self, timeout=TMO):
-        """ Run current component. """
-        self('project_menu').click()
-        self('run_button').click()
-        NotifierPage.wait(self, timeout)
 
     def do_command(self, cmd, timeout=TMO, ack=True):
         """ Execute a command. """
@@ -362,7 +355,7 @@ class WorkspacePage(BasePageObject):
         for filename in file_paths:
             element = self.find_file(filename)
             chain = ActionChains(self.browser)
-            chain.key_down( Keys.CONTROL ).click(element).key_up( Keys.CONTROL ).perform()
+            chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         self('files_tab').click()
         self('file_menu').click()

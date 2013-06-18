@@ -314,7 +314,7 @@ openmdao.Model=function(listeners_ready) {
 
     /** get the inputs and outputs of the assembly's child components and
         an indicator for each whether or not it is a passthrough variable */
-    this.getPassthroughs = function(name, callback, errorHandler) {
+    this.getPassthroughs = function(pathname, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -348,7 +348,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get all available events in a workflow */
-    this.getAvailableEvents = function(name,callback,errorHandler) {
+    this.getAvailableEvents = function(pathname,callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }

@@ -71,8 +71,8 @@ class ZMQServerManager(object):
             server_info = self.server_dict[server_id]
             del self.server_dict[server_id]
 
-            self._terminate(server_info, 'out_server')
-            self._terminate(server_info, 'pub_server')
+            self._terminate(server_info, 'out_ws_server')
+            self._terminate(server_info, 'pub_ws_server')
 
             # Call proxy.cleanup() in a separate thread so we can
             # recover if it hangs (happens sometimes on Windows/EC2).
