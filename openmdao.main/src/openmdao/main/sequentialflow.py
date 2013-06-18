@@ -287,12 +287,13 @@ class SequentialWorkflow(Workflow):
         # Call ApplyJ on each component
         for comp in self.__iter__():
             
+            name = comp.name
+            
             # A component can also define a preconditioner
             if hasattr(comp, 'applyMinv'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinv(inputs[name], pre_inputs)
             
-            name = comp.name
             comp.applyJ(inputs[name], outputs[name])
             
         # Poke results into the return vector
@@ -306,10 +307,25 @@ class SequentialWorkflow(Workflow):
         
         return result
     
-    def calc_gradient(self):
-        """Returns the gradient of the given outputs with respect to all 
-        parameters. The returned output is in the form of a dictionary of
-        dictionaries where the 
+    def calc_gradient(self, inputs, outputs):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs.
         """
-        pass
         
+        # Find dimension of our problem.
+        nEdge = self.initialize_residual()
+        
+        A = LinearOperator((nEdge, nEdge),
+                           matvec=self.matvecFWD,
+                           dtype=float)        
+        
+        RHS = array((nEdge, 1))
+        
+        # Each comp calculates its own derivatives at the current
+        # point. (i.e., linearizes)
+        self.calc_derivatives(first=True)
+        
+        # Call GMRES to solve the linear system
+        dx, info = gmres(A, RHS,
+                         tol=self.tolerance,
+                         maxiter=100)
