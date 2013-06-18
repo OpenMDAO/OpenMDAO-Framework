@@ -71,6 +71,7 @@ class ExprMapper(object):
 
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
         desttrait = None
+        srccomp = None
 
         if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.'):
             for srcvar in srcvars:
@@ -83,22 +84,22 @@ class ExprMapper(object):
                             dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
 
-            if not isinstance(srccomp, PseudoComponent) and not srcexpr.refs_parent() and desttrait is not None:
-                # punt if dest is not just a simple var name.
-                # validity will still be checked at execution time
-                if destvar == destexpr.text:
-                    ttype = desttrait.trait_type
-                    if not ttype:
-                        ttype = desttrait
-                    srcval = srcexpr.evaluate()
-                    if ttype.validate:
-                        ttype.validate(destcomp, destvarname, srcval)
-                    else:
-                        # no validate function on destination trait. Most likely
-                        # it's a property trait.  No way to validate without
-                        # unknown side effects. Have to wait until later when
-                        # data actually gets passed via the connection.
-                        pass
+                if not isinstance(srccomp, PseudoComponent) and not srcexpr.refs_parent() and desttrait is not None:
+                    # punt if dest is not just a simple var name.
+                    # validity will still be checked at execution time
+                    if destvar == destexpr.text:
+                        ttype = desttrait.trait_type
+                        if not ttype:
+                            ttype = desttrait
+                        srcval = srcexpr.evaluate()
+                        if ttype.validate:
+                            ttype.validate(destcomp, destvarname, srcval)
+                        else:
+                            # no validate function on destination trait. Most likely
+                            # it's a property trait.  No way to validate without
+                            # unknown side effects. Have to wait until later when
+                            # data actually gets passed via the connection.
+                            pass
 
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
@@ -164,21 +165,21 @@ class ExprMapper(object):
         if destcomps and destcomps[0] in srccomps:
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src, dest))
 
-        return srcexpr, destexpr, self._make_pseudo(srcexpr, destexpr)
+        return srcexpr, destexpr, self._make_pseudo(scope, srcexpr, destexpr)
 
     def _get_pseudo_name(self):
         name = "_%d" % self._pseudo_count
         self._pseudo_count += 1
         return name
 
-    def _make_pseudo(self, srcexpr, destexpr):
+    def _make_pseudo(self, parent, srcexpr, destexpr):
         """Possibly create a pseudo-component if srcexpr and destexpr require it.
         Otherwise, return None.
         """
         srcrefs = list(srcexpr.refs())
         if srcrefs and srcrefs[0] != srcexpr.text:
             # expression is more than just a simple variable reference, so we need a pseudocomp
-            return PseudoComponent(self._get_pseudo_name(), 
+            return PseudoComponent(self._get_pseudo_name(), parent,
                                    srcexpr, destexpr)
 
         destmeta = destexpr.get_metadata('units')
@@ -188,7 +189,7 @@ class ExprMapper(object):
         destunit = destmeta[0][1] if destmeta else None
 
         if destunit and srcunit and destunit != srcunit:
-            return PseudoComponent(self._get_pseudo_name(), 
+            return PseudoComponent(self._get_pseudo_name(), parent,
                                    srcexpr, destexpr)
 
         return None

@@ -13,10 +13,12 @@ class AttrWrapper(object):
         self.value = value
         self.metadata = metadata
 
+
 def _get_PQ(obj):
     if isinstance(obj, UnitsAttrWrapper):
         return obj.pq
     return obj
+
 
 class UnitsAttrWrapper(AttrWrapper):
     """A class that allows us to check for units metadata specifically and

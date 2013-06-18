@@ -18,6 +18,7 @@ from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitectu
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
+from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import Slot
@@ -29,6 +30,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper
+from openmdao.main.depgraph import cvt_fake
 from openmdao.util.nameutil import partition_names_by_comp
 
 _iodict = {'out': 'output', 'in': 'input'}
@@ -545,8 +547,19 @@ class Assembly(Component):
             
         # Detect and save any loops in the graph.
         if hasattr(self, '_depgraph'):
-            graph = self._depgraph._graph
-            self._graph_loops = nx.strongly_connected_components(graph)
+            self._graph_loops = None
+            
+    def _get_graph_loops(self):
+        if self._graph_loops is None and hasattr(self, '_depgraph'):
+            self._graph_loops = [s for s in nx.strongly_connected_components(self._depgraph._graph) if len(s)>1]
+        return self._graph_loops
+
+    def _set_failed(self, path, value, index=None, src=None, force=False):
+        parts = path.split('.', 1)
+        if len(parts) > 1:
+            obj = getattr(self, parts[0])
+            if isinstance(obj, PseudoComponent):
+                obj.set(parts[1], value, index, src, force)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
@@ -593,29 +606,48 @@ class Assembly(Component):
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        expr_info = []
+        #expr_info = []
         invalids = []
+        conns = []
 
         if compname is not None:
-            pred = self._exprmapper._exprgraph.pred
+            #pred = self._exprmapper._exprgraph.pred
             if exprs:
-                ex = ['.'.join([compname, n]) for n in exprs]
-                exprs = []
-                for e in ex:
-                    exprs.extend([expr for expr in self._exprmapper.find_referring_exprs(e)
-                                  if expr in pred])
+                #ex = ['.'.join([compname, n]) for n in exprs]
+                #exprs = []
+                # for e in ex:
+                #     exprs.extend([expr for expr in self._exprmapper.find_referring_exprs(e)
+                #                   if expr in pred])
+                for e in exprs:
+                    conns.extend(self._depgraph._var_connections('.'.join([compname, e]), 'in'))
             else:
-                exprs = [expr for expr in self._exprmapper.find_referring_exprs(compname)
-                             if expr in pred]
-        for expr in exprs:
-            srctxt = self._exprmapper.get_source(expr)
-            if srctxt:
-                srcexpr = self._exprmapper.get_expr(srctxt)
-                invalids.extend(srcexpr.invalid_refs())
-                expr_info.append((srcexpr, self._exprmapper.get_expr(expr)))
+                # exprs = [expr for expr in self._exprmapper.find_referring_exprs(compname)
+                #              if expr in pred]
+                conns = self._depgraph._comp_connections(compname, 'in')
 
-        # if source exprs reference invalid vars, request an update
+        conns = [(cvt_fake(u), cvt_fake(v)) for u,v in conns]
+        for i,tup in enumerate(conns):
+            # auto-passthrough shows up as ('<varname>', '<varname>')
+            if tup[0] == tup[1]:
+                # find the external var that the dest is connected to (it's at @xin.parent.<extvarname>)
+                xsrc = self._depgraph._var_connections('.'.join(['@bin', tup[1]]), 'in')[0][0]
+                xsrc = xsrc[5:]
+                conns[i] = (xsrc, tup[1])
+
+        # for expr in exprs:
+        #     srctxt = self._exprmapper.get_source(expr)
+        #     if srctxt:
+        #         srcexpr = self._exprmapper.get_expr(srctxt)
+        #         invalids.extend(srcexpr.invalid_refs())
+        #         expr_info.append((srcexpr, self._exprmapper.get_expr(expr)))
+
+        srcs = [u for u,v in conns]
+        invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcs)) if not valid]
+
+        # if source vars are invalid, request an update
         if invalids:
+            loops = self._get_graph_loops()
+            
             for cname, vnames in partition_names_by_comp(invalids).items():
                 if cname is None:
                     if self.parent:
@@ -625,8 +657,8 @@ class Assembly(Component):
                 # run it. Otherwise you have infinite recursion. It is
                 # the responsibility of the solver to properly execute
                 # the comps in its loop.
-                elif self._graph_loops:
-                    for loop in self._graph_loops:
+                elif loops:
+                    for loop in loops:
                         if compname in loop and cname in loop:
                             break
                     else:
@@ -636,8 +668,11 @@ class Assembly(Component):
                     getattr(self, cname).update_outputs(vnames)
                     #self.set_valid(vnames, True)
 
-        for srcexpr, destexpr in expr_info:
+        #for srcexpr, destexpr in expr_info:
+        for u,v in conns:
             try:
+                srcexpr = self._exprmapper.get_expr(u)
+                destexpr = self._exprmapper.get_expr(v)
                 destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
             except Exception as err:
                 self.raise_exception("cannot set '%s' from '%s': %s" %
@@ -670,7 +705,7 @@ class Assembly(Component):
                     ret[posdict[varnames[i]]] = val
             else:
                 comp = getattr(self, compname)
-                if isinstance(comp, Component):
+                if isinstance(comp, Component) or isinstance(comp, PseudoComponent):
                     vals = comp.get_valid(varnames)
                 else:
                     vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]

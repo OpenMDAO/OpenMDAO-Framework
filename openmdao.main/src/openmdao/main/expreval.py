@@ -6,12 +6,9 @@ __all__ = ["ExprEvaluator"]
 import weakref
 import math
 import ast
-import copy
-import re
 import __builtin__
 
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
-from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
@@ -87,7 +84,7 @@ class ExprTransformer(ast.NodeTransformer):
         
         #scope = self.expreval.scope
         #if scope:
-        parts = name.split('.',1)
+        #parts = name.split('.',1)
         names = ['scope']
         self.expreval.var_names.add(name)
         #else:
