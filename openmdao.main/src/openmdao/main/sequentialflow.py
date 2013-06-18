@@ -277,21 +277,21 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
+            comp_name, dot, var_name = src.partition('.')
             outputs[comp_name][var_name] = arg[i1:i2]
             inputs[comp_name][var_name] = arg[i1:i2]
             
-            parts = target.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
+            comp_name, dot, var_name = target.partition('.')
             inputs[comp_name][var_name] = arg[i1:i2]
             
         # Call ApplyJ on each component
         for comp in self.__iter__():
+            
+            # A component can also define a preconditioner
+            if hasattr(comp, 'applyMinv'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinv(inputs[name], pre_inputs)
+            
             name = comp.name
             comp.applyJ(inputs[name], outputs[name])
             
@@ -301,10 +301,7 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
         
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
+            comp_name, dot, var_name = src.partition('.')
             result[i1:i2] = outputs[comp_name][var_name]
         
         return result
