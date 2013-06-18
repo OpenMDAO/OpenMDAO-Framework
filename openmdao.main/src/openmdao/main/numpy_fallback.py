@@ -8,9 +8,9 @@ try:
     import numpy
     from numpy import *
 except ImportError as err:   
-    
+
     import logging
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
     
     import operator
     from copy import deepcopy
@@ -49,11 +49,22 @@ except ImportError as err:
             shp = []
             while stack:
                 obj = stack.pop()
-                size = len(obj)
-                shp.append(size)
-                if size > 0 and isinstance(obj[0], (list, tuple)):
+                siz = len(obj)
+                shp.append(siz)
+                if siz > 0 and isinstance(obj[0], (list, tuple)):
                     stack.append(obj[0])
             return tuple(shp)
+
+        @property
+        def size(self):
+            shp = self.shape
+            if shp:
+                siz = 1
+                for dim in shp:
+                    siz *= dim
+            else:
+                siz = 0
+            return siz
 
         def __eq__(self, other):
             try:
@@ -154,6 +165,20 @@ except ImportError as err:
                     ret.extend(val.flatten())
                 return _FakeNumpyArray(ret, self.dtype)
     
+        def reshape(self, shape):
+            """Return array of `shape` initialized with our data"""
+            def _reshape(shp, init_val):
+                if len(shp) == 1:
+                    i = shp[0]
+                    val = init_val[:i]
+                    del init_val[:i]
+                else:
+                    val = [_reshape(shp[1:], init_val) for i in range(shp[0])]
+                return val
+            result = _FakeNumpyArray([], self.dtype)
+            result[:] = _reshape(shape, self.flatten())
+            return result
+
     # this ndarray doesn't have the same __init__ signature as the real one, but
     # people aren't supposed to construct them directly anyway 
     # (should use zeros, ones, etc. instead)
@@ -239,7 +264,19 @@ except ImportError as err:
             return y, step
         else:
             return y
-    
+
+    def inner(arr_a, arr_b):
+        """Limited version of the real inner()."""
+        imax = arr_a.shape[-2]
+        jmax = arr_b.shape[-2]
+        kmax = arr_a.shape[-1]
+        arr_r = zeros((imax, jmax), dtype=arr_a.dtype)
+        for i in range(imax):
+            for j in range(jmax):
+                for k in range(kmax):
+                    arr_r[i, j] += arr_a[i, k] * arr_b[j, k]
+        return arr_r
+
     
 if __name__ == '__main__':
     x = array([[1,2,3],[4,5,6]])
@@ -250,15 +287,25 @@ if __name__ == '__main__':
     assert(b == a)
     assert(all(x==y))
     
+    assert(x.shape == (2, 3))
+    reshaped_x = x.reshape((3, 2))
+    assert(reshaped_x.shape == (3, 2))
+    assert(all(reshaped_x[0] == array([1, 2])))
+    assert(all(reshaped_x[1] == array([3, 4])))
+    assert(all(reshaped_x[2] == array([5, 6])))
+
+    xy = inner(x, y)
+    assert(xy.shape == (2, 2))
+    assert(all(xy[0] == array([14, 32])))
+    assert(all(xy[1] == array([32, 77])))
+
     z = array([1,2,3,4,5,6])
-    assert(z[::-1] == array([6,5,4,3,2,1]))
+    assert(all(z[::-1] == array([6,5,4,3,2,1])))
     
     x[1,1] = 99
-    assert(x[0] == array([1, 2, 3]))
-    assert(x[1] == array([4, 99, 6]))
+    assert(all(x[0] == array([1, 2, 3])))
+    assert(all(x[1] == array([4, 99, 6])))
     
     z[2:4] = [44, 55, 66]
     assert(all(z == array([1,2,44,55,66,5,6])))
-    
-    
     
