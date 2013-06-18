@@ -192,14 +192,13 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get constructor signature for a type */
-    this.getSignature = function(typepath, callback, errorHandler) {
+    this.getSignature = function(typename, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
         jQuery.ajax({
             type: 'GET',
-            url:  'signature',
-            data: {'type': typepath},
+            url:  'type/'+typename+'/signature',
             dataType: 'json',
             success: callback,
             error: errorHandler
@@ -258,7 +257,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get list of components in the top driver workflow */
-    this.getWorkflow = function(pathname,callback,errorHandler) {
+    this.getWorkflow = function(pathname, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -277,7 +276,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get the structure (data flow)) of an assembly */
-    this.getDataflow = function(pathname,callback,errorHandler) {
+    this.getDataflow = function(pathname, callback ,errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -296,16 +295,15 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get  hierarchical list of components */
-    this.getComponents = function(callback,errorHandler) {
+    this.getComponents = function(callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
         else {
             jQuery.ajax({
                 type: 'GET',
-                url:  'components',
+                url:  'objects',
                 dataType: 'json',
-                data: {},
                 success: callback,
                 error: errorHandler
             });
@@ -331,7 +329,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get  attributes of any slotable object */
-    this.getObject = function(name,callback,errorHandler) {
+    this.getObject = function(name, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -348,7 +346,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get all available events in a workflow */
-    this.getAvailableEvents = function(pathname,callback,errorHandler) {
+    this.getAvailableEvents = function(pathname, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -366,7 +364,7 @@ openmdao.Model=function(listeners_ready) {
 
 
     /** get value for pathname */
-    this.getValue = function(pathname,callback,errorHandler) {
+    this.getValue = function(pathname, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -381,7 +379,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** get connections between two components in an assembly */
-    this.getConnections = function(pathname,src_name,dst_name,callback,errorHandler) {
+    this.getConnections = function(pathname, src_name, dst_name, callback, errorHandler) {
         if (typeof callback !== 'function') {
             return;
         }
@@ -407,7 +405,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** set connections between two components in an assembly */
-    this.setConnections = function(pathname,src_name,dst_name,connections,callback,errorHandler) {
+    this.setConnections = function(pathname, src_name ,dst_name, connections, callback ,errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'connections/'+pathname,
@@ -420,29 +418,8 @@ openmdao.Model=function(listeners_ready) {
         self.setModified(true);
     };
 
-    /** add an object of the specified type & name to the specified parent */
-    this.addComponent = function(typepath, name, args, parent,
-                                 callback, errorHandler) {
-        if (!parent) {
-            parent = '';
-        }
-        if (/driver/.test(typepath) && (openmdao.Util['$'+name])) {
-            openmdao.Util['$'+name]();
-            return;
-        }
-        jQuery.ajax({
-            type: 'POST',
-            url:  'component/'+name,
-            data: {'type': typepath, 'parent': parent, 'args': args },
-            success: callback,
-            error: errorHandler
-        });
-        self.setModified(true);
-    };
-
-    /** replace pathname with an object of the specified type */
-    this.replaceComponent = function(pathname, typepath, args,
-                                     callback, errorHandler) {
+    /** create or replace object with pathname with a new object of the specified type */
+    this.putObject = function(pathname, typepath, args, callback, errorHandler) {
         jQuery.ajax({
             type: 'PUT',
             url:  'object/'+pathname,
@@ -588,17 +565,23 @@ openmdao.Model=function(listeners_ready) {
 
     /** rename file with specified path. */
     this.renameFile = function(filepath, newname, callback) {
+        // convert to relative path with forward slashes
+        var path = filepath.replace(/\\/g,'/');
+        if (path[0] === '/') {
+            path = path.substring(1, path.length);
+        }
+        // make the call
         jQuery.ajax({
             type: 'POST',
-            url:  'rename',
-            data: { 'old': filepath, 'new': newname },
+            url:  'file/'+path,
+            data: { 'rename': newname },
             success: callback,
             error: function(jqXHR, textStatus, errorThrown) {
                        debug.warn("model.renameFile",
                                   jqXHR, textStatus, errorThrown);
                    }
-            });
-            self.setModified(true);
+        });
+        self.setModified(true);
     };
 
     /** delete file with specified path from the model working directory */

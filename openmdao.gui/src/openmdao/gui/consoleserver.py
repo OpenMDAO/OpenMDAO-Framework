@@ -127,7 +127,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             comps = self._publish_comps.keys()
             for pathname in comps:
-                comp, root = self.get_container(pathname, report=False)
+                comp, root = self.get_object(pathname, report=False)
                 if comp is None:
                     del self._publish_comps[pathname]
                     publish(pathname, {})
@@ -277,7 +277,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self._recorded_cmds[:]
 
-    def get_container(self, pathname, report=True):
+    def get_object(self, pathname, report=True):
         ''' Get the container with the specified pathname.
             Returns the container and the name of the root object.
         '''
@@ -340,7 +340,7 @@ class ConsoleServer(cmd.Cmd):
             *dst_name* (destinations) and the connections between them.
         '''
         conns = {}
-        asm, root = self.get_container(pathname)
+        asm, root = self.get_object(pathname)
         if asm:
             try:
                 conns = asm.get_connections(src_name, dst_name)
@@ -356,7 +356,7 @@ class ConsoleServer(cmd.Cmd):
         dataflow = {}
         if pathname and len(pathname) > 0:
             try:
-                asm, root = self.get_container(pathname)
+                asm, root = self.get_object(pathname)
                 if has_interface(asm, IAssembly):
                     dataflow = asm.get_dataflow()
             except Exception as err:
@@ -387,7 +387,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         events = []
         if pathname:
-            drvr, root = self.get_container(pathname)
+            drvr, root = self.get_object(pathname)
             events = drvr.list_available_events()
 
         return json.dumps(events, default=json_default)
@@ -399,7 +399,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         flows = []
         if pathname:
-            drvr, root = self.get_container(pathname)
+            drvr, root = self.get_object(pathname)
             # allow for request on the parent assembly
             if is_instance(drvr, Assembly):
                 drvr = drvr.get('driver')
@@ -423,7 +423,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Get the attributes of the specified object.
         '''
         attr = {}
-        comp, root = self.get_container(pathname)
+        comp, root = self.get_object(pathname)
         try:
             if comp:
                 attr = comp.get_attributes(io_only=False)
@@ -435,7 +435,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Get the inputs and outputs of the assembly's child components
             and indicate for each whether or not it is a passthrough variable.
         '''
-        asm, root = self.get_container(pathname)
+        asm, root = self.get_object(pathname)
         passthroughs = asm.get_passthroughs()
         return json.dumps(passthroughs, default=json_default)
 
@@ -443,7 +443,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Get the value of the object with the given pathname.
         '''
         try:
-            val, root = self.get_container(pathname)
+            val, root = self.get_object(pathname)
             return val
         except Exception as err:
             self._print_error("error getting value: %s" % err)
@@ -527,10 +527,21 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
-    @modifies_model
-    def add_component(self, name, classname, parentname, args):
-        ''' Add a new component of the given type to the specified parent.
+    def put_object(self, pathname, classname, args):
+        ''' Create or replace object with the given pathname with a new object
+            of the specified type.
         '''
+        obj, root = self.get_object(pathname)
+        if obj:
+            self.replace_object(pathname, classname, args)
+        else:
+            self.add_object(pathname, classname, args)
+
+    @modifies_model
+    def add_object(self, pathname, classname, args):
+        ''' Add a new object of the given type to the specified parent.
+        '''
+        parentname, dot, name = pathname.rpartition('.')
         if isidentifier(name):
             name = name.encode('utf8')
             cmd = 'create("%s"%s)' % (classname, args)
@@ -543,12 +554,12 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('Error adding component:'
+            self._print_error('Error adding object:'
                               ' "%s" is not a valid identifier' % name)
 
     @modifies_model
     def replace_object(self, pathname, classname, args):
-        ''' Replace existing component with component of the given type.
+        ''' Replace existing object with object of the given type.
         '''
         pathname = pathname.encode('utf8')
         parentname, dot, name = pathname.rpartition('.')
@@ -645,7 +656,7 @@ class ConsoleServer(cmd.Cmd):
                     rest = parts[1]
                     root.register_published_vars(rest, publish)
 
-            cont, root = self.get_container(pathname)
+            cont, root = self.get_object(pathname)
             if has_interface(cont, IComponent):
                 if publish:
                     if pathname in self._publish_comps:

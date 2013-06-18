@@ -446,7 +446,10 @@ openmdao.Util = {
         prompt = prompt || 'Enter name for new '+ typeName;
         openmdao.model.getSignature(typePath, function(signature) {
             openmdao.Util.promptForArgs(prompt, signature, function(name, args) {
-                openmdao.model.addComponent(typePath, name, args, parentPath, function() {
+                if (parentPath) {
+                    name = parentPath + '.' + name;
+                }
+                openmdao.model.putObject(name, typePath, args, function() {
                     if (callback) {
                         callback(name);
                     }
@@ -469,10 +472,10 @@ openmdao.Util = {
                 if (signature.args.length) {
                     prompt = 'Replacement '+typeName;
                     openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        openmdao.model.replaceComponent(compPath, typePath, args);
+                        openmdao.model.putObject(compPath, typePath, args);
                     }, true);
                 } else {
-                    openmdao.model.replaceComponent(compPath, typePath, '');
+                    openmdao.model.putObject(compPath, typePath, '');
                 }
             });
         });

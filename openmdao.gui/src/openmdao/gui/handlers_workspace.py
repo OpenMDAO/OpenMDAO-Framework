@@ -72,16 +72,17 @@ class CloseHandler(ReqHandler):
 
 
 class CommandHandler(ReqHandler):
-    ''' Get the command, send it to the cserver, and return response.
+    ''' POST: execute a command and return the console-like response.
+              required arguments are:
+                  command - the command to execute
     '''
 
     @web.authenticated
     def post(self):
-        history = ''
-        command = self.get_argument('command', default=None)
-
-        # if there is a command, execute it & get the result
-        if command:
+        if 'command' not in self.request.arguments.keys():
+            self.send_error(400)  # bad request
+        else:
+            command = self.get_argument('command', default=None)
             result = ''
             try:
                 cserver = self.get_server()
@@ -90,80 +91,10 @@ class CommandHandler(ReqHandler):
                 print exc
                 result = sys.exc_info()
             if result:
-                history = history + str(result) + '\n'
+                result = str(result) + '\n'
 
-        self.content_type = 'text/html'
-        self.write(history)
-
-
-class ComponentHandler(ReqHandler):
-    ''' Add, get, or remove a component.
-    '''
-
-    @web.authenticated
-    def post(self, name):
-        type = self.get_argument('type')
-        if 'parent' in self.request.arguments.keys():
-            parent = self.get_argument('parent')
-        else:
-            parent = ''
-        if 'args' in self.request.arguments.keys():
-            args = self.get_argument('args')
-        else:
-            args = ''
-        result = ''
-        try:
-            cserver = self.get_server()
-            cserver.add_component(name, type, parent, args)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
-        self.write(result)
-
-    @web.authenticated
-    def delete(self, name):
-        cserver = self.get_server()
-        result = ''
-        try:
-            result = cserver.onecmd('del ' + name)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
-        self.write(result)
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        attr = {}
-        try:
-            attr = cserver.get_attributes(name)
-        except Exception as exc:
-            print 'Error getting attributes on', name, ':', exc
-            attr = '"%s"' % sys.exc_info()
-        self.content_type = 'application/javascript'
-        self.write(attr)
-
-
-class ComponentsHandler(ReqHandler):
-
-    @web.authenticated
-    def get(self):
-        cserver = self.get_server()
-        self.content_type = 'application/javascript'
-        for retry in range(3):
-            json_comps = cserver.get_components()
-            try:
-                self.write(json_comps)
-            except AssertionError as exc:
-                # Have had issues with `json` being ZMQ_RPC.invoke args.
-                print >>sys.stderr, "ComponentsHandler: Can't write %r: %s" \
-                                    % (json, str(exc) or repr(exc))
-                if retry >= 2:
-                    raise
-            else:
-                break
+            self.content_type = 'text/html'
+            self.write(result)
 
 
 class EditorHandler(ReqHandler):
@@ -183,7 +114,10 @@ class FileHandler(ReqHandler):
 
         DELETE: delete a file.
 
-        POST:   execute a file.
+        POST:   if request contains a 'rename' argument,
+                    rename file to the value of rename argument
+                otherwise
+                    execute the file
     '''
 
     @web.authenticated
@@ -221,10 +155,14 @@ class FileHandler(ReqHandler):
 
     @web.authenticated
     def post(self, filename):
-        result = ''
         cserver = self.get_server()
+        result = ''
         try:
-            result = cserver.execfile(filename)
+            if 'rename' in self.request.arguments.keys():
+                newname = self.get_argument('rename')
+                cserver.rename_file(filename, newname)
+            else:
+                result = cserver.execfile(filename)
         except Exception as exc:
             print exc
             result = result + str(sys.exc_info()) + '\n'
@@ -233,7 +171,12 @@ class FileHandler(ReqHandler):
 
 
 class FilesHandler(ReqHandler):
-    ''' Get a list of the user's files in JSON format.
+    ''' GET: get heirarchical list of files.
+
+        DELETE: delete files
+                required arguments are:
+                    filepaths - the pathnames of the files to delete
+
     '''
 
     @web.authenticated
@@ -246,15 +189,17 @@ class FilesHandler(ReqHandler):
 
     @web.authenticated
     def delete(self):
+        if 'filepaths' not in self.request.arguments.keys():
+            self.send_error(400)  # bad request
+        else:
+            filepaths = escape.json_decode(self.request.body)['filepaths']
 
-        filepaths = escape.json_decode(self.request.body)['filepaths']
-
-        cserver = self.get_server()
-        self.content_type = 'text/html'
-        success = True
-        for filename in filepaths:
-            success = success and cserver.delete_file(filename)
-        self.write(str(success))
+            cserver = self.get_server()
+            self.content_type = 'text/html'
+            success = True
+            for filename in filepaths:
+                success = success and cserver.delete_file(filename)
+            self.write(str(success))
 
 
 class GeometryHandler(ReqHandler):
@@ -273,12 +218,13 @@ class GeometryHandler(ReqHandler):
 class ObjectHandler(ReqHandler):
     ''' GET:    Get the attributes of an object.
                 param is optional and can be one of:
-                    dataflow, workflow, events, passthroughs, connections
+                    'dataflow', 'workflow', 'events', 'passthroughs', 'connections'
 
-        PUT:    replace an object.
+        PUT:    create or replace an object.
                 required arguments are:
-                    type - the type of the new replacement object
-                    args - arguments required to create the replacement object
+                    type - the type of the new object
+                optional arguments are:
+                    args - arguments required to create the new object
 
         POST:   execute an object.
 
@@ -340,7 +286,7 @@ class ObjectHandler(ReqHandler):
         result = ''
         try:
             cserver = self.get_server()
-            cserver.replace_object(pathname, type, args)
+            cserver.put_object(pathname, type, args)
         except Exception as exc:
             print exc
             result = str(sys.exc_info())
@@ -373,6 +319,26 @@ class ObjectHandler(ReqHandler):
             result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
+
+
+class ObjectsHandler(ReqHandler):
+
+    @web.authenticated
+    def get(self):
+        cserver = self.get_server()
+        self.content_type = 'application/javascript'
+        for retry in range(3):
+            json_comps = cserver.get_components()
+            try:
+                self.write(json_comps)
+            except AssertionError as exc:
+                # Have had issues with `json` being ZMQ_RPC.invoke args.
+                print >>sys.stderr, "ComponentsHandler: Can't write %r: %s" \
+                                    % (json, str(exc) or repr(exc))
+                if retry >= 2:
+                    raise
+            else:
+                break
 
 
 class StreamHandler(ReqHandler):
@@ -464,40 +430,31 @@ class PublishHandler(ReqHandler):
         cserver.add_subscriber(topic, publish)
 
 
-class RenameHandler(ReqHandler):
-    ''' Rename a file.
+class TypeHandler(ReqHandler):
+    ''' GET:    Get the attributes of a type.
+                param is required and must be one of:
+                    'signature'
     '''
 
     @web.authenticated
-    def post(self):
-        oldpath = self.get_argument('old')
-        newname = self.get_argument('new')
+    def get(self, typename, param):
+        cserver = self.get_server()
         result = ''
-        try:
-            cserver = self.get_server()
-            cserver.rename_file(oldpath, newname)
-        except Exception as exc:
-            print exc
-            result = str(sys.exc_info())
-        self.content_type = 'text/html'
+        if param:
+            param = param.lower()
+            if param == 'signature':
+                signature = cserver.get_signature(typename)
+                result = json.dumps(signature)
+            else:
+                self.send_error(400)  # bad request
+        else:
+            self.send_error(400)  # bad request
+        self.content_type = 'application/javascript'
         self.write(result)
 
 
-class SignatureHandler(ReqHandler):
-    ''' Get type constructor signature.
-    '''
-
-    @web.authenticated
-    def get(self):
-        typename = self.get_argument('type')
-        cserver = self.get_server()
-        signature = cserver.get_signature(typename)
-        self.content_type = 'application/javascript'
-        self.write(json.dumps(signature))
-
-
 class TypesHandler(ReqHandler):
-    ''' Get hierarchy of package/types to populate the Palette.
+    ''' GET: Get the list of available types.
     '''
 
     @web.authenticated
@@ -601,37 +558,40 @@ handlers = [
     web.url(r'/workspace/addons/?',         AddOnsHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
     web.url(r'/workspace/variable',         VariableHandler),
-    web.url(r'/workspace/components/?',     ComponentsHandler),
-    web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/editor/?',         EditorHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
-    web.url(r'/workspace/rename',           RenameHandler),
-    web.url(r'/workspace/signature/?',      SignatureHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),
 
-    # new, better
+    # new and improved
     web.url(r'/workspace/command',          CommandHandler),
+
     web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
-    web.url(r"/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?",  ObjectHandler),
-    web.url(r"/workspace/stream/(.*)",      StreamHandler),
+
+    web.url(r'/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?',  ObjectHandler),
+
+    web.url(r'/workspace/stream/(.*)',      StreamHandler),
+
     web.url(r'/workspace/types/?',          TypesHandler),
+    web.url(r'/workspace/type/(?P<typename>[^\/]+)/?(?P<param>[^\/]+)?',    TypeHandler),
 ]
 
 
 """
-# GET    types
+
+# POST   command, {command: command}
 
 # GET    files
 # DELETE files, {filepaths: [file1, file2, ...]}
+
 # GET    file/name
 # PUT    file/name, {contents: new_contents}
-# POST   file/name
+# POST   file/name, {rename: newname}
 # DELETE file/name
 
 GET    objects
@@ -643,13 +603,12 @@ POST   objects/name, {parent: parent, type: type, args: args}
 # GET    object/name/workflow
 # GET    object/name/events
 # GET    object/name/passthroughs
-PUT    object/name, {type: new_type}
+# PUT    object/name, {type: new_type, args: args}
 # DELETE object/name
 # POST   object/name   (exec)
 
-GET    variable/name
-PUT    variable/name, {value: value}
-POST   variable/name, {parent: parent} ??
+# GET    types
+# GET    type/name/signature
 
 # GET    stream/pub
 # GET    stream/out
@@ -657,10 +616,12 @@ POST   variable/name, {parent: parent} ??
 GET    subscription/name
 DELETE subscription/name
 
-# POST   command, {command: command}
-
 GET    project/id
 POST   project/id, {version: previous_version} # no version means commit
+
+GET    variable/name
+PUT    variable/name, {value: value}
+POST   variable/name, {parent: parent} ??
 
 
 
