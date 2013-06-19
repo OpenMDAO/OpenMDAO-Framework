@@ -6,14 +6,82 @@ perform calculations during a Fake Finite Difference.
 from openmdao.main.vartree import VariableTree
 
 try:
-    from numpy import array, ndarray
+    from numpy import array, ndarray, zeros
+    
+    # Can't solve derivatives without these
+    from scipy.sparse.linalg import gmres, LinearOperator
+
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import array, ndarray
 
-#public symbols
-__all__ = ['Derivatives', 'derivative_name']
+
+def flattened_size(name, val):
+    """ Return size of `val` flattened to a 1D float array. """
+    if isinstance(val, float):
+        return 1
+    elif isinstance(val, ndarray):
+        return val.size
+    elif isinstance(val, VariableTree):
+        size = 0
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            size += flattened_size('.'.join((name, key)), value)
+        return size
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+
+def flattened_value(name, val):
+    """ Return `val` as a 1D float array. """
+    if isinstance(val, float):
+        return array([val])
+    elif isinstance(val, ndarray):
+        return val.flatten()
+    elif isinstance(val, VariableTree):
+        vals = []
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            vals.extend(flattened_value('.'.join((name, key)), value))
+        return array(vals)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+
+
+def calc_gradient(wflow, inputs, outputs):
+    """Returns the gradient of the passed outputs with respect to
+    all passed inputs.
+    """    
+
+    # Find dimension of our problem.
+    nEdge = wflow.initialize_residual()
+    
+    A = LinearOperator((nEdge, nEdge),
+                       matvec=wflow.matvecFWD,
+                       dtype=float)        
+    
+    RHS = zeros((nEdge, 1))
+    
+    for param in wflow._parent.get_parameters():
+        i1, i2 = wflow.bounds[(param, param)]
+        for i in range(i1, i2):
+            RHS[i, 0] = 1.0
+    
+    # Each comp calculates its own derivatives at the current
+    # point. (i.e., linearizes)
+    wflow.calc_derivatives(first=True)
+    
+    # Call GMRES to solve the linear system
+    dx, info = gmres(A, RHS,
+                     tol=1.0e-6,
+                     maxiter=100)
+
+    print dx
+#-------------------------------------------
+# Everything below here will be deprecated.
+#-------------------------------------------
 
 
 def _check_var(comp, var_name, iotype):
@@ -50,39 +118,6 @@ def derivative_name(input_name, output_name):
     
     return "d__%s__%s" % (output_name.replace('.', '_'),
                           input_name.replace('.', '_'))
-
-
-def flattened_size(name, val):
-    """ Return size of `val` flattened to a 1D float array. """
-    if isinstance(val, float):
-        return 1
-    elif isinstance(val, ndarray):
-        return val.size
-    elif isinstance(val, VariableTree):
-        size = 0
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            size += flattened_size('.'.join((name, key)), value)
-        return size
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-
-def flattened_value(name, val):
-    """ Return `val` as a 1D float array. """
-    if isinstance(val, float):
-        return array([val])
-    elif isinstance(val, ndarray):
-        return val.flatten()
-    elif isinstance(val, VariableTree):
-        vals = []
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            vals.extend(flattened_value('.'.join((name, key)), value))
-        return array(vals)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
 
 
 class Derivatives(object):

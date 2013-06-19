@@ -3,7 +3,8 @@ order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
 from openmdao.main.api import VariableTree
-from openmdao.main.derivatives import flattened_size, flattened_value
+from openmdao.main.derivatives import flattened_size, flattened_value, \
+                                      calc_gradient
 from openmdao.main.workflow import Workflow
 
 try:
@@ -266,6 +267,14 @@ class SequentialWorkflow(Workflow):
             
             comp.applyJ(inputs[name], outputs[name])
 
+        # Each parameter adds an equation
+        if hasattr(self._parent, 'get_parameters'):
+            for param in self._parent.get_parameters():
+                i1, i2 = self.bounds[(param, param)]
+                comp_name, dot, var_name = param.partition('.')
+                for i in range(i1, i2):
+                    outputs[comp_name][var_name] = arg[i1:i2]
+
         # Poke results into the return vector
         result = zeros(len(arg))
         for edge in self.get_interior_edges():
@@ -274,27 +283,13 @@ class SequentialWorkflow(Workflow):
             
             comp_name, dot, var_name = src.partition('.')
             result[i1:i2] = outputs[comp_name][var_name]
-
+        print inputs, outputs, result
         return result
+    
     def calc_gradient(self, inputs, outputs):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
-        
-        # Find dimension of our problem.
-        nEdge = self.initialize_residual()
-        
-        A = LinearOperator((nEdge, nEdge),
-                           matvec=self.matvecFWD,
-                           dtype=float)        
-        
-        RHS = array((nEdge, 1))
-        
-        # Each comp calculates its own derivatives at the current
-        # point. (i.e., linearizes)
-        self.calc_derivatives(first=True)
-        
-        # Call GMRES to solve the linear system
-        dx, info = gmres(A, RHS,
-                         tol=self.tolerance,
-                         maxiter=100)
+        return calc_gradient(self, inputs, outputs)
+    
+

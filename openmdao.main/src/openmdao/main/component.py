@@ -1900,7 +1900,7 @@ class Component(Container):
 
         # Optional specification of the Jacobian
         input_keys, output_keys, J = self.provideJ()
-
+        print input_keys, output_keys, J
         ibounds = {}
         nvar = 0
         for key in input_keys:
@@ -1919,7 +1919,7 @@ class Component(Container):
 
         for okey in result:
             for ikey in arg:
-                if ikey not in result:
+                if ikey not in output_keys:
                     i1, i2 = ibounds[ikey]
                     o1, o2 = obounds[okey]
                     if i2 - i1 == 1:
@@ -1939,7 +1939,7 @@ class Component(Container):
                             result[okey] += float(tmp)
                         else:
                             result[okey] += tmp.reshape(result[okey].shape)
-
+        print "end applyJ", arg, result
 
 def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits

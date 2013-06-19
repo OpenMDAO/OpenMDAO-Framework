@@ -10,8 +10,12 @@ try:
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array
 
-from openmdao.main.api import Component, VariableTree
+from openmdao.main.api import Component, VariableTree, Driver, Assembly
 from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasobjective import HasObjective
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.util.decorators import add_delegate
 
 class Tree2(VariableTree):
 
@@ -64,7 +68,7 @@ class MyComp(Component):
         return input_keys, output_keys, self.J
 
 
-class Testcase(unittest.TestCase):
+class Testcase_applyJ(unittest.TestCase):
     """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
@@ -119,6 +123,86 @@ class Testcase(unittest.TestCase):
             for j in range(2):
                 self.assertEqual(outputs['vvt.vt1.d1'].flat[j], comp.J[9+j, i])
 
+
+class Paraboloid(Component):
+    """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+    
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    x = Float(0.0, iotype='in', desc='The variable x')
+    y = Float(0.0, iotype='in', desc='The variable y')
+
+    f_xy = Float(iotype='out', desc='F(x,y)')
+
+    def execute(self):
+        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+        Optimal solution (minimum): x = 6.6667; y = -7.3333
+        """
+        
+        x = self.x
+        y = self.y
+        
+        self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+        
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        df_dx = 2.0*self.x - 6.0 + self.y
+        df_dy = 2.0*self.y + 8.0 + self.x
+    
+        self.J = array([[df_dx, df_dy]])
+        
+    def provideJ(self):
+        
+        input_keys = ('x', 'y')
+        output_keys = ('f_xy',)
+        return input_keys, output_keys, self.J
+
+
+class Fake(Component):
+    
+    x = Float(iotype='in')
+    y = Float(iotype='out')
+    
+    def execute(self):
+        self.y = self.x
+        
+    def linearize(self):
+        self.J = array([[1.0, 0.0], [0.0, 1.0]])
+        
+    def provideJ(self):
+        input_keys = ('x')
+        output_keys = ('y')
+        return input_keys, output_keys, self.J
+        
+    
+@add_delegate(HasParameters, HasObjective)
+class SimpleDriver(Driver):
+    """Driver with Parameters"""
+
+    implements(IHasParameters)
+    
+    
+class Testcase_derivatives(unittest.TestCase):
+    """ Test run/step/stop aspects of a simple workflow. """
+
+    def test_first_derivative(self):
+        
+        top = Assembly()
+        top.add('comp', Paraboloid())
+        top.add('fake', Fake())
+        top.connect('comp.f_xy', 'fake.x')
+        top.add('driver', SimpleDriver())
+        #top.driver.workflow.add(['comp'])
+        top.driver.workflow.add(['comp', 'fake'])
+        top.driver.add_parameter('comp.x', low=-1000, 
+                                           high=1000)
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.comp.run()
+        
+        top.driver.workflow.calc_gradient('comp.x', 'comp.f_xy')
 
 if __name__ == '__main__':
     import nose
