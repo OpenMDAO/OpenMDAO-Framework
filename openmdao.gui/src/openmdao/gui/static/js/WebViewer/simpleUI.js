@@ -308,16 +308,23 @@ function wvUpdateUI()
 
         var ibody = 0;
         for(var gprim in g.sceneGraph){
-        var primitiveType = g.scengeGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
-	if( jQuery("#" + gprim).length === 0 ){
             
-	    if( jQuery("#" + primitiveType).length === 0 ){
-                addNode(primitiveType);
-                jQuery("#" + primitiveType).data("attrs", 1);
+            var primitiveType = g.scengeGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
+            var gprimObject = g.sceneGraph[gprim];
+            
+            if( jQuery("#" + gprim).length === 0 ){
+            
+	            if( jQuery("#" + primitiveType).length === 0 ){
+                    
+                    var controls = getDisplayControls(gprim.attrs);
+                    addNode("#" + primitiveType + " ul").before(controls);
+                    jQuery("#" + primitiveType).data("attrs", gprim.attrs);
+                }
+                
+	            addNode(gprim, primitiveType);
+                jQuery("#" + gprim).append(getDisplayControls(gprim.attrs));
+                jQuery("#" + gprim).data("gprim", gprimObject);
             }
-	    addNode(gprim, primitiveType);
-            jQuery("#" + gprim).data("grpim", g.sceneGraph[gprim]);
-        }
         }
         /*if( jQuery("#geom_display_body_" + ibody).length === 0 ){
             //addBody(ibody);
