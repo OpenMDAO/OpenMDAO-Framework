@@ -63,7 +63,7 @@ class ExprMapper(object):
             self._exprgraph.remove_nodes_from(refs)
             self._remove_disconnected_exprs()
 
-    def connect(self, srcexpr, destexpr, scope):
+    def connect(self, srcexpr, destexpr, scope, pseudocomp=None):
         src = srcexpr.text
         dest = destexpr.text
         srcvars = srcexpr.get_referenced_varpaths(copy=False)
@@ -107,6 +107,8 @@ class ExprMapper(object):
             self._exprgraph.add_node(dest, expr=destexpr)
 
         self._exprgraph.add_edge(src, dest)
+        if pseudocomp is not None:
+            self._exprgraph[src][dest]['pcomp'] = pseudocomp
 
     def find_referring_exprs(self, name):
         """Returns a list of expression strings that reference the given name, which
@@ -122,29 +124,46 @@ class ExprMapper(object):
         for expr in graph.nodes():
             if graph.in_degree(expr) == 0 and graph.out_degree(expr) == 0:
                 to_remove.append(expr)
-        for expr in to_remove:
-            graph.remove_node(expr)
+        graph.remove_nodes_from(to_remove)
+        return to_remove
 
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
 
-        if destpath is None:
-            if srcpath in graph:
-                graph.remove_node(srcpath)
-            else:
-                graph.remove_nodes_from(self.find_referring_exprs(srcpath))
-            self._remove_disconnected_exprs()
-            return
+        to_remove = set()
+        exprs = []
 
-        if srcpath in graph and destpath in graph:
-            graph.remove_edge(srcpath, destpath)
-            self._remove_disconnected_exprs()
-        else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
-            src_exprs = set(self.find_referring_exprs(srcpath))
-            dest_exprs = set(self.find_referring_exprs(destpath))
-            graph.remove_edges_from([(src, dest) for src, dest in graph.edges()
-                                           if src in src_exprs and dest in dest_exprs])
+        if destpath is None:
+            exprs = self.find_referring_exprs(srcpath)
+            for expr in exprs:
+                to_remove.update(graph.edges(expr))
+                to_remove.update(graph.in_edges(expr))
+        else:
+            if srcpath in graph and destpath in graph:
+                to_remove.add((srcpath, destpath))
+            else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
+                src_exprs = set(self.find_referring_exprs(srcpath))
+                dest_exprs = set(self.find_referring_exprs(destpath))
+                to_remove.add([(src, dest) for src, dest in graph.edges()
+                                               if src in src_exprs and dest in dest_exprs])
+
+        added = []
+        for src, dest in to_remove:
+            try:
+                pcomp = graph[src][dest]['pcomp']
+            except KeyError:
+                pass
+            else:
+                added.extend(pcomp.list_connections())
+
+        to_remove.update(added)
+
+        graph.remove_edges_from(to_remove)
+        graph.remove_nodes_from(exprs)
+        self._remove_disconnected_exprs()
+
+        return to_remove
 
     def check_connect(self, src, dest, scope):
         """Check validity of connecting a source expression to a destination expression, and
@@ -165,22 +184,21 @@ class ExprMapper(object):
         if destcomps and destcomps[0] in srccomps:
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src, dest))
 
-        return srcexpr, destexpr, self._make_pseudo(scope, srcexpr, destexpr)
+        return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
 
-    def _get_pseudo_name(self):
+    def _new_pseudo_name(self):
         name = "_%d" % self._pseudo_count
         self._pseudo_count += 1
         return name
 
-    def _make_pseudo(self, parent, srcexpr, destexpr):
+    def _needs_pseudo(self, parent, srcexpr, destexpr):
         """Possibly create a pseudo-component if srcexpr and destexpr require it.
         Otherwise, return None.
         """
         srcrefs = list(srcexpr.refs())
         if srcrefs and srcrefs[0] != srcexpr.text:
             # expression is more than just a simple variable reference, so we need a pseudocomp
-            return PseudoComponent(self._get_pseudo_name(), parent,
-                                   srcexpr, destexpr)
+            return True
 
         destmeta = destexpr.get_metadata('units')
         srcmeta = srcexpr.get_metadata('units')
@@ -189,10 +207,18 @@ class ExprMapper(object):
         destunit = destmeta[0][1] if destmeta else None
 
         if destunit and srcunit and destunit != srcunit:
-            return PseudoComponent(self._get_pseudo_name(), parent,
-                                   srcexpr, destexpr)
+            return True
 
-        return None
+        return False
+
+    def _make_pseudo(self, parent, srcexpr, destexpr):
+        """Possibly create a pseudo-component if srcexpr and destexpr require it.
+        Otherwise, return None.
+        """
+        pcomp = PseudoComponent(self._new_pseudo_name(), parent, srcexpr, destexpr)
+
+        return pcomp
+
 
 
 

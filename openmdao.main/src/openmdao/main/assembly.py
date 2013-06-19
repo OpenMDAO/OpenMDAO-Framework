@@ -462,14 +462,11 @@ class Assembly(Component):
 
         # Among other things, check if already connected.
         try:
-            srcexpr, destexpr, pseudocomp = \
+            srcexpr, destexpr, needpseudocomp = \
                        self._exprmapper.check_connect(src, dest, self)
         except Exception as err:
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
-
-        src = srcexpr.text  # may have changed if pseudocomp was created
-        dest = destexpr.text # may have changed 
 
         # Check if dest is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
@@ -482,14 +479,16 @@ class Assembly(Component):
                            "driver '%s'." % comp.name
                     self.raise_exception(msg, RuntimeError)
 
-        if pseudocomp is None:
-            super(Assembly, self).connect(src, dest)
-        else:
+        if needpseudocomp:
+            pseudocomp = self._exprmapper._make_pseudo(self, srcexpr, destexpr)
             setattr(self, pseudocomp.name, pseudocomp)
             pseudocomp.make_connections(self)
+        else:
+            pseudocomp = None
+            super(Assembly, self).connect(src, dest)
 
         try:
-            self._exprmapper.connect(srcexpr, destexpr, self)
+            self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
         except Exception as err:
             super(Assembly, self).disconnect(src, dest)
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
@@ -522,17 +521,15 @@ class Assembly(Component):
             graph = self._exprmapper._exprgraph
             to_remove = set()
             for expr in self._exprmapper.find_referring_exprs(varpath):
-                for u, v in graph.edges(expr):
-                    to_remove.add((u, v))
-                for u, v in graph.in_edges(expr):
-                    to_remove.add((u, v))
+                to_remove.update(graph.edges(expr))
+                to_remove.update(graph.in_edges(expr))
         else:
-            to_remove = [(varpath, varpath2)]
+            to_remove = set([(varpath, varpath2)])
+
+        to_remove.update(self._exprmapper.disconnect(varpath, varpath2))
 
         for u, v in to_remove:
             super(Assembly, self).disconnect(u, v)
-
-        self._exprmapper.disconnect(varpath, varpath2)
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -610,19 +607,14 @@ class Assembly(Component):
         invalids = []
         conns = []
 
-        if compname is not None:
-            #pred = self._exprmapper._exprgraph.pred
+        if compname is None:
+            for e in exprs:
+                conns.extend(self._depgraph._var_connections(e, 'in'))
+        else:
             if exprs:
-                #ex = ['.'.join([compname, n]) for n in exprs]
-                #exprs = []
-                # for e in ex:
-                #     exprs.extend([expr for expr in self._exprmapper.find_referring_exprs(e)
-                #                   if expr in pred])
                 for e in exprs:
                     conns.extend(self._depgraph._var_connections('.'.join([compname, e]), 'in'))
             else:
-                # exprs = [expr for expr in self._exprmapper.find_referring_exprs(compname)
-                #              if expr in pred]
                 conns = self._depgraph._comp_connections(compname, 'in')
 
         conns = [(cvt_fake(u), cvt_fake(v)) for u,v in conns]
@@ -634,15 +626,12 @@ class Assembly(Component):
                 xsrc = xsrc[5:]
                 conns[i] = (xsrc, tup[1])
 
-        # for expr in exprs:
-        #     srctxt = self._exprmapper.get_source(expr)
-        #     if srctxt:
-        #         srcexpr = self._exprmapper.get_expr(srctxt)
-        #         invalids.extend(srcexpr.invalid_refs())
-        #         expr_info.append((srcexpr, self._exprmapper.get_expr(expr)))
-
         srcs = [u for u,v in conns]
-        invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcs)) if not valid]
+        srcvars = srcs[:]
+        for i in range(len(srcvars)):
+            if '[' in srcvars[i]:
+                srcvars[i] = srcvars[i][:srcvars[i].index('[')]
+        invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcvars)) if not valid]
 
         # if source vars are invalid, request an update
         if invalids:
@@ -666,9 +655,7 @@ class Assembly(Component):
                         
                 else:
                     getattr(self, cname).update_outputs(vnames)
-                    #self.set_valid(vnames, True)
 
-        #for srcexpr, destexpr in expr_info:
         for u,v in conns:
             try:
                 srcexpr = self._exprmapper.get_expr(u)

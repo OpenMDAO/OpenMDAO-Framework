@@ -62,7 +62,7 @@ def _cvt_names_to_graph(srcpath, destpath):
 def cvt_fake(name):
     """removes 'fake' name from a path"""
     if name[0] == '@':
-        return name[5:]
+        return name[6:] if name[2]=='o' else name[5:]
     return name
 
 

@@ -63,13 +63,20 @@ class PseudoComponent(object):
         # this is just the equation string (for debugging)
         self._eqn = "%s = %s" % (self._destexpr.text, self._srcexpr.text)
 
+    def list_connections(self):
+        """list all of the inputs and outputs of this comp.
+        """
+        conns = [(src, '.'.join([self.name, dest])) 
+                     for src, dest in self._mapping.items()]
+        conns.append(('.'.join([self.name, 'out0']), self._outdest))
+        return conns
+
     def make_connections(self, parent):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
-        for src, dest in self._mapping.items():
-            parent._connect(src, '.'.join([self.name, dest]))
-        parent._connect('.'.join([self.name, 'out0']), self._outdest)
+        for src, dest in self.list_connections():
+            parent._connect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
         self._valid = False
