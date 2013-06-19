@@ -286,6 +286,16 @@ function hasChildren(button){
     return (button.parent().siblings("ul").size() > 0);
 }
 
+function addNode( id, parent ){
+    parent = if parent !== undefined ? parent : "leftframe";
+    jQuery("#leftframe").jstree("create_node", "#" + parent, "inside", {
+        "attr" : { 
+            "id" : id 
+        },
+        "data" : id,
+    });
+}
+
 function wvUpdateUI()
 {
 // if the tree has not been created but the scene graph (possibly) exists...
