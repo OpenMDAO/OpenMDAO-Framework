@@ -307,9 +307,20 @@ function wvUpdateUI()
         }
 
         var ibody = 0;
-        
-        if( jQuery("#geom_display_body_" + ibody).length === 0 ){
-            addBody(ibody);
+        for(var gprim in g.sceneGraph){
+        var primitiveType = g.scengeGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
+	if( jQuery("#" + gprim).length === 0 ){
+            
+	    if( jQuery("#" + primitiveType).length === 0 ){
+                addNode(primitiveType);
+                jQuery("#" + primitiveType).data("attrs", 1);
+            }
+	    addNode(gprim, primitiveType);
+            jQuery("#" + gprim).data("grpim", g.sceneGraph[gprim]);
+        }
+        }
+        /*if( jQuery("#geom_display_body_" + ibody).length === 0 ){
+            //addBody(ibody);
 
             for (var gprim in g.sceneGraph){
                 var matches = gprim.split(" ");
@@ -320,7 +331,7 @@ function wvUpdateUI()
             jQuery(".grd").click(handleClick("grd"));
             jQuery(".trn").click(handleClick("trn"));
             jQuery(".ori").click(handleClick("ori"));
-        }
+        }*/
     }
 
   if (g.keyPress != -1) 
