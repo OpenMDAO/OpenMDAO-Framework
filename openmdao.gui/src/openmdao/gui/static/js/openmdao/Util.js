@@ -700,6 +700,20 @@ openmdao.Util = {
         poll();
     },
 
+    viewGeometry: function(pathname) {
+        function popupGeom(pathname) {
+            w = openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);
+            openmdao.model.addWindow(w);
+        }
+        if (typeof pathname === "undefined" || !pathname) {
+            openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
+                                           popupGeom);
+        }
+        else {
+            popupGeom(pathname);
+        }
+    },
+
     /*
      * Allow a child object to inherit from a parent object.
      * Make sure to call this method immediately after defining
@@ -713,17 +727,4 @@ openmdao.Util = {
     }
 };
 
-openmdao.viewGeometry = function(pathname) {
-    function popupGeom(pathname) {
-        w = openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);
-        openmdao.model.addWindow(w);
-    }
-    if (typeof pathname === "undefined" || !pathname) {
-        openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
-                                       popupGeom);
-    }
-    else {
-        popupGeom(pathname);
-    }
-};
 

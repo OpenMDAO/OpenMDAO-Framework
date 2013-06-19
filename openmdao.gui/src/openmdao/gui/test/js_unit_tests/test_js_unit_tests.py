@@ -1,7 +1,10 @@
 import sys
 
 # to run interactively, use the following command in directory with jsTestDriver.conf:
-# java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests all
+#   java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests all
+#
+# or to run a specific test:
+#   java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests "test addListener"
 
 # Because Xvfb does not exist on Windows, it is difficult
 #   to do headless testing on Windows. So for now

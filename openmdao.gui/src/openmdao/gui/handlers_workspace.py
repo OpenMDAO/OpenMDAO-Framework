@@ -89,12 +89,11 @@ class CommandHandler(ReqHandler):
                 result = cserver.onecmd(command)
             except Exception as exc:
                 print exc
-                result = sys.exc_info()
+                result += str(sys.exc_info())
             if result:
-                result = str(result) + '\n'
-
-            self.content_type = 'text/html'
-            self.write(result)
+                result += '\n'
+                self.content_type = 'text/html'
+                self.write(result)
 
 
 class EditorHandler(ReqHandler):
@@ -151,7 +150,6 @@ class FileHandler(ReqHandler):
         self.content_type = 'text/html'
         if str(cserver.delete_file(filename)):
             self.set_status(204)  # successful, no data in response
-            self.write()
 
     @web.authenticated
     def post(self, filename):
@@ -189,6 +187,9 @@ class FilesHandler(ReqHandler):
 
     @web.authenticated
     def delete(self):
+        print 'files.delete req:', self.request
+        print 'files.delete arguments:', self.request.arguments
+        print 'files.delete arguments.keys():', self.request.arguments.keys()
         if 'filepaths' not in self.request.arguments.keys():
             self.send_error(400)  # bad request
         else:
@@ -341,18 +342,6 @@ class ObjectsHandler(ReqHandler):
                 break
 
 
-class StreamHandler(ReqHandler):
-    ''' Return the url of the zmq stream server for `stream_name`.
-    '''
-
-    @web.authenticated
-    def get(self, stream_name):
-        url = self.application.server_manager.\
-              get_websocket_url(self.get_sessionid(), stream_name,
-                                '/workspace/'+stream_name+'_stream')
-        self.write(url)
-
-
 class ProjectLoadHandler(ReqHandler):
     ''' GET:  load model from the given project archive,
               or reload remembered project for session if no file given.
@@ -417,17 +406,34 @@ class ProjectHandler(ReqHandler):
             self.redirect('/')
 
 
-class PublishHandler(ReqHandler):
-    ''' GET: tell the server to publish the specified topic/variable.
+class StreamHandler(ReqHandler):
+    ''' GET: get the url of the websocket server for `stream_name`.
     '''
 
     @web.authenticated
-    def get(self):
-        topic = self.get_argument('topic')
-        publish = self.get_argument('publish', default=True)
-        publish = publish in [True, 'true', 'True']
+    def get(self, stream_name):
+        url = self.application.server_manager.\
+              get_websocket_url(self.get_sessionid(), stream_name,
+                                '/workspace/'+stream_name+'_stream')
+        self.write(url)
+
+
+class SubscriptionHandler(ReqHandler):
+    ''' GET: get a subscription to a topic
+             (messages will be published via the pub websocket)
+
+        DELETE: remove a subscription to a topic
+    '''
+
+    @web.authenticated
+    def get(self, topic):
         cserver = self.get_server()
-        cserver.add_subscriber(topic, publish)
+        cserver.add_subscriber(escape.url_unescape(topic), True)
+
+    @web.authenticated
+    def delete(self, topic):
+        cserver = self.get_server()
+        cserver.add_subscriber(escape.url_unescape(topic), False)
 
 
 class TypeHandler(ReqHandler):
@@ -491,55 +497,44 @@ class UploadHandler(ReqHandler):
         self.render('workspace/upload.html', path=path)
 
 
-class ValueHandler(ReqHandler):
-    ''' GET:    get a value for the given pathname.
-        TODO:   combine with ComponentHandler? Handle Containers as well?
+class VariableHandler(ReqHandler):
+    ''' GET:    get the value of a variable.
+
+        PUT:    set the value of a variable.
     '''
 
     @web.authenticated
-    def get(self, name):
+    def get(self, pathname):
         cserver = self.get_server()
-        value = cserver.get_value(name)
+        value = cserver.get_value(escape.url_unescape(pathname))
         self.content_type = 'application/javascript'
         self.write(value)
 
-
-class VariableHandler(ReqHandler):
-    ''' Get a command to set a variable, send it to the cserver, and return response.
-    '''
-
     @web.authenticated
-    def post(self):
-        history = ''
-        lhs = self.get_argument('lhs', default=None)
+    def post(self, pathname):
         rhs = self.get_argument('rhs', default=None)
         vtype = self.get_argument('type', default=None)
-        if (lhs and rhs and vtype):
-            obj, dot, attr = lhs.partition('.')
+        if (rhs and vtype):
+            obj, dot, var = escape.url_unescape(pathname).partition('.')
             if vtype == 'str':
-                command = '%s.set(%r, %r)' % (obj, attr, rhs)
+                command = '%s.set(%r, %r)' % (obj, var, rhs)
             else:
-                command = '%s.set(%r, %s)' % (obj, attr, rhs)
+                command = '%s.set(%r, %s)' % (obj, var, rhs)
 
-        # if there is a command, execute it & get the result
-        if command:
             result = ''
             try:
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception as exc:
                 print exc
-                result = sys.exc_info()
+                result += str(sys.exc_info())
             if result:
-                history = history + str(result) + '\n'
+                result += '\n'
+                self.content_type = 'text/html'
+                self.write(result)
 
-        self.content_type = 'text/html'
-        self.write(history)
-
-    @web.authenticated
-    def get(self):
-        self.content_type = 'text/html'
-        self.write('')  # not used for now, could render a form
+        else:
+            self.send_error(400)  # bad request
 
 
 class WorkspaceHandler(ReqHandler):
@@ -555,30 +550,35 @@ class WorkspaceHandler(ReqHandler):
 
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
-    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/variable',         VariableHandler),
-    web.url(r'/workspace/editor/?',         EditorHandler),
-    web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
-    web.url(r'/workspace/project/?',        ProjectHandler),
-    web.url(r'/workspace/publish/?',        PublishHandler),
+
+
+    # tools
+    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/editor/?',         EditorHandler),
+    web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
-    web.url(r'/workspace/value/(.*)',       ValueHandler),
+
 
     # new and improved
-    web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/command',                                          CommandHandler),
 
-    web.url(r'/workspace/files/?',          FilesHandler),
-    web.url(r'/workspace/file/(.*)',        FileHandler),
+    web.url(r'/workspace/files/?',                                          FilesHandler),
+    web.url(r'/workspace/file/(.*)',                                        FileHandler),
 
     web.url(r'/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?',  ObjectHandler),
 
-    web.url(r'/workspace/stream/(.*)',      StreamHandler),
+    web.url(r'/workspace/stream/(.*)',                                      StreamHandler),
 
-    web.url(r'/workspace/types/?',          TypesHandler),
+    web.url(r'/workspace/subscription/(.*)',                                SubscriptionHandler),
+
+    web.url(r'/workspace/types/?',                                          TypesHandler),
     web.url(r'/workspace/type/(?P<typename>[^\/]+)/?(?P<param>[^\/]+)?',    TypeHandler),
+
+    web.url(r'/workspace/variable/(.*)',                                    VariableHandler),
 ]
 
 
@@ -594,8 +594,7 @@ handlers = [
 # POST   file/name, {rename: newname}
 # DELETE file/name
 
-GET    objects
-POST   objects/name, {parent: parent, type: type, args: args}
+# GET    objects
 
 # GET    object/name
 # GET    object/name/connections
@@ -613,15 +612,14 @@ POST   objects/name, {parent: parent, type: type, args: args}
 # GET    stream/pub
 # GET    stream/out
 
-GET    subscription/name
-DELETE subscription/name
+# GET    subscription/name
+# DELETE subscription/name
 
 GET    project/id
 POST   project/id, {version: previous_version} # no version means commit
 
-GET    variable/name
-PUT    variable/name, {value: value}
-POST   variable/name, {parent: parent} ??
+# GET    variable/name
+# PUT    variable/name, {value: value}
 
 
 
@@ -631,6 +629,4 @@ GET editor
 GET upload
 GET addons
 GET close
-GET test
-GET base
 """

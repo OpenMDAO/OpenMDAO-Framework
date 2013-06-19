@@ -225,11 +225,11 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             // if it's a geometry file, let them load it into viewer
             // FIXME: ultimately the test of whether a file is a geometry file
             //     should use information from geometry viewer plugins that have
-            //     been loaded in ther server...
+            //     been loaded in the server...
             if (/.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { openmdao.viewGeometry(path.replace(/\\/g,'/')); }
+                    "action" : function(node) { openmdao.Util.viewGeometry(path.replace(/\\/g,'/')); }
                 };
             }
 
@@ -310,11 +310,11 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
                 // children[1].children[0] is the ins tag inside the a tag and that is the
                 //    icon that needs to be set, which we do by adding a class and
                 //    adding some CSS into mdao-styles.css
-                if ( this.children[1].getAttribute("class") === "folder" ) {
+                if (this.children[1].getAttribute("class") === "folder") {
                     this.children[1].children[0].addClass( "jstree-folder" ) ;
                 }
                 else {
-                    if ( this.children[1].text.match("\.py$")  ) {
+                    if (this.children[1].text.match("\.py$") ) {
                         this.children[1].children[0].addClass( "jstree-python-file" ) ;
                     } else {
                         this.children[1].children[0].addClass( "jstree-file" ) ;

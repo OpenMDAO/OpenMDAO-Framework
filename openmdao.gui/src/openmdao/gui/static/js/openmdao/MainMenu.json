@@ -25,7 +25,7 @@
       "items": [
         { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor')"},
         { "text": "Plot Variable", "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
-        { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.viewGeometry();"},
+        { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.Util.viewGeometry();"},
         { "text": "Show Drawing",  "id": "tools-drawing",   "onclick": "openmdao.DrawingFrame.prototype.chooseVariable();"},
         { "text": "Show Log",      "id": "tools-log",       "onclick": "openmdao.DisplayLogFrame();"}
       ]

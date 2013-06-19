@@ -129,8 +129,7 @@ openmdao.Model=function(listeners_ready) {
             ! /.exec_state$/.test(topic) && topic.charAt(0) !== '@') {
             jQuery.ajax({
                 type: 'GET',
-                url:  'publish',
-                data: {'topic': topic, 'publish': true}
+                url:  'subscription/'+encodeURIComponent(topic)
             });
         }
     };
@@ -148,9 +147,8 @@ openmdao.Model=function(listeners_ready) {
             if (topic.length > 0 && ! /.exec_state$/.test(topic) &&
                 topic.charAt(0) !== '@') {
                 jQuery.ajax({
-                    type: 'GET',
-                    url:  'publish',
-                    data: {'topic': topic, 'publish': false}
+                    type: 'DELETE',
+                    url:  'subscription/'+encodeURIComponent(topic)
                 });
             }
         }
@@ -404,20 +402,6 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-    /** set connections between two components in an assembly */
-    this.setConnections = function(pathname, src_name ,dst_name, connections, callback ,errorHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'connections/'+pathname,
-            dataType: 'json',
-            data: { 'src_name': src_name, 'dst_name': dst_name,
-                    'connections': connections },
-            success: callback,
-            error: errorHandler
-        });
-        self.setModified(true);
-    };
-
     /** create or replace object with pathname with a new object of the specified type */
     this.putObject = function(pathname, typepath, args, callback, errorHandler) {
         jQuery.ajax({
@@ -456,29 +440,20 @@ openmdao.Model=function(listeners_ready) {
         self.setModified(true);
     };
 
-    /** issue the specified command against the model */
-    this.setVariableValue = function(lhs, rhs, type, callback, errorHandler, completeHandler) {
+    /** set the value of the variable with to rhs */
+    this.setVariableValue = function(pathname, rhs, type, callback, errorHandler, completeHandler) {
         jQuery.ajax({
             type: 'POST',
-            url:  'variable',
-            data: { 'lhs': lhs,
-                    'rhs': rhs,
-                    'type': type
-                  },
+            url:  'variable/'+encodeURIComponent(pathname),   // escape any brackets, etc.
+            data: {
+                'rhs': rhs,
+                'type': type   // need to know if it's a string vs. an expression
+            },
             success: callback,
             error: errorHandler,
             complete: completeHandler
         });
         self.setModified(true);
-    };
-
-    /** get any queued output from the model */
-    this.getOutput = function(callback, errorHandler) {
-        jQuery.ajax({
-            url: 'output',
-            success: callback,
-            error: errorHandler
-        });
     };
 
     /** get a recursize file listing of the model working directory (as JSON) */
