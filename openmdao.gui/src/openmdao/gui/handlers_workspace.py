@@ -174,7 +174,7 @@ class FilesHandler(ReqHandler):
         DELETE: delete files
                 required arguments are:
                     filepaths - the pathnames of the files to delete
-
+                returns 'True' if all files were successfully deleted
     '''
 
     @web.authenticated
@@ -187,13 +187,14 @@ class FilesHandler(ReqHandler):
 
     @web.authenticated
     def delete(self):
-        print 'files.delete req:', self.request
-        print 'files.delete arguments:', self.request.arguments
-        print 'files.delete arguments.keys():', self.request.arguments.keys()
-        if 'filepaths' not in self.request.arguments.keys():
+        # should be able to use self.get_arguments('filepaths'),
+        # but it doesn't seem to work as advertised so...
+        args = escape.json_decode(self.request.body)
+
+        if 'filepaths' not in args.keys():
             self.send_error(400)  # bad request
         else:
-            filepaths = escape.json_decode(self.request.body)['filepaths']
+            filepaths = args['filepaths']
 
             cserver = self.get_server()
             self.content_type = 'text/html'
@@ -607,6 +608,7 @@ handlers = [
 # POST   object/name   (exec)
 
 # GET    types
+
 # GET    type/name/signature
 
 # GET    stream/pub

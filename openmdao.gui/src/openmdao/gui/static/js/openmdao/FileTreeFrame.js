@@ -122,6 +122,15 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
         jQuery.fileDownload('file'+pathname+'?download=True');
     }
 
+    /** delete selected files **/
+    function deleteSelectedFiles() {
+        var filepaths = [];
+        _self.elm.find('a.jstree-clicked').each(function() {
+            filepaths.push(this.getAttribute("path"));
+        });
+        model.removeFiles(filepaths);
+    };
+
     /** toggle the hidden files filter */
     function toggleFilter() {
         _filter_active = !_filter_active;
@@ -268,6 +277,14 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             };
         }
 
+        // if they have selected multiple files, offer multiple file delete
+        if (_self.elm.find('a.jstree-clicked').length > 1) {
+            menu.deleteSelectedFiles = {
+                "label"  : 'Delete Selected Files',
+                "action" : function(node) { deleteSelectedFiles(); }
+            };
+        }
+
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
             "action" :  function(node) { toggleFilter(); }
@@ -314,7 +331,7 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
                     this.children[1].children[0].addClass( "jstree-folder" ) ;
                 }
                 else {
-                    if (this.children[1].text.match("\.py$") ) {
+                    if (this.children[1].text.match("\.py$")) {
                         this.children[1].children[0].addClass( "jstree-python-file" ) ;
                     } else {
                         this.children[1].children[0].addClass( "jstree-file" ) ;
@@ -471,7 +488,7 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
     filechooser.focus();
     if (typeof openmdao_test_mode !== 'undefined') {
         // if testing, make the file chooser visible for selenium
-        filechooser.css({'left':'100px','top':'100px'});
+        filechooser.css({'left':'100px', 'top':'100px'});
     }
     else {
         filechooser.click();
@@ -480,14 +497,12 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
 };
 
 /** delete selected files **/
-openmdao.FileTreeFrame.prototype.deleteFiles = function(path) {
-
-    var filepaths = [] ;
-
-    jQuery('#' + 'ftree_pane' + ' a.jstree-clicked').each(function () {
-        filepaths.push( this.getAttribute("path")) ;
+openmdao.FileTreeFrame.prototype.deleteFiles = function() {
+    var filepaths = [];
+    // FIXME: hard coded element ID
+    jQuery('#ftree_pane a.jstree-clicked').each(function() {
+        filepaths.push(this.getAttribute("path"));
     });
     openmdao.model.removeFiles(filepaths);
-
 };
 

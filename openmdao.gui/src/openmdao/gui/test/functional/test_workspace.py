@@ -995,7 +995,7 @@ def _test_rename_file(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_removefiles(browser):
+def _test_remove_files(browser):
     # Adds multiple files to the project.
     project_dict, workspace_page = startup(browser)
 

@@ -577,21 +577,17 @@ openmdao.Model=function(listeners_ready) {
 
     /** delete files with specified path from the model working directory */
     this.removeFiles = function(filepaths, callback) {
-
         jQuery.ajax({
             type: 'DELETE',
             url:  'files',
-            data: JSON.stringify( { 'filepaths': filepaths } ),
+            data: JSON.stringify({'filepaths': filepaths}),
             contentType: 'application/json; charset=utf-8',
-            dataType: 'json',
             success: callback,
             error: function(jqXHR, textStatus, errorThrown) {
-                        // not sure why this always returns a false error
-                       debug.warn("model.removeFiles",
-                                  jqXHR,textStatus,errorThrown);
-                   }
-            });
-            self.setModified(true);
+                debug.error("model.removeFiles", jqXHR, textStatus, errorThrown);
+            }
+        });
+        self.setModified(true);
     };
 
     /** execute a component */
