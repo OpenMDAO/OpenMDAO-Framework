@@ -1899,8 +1899,9 @@ class Component(Container):
             return
 
         # Optional specification of the Jacobian
+        # (Subassemblies do this by default)
         input_keys, output_keys, J = self.provideJ()
-        print input_keys, output_keys, J
+
         ibounds = {}
         nvar = 0
         for key in input_keys:
