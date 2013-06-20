@@ -308,7 +308,7 @@ class DependencyGraph(object):
         compset = set(comps)
         fullset = set(comps)
         
-        while compset:
+        while compset and complist:
             conn = self.find_all_connecting(complist[0], complist[-1])
             fullset.update(conn)
             compset -= conn
