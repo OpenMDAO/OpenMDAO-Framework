@@ -514,22 +514,18 @@ class Assembly(Component):
         name of a Component, remove all connections from all of its inputs
         and outputs.
         """
-        to_remove = []
-        if varpath2 is None:
-            if self.parent and '.' not in varpath:  # boundary var. make sure it's disconnected in parent
-                self.parent.disconnect('.'.join([self.name, varpath]))
-            graph = self._exprmapper._exprgraph
-            to_remove = set()
-            for expr in self._exprmapper.find_referring_exprs(varpath):
-                to_remove.update(graph.edges(expr))
-                to_remove.update(graph.in_edges(expr))
-        else:
-            to_remove = set([(varpath, varpath2)])
+        if varpath2 is None and self.parent and '.' not in varpath:  # boundary var. make sure it's disconnected in parent
+            self.parent.disconnect('.'.join([self.name, varpath]))
 
-        to_remove.update(self._exprmapper.disconnect(varpath, varpath2))
+        to_remove = self._exprmapper.disconnect(varpath, varpath2)
 
-        for u, v in to_remove:
-            super(Assembly, self).disconnect(u, v)
+        for u, v in self._depgraph.list_connections(show_external=True):
+            if (u,v) in to_remove:
+                super(Assembly, self).disconnect(u, v)
+                
+        for u, v in self._depgraph.list_autopassthroughs():
+            if (u,v) in to_remove:
+                super(Assembly, self).disconnect(u, v)
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,

@@ -145,7 +145,7 @@ class ExprMapper(object):
             else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
                 src_exprs = set(self.find_referring_exprs(srcpath))
                 dest_exprs = set(self.find_referring_exprs(destpath))
-                to_remove.add([(src, dest) for src, dest in graph.edges()
+                to_remove.update([(src, dest) for src, dest in graph.edges()
                                                if src in src_exprs and dest in dest_exprs])
 
         added = []

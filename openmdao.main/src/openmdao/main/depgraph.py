@@ -172,16 +172,13 @@ class DependencyGraph(object):
                                 stack.append((dest, outs))
         return outset
 
-    def list_connections(self, show_passthrough=True):
+    def list_connections(self, show_passthrough=True, show_external=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
         for u, v, data in self._graph.edges(data=True):
             link = data['link']
-            # leave out external connections to boundary
-            if v == '@bin' or u == '@bout': 
-                continue
-            elif u == '@bin':
+            if u == '@bin':
                 if show_passthrough:
                     for dest, src in link._dests.items():
                         vpath, expr = _split_expr(src)
@@ -191,6 +188,16 @@ class DependencyGraph(object):
                 if show_passthrough:
                     for dest, src in link._dests_ext.items():
                         if '.' not in dest:
+                            conns.append((src, dest))
+            elif v == '@bin':  # external connection to input boundary
+                if show_external:
+                    for dest, src in link._dests.items():
+                        if '.' not in dest:
+                            conns.append((src, dest))
+            elif u == '@bout': # external connection from output boundary
+                if show_external:
+                    for dest, src in link._dests.items():
+                        if '.' not in src:
                             conns.append((src, dest))
             else:
                 for dest, src in link._dests_ext.items():

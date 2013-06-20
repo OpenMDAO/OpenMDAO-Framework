@@ -333,8 +333,9 @@ class Container(SafeHasTraits):
             try:
                 for child, childsrc, childdest in child_connections:
                     child.disconnect(childsrc, childdest)
-            except:
-                pass
+            except Exception as err:
+                self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
+                                   (childsrc, childdest, srcpath, destpath, err))
             self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
                                  RuntimeError)
 
