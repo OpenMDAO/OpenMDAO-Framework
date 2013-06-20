@@ -56,14 +56,14 @@ def calc_gradient(wflow, inputs, outputs):
     """    
 
     # New edges for parameters
-    input_edges = [('in', a) for a in inputs]
+    input_edges = [('@in', a) for a in inputs]
     additional_edges = set(input_edges)
     
     # New edges for responses
     out_edges = [a for a, b in wflow.get_interior_edges()]
     for item in outputs:
         if item not in out_edges:
-            additional_edges.add((item, 'out'))
+            additional_edges.add((item, '@out'))
     
     wflow._additional_edges = additional_edges
             
@@ -87,7 +87,7 @@ def calc_gradient(wflow, inputs, outputs):
     # Forward mode, solve linear system for each parameter
     for j, param in enumerate(inputs):
         RHS = zeros((nEdge, 1))
-        i1, i2 = wflow.bounds[('in', param)]
+        i1, i2 = wflow.bounds[('@in', param)]
         for i in range(i1, i2):
             RHS[i, 0] = 1.0
     

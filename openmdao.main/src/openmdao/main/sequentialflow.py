@@ -145,7 +145,7 @@ class SequentialWorkflow(Workflow):
         nEdge = 0
         self.bounds = {}
         for edge in self.get_interior_edges():
-            if edge[0]=='in':
+            if edge[0]=='@in':
                 src = edge[1]
             else:
                 src = edge[0]
@@ -263,12 +263,12 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src != 'in':
+            if src != '@in':
                 comp_name, dot, var_name = src.partition('.')
                 outputs[comp_name][var_name] = arg[i1:i2]
                 inputs[comp_name][var_name] = arg[i1:i2]
 
-            if target != 'out':
+            if target != '@out':
                 comp_name, dot, var_name = target.partition('.')
                 inputs[comp_name][var_name] = arg[i1:i2]
 
@@ -286,7 +286,7 @@ class SequentialWorkflow(Workflow):
         # Each parameter adds an equation
         if hasattr(self._parent, 'get_parameters'):
             for param in self._parent.get_parameters():
-                i1, i2 = self.bounds[('in', param)]
+                i1, i2 = self.bounds[('@in', param)]
                 comp_name, dot, var_name = param.partition('.')
                 for i in range(i1, i2):
                     outputs[comp_name][var_name] = arg[i1:i2]
@@ -297,7 +297,7 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src=='in':
+            if src=='@in':
                 src = target
                 
             comp_name, dot, var_name = src.partition('.')
