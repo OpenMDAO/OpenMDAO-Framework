@@ -191,11 +191,11 @@ class Testcase_derivatives(unittest.TestCase):
         
         top = Assembly()
         top.add('comp', Paraboloid())
-        top.add('fake', Fake())
-        top.connect('comp.f_xy', 'fake.x')
+        #top.add('fake', Fake())
+        #top.connect('comp.f_xy', 'fake.x')
         top.add('driver', SimpleDriver())
-        #top.driver.workflow.add(['comp'])
-        top.driver.workflow.add(['comp', 'fake'])
+        top.driver.workflow.add(['comp'])
+        #top.driver.workflow.add(['comp', 'fake'])
         top.driver.add_parameter('comp.x', low=-1000, 
                                            high=1000)
         top.driver.add_parameter('comp.y', low=-1000, 
