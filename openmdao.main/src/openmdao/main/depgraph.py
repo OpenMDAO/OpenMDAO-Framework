@@ -294,9 +294,28 @@ class DependencyGraph(object):
         comps: list of str
             List of component names
         """
+        if len(comps) < 2:
+            return set()
         
-        in_set = set(self.var_in_edges(comps))
-        return in_set.intersection(self.var_edges(comps))
+        # first, determine if we have any pseudo-components between any
+        # of the specified components
+        
+        # make sure we have an even number of entries
+        complist = list(comps)
+        if len(complist) % 2 != 0:
+            complist.append(complist[-1])
+            
+        compset = set(comps)
+        fullset = set(comps)
+        
+        while compset:
+            conn = self.find_all_connecting(complist[0], complist[-1])
+            fullset.update(conn)
+            compset -= conn
+            complist = complist[1:-1]
+        
+        in_set = set(self.var_in_edges(fullset))
+        return in_set.intersection(self.var_edges(fullset))
         
     def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from 
@@ -468,7 +487,7 @@ class DependencyGraph(object):
             stream.write('%s -> %s\n' % tup)
             for src, dests in link._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
-
+        
     def find_all_connecting(self, start, end):
         """Return the set of all nodes along all paths between 
         start and end.  The start and end nodes are included
