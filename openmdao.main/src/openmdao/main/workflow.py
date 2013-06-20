@@ -130,8 +130,7 @@ class Workflow(object):
         """ Returns an alphabetical list of all output edges that are
         interior to the set of components supplied."""
         
-        names = self.get_names()
-        edge_list = self.scope._depgraph.get_interior_edges(names)
+        edge_list = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
         
         if hasattr(self._parent, 'get_parameters'):
             for param in self._parent.get_parameters():

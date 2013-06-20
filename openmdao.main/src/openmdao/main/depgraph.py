@@ -297,25 +297,8 @@ class DependencyGraph(object):
         if len(comps) < 2:
             return set()
         
-        # first, determine if we have any pseudo-components between any
-        # of the specified components
-        
-        # make sure we have an even number of entries
-        complist = list(comps)
-        if len(complist) % 2 != 0:
-            complist.append(complist[-1])
-            
-        compset = set(comps)
-        fullset = set(comps)
-        
-        while compset and complist:
-            conn = self.find_all_connecting(complist[0], complist[-1])
-            fullset.update(conn)
-            compset -= conn
-            complist = complist[1:-1]
-        
-        in_set = set(self.var_in_edges(fullset))
-        return in_set.intersection(self.var_edges(fullset))
+        in_set = set(self.var_in_edges(comps))
+        return in_set.intersection(self.var_edges(comps))
         
     def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from 
@@ -488,11 +471,31 @@ class DependencyGraph(object):
             for src, dests in link._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
         
+    def find_betweens(self, nodes):
+        """Return a set of nodes that are between nodes in the given list, i.e., the
+        returned nodes have an immediate predecessor and an immediate successor in the
+        given list.
+        """
+        
+        orig = set(nodes)
+        betweens = set()
+        pred = self._graph.pred
+        succ = self._graph.succ
+        
+        for node in self._graph.nodes():
+            if node not in orig:
+                p = orig.intersection(pred[node].keys())
+                s = orig.intersection(succ[node].keys())
+                if p and s:
+                    betweens.add(node)
+        return betweens
+            
     def find_all_connecting(self, start, end):
         """Return the set of all nodes along all paths between 
         start and end.  The start and end nodes are included
         in the set if they're connected.
         """
+        
         if start == end:
             return set()
         graph = self._graph
@@ -504,7 +507,7 @@ class DependencyGraph(object):
             if node in backset:
                 continue
             backset.add(node)
-            tmpset.update(graph.predecessors(node))
+            tmpset.update(graph.pred[node].keys())
         
         tmpset = set([start])
         while tmpset:
@@ -512,7 +515,7 @@ class DependencyGraph(object):
             if node in fwdset:
                 continue
             fwdset.add(node)
-            tmpset.update(graph.successors(node))
+            tmpset.update(graph.succ[node].keys())
         
         return fwdset.intersection(backset)
 

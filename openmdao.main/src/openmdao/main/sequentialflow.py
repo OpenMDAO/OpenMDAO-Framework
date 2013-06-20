@@ -49,9 +49,14 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get_names(self):
-        """Return a list of component names in this workflow."""
-        return self._names[:]
+    def get_names(self, full=False):
+        """Return a list of component names in this workflow.  If full is True,
+        include hidden pseudo-components in the list.
+        """
+        if full:
+            return self._names + list(self.scope._depgraph.find_betweens(self._names))
+        else:
+            return self._names[:]
 
     def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the end of the workflow by name. """
@@ -240,8 +245,7 @@ class SequentialWorkflow(Workflow):
         outputs = {}
 
         # Start with zero-valued dictionaries cotaining keys for all inputs
-        for comp in self:
-            name = comp.name
+        for name in self.get_names(full=True):
             inputs[name] = {}
             outputs[name] = {}
 
