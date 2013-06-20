@@ -1919,7 +1919,7 @@ class Component(Container):
 
         for okey in result:
             for ikey in arg:
-                if ikey not in output_keys:
+                if ikey not in result:
                     i1, i2 = ibounds[ikey]
                     o1, o2 = obounds[okey]
                     if i2 - i1 == 1:
@@ -1939,7 +1939,8 @@ class Component(Container):
                             result[okey] += float(tmp)
                         else:
                             result[okey] += tmp.reshape(result[okey].shape)
-        print "end applyJ", arg, result
+        
+        
 
 def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits

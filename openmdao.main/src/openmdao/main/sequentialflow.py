@@ -250,7 +250,11 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             comp_name, dot, var_name = src.partition('.')
-            outputs[comp_name][var_name] = arg[i1:i2]
+            
+            # Note: src=target means parameter edge.
+            if src != target:
+                outputs[comp_name][var_name] = arg[i1:i2]
+                
             inputs[comp_name][var_name] = arg[i1:i2]
 
             comp_name, dot, var_name = target.partition('.')
@@ -283,13 +287,34 @@ class SequentialWorkflow(Workflow):
             
             comp_name, dot, var_name = src.partition('.')
             result[i1:i2] = outputs[comp_name][var_name]
-        print inputs, outputs, result
+            
         return result
     
-    def calc_gradient(self, inputs, outputs):
+    def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
+        
+        if inputs==None:
+            if hasattr(self._parent, 'get_parameters'):
+                inputs = self._parent.get_parameters().keys()
+            else:
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+            
+        if outputs==None:
+            outputs = []
+            if hasattr(self._parent, 'get_objectives'):
+                outputs.extend(self._parent.get_objectives())
+            if hasattr(self._parent, 'get_ineq_constraints'):
+                outputs.extend(self._parent.get_ineq_constraints())
+            if hasattr(self._parent, 'get_eq_constraints'):
+                outputs.extend(self._parent.get_eq_constraints())
+                
+            if len(outputs)==0:
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+                
         return calc_gradient(self, inputs, outputs)
     
 

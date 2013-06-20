@@ -60,25 +60,45 @@ def calc_gradient(wflow, inputs, outputs):
     
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecFWD,
-                       dtype=float)        
+                       dtype=float)
     
-    RHS = zeros((nEdge, 1))
+    J = zeros((len(outputs), len(inputs)))
     
-    for param in wflow._parent.get_parameters():
+    # Locate the output keys:
+    obounds = {}
+    # This is not efficient, but we need more info on how things 
+    # will work with the pseudocomps.
+    for item in outputs:
+        for edge in wflow.get_interior_edges():
+            if item == edge[0]:
+                obounds[item] = wflow.bounds[edge]
+    
+    # Forward mode, solve linear system for each parameter
+    for j, param in enumerate(inputs):
+        RHS = zeros((nEdge, 1))
         i1, i2 = wflow.bounds[(param, param)]
         for i in range(i1, i2):
             RHS[i, 0] = 1.0
     
-    # Each comp calculates its own derivatives at the current
-    # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
-    
-    # Call GMRES to solve the linear system
-    dx, info = gmres(A, RHS,
-                     tol=1.0e-6,
-                     maxiter=100)
+        # Each comp calculates its own derivatives at the current
+        # point. (i.e., linearizes)
+        wflow.calc_derivatives(first=True)
+        
+        # Call GMRES to solve the linear system
+        dx, info = gmres(A, RHS,
+                         tol=1.0e-6,
+                         maxiter=100)
 
-    print dx
+        print 'dx', dx
+        print wflow.bounds
+        i = 0
+        for item in outputs:
+            k1, k2 = obounds[item]
+            J[i:i+(k2-k1), j] = dx[k1:k2]
+            i += k2-k1
+        
+    return J
+
 #-------------------------------------------
 # Everything below here will be deprecated.
 #-------------------------------------------

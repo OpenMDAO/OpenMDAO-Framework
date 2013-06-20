@@ -16,6 +16,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.util.decorators import add_delegate
+from openmdao.util.testutil import assert_rel_error
 
 class Tree2(VariableTree):
 
@@ -197,13 +198,17 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp', 'fake'])
         top.driver.add_parameter('comp.x', low=-1000, 
                                            high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, 
+                                           high=1000)
 
         top.comp.x = 3
         top.comp.y = 5
         top.comp.run()
         
-        top.driver.workflow.calc_gradient('comp.x', 'comp.f_xy')
-
+        J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'])
+        assert_rel_error(self, J[0,0], 5.0, 0.0001)
+        assert_rel_error(self, J[0,1], 21.0, 0.0001)
+        
 if __name__ == '__main__':
     import nose
     import sys
