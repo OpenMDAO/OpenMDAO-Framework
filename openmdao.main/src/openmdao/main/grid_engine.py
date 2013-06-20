@@ -32,10 +32,10 @@ class GridEngineAllocator(FactoryAllocator):
     Uses :class:`GridEngineServer` instead of :class:`ObjServer` when deploying.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     pattern: string
-        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output,
+        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -169,9 +169,9 @@ class GridEngineAllocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(GridEngineAllocator, self).check_compatibility(resource_desc)

@@ -11,7 +11,7 @@ MetaModel is a class which supports generalized meta modeling
 slot, MetaModel will automatically mirror the inputs and outputs of that 
 component. In other words, MetaModel will have the same inputs and 
 outputs as whatever component is put into the model slot. If you fill 
-only the `model` slot, the a MetaModel instance will act exactly mimic
+only the `model` slot, the MetaModel instance will mimic
 the underlying component.
 
 .. testcode:: MetaModel_model
@@ -39,7 +39,7 @@ will be used for any outputs that don't have a specific surrogate model
 generator associated with them. To associate a surrogate model generator with
 a specific output, you must first fill the `model` slot so that MetaModel can
 determine what your outputs are. When `model` is filled, MetaModel will
-create a dictionary named surrogates where the keys are the variable names in
+create a dictionary named `surrogates` where the keys are the variable names in
 the model, and the values are slots. To override the default surrogate model
 generator for a specific output, just drop the new surrogate model generator
 into the slot whose key is the output of interest. All surrogate model

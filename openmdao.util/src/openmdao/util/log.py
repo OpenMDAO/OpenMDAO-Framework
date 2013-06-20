@@ -1,7 +1,7 @@
 """
 This is just a wrapper for the logging module.
 Messages can be routed to the console via enable_console().
-If the file `logger.cfg` exists, it can be used to configure logging.
+If the file logger.cfg exists, it can be used to configure logging.
 See the Python documentation for `logging.config` for details.
 The example below is equivalent to calling enable_console():
 

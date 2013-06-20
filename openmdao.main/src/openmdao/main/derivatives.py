@@ -3,8 +3,106 @@ This object is used by Component to store derivative information and to
 perform calculations during a Fake Finite Difference.
 """
 
-#public symbols
-__all__ = ['Derivatives', 'derivative_name']
+from openmdao.main.vartree import VariableTree
+
+try:
+    from numpy import array, ndarray, zeros
+    
+    # Can't solve derivatives without these
+    from scipy.sparse.linalg import gmres, LinearOperator
+
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import array, ndarray
+
+
+def flattened_size(name, val):
+    """ Return size of `val` flattened to a 1D float array. """
+    if isinstance(val, float):
+        return 1
+    elif isinstance(val, ndarray):
+        return val.size
+    elif isinstance(val, VariableTree):
+        size = 0
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            size += flattened_size('.'.join((name, key)), value)
+        return size
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+
+def flattened_value(name, val):
+    """ Return `val` as a 1D float array. """
+    if isinstance(val, float):
+        return array([val])
+    elif isinstance(val, ndarray):
+        return val.flatten()
+    elif isinstance(val, VariableTree):
+        vals = []
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            vals.extend(flattened_value('.'.join((name, key)), value))
+        return array(vals)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+
+
+def calc_gradient(wflow, inputs, outputs):
+    """Returns the gradient of the passed outputs with respect to
+    all passed inputs.
+    """    
+
+    # Find dimension of our problem.
+    nEdge = wflow.initialize_residual()
+    
+    A = LinearOperator((nEdge, nEdge),
+                       matvec=wflow.matvecFWD,
+                       dtype=float)
+    
+    J = zeros((len(outputs), len(inputs)))
+    
+    # Locate the output keys:
+    obounds = {}
+    # This is not efficient, but we need more info on how things 
+    # will work with the pseudocomps.
+    for item in outputs:
+        for edge in wflow.get_interior_edges():
+            if item == edge[0]:
+                obounds[item] = wflow.bounds[edge]
+    
+    # Forward mode, solve linear system for each parameter
+    for j, param in enumerate(inputs):
+        RHS = zeros((nEdge, 1))
+        i1, i2 = wflow.bounds[(param, param)]
+        for i in range(i1, i2):
+            RHS[i, 0] = 1.0
+    
+        # Each comp calculates its own derivatives at the current
+        # point. (i.e., linearizes)
+        wflow.calc_derivatives(first=True)
+        
+        # Call GMRES to solve the linear system
+        dx, info = gmres(A, RHS,
+                         tol=1.0e-6,
+                         maxiter=100)
+
+        print 'dx', dx
+        print wflow.bounds
+        i = 0
+        for item in outputs:
+            k1, k2 = obounds[item]
+            J[i:i+(k2-k1), j] = dx[k1:k2]
+            i += k2-k1
+        
+    return J
+
+#-------------------------------------------
+# Everything below here will be deprecated.
+#-------------------------------------------
+
 
 def _check_var(comp, var_name, iotype):
     """ Checks a variable to make sure it's the proper type and iotype."""
@@ -31,7 +129,7 @@ def _check_var(comp, var_name, iotype):
     
 def derivative_name(input_name, output_name):
     """ Assemble the name string for a derivative output based on its input
-    and output name. This name string is used in several places, and is 
+    and output name. This name string is used in several places and is 
     considered part of the API."""
     
     # Sometimes a parameter is connected to multiple inputs.
@@ -260,7 +358,7 @@ class Derivatives(object):
                'no_deriv_check' not in self.parent.get_metadata(invar):
                 input_list.append(invar)
                 
-        if order==1 and self.first_derivatives:
+        if order == 1 and self.first_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.first_derivatives:
@@ -282,7 +380,7 @@ class Derivatives(object):
                         # finalized.
                         print msg
                         
-        elif order==2 and self.second_derivatives:
+        elif order == 2 and self.second_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.second_derivatives:

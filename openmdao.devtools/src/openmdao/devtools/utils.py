@@ -89,7 +89,7 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
 
 
 def tar_dir(dirpath, archive_name, destdir):
-    """Tar up the given directory and put in in the specified destination
+    """Tar up the given directory and put it in the specified destination
     directory.
     """
     dirpath = os.path.abspath(dirpath)

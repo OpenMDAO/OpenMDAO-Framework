@@ -3,14 +3,16 @@ order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
 from openmdao.main.api import VariableTree
+from openmdao.main.derivatives import flattened_size, flattened_value, \
+                                      calc_gradient
 from openmdao.main.workflow import Workflow
 
 try:
-    from numpy import array, ndarray, zeros
+    from numpy import ndarray, zeros
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros
+    from openmdao.main.numpy_fallback import ndarray, zeros
 
 __all__ = ['SequentialWorkflow']
 
@@ -135,7 +137,7 @@ class SequentialWorkflow(Workflow):
         for edge in self.get_interior_edges():
             src = edge[0]
             val = self.scope.get(src)
-            width = self._flatten(src, val).size
+            width = flattened_size(src, val)
             self.bounds[edge] = (nEdge, nEdge+width)
             nEdge += width
 
@@ -147,35 +149,18 @@ class SequentialWorkflow(Workflow):
         return nEdge
 
     def calculate_residuals(self):
-        """Caclulate and return the vector of residuals based on the current
+        """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
         for edge in self.get_interior_edges():
             src, target = edge
             src_val = self.scope.get(src)
-            src_val = self._flatten(src, src_val).reshape(-1, 1)
+            src_val = flattened_value(src, src_val).reshape(-1, 1)
             target_val = self.scope.get(target)
-            target_val = self._flatten(target, target_val).reshape(-1, 1)
+            target_val = flattened_value(target, target_val).reshape(-1, 1)
             i1, i2 = self.bounds[edge]
             self.res[i1:i2] = src_val - target_val
 
         return self.res
-
-    def _flatten(self, name, val):
-        """ Return 'flattened' value for `val`. """
-        if isinstance(val, float):
-            return array([val])
-        elif isinstance(val, ndarray):
-            return val.flatten()
-        elif isinstance(val, VariableTree):
-            vals = []
-            for key in sorted(val.list_vars()):  # Force repeatable order.
-                value = getattr(val, key)
-                vals.extend(self._flatten('.'.join((name, key)), value))
-            return array(vals)
-        else:
-            msg = "Variable %s is of type %s." % (name, type(val)) + \
-                  " This type is not supported by the MDA Solver."
-            self.scope.raise_exception(msg, RuntimeError)
 
     def set_new_state(self, dv):
         """Adds a vector of new values to the current model state at the
@@ -194,14 +179,8 @@ class SequentialWorkflow(Workflow):
             elif isinstance(old_val, ndarray):
                 shape = old_val.shape
                 if len(shape) > 1:
-                    # Arrays that are 2D column vectors
-                    if shape[0] > shape[1]:
-                        new_val = old_val.T + dv[i1:i2]
-                        new_val = new_val.T
-                    # 2D Row vector or matrix
-                    else:
-                        new_val = old_val.flatten() + dv[i1:i2]
-                        new_val.reshape(shape)
+                    new_val = old_val.flatten() + dv[i1:i2]
+                    new_val = new_val.reshape(shape)
                 else:
                     new_val = old_val + dv[i1:i2]
             elif isinstance(old_val, VariableTree):
@@ -237,14 +216,8 @@ class SequentialWorkflow(Workflow):
                 size = value.size
                 i2 = i1 + size
                 if len(shape) > 1:
-                    # Arrays that are 2D column vectors
-                    if shape[0] > shape[1]:
-                        value = value.T + dv[i1:i2]
-                        value = value.T
-                    # 2D Row vector or matrix
-                    else:
-                        value = value.flatten() + dv[i1:i2]
-                        value.reshape(shape)
+                    value = value.flatten() + dv[i1:i2]
+                    value = value.reshape(shape)
                 else:
                     value = value + dv[i1:i2]
                 setattr(vtree, key, value)
@@ -261,51 +234,87 @@ class SequentialWorkflow(Workflow):
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
-        
+
         # Bookkeeping dictionaries
         inputs = {}
         outputs = {}
-        
+
         # Start with zero-valued dictionaries cotaining keys for all inputs
-        for comp in self.__iter__():
+        for comp in self:
             name = comp.name
             inputs[name] = {}
             outputs[name] = {}
-            
+
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
             src, target = edge
             i1, i2 = self.bounds[edge]
+            comp_name, dot, var_name = src.partition('.')
             
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
-            outputs[comp_name][var_name] = arg[i1:i2]
+            # Note: src=target means parameter edge.
+            if src != target:
+                outputs[comp_name][var_name] = arg[i1:i2]
+                
             inputs[comp_name][var_name] = arg[i1:i2]
-            
-            parts = target.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
-            
+
+            comp_name, dot, var_name = target.partition('.')
             inputs[comp_name][var_name] = arg[i1:i2]
-            
+
         # Call ApplyJ on each component
-        for comp in self.__iter__():
+        for comp in self:
             name = comp.name
-            comp.applyJ(inputs[name], outputs[name])
             
+            # A component can also define a preconditioner
+            if hasattr(comp, 'applyMinv'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinv(inputs[name], pre_inputs)
+            
+            comp.applyJ(inputs[name], outputs[name])
+
+        # Each parameter adds an equation
+        if hasattr(self._parent, 'get_parameters'):
+            for param in self._parent.get_parameters():
+                i1, i2 = self.bounds[(param, param)]
+                comp_name, dot, var_name = param.partition('.')
+                for i in range(i1, i2):
+                    outputs[comp_name][var_name] = arg[i1:i2]
+
         # Poke results into the return vector
         result = zeros(len(arg))
         for edge in self.get_interior_edges():
             src, target = edge
             i1, i2 = self.bounds[edge]
-        
-            parts = src.split('.')
-            comp_name = parts[0]
-            var_name = '.'.join(parts[1:])
             
+            comp_name, dot, var_name = src.partition('.')
             result[i1:i2] = outputs[comp_name][var_name]
-        
+            
         return result
+    
+    def calc_gradient(self, inputs=None, outputs=None):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs.
+        """
         
+        if inputs==None:
+            if hasattr(self._parent, 'get_parameters'):
+                inputs = self._parent.get_parameters().keys()
+            else:
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+            
+        if outputs==None:
+            outputs = []
+            if hasattr(self._parent, 'get_objectives'):
+                outputs.extend(self._parent.get_objectives())
+            if hasattr(self._parent, 'get_ineq_constraints'):
+                outputs.extend(self._parent.get_ineq_constraints())
+            if hasattr(self._parent, 'get_eq_constraints'):
+                outputs.extend(self._parent.get_eq_constraints())
+                
+            if len(outputs)==0:
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+                
+        return calc_gradient(self, inputs, outputs)
+    
+

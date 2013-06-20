@@ -15,7 +15,7 @@ from numpy import array, matrix, identity, zeros, ones
 class Discipline(Component): 
     
     c_y_out = Float(1.0,iotype="in",
-                    desc="coefficient for the output variables")
+                    desc="Coefficient for the output variables.")
     
     def __init__(self,prob_size=1): 
         super(Discipline,self).__init__()        
@@ -67,11 +67,10 @@ class Discipline(Component):
         self.Jz = self.C_z/self.c_y_out
         
         
-    def applyJ(self, arg, result):
+    def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian"""
         
         for key in result:
-            result[key] = -arg['y_out']
 
             if 'x' in arg:
                 result[key] += self.Jx.dot(arg['x'])

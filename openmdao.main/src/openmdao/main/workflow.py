@@ -132,6 +132,11 @@ class Workflow(object):
         
         names = self.get_names()
         edge_list = self.scope._depgraph.get_interior_edges(names)
+        
+        if hasattr(self._parent, 'get_parameters'):
+            for param in self._parent.get_parameters():
+                edge_list.add((param, param))
+                
         return sorted(list(edge_list))
     
     def calc_derivatives(self, first=False, second=False, savebase=False):
@@ -164,7 +169,7 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc)
+        """Notifies the Workflow that workflow configuration (dependencies, etc.)
         has changed.
         """
         pass
