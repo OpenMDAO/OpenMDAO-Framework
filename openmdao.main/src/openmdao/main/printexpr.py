@@ -292,6 +292,7 @@ class ExprNameTransformer(ast.NodeTransformer):
         if xform is not None:
             return _get_attr_node(xform.split('.'))
         return super(ExprNameTransformer, self).generic_visit(node)
+        
     
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on

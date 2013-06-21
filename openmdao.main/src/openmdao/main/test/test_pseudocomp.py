@@ -1,9 +1,13 @@
 
 import unittest
 
+import ast
+
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-
+from openmdao.main.pseudocomp import UnitTransformer
+from openmdao.units.units import PhysicalQuantity
+from openmdao.main.printexpr import print_node
 
 class Simple(Component):
     a = Float(iotype='in', units='ft')
@@ -19,8 +23,8 @@ class Simple(Component):
         self.d = -1
 
     def execute(self):
-        self.c = self.a + self.b
-        self.d = self.a - self.b
+        self.c = PhysicalQuantity(self.a + self.b, 'ft').in_units_of('inch').value
+        self.d = PhysicalQuantity(self.a - self.b, 'ft').in_units_of('inch').value
 
 class SimpleNoUnits(Component):
     a = Float(iotype='in')
@@ -100,8 +104,8 @@ class PseudoCompTestCase(unittest.TestCase):
         top.comp1.a = 7.
         top.comp1.b = 3.
         top.run()
-        self.assertEqual(top.comp1.c, 10.)
-        
+        self.assertAlmostEqual(top.comp1.c, 120.)
+        self.assertAlmostEqual(top.comp2.a, 10.)
         
     def test_multi_src(self):
         top = _simple_model()
@@ -127,6 +131,37 @@ class PseudoCompTestCase(unittest.TestCase):
     # listing connections without pseudocomps (will have multiple srcs connected to one dest)
     # expr with array index ref
        
+
+class UnitXformerTestCase(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_simple_conversion(self):
+        node = ast.parse('a')
+        meta = { 'a': { 'units': 'ft'}, 'b': { 'units': 'cm'} }
+        utf = UnitTransformer(meta, 'inch')
+        cnv = utf.visit(node)
+        newexpr = print_node(cnv)
+        self.assertEqual(newexpr, 'a*12.0')
+
+    def test_scaler_adder_conversion(self):
+        node = ast.parse('a')
+        meta = { 'a': { 'units': 'degC'}}
+        utf = UnitTransformer(meta, 'degF')
+        cnv = utf.visit(node)
+        self.assertEqual(print_node(cnv), 'a*1.8+32.0')
+        
+    def test_multi_scaler_adder_conversion(self):
+        node = ast.parse('a*b')
+        meta = { 'a': { 'units': 'degC'}, 'b': { 'units': 'degC'}}
+        utf = UnitTransformer(meta, 'degF')
+        cnv = utf.visit(node)
+        self.assertEqual(print_node(cnv), '(a*1.8+32.0)*(b*1.8+32.0)')
+
+
 
 
 if __name__ == '__main__':

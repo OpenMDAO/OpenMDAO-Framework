@@ -82,13 +82,8 @@ class ExprTransformer(ast.NodeTransformer):
         if self.expreval.is_local(name):
             return node
         
-        #scope = self.expreval.scope
-        #if scope:
-        #parts = name.split('.',1)
         names = ['scope']
         self.expreval.var_names.add(name)
-        #else:
-            #raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
@@ -540,8 +535,8 @@ class ExprEvaluator(object):
     
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect to 
-        each of the referenced varpaths. The gradient is calculated by 1st order central
-        difference for now. 
+        each of the referenced varpaths. The gradient is calculated by 1st order 
+        central difference for now. 
         
         stepsize: float
             Step size for finite difference.
@@ -554,7 +549,7 @@ class ExprEvaluator(object):
         scope = self._get_updated_scope(scope)
         inputs = list(self.refs(copy=False))
 
-        if wrt==None:
+        if wrt is None:
             wrt = inputs
         elif isinstance(wrt, str):
             wrt = [wrt]
