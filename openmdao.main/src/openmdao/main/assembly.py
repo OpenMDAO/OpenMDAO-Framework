@@ -891,12 +891,48 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
-        """ Overides the component's version of this function. An assembly
-        must initiate the call of calc_derivatives on all components in its
-        driver's workflow."""
-
-        self.driver.calc_derivatives(first, second, savebase)
+    def linearize(self):
+        '''An assembly calculates its Jacobian by calling the calc_gradient
+        method on its base driver.'''
+        
+        input_keys = []
+        output_keys = []
+        for src, target in self.list_connections():
+            if '.' in src:
+                output_keys.append(src)
+            elif '.' in target:
+                input_keys.append(target)
+            else:
+                msg = "Something wrong with this assembly connection: " + \
+                      "'%s' and '%s' " % (src, target)
+                raise RuntimeError(msg)
+                
+        self.J = self.driver.calc_gradient(input_keys, output_keys)
+        
+    def provideJ(self):
+        '''Provides the Jacobian calculated in linearize().'''
+        
+        input_keys = []
+        output_keys = []
+        for src, target in self.list_connections():
+            if '.' in src:
+                output_keys.append(target)
+            elif '.' in target:
+                input_keys.append(src)
+            else:
+                msg = "Something wrong with this assembly connection: " + \
+                      "'%s' and '%s' " % (src, target)
+                raise RuntimeError(msg)
+            
+        return input_keys, output_keys, self.J
+    
+    # KTM - This is deprecated in favor of the Component's behavior.
+    #def calc_derivatives(self, first=False, second=False, savebase=False):
+    #    """ Overides the component's version of this function. An assembly
+    #    must initiate the call of calc_derivatives on all components in its
+    #    driver's workflow."""
+    #
+    #    self.driver.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each

@@ -190,6 +190,25 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0,0], 5.0, 0.0001)
         assert_rel_error(self, J[0,1], 21.0, 0.0001)
 
+    def test_nested(self):
+        
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp', Paraboloid())
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        top.nest.create_passthrough('comp.f_xy')
+        top.nest.x = 3
+        top.nest.y = 5
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                              outputs=['nest.f_xy'])
+        assert_rel_error(self, J[0,0], 5.0, 0.0001)
+        assert_rel_error(self, J[0,1], 21.0, 0.0001)
+
     def test_large_dataflow(self):
         
         self.top = set_as_top(Assembly())
