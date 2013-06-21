@@ -14,7 +14,7 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray
+    from openmdao.main.numpy_fallback import array, ndarray, zeros
 
 
 def flattened_size(name, val):
@@ -84,6 +84,10 @@ def calc_gradient(wflow, inputs, outputs):
                 obounds[item] = wflow.bounds[edge]
                 break
             
+    # Each comp calculates its own derivatives at the current
+    # point. (i.e., linearizes)
+    wflow.calc_derivatives(first=True)
+    
     # Forward mode, solve linear system for each parameter
     for j, param in enumerate(inputs):
         RHS = zeros((nEdge, 1))
@@ -91,10 +95,6 @@ def calc_gradient(wflow, inputs, outputs):
         for i in range(i1, i2):
             RHS[i, 0] = 1.0
     
-        # Each comp calculates its own derivatives at the current
-        # point. (i.e., linearizes)
-        wflow.calc_derivatives(first=True)
-        
         # Call GMRES to solve the linear system
         dx, info = gmres(A, RHS,
                          tol=1.0e-6,

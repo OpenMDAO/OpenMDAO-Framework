@@ -7,6 +7,12 @@ from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator, _expr_dict
 
+try:
+    from numpy import zeros
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import zeros
 
 class ExecComp(Component):
     """Given a list of assignment statements, this component creates
@@ -168,6 +174,36 @@ class ExecCompWithDerivatives(Component):
         if self.sleep:
             time.sleep(self.sleep)            
     
+    def linearize(self):
+        '''Calculate the Jacobian'''
+        
+        global _expr_dict
+        
+        for expr in self.derivative_codes:
+            exec(expr, _expr_dict, self.__dict__ )
+
+        inputs = [x[0] for x in self.items(framework_var=None, iotype='in')]
+        outputs = [x[0] for x in self.items(framework_var=None, iotype='out')]
+        self.J = zeros((len(outputs), len(inputs)))
+        
+        for item in sorted(self.derivative_names):
+            
+            inp = inputs.index(item[2])
+            outp = outputs.index(item[1])
+            
+            self.J[outp, inp] = getattr(self, item[0])
+            
+        if self.dsleep:
+            time.sleep(self.dsleep)
+            
+    def provideJ(self):
+        
+        input_keys = [x[0] for x in self.items(framework_var=None, 
+                                               iotype='in')]
+        output_keys = [x[0] for x in self.items(framework_var=None, 
+                                                iotype='out')]
+        return input_keys, output_keys, self.J
+            
     def calculate_first_derivatives(self):
         ''' Calculate the first derivatives '''
         

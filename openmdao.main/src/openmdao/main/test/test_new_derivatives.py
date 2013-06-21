@@ -161,23 +161,6 @@ class Paraboloid(Component):
         return input_keys, output_keys, self.J
 
 
-class Fake(Component):
-    
-    x = Float(iotype='in')
-    y = Float(iotype='out')
-    
-    def execute(self):
-        self.y = self.x
-        
-    def linearize(self):
-        self.J = array([[1.0, 0.0], [0.0, 1.0]])
-        
-    def provideJ(self):
-        input_keys = ('x')
-        output_keys = ('y')
-        return input_keys, output_keys, self.J
-        
-    
 @add_delegate(HasParameters, HasObjective)
 class SimpleDriver(Driver):
     """Driver with Parameters"""
@@ -240,11 +223,8 @@ class Testcase_derivatives(unittest.TestCase):
         
         top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
-        #top.add('fake', Fake())
-        #top.connect('comp.f_xy', 'fake.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
-        #top.driver.workflow.add(['comp', 'fake'])
         top.driver.add_parameter('comp.x', low=-1000, 
                                            high=1000)
         top.driver.add_parameter('comp.y', low=-1000, 
