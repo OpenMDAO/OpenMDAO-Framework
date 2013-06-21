@@ -284,10 +284,10 @@ class SequentialWorkflow(Workflow):
             comp.applyJ(inputs[name], outputs[name])
 
         # Each parameter adds an equation
-        if hasattr(self._parent, 'get_parameters'):
-            for param in self._parent.get_parameters():
-                i1, i2 = self.bounds[('@in', param)]
-                comp_name, dot, var_name = param.partition('.')
+        for edge in self._additional_edges:
+            if edge[0] == '@in':
+                i1, i2 = self.bounds[edge]
+                comp_name, dot, var_name = edge[1].partition('.')
                 for i in range(i1, i2):
                     outputs[comp_name][var_name] = arg[i1:i2]
 
