@@ -4,7 +4,7 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 from openmdao.main.api import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      calc_gradient
+                                      calc_gradient, applyJ
 from openmdao.main.workflow import Workflow
 
 try:
@@ -26,7 +26,8 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
         # Bookkeeping for calculating the residual.
-        self._severed_edges = None
+        self._severed_edges = set()
+        self._additional_edges = []
         self.res = None
         self.bounds = None        
 
@@ -133,6 +134,14 @@ class SequentialWorkflow(Workflow):
         """Remove all components from this workflow."""
         self._names = []
 
+    def get_interior_edges(self):
+        """ Returns an alphabetical list of all output edges that are
+        interior to the set of components supplied."""
+        
+        edge_list = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
+                
+        return sorted(list(edge_list.union(self._additional_edges)))
+
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
@@ -140,7 +149,10 @@ class SequentialWorkflow(Workflow):
         nEdge = 0
         self.bounds = {}
         for edge in self.get_interior_edges():
-            src = edge[0]
+            if edge[0]=='@in':
+                src = edge[1]
+            else:
+                src = edge[0]
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.bounds[edge] = (nEdge, nEdge+width)
@@ -253,32 +265,31 @@ class SequentialWorkflow(Workflow):
         for edge in self.get_interior_edges():
             src, target = edge
             i1, i2 = self.bounds[edge]
-            comp_name, dot, var_name = src.partition('.')
             
-            # Note: src=target means parameter edge.
-            if src != target:
+            if src != '@in':
+                comp_name, dot, var_name = src.partition('.')
                 outputs[comp_name][var_name] = arg[i1:i2]
-                
-            inputs[comp_name][var_name] = arg[i1:i2]
+                inputs[comp_name][var_name] = arg[i1:i2]
 
-            comp_name, dot, var_name = target.partition('.')
-            inputs[comp_name][var_name] = arg[i1:i2]
+            if target != '@out':
+                comp_name, dot, var_name = target.partition('.')
+                inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyJ on each component
-        for comp in self:
-            name = comp.name
+        for name in self.get_names(full=True):
+            comp = getattr(self.scope, name)
             
             # A component can also define a preconditioner
             if hasattr(comp, 'applyMinv'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinv(inputs[name], pre_inputs)
             
-            comp.applyJ(inputs[name], outputs[name])
+            applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
         if hasattr(self._parent, 'get_parameters'):
             for param in self._parent.get_parameters():
-                i1, i2 = self.bounds[(param, param)]
+                i1, i2 = self.bounds[('@in', param)]
                 comp_name, dot, var_name = param.partition('.')
                 for i in range(i1, i2):
                     outputs[comp_name][var_name] = arg[i1:i2]
@@ -289,6 +300,9 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
+            if src=='@in':
+                src = target
+                
             comp_name, dot, var_name = src.partition('.')
             result[i1:i2] = outputs[comp_name][var_name]
             

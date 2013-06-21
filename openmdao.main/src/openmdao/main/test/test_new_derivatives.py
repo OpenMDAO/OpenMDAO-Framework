@@ -15,6 +15,7 @@ from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.derivatives import applyJ
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 
@@ -112,7 +113,7 @@ class Testcase_applyJ(unittest.TestCase):
             inputs['vvt.a1'] = 0
             inputs['vvt.vt1.d1'] = zeros((1, 2))
 
-            comp.applyJ(inputs, outputs)
+            applyJ(comp, inputs, outputs)
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -239,11 +240,11 @@ class Testcase_derivatives(unittest.TestCase):
         
         top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
-        top.add('fake', Fake())
-        top.connect('comp.f_xy', 'fake.x')
+        #top.add('fake', Fake())
+        #top.connect('comp.f_xy', 'fake.x')
         top.add('driver', SimpleDriver())
-        #top.driver.workflow.add(['comp'])
-        top.driver.workflow.add(['comp', 'fake'])
+        top.driver.workflow.add(['comp'])
+        #top.driver.workflow.add(['comp', 'fake'])
         top.driver.add_parameter('comp.x', low=-1000, 
                                            high=1000)
         top.driver.add_parameter('comp.y', low=-1000, 
@@ -269,14 +270,14 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp1', 'comp2'])
         
         top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
-        #top.driver.add_objective('comp2.y')
+        top.driver.add_objective('comp2.y')
         
         top.comp1.x = 2.0
         top.run()
         #top.driver.differentiator.calc_gradient()
         
         J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
-        assert_rel_error(self, J[0], 48.0, .001)
+        assert_rel_error(self, J[0,0], 48.0, .001)
         
 if __name__ == '__main__':
     import nose

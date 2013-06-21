@@ -55,13 +55,23 @@ def calc_gradient(wflow, inputs, outputs):
     all passed inputs.
     """    
 
-    # Find dimension of our problem.
-    nEdge = wflow.initialize_residual()
+    # New edges for parameters
+    input_edges = [('@in', a) for a in inputs]
+    additional_edges = set(input_edges)
     
+    # New edges for responses
+    out_edges = [a for a, b in wflow.get_interior_edges()]
+    for item in outputs:
+        if item not in out_edges:
+            additional_edges.add((item, '@out'))
+    
+    wflow._additional_edges = additional_edges
+            
+    # Size the problem
+    nEdge = wflow.initialize_residual()
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
-    
     J = zeros((len(outputs), len(inputs)))
     
     # Locate the output keys:
@@ -72,11 +82,12 @@ def calc_gradient(wflow, inputs, outputs):
         for edge in wflow.get_interior_edges():
             if item == edge[0]:
                 obounds[item] = wflow.bounds[edge]
-    
+                break
+            
     # Forward mode, solve linear system for each parameter
     for j, param in enumerate(inputs):
         RHS = zeros((nEdge, 1))
-        i1, i2 = wflow.bounds[(param, param)]
+        i1, i2 = wflow.bounds[('@in', param)]
         for i in range(i1, i2):
             RHS[i, 0] = 1.0
     
@@ -89,8 +100,6 @@ def calc_gradient(wflow, inputs, outputs):
                          tol=1.0e-6,
                          maxiter=100)
 
-        print 'dx', dx
-        print wflow.bounds
         i = 0
         for item in outputs:
             k1, k2 = obounds[item]
@@ -98,6 +107,62 @@ def calc_gradient(wflow, inputs, outputs):
             i += k2-k1
         
     return J
+
+def applyJ(obj, arg, result):
+    """Multiply an input vector by the Jacobian. For an Explicit Component,
+    this automatically forms the "fake" residual, and calls into the
+    function hook "apply_deriv".
+    """
+    for key in result:
+        result[key] = -arg[key]
+
+    if hasattr(obj, 'apply_deriv'):
+        obj.apply_deriv(arg, result)
+        return
+
+    # Optional specification of the Jacobian
+    # (Subassemblies do this by default)
+    input_keys, output_keys, J = obj.provideJ()
+
+    ibounds = {}
+    nvar = 0
+    for key in input_keys:
+        val = obj.get(key)
+        width = flattened_size('.'.join((obj.name, key)), val)
+        ibounds[key] = (nvar, nvar+width)
+        nvar += width
+
+    obounds = {}
+    nvar = 0
+    for key in output_keys:
+        val = obj.get(key)
+        width = flattened_size('.'.join((obj.name, key)), val)
+        obounds[key] = (nvar, nvar+width)
+        nvar += width
+
+    for okey in result:
+        for ikey in arg:
+            if ikey not in result:
+                i1, i2 = ibounds[ikey]
+                o1, o2 = obounds[okey]
+                if i2 - i1 == 1:
+                    if o2 - o1 == 1:
+                        Jsub = float(J[o1, i1])
+                        result[okey] += Jsub*arg[ikey]
+                    else:
+                        Jsub = J[o1:o2, i1:i2]
+                        tmp = Jsub*arg[ikey]
+                        result[okey] += tmp.reshape(result[okey].shape)
+                else:
+                    tmp = flattened_value('.'.join((obj.name, ikey)),
+                                          arg[ikey]).reshape(1, -1)
+                    Jsub = J[o1:o2, i1:i2]
+                    tmp = inner(Jsub, tmp)
+                    if o2 - o1 == 1:
+                        result[okey] += float(tmp)
+                    else:
+                        result[okey] += tmp.reshape(result[okey].shape)
+    
 
 #-------------------------------------------
 # Everything below here will be deprecated.

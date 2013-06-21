@@ -141,3 +141,7 @@ class PseudoComponent(object):
 
     def get_valid(self, names):
         return [self._valid]*len(names)
+
+    def provideJ():
+        
+        return input_keys, output_keys, J
