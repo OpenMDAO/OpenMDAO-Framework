@@ -69,31 +69,24 @@
 
     //var myTree = new Tree(document, "myTree");
     var myTree = jQuery("#leftframe").jstree({
-        "plugins" : ["json_data", "themes", "ui"],
-        "json_data" : {}
-            /*"data" : [
-                {
-                    "attr" : { 
-                        "id" : "geom_display",
-                    },
-                    "data" : "Display",
-                    "state" : "closed",
-                    "children" : [],
-                    "children" : [
-                        {
-                            "attr" : {
-                                "id" : "geom_display_body",
-                            },
-                            "data" : "Bodies",
-                            "state" : "closed",
-                            "children" : [],
-                        }
-                    ],
-                },
-            ],*/
+        "plugins" : ["json_data", "themes", "ui", "sort"],
+
+        "json_data" : {
+            "data" : [],
         },
+
         "themes" : { 
             "theme" : "openmdao",
+        },
+
+        "sort" : function( a, b ){
+            var aIndices = this.get_text(a).split(" ");
+            var bIndices = this.get_text(b).split(" ");
+
+            var aIndex = aIndices.length > 1 ? aIndices[1] : this.get_text(a);
+            var bIndex = bIndices.length > 1 ? bIndices[1] : this.get_text(b);
+
+            return aIndex > bIndex ? 1 : -1;
         },
 
     });

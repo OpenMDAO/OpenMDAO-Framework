@@ -209,7 +209,7 @@ function getChildren(root, controlType){
     
 }
 
-function handleClick(attribute){
+function handleClick(attrmask){
     var plotAttrs = {
         "viz" : g.plotAttrs.ON,
         "grd" : g.plotAttrs.LINES | g.plotAttrs.POINTS,
@@ -218,8 +218,8 @@ function handleClick(attribute){
     };
   
     return function(e){
-        var button = jQuery(this).is("button") ? jQuery(this) : jQuery(this).parent();
-        var attrMask = plotAttrs[attribute];
+        var button = jQuery(this).is("button") ? jQuery(this).parent().parent() : jQuery(this).parent();
+        //var attrMask = plotAttrs[attribute];
         var attrs = getData(button, "gprim") ? getData(button, "gprim").attrs : getData(button, "attrs");
         var attributeIsSet = isAttributeSet(attrMask, attrs);
        
@@ -234,7 +234,7 @@ function handleClick(attribute){
         var buttonActivator = attributeIsSet ? deactivateButton : activateButton;
         var attributeSetter = attributeIsSet ? resetAttr : setAttr;
 
-        console.log(buttonActivator);
+        //console.log(buttonActivator);
 
         toggleElement(button, attribute, attributeSetter, buttonActivator);
 
@@ -286,14 +286,71 @@ function hasChildren(button){
     return (button.parent().siblings("ul").size() > 0);
 }
 
-function addNode( id, parent ){
-    parent = if parent !== undefined ? parent : "leftframe";
-    jQuery("#leftframe").jstree("create_node", "#" + parent, "inside", {
+function nodeHasChildren( node ){
+    return node.siblings("ul").size() > 0;
+}
+
+function addNode( id, title, parentId ){
+    var position = undefined;
+    var parentNode = getNode(id);
+  
+    if( ! parentNode ){
+        position = 1;
+    }
+
+    else{
+        position = "inside";
+    }
+
+    parentNode = ( parentId !== undefined ) ? getNode(parentId) : -1;
+    jQuery("#leftframe").jstree("create_node", parentNode, position, {
         "attr" : { 
-            "id" : id 
+            "id" : id,
         },
-        "data" : id,
+        "data" : title,
+        "state" : "closed",
     });
+
+    return getNode(id);
+}
+
+function getNode(id){
+    return jQuery("#" + id);
+}
+
+function nodeExists(id){
+    return getNode(id).length !== 0;
+}
+
+function gprimToId(gprim){
+    return gprim.replace(/ /g, "_");
+}
+
+function setNodeData(node, dataKey, data){
+    node.data(dataKey, data);
+}
+
+function getNodeData(node, dataKey){
+    return node.data(dataKey);
+}
+
+function setNodeControls(node, controls){
+    if( nodeHasChildren( node ) ){
+        jQuery("ul", node).before(controls);
+    }
+
+    else{
+        node.append( controls );
+    }
+}
+
+function setNodeControl(node, control, activate){
+    if( activate ){
+        jQuery(control, node).addClass("active");
+    }
+    else{
+        jQuery(control, node).removeClass("active");
+    }
 }
 
 function wvUpdateUI()
@@ -306,24 +363,23 @@ function wvUpdateUI()
             alert("g.sceneGraph is undefined --- but we need it");
         }
 
-        var ibody = 0;
-        for(var gprim in g.sceneGraph){
-            
-            var primitiveType = g.scengeGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
+        var node = undefined;
+        var controls = undefined;
+
+        for(var gprim in g.sceneGraph){ 
+            var primitiveType = g.sceneGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
             var gprimObject = g.sceneGraph[gprim];
+            if( ! nodeExists( gprimToId( gprim ) ) ){
             
-            if( jQuery("#" + gprim).length === 0 ){
-            
-	            if( jQuery("#" + primitiveType).length === 0 ){
-                    
-                    var controls = getDisplayControls(gprim.attrs);
-                    addNode("#" + primitiveType + " ul").before(controls);
-                    jQuery("#" + primitiveType).data("attrs", gprim.attrs);
+	        if( ! nodeExists( primitiveType ) ){
+                    node = addNode(primitiveType, primitiveType);
+                    setNodeControls( node, getDisplayControls( gprimObject.attrs ) );
+                    setNodeData( node, "attrs", gprimObject.attrs );
                 }
                 
-	            addNode(gprim, primitiveType);
-                jQuery("#" + gprim).append(getDisplayControls(gprim.attrs));
-                jQuery("#" + gprim).data("gprim", gprimObject);
+	        node = addNode( gprimToId( gprim ), gprim, primitiveType );
+                setNodeControls( node, getDisplayControls( gprimObject.attrs ) );
+                setNodeData( node, "gprim", gprimObject );
             }
         }
         /*if( jQuery("#geom_display_body_" + ibody).length === 0 ){
@@ -339,6 +395,11 @@ function wvUpdateUI()
             jQuery(".trn").click(handleClick("trn"));
             jQuery(".ori").click(handleClick("ori"));
         }*/
+
+        jQuery(".viz").click(handleClick(g.plotAttrs.ON));
+        jQuery(".grd").click(handleClick(g.plotAttrs.LINES | g.plotAttrs.POINTS));
+        jQuery(".trn").click(handleClick(g.plotAttrs.TRANSPARENT));
+        jQuery(".ori").click(handleClick(g.plotAttrs.ORIENTATION));
     }
 
   if (g.keyPress != -1) 
