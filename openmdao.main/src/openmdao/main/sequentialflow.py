@@ -5,6 +5,7 @@ important workflows: Dataflow and CyclicWorkflow."""
 from openmdao.main.api import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, applyJ
+from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.workflow import Workflow
 
 try:
@@ -339,6 +340,8 @@ class SequentialWorkflow(Workflow):
                 nondiff_groups.append(set([comp]))
                 
         # Create the pseudo-assys
+        for group in nondiff_groups:
+            pseudo_assy = PseudoAssembly(group, self)
         
         # TODO: get_interior_edges needs to pull from the derivative edges.
         pass
