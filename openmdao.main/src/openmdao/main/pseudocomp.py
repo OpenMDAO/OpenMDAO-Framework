@@ -19,9 +19,7 @@ def _get_varname(name):
 
 
 def unit_transform(node, in_units, out_units):
-    """Transforms an expression into expr*scaler+adder if 
-    a unit conversion is necessary. 
-    """
+    """Transforms an expression into expr*scaler+adder."""
     inpq = PhysicalQuantity(1.0, in_units)
     outpq = PhysicalQuantity(1.0, out_units)
     try:

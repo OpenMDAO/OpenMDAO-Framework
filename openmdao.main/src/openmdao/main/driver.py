@@ -330,6 +330,14 @@ class Driver(Component):
         in this workflow."""
         self.workflow.calc_derivatives(first, second, savebase)
 
+    def calc_gradient(self, inputs=None, outputs=None):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs. The basic driver behavior is to call calc_gradient
+        on its workflow. However, some driver (optimizers in particular) may
+        want to define their own behavior.
+        """
+        return self.workflow.calc_gradient(inputs, outputs)
+
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ Check derivatives for all components in this workflow."""
         self.workflow.check_derivatives(order, driver_inputs, driver_outputs)

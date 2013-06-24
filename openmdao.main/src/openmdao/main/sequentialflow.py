@@ -29,8 +29,10 @@ class SequentialWorkflow(Workflow):
         self._severed_edges = set()
         self._additional_edges = []
         self.res = None
-        self.bounds = None        
-
+        self.bounds = None
+        
+        self.derivative_iterset = None
+        
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter(self.get_components(full=True))
@@ -276,8 +278,8 @@ class SequentialWorkflow(Workflow):
                 inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyJ on each component
-        for name in self.get_names(full=True):
-            comp = getattr(self.scope, name)
+        for comp in self.derivative_iter():
+            name = comp.name
             
             # A component can also define a preconditioner
             if hasattr(comp, 'applyMinv'):
@@ -308,10 +310,55 @@ class SequentialWorkflow(Workflow):
             
         return result
     
+    def group_nondifferentiables(self):
+        """Method to find all non-differentiable blocks. These blocks
+        will be replaced in the differentiation workflow by a pseudo-
+        assembly, which can provide its own Jacobian via finite difference.
+        """
+        
+        nondiff = []
+        for comp in self:
+            if not hasattr(comp, 'apply_deriv') and \
+               not hasattr(comp, 'provideJ'):
+                nondiff.append(comp.name)
+                
+        if len(nondiff) == 0:
+            return
+        print nondiff
+        
+        # Groups any connected non-differentiable blocks
+        nondiff_groups = []
+        nondiff_groups.append(set([nondiff[0]]))
+        for comp in nondiff[1:]:
+            pre = set(self._collapsed_graph.predecessors(comp))
+            for group in nondiff_groups:
+                if len(pre.intersection(group)) > 0:
+                    group.add(comp)
+                    break
+            else:
+                nondiff_groups.append(set([comp]))
+                
+        # Create the pseudo-assys
+        
+        # TODO: get_interior_edges needs to pull from the derivative edges.
+        pass
+        
+
+    def derivative_iter(self):
+        """Return the iterator for differentiating this workflow. All
+        non-differential groups are found in pseudo-assemblies.
+        """
+        if self.derivative_iterset is None:
+            return [getattr(self.scope, n) for n in self.get_names(full=True)]
+        return self.derivative_iterset
+
     def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
+        
+        # TODO: This line should only be executed once at startup.
+        self.group_nondifferentiables()
         
         if inputs==None:
             if hasattr(self._parent, 'get_parameters'):
