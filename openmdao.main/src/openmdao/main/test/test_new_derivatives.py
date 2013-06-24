@@ -15,6 +15,7 @@ from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.derivatives import applyJ
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -113,7 +114,7 @@ class Testcase_applyJ(unittest.TestCase):
             inputs['vvt.a1'] = 0
             inputs['vvt.vt1.d1'] = zeros((1, 2))
 
-            comp.applyJ(inputs, outputs)
+            applyJ(comp, inputs, outputs)
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -167,13 +168,61 @@ class SimpleDriver(Driver):
 
     implements(IHasParameters)
     
+        
+class CompFoot(Component):
+    """ Evaluates the equation y=x^2"""
     
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.J = array([[dy_dx]])
+        
+    def provideJ(self):
+        
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys, self.J
+
+        
+class CompInch(Component):
+    """ Evaluates the equation y=x^2"""
+    
+    x = Float(1.0, iotype='in', units='inch')
+    y = Float(1.0, iotype='out', units='inch')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.J = array([[dy_dx]])
+
+    def provideJ(self):
+        
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys, self.J
+
+
 class Testcase_derivatives(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
+    """ Test derivative aspects of a simple workflow. """
 
     def test_first_derivative(self):
         
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
@@ -323,6 +372,27 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.connect('comp4.y3', 'comp5.x3')
     
         self.top.driver.workflow.group_nondifferentiables()
+        
+    def test_first_derivative_with_units(self):
+        top = set_as_top(Assembly())
+        
+        top.add('comp1', CompFoot())
+        top.add('comp2', CompInch())
+        
+        top.connect('comp1.y', 'comp2.x')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        
+        top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        top.driver.add_objective('comp2.y')
+        
+        top.comp1.x = 2.0
+        top.run()
+        #top.driver.differentiator.calc_gradient()
+        
+        J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
+        assert_rel_error(self, J[0,0], 48.0, .001)
         
 if __name__ == '__main__':
     import nose

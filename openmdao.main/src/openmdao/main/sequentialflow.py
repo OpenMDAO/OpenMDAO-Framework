@@ -4,7 +4,7 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 from openmdao.main.api import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      calc_gradient
+                                      calc_gradient, applyJ
 from openmdao.main.workflow import Workflow
 
 try:
@@ -35,7 +35,7 @@ class SequentialWorkflow(Workflow):
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        return iter(self.get_components())
+        return iter(self.get_components(full=True))
 
     def __len__(self):
         return len(self._names)
@@ -52,9 +52,14 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get_names(self):
-        """Return a list of component names in this workflow."""
-        return self._names[:]
+    def get_names(self, full=False):
+        """Return a list of component names in this workflow.  If full is True,
+        include hidden pseudo-components in the list.
+        """
+        if full:
+            return self._names + list(self.scope._depgraph.find_betweens(self._names))
+        else:
+            return self._names[:]
 
     def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the end of the workflow by name. """
@@ -135,8 +140,7 @@ class SequentialWorkflow(Workflow):
         """ Returns an alphabetical list of all output edges that are
         interior to the set of components supplied."""
         
-        names = self.get_names()
-        edge_list = self.scope._depgraph.get_interior_edges(names)
+        edge_list = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
                 
         return sorted(list(edge_list.union(self._additional_edges)))
 
@@ -255,8 +259,7 @@ class SequentialWorkflow(Workflow):
         outputs = {}
 
         # Start with zero-valued dictionaries cotaining keys for all inputs
-        for comp in self:
-            name = comp.name
+        for name in self.get_names(full=True):
             inputs[name] = {}
             outputs[name] = {}
 
@@ -283,7 +286,7 @@ class SequentialWorkflow(Workflow):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinv(inputs[name], pre_inputs)
             
-            comp.applyJ(inputs[name], outputs[name])
+            applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
         for edge in self._additional_edges:
@@ -345,8 +348,9 @@ class SequentialWorkflow(Workflow):
         """Return the iterator for differentiating this workflow. All
         non-differential groups are found in pseudo-assemblies.
         """
-        return self.derivative_iterset if self.derivative_iterset \
-               else self.__iter__()
+        if self.derivative_iterset is None:
+            return [getattr(self.scope, n) for n in self.get_names(full=True)]
+        return self.derivative_iterset
 
     def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to

@@ -65,7 +65,7 @@ def index_retains_metadata(index):
     return True
         
 
-def get_indexed_value(obj, name, index):
+def get_indexed_value(obj, name, index=None):
     if name:
         obj = getattr(obj, name)
     if index:

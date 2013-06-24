@@ -566,7 +566,7 @@ class DependsTestCase2(unittest.TestCase):
         try:
             top.connect('c1.c', 'c2.velocity')
         except Exception as err:
-            self.assertEqual(str(err), ": Can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'inch/s'")
+            self.assertEqual(str(err), "Can't connect 'c1.c' to 'c2.velocity': units 'ft' are incompatible with assigning units of 'inch/s'")
         else:
             self.fail("Exception expected")
         
@@ -804,7 +804,8 @@ class ExprDependsTestCase(unittest.TestCase):
         top.sub.connect('comp1.c', 'comp3.b')
         top.sub.disconnect('comp1.c','comp3.b')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('comp1.c*3.0', 'comp4.a')]))
+                         set([('comp1.c*3.0', 'comp4.a'), ('_0.out0', 'comp4.a'), 
+                              ('comp1.c', '_0.in0')]))
         self.assertEqual(initial_connections-set(top.sub.list_connections()), 
                          set())
         for u,v in self._all_nested_connections(top.sub):

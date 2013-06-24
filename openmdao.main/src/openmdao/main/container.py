@@ -333,8 +333,9 @@ class Container(SafeHasTraits):
             try:
                 for child, childsrc, childdest in child_connections:
                     child.disconnect(childsrc, childdest)
-            except:
-                pass
+            except Exception as err:
+                self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
+                                   (childsrc, childdest, srcpath, destpath, err))
             self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
                                  RuntimeError)
 
@@ -934,7 +935,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            elif is_instance(obj, Container):
+            elif hasattr(obj, 'get_metadata'):
                 return obj.get_metadata(restofpath, metaname)
             else:
                 # if the thing being accessed is an attribute of a Variable's

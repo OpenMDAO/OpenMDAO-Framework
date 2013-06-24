@@ -539,13 +539,6 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
     def test_connected_expr(self):
-        try:
-            ConnectedExprEvaluator("var1+var2", self.top)._parse()
-        except Exception as err:
-            self.assertEqual(str(err), "bad connected expression 'var1+var2' must reference exactly one variable")
-        else:
-            self.fail("Exception expected")
-            
         ConnectedExprEvaluator("var1[x]", self.top)._parse()
         try:
             ConnectedExprEvaluator("var1[x]", self.top, is_dest=True)._parse()

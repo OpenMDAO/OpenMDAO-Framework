@@ -286,6 +286,13 @@ class ExprNameTransformer(ast.NodeTransformer):
             return self.generic_visit(node)
         return _get_attr_node(self.mapping[long_name].split('.'))
 
+    def visit_Subscript(self, node):
+        p = print_node(node)
+        xform = self.mapping.get(p)
+        if xform is not None:
+            return _get_attr_node(xform.split('.'))
+        return super(ExprNameTransformer, self).generic_visit(node)
+        
     
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on
@@ -304,7 +311,16 @@ def eliminate_expr_ws(expr):
     """Return the expression string with whitespace removed, except for 
     whitespace within string literals passed as function args.
     """
-    return transform_expression(expr, {})
+    node = ast.parse(expr, mode='eval')
+    ep = ExprPrinter()
+    ep.visit(node)
+    return ep.get_text()
+
+def print_node(node):
+    p = ExprPrinter()
+    p.visit(node)
+    return p.get_text()
+
 
 if __name__ == '__main__':
     import sys
