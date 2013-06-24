@@ -3,8 +3,18 @@ This object is used by Component to store derivative information and to
 perform calculations during a Fake Finite Difference.
 """
 
+from openmdao.main.vartree import VariableTree
+
+try:
+    from numpy import array, ndarray
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import array, ndarray
+
 #public symbols
 __all__ = ['Derivatives', 'derivative_name']
+
 
 def _check_var(comp, var_name, iotype):
     """ Checks a variable to make sure it's the proper type and iotype."""
@@ -40,6 +50,39 @@ def derivative_name(input_name, output_name):
     
     return "d__%s__%s" % (output_name.replace('.', '_'),
                           input_name.replace('.', '_'))
+
+
+def flattened_size(name, val):
+    """ Return size of `val` flattened to a 1D float array. """
+    if isinstance(val, float):
+        return 1
+    elif isinstance(val, ndarray):
+        return val.size
+    elif isinstance(val, VariableTree):
+        size = 0
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            size += flattened_size('.'.join((name, key)), value)
+        return size
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+
+def flattened_value(name, val):
+    """ Return `val` as a 1D float array. """
+    if isinstance(val, float):
+        return array([val])
+    elif isinstance(val, ndarray):
+        return val.flatten()
+    elif isinstance(val, VariableTree):
+        vals = []
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            vals.extend(flattened_value('.'.join((name, key)), value))
+        return array(vals)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
 
 
 class Derivatives(object):
@@ -260,7 +303,7 @@ class Derivatives(object):
                'no_deriv_check' not in self.parent.get_metadata(invar):
                 input_list.append(invar)
                 
-        if order==1 and self.first_derivatives:
+        if order == 1 and self.first_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.first_derivatives:
@@ -282,7 +325,7 @@ class Derivatives(object):
                         # finalized.
                         print msg
                         
-        elif order==2 and self.second_derivatives:
+        elif order == 2 and self.second_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.second_derivatives:

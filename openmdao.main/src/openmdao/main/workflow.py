@@ -164,7 +164,7 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc)
+        """Notifies the Workflow that workflow configuration (dependencies, etc.)
         has changed.
         """
         pass

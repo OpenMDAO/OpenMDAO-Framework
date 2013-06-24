@@ -31,12 +31,12 @@ class ShellProc(subprocess.Popen):
     args: string or list
         If a string, then this is the command line to execute and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict
@@ -176,12 +176,12 @@ def call(args, stdin=None, stdout=None, stderr=None, env=None,
     args: string or list
         If a string, then this is the command line to execute and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict
@@ -208,12 +208,12 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
     args: string or list
         If a string, then this is the command line to execute, and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict
