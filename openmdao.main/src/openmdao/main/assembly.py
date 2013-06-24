@@ -594,7 +594,6 @@ class Assembly(Component):
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        #expr_info = []
         invalids = []
         conns = []
 
@@ -647,6 +646,9 @@ class Assembly(Component):
                 else:
                     getattr(self, cname).update_outputs(vnames)
 
+        # these connections all come from the depgraph, so they will conly
+        # contain simple expressions, i.e. only one variable ref (may be
+        # an array index).
         for u,v in conns:
             try:
                 srcexpr = self._exprmapper.get_expr(u)

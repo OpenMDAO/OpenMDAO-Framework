@@ -3,13 +3,13 @@ import ast
 
 from openmdao.main.numpy_fallback import array
 
-from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.attrwrapper import create_attr_wrapper, UnitsAttrWrapper
 from openmdao.main.sym import SymGrad
 from openmdao.util.log import logger
 
-from openmdao.units.units import PhysicalQuantity
+from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
 def _get_varname(name):
     idx = name.find('[')
@@ -18,37 +18,24 @@ def _get_varname(name):
     return name[:idx]
 
 
-class UnitTransformer(ast.NodeTransformer):
-    """Transforms varname in an expression into (varname*scaler+adder) if 
+def unit_transform(node, in_units, out_units):
+    """Transforms an expression into expr*scaler+adder if 
     a unit conversion is necessary. 
     """
-    def __init__(self, meta, out_units):
-        # Units are stored in a metadata dict and found in meta[varname]['units'].
-        self.meta = meta
-        self.out_pq = PhysicalQuantity(1.0, out_units)
-        super(UnitTransformer, self).__init__()
+    inpq = PhysicalQuantity(1.0, in_units)
+    outpq = PhysicalQuantity(1.0, out_units)
+    try:
+        scaler, adder = inpq.unit.conversion_tuple_to(outpq.unit)
+    except TypeError:
+        raise TypeError("units '%s' are incompatible with assigning units of '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
         
-    def visit_Name(self, node):
-        """Given a name, return the proper node depending on whether
-        the name refers to a variable that requires a unit conversion.
-        """
-        meta = self.meta.get(node.id)
-        if meta is not None:
-            units = meta.get('units')
-            if units is not None:
-                pq = PhysicalQuantity(1.0, units)
-                scaler, adder = pq.unit.conversion_tuple_to(self.out_pq.unit)
-
-                # construct new node of form '(name*scaler+adder)'
-                newnode = ast.BinOp(node, ast.Mult(), ast.Num(scaler))
-                if adder != 0.0: # do the multiply and the add
-                    newnode = ast.BinOp(newnode, ast.Add(), 
-                                        ast.Num(scaler*adder))
-                return ast.copy_location(newnode, node)
-        return node
+    newnode = ast.BinOp(node, ast.Mult(), ast.Num(scaler))
+    if adder != 0.0: # do the multiply and the add
+        newnode = ast.BinOp(newnode, ast.Add(), 
+                            ast.Num(scaler*adder))
+    return ast.copy_location(newnode, node)
 
 
-    
 class PseudoComponent(object):
     """A 'fake' component that is constructed from an ExprEvaluator.
     This fake component can be added to a dependency graph and executed
@@ -100,9 +87,31 @@ class PseudoComponent(object):
 
         out_units = self._meta['out0'].get('units')
         if out_units is not None:
+            # evaluate the src expression using UnitsOnlyPQ objects
+
+            tmpdict = {}
+
+            # First, replace values with UnitsOnlyPQ objects
+            for inp in self._inputs:
+                units = self._meta[inp].get('units')
+                if units:
+                    tmpdict[inp] = UnitsOnlyPQ(0., units)
+                else:
+                    tmpdict[inp] = 0.
+
+            pq = eval(xformed_src, _expr_dict, tmpdict)
+            self._srcunits = pq.unit
+
             unitnode = ast.parse(xformed_src)
-            unit_src = print_node(UnitTransformer(self._meta, out_units).visit(unitnode))
+            try:
+                unitxform = unit_transform(unitnode, self._srcunits, out_units)
+            except Exception as err:
+                raise TypeError("Can't connect '%s' to '%s': %s" % (srcexpr.text, 
+                                                                    destexpr.text, err))
+            unit_src = print_node(unitxform)
             xformed_src = unit_src
+        else:
+            self._srcunits = None
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
         self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
@@ -132,7 +141,7 @@ class PseudoComponent(object):
     def connect(self, src, dest):
         self._valid = False
 
-    def run(self):
+    def run(self, ffd_order=0, case_id=''):
         if not self._valid:
             self._parent.update_inputs(self.name, None)
 
@@ -152,19 +161,13 @@ class PseudoComponent(object):
     def get(self, name, index=None):
         if index is not None:
             raise RuntimeError("index not supported in PseudoComponent.get")
-        units = self._meta[name].get('units')
-        if units is not None:
-            val = getattr(self, name)
-            if isinstance(val, PhysicalQuantity):
-                return val
-            return PhysicalQuantity(val, units)
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
-            setattr(self, path, value.pq)
+            setattr(self, path, value.pq.value)
         elif isinstance(value, PhysicalQuantity):
             setattr(self, path, value.value)
         else:
@@ -173,7 +176,8 @@ class PseudoComponent(object):
     def get_wrapped_attr(self, name, index=None):
         if index is not None:
             raise RuntimeError("pseudocomponent attr accessed using an index")
-        return create_attr_wrapper(getattr(self, name), self._meta[name])
+        #return create_attr_wrapper(getattr(self, name), self._meta[name])
+        return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
@@ -188,6 +192,9 @@ class PseudoComponent(object):
 
     def get_valid(self, names):
         return [self._valid]*len(names)
+
+    def set_itername(self, itername):
+        self._itername = itername
 
     def calc_derivatives(self, first=False, second=False, savebase=False):
         if first:

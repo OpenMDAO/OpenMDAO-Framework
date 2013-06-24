@@ -5,6 +5,7 @@ from sympy.core.function import Derivative
 from sympy.functions import *
 
 from openmdao.main.printexpr import print_node
+from openmdao.main.expreval import _get_long_name
 
 class SymbolicDerivativeError(Exception):
     def __init__(self, value):
@@ -26,7 +27,7 @@ class SymTransformer(ast.NodeTransformer):
 
         return ast.copy_location(ast.Call(func=called_obj, args=args,
                                           ctx=node.ctx, keywords=[]), node)
-    
+
     def visit_Num(self, node):
         args = [node]
         called_obj = ast.Name(id='sympify', ctx=ast.Load())
@@ -36,20 +37,20 @@ class SymTransformer(ast.NodeTransformer):
 
 def SymGrad(ex, vars):
     """Symbolic gradient."""
-    node = ast.parse(ex, mode='eval')
-    xformed = SymTransformer().visit(node)
-    ast.fix_missing_locations(xformed)
-    code = compile(xformed, '<string>', 'eval')
-    newex = eval(code)
+    #node = ast.parse(ex, mode='eval')
+    #xformed = SymTransformer().visit(node)
+    #ast.fix_missing_locations(xformed)
+    #code = compile(xformed, '<string>', 'eval')
+    #newex = eval(code)
 
-    # s=[]
-    # for var in vars:
-    #     s.append(Symbol(var))
+    s=[]
+    for var in vars:
+        s.append(Symbol(var))
 
-    # newex=ex
-    # for i in xrange(len(vars)):
-    #     newex = newex.replace(vars[i],"s["+str(i)+"]") 
-    # exec "newex="+newex
+    newex=ex
+    for i in xrange(len(vars)):
+        newex = newex.replace(vars[i],"s["+str(i)+"]") 
+    exec "newex="+newex
     grad=[]
     for i in xrange(len(vars)):
         d = diff(newex, Symbol(vars[i])).evalf()

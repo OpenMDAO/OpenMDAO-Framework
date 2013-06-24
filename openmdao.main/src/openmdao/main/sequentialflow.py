@@ -33,7 +33,7 @@ class SequentialWorkflow(Workflow):
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        return iter(self.get_components())
+        return iter(self.get_components(full=True))
 
     def __len__(self):
         return len(self._names)

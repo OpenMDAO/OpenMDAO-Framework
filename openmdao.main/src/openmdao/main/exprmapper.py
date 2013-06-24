@@ -73,7 +73,7 @@ class ExprMapper(object):
         desttrait = None
         srccomp = None
 
-        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.'):
+        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.') and not len(srcvars)>1:
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
                     srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
@@ -174,9 +174,9 @@ class ExprMapper(object):
             scope.raise_exception("'%s' is already connected to source '%s'" % 
                                   (dest, self.get_source(dest)), RuntimeError)
 
-        destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr',
-                                          is_dest=True)
-        srcexpr = ConnectedExprEvaluator(src, scope, getter='get_wrapped_attr')
+        destexpr = ConnectedExprEvaluator(dest, scope, is_dest=True)
+        srcexpr = ConnectedExprEvaluator(src, scope, 
+                                         getter='get_wrapped_attr')
 
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = list(destexpr.get_referenced_compnames())

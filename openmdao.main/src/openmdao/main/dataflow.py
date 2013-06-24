@@ -98,10 +98,10 @@ class Dataflow(SequentialWorkflow):
         # find all of the incoming and outgoing edges to/from all of the
         # components in each driver's iteration set so we can add edges to/from
         # the driver in our collapsed graph
-        cnames = set(self._names)
+        cnames = set(self.get_names(full=True))
         removes = set()
         itersets = {}
-        for comp in contents:
+        for comp in self.get_components(full=True):
             cname = comp.name
             if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]

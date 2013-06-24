@@ -147,7 +147,7 @@ class Workflow(object):
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.get_components():
+        for comp in self.get_components(full=True):
             comp.stop()
         self._stop = True
 
@@ -165,16 +165,16 @@ class Workflow(object):
         """Remove a component from this Workflow by name."""
         raise NotImplementedError("This Workflow has no 'remove' function")
 
-    def get_names(self):
+    def get_names(self, full=False):
         """Return a list of component names in this workflow."""
         raise NotImplementedError("This Workflow has no 'get_names' function")
 
-    def get_components(self):
+    def get_components(self, full=False):
         """Returns a list of all component objects in the workflow. No ordering
         is assumed.
         """
         scope = self.scope
-        return [getattr(scope, name) for name in self.get_names()]
+        return [getattr(scope, name) for name in self.get_names(full)]
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
