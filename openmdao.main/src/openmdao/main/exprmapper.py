@@ -37,8 +37,7 @@ class ExprMapper(object):
         lst = [(u,v,data) for u,v,data in self._exprgraph.edges(data=True) if not (u in excludes or v in excludes)]
 
         if not show_passthrough:
-            lst = [(u, v, data) for u, v, data in self._exprgraph.edges(data=True)
-                             if '.' in u and '.' in v]
+            lst = [(u, v, data) for u, v, data in lst if '.' in u and '.' in v]
 
         if visible_only:
             newlst = []
