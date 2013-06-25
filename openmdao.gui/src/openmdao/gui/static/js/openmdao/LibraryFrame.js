@@ -82,7 +82,7 @@ openmdao.LibraryFrame = function(id,model) {
                     "Driver",
                     "Optimizer",
                     "Solver",
-                    "Surrogate",
+                    "Surrogate"
                 ];
         var input_obj = self.elm.find('#objtt-select');
 

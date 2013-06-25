@@ -477,7 +477,7 @@ class Assembly(Component):
         if needpseudocomp:
             pseudocomp = self._exprmapper._make_pseudo(self, srcexpr, destexpr)
             setattr(self, pseudocomp.name, pseudocomp)
-            pseudocomp.make_connections(self)
+            pseudocomp.make_connections()
         else:
             pseudocomp = None
             super(Assembly, self).connect(src, dest)
@@ -512,7 +512,7 @@ class Assembly(Component):
         if varpath2 is None and self.parent and '.' not in varpath:  # boundary var. make sure it's disconnected in parent
             self.parent.disconnect('.'.join([self.name, varpath]))
 
-        to_remove = self._exprmapper.disconnect(varpath, varpath2)
+        to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
         for u, v in self._depgraph.list_connections(show_external=True):
             if (u,v) in to_remove:
@@ -521,6 +521,10 @@ class Assembly(Component):
         for u, v in self._depgraph.list_autopassthroughs():
             if (u,v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
+                
+        for name in pcomps:
+            delattr(self, name)
+            self._depgraph._graph.remove_node(name)
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -582,10 +586,11 @@ class Assembly(Component):
         """Stop the calculation."""
         self.driver.stop()
 
-    def list_connections(self, show_passthrough=True):
+    def list_connections(self, show_passthrough=True, visible_only=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._exprmapper.list_connections(show_passthrough)
+        return self._exprmapper.list_connections(show_passthrough=show_passthrough,
+                                                     visible_only=visible_only)
 
     @rbac(('owner', 'user'))
     def update_inputs(self, compname, exprs):
@@ -934,7 +939,7 @@ class Assembly(Component):
                                                        comp.name + '.' + name])
 
         # list of connections (convert tuples to lists)
-        conntuples = self.list_connections(show_passthrough=True)
+        conntuples = self.list_connections(show_passthrough=True, visible_only=True)
         for connection in conntuples:
             connections.append(list(connection))
 
@@ -1148,7 +1153,7 @@ class Assembly(Component):
 
         # connections
         connections = []
-        conntuples = self.list_connections(show_passthrough=True)
+        conntuples = self.list_connections(show_passthrough=True, visible_only=True)
         comp_names = self.list_components()
         for src_var, dst_var in conntuples:
             src_root = src_var.split('.')[0]

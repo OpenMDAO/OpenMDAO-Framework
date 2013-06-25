@@ -5,9 +5,7 @@ from openmdao.main.numpy_fallback import array
 
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.attrwrapper import create_attr_wrapper, UnitsAttrWrapper
-from openmdao.main.sym import SymGrad
-from openmdao.util.log import logger
+from openmdao.main.attrwrapper import UnitsAttrWrapper
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
@@ -117,20 +115,31 @@ class PseudoComponent(object):
         # this is just the equation string (for debugging)
         self._eqn = "%s = %s" % (self._destexpr.text, self._srcexpr.text)
 
-    def list_connections(self):
-        """list all of the inputs and outputs of this comp.
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full pathname to this object, relative to scope
+        *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-        conns = [(src, '.'.join([self.name, dest])) 
-                     for src, dest in self._mapping.items()]
-        conns.append(('.'.join([self.name, 'out0']), self._outdest))
+        return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
+
+    def list_connections(self, is_hidden=False):
+        """list all of the inputs and outputs of this comp. If is_hidden
+        is True, list the connections that a user would see if this
+        PseudoComponent is hidden.
+        """
+        if is_hidden:
+            return [(src, self._outdest) for src in self._mapping.keys()]
+        else:
+            conns = [(src, '.'.join([self.name, dest])) 
+                         for src, dest in self._mapping.items()]
+            conns.append(('.'.join([self.name, 'out0']), self._outdest))
         return conns
 
-    def make_connections(self, parent):
+    def make_connections(self):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            parent._connect(src, dest)
+            self._parent._connect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
         self._valid = False
@@ -190,6 +199,9 @@ class PseudoComponent(object):
 
     def get_valid(self, names):
         return [self._valid]*len(names)
+
+    def is_valid(self):
+        return self._valid
 
     def set_itername(self, itername):
         self._itername = itername

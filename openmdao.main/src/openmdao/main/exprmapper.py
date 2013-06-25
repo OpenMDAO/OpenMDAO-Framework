@@ -28,16 +28,27 @@ class ExprMapper(object):
             return node['expr']
         return None
 
-    def list_connections(self, show_passthrough=True):
+    def list_connections(self, show_passthrough=True, visible_only=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        excludes = set([name for name, data in self._exprgraph.nodes(data=True)
-                        if data['expr'].refs_parent()])
-        if show_passthrough:
-            return [(u, v) for u, v in self._exprgraph.edges() if not (u in excludes or v in excludes)]
-        else:
-            return [(u, v) for u, v in self._exprgraph.edges()
-                       if '.' in u and '.' in v and not (u in excludes or v in excludes)]
+        excludes = set([name for name, data in  self._exprgraph.nodes(data=True)
+                                   if data['expr'].refs_parent()])
+
+        lst = [(u,v,data) for u,v,data in self._exprgraph.edges(data=True) if not (u in excludes or v in excludes)]
+
+        if not show_passthrough:
+            lst = [(u, v, data) for u, v, data in self._exprgraph.edges(data=True)
+                             if '.' in u and '.' in v]
+
+        if visible_only:
+            newlst = []
+            for u, v, data in lst:
+                pcomp = data.get('pcomp')
+                if pcomp is not None:
+                    newlst.extend(pcomp.list_connections(is_hidden=True))
+            return newlst
+
+        return [(u, v) for u, v, data in lst]
 
     def get_source(self, dest_expr):
         """Returns the text of the source expression that is connected to the given
@@ -128,7 +139,9 @@ class ExprMapper(object):
         return to_remove
 
     def disconnect(self, srcpath, destpath=None):
-        """Disconnect the given expressions/variables/components."""
+        """Disconnect the given expressions/variables/components.
+        Returns a list of edges to remove and a list of pseudocomponents to remove
+        """
         graph = self._exprgraph
 
         to_remove = set()
@@ -149,6 +162,7 @@ class ExprMapper(object):
                                                if src in src_exprs and dest in dest_exprs])
 
         added = []
+        pcomps = []
         for src, dest in to_remove:
             try:
                 pcomp = graph[src][dest]['pcomp']
@@ -156,6 +170,7 @@ class ExprMapper(object):
                 pass
             else:
                 added.extend(pcomp.list_connections())
+                pcomps.append(pcomp.name)
 
         to_remove.update(added)
 
@@ -163,7 +178,7 @@ class ExprMapper(object):
         graph.remove_nodes_from(exprs)
         self._remove_disconnected_exprs()
 
-        return to_remove
+        return to_remove, pcomps
 
     def check_connect(self, src, dest, scope):
         """Check validity of connecting a source expression to a destination expression, and
@@ -192,8 +207,8 @@ class ExprMapper(object):
         return name
 
     def _needs_pseudo(self, parent, srcexpr, destexpr):
-        """Possibly create a pseudo-component if srcexpr and destexpr require it.
-        Otherwise, return None.
+        """Return True if srcexpr and destexpr require a pseudocomp to be
+        created.
         """
         srcrefs = list(srcexpr.refs())
         if srcrefs and srcrefs[0] != srcexpr.text:
@@ -215,10 +230,11 @@ class ExprMapper(object):
         """Possibly create a pseudo-component if srcexpr and destexpr require it.
         Otherwise, return None.
         """
-        pcomp = PseudoComponent(self._new_pseudo_name(), parent, srcexpr, destexpr)
+        return PseudoComponent(self._new_pseudo_name(), parent, srcexpr, destexpr)
 
-        return pcomp
-
+    def list_pseudocomps(self):
+        return [data['pcomp'].name for u, v, data in 
+                           self._exprgraph.edges(data=True) if 'pcomp' in data]
 
 
 

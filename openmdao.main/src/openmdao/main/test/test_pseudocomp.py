@@ -111,7 +111,7 @@ class PseudoCompTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp2.a, 36.)
         
     def test_multi_src(self):
-        top = _simple_model()
+        top = _simple_model()  # comp1.c --> comp2.a
         top.connect('comp1.dist/comp1.time', 'comp2.speed')
         top.comp1.dist = 10.
         top.comp1.time = 5.
@@ -119,25 +119,98 @@ class PseudoCompTestCase(unittest.TestCase):
         top.run()
         self.assertAlmostEqual(top.comp2.speed, 24.) # speed = 24 inch/s
 
-        # top.add("comp3", Simple())
-        # top.driver.workflow.add('comp3')
-        # top.connect("comp1.d+comp3.d", "comp2.b")
+        self.assertTrue(hasattr(top, '_0'))
+        self.assertTrue(hasattr(top, '_1'))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set(['_0', '_1']))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', 
+                              '_0', '_1', 'driver']+self.fakes))
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([('_0.out0', 'comp2.a'), ('comp1.c', '_0.in0'),
+                              ('comp1.dist', '_1.in1'), ('comp1.time', '_1.in0'),
+                              ('_1.out0', 'comp2.speed')]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_0.in0'), 
+                              ('_1.out0', 'comp2.speed'), ('comp1.dist', '_1.in1'), 
+                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                              ('_0.out0', 'comp2.a'), ('comp1.time', '_1.in0')]))
+        
+        # disconnect two linked expressions
+        top.disconnect('comp1.dist/comp1.time')
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([('_0.out0', 'comp2.a'), ('comp1.c', '_0.in0')]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_0.in0'),
+                              ('_0.out0', 'comp2.a')]))
+        self.assertEqual(set(top._exprmapper._exprgraph.nodes()),
+                         set(['comp1.c', 'comp2.a', '_0.out0', '_0.in0']))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', '_0', 'driver']+self.fakes))
+        self.assertFalse(hasattr(top, '_1'))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set(['_0']))
+        
+        top.run()
+        top.connect('comp1.dist/comp1.time', 'comp2.speed')
+        self.assertTrue(hasattr(top, '_2'))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', '_0', '_2', 'driver']+self.fakes))
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([('_0.out0', 'comp2.a'), ('comp1.c', '_0.in0'),
+                              ('comp1.dist', '_2.in1'), ('comp1.time', '_2.in0'),
+                              ('_2.out0', 'comp2.speed')]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_0.in0'), 
+                              ('_2.out0', 'comp2.speed'), ('comp1.dist', '_2.in1'), 
+                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                              ('_0.out0', 'comp2.a'), ('comp1.time', '_2.in0')]))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set(['_0', '_2']))
+        
+        # disconnect a single variable
+        top.disconnect('comp1.dist')
+        self.assertFalse(hasattr(top, '_2'))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', 
+                              '_0', 'driver']+self.fakes))
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([('_0.out0', 'comp2.a'), ('comp1.c', '_0.in0')]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_0.in0'), ('_0.out0', 'comp2.a')]))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set(['_0']))
 
-        # self.assertEqual(set(top._depgraph._graph.nodes()),
-        #                  set(['comp1','comp2','comp3', 
-        #                       '_0', '_1', 'driver']+self.fakes))
-        # self.assertEqual(set(top._depgraph.list_connections()),
-        #                  set([('comp3.d', '_1.in0'), ('_1.out0', 'comp2.b'), 
-        #                       ('_0.out0', 'comp2.a'), ('comp1.d', '_1.in1'), 
-        #                       ('comp1.c', '_0.in0')]))
+        top.run()
+        top.connect('comp1.dist/comp1.time', 'comp2.speed')
+        self.assertTrue(hasattr(top, '_3'))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', '_0', '_3', 'driver']+self.fakes))
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([('_0.out0', 'comp2.a'), ('comp1.c', '_0.in0'),
+                              ('comp1.dist', '_3.in1'), ('comp1.time', '_3.in0'),
+                              ('_3.out0', 'comp2.speed')]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_0.in0'), 
+                              ('_3.out0', 'comp2.speed'), ('comp1.dist', '_3.in1'), 
+                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                              ('_0.out0', 'comp2.a'), ('comp1.time', '_3.in0')]))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set(['_0', '_3']))
+        
+        # disconnect a whole component
+        top.disconnect('comp2')
+        self.assertFalse(hasattr(top, '_3'))
+        self.assertEqual(set(top._depgraph._graph.nodes()),
+                         set(['comp1','comp2', 'driver']+self.fakes))
+        self.assertEqual(set(top._depgraph.list_connections()),
+                         set([]))
+        self.assertEqual(set(top._exprmapper.list_connections()),
+                         set([]))
+        self.assertEqual(set(top._exprmapper.list_pseudocomps()),
+                         set())
 
-    # connect('comp1.c*comp2.d', 'comp3.a')
-    # disconnect() for a var in an expr
-    # disconnect() for an exact expr (src and dest)
-    # connect('a1+comp2.c', 'comp3.b')
     # disconnect() for a boundary var in an expr  
-    # invlidation through a pseudocomp
-    # listing connections with pseudocomps
     # listing connections without pseudocomps (will have multiple srcs connected to one dest)
     # expr with array index ref
        
