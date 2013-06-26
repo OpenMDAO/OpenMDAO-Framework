@@ -45,6 +45,12 @@ class ExprMapper(object):
                 pcomp = data.get('pcomp')
                 if pcomp is not None:
                     newlst.extend(pcomp.list_connections(is_hidden=True))
+                else:
+                    srccmp = getattr(self._scope, u.split('.',1)[0], None)
+                    dstcmp = getattr(self._scope, v.split('.',1)[0], None)
+                    if isinstance(srccmp, PseudoComponent) or isinstance(dstcmp, PseudoComponent):
+                        continue
+                    newlst.append((u,v))
             return newlst
 
         return [(u, v) for u, v, data in lst]
