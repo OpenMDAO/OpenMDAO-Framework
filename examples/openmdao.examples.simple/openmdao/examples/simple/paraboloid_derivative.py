@@ -3,10 +3,10 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import ComponentWithDerivatives
+from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
-class ParaboloidDerivative(ComponentWithDerivatives):
+class ParaboloidDerivative(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
     # set up interface to the framework  

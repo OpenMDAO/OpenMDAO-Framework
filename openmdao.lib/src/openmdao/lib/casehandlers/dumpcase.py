@@ -6,8 +6,8 @@ from openmdao.main.interfaces import implements, ICaseRecorder
 class DumpCaseRecorder(object):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
-    ``stderr`` then that standard stream is used. Otherwise if `out` is a
-    string then a file with that name will be opened in the current directory.
+    ``stderr``, then that standard stream is used. Otherwise, if `out` is a
+    string, then a file with that name will be opened in the current directory.
     If `out` is None, cases will be ignored.
     """
     

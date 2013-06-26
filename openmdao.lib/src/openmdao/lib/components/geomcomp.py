@@ -117,7 +117,7 @@ class GeomComponent(Component):
 
     def _model_updated(self):
         """Should be called by the parametric_geometry object whenever
-        the list of parameters changes, so that we can update our list
+        the list of parameters changes so that we can update our list
         of inputs and outputs.
         """
         self._update_iovar_set()
@@ -145,8 +145,8 @@ class GeomComponent(Component):
         self.geom_out = self.parametric_geometry.get_static_geometry()
 
     def _auto_run_notify(self,new=False): 
-        """adds or removes callbacks from variable changes to call run. new will
-        be value of auto_run variable""" 
+        """Adds or removes callbacks from variable changes to call run. New will
+        be value of auto_run variable.""" 
         for var in self._input_var_names: 
             self.on_trait_change(self.run,name=var,remove=(not new))
 

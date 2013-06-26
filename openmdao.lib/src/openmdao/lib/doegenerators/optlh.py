@@ -200,7 +200,7 @@ class OptLatinHypercube(Container):
     generations = Int(2,
         desc="Number of generations the optimization will evolve over.")
     norm_method = Enum(["1-norm","2-norm"],
-                    desc="Vector norm calculation method. '1-norm' is faster, but less accurate.")
+                    desc="Vector norm calculation method. '1-norm' is faster but less accurate.")
     
     def __init__(self, num_samples=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()

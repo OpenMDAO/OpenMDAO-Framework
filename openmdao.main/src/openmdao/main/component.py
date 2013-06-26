@@ -13,12 +13,20 @@ import pkg_resources
 import sys
 import weakref
 
+try:
+    from numpy import inner
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import inner
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import Derivatives, \
+                                      flattened_size, flattened_value
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -34,12 +42,14 @@ from openmdao.main.file_supp import FileMetadata
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, FileRef
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
+                                        FileRef
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+
 import openmdao.util.log as tracing
 
 __missing__ = object()
@@ -111,6 +121,7 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+# this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
 
@@ -144,8 +155,8 @@ class Component(Container):
 
     create_instance_dir = Bool(False)
 
-    def __init__(self, doc=None, directory=''):
-        super(Component, self).__init__(doc)
+    def __init__(self):
+        super(Component, self).__init__()
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
@@ -183,13 +194,6 @@ class Component(Container):
         self._connected_inputs = None
         self._connected_outputs = None
 
-        self.exec_count = 0
-        self.derivative_exec_count = 0
-        self.itername = ''
-        self.create_instance_dir = False
-        if directory:
-            self.directory = directory
-
         self._dir_stack = []
         self._dir_context = None
 
@@ -197,6 +201,9 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
+        
+        # Derivatives helper object. Mostly used for the older differentiators.
+        self.derivatives = Derivatives(self)
 
     @property
     def dir_context(self):
@@ -370,7 +377,7 @@ class Component(Container):
 
     def _pre_execute(self, force=False):
         """Prepares for execution by calling *cpath_updated()* and *check_config()* if
-        their "dirty" flags are set, and by requesting that the parent Assembly
+        their "dirty" flags are set and by requesting that the parent Assembly
         update this Component's invalid inputs.
 
         Overrides of this function must call this version.
@@ -430,30 +437,56 @@ class Component(Container):
         This method approximates the output using a Taylor series expansion
         about the saved baseline point.
 
-        This function is overridden by ComponentWithDerivatives.
-
         ffd_order: int
             Order of the derivatives to be used (1 or 2).
         """
 
-        pass
+        for name in self.derivatives.out_names:
+            setattr(self, name,
+                    self.derivatives.calculate_output(name, ffd_order))
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives and saving the current state as the baseline. The user
-        must supply *calculate_first_derivatives()* and/or
-        *calculate_second_derivatives()* in the component.
-
-        This function is overridden by ComponentWithDerivatives
-
+        derivatives, and saving the current state as the baseline if
+        requested. The user must supply *calculate_first_derivatives()*
+        and/or *calculate_second_derivatives()* in the component.
+        
+        This function should not be overriden.
+        
         first: Bool
             Set to True to calculate first derivatives.
-
+        
         second: Bool
             Set to True to calculate second derivatives.
+            
+        savebase: Bool
+            If set to true, then we save our baseline state for fake finite
+            difference.
         """
-
-        pass
+        
+        executed = False
+        
+        # Calculate first derivatives using the new API.
+        # TODO: unify linearize & calculate_first_derivatives'
+        if first and hasattr(self, 'linearize'):
+            self.linearize()
+            self.derivative_exec_count += 1
+            
+        # Calculate first derivatives in user-defined function
+        if first and hasattr(self, 'calculate_first_derivatives'):
+            self.calculate_first_derivatives()
+            self.derivative_exec_count += 1
+            executed = True
+            
+        # Calculate second derivatives in user-defined function
+        if second and hasattr(self, 'calculate_second_derivatives'):
+            self.calculate_second_derivatives()
+            self.derivative_exec_count += 1
+            executed = True
+            
+        # Save baseline state
+        if savebase and executed:
+            self.derivatives.save_baseline(self)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ComponentsWithDerivatives overloads this function to check for
@@ -486,7 +519,7 @@ class Component(Container):
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
-        """Run this object. This should include fetching input variables if necessary,
+        """Run this object. This should include fetching input variables (if necessary),
         executing, and updating output variables. Do not override this function.
 
         force: bool
@@ -1016,10 +1049,10 @@ class Component(Container):
         should be specified relative to this component.
 
         name: string
-            Name for egg, must be an alphanumeric string.
+            Name for egg; must be an alphanumeric string.
 
         version: string
-            Version for egg, must be an alphanumeric string.
+            Version for egg; must be an alphanumeric string.
 
         py_dir: string
             The (root) directory for local Python files. It defaults to
@@ -1028,7 +1061,7 @@ class Component(Container):
         require_relpaths: bool
             If True, any path (directory attribute, external file, or file
             trait) which cannot be made relative to this component's directory
-            will raise ValueError. Otherwise such paths generate a warning and
+            will raise ValueError. Otherwise, such paths generate a warning and
             the file is skipped.
 
         child_objs: list
@@ -1675,13 +1708,16 @@ class Component(Container):
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
 
-            if name in connected_inputs:
-                connections = self._depgraph._var_connections(name)
-                # there can be only one connection to an input
-                io_attr['connected'] = \
-                    str([src for src, dst in connections]).replace('@xin.', '')
+            connected = []
+            for inp in connected_inputs:
+                cname = inp.split('[')[0]  # Could be 'inp[0]'.
+                if cname == name:
+                    connections = self._depgraph._var_connections(inp)
+                    connected.extend([src for src, dst in connections])
+            if connected:
+                io_attr['connected'] = str(connected).replace('@xin.', '')
 
-            if name in connected_outputs:
+            if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
@@ -1813,10 +1849,10 @@ class Component(Container):
                 attrs['Parameters'] = parameters
 
             constraints = []
-            constraint_pane = False
+            has_constraints = False
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasEqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1828,7 +1864,7 @@ class Component(Container):
 
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasIneqConstraints):
-                constraint_pane = True
+                has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1838,7 +1874,7 @@ class Component(Container):
                     attr['adder']   = con.adder
                     constraints.append(attr)
 
-            if constraint_pane:
+            if has_constraints:
                 attrs['Constraints'] = constraints
 
             if has_interface(self, IHasEvents):
@@ -1850,12 +1886,68 @@ class Component(Container):
 
         return attrs
 
+    def applyJ(self, arg, result):
+        """Multiply an input vector by the Jacobian. For an Explicit Component,
+        this automatically forms the "fake" residual, and calls into the
+        function hook "apply_deriv.
+        """
+        for key in result:
+            result[key] = -arg[key]
 
-def _show_validity(comp, recurse=True, exclude=set(), valid=None):  # pragma no cover
+        if hasattr(self, 'apply_deriv'):
+            self.apply_deriv(arg, result)
+            return
+
+        # Optional specification of the Jacobian
+        input_keys, output_keys, J = self.provideJ()
+
+        ibounds = {}
+        nvar = 0
+        for key in input_keys:
+            val = self.get(key)
+            width = flattened_size('.'.join((self.name, key)), val)
+            ibounds[key] = (nvar, nvar+width)
+            nvar += width
+
+        obounds = {}
+        nvar = 0
+        for key in output_keys:
+            val = self.get(key)
+            width = flattened_size('.'.join((self.name, key)), val)
+            obounds[key] = (nvar, nvar+width)
+            nvar += width
+
+        for okey in result:
+            for ikey in arg:
+                if ikey not in result:
+                    i1, i2 = ibounds[ikey]
+                    o1, o2 = obounds[okey]
+                    if i2 - i1 == 1:
+                        if o2 - o1 == 1:
+                            Jsub = float(J[o1, i1])
+                            result[okey] += Jsub*arg[ikey]
+                        else:
+                            Jsub = J[o1:o2, i1:i2]
+                            tmp = Jsub*arg[ikey]
+                            result[okey] += tmp.reshape(result[okey].shape)
+                    else:
+                        tmp = flattened_value('.'.join((self.name, ikey)),
+                                              arg[ikey]).reshape(1, -1)
+                        Jsub = J[o1:o2, i1:i2]
+                        tmp = inner(Jsub, tmp)
+                        if o2 - o1 == 1:
+                            result[okey] += float(tmp)
+                        else:
+                            result[okey] += tmp.reshape(result[okey].shape)
+
+
+def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
     """
+    exclude = exclude or set()
+
     def _show_validity_(comp, recurse, exclude, valid, result):
         pname = comp.get_pathname()
         for name, val in comp._valid_dict.items():

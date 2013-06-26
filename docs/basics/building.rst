@@ -34,7 +34,7 @@ compliance when a variable or Component instance is created:
 
     >>> from openmdao.main.api import Assembly
     >>> from openmdao.examples.enginedesign.chassis import Chassis
-    >>> top = Assembly('top')
+    >>> top = Assembly()
     >>> top.add('chassis1',Chassis())
     <openmdao.examples.enginedesign.chassis.Chassis object at ...
     >>> top.add('the chassis',Chassis())

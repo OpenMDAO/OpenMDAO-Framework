@@ -37,24 +37,23 @@ class Driver(Component):
                      desc='Case recorders for iteration data.')
 
     # Extra variables for adding to CaseRecorders
-    printvars = List(Str, iotype='in', 
+    printvars = List(Str, iotype='in',
                      desc='List of extra variables to output in the recorders.')
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
-    workflow = Slot(Workflow, allow_none=True, required=True, 
+    workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
-    
-    def __init__(self, doc=None):
+
+    def __init__(self):
         self._iter = None
-        super(Driver, self).__init__(doc=doc)
+        super(Driver, self).__init__()
         self.workflow = Dataflow(self)
         self.force_execute = True
-        
+
         # This flag is triggered by adding or removing any parameters,
         # constraints, or objectives.
         self._invalidated = False
-
 
     def _workflow_changed(self, oldwf, newwf):
         if newwf is not None:
@@ -71,10 +70,10 @@ class Driver(Component):
         """
         self._invalidated = True
         self._set_exec_state('INVALID')
-        
+
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our variables is invalid, or if the parameters,
+        if any of our variables is invalid, or if the parameters,
         constraints, or objectives have changed.
         """
         if super(Driver, self).is_valid() is False:
@@ -92,13 +91,13 @@ class Driver(Component):
 
     def check_config(self):
         """Verify that our workflow is able to resolve all of its components."""
-        
+
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
         self._update_workflow()
-        
+
         self.workflow.check_config()
-        
+
     def _update_workflow(self):
         """Updates workflow contents based on driver dependencies."""
         # if workflow is not defined, or if it contains only Drivers, try to
@@ -169,7 +168,7 @@ class Driver(Component):
                     getcomps.update(inst.get_referenced_compnames())
 
         full = set(setcomps)
-        
+
         if self.parent:
             graph = self.parent._depgraph
             for end in getcomps:
@@ -237,7 +236,7 @@ class Driver(Component):
             changed. (Default is False)
 
         ffd_order: int
-            Order of the derivatives to be used when finite differncing (1 for first
+            Order of the derivatives to be used when finite differencing (1 for first
             derivatives, 2 for second derivativse). During regular execution,
             ffd_order should be 0. (Default is 0)
 
@@ -246,10 +245,10 @@ class Driver(Component):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
-        
+
         for recorder in self.recorders:
             recorder.startup()
-            
+
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
@@ -326,10 +325,10 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second)
+        self.workflow.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ Check derivatives for all components in this workflow."""
@@ -354,7 +353,7 @@ class Driver(Component):
         the driver should call this function once per iteration and may also
         need to call it at the conclusion.
 
-        All paramters, objectives, and constraints are included in the Case
+        All parameters, objectives, and constraints are included in the Case
         output, along with all extra variables listed in self.printvars.
         """
 
@@ -396,11 +395,11 @@ class Driver(Component):
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)
         iotypes[tmp_printvars[-1]] = 'out'
-        
+
         # Additional user-requested variables
         for printvar in tmp_printvars:
 
-            if  '*' in printvar:
+            if '*' in printvar:
                 printvars = self._get_all_varpaths(printvar)
             else:
                 printvars = [printvar]
@@ -499,7 +498,6 @@ class Run_Once(Driver):
 
     def execute(self):
         ''' Call parent, then record cases.'''
-        
+
         super(Run_Once, self).execute()
         self.record_case()
-        

@@ -157,7 +157,7 @@ class ConsoleServer(cmd.Cmd):
             logger.error('publishing of message failed')
 
     def do_trace(self, arg):
-        ''' print remembered trace from last exception
+        ''' Print remembered trace from last exception.
         '''
         if self.exc_info:
             exc_type, exc_value, exc_traceback = self.exc_info
@@ -249,7 +249,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def execfile(self, filename):
-        ''' execfile in server's globals.
+        ''' Execfile in server's globals.
         '''
         try:
             self.proj.command("execfile('%s', '%s')" %
@@ -393,9 +393,9 @@ class ConsoleServer(cmd.Cmd):
         return json.dumps(events, default=json_default)
 
     def get_workflow(self, pathname):
-        ''' get the workflow for the specified driver or assembly
-            if no driver or assembly is specified, get the workflows for
-            all of the top-level assemblies
+        ''' Get the workflow for the specified driver or assembly.
+            If no driver or assembly is specified, get the workflows for
+            all of the top-level assemblies.
         '''
         flows = []
         if pathname:
@@ -415,33 +415,12 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Assembly):
                     v = v.get('driver')
                 if is_instance(v, Driver):
-                    flow = {}
-                    flow['pathname'] = v.get_pathname()
-                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
-                    flow['workflow'] = []
-                    flow['valid'] = v.is_valid()
-                    for comp in v.workflow:
-                        pathname = comp.get_pathname()
-                        if is_instance(comp, Assembly) and comp.driver:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'driver':   comp.driver.get_workflow(),
-                                'valid':    comp.is_valid()
-                            })
-                        elif is_instance(comp, Driver):
-                            flow['workflow'].append(comp.get_workflow())
-                        else:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'valid':    comp.is_valid()
-                            })
+                    flow = v.get_workflow()
                     flows.append(flow)
         return json.dumps(flows, default=json_default)
 
     def get_attributes(self, pathname):
-        ''' get the attributes of the specified object
+        ''' Get the attributes of the specified object.
         '''
         attr = {}
         comp, root = self.get_container(pathname)
@@ -453,8 +432,8 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     def get_passthroughs(self, pathname):
-        ''' get the inputs and outputs of the assembly's child components
-            and indicate for each whether or not it is a passthrough variable
+        ''' Get the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable.
         '''
         asm, root = self.get_container(pathname)
         passthroughs = asm.get_passthroughs()
@@ -470,7 +449,7 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
-        ''' get a dictionary of types available for creation
+        ''' Get a dictionary of types available for creation.
         '''
         #Don't want to get variable types showing up, so we exclude
         #'openmdao.variable' from this list.
@@ -481,8 +460,8 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, projdir):
-        ''' activate the project in the specified directory,
-            instantiate a file manager and projdirfactory
+        ''' Activate the project in the specified directory;
+            instantiate a file manager and projdirfactory.
         '''
         _clear_insts()
         self.cleanup()
@@ -521,7 +500,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def revert_project(self, commit_id=None):
-        ''' Revert back to the most recent commit of the project.
+        ''' Revert to the most recent commit of the project.
         '''
         if self.proj:
             try:
@@ -595,7 +574,7 @@ class ConsoleServer(cmd.Cmd):
             self.files.cleanup()
 
     def get_files(self):
-        ''' get a nested dictionary of files
+        ''' Get a nested dictionary of files.
         '''
         try:
             return self.files.get_files(root=self.proj.path)
@@ -628,7 +607,7 @@ class ConsoleServer(cmd.Cmd):
 
     def delete_file(self, filename):
         ''' Delete file from project.
-            Returns False if file was not found; otherwise, returns True.
+            Returns False if file was not found; otherwise returns True.
         '''
         return self.files.delete_file(filename)
 

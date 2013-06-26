@@ -316,9 +316,11 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
 *File Variables*
 ++++++++++++++++
 
-The value of a *File* variable is a *FileRef*, a reference to a file on disk
-(possibly at a remote system) along with various metadata regarding the file's
-format. Legal metadata associated with the File variable depends on its iotype.
+The value of a :class:`File <openmdao.main.datatypes.file.File>` variable is a
+:class:`FileRef <openmdao.main.datatypes.file.FileRef>`, a reference to a file
+on disk (possibly at a remote system) along with various metadata regarding the
+file's format.
+Legal metadata associated with the File variable depends on its iotype.
 File variables with iotype ``in`` may specify *legal_types* and *local_path*
 if desired.
 
@@ -382,8 +384,8 @@ access it by filename.
 
 To access the file directly, simply :meth:`open` the File variable's value.
 The (possibly remote) file will be opened in either text or binary mode as
-appropriate and a `RemoteFile` object will be returned which acts like other
-Python file objects.
+appropriate and a :class:`RemoteFile <openmdao.main.file_supp.RemoteFile>`
+object will be returned which acts like other Python file objects.
 
 .. testcode:: filevar_input
 
@@ -420,7 +422,8 @@ automatically be copied to this location.
                 for line in inp:
                     print line,
 
-FileRefs are an extension of :class:`openmdao.main.filevar.FileMetadata`,
+FileRefs are an extension of
+:class:`FileMetadata <openmdao.main.file_supp.FileMetadata>`,
 which holds predefined as well as arbitrary user metadata.
 The predefined metadata is used to describe file layout, primarily basic binary
 formats.
@@ -435,10 +438,10 @@ is False, signifying a text file which needs newline translation between
 different systems.  If newline translation is applied to a binary file it will
 corrupt the data.
 
-The :class:`openmdao.util.stream.Stream` class can be helpful when reading or
-writing binary formats.  Stream uses :mod:`numpy` internally which requires a
-standard Python file object rather than RemoteFile, so you'll have to use the
-local_path option for input files.
+The :class:`Stream <openmdao.util.stream.Stream>` class can be helpful when
+reading or writing binary formats.  Stream uses :mod:`numpy` internally which
+requires a standard Python file object rather than RemoteFile, so you'll have
+to use the local_path option for input files.
 
 Here's a complete example of a source component sending to two destination
 components.  The source component generates both text and binary files.

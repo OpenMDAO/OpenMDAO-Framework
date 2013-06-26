@@ -256,9 +256,16 @@ class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
     def configure(self):
-        self.add('Source', Source(directory='Source'))
-        self.add('Oddball', Oddball(directory='Oddball'))
-        self.add('Sink', Sink(directory='Sink'))
+        self.directory = 'Egg'
+        comp = Source()
+        comp.directory = 'Source'
+        comp = self.add('Source', comp)
+        comp = Oddball()
+        comp.directory = 'Oddball'
+        comp = self.add('Oddball', comp)
+        comp = Sink()
+        comp.directory = 'Sink'
+        comp = self.add('Sink', comp)
 
         self.driver.workflow.add(['Source', 'Oddball', 'Sink'])
 
@@ -276,7 +283,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = set_as_top(Model(directory='Egg'))
+        self.model = set_as_top(Model())
         self.model.name = 'Egg_TestModel'
         self.child_objs = [self.model.Source, self.model.Sink,
                            self.model.Oddball, self.model.Oddball.oddcomp,

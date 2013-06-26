@@ -165,7 +165,7 @@ class Container(SafeHasTraits):
 
     implements(IContainer)
 
-    def __init__(self, doc=None):
+    def __init__(self):
         super(Container, self).__init__()
 
         self._call_cpath_updated = True
@@ -180,9 +180,6 @@ class Container(SafeHasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
-
-        if doc is not None:
-            self.__doc__ = doc
 
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
@@ -208,7 +205,6 @@ class Container(SafeHasTraits):
                 finally:
                     variable_tree._parent = parent
                 setattr(self, name, new_tree)
-                new_tree.install_callbacks()
 
     @property
     def parent(self):
@@ -596,9 +592,13 @@ class Container(SafeHasTraits):
                 if isinstance(val, Container):
                     old_parent = val.parent
                     val.parent = None
-                    val_copy = _copydict[ttype.copy](val)
-                    val.parent = old_parent
+                    try:
+                        val_copy = _copydict[ttype.copy](val)
+                    finally:
+                        val.parent = old_parent
                     val_copy.parent = self
+                    if hasattr(val_copy, 'install_callbacks'):
+                        val_copy.install_callbacks()
                     val = val_copy
                 else:
                     val = _copydict[ttype.copy](val)
@@ -736,6 +736,19 @@ class Container(SafeHasTraits):
         pass
 
     @rbac(('owner', 'user'))
+    def copy(self):
+        """Returns a deep copy without deepcopying the parent.
+        """
+        par = self.parent
+        self.parent = None
+        try:
+            cp = copy.deepcopy(self)
+        finally:
+            self.parent = par
+            cp.parent = par
+        return cp
+
+    @rbac(('owner', 'user'))
     def cpath_updated(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
@@ -807,25 +820,26 @@ class Container(SafeHasTraits):
         return [k for k, v in self.items(iotype=not_none)]
 
     def get_attributes(self, io_only=True):
-        """ We use Container as a base class for objects that have traits
-        that need to be edited, but have no iotype. This method returns a
-        dictionary of information that the GUI can use to build the editors.
+        """ Get attributes of this container. Includes all variables ('Inputs')
+            and, if *io_only* is not true, attributes for all slots as well.
 
-        The default behavior is to take all traits and put them on the inputs
-        pane. For different behavior, overload this method.
-
-        io_only: Bool
-            Passed in, but not used in the base class."""
+            Arguments:
+                io_only:  if True then only 'Inputs' are included
+        """
 
         attrs = {}
         attrs['type'] = type(self).__name__
 
-        variables = []
-        slots = []
+        var_attrs = []
+
+        if not io_only:
+            slot_attrs = []
+        else:
+            slot_attrs = None
+
         #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union(
-                                 self._added_traits.keys(),
-                                     self._alltraits(type=Slot).keys()):
+        for name in set(self.list_vars()).union(self._added_traits.keys(),
+                                                self._alltraits(type=Slot).keys()):
 
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
@@ -843,17 +857,18 @@ class Container(SafeHasTraits):
             # Container variables are not connectable
             attr['connected'] = ''
 
-            variables.append(attr)
+            var_attrs.append(attr)
 
-            # Process singleton and contained slots.
-            if not io_only and slot_attr is not None:
-                # We can hide slots (e.g., the Workflow slot in drivers)
+            # Process slots
+            if slot_attrs is not None and slot_attr is not None:
+                # slots can be hidden (e.g. the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] is False:
-                    slots.append(slot_attr)
+                    slot_attrs.append(slot_attr)
 
-        attrs["Inputs"] = variables
-        if slots:
-            attrs['Slots'] = slots
+        attrs['Inputs'] = var_attrs
+
+        if slot_attrs:
+            attrs['Slots'] = slot_attrs
         return attrs
 
     # Can't use items() since it returns a generator (won't pickle).
@@ -1005,6 +1020,14 @@ class Container(SafeHasTraits):
                 if path:
                     if idx.isdigit():
                         obj = getattr(self, path, Missing)[int(idx)]
+                    elif idx.startswith('('):  # ndarray index
+                        obj = getattr(self, path, Missing)
+                        if obj is Missing:
+                            return self._get_failed(path, index)
+                        idx = idx[1:-1].split(',')
+                        for i in idx:
+                            obj = obj[int(i)]
+                        return obj
                     else:
                         key = re.sub('\'|"', '', str(idx))  # strip any quotes
                         obj = getattr(self, path, Missing)[key]
@@ -1105,7 +1128,7 @@ class Container(SafeHasTraits):
                         self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
-            elif iotype == 'out':
+            elif iotype == 'out' and not force:
                 self.raise_exception('Cannot set output %r' % path,
                                      RuntimeError)
             elif index:  # array index specified
@@ -1618,7 +1641,7 @@ def deep_hasattr(obj, pathname):
 
 def deep_getattr(obj, pathname):
     """Returns the attrbute indicated by the given pathname or raises
-    and exception if it doesn't exist.
+    an exception if it doesn't exist.
     """
     for name in pathname.split('.'):
         obj = getattr(obj, name)
@@ -1654,16 +1677,16 @@ def create_io_traits(cont, obj_info, iotype='in'):
     that contains strings and/or tuples.  The information is used to specify
     the "internal" and "external" names of the variable.
     The "internal" name uses the naming scheme within the Container.
-    The "external name is the one that will be used to access the trait
-    from outside the Container, it must not contain any '.' characters.
+    The "external" name is the one that will be used to access the trait
+    from outside the Container; it must not contain any '.' characters.
 
     A string specifies the "internal" name for the variable.  The "external"
     name will be the "internal" name with any '.' characters replaced by '_'.
 
-    Tuples must contain the "internal" name followed by the "external" name,
+    Tuples must contain the "internal" name followed by the "external" name
     and may optionally contain an iotype and a validation trait. If the iotype
-    is a dictionary rather than a string it is used for trait metadata (it may
-    include the ``iotype`` key, but does not have to).
+    is a dictionary rather than a string, it is used for trait metadata (it may
+    include the ``iotype`` key but does not have to).
 
     `iotype` is the default I/O type to be used.
 

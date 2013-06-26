@@ -138,7 +138,7 @@ class ExprMapper(object):
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
 
     def remove(self, compname):
-        """Remove any connections referring to the given component"""
+        """Remove any connections referring to the given component."""
         refs = self.find_referring_exprs(compname)
         if refs:
             self._exprgraph.remove_nodes_from(refs)
@@ -263,11 +263,12 @@ class Assembly(Component):
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
 
-    def __init__(self, directory=''):
+    def __init__(self):
 
-        super(Assembly, self).__init__(directory=directory)
+        super(Assembly, self).__init__()
 
         self._exprmapper = ExprMapper(self)
+        self._graph_loops = []
 
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
@@ -530,9 +531,9 @@ class Assembly(Component):
         return newtrait
 
     def get_passthroughs(self):
-        ''' get all the inputs and outputs of the assembly's child components
-            and indicate for each whether or not it is a passthrough variable
-            and if it is a passthrough, the assembly's name for the variable
+        ''' Get all the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable.
+            If it is a passthrough, provide the assembly's name for the variable.
         '''
         inputs = {}
         outputs = {}
@@ -594,7 +595,7 @@ class Assembly(Component):
             Source expression string.
 
         dest: str or list(str)
-            destination expression string(s).
+            Destination expression string(s).
         """
         src = eliminate_expr_ws(src)
 
@@ -685,6 +686,11 @@ class Assembly(Component):
         # dependencies may have changed
         if self.driver is not None:
             self.driver.config_changed(update_parent=False)
+            
+        # Detect and save any loops in the graph.
+        if hasattr(self, '_depgraph'):
+            graph = self._depgraph._graph
+            self._graph_loops = nx.strongly_connected_components(graph)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
@@ -758,6 +764,18 @@ class Assembly(Component):
                 if cname is None:
                     if self.parent:
                         self.parent.update_inputs(self.name, vnames)
+                        
+                # If our source component is in a loop with us, don't
+                # run it. Otherwise you have infinite recursion. It is
+                # the responsibility of the solver to properly execute
+                # the comps in its loop.
+                elif self._graph_loops:
+                    for loop in self._graph_loops:
+                        if compname in loop and cname in loop:
+                            break
+                    else:
+                        getattr(self, cname).update_outputs(vnames)
+                        
                 else:
                     getattr(self, cname).update_outputs(vnames)
                     #self.set_valid(vnames, True)
@@ -873,12 +891,12 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Overides the component's version of this function. An assembly
         must initiate the call of calc_derivatives on all components in its
         driver's workflow."""
 
-        self.driver.calc_derivatives(first, second)
+        self.driver.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each
@@ -924,7 +942,7 @@ class Assembly(Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def list_components(self):
-        ''' list the components in the assembly
+        ''' List the components in the assembly.
         '''
         names = [name for name in self.list_containers()
                      if isinstance(self.get(name), Component)]
@@ -933,7 +951,7 @@ class Assembly(Component):
     def get_dataflow(self):
         ''' Get a dictionary of components and the connections between them
             that make up the data flow for the assembly;
-            also includes parameter, constraint, and objective flows
+            also includes parameter, constraint, and objective flows.
         '''
         components = []
         connections = []

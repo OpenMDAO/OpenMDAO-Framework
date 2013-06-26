@@ -105,7 +105,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     return inst
 
 def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
-    """Starts up an existing EC2 instance given its id"""
+    """Starts up an existing EC2 instance given its id."""
     if debug:
         print 'starting a instance (id=%s)' % inst_id
         

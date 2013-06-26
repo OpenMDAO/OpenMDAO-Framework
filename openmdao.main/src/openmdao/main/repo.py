@@ -209,7 +209,7 @@ class HgRepo(RepositoryBase):
 class DumbRepo(RepositoryBase):
     """A really simple repository that's used as a fallback if git, hg, bzr
     are not present.  It simply keeps an exported copy of the project in
-    a .projrepo directory and therefore only allows one level of 'revert'. A
+    a .projrepo directory and, therefore, only allows one level of 'revert'. A
     commit just replaces the project copy.
     """
     repodir = '.projrepo'

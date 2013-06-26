@@ -44,25 +44,25 @@ def _load_templates():
       change, this may need to be updated.
 
     index.rst
-      template for the top level file in the Sphinx docs for the plugin
+      Template for the top level file in the Sphinx docs for the plugin.
 
     usage.rst
-      template for the file where the user may add specific usage documentation
-      for the plugin
+      Template for the file where the user may add specific usage documentation
+      for the plugin.
 
     setup.py
-      template for the file that packages and install the plugin using
-      setuptools
+      Template for the file that packages and install the plugin using
+      setuptools.
 
     MANIFEST.in
-      template for the file that tells setuptools/distutils what extra data
-      files to include in the distribution for the plugin
+      Template for the file that tells setuptools/distutils what extra data
+      files to include in the distribution for the plugin.
 
     README.txt
-      template for the README.txt file.
+      Template for the README.txt file.
 
     setup.cfg
-      template for the setup configuration file, where all of the user
+      Template for the setup configuration file, where all of the user
       supplied metadata is located.  This file may be hand edited by the
       plugin developer.
 
@@ -174,7 +174,7 @@ def _get_pkgdocs(cfg):
     for the package.
 
     cfg: ConfigParser
-        ConfigParser object used to read the setup.cfg file
+        ConfigParser object used to read the setup.cfg file.
     """
     lines = ['\n',
              '================\n',
@@ -352,7 +352,7 @@ def _get_template_options(distdir, cfg, **kwargs):
 
 
 def plugin_quickstart(parser, options, args=None):
-    """A command line script (plugin quickstart) points to this.  It generates a
+    """A command-line script (plugin quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
 
     usage: plugin quickstart <dist_name> [-v <version>] [-d <dest_dir>] [-g <plugin_group>] [-c class_name]
@@ -490,7 +490,7 @@ def _get_entry_points(startdir):
 
 
 def plugin_makedist(parser, options, args=None, capture=None, srcdir='src'):
-    """A command line script (plugin makedist) points to this.  It creates a
+    """A command-line script (plugin makedist) points to this.  It creates a
     source distribution containing Sphinx documentation for the specified
     distribution directory.  If no directory is specified, the current directory
     is assumed.
@@ -571,7 +571,7 @@ def plugin_makedist(parser, options, args=None, capture=None, srcdir='src'):
 
 # This brings up a browser window which can be a problem during testing.
 def plugin_docs(parser, options, args=None):  # pragma no cover
-    """A command line script (plugin docs) points to this. It brings up
+    """A command-line script (plugin docs) points to this. It brings up
     the Sphinx documentation for the named plugin in a browser.
     """
     if args:
@@ -656,7 +656,7 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
 
 
 def plugin_install(parser, options, args=None, capture=None):
-    """A command line script (plugin install) points to this. It installs
+    """A command-line script (plugin install) points to this. It installs
     the specified plugin distribution into the current environment.
 
     """
@@ -931,7 +931,7 @@ def _plugin_build_docs(destdir, cfg, src='src'):
 
 
 def plugin_build_docs(parser, options, args=None):
-    """A command line script (plugin build_docs) points to this.  It builds the
+    """A command-line script (plugin build_docs) points to this.  It builds the
     Sphinx documentation for the specified distribution directory.
     If no directory is specified, the current directory is assumed.
 
@@ -980,7 +980,7 @@ def plugin_build_docs(parser, options, args=None):
 
 
 def plugin_list(parser, options, args=None):
-    """ List github/external/built-in plugins. """
+    """ List GitHub/external/built-in plugins. """
     if args:
         print_sub_help(parser, 'list')
         return -1

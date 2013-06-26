@@ -162,7 +162,7 @@ class MetaModel(Component):
         self._new_train_data = True
 
     def check_config(self):
-        '''called as part of pre_execute'''
+        '''Called as part of pre_execute.'''
 
         # 1. model must be set
         if self.model is None:
@@ -304,7 +304,7 @@ class MetaModel(Component):
     def _set_output(self, path, value):
         """
         Since the set method of container does not allow setting
-        of variables with iotype of out, this method needed to be written
+        of variables with iotype of out, this method needed to be written.
         """
 
         # get the leaf object
@@ -438,7 +438,7 @@ class MetaModel(Component):
         return surrogate
 
     def update_outputs_from_model(self):
-        """Copy output values from the model into the MetaModel's outputs, and
+        """Copy output values from the model into the MetaModel's outputs and
         if training, save the output associated with surrogate.
         """
 
@@ -504,7 +504,7 @@ class MetaModel(Component):
 
     def _remove_input(self, name):
         """Removes the specified input variable.
-        Assumes one level of vartree
+        Assumes one level of vartree.
         """
 
         if self.parent:
