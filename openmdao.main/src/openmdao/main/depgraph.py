@@ -474,7 +474,7 @@ class DependencyGraph(object):
     def find_betweens(self, nodes):
         """Return a set of nodes that are between nodes in the given list, i.e., the
         returned nodes have an immediate predecessor and an immediate successor in the
-        given list.
+        given list, or they have a node between themselves and the boundary.
         """
         
         orig = set(nodes)
@@ -487,6 +487,10 @@ class DependencyGraph(object):
                 p = orig.intersection(pred[node].keys())
                 s = orig.intersection(succ[node].keys())
                 if p and s:
+                    betweens.add(node)
+                elif p and node in pred['@bout']:
+                    betweens.add(node)
+                elif s and node in succ['@bin']:
                     betweens.add(node)
         return betweens
             
