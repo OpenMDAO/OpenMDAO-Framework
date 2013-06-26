@@ -52,7 +52,7 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
 openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
                          ]
 
-def _get_adjust_options(options, version):
+def _get_adjust_options(options, version, setuptools_url):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
@@ -83,7 +83,13 @@ def adjust_options(options, args):
     virtual_env = os.environ.get('VIRTUAL_ENV')
     if virtual_env:
         after_install(options, virtual_env, activated=True)
-""" % code
+
+    try:
+        download('%s')
+    except Exception as err:
+        logger.warn(str(err))
+
+""" % (code, setuptools_url)
 
 def main(args=None):
     if args is None:
@@ -546,6 +552,10 @@ def after_install(options, home_dir, activated=False):
     reqs = _reqs + list(reqs) 
     guireqs = list(guireqs)
     guitestreqs = list(guitestreqs)
+
+    # pin setuptools to this version
+    setuptools_version = "0.7.4"
+    setuptools_url = "https://openmdao.org/dists/setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
     
     optdict = { 
         'mkdir_pkg' : offline_[3],
@@ -561,7 +571,7 @@ def after_install(options, home_dir, activated=False):
         'url': options.findlinks,
         'make_dev_eggs': make_dev_eggs,
         'make_docs': make_docs,
-        'adjust_options': _get_adjust_options(options, version),
+        'adjust_options': _get_adjust_options(options, version, setuptools_url),
         'openmdao_prereqs': openmdao_prereqs,
     }
     
@@ -579,7 +589,9 @@ def after_install(options, home_dir, activated=False):
         fixline = u"        egg_path = 'setuptools-*-py%s.egg' % sys.version[:3]"
         for line in virtualenv.create_bootstrap_script(script_str % optdict).split('\n'):
             if line == fixline:
-                line = line.replace('*', '0.6c11')
+                line = line.replace('*', setuptools_version)
+            elif ", '-U'" in line: # remove forcing it to look for latest setuptools version
+                line = line.replace(", '-U'", "")
             f.write('%s\n' % line)
     os.chmod(scriptname, 0755)
  
