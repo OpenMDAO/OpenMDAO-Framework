@@ -19,7 +19,7 @@ def DEBUG(msg):
 
 
 class ZMQServerManager(object):
-    ''' creates and keeps track of ZMQ servers for the given class
+    ''' Creates and keeps track of ZMQ servers for the given class.
     '''
 
     def __init__(self, classpath, external=False):
@@ -32,7 +32,7 @@ class ZMQServerManager(object):
             self.address = 'localhost'
 
     def server(self, server_id):
-        ''' get server associated with an id, create one if none exists
+        ''' Get server associated with an id; create one if none exists.
         '''
         try:
             if server_id in self.server_dict:
@@ -65,7 +65,7 @@ class ZMQServerManager(object):
             return None
 
     def delete_server(self, server_id):
-        ''' delete the server(s) associated with an id
+        ''' Delete the server(s) associated with an id.
         '''
         if server_id in self.server_dict:
             server_info = self.server_dict[server_id]
@@ -111,8 +111,8 @@ class ZMQServerManager(object):
             print 'Error cleaning up proxy', exc
 
     def get_pub_socket_url(self, server_id):
-        ''' get the url of the publisher socket for the server associated with
-            an id
+        ''' Get the url of the publisher socket for the server associated with
+            an id.
         '''
         if server_id in self.server_dict:
             server_info = self.server_dict[server_id]
@@ -121,8 +121,8 @@ class ZMQServerManager(object):
             return None
 
     def get_out_socket_url(self, server_id):
-        ''' get the url of the output socket for the server associated with
-            an id
+        ''' Get the url of the output socket for the server associated with
+            an id.
         '''
         if server_id in self.server_dict:
             server_info = self.server_dict[server_id]
@@ -131,8 +131,8 @@ class ZMQServerManager(object):
             return None
 
     def get_pub_server_url(self, server_id, ws_url):
-        ''' get the publisher socket web server for the server associated with
-            an id, create one if none exists
+        ''' Get the publisher socket web server for the server associated with
+            an id; create one if none exists.
         '''
         server_info = self.server_dict[server_id]
         if 'pub_server' in server_info:
@@ -147,8 +147,8 @@ class ZMQServerManager(object):
             return ws_addr
 
     def get_out_server_url(self, server_id, ws_url):
-        ''' get the output socket web server for the server associated with
-            an id, create one if none exists
+        ''' Get the output socket web server for the server associated with
+            an id; create one if none exists.
         '''
         server_info = self.server_dict[server_id]
         if 'out_server' in server_info:
@@ -163,7 +163,7 @@ class ZMQServerManager(object):
             return ws_addr
 
     def cleanup(self):
-        ''' delete all servers
+        ''' Delete all servers.
         '''
         keys = self.server_dict.keys()
         for server_id in keys:

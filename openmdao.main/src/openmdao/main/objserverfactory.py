@@ -48,7 +48,7 @@ class ObjServerFactory(Factory):
     within those servers.
 
     name: string
-        Name of factory, used in log messages, etc.
+        Name of factory; used in log messages, etc.
 
     authkey: string
         Passed to created :class:`ObjServer` servers.
@@ -65,7 +65,7 @@ class ObjServerFactory(Factory):
         same form of address.
 
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
-    having server directory trees removed when servers are shut-down.
+    having server directory trees removed when servers are shut down.
     """
 
     # These are used to propagate selections from main().
@@ -329,7 +329,7 @@ class ObjServer(object):
     directory at startup.
 
     name: string
-        Name of server, used in log messages, etc.
+        Name of server; used in log messages, etc.
 
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed.
@@ -537,10 +537,10 @@ class ObjServer(object):
             Name of ZipFile to unpack.
 
         textfiles: list
-            List of :mod:`fnmatch` style patterns specifying which upnapcked
+            List of :mod:`fnmatch` style patterns specifying which unpacked
             files are text files possibly needing newline translation. If not
-            supplied, the first 4KB of each is scanned for a zero byte. If not
-            found then the file is assumed to be a text file.
+            supplied, the first 4KB of each is scanned for a zero byte. If none
+            is found, then the file is assumed to be a text file.
         """
         self._logger.debug('unpack_zipfile %r', filename)
         self._check_path(filename, 'unpack_zipfile')
@@ -609,7 +609,7 @@ class ObjServer(object):
             Name of file to open.
 
         mode: string
-            Accees mode.
+            Access mode.
 
         bufsize: int
             Size of buffer to use.
@@ -690,11 +690,11 @@ def connect_to_server(config_filename):
 def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             logfile=None):
     """
-    Connects to the the server at `address` and `port` using `key` and returns
+    Connects to the server at `address` and `port` using `key` and returns
     a (shared) proxy for the associated :class:`ObjServerFactory`.
 
     address: string
-        IP address for server, or pipe filename.
+        IP address for server or pipe filename.
 
     port: int
         Server port.  If < 0, `address` is a pipe filename.
@@ -706,7 +706,7 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
         Server authorization key.
 
     pubkey:
-        Server public key, required if `authkey` is 'PublicKey'.
+        Server public key; required if `authkey` is 'PublicKey'.
 
     logfile:
         Location of server's log file, if known.
@@ -756,7 +756,7 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
     in the current directory.
 
     authkey: string
-        Authorization key, must be matched by clients.
+        Authorization key; must be matched by clients.
 
     address: string
         IPv4 address, hostname, or pipe name.
@@ -902,10 +902,10 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
 def stop_server(server, config_filename):
     """
     Shutdown :class:`ObjServerFactory` specified by `config_filename` and
-    terminate it's process `server`.
+    terminate its process `server`.
 
     server: :class:`ShellProc`
-        Server process retured by :meth:`start_server`.
+        Server process returned by :meth:`start_server`.
 
     config_filename: string:
         Name of server configuration file.
@@ -989,7 +989,7 @@ def main():  #pragma no cover
         Prefix to apply to remote log messages. Default is ``pid@host``.
 
     If ``prefix.key`` exists, it is read for an authorization key string.
-    Otherwise public key authorization and encryption is used.
+    Otherwise, public key authorization and encryption is used.
 
     Allowed hosts *must* be specified if `port` is >= 0. Only allowed hosts
     may connect to the server.

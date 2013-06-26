@@ -587,8 +587,6 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    args_page = ArgsPrompt(workspace_page.browser, workspace_page.port)
-    args_page.click_ok()
     expected = "RuntimeError: top: Can't connect 'comp.result' to" \
                " 'postproc.result_in': top: Can't find 'comp.result'"
     time.sleep(0.5)
@@ -668,17 +666,17 @@ def _test_io_filter_without_vartree(browser):
     #filter on name='ctlmin'
     editor.filter_inputs("ctlmin")
     eq([u'', u'ctlmin', u'0.001', u'', u'Minimum absolute value of ctl used in optimization.'], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    editor.clear_inputs_filter()
 
     #filter on description='conjugate'
     editor.filter_inputs("conjugate")
     eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    editor.clear_inputs_filter()
 
     #filter on description='Conjugate'
     editor.filter_inputs("Conjugate")
     eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
-    editor.filter_inputs("")
+    editor.clear_inputs_filter()
 
     #filter on term='print'
     #filter should match items in name and description column
@@ -688,8 +686,16 @@ def _test_io_filter_without_vartree(browser):
     ]
 
     editor.filter_inputs("print")
-    eq(expected, editor.get_inputs().value)
-    editor.filter_inputs("")
+    inputs = editor.get_inputs()
+    eq(expected, inputs.value)
+
+    # Verify that editing a value doesn't clear the filter.
+    inputs[0].cells[2].select(1)
+    expected[0][2] = u'1'
+    inputs = editor.get_inputs()
+    eq(expected, inputs.value)
+
+    editor.clear_inputs_filter()
 
     editor.show_outputs()
 
@@ -698,12 +704,12 @@ def _test_io_filter_without_vartree(browser):
     #filter on name='derivative_exec_count'
     editor.filter_outputs("derivative_exec_count")
     eq([u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    editor.clear_outputs_filter()
 
     #filter on description='coordinates'
     editor.filter_outputs("coordinates")
     eq([u'', u'itername', u'', u'', u"Iteration coordinates."], editor.get_outputs().value[0])
-    editor.filter_outputs("")
+    editor.clear_outputs_filter()
 
     #filter on term='time'.
     editor.filter_outputs("time")

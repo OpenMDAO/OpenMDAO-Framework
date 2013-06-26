@@ -57,7 +57,9 @@ class Middle(Assembly):
 
     def configure(self):
 
-        self.add('passthrough', Passthrough(directory='Passthrough'))
+        comp = Passthrough()
+        comp.directory = 'Passthrough'
+        self.add('passthrough', comp)
         self.driver.workflow.add('passthrough')
 
         self.create_passthrough('passthrough.text_in')
@@ -94,9 +96,15 @@ class Model(Assembly):
 
     def configure(self):
         """ Sets passthrough paths to absolute to exercise code. """
-        self.add('source', Source(directory='Source'))
-        self.add('middle', Middle(directory='Middle'))
-        self.add('sink', Sink(directory='Sink'))
+        comp = Source()
+        comp.directory = 'Source'
+        comp = self.add('source', comp)
+        comp = Middle()
+        comp.directory = 'Middle'
+        comp = self.add('middle', comp)
+        comp = Sink()
+        comp.directory = 'Sink'
+        comp = self.add('sink', comp)
         self.driver.workflow.add(['source', 'middle', 'sink'])
 
         self.connect('source.text_file', 'middle.text_in')

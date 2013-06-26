@@ -6,7 +6,7 @@ class TreeProxy(object):
     structured local object so that normal Python attribute access will work
     to access objects inside of the opaque object's tree.
     
-    The opaque object must implement the following interface which is checked
+    The opaque object must implement the following interface, which is checked
     only via duck typing:
     
     ::

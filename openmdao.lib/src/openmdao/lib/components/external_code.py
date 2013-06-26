@@ -13,7 +13,7 @@ import time
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Bool, Dict, Str, FileRef, Float, Int, List
 
-from openmdao.main.api import ComponentWithDerivatives
+from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -22,7 +22,7 @@ from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util import shellproc
 
 
-class ExternalCode(ComponentWithDerivatives):
+class ExternalCode(Component):
     """
     Run an external code as a component. The component can be configured to
     run the code on a remote server. See :meth:`execute`.

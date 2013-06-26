@@ -45,9 +45,9 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-    def __init__(self, doc=None):
+    def __init__(self):
         self._iter = None
-        super(Driver, self).__init__(doc=doc)
+        super(Driver, self).__init__()
         self.workflow = Dataflow(self)
         self.force_execute = True
 
@@ -73,7 +73,7 @@ class Driver(Component):
 
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our variables is invalid, or if the parameters,
+        if any of our variables is invalid, or if the parameters,
         constraints, or objectives have changed.
         """
         if super(Driver, self).is_valid() is False:
@@ -236,7 +236,7 @@ class Driver(Component):
             changed. (Default is False)
 
         ffd_order: int
-            Order of the derivatives to be used when finite differncing (1 for first
+            Order of the derivatives to be used when finite differencing (1 for first
             derivatives, 2 for second derivativse). During regular execution,
             ffd_order should be 0. (Default is 0)
 
@@ -325,10 +325,10 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second)
+        self.workflow.calc_derivatives(first, second, savebase)
 
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ Check derivatives for all components in this workflow."""
@@ -353,7 +353,7 @@ class Driver(Component):
         the driver should call this function once per iteration and may also
         need to call it at the conclusion.
 
-        All paramters, objectives, and constraints are included in the Case
+        All parameters, objectives, and constraints are included in the Case
         output, along with all extra variables listed in self.printvars.
         """
 

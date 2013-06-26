@@ -96,7 +96,8 @@ class TestCase(unittest.TestCase):
 
         try:
             # Set an illegal execution directory, verify error.
-            comp = Component(directory='/illegal')
+            comp = Component()
+            comp.directory = '/illegal'
             comp.cpath_updated()
         except ValueError, exc:
             msg = ": Illegal path '/illegal', not a descendant of"
@@ -120,7 +121,8 @@ class TestCase(unittest.TestCase):
         exe_dir = os.path.join(directory, 'xyzzy')
         try:
             # Attempt auto-creation of execution directory in protected area.
-            comp = Component(directory=exe_dir)
+            comp = Component()
+            comp.directory = exe_dir
             comp.cpath_updated()
         except OSError, exc:
             msg = ": Can't create execution directory"
@@ -144,7 +146,8 @@ class TestCase(unittest.TestCase):
         out.close()
         try:
             # Set execution directory to plain file.
-            comp = Component(directory=directory)
+            comp = Component()
+            comp.directory = directory
             comp.cpath_updated()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)

@@ -88,7 +88,7 @@ class ZMQServer(object):
 
     @staticmethod
     def spawn_server(classpath, rep_url, pub_url, out_url):
-        ''' run server in it's own process
+        ''' Run server in its own process.
         '''
         file_path = os.path.abspath(__file__)
         cmd = ['python', file_path,

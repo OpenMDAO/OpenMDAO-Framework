@@ -138,7 +138,7 @@ class ZMQStreamServer(object):
 
     @staticmethod
     def get_options_parser():
-        ''' create a parser for command line arguments
+        ''' Create a parser for command-line arguments.
         '''
         parser = OptionParser()
         parser.add_option("-z", "--zmqstream",
@@ -157,7 +157,7 @@ class ZMQStreamServer(object):
 
     @staticmethod
     def spawn_process(zmq_url, ws_port, ws_url='/', external=False):
-        ''' run zmqstreamserver in it's own process, mapping a zmq
+        ''' Run zmqstreamserver in its own process, mapping a zmq
             stream to a websocket.
 
             args:
