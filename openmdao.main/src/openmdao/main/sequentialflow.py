@@ -29,6 +29,7 @@ class SequentialWorkflow(Workflow):
         # Bookkeeping for calculating the residual.
         self._severed_edges = set()
         self._additional_edges = []
+        self._hidden_edges = set()
         self.res = None
         self.bounds = None
         
@@ -327,7 +328,8 @@ class SequentialWorkflow(Workflow):
             return
         print nondiff
         
-        # Groups any connected non-differentiable blocks
+        # Groups any connected non-differentiable blocks. Each block is a set
+        # of component names.
         nondiff_groups = []
         nondiff_groups.append(set([nondiff[0]]))
         for comp in nondiff[1:]:
@@ -340,12 +342,16 @@ class SequentialWorkflow(Workflow):
                 nondiff_groups.append(set([comp]))
                 
         # Create the pseudo-assys
+        iterset = self._get_topsort()
         for group in nondiff_groups:
             pseudo_assy = PseudoAssembly(group, self)
+            
+                
+        print iterset
         
         # TODO: get_interior_edges needs to pull from the derivative edges.
-        pass
-        
+        scope = self.scope
+        self.derivative_iterset = iterset
 
     def derivative_iter(self):
         """Return the iterator for differentiating this workflow. All

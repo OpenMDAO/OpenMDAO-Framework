@@ -29,6 +29,7 @@ class CyclicWorkflow(SequentialWorkflow):
         self._collapsed_graph = None
         self._topsort = None
         self._severed_edges = None
+        self._hidden_edges = set()
         self.res = None
         self.bounds = None
         
