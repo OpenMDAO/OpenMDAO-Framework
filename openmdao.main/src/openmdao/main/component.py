@@ -1886,62 +1886,6 @@ class Component(Container):
 
         return attrs
 
-    #def applyJ(self, arg, result):
-        #"""Multiply an input vector by the Jacobian. For an Explicit Component,
-        #this automatically forms the "fake" residual, and calls into the
-        #function hook "apply_deriv".
-        #"""
-        #for key in result:
-            #result[key] = -arg[key]
-
-        #if hasattr(self, 'apply_deriv'):
-            #self.apply_deriv(arg, result)
-            #return
-
-        ## Optional specification of the Jacobian
-        ## (Subassemblies do this by default)
-        #input_keys, output_keys, J = self.provideJ()
-
-        #ibounds = {}
-        #nvar = 0
-        #for key in input_keys:
-            #val = self.get(key)
-            #width = flattened_size('.'.join((self.name, key)), val)
-            #ibounds[key] = (nvar, nvar+width)
-            #nvar += width
-
-        #obounds = {}
-        #nvar = 0
-        #for key in output_keys:
-            #val = self.get(key)
-            #width = flattened_size('.'.join((self.name, key)), val)
-            #obounds[key] = (nvar, nvar+width)
-            #nvar += width
-
-        #for okey in result:
-            #for ikey in arg:
-                #if ikey not in result:
-                    #i1, i2 = ibounds[ikey]
-                    #o1, o2 = obounds[okey]
-                    #if i2 - i1 == 1:
-                        #if o2 - o1 == 1:
-                            #Jsub = float(J[o1, i1])
-                            #result[okey] += Jsub*arg[ikey]
-                        #else:
-                            #Jsub = J[o1:o2, i1:i2]
-                            #tmp = Jsub*arg[ikey]
-                            #result[okey] += tmp.reshape(result[okey].shape)
-                    #else:
-                        #tmp = flattened_value('.'.join((self.name, ikey)),
-                                              #arg[ikey]).reshape(1, -1)
-                        #Jsub = J[o1:o2, i1:i2]
-                        #tmp = inner(Jsub, tmp)
-                        #if o2 - o1 == 1:
-                            #result[okey] += float(tmp)
-                        #else:
-                            #result[okey] += tmp.reshape(result[okey].shape)
-        
-        
 
 def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
     """Prints out validity status of all input and output traits

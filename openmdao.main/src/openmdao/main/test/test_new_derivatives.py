@@ -371,7 +371,22 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.connect('comp4.y2', 'comp5.x2')
         self.top.connect('comp4.y3', 'comp5.x3')
     
-        self.top.driver.workflow.group_nondifferentiables()
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        
+        self.top.replace('comp4', ExecComp(exp4))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0'] == iterlist)
+        
+        self.top.replace('comp5', ExecCompWithDerivatives(exp5, deriv5))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0', 'comp5'] == iterlist)
+        removed = set([('comp1', 'comp2'),
+                       ('comp1', 'comp3'),
+                       ('comp2', 'comp4'),
+                       ('comp3', 'comp4')])
+        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
+        
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())

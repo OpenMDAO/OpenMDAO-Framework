@@ -165,6 +165,57 @@ def applyJ(obj, arg, result):
                         result[okey] += tmp.reshape(result[okey].shape)
     
 
+class FiniteDifference(object):
+    """ Helper object for performing finite difference on a portion of a model.
+    """
+    
+    def __init__(self, pa):
+        """ Performs finite difference on the components in a given 
+        pseudo_assembly. """
+                          
+        self.inputs = pa.inputs
+        self.outputs = pa.outputs
+        self.in_bounds = {}
+        self.out_bounds = {}
+        self.pa = pa
+        self.scope = pa.wflow.scope
+        
+        in_size = 0
+        for edge in self.inputs:
+            src = edge[1]
+            val = self.scope.get(src)
+            print src
+            width = flattened_size(src, val)
+            self.in_bounds[src] = (in_size, in_size+width)
+            in_size += width
+            
+        out_size = 0
+        for edge in self.outputs:
+            src = edge[0]
+            val = self.scope.get(src)
+            width = flattened_size(src, val)
+            self.out_bounds[src] = (out_size, out_size+width)
+            out_size += width
+                
+        self.J = array((out_size, in_size))
+        
+    def calculate(self):
+        """Return Jacobian for all inputs and outputs."""
+        
+        n_in = self.J.size(1)
+        n_out = self.J.size(0)
+        
+        for src_conn in self.inputs:
+            
+            src = src_conn[1]
+            i1, i2 = self.bounds(src)
+            val = self.scope.get(src)
+            
+            if i2-i1==1:
+                pass
+    
+       
+                      
 #-------------------------------------------
 # Everything below here will be deprecated.
 #-------------------------------------------

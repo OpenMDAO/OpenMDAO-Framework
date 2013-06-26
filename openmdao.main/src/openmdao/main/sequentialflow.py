@@ -2,6 +2,8 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
+import networkx as nx
+
 from openmdao.main.vartree import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, applyJ
@@ -142,9 +144,11 @@ class SequentialWorkflow(Workflow):
         """ Returns an alphabetical list of all output edges that are
         interior to the set of components supplied."""
         
-        edge_list = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
+        edges = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
+        edges = edges.union(self._additional_edges)
+        edges = edges - self._hidden_edges
                 
-        return sorted(list(edge_list.union(self._additional_edges)))
+        return sorted(list(edges))
 
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
@@ -326,7 +330,6 @@ class SequentialWorkflow(Workflow):
                 
         if len(nondiff) == 0:
             return
-        print nondiff
         
         # Groups any connected non-differentiable blocks. Each block is a set
         # of component names.
@@ -341,17 +344,58 @@ class SequentialWorkflow(Workflow):
             else:
                 nondiff_groups.append(set([comp]))
                 
-        # Create the pseudo-assys
-        iterset = self._get_topsort()
-        for group in nondiff_groups:
-            pseudo_assy = PseudoAssembly(group, self)
-            
-                
-        print iterset
+        # We need to copy our graph, and put pseudoasemblies in place
+        # of the nondifferentiable components.
         
-        # TODO: get_interior_edges needs to pull from the derivative edges.
+        graph = nx.DiGraph(self._get_collapsed_graph())
+        pseudo_assemblies = {}
+        
+        for j, group in enumerate(nondiff_groups):
+            pa_name = '~~%d' % j
+            
+            # Add the pseudo_comps:
+            graph.add_node(pa_name)
+            
+            # Replace edges
+            inputs = set()
+            outputs = set()
+            for edge in graph.edges():
+                
+                if edge[0] in group and edge[1] in group:
+                    graph.remove_edge(edge[0], edge[1])
+                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    self._hidden_edges = self._hidden_edges.union(var_edge)
+                elif edge[0] in group:
+                    graph.remove_edge(edge[0], edge[1])
+                    graph.add_edge(pa_name, edge[1])
+                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    outputs = outputs.union(var_edge)
+                else:
+                    graph.remove_edge(edge[0], edge[1])
+                    graph.add_edge(edge[0], pa_name)
+                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    inputs = inputs.union(var_edge)
+                    
+            # Remove old nodes
+            for node in group:
+                graph.remove_node(node)
+                
+            # Create pseudo_assy
+            pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, group, 
+                                                        inputs, outputs, 
+                                                        self)
+                
+        iterset = nx.topological_sort(graph)
+        
+        self.derivative_iterset = []
         scope = self.scope
-        self.derivative_iterset = iterset
+        for name in iterset:
+            if '~' in name:
+                self.derivative_iterset.append(pseudo_assemblies[name])
+            else:
+                self.derivative_iterset.append(getattr(scope, name))
+                
+        return iterset
 
     def derivative_iter(self):
         """Return the iterator for differentiating this workflow. All
