@@ -69,7 +69,7 @@ class DriverUsesDerivatives(Driver):
         return driver_inputs, list(driver_outputs)
     
         
-    def check_config (self):
+    def check_config(self):
         """Verify that our workflow is able to resolve all of its components."""
         
         super(DriverUsesDerivatives, self).check_config()
@@ -83,7 +83,7 @@ class DriverUsesDerivatives(Driver):
         """Run check_derivatives on our workflow."""
     
         driver_inputs, driver_outputs = self._list_driver_connections()
-        self.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
+        #self.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
         
         
     def check_hessians(self):

@@ -122,8 +122,7 @@ def applyJ(obj, arg, result):
 
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
-    if hasattr(obj, 'provideJ'):
-        input_keys, output_keys, J = obj.provideJ()
+    input_keys, output_keys, J = obj.provideJ()
 
     ibounds = {}
     nvar = 0

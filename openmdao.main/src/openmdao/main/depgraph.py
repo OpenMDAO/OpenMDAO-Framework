@@ -486,11 +486,11 @@ class DependencyGraph(object):
             if node not in orig:
                 p = orig.intersection(pred[node].keys())
                 s = orig.intersection(succ[node].keys())
-                if p and s:
+                if p and s:   # in between two nodes in the list
                     betweens.add(node)
-                elif p and node in pred['@bout']:
+                elif p and node in pred['@bout']: # between a list node and the output boundary
                     betweens.add(node)
-                elif s and node in succ['@bin']:
+                elif s and node in succ['@bin']: # between a list node and the input boundary
                     betweens.add(node)
         return betweens
             

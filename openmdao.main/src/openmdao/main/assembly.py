@@ -851,7 +851,7 @@ class Assembly(Component):
                 if names[0] == self.name:
                     driver_outputs[j] = names[1]
 
-        self.driver.check_derivatives(order, driver_inputs, driver_outputs)
+        #self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def list_components(self):
         ''' List the components in the assembly.
