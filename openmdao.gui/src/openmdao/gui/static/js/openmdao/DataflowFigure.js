@@ -85,7 +85,7 @@ openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfac
 
         // listen for changes to valid status due to execution
         topic = pathname+'.exec_state';
-        model.addListener(topic,this.setExecState.bind(this));
+        model.addListener(topic, this.setExecState.bind(this));
     }
 };
 
@@ -652,7 +652,7 @@ openmdao.DataflowFigure.prototype.minimize=function(force){
 };
 
 /* show the maximized version of the figure, with subcomponents & connections */
-openmdao.DataflowFigure.prototype.maximize=function(){
+openmdao.DataflowFigure.prototype.maximize=function() {
     // ensure the maxmin button is set to maximized
     if (this.maxmin === '+') {
         this.maxmin = '-';
@@ -662,13 +662,11 @@ openmdao.DataflowFigure.prototype.maximize=function(){
 
     // get child data from model and redraw with child figures
     var self = this;
-    this.openmdao_model.getDataflow(self.pathname, function(json) {
-            self.updateDataflow(json);
-        },
-        function(jqXHR, textStatus, errorThrown) {
-            debug.error('Error getting dataflow for',self,jqXHR);
-        }
-    );
+    this.openmdao_model.getDataflow(self.pathname)
+        .done(self.updateDataflow.bind(self))
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            debug.error('Error getting dataflow for', self, jqXHR);
+        });
 };
 
 /** update dataflow by recreating figures from JSON dataflow data */

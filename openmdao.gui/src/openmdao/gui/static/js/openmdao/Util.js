@@ -1,6 +1,5 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
-openmdao.sockets = [];
 
 /**
  * utility functions used in the openmdao gui
@@ -53,7 +52,7 @@ openmdao.Util = {
      * title:   the title of the window
      * options: window options
      */
-    popupWindow: function(url,title,options) {
+    popupWindow: function(url, title, options) {
         var specs = {
             height:     3/4*screen.height,
             width:      1/2*screen.width,
@@ -96,7 +95,7 @@ openmdao.Util = {
      * title:   the title of the window
      * options: window options
      */
-    htmlWindow: function(html,title,options) {
+    htmlWindow: function(html, title, options) {
         var win =  openmdao.Util.popupWindow('',title,options);
         win.document.open();
         win.document.write(html);
@@ -110,11 +109,10 @@ openmdao.Util = {
      * script:  script to initialize the window
      * options: window options
      */
-    popupScript: function (title,script,options) {
+    scriptWindow: function (title, script, options) {
         var url = "/workspace/base?head_script='"+script+"'",
             win = openmdao.Util.popupWindow(url,title,options);
     },
-
 
     /**
      *  escape anything in the text that might look like HTML, etc.
@@ -584,163 +582,6 @@ openmdao.Util = {
         document.body.setAttribute('style',rotateCSS);
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);} return;},
 
-    /** connect to websocket at specified address */
-    openWebSocket: function(addr,handler,errHandler,retry,delay) {
-        // if retry is true and connection fails, try again to connect after delay
-        retry = typeof retry !== 'undefined' ? retry : true;
-        delay = typeof delay !== 'undefined' ? delay : 2000;
-
-        var socket = null,
-            defrd = jQuery.Deferred();
-
-        function connect_after_delay() {
-            tid = setTimeout(connect, delay);
-        }
-
-        function displaySockets() {
-            debug.info('WebSockets:');
-            var i = 0;
-            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-                debug.info('    '+i+': state '+openmdao.sockets[i].readyState);
-            }
-        }
-
-        function connect() {
-            if (socket === null || socket.readyState > 0) {
-                socket = new WebSocket(addr);
-                socket.binaryType = "arraybuffer"; // when binary msgs are received, treat as ArrayBuffers
-                openmdao.sockets.push(socket);
-                socket.onopen = function (e) {
-                    defrd.resolve(socket);
-                    //debug.info('websocket opened '+socket.readyState,socket,e);
-                    //displaySockets();
-                };
-                socket.onclose = function (e) {
-                    //debug.info('websocket closed',socket,e);
-                    //displaySockets();
-                    index = openmdao.sockets.indexOf(this);
-                    if (index >= 0) {
-                        openmdao.sockets.splice(index, 1);
-                        if (typeof openmdao_test_mode !== 'undefined') {
-                            if (openmdao.sockets.length === 0) {
-                                openmdao.Util.notify('WebSockets closed',
-                                                     'closed', 'ws_closed');
-                            }
-                        }
-                    }
-                    else {
-                        debug.info('websocket not found!');
-                    }
-                    if ((e.code === 1006) && (retry === true)) {
-                        // See RFC 6455 for error code definitions.
-                        connect_after_delay();
-                    }
-                };
-                socket.onmessage = function(e) {
-                    //debug.info('websocket message',socket,e);
-                    handler(e.data);
-                };
-
-                socket.onerror = function (e) {
-                    if (typeof errHandler === 'function') {
-                        errHandler(e);
-                    }
-                    else {
-                        debug.error('websocket error',socket,e);
-                    }
-                };
-            }
-        }
-
-        connect();
-        /*debug.info('websocket connected');
-        debug.info('addr='+addr);
-        debug.info('retry='+retry);
-        debug.info('delay='+delay);
-        debug.info('handler:');
-        debug.info(handler);
-        debug.info('errhandler:');
-        debug.info(errHandler);
-        */
-        return defrd.promise();
-    },
-
-    /** Close all WebSockets. */
-    closeWebSockets: function(reason) {
-        var i;
-        if (openmdao.sockets) {
-            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-             openmdao.sockets[i].close(1000, reason);
-            }
-        }
-    },
-
-    /** Notify when `nSockets` are open (used for testing). */
-    webSocketsReady: function(nSockets) {
-        function doPoll() {
-            setTimeout(poll, 500);
-        }
-
-        function poll() {
-            var i;
-            if (openmdao.sockets.length >= nSockets) {
-                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-                    if (openmdao.sockets[i].readyState !== 1) {
-                        doPoll();
-                        return;
-                    }
-                }
-                openmdao.Util.notify('WebSockets open', 'open',
-                                      'ws_open');
-            }
-            else {
-                doPoll();
-            }
-        }
-        poll();
-    },
-
-    /** add window to window list. */
-    addWindow: function(win) {
-        if (! openmdao.windows) {
-            openmdao.windows = [];
-        }
-        openmdao.windows.push(win);
-    },
-
-
-    /** close all windows on the window list */
-    closeWindows: function() {
-        if (openmdao.windows) {
-            for (i = 0; i < openmdao.windows.length; i++) {
-                openmdao.windows[i].close();
-            }
-        }
-    },
-
-    editFile: function(filename) {
-        if (openmdao.codeEditor) {
-            openmdao.codeEditor.editFile(filename);
-        }
-        else {
-            openmdao.Util.popupWindow('tools/editor?filename='+filename, 'Code Editor');
-        }
-    },
-
-    viewGeometry: function(pathname) {
-        function popupGeom(pathname) {
-            w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,'Geometry of '+pathname);
-            openmdao.Util.addWindow(w);
-        }
-        if (typeof pathname === "undefined" || !pathname) {
-            openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
-                                           popupGeom);
-        }
-        else {
-            popupGeom(pathname);
-        }
-    },
-
     /*
      * Allow a child object to inherit from a parent object.
      * Make sure to call this method immediately after defining
@@ -753,5 +594,3 @@ openmdao.Util = {
         childObject.prototype.superClass = parentObject.prototype;
     }
 };
-
-

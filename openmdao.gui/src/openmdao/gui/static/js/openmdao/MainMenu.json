@@ -23,9 +23,9 @@
     },
     { "text": "Tools", "id": "tools-menu",
       "items": [
-        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.editFile();"},
+        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.model.editFile();"},
+        { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.model.viewGeometry();"},
         { "text": "Plot Variable", "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
-        { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.Util.viewGeometry();"},
         { "text": "Show Drawing",  "id": "tools-drawing",   "onclick": "openmdao.DrawingFrame.prototype.chooseVariable();"},
         { "text": "Show Log",      "id": "tools-log",       "onclick": "openmdao.DisplayLogFrame();"}
       ]

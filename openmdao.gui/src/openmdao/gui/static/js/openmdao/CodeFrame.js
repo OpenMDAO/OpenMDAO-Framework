@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.CodeFrame = function(id,model) {
-    openmdao.CodeFrame.prototype.init.call(this,id,'Code');
+openmdao.CodeFrame = function(id, model) {
+    openmdao.CodeFrame.prototype.init.call(this, id, 'Code');
 
     /***********************************************************************
      *  private
@@ -353,6 +353,10 @@ openmdao.CodeFrame = function(id,model) {
 
     /** get contents of specified file from model, load into editor */
     this.editFile = function(filepath) {
+        if (! filepath) {
+            alert("Error: file name not specified");
+            return;
+        };
         var tabName = nameSplit(filepath);
         if (sessions[tabName]) {
             // file already has open tab, just switch to it

@@ -105,160 +105,160 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         model.issueCommand(cmd);
     }
 
-    function error_handler(jqXHR, textStatus, errorThrown) {
-        debug.error("Error while trying to find candidate parameters.", jqXHR);
-    }
+    function findComps(wjson, callback) {
+        debug.info('findComps', wjson, callback);
+        var candidates = [];
+        var limits = {};
 
-    /** Breakout dialog for adding a new parameter */
-    function promptForParameter(callback, model) {
+        // Loop through components in workflow to gather all our param candidates
+        jQuery.each(wjson.components, function(idx, comp) {
 
-        // Figure out all of our candidates for parameter addition.
-        var parentpath = pathname.split('.').slice(0, -1).join('.');
-        model.getDataflow(parentpath, function findComps(wjson) {
+            var comppath = comp.pathname.split('.').slice(-1)[0];
 
-            var candidates = [];
-            var limits = {};
+            // Loop through inputs in component and fill our table of candidates
+            model.getObject(comp.pathname, function findInputs(cjson) {
+                var highlimit, lowlimit;
+                jQuery.each(cjson.Inputs, function(idx, input) {
 
-            // Loop through components in workflow to gather all our param candidates
-            jQuery.each(wjson.components, function(idx, comp) {
+                    // Do not include connected inputs.
+                    // TODO: Recurse into subdriver workflows.
+                    if (input.connected) {
+                        return;
+                    };
 
-                var comppath = comp.pathname.split('.').slice(-1)[0];
+                    // Do not include parameters already connected in any workflow.
+                    // TODO: Should limit it to this workflow.
+                    if (input.implicit) {
+                        return;
+                    }
 
-                // Loop through inputs in component and fill our table of candidates
-                model.getObject(comp.pathname, function findInputs(cjson) {
-                    var highlimit, lowlimit;
-                    jQuery.each(cjson.Inputs, function(idx, input) {
-
-                        // Do not include connected inputs.
-                        // TODO: Recurse into subdriver workflows.
-                        if (input.connected) {
-                            return;
-                        };
-
-                        // Do not include parameters already connected in any workflow.
-                        // TODO: Should limit it to this workflow.
-                        if (input.implicit) {
-                            return;
-                        }
-
-                        lowlimit = null;
-                        highlimit = null;
-                        if (input.low !== null) {
-                            lowlimit = input.low;
-                        };
-                        if (input.high !== null) {
-                            highlimit = input.high;
-                        };
-                        fullpath = comppath + '.' + input.name
-                        candidates.push(fullpath);
-                        limits[fullpath] = [lowlimit, highlimit];
-                    });
-                    candidates.sort();
+                    lowlimit = null;
+                    highlimit = null;
+                    if (input.low !== null) {
+                        lowlimit = input.low;
+                    };
+                    if (input.high !== null) {
+                        highlimit = input.high;
+                    };
+                    fullpath = comppath + '.' + input.name
+                    candidates.push(fullpath);
+                    limits[fullpath] = [lowlimit, highlimit];
                 });
+                candidates.sort();
+            });
+        });
+
+        // Build dialog markup
+        var win = jQuery('<div id="parameter-dialog"></div>'),
+            target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
+            low    = jQuery('<input id="parameter-low" type="text" style="width:50%"></input>'),
+            high   = jQuery('<input id="parameter-high" type="text" style="width:50%"></input>'),
+            scaler = jQuery('<input id="parameter-scaler" type="text" style="width:50%"></input>'),
+            adder  = jQuery('<input id="parameter-adder" type="text" style="width:50%"></input>'),
+            name   = jQuery('<input id="parameter-name" type="text" style="width:50%"></input>');
+
+        win.append(jQuery('<div>Target: </div>').append(target));
+        parm_selector = win.find('#parameter-target');
+
+        var table = jQuery('<table>');
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
+                            .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
+        table.append(row);
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
+                            .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
+        table.append(row);
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
+        table.append(row);
+        win.append(table);
+
+        // update the parameter selector.
+        parm_selector.html('');
+        parm_selector.autocomplete({ source: candidates, minLength:0});
+
+        function setupSelector(selector) {
+
+            // process new selector value when selector loses focus
+            selector.bind('blur', function(e) {
+                selector.autocomplete('close');
             });
 
-            // Build dialog markup
-            var win = jQuery('<div id="parameter-dialog"></div>'),
-                target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
-                low    = jQuery('<input id="parameter-low" type="text" style="width:50%"></input>'),
-                high   = jQuery('<input id="parameter-high" type="text" style="width:50%"></input>'),
-                scaler = jQuery('<input id="parameter-scaler" type="text" style="width:50%"></input>'),
-                adder  = jQuery('<input id="parameter-adder" type="text" style="width:50%"></input>'),
-                name   = jQuery('<input id="parameter-name" type="text" style="width:50%"></input>');
+            // set autocomplete to trigger blur (remove focus)
+            selector.autocomplete({
+                select: function(event, ui) {
+                    selector.val(ui.item.value);
+                    selector.blur();
+                    limit = limits[ui.item.value];
+                    if (limit[0] !== null) {
+                        low.val(limit[0]);
+                    }
+                    if (limit[1] !== null) {
+                        high.val(limit[1]);
+                    }
+                },
+                delay: 0,
+                minLength: 0
+            });
 
-            win.append(jQuery('<div>Target: </div>').append(target));
-            parm_selector = win.find('#parameter-target');
+            // set enter key to trigger blur (remove focus)
+            selector.bind('keypress.enterkey', function(e) {
+                if (e.which === 13) {
+                    selector.blur();
 
-            var table = jQuery('<table>');
-            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
-                                .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
-            table.append(row);
-            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
-                                .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
-            table.append(row);
-            row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
-            table.append(row);
-            win.append(table);
-
-            // update the parameter selector.
-            parm_selector.html('');
-            parm_selector.autocomplete({ source: candidates, minLength:0});
-
-            function setupSelector(selector) {
-
-                // process new selector value when selector loses focus
-                selector.bind('blur', function(e) {
-                    selector.autocomplete('close');
-                });
-
-                // set autocomplete to trigger blur (remove focus)
-                selector.autocomplete({
-                    select: function(event, ui) {
-                        selector.val(ui.item.value);
-                        selector.blur();
-                        limit = limits[ui.item.value];
+                    // If the user types the var name manually, we should
+                    // still add the limits from that variable.
+                    if (candidates.indexOf(selector.val()) >= 0) {
+                        limit = limits[selector.val()];
                         if (limit[0] !== null) {
                             low.val(limit[0]);
                         }
                         if (limit[1] !== null) {
                             high.val(limit[1]);
                         }
-                    },
-                    delay: 0,
-                    minLength: 0
-                });
-
-                // set enter key to trigger blur (remove focus)
-                selector.bind('keypress.enterkey', function(e) {
-                    if (e.which === 13) {
-                        selector.blur();
-
-                        // If the user types the var name manually, we should
-                        // still add the limits from that variable.
-                        if (candidates.indexOf(selector.val()) >= 0) {
-                            limit = limits[selector.val()];
-                            if (limit[0] !== null) {
-                                low.val(limit[0]);
-                            }
-                            if (limit[1] !== null) {
-                                high.val(limit[1]);
-                            }
-                        }
                     }
-                });
-            }
-
-            setupSelector(parm_selector);
-
-            // Display dialog
-            jQuery(win).dialog({
-                modal: true,
-                title: 'New Parameter',
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: 'parameter-ok',
-                        click: function() {
-                            jQuery(this).dialog('close');
-                            callback(target.val(),low.val(),high.val(),
-                                     scaler.val(),adder.val(),name.val());
-                            // remove from DOM
-                            win.remove();
-                        }
-                    },
-                    {
-                        text: 'Cancel',
-                        id: 'parameter-cancel',
-                        click: function() {
-                            jQuery(this).dialog('close');
-                            // remove from DOM
-                            win.remove();
-                        }
-                    }
-                ]
+                }
             });
-        }, error_handler);
+        }
 
+        setupSelector(parm_selector);
+
+        // Display dialog
+        jQuery(win).dialog({
+            modal: true,
+            title: 'New Parameter',
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: 'parameter-ok',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                        callback(target.val(),low.val(),high.val(),
+                                 scaler.val(),adder.val(),name.val());
+                        // remove from DOM
+                        win.remove();
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    id: 'parameter-cancel',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                        // remove from DOM
+                        win.remove();
+                    }
+                }
+            ]
+        });
+    }
+
+    /** Breakout dialog for adding a new parameter */
+    function promptForParameter(callback, model) {
+        // Figure out all of our candidates for parameter addition.
+        var parentpath = pathname.split('.').slice(0, -1).join('.');
+        model.getDataflow(parentpath)
+            .done(function(wjson) { findComps(wjson, callback); })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error while trying to find candidate parameters.", jqXHR, textStatus, errorThrown);
+            });
     }
 
     /** clear all parameters */

@@ -210,7 +210,7 @@ openmdao.FileTreeFrame = function(id, model) {
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
-                "action" : function(node) { openmdao.Util.editFile(path); }
+                "action" : function(node) { openmdao.model.editFile(path); }
             };
 
             // if it's a py file, let them execute it
@@ -228,7 +228,7 @@ openmdao.FileTreeFrame = function(id, model) {
             if (/.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { openmdao.Util.viewGeometry(path.replace(/\\/g,'/')); }
+                    "action" : function(node) { openmdao.model.viewGeometry(path.replace(/\\/g,'/')); }
                 };
             }
 
@@ -334,7 +334,7 @@ openmdao.FileTreeFrame = function(id, model) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                openmdao.Util.editFile(path);
+                openmdao.model.editFile(path);
             }
             else if (node.hasClass('folder')) {
                 // what do, what do
@@ -413,16 +413,14 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
         function(name) {
             openmdao.model.newFile(name, path,
                 function(data, textStatus, jqXHR) {
-                    name = '/'+name;
-                    if (path)
-                        name = path+name;
-                    openmdao.Util.editFile(path);
-                    // Depending on browser settings, this may get blocked.  Worse yet, it can
-                    // put things in a state that other means of opening the editor get blocked.
-                    // For now just don't even try.
-                    // else {
-                    //     openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
-                    // }
+                    var pathname = '/'+name;
+                    if (path) {
+                        pathname = path + name;
+                    }
+                    // if the editor is already open, load the new file
+                    if (openmdao.model.codeEditor) {
+                        openmdao.model.editFile(pathname);
+                    }
                     if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify('New file created');
                     }

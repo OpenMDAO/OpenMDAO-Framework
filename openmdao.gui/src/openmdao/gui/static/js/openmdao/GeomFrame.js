@@ -62,7 +62,7 @@ openmdao.NAME_SIZE = 256;
 //     g.offTop   =  0;    // offset to upper-left corner of the canvas
 //     g.offLeft  =  0;
 //     g.dragging = false;
-  
+
 //   //var canvas = document.getElementById("WebViewer");
 //     g.canvas.addEventListener('mousemove',  getCursorXY,  false);
 //     g.canvas.addEventListener('mousedown',  getMouseDown, false);
@@ -87,7 +87,7 @@ openmdao.NAME_SIZE = 256;
 
 //     function handleMessage(message) {
 //         // NOTE: the message here is the entire ArrayBuffer containing the padded topic name + the
-//         // actual message being sent to the WebViewer.  This is done so we can avoid copying 
+//         // actual message being sent to the WebViewer.  This is done so we can avoid copying
 //         // the buffer.
 //         g.messageQ.push(message[1]); // FIXME: add namespacing to WebViewer stuff
 //     }
@@ -134,7 +134,7 @@ openmdao.NAME_SIZE = 256;
 //     /** nothing to see here, we get our data elsewhere */
 //     this.update = function() {};
 
-//     wvStart(); 
+//     wvStart();
 // };
 
 // /** set prototype */

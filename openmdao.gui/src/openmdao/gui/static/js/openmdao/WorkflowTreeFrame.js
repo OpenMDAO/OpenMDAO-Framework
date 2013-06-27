@@ -285,11 +285,12 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 
     /** update the tree, with data from the model  */
     this.update = function() {
-        model.getWorkflow('',
-                          updateTree,
-                          function(jqXHR, textStatus, errorThrown) {
-                              debug.error("Error getting workflow ", jqXHR);
-                          });
+        model.getWorkflow('')
+            .done(updateTree)
+            .fail(function(jqXHR, textStatus, err) {
+                self.pathname = '';
+                debug.error("Error getting workflow ", jqXHR, textStatus, err);
+            });
     };
 
     // load initial component data

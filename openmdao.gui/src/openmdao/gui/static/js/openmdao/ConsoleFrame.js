@@ -58,7 +58,7 @@ openmdao.ConsoleFrame = function(id,model) {
         openmdao.Util.htmlWindow(history.html());
     }));
     contextMenu.append(jQuery('<li title="Open a pop-out console window">Pop Out</li>').click(function(ev) {
-        openmdao.Util.popupScript('Console', 'jQuery(function(){openmdao.PopoutConsoleFrame()})');
+        openmdao.Util.scriptWindow('Console', 'jQuery(function(){openmdao.PopoutConsoleFrame()})');
     }));
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
@@ -132,8 +132,8 @@ openmdao.ConsoleFrame.prototype.constructor = openmdao.ConsoleFrame;
 
 /** initialize a console in a child window */
 openmdao.PopoutConsoleFrame = function() {
-    openmdao = opener.openmdao;
-    openmdao.Util.addWindow(window);
+    openmdao.model = opener.openmdao.model;
+    openmdao.model.addWindow(window);
     jQuery('body').append('<div id="console"></div>');
     new openmdao.ConsoleFrame("console",  openmdao.model);
     window.document.title='OpenMDAO Console';

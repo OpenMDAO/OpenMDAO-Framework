@@ -397,7 +397,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             if ( dataView.getItem(cell.row).value === "Geometry" ) {
                 var p = self.pathname + '.' + dataView.getItem(cell.row).id;
-                openmdao.viewGeometry(p);          
+                openmdao.model.viewGeometry(p);
             }
         });
 
@@ -454,7 +454,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
         if ( dataContext.value === "Geometry"){
-            return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' + 
+            return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' +
                    'role="button" aria-disabled="false">View Geom</button>' ;
         }
         return value ;

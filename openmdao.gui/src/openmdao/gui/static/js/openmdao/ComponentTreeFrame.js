@@ -84,8 +84,8 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' a').draggable({ 
-                //helper: 'clone', 
+            jQuery('#'+id+' a').draggable({
+                //helper: 'clone',
                 appendTo: 'body',
                 helper: function(event) {
                     return jQuery('<span style="white-space:nowrap;background-color:black;color:white;"/>')
@@ -208,4 +208,3 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 /** set prototype */
 openmdao.ComponentTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.ComponentTreeFrame.prototype.constructor = openmdao.ComponentTreeFrame;
-

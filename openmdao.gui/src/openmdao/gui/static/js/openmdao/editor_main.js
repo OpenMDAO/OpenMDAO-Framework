@@ -4,8 +4,7 @@
 
 jQuery(function() {
     if (opener && opener.openmdao) {
-        openmdao = opener.openmdao;
-        openmdao.Util.addWindow(window);
+        openmdao.model = opener.openmdao.model;
     }
     else {
         // define openmdao namespace & create interface to openmdao in global scope
@@ -18,7 +17,7 @@ jQuery(function() {
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {
-        openmdao.editorEditor = undefined;
+        openmdao.model.codeEditor = undefined;
         editor.close();
         ftree.close();
     });
@@ -56,6 +55,6 @@ jQuery(function() {
     }
 
     // save ref to editor for others to use
-    openmdao.editorEditor = editor;
+    openmdao.model.codeEditor = editor;
 });
 

@@ -138,7 +138,7 @@ class WorkspacePage(BasePageObject):
             lambda browser: len(self.get_dataflow_figures()) > 0)
 
         # Now wait for all WebSockets open.
-        browser.execute_script('openmdao.Util.webSocketsReady(2);')
+        browser.execute_script('openmdao.model.webSocketsReady(2);')
 
         try:  # We may get 2 notifiers: sockets open and sockets closed.
             NotifierPage.wait(self, base_id='ws_open')
@@ -202,7 +202,7 @@ class WorkspacePage(BasePageObject):
         """ Close the workspace page. Returns :class:`ProjectsPage`. """
         if commit:
             self.commit_project()
-        self.browser.execute_script('openmdao.Util.closeWebSockets();')
+        self.browser.execute_script('openmdao.model.closeWebSockets();')
         NotifierPage.wait(self, base_id='ws_closed')
         self('project_menu').click()
         self('close_button').click()
@@ -219,7 +219,7 @@ class WorkspacePage(BasePageObject):
         if expectDialog:
             dialog = ConfirmationPage(self)
             if confirm:  # close without saving
-                self.browser.execute_script('openmdao.Util.closeWebSockets();')
+                self.browser.execute_script('openmdao.model.closeWebSockets();')
                 NotifierPage.wait(self)
                 dialog.click_ok()
                 from project import ProjectsPage

@@ -49,7 +49,7 @@ openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
             self.pathname = path;
             self.setTitle('Dataflow: '+path);
             pane.showDataflow(path);
-            model.addListener(path,handleMessage);
+            model.addListener(path, handleMessage);
         }
     };
 

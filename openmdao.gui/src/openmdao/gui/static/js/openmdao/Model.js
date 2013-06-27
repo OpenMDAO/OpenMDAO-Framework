@@ -7,43 +7,158 @@ openmdao.Model=function(listeners_ready) {
      *  private
      ***********************************************************************/
 
-    var self = this,
+    var _self = this,
         _modified = false,
-        outstream_opened = false,
-        pubstream_opened = false,
-        sockets = {},
-        subscribers = {};
+        _windows = [],
+        _websockets = [],
+        _subscribers = {};
 
-    this.model_ready = jQuery.Deferred();
+    _self.model_ready = jQuery.Deferred();
 
-    /** initialize a websocket
-           stream_name: the name of the stream for which to open the websocket
-           handler:     the message handler for the websocket
+    /** close all windows associated with this model */
+    function closeWindows() {
+        if (_windows) {
+            for (i=0; i<_windows.length; i++) {
+                _windows[i].close();
+            }
+        }
+    }
+
+    /** connect to websocket at specified address */
+    function openWebSocket(addr, handler, errHandler, retry, delay) {
+        // if retry is true and connection fails, try again to connect after delay
+        retry = typeof retry !== 'undefined' ? retry : true;
+        delay = typeof delay !== 'undefined' ? delay : 2000;
+
+        var socket = null,
+            defrd = jQuery.Deferred();
+
+        function connect_after_delay() {
+            tid = setTimeout(connect, delay);
+        }
+
+        function displaySockets() {
+            debug.info('WebSockets:');
+            for (var i=0 ; i<_websockets.length; ++i) {
+                debug.info('    '+i+': state '+_websockets[i].readyState);
+            }
+        }
+
+        function connect() {
+            if (socket === null || socket.readyState > 0) {
+                socket = new WebSocket(addr);
+                socket.binaryType = "arraybuffer"; // when binary msgs are received, treat as ArrayBuffers
+                _websockets.push(socket);
+                socket.onopen = function (e) {
+                    defrd.resolve(socket);
+                    //debug.info('websocket opened '+socket.readyState,socket,e); displaySockets();
+                };
+                socket.onclose = function (e) {
+                    //debug.info('websocket closed',socket,e); displaySockets();
+                    index = _websockets.indexOf(this);
+                    if (index >= 0) {
+                        _websockets.splice(index, 1);
+                        if (typeof openmdao_test_mode !== 'undefined') {
+                            if (_websockets.length === 0) {
+                                openmdao.Util.notify('WebSockets closed',
+                                                     'closed', 'ws_closed');
+                            }
+                        }
+                    }
+                    else {
+                        debug.info('websocket not found!');
+                    }
+                    if ((e.code === 1006) && (retry === true)) {
+                        // See RFC 6455 for error code definitions.
+                        connect_after_delay();
+                    }
+                };
+                socket.onmessage = function(e) {
+                    //debug.info('websocket message',socket,e);
+                    handler(e.data);
+                };
+
+                socket.onerror = function (e) {
+                    if (typeof errHandler === 'function') {
+                        errHandler(e);
+                    }
+                    else {
+                        debug.error('websocket error',socket,e);
+                    }
+                };
+            }
+        }
+
+        connect();
+        /*
+        debug.info('websocket connected');
+        debug.info('addr='+addr);
+        debug.info('retry='+retry);
+        debug.info('delay='+delay);
+        debug.info('handler:');
+        debug.info(handler);
+        debug.info('errhandler:');
+        debug.info(errHandler);
+        */
+        return defrd.promise();
+    }
+
+    /** Close all WebSockets. */
+    function closeWebSockets(reason) {
+        var i;
+        if (_websockets) {
+            for (i = 0 ; i < _websockets.length ; ++i) {
+             _websockets[i].close(1000, reason);
+            }
+        }
+    }
+
+    /** initialize a message stream
+           stream_name: the name of the stream
+           handler:     the message handler for the stream
     */
-    function open_websocket(stream_name, handler) {
+    function openStream(stream_name, handler) {
         // make ajax call (to url) to get the address of the websocket
-       return jQuery.ajax({ type: 'GET', url:  'stream/'+stream_name })
-               .fail(function(jqXHR, textStatus, err) {
-                   debug.error('Error getting websocket url',jqXHR,textStatus,err);
-               })
-               .pipe(function(addr) {
-                   return openmdao.Util.openWebSocket(addr,handler);
-               })
-               .done(function(sock) {
-                   sockets[stream_name] = sock;
-               });
+        return  jQuery.ajax({
+                    type: 'GET',
+                    url:  'stream/'+stream_name
+                })
+                .fail(function(jqXHR, textStatus, err) {
+                    debug.error('Error getting websocket url', jqXHR ,textStatus, err);
+                })
+                .pipe(function(addr) {
+                    return openWebSocket(addr, handler);
+                });
     }
 
-    /** close all websockets */
-    function close_websockets(reason) {
-        jQuery.each(sockets,function(idx,socket) {
-            socket.close(1000,reason);
-        });
+    /** publish message to subscribed listeners. */
+    function publish(message) {
+        var topic = message[0],
+            callbacks;
+        if (_subscribers.hasOwnProperty(topic) && _subscribers[topic].length > 0) {
+            // Need a copy in case subscriber removes itself during callback.
+            callbacks = _subscribers[topic].slice();
+            for (var i=0; i<callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
+                }
+                else {
+                    debug.error('Model.publish: invalid callback for topic:',
+                                topic, callbacks[i]);
+                }
+            }
+        }
     }
 
-    /** handle an output message, which is just passed on to all subscribers */
+    /** Set 'modified' flag and publish to '@model-modified' topic. */
+    function setModified(value) {
+        _modified = value;
+        publish(['@model-modified', _modified]);
+    };
+
+    /** handle an output message, which is just passed on to all _subscribers */
     function handleOutMessage(message) {
-        var callbacks = subscribers.outstream;
+        var callbacks = _subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -56,18 +171,18 @@ openmdao.Model=function(listeners_ready) {
             }
         }
         else {
-            debug.info("no callbacks for out message:",message);
+            debug.info("no callbacks for out message:", message);
         }
     }
 
     /** handle a published message, which has a topic
-        the message is passed only to subscribers of that topic
+        the message is passed only to _subscribers of that topic
     */
     function handlePubMessage(message) {
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
-                self.publish(message);
+                publish(message);
             }
             catch(err) {
                 debug.error('Model.handlePubMessage Error:',err,message);
@@ -83,45 +198,41 @@ openmdao.Model=function(listeners_ready) {
             if (idx > 0) {
                 name = name.substr(0, idx);
             }
-            self.publish([name, message]);  // send the whole message to save on some copying later...
+            publish([name, message]);  // send the whole message to save on some copying later...
         }
     }
 
-    var ws_ready = jQuery.when(open_websocket('out', handleOutMessage),
-                               open_websocket('pub', handlePubMessage));
+    var ws_ready = jQuery.when(openStream('out', handleOutMessage),
+                               openStream('pub', handlePubMessage));
 
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();
         listeners_ready.resolve();
-    }
+    };
 
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
     jQuery.when(ws_ready, listeners_ready).done(function() {
         jQuery.ajax({ type: 'GET', url: 'project_load' })
-        .done(function() {
-             self.model_ready.resolve();
-        })
-        .fail(function() {
-             self.model_ready.reject();
-        });
+              .done(function() { _self.model_ready.resolve(); })
+              .fail(function() { _self.model_ready.reject();  });
     });
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
-    /** add a subscriber (i.e. a function to be called)
+    /** add a listener (i.e. a function to be called)
         for messages with the given topic.
         Topics beginning with '@' are for messaging within the GUI.
     */
     this.addListener = function(topic, callback) {
         //console.debug("added a listener for topic "+topic);
-        if (subscribers.hasOwnProperty(topic)) {
-            subscribers[topic].push(callback);
+        if (_subscribers.hasOwnProperty(topic)) {
+            _subscribers[topic].push(callback);
         }
         else {
-            subscribers[topic] = [callback];
+            _subscribers[topic] = [callback];
         }
         // tell server there's a new subscriber to the topic
         if (topic !== 'outstream' && topic.length > 0 &&
@@ -133,12 +244,12 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-    /** remove a subscriber (i.e. a function to be called)
+    /** remove a listener (i.e. a function to be called)
         for messages with the given topic
     */
     this.removeListener = function(topic, callback) {
-        if (subscribers.hasOwnProperty(topic)) {
-            var listeners = subscribers[topic];
+        if (_subscribers.hasOwnProperty(topic)) {
+            var listeners = _subscribers[topic];
             while (listeners.indexOf(callback) !== -1) {
                 listeners.splice(listeners.indexOf(callback), 1);
             }
@@ -153,46 +264,17 @@ openmdao.Model=function(listeners_ready) {
         }
     };
 
-    /** publish message to subscribed listeners. */
-    this.publish = function(message) {
-        var topic = message[0],
-            callbacks,
-            i;
-        if (subscribers.hasOwnProperty(topic) && subscribers[topic].length > 0) {
-            // Need a copy in case subscriber removes itself during callback.
-            callbacks = subscribers[topic].slice();
-            for (i = 0; i < callbacks.length; i++) {
-                if (typeof callbacks[i] === 'function') {
-                    callbacks[i](message);
-                }
-                else {
-                    debug.error('Model.publish: invalid callback for topic:',
-                                topic, callbacks[i]);
-                }
-            }
-        }
-    };
-
     /** get the list of object types that are available for creation */
-    this.getTypes = function(callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-
-        jQuery.ajax({
+    this.getTypes = function() {
+        return jQuery.ajax({
             type: 'GET',
             url:  'types',
             dataType: 'json',
-            success: callback,
-            error: errorHandler
-        });
+        })
     };
 
     /** get constructor signature for a type */
     this.getSignature = function(typename, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
         jQuery.ajax({
             type: 'GET',
             url:  'type/'+typename+'/signature',
@@ -204,7 +286,7 @@ openmdao.Model=function(listeners_ready) {
 
     /** get a new (empty) model */
     this.newModel = function() {
-        jQuery.ajax({
+        return jQuery.ajax({
             type: 'POST',
             url:  'model'
         });
@@ -223,13 +305,13 @@ openmdao.Model=function(listeners_ready) {
                           }
                       }
         });
-        self.setModified(false);
+        setModified(false);
         return defrd.promise();
     };
 
     /** commit the current project to the repository (after supplying a comment)*/
-    this.commit = function(callback, errorHandler) {
-        openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
+    this.commit = function() {
+        openmdao.Util.promptForValue("Enter a commit comment", _self.commit_with_comment);
     };
 
     /** revert back to the most recent commit of the project */
@@ -240,7 +322,7 @@ openmdao.Model=function(listeners_ready) {
                     type: 'POST',
                     url:  'project_revert',
                     success: function(data, textStatus, jqXHR) {
-                        self.reload();
+                        _self.reload();
                     },
                     error: errorHandler,
                     complete: function(jqXHR, textStatus) {
@@ -249,46 +331,32 @@ openmdao.Model=function(listeners_ready) {
                                   }
                               }
                 });
-                self.setModified(false);
+                setModified(false);
         });
     };
 
     /** get list of components in the top driver workflow */
-    this.getWorkflow = function(pathname, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
+    this.getWorkflow = function(pathname) {
+        if (!pathname) {
+            pathname = 'None';
         }
-        else {
-            if (!pathname) {
-                pathname = 'None';
-            }
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+pathname+'/workflow',
-                dataType: 'json',
-                success: callback,
-                error: errorHandler
-            });
-        }
+        return jQuery.ajax({
+            type: 'GET',
+            url:  'object/'+pathname+'/workflow',
+            dataType: 'json',
+        });
     };
 
     /** get the structure (data flow)) of an assembly */
-    this.getDataflow = function(pathname, callback ,errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
+    this.getDataflow = function(pathname) {
+        if (!pathname) {
+            pathname = 'None';
         }
-        else {
-            if (!pathname) {
-                pathname = 'None';
-            }
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+pathname+'/dataflow',
-                dataType: 'json',
-                success: callback,
-                error: errorHandler
-            });
-        }
+        return jQuery.ajax({
+            type: 'GET',
+            url:  'object/'+pathname+'/dataflow',
+            dataType: 'json',
+        });
     };
 
     /** get  hierarchical list of components */
@@ -410,7 +478,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** remove the component with the given pathname */
@@ -422,8 +490,8 @@ openmdao.Model=function(listeners_ready) {
         else {
             cmd = 'del('+openmdao.Util.getName(pathname)+')';
         }
-        self.issueCommand(cmd);
-        self.setModified(true);
+        _self.issueCommand(cmd);
+        setModified(true);
     };
 
     /** issue the specified command against the model */
@@ -436,7 +504,7 @@ openmdao.Model=function(listeners_ready) {
             error: errorHandler,
             complete: completeHandler
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** set the value of the variable with to rhs */
@@ -452,7 +520,7 @@ openmdao.Model=function(listeners_ready) {
             error: errorHandler,
             complete: completeHandler
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** get a recursize file listing of the model working directory (as JSON) */
@@ -497,7 +565,7 @@ openmdao.Model=function(listeners_ready) {
                 409: handler409
              }
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** create new folder with specified path in the model working directory */
@@ -509,7 +577,7 @@ openmdao.Model=function(listeners_ready) {
             success: callback,
             error: errorHandler
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** create a new file in the model working directory with the specified path  */
@@ -524,8 +592,8 @@ openmdao.Model=function(listeners_ready) {
             if (/.json$/.test(name)) {
                 contents = '[]';
             }
-            self.setFile(name, contents, undefined, callback);
-            self.setModified(true);
+            _self.setFile(name, contents, undefined, callback);
+            setModified(true);
     };
 
     /** prompt for name & create a new folder */
@@ -533,8 +601,8 @@ openmdao.Model=function(listeners_ready) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }
-            self.createFolder(name);
-            self.setModified(true);
+            _self.createFolder(name);
+            setModified(true);
     };
 
     /** rename file with specified path. */
@@ -555,7 +623,7 @@ openmdao.Model=function(listeners_ready) {
                                   jqXHR, textStatus, errorThrown);
                    }
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** delete file with specified path from the model working directory */
@@ -571,7 +639,7 @@ openmdao.Model=function(listeners_ready) {
                                   jqXHR,textStatus,errorThrown);
                    }
             });
-            self.setModified(true);
+            setModified(true);
     };
 
     /** delete files with specified path from the model working directory */
@@ -586,7 +654,7 @@ openmdao.Model=function(listeners_ready) {
                 debug.error("model.removeFiles", jqXHR, textStatus, errorThrown);
             }
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** execute a component */
@@ -605,7 +673,7 @@ openmdao.Model=function(listeners_ready) {
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** execute the specified file */
@@ -621,41 +689,98 @@ openmdao.Model=function(listeners_ready) {
             url:  'file/'+path,
             success: callback
         });
-        self.setModified(true);
+        setModified(true);
     };
 
     /** reload the model */
     this.reload = function() {
-        self.setModified(false);
-        openmdao.Util.closeWebSockets('reload');
-        openmdao.Util.closeWindows();
+        setModified(false);
+        closeWebSockets('reload');
+        closeWindows();
         window.location.replace('/workspace/project');
     };
 
     /** close the model */
    this.close = function() {
-       openmdao.Util.closeWebSockets('close');
-       openmdao.Util.closeWindows();
+       closeWebSockets('close');
+       closeWindows();
        window.location.replace('/workspace/close');
    };
 
    /** exit the gui */
    this.exit = function() {
-       openmdao.Util.closeWebSockets('exit');
-       openmdao.Util.closeWindows();
+       closeWebSockets('exit');
+       closeWindows();
        window.location.replace('/exit');
    };
 
-    /** return if the model has changed since last save */
-    this.getModified = function() {
-        return _modified;
+    /** add window to the list of windows accociated with this model. */
+    this.addWindow = function(win) {
+        if (! _windows) {
+            _windows = [];
+        }
+        _windows.push(win);
     };
 
-    /** Set '_modified' flag and publish to '@model-modified' topic. */
-    this.setModified = function(value) {
-        _modified = value;
-        this.publish(['@model-modified', _modified]);
+    /** edit file associated with this model */
+    this.editFile = function(filename) {
+        if (_self.codeEditor) {
+            _self.codeEditor.editFile(filename);
+        }
+        else {
+            var url = 'tools/editor';
+            if (filename) {
+                url += '?filename='+filename;
+            }
+            w = openmdao.Util.popupWindow(url, 'Code Editor');
+            _self.addWindow(w);
+        }
     };
 
+    /** view geometry associated with this model */
+    this.viewGeometry = function(pathname) {
+        function popupGeom(pathname) {
+            w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,
+                                          'Geometry of '+pathname);
+            _self.addWindow(w);
+        }
+        if (typeof pathname === "undefined" || !pathname) {
+            openmdao.Util.promptForValue('Enter pathname of geometry object to view:',
+                                           popupGeom);
+        }
+        else {
+            popupGeom(pathname);
+        }
+    };
+
+    /** For functional testing: Notify when `nSockets` are open. */
+    this.webSocketsReady = function(nSockets) {
+        function doPoll() {
+            setTimeout(poll, 500);
+        }
+
+        function poll() {
+            var i;
+            if (_websockets.length >= nSockets) {
+                for (i = 0 ; i < _websockets.length ; ++i) {
+                    if (_websockets[i].readyState !== 1) {
+                        doPoll();
+                        return;
+                    }
+                }
+                openmdao.Util.notify('WebSockets open', 'open',
+                                      'ws_open');
+            }
+            else {
+                doPoll();
+            }
+        }
+        poll();
+    }
+
+    /** For functional testing: Close all WebSockets. */
+    this.closeWebSockets = function(reason) {
+        closeWebSockets(reason);
+    }
 };
 

@@ -31,12 +31,12 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
     /** update the schematic with data from the model */
     this.showWorkflow = function(pathname) {
         self.pathname = pathname;
-        model.getWorkflow(self.pathname,
-                          self.loadData,
-                          function(jqXHR, textStatus, errorThrown) {
-                              self.pathname = '';
-                              debug.error("Error getting workflow ", jqXHR);
-                          });
+        model.getWorkflow(self.pathname)
+            .done(self.loadData)
+            .fail(function(jqXHR, textStatus, err) {
+                self.pathname = '';
+                debug.error("Error getting workflow ", jqXHR, textStatus, err);
+            });
     };
 
     /** update workflow diagram */
