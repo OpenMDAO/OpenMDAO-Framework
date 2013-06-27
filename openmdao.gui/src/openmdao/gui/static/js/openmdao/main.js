@@ -92,6 +92,11 @@ jQuery(function() {
         new openmdao.LibraryFrame("library_pane",  model);
 
         listeners_ready.resolve();
+
+	    // close model cleanly before closing window
+	    jQuery(window).bind('beforeunload', function(e) {
+	        model.close();
+	    });
     }());
 
     // do layout
