@@ -700,10 +700,37 @@ openmdao.Util = {
         poll();
     },
 
+    /** add window to window list. */
+    addWindow: function(win) {
+        if (! openmdao.windows) {
+            openmdao.windows = [];
+        }
+        openmdao.windows.push(win);
+    },
+
+
+    /** close all windows on the window list */
+    closeWindows: function() {
+        if (openmdao.windows) {
+            for (i = 0; i < openmdao.windows.length; i++) {
+                openmdao.windows[i].close();
+            }
+        }
+    },
+
+    editFile: function(filename) {
+        if (openmdao.codeEditor) {
+            openmdao.codeEditor.editFile(filename);
+        }
+        else {
+            openmdao.Util.popupWindow('tools/editor?filename='+filename, 'Code Editor');
+        }
+    },
+
     viewGeometry: function(pathname) {
         function popupGeom(pathname) {
-            w = openmdao.Util.popupWindow('geometry?path='+pathname,'Geometry of '+pathname);
-            openmdao.model.addWindow(w);
+            w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,'Geometry of '+pathname);
+            openmdao.Util.addWindow(w);
         }
         if (typeof pathname === "undefined" || !pathname) {
             openmdao.Util.promptForValue('Enter pathname of geometry object to view:',

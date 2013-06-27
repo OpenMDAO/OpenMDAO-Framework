@@ -557,13 +557,6 @@ handlers = [
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
 
 
-    # tools
-    web.url(r'/workspace/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/editor/?',         EditorHandler),
-    web.url(r'/workspace/geometry',         GeometryHandler),
-    web.url(r'/workspace/upload/?',         UploadHandler),
-
-
     # new and improved
     web.url(r'/workspace/command',                                          CommandHandler),
 
@@ -580,6 +573,12 @@ handlers = [
     web.url(r'/workspace/type/(?P<typename>[^\/]+)/?(?P<param>[^\/]+)?',    TypeHandler),
 
     web.url(r'/workspace/variable/(.*)',                                    VariableHandler),
+
+    # tools
+    web.url(r'/workspace/tools/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/tools/editor/?',         EditorHandler),
+    web.url(r'/workspace/tools/geometry',         GeometryHandler),
+    web.url(r'/workspace/tools/upload/?',         UploadHandler),
 ]
 
 
