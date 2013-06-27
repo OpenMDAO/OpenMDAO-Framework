@@ -6,7 +6,7 @@ perform calculations during a Fake Finite Difference.
 from openmdao.main.vartree import VariableTree
 
 try:
-    from numpy import array, ndarray, zeros, inner
+    from numpy import array, ndarray, zeros, inner, ones
     
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -14,7 +14,8 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros, inner
+    from openmdao.main.numpy_fallback import array, ndarray, zeros, inner, \
+                                             ones
 
 
 def flattened_size(name, val):
@@ -54,18 +55,6 @@ def calc_gradient(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
     """    
-
-    # New edges for parameters
-    input_edges = [('@in', a) for a in inputs]
-    additional_edges = set(input_edges)
-    
-    # New edges for responses
-    out_edges = [a for a, b in wflow.get_interior_edges()]
-    for item in outputs:
-        if item not in out_edges:
-            additional_edges.add((item, '@out'))
-    
-    wflow._additional_edges = additional_edges
             
     # Size the problem
     nEdge = wflow.initialize_residual()
@@ -179,47 +168,86 @@ class FiniteDifference(object):
         self.pa = pa
         self.scope = pa.wflow.scope
         
+        self.fd_step = 1.0e-6*ones((len(self.inputs)))
+        
         in_size = 0
-        for edge in self.inputs:
-            src = edge[1]
+        for src in self.inputs:
             val = self.scope.get(src)
-            print src
             width = flattened_size(src, val)
             self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
             
         out_size = 0
-        for edge in self.outputs:
-            src = edge[0]
+        for src in self.outputs:
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.out_bounds[src] = (out_size, out_size+width)
             out_size += width
                 
-        self.J = array((out_size, in_size))
-        self.x_base = array((in_size, 1))
-        self.y_base = array((out_size, 1))
-        self.x = array((in_size, 1))
-        self.y = array((out_size, 1))
+        self.J = zeros((out_size, in_size))
+        self.y_base = zeros((out_size, 1))
+        self.x = zeros((in_size, 1))
+        self.y = zeros((out_size, 1))
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
         
-        n_in = self.J.size(1)
-        n_out = self.J.size(0)
+        #self.get_inputs(self.x_base)
+        self.get_outputs(self.y_base)
         
-        for src_conn in self.inputs:
+        for src, fd_step in zip(self.inputs, self.fd_step):
             
-            src = src_conn[1]
-            i1, i2 = self.bounds(src)
-            val = self.scope.get(src)
-            
-            if i2-i1==1:
-                pass
+            i1, i2 = self.in_bounds[src]
+
+            for i in range(i1, i2):
+                
+                if i2-i1 == 1:
+                    self.set_value(src, fd_step)
+                else:
+                    self.set_value(src, fd_step, i-i1)
+                    
+                self.pa.run()
+                self.get_outputs(self.y)
+                
+                # Backward difference
+                self.J[i, :] = (self.y - self.y_base)/fd_step
+                
+                if i2-i1 == 1:
+                    self.set_value(src, -fd_step)
+                else:
+                    self.set_value(src, -fd_step, i-i1)
     
-    def get_inputs(self):
-        """Return matrix of flattened values from out input edges."""
+        return self.J
+    
+    def get_inputs(self, x):
+        """Return matrix of flattened values from input edges."""
        
+        for src in self.inputs:
+            src_val = self.scope.get(src)
+            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            i1, i2 = self.in_bounds[src]
+            x[i1:i2] = src_val
+
+    def get_outputs(self, x):
+        """Return matrix of flattened values from output edges."""
+       
+        for src in self.outputs:
+            src_val = self.scope.get(src)
+            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            i1, i2 = self.out_bounds[src]
+            x[i1:i2] = src_val
+            
+    def set_value(self, src, val, index=None):
+        """Set a value in the model"""
+        
+        i1, i2 = self.in_bounds[src]
+        old_val = self.scope.get(src)
+        
+        if index==None:
+            self.scope.set(src, old_val+val, force=True)
+        else:
+            old_val[index] += val
+            self.scope.set(src, old_val, force=True)
                       
 #-------------------------------------------
 # Everything below here will be deprecated.

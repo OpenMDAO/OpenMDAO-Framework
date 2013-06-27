@@ -298,7 +298,7 @@ class Testcase_derivatives(unittest.TestCase):
         
         self.top.connect('comp1.y1', 'comp2.x1')
         self.top.connect('comp1.y2', 'comp3.x1')
-        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('1.0*comp2.y1', 'comp4.x1')
         self.top.connect('comp3.y1', 'comp4.x2')
         self.top.connect('comp4.y1', 'comp5.x1')
         self.top.connect('comp4.y2', 'comp5.x2')
@@ -371,12 +371,25 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.connect('comp4.y2', 'comp5.x2')
         self.top.connect('comp4.y3', 'comp5.x3')
     
+        # Case 1 - differentiable (comp4)
+        
         iterlist = self.top.driver.workflow.group_nondifferentiables()
         self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        
+        # Case 2 - differentiable (none)
         
         self.top.replace('comp4', ExecComp(exp4))
         iterlist = self.top.driver.workflow.group_nondifferentiables()
         self.assertTrue(['~~0'] == iterlist)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        # Case 3 - differentiable (comp5)
         
         self.top.replace('comp5', ExecCompWithDerivatives(exp5, deriv5))
         iterlist = self.top.driver.workflow.group_nondifferentiables()

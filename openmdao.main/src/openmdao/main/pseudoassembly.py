@@ -37,12 +37,20 @@ class PseudoAssembly(object):
         Finite Difference."""
         
         # First, linearize about operating point.
+        # Note: Only needed for differentiable islands, which are handled
+        # with Fake Finite Difference.
         if first:
             for comp in self.comps:
-                comp.linearize()
+                if hasattr(comp, 'linearize'):
+                    comp.linearize()
                 
         self.J = self.fd.calculate()
             
     def provideJ(self):
         return self.inputs, self.outputs, self.J
+    
+    def get(self, varname):
+        """ Return the value of a variable in the Pseudoassembly"""
+        
+        return self.wflow.scope.get(varname)
             

@@ -265,9 +265,19 @@ class SequentialWorkflow(Workflow):
         outputs = {}
 
         # Start with zero-valued dictionaries cotaining keys for all inputs
-        for name in self.get_names(full=True):
+        pa_ref = {}
+        for comp in self.derivative_iter():
+            name = comp.name
             inputs[name] = {}
             outputs[name] = {}
+            
+            # Interior Edges use original names, so we need to know
+            # what comps are in a pseudo-assy.
+            if '~' in name:
+                for item in comp.inputs + comp.outputs:
+                    key = item.partition('.')[0]
+                    pa_ref[key] = name
+
 
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
@@ -276,11 +286,17 @@ class SequentialWorkflow(Workflow):
             
             if src != '@in':
                 comp_name, dot, var_name = src.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
                 outputs[comp_name][var_name] = arg[i1:i2]
                 inputs[comp_name][var_name] = arg[i1:i2]
 
             if target != '@out':
                 comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
                 inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyJ on each component
@@ -300,6 +316,9 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.bounds[edge]
                 comp_name, dot, var_name = edge[1].partition('.')
                 for i in range(i1, i2):
+                    if comp_name in pa_ref:
+                        var_name = '%s.%s' % (comp_name, var_name)
+                        comp_name = pa_ref[comp_name]
                     outputs[comp_name][var_name] = arg[i1:i2]
 
         # Poke results into the return vector
@@ -312,6 +331,9 @@ class SequentialWorkflow(Workflow):
                 src = target
                 
             comp_name, dot, var_name = src.partition('.')
+            if comp_name in pa_ref:
+                var_name = '%s.%s' % (comp_name, var_name)
+                comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
             
         return result
@@ -380,8 +402,25 @@ class SequentialWorkflow(Workflow):
             for node in group:
                 graph.remove_node(node)
                 
+            # You don't need the whole edge.
+            inputs  = [b for a, b in inputs]
+            outputs = [a for a, b in outputs]
+                
+            # Boundary edges must be added to inputs and outputs
+            for edge in list(self._additional_edges):
+                src, target = edge
+                
+                comp_name, dot, var_name = src.partition('.')
+                if comp_name in group:
+                    outputs.append(src)
+                    
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in group:
+                    inputs.append(target)
+                
             # Create pseudo_assy
-            pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, group, 
+            comps = [getattr(self.scope, name) for name in group]
+            pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
                                                         inputs, outputs, 
                                                         self)
                 
@@ -405,13 +444,20 @@ class SequentialWorkflow(Workflow):
             return [getattr(self.scope, n) for n in self.get_names(full=True)]
         return self.derivative_iterset
 
+    def calc_derivatives(self, first=False, second=False, savebase=False):
+        """ Calculate derivatives and save baseline states for all components
+        in this workflow."""
+
+        self._stop = False
+        for node in self.derivative_iter():
+            node.calc_derivatives(first, second, savebase)
+            if self._stop:
+                raise RunStopped('Stop requested')
+
     def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
-        
-        # TODO: This line should only be executed once at startup.
-        self.group_nondifferentiables()
         
         if inputs==None:
             if hasattr(self._parent, 'get_parameters'):
@@ -433,6 +479,22 @@ class SequentialWorkflow(Workflow):
                 msg = "No outputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
                 
+            
+        # TODO: These lines should only be executed once at startup.
+        
+        # New edges for parameters
+        input_edges = [('@in', a) for a in inputs]
+        additional_edges = set(input_edges)
+        
+        # New edges for responses
+        out_edges = [a for a, b in self.get_interior_edges()]
+        for item in outputs:
+            if item not in out_edges:
+                additional_edges.add((item, '@out'))
+        
+        self._additional_edges = additional_edges                
+        self.group_nondifferentiables()
+        
         return calc_gradient(self, inputs, outputs)
     
 

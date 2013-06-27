@@ -126,16 +126,6 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
-        """ Calculate derivatives and save baseline states for all components
-        in this workflow."""
-
-        self._stop = False
-        for node in self.__iter__():
-            node.calc_derivatives(first, second, savebase)
-            if self._stop:
-                raise RunStopped('Stop requested')
-
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """ Run check_derivatives on all components in workflow."""
 
