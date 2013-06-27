@@ -392,7 +392,7 @@ class SequentialWorkflow(Workflow):
                     graph.add_edge(pa_name, edge[1])
                     var_edge = self.scope._depgraph.get_interior_edges(edge)
                     outputs = outputs.union(var_edge)
-                else:
+                elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
                     var_edge = self.scope._depgraph.get_interior_edges(edge)
@@ -481,6 +481,10 @@ class SequentialWorkflow(Workflow):
                 
             
         # TODO: These lines should only be executed once at startup.
+        
+        self._severed_edges = set()
+        self._additional_edges = []
+        self._hidden_edges = set()
         
         # New edges for parameters
         input_edges = [('@in', a) for a in inputs]

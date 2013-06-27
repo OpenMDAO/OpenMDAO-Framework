@@ -185,14 +185,14 @@ class FiniteDifference(object):
             out_size += width
                 
         self.J = zeros((out_size, in_size))
-        self.y_base = zeros((out_size, 1))
-        self.x = zeros((in_size, 1))
-        self.y = zeros((out_size, 1))
+        self.y_base = zeros((out_size,))
+        self.x = zeros((in_size,))
+        self.y = zeros((out_size,))
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
         
-        #self.get_inputs(self.x_base)
+        self.get_inputs(self.x)
         self.get_outputs(self.y_base)
         
         for src, fd_step in zip(self.inputs, self.fd_step):
@@ -210,7 +210,7 @@ class FiniteDifference(object):
                 self.get_outputs(self.y)
                 
                 # Backward difference
-                self.J[i, :] = (self.y - self.y_base)/fd_step
+                self.J[:, i] = (self.y - self.y_base)/fd_step
                 
                 if i2-i1 == 1:
                     self.set_value(src, -fd_step)
@@ -248,6 +248,12 @@ class FiniteDifference(object):
         else:
             old_val[index] += val
             self.scope.set(src, old_val, force=True)
+            
+        # Prevent OpenMDAO from stomping on our poked input.
+        comp_name, dot, var_name = src.partition('.')
+        comp = self.scope.get(comp_name)
+        comp._valid_dict[var_name] = True
+            
                       
 #-------------------------------------------
 # Everything below here will be deprecated.
