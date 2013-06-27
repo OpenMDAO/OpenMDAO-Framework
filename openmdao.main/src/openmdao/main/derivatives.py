@@ -197,6 +197,10 @@ class FiniteDifference(object):
             out_size += width
                 
         self.J = array((out_size, in_size))
+        self.x_base = array((in_size, 1))
+        self.y_base = array((out_size, 1))
+        self.x = array((in_size, 1))
+        self.y = array((out_size, 1))
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
@@ -213,6 +217,8 @@ class FiniteDifference(object):
             if i2-i1==1:
                 pass
     
+    def get_inputs(self):
+        """Return matrix of flattened values from out input edges."""
        
                       
 #-------------------------------------------
