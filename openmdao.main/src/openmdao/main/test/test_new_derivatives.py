@@ -414,6 +414,22 @@ class Testcase_derivatives(unittest.TestCase):
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        # Case 4 - differentiable (comp1, comp3, comp5)
+        
+        self.top.replace('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.replace('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
+        removed = set([('comp3', 'comp4')])
+        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())
