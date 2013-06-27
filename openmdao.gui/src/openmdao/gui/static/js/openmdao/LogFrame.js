@@ -237,8 +237,8 @@ openmdao.DisplayLogFrame = function() {
 
 /** initialize a log viewer in a separate window */
 openmdao.PopoutLogFrame = function() {
-    openmdao.model = opener.openmdao.model;
-    openmdao.model.addWindow(window);
+    openmdao = opener.openmdao;
+    openmdao.Util.addWindow(window);
     jQuery('body').attr('id', 'logbody');
     frame = new openmdao.LogFrame('logbody', openmdao.model);
     window.document.title = 'OpenMDAO Log';

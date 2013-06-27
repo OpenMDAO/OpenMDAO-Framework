@@ -77,18 +77,10 @@ jQuery(function() {
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
         function comp_fn(path) { new openmdao.ObjectFrame(model,path); }
-        function code_fn(path) {
-            if (openmdao.model.editor) {
-                openmdao.model.editor.editFile(path);
-            }
-            else {
-                openmdao.Util.popupWindow('editor?filename='+path, 'Code Editor');
-            }
-        }
 
         //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.WorkflowTreeFrame("wtree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.FileTreeFrame("ftree_pane", model, code_fn);
+        new openmdao.FileTreeFrame("ftree_pane", model);
         new openmdao.LibraryFrame("library_pane",  model);
 
         listeners_ready.resolve();

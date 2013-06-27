@@ -1,28 +1,25 @@
 /**
- * stuff to do after the code editor page is loaded
+ * stuff to do after the editor editor page is loaded
  */
 
 jQuery(function() {
-    // define openmdao namespace & create interface to openmdao in global scope
-    openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
-    if (opener && opener.openmdao && opener.openmdao.model ) {
-        openmdao.model = opener.openmdao.model;
-        openmdao.model.addWindow(window);
+    if (opener && opener.openmdao) {
+        openmdao = opener.openmdao;
+        openmdao.Util.addWindow(window);
     }
     else {
+        // define openmdao namespace & create interface to openmdao in global scope
+        openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
         openmdao.model = new openmdao.Model();
     }
 
-    var code = new openmdao.CodeFrame('code_pane', openmdao.model);
-
-    function code_fn(path) { code.editFile(path); }
-
-    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model, code_fn);
+    var editor = new openmdao.CodeFrame('code_pane', openmdao.model);
+    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model);
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {
-        openmdao.model.editor = undefined;
-        code.close();
+        openmdao.editorEditor = undefined;
+        editor.close();
         ftree.close();
     });
 
@@ -38,7 +35,7 @@ jQuery(function() {
                 panel.height(pane_height);
                 panel.width(pane_width);
             }));
-            code.resize();
+            editor.resize();
         }
     });
 
@@ -54,11 +51,11 @@ jQuery(function() {
 
     // if a filename was specified, load it & clean up the temporary variable
     if (openmdao.edit_filename) {
-        code.editFile(openmdao.edit_filename);
+        editor.editFile(openmdao.edit_filename);
         delete openmdao.edit_filename;
     }
 
     // save ref to editor for others to use
-    openmdao.model.editor = code;
+    openmdao.editorEditor = editor;
 });
 

@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.FileTreeFrame = function(id, model, code_fn) {
+openmdao.FileTreeFrame = function(id, model) {
     var _menu = [
         {   "text": "File",
             "items": [
@@ -102,16 +102,6 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
         return html;
     }
 
-    /** if we have an edit function, then call it on the specified file */
-    function editFile(pathname) {
-        if (typeof code_fn === 'function') {
-            code_fn(pathname);
-        }
-        else {
-            alert("Edit function is not defined");
-        }
-    }
-
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
         openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname);
@@ -129,7 +119,7 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             filepaths.push(this.getAttribute("path"));
         });
         model.removeFiles(filepaths);
-    };
+    }
 
     /** toggle the hidden files filter */
     function toggleFilter() {
@@ -220,7 +210,7 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
-                "action" : function(node) { editFile(path); }
+                "action" : function(node) { openmdao.Util.editFile(path); }
             };
 
             // if it's a py file, let them execute it
@@ -344,7 +334,7 @@ openmdao.FileTreeFrame = function(id, model, code_fn) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                editFile(path);
+                openmdao.Util.editFile(path);
             }
             else if (node.hasClass('folder')) {
                 // what do, what do
@@ -426,9 +416,7 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
                     name = '/'+name;
                     if (path)
                         name = path+name;
-                    if (openmdao.model.editor) {
-                        openmdao.model.editor.editFile(name);
-                    }
+                    openmdao.Util.editFile(path);
                     // Depending on browser settings, this may get blocked.  Worse yet, it can
                     // put things in a state that other means of opening the editor get blocked.
                     // For now just don't even try.
@@ -462,7 +450,7 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
             formData.append('file', files[filename]);
         }
         // now post a new XHR request
-        xhr.open('POST', 'upload');
+        xhr.open('POST', 'tools/upload');
         xhr.onload = function () {
             if (xhr.status !== 200) {
                 debug.error('error uploading files', files, path);

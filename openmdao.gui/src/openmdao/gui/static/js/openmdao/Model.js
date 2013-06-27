@@ -12,8 +12,7 @@ openmdao.Model=function(listeners_ready) {
         outstream_opened = false,
         pubstream_opened = false,
         sockets = {},
-        subscribers = {},
-        windows = [];
+        subscribers = {};
 
     this.model_ready = jQuery.Deferred();
 
@@ -629,43 +628,26 @@ openmdao.Model=function(listeners_ready) {
     this.reload = function() {
         self.setModified(false);
         openmdao.Util.closeWebSockets('reload');
-        self.closeWindows();
+        openmdao.Util.closeWindows();
         window.location.replace('/workspace/project');
     };
 
     /** close the model */
    this.close = function() {
        openmdao.Util.closeWebSockets('close');
-       self.closeWindows();
+       openmdao.Util.closeWindows();
        window.location.replace('/workspace/close');
    };
 
    /** exit the gui */
    this.exit = function() {
        openmdao.Util.closeWebSockets('exit');
-       self.closeWindows();
+       openmdao.Util.closeWindows();
        window.location.replace('/exit');
    };
 
-    /** add window to window list. */
-    this.addWindow = function(win) {
-        if (! windows) {
-            windows = [];
-        }
-        windows.push(win);
-    };
-
-    /** close all windows on the window list */
-    this.closeWindows = function() {
-        if ( windows ) {
-            for (i = 0; i < windows.length; i++) {
-                windows[i].close();
-            }
-        }
-    };
-
     /** return if the model has changed since last save */
-    this.getModified = function(){
+    this.getModified = function() {
         return _modified;
     };
 
