@@ -491,7 +491,7 @@ def _install_req(py_executable, unzip=False, distribute=False,
         search_dirs = file_search_dirs()
 
     if not distribute:
-        egg_path = 'setuptools-0.6c11-py%s.egg' % sys.version[:3]
+        egg_path = 'setuptools-0.7.4-py%s.egg' % sys.version[:3]
         found, egg_path = _find_file(egg_path, search_dirs)
         project_name = 'setuptools'
         bootstrap_script = EZ_SETUP_PY
@@ -558,7 +558,7 @@ def _install_req(py_executable, unzip=False, distribute=False,
         sys.exit(1)
     elif egg_path:
         logger.info('No %s egg found; downloading' % project_name)
-        cmd.extend(['--always-copy', '-U', project_name])
+        cmd.extend(['--always-copy', project_name])
     else:
         logger.info('No %s tgz found; downloading' % project_name)
     logger.start_progress('Installing %s...' % project_name)
@@ -1938,6 +1938,12 @@ def adjust_options(options, args):
     if virtual_env:
         after_install(options, virtual_env, activated=True)
 
+    try:
+        download('https://openmdao.org/dists/setuptools-0.7.4-py2.7.egg')
+    except Exception as err:
+        logger.warn(str(err))
+
+
 
 
 def download(url, dest='.'):
@@ -2016,7 +2022,7 @@ def _update_activate(bindir):
         with open(activate_fname, 'w') as out:
             out.write(content)
             
-def _copy_winlibs(home_dir):
+def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
     # fail when built in a virtualenv 
     # (still broken as of virtualenv 1.9.1, under python 2.7.4)
@@ -2027,7 +2033,12 @@ def _copy_winlibs(home_dir):
     libsdir = os.path.join(home_dir, 'libs')
     if not os.path.isdir(libsdir):
         os.mkdir(libsdir)
-    sysdir = os.path.join(os.path.dirname(sys.executable), 'libs')
+    if activated:
+        with open(os.path.join(home_dir, 'Lib', 'orig-prefix.txt')) as inp:
+            prefix = inp.readline().strip()
+    else:
+        prefix = os.path.dirname(sys.executable)
+    sysdir = os.path.join(prefix, 'libs')
     names = os.listdir(sysdir)
     for pat in ['*python*', '*msvc*']:
         for name in fnmatch.filter(names, pat):
@@ -2103,7 +2114,7 @@ def after_install(options, home_dir, activated=False):
         os.makedirs(etc)
         
     if is_win:
-        _copy_winlibs(home_dir)
+        _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
     else:
         # Put lib64_path at front of paths rather than end.
