@@ -19,6 +19,7 @@ class PseudoAssembly(object):
         self.itername = ''
         
         self.fd = FiniteDifference(self)
+        self.J = None
         
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in 
@@ -26,7 +27,8 @@ class PseudoAssembly(object):
         self.itername = name
     
     def run(self, ffd_order=0, case_id=''):
-        """Run all components contained in this assy. Used by finite difference."""
+        """Run all components contained in this assy. Used by finite 
+        difference."""
         
         for comp in self.comps:
             comp.set_itername(self.itername+'-fd')
@@ -42,11 +44,12 @@ class PseudoAssembly(object):
         if first:
             for comp in self.comps:
                 if hasattr(comp, 'apply_deriv') or hasattr(comp, 'provideJ'):
-                    comp.calc_derivatives()
+                    comp.calc_derivatives(first, second, savebase)
                 
         self.J = self.fd.calculate()
             
     def provideJ(self):
+        """Jacobian for this block"""
         return self.inputs, self.outputs, self.J
     
     def get(self, varname):

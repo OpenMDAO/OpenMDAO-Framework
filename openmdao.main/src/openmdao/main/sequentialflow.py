@@ -4,10 +4,11 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 import networkx as nx
 
-from openmdao.main.vartree import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, applyJ
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
+from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 
 try:
@@ -36,6 +37,8 @@ class SequentialWorkflow(Workflow):
         self.bounds = None
         
         self.derivative_iterset = None
+        self._collapsed_graph = None
+        self._topsort = None
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -48,6 +51,7 @@ class SequentialWorkflow(Workflow):
         return comp in self._names
 
     def index(self, comp):
+        """Return index number for a component in this workflow."""
         return self._names.index(comp)
 
     def __eq__(self, other):
@@ -61,7 +65,8 @@ class SequentialWorkflow(Workflow):
         include hidden pseudo-components in the list.
         """
         if full:
-            return self._names + list(self.scope._depgraph.find_betweens(self._names))
+            return self._names + \
+                   list(self.scope._depgraph.find_betweens(self._names))
         else:
             return self._names[:]
 
@@ -119,9 +124,10 @@ class SequentialWorkflow(Workflow):
                     self._names.insert(index, node)
                     index += 1
             else:
-                raise TypeError("Components must be added by name to a workflow.")
+                msg = "Components must be added by name to a workflow."
+                raise TypeError(msg)
 
-        # We seem to need this so that our get_attributes is correct for the GUI.
+        # We seem to need this so that get_attributes is correct for the GUI.
         if check:
             self.config_changed()
 
@@ -130,7 +136,8 @@ class SequentialWorkflow(Workflow):
         error if the specified component is not found.
         """
         if not isinstance(compname, basestring):
-            raise TypeError("Components must be removed by name from a workflow.")
+            msg = "Components must be removed by name from a workflow."
+            raise TypeError(msg)
         try:
             self._names.remove(compname)
         except ValueError:
@@ -142,9 +149,14 @@ class SequentialWorkflow(Workflow):
 
     def get_interior_edges(self):
         """ Returns an alphabetical list of all output edges that are
-        interior to the set of components supplied."""
+        interior to the set of components supplied. When used for derivative
+        calculation, the parameter inputs and response outputs are also
+        included. If there are non-differentiable blocks grouped in
+        pseudo-assemblies, then those interior edges are excluded.
+        """
         
-        edges = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
+        graph = self.scope._depgraph
+        edges = graph.get_interior_edges(self.get_names(full=True))
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
                 
@@ -157,7 +169,7 @@ class SequentialWorkflow(Workflow):
         nEdge = 0
         self.bounds = {}
         for edge in self.get_interior_edges():
-            if edge[0]=='@in':
+            if edge[0] == '@in':
                 src = edge[1]
             else:
                 src = edge[0]
@@ -315,11 +327,10 @@ class SequentialWorkflow(Workflow):
             if edge[0] == '@in':
                 i1, i2 = self.bounds[edge]
                 comp_name, dot, var_name = edge[1].partition('.')
-                for i in range(i1, i2):
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    outputs[comp_name][var_name] = arg[i1:i2]
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2]
 
         # Poke results into the return vector
         result = zeros(len(arg))
@@ -327,7 +338,7 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src=='@in':
+            if src == '@in':
                 src = target
                 
             comp_name, dot, var_name = src.partition('.')
@@ -459,14 +470,14 @@ class SequentialWorkflow(Workflow):
         all passed inputs.
         """
         
-        if inputs==None:
+        if inputs == None:
             if hasattr(self._parent, 'get_parameters'):
                 inputs = self._parent.get_parameters().keys()
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
             
-        if outputs==None:
+        if outputs == None:
             outputs = []
             if hasattr(self._parent, 'get_objectives'):
                 outputs.extend(self._parent.get_objectives())
@@ -491,7 +502,7 @@ class SequentialWorkflow(Workflow):
         additional_edges = set(input_edges)
         
         # New edges for responses
-        out_edges = [a for a, b in self.get_interior_edges()]
+        out_edges = [a[0] for a in self.get_interior_edges()]
         for item in outputs:
             if item not in out_edges:
                 additional_edges.add((item, '@out'))

@@ -13,20 +13,12 @@ import pkg_resources
 import sys
 import weakref
 
-try:
-    from numpy import inner
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import inner
-
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.derivatives import Derivatives, \
-                                      flattened_size, flattened_value
+from openmdao.main.derivatives import Derivatives
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -487,15 +479,6 @@ class Component(Container):
         # Save baseline state
         if savebase and executed:
             self.derivatives.save_baseline(self)
-
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ComponentsWithDerivatives overloads this function to check for
-        missing derivatives.
-
-        This function is overridden by ComponentWithDerivatives.
-        """
-
-        pass
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.

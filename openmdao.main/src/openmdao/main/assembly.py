@@ -810,49 +810,6 @@ class Assembly(Component):
     #
     #    self.driver.calc_derivatives(first, second, savebase)
 
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """An assembly just tells its driver to run check_derivatives on each
-        element in its workflow. Note that an assembly signifies a change of
-        scope, so the driver input and output lists are pared down."""
-
-        # Put the driver connection lists into our local scope by removing
-        # the assembly name from the dotted path.
-        for j, item in enumerate(driver_inputs):
-            if isinstance(item, tuple):
-
-                tuple_list = []
-                for tup_item in item:
-                    names = tup_item.split('.', 1)
-                    if names[0] == self.name:
-                        tuple_list.append(names[1])
-                    else:
-                        tuple_list.append(tup_item)
-
-                driver_inputs[j] = tuple(tuple_list)
-            else:
-                names = item.split('.', 1)
-                if names[0] == self.name:
-                    driver_inputs[j] = names[1]
-
-        for j, item in enumerate(driver_outputs):
-            if isinstance(item, tuple):
-
-                tuple_list = []
-                for tup_item in item:
-                    names = tup_item.split('.', 1)
-                    if names[0] == self.name:
-                        tuple_list.append(names[1])
-                    else:
-                        tuple_list.append(tup_item)
-
-                driver_inputs[j] = tuple(tuple_list)
-            else:
-                names = item.split('.', 1)
-                if names[0] == self.name:
-                    driver_outputs[j] = names[1]
-
-        #self.driver.check_derivatives(order, driver_inputs, driver_outputs)
-
     def list_components(self):
         ''' List the components in the assembly.
         '''
