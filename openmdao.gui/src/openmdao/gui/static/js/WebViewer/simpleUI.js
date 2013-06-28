@@ -15,6 +15,7 @@ var NO_MODIFIER = 0;
 var ALT_KEY = 1;
 var SHIFT_KEY = 2;
 var CTRL_KEY = 4;
+var META_KEY = 8;
 var WHEEL_DELTA = 120;
 function getCursorXY(e) 
 {
@@ -45,6 +46,7 @@ function getMouseDown(e)
   if (e.shiftKey) g.modifier |= SHIFT_KEY;
   if (e.altKey)   g.modifier |= ALT_KEY;
   if (e.ctrlKey)  g.modifier |= CTRL_KEY;
+  if (e.metaKey)  g.modifier |= META_KEY;
 }
 
 
@@ -213,7 +215,7 @@ function wvUpdateUI()
 
   if (g.wheelDelta !== 0)
   {
-    var scale = Math.exp(g.wheelDelta/128.0);
+    var scale = Math.exp(g.wheelDelta/16.0);
     g.mvMatrix.scale(scale, scale, scale);
     g.scale   *= scale;
     g.sceneUpd = 1;
@@ -223,8 +225,9 @@ function wvUpdateUI()
   // now mouse movement
   if (g.dragging) 
   {
+      console.log(g.modifier);
     // alt and shift key is down
-    if (g.modifier === (ALT_KEY|SHIFT_KEY) )
+    if (g.modifier & (META_KEY) || g.modifier & (META_KEY | CTRL_KEY) || g.modifier & CTRL_KEY )
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
       var angleY = -(g.startX-g.cursorX)/4.0;
@@ -237,7 +240,7 @@ function wvUpdateUI()
     }
     
     // alt is down
-    if (g.modifier === ALT_KEY)
+    if (g.modifier & ALT_KEY )
     {
       var xf = g.startX - g.width/2;
       var yf = g.startY - g.height/2;
@@ -273,6 +276,7 @@ function wvUpdateUI()
 
     g.startX = g.cursorX;
     g.startY = g.cursorY;
+//    g.modifier = 0;
   }
 
 }
