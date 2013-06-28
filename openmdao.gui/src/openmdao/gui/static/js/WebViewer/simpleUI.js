@@ -118,7 +118,6 @@ function getDisplayControl(display, isActive){
     button.addClass("btn btn-primary btn-small");
     button.addClass(display);
     button.attr("type", "button");
-    button.data("controlType", display);
 
     if(isActive){
         button.addClass("active");
