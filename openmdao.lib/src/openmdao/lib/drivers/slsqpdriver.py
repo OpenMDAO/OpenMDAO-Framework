@@ -213,7 +213,7 @@ class SLSQPdriver(DriverUsesDerivatives):
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0
-            
+        
         df[0:self.nparam] = \
             self.differentiator.get_gradient(self.get_objectives().keys()[0])
 
@@ -222,5 +222,13 @@ class SLSQPdriver(DriverUsesDerivatives):
                 dg[i][0:self.nparam] = \
                     -self.differentiator.get_gradient(con)
         
+        #J = self.workflow.calc_gradient(self.get_parameters().keys(), \
+        #                                self.get_objectives().keys())
+        
+        #print self.get_parameters().keys()
+        #print self.get_objectives().keys()
+        #print self.get_constraints().keys()
+        #print J
+            
         return df, dg
     

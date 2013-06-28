@@ -206,7 +206,7 @@ class FiniteDifference(object):
                 else:
                     self.set_value(src, fd_step, i-i1)
                     
-                self.pa.run()
+                self.pa.run(ffd_order=1)
                 self.get_outputs(self.y)
                 
                 # Backward difference
