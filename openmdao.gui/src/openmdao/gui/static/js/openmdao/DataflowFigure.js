@@ -280,12 +280,12 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.reset();
 
                 if (maxmin !== '') {
-                    openmdao.Util.addComponent(droppedPath, droppedName,
-                                               elm.data("pathname"));
+                    openmdao.model.addObject(droppedPath, droppedName,
+                                             elm.data("pathname"));
                 }
                 else {
-                    openmdao.Util.replaceComponent(droppedPath, droppedName,
-                                                   elm.data("pathname"));
+                    openmdao.model.replaceObject(droppedPath, droppedName,
+                                                 elm.data("pathname"));
                 }
             }
         });
@@ -588,7 +588,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove", null, function() {
-            model.removeComponent(pathname);
+            model.removeObject(pathname);
         }));
 
         menu.setZOrder(999999);
@@ -665,7 +665,8 @@ openmdao.DataflowFigure.prototype.maximize=function() {
     this.openmdao_model.getDataflow(self.pathname)
         .done(self.updateDataflow.bind(self))
         .fail(function(jqXHR, textStatus, errorThrown) {
-            debug.error('Error getting dataflow for', self, jqXHR);
+            debug.error('Error getting dataflow for', self,
+                        jqXHR, textStatus, errorThrown);
         });
 };
 

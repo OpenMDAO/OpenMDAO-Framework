@@ -73,25 +73,21 @@ openmdao.ConsoleFrame = function(id,model) {
             i_command_current = num_commands + 1;
             localStorage.setItem("cmd" + num_commands, cmd);
 
-            model.issueCommand(cmd,
-                // success, record any response in history & clear the command
-                function(responseText) {
+            model.issueCommand(cmd)
+                .done(function(responseText) {
                     if (responseText.length > 0) {
                         updateHistory(responseText);
                     }
-                },
-                // failure
-                function(jqXHR, textStatus, errorThrown) {
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
                     alert('Error issuing command: '+jqXHR.statusText);
-                },
-                // completion
-                function(jqXHR, textStatus) {
+                })
+                .always(function(jqXHR, textStatus) {
                     if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify("'"+cmd+"' complete: "
                                              +textStatus, 'Console', 'command');
                     }
-                }
-            );
+                });
         }
         return false;
     });

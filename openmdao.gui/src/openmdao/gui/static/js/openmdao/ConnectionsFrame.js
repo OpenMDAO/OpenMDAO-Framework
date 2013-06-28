@@ -536,8 +536,8 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
             busyDiv.show();
-            model.getConnections(self.pathname, self.src_comp, self.dst_comp,
-                function(data) {
+            model.getConnections(self.pathname, self.src_comp, self.dst_comp)
+                .done(function(data) {
                     if (!data || !data.sources || !data.destinations) {
                         // don't have what we need, probably something got deleted
                         debug.warn('ConnectionFrame.showConnections(): Invalid data', data);
@@ -547,12 +547,13 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                         connection_data = data;
                         loadConnectionData(connection_data);
                     }
-                },
-                function(jqXHR, textStatus, errorThrown) {
-                    debug.error(jqXHR,textStatus,errorThrown);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error('Error getting connections for',
+                                self.pathname, self.src_comp, self.dst_comp,
+                                jqXHR,textStatus,errorThrown);
                     self.close();
-                }
-            );
+                });
         }
         else {
             connectionsDiv.hide();
@@ -595,14 +596,14 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        model.getObject(path, loadComponentData,
-            function(jqXHR, textStatus, errorThrown) {
+        model.getObject(path)
+            .done(loadComponentData)
+            .fail(function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',
                             jqXHR, textStatus, errorThrown);
                 // assume component has been deleted, so close frame
                 self.close();
-            }
-        );
+            });
     };
 
     this.destructor = function() {

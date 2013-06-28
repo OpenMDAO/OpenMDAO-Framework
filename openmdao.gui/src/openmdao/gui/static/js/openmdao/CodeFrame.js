@@ -190,12 +190,15 @@ openmdao.CodeFrame = function(id, model) {
 
         /** display error message if file save failed */
         function failedSave(jqXHR, textStatus, errorThrown) {
-            debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
             // 409 gets special handling.
+            if (jqXHR.status === 409) {
+                handle409(jqXHR, textStatus, errorThrown);
+            }
             // 400 is (normally) related to msg reported via publisher.
-            if (jqXHR.status !== 409 && jqXHR.status !== 400) {
+            else if (jqXHR.status !== 400) {
                 var msg = jqXHR.responseXML || textStatus;
                 openmdao.Util.notify(msg, 'Save Failed');
+                debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
             }
         }
 
@@ -211,20 +214,16 @@ openmdao.CodeFrame = function(id, model) {
                       text: 'Save File and Reload Project',
                       id:    overwriteID,
                       click: function() {
-                               jQuery(this).dialog('close');
-                               model.setFile(filepath,currentCode, 1,
-                                             function() {
-                                                 model.reload();
-                                             },
-                                             failedSave);
+                                jQuery(this).dialog('close');
+                                    model.setFile(filepath, currentCode, 1)
+                                        .done(function() { model.reload(); })
+                                        .fail(failedSave);
                              }
                     },
                     {
                        text: 'Cancel',
                        id:    cancelID,
-                       click: function() {
-                                 jQuery(this).dialog('close');
-                              }
+                       click: function() { jQuery(this).dialog('close'); }
                     }
                   ]
                 }
@@ -232,8 +231,8 @@ openmdao.CodeFrame = function(id, model) {
         }
 
         if (currentCode !== lastCode) {
-            model.setFile(filepath, currentCode, 0,
-                function (data, textStatus, jqXHR) {  // success
+            model.setFile(filepath, currentCode, 0)
+                .done(function(data, textStatus, jqXHR) {
                     // store saved file for comparison
                     session.prevContent = currentCode;
                     // mark as not modified
@@ -245,9 +244,8 @@ openmdao.CodeFrame = function(id, model) {
                     if (typeof callback === 'function') {
                         callback();
                     }
-                },
-                failedSave,
-                handle409);
+                })
+                .fail(failedSave);
         }
     }
 
@@ -356,7 +354,7 @@ openmdao.CodeFrame = function(id, model) {
         if (! filepath) {
             alert("Error: file name not specified");
             return;
-        };
+        }
         var tabName = nameSplit(filepath);
         if (sessions[tabName]) {
             // file already has open tab, just switch to it
@@ -365,18 +363,17 @@ openmdao.CodeFrame = function(id, model) {
         }
         else {
             // file not being edited, make new tab
-            model.getFile(filepath,
-                // success
-                function(contents) {
+            model.getFile(filepath)
+                .done(function(contents) {
                     newTab(contents, filepath, tabName);
                     editor.navigateFileStart();
                     editor.getSession().setUndoManager(new UndoManager());
-                },
-                // failure
-                function(jqXHR, textStatus, errorThrown) {
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
                     alert("Error editing file: "+jqXHR.statusText);
-                }
-            );
+                    debug.error('Error editing file', filepath,
+                            jqXHR, textStatus, errorThrown);
+                });
         }
     };
 

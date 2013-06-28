@@ -253,7 +253,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                                 model.issueCommand(cmd);
                             }
             };
-        };
+        }
         return menu;
     }
 
@@ -288,8 +288,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         model.getWorkflow('')
             .done(updateTree)
             .fail(function(jqXHR, textStatus, err) {
-                self.pathname = '';
-                debug.error("Error getting workflow ", jqXHR, textStatus, err);
+                debug.error("Error getting workflow", jqXHR, textStatus, err);
             });
     };
 

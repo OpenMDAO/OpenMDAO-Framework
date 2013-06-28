@@ -57,7 +57,7 @@ openmdao.LogFrame = function(id, model) {
     // Open log in separate window.
     function doPopout(ev) {
         var init_fn = 'jQuery(function() { openmdao.PopoutLogFrame() })';
-        openmdao.Util.popupScript('', init_fn);
+        openmdao.Util.scriptWindow('', init_fn);
         self.close();
     }
 

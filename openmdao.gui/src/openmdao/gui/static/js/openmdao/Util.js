@@ -431,55 +431,6 @@ openmdao.Util = {
     },
 
     /**
-     * Get name and arguments for new component, add it to model,
-     * and optionally invoke callback.
-     *
-     * typePath: python path for type of component.
-     * typeName: last component of typePath.
-     * parentPath: pathname for component's parent.
-     * prompt: optional prompt use when requesting name.
-     * callback: optional callback invoked after adding component to model.
-     */
-    addComponent: function(typePath, typeName, parentPath, prompt, callback) {
-        prompt = prompt || 'Enter name for new '+ typeName;
-        openmdao.model.getSignature(typePath, function(signature) {
-            openmdao.Util.promptForArgs(prompt, signature, function(name, args) {
-                if (parentPath) {
-                    name = parentPath + '.' + name;
-                }
-                openmdao.model.putObject(name, typePath, args, function() {
-                    if (callback) {
-                        callback(name);
-                    }
-                });
-            });
-        });
-    },
-
-    /**
-     * Confirm and then replace component.
-     *
-     * typePath: python path for type of component.
-     * typeName: last component of typePath.
-     * compPath: pathname for replaced component.
-     */
-    replaceComponent: function(typePath, typeName, compPath) {
-        prompt = 'Replace '+compPath+' with '+typeName;
-        openmdao.Util.confirm(prompt, function() {
-            openmdao.model.getSignature(typePath, function(signature) {
-                if (signature.args.length) {
-                    prompt = 'Replacement '+typeName;
-                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        openmdao.model.putObject(compPath, typePath, args);
-                    }, true);
-                } else {
-                    openmdao.model.putObject(compPath, typePath, '');
-                }
-            });
-        });
-    },
-
-    /**
      * show the properties of an object on the log (debug only)
      *
      * obj: the object for which properties are to be displayed

@@ -243,11 +243,13 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
     /** get the object properties from model, load data into tabbed panes */
     this.update = function(callback) {
         callback = callback || loadData;
-        model.getObject(pathname, callback, function(jqXHR, textStatus, error) {
-            debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
-            // assume component has been deleted, so close frame
-            _self.close();
-        });
+        model.getObject(pathname)
+            .done(callback)
+            .fail(function(jqXHR, textStatus, error) {
+                debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
+                // assume component has been deleted, so close frame
+                _self.close();
+            });
     };
 
     /** select the tab with the specified label */

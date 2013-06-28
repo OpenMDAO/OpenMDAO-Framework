@@ -87,8 +87,9 @@ openmdao.PropertiesFrame = function(id,model) {
             // listen for messages and update component properties accordingly
             model.addListener(self.pathname, handleMessage);
 
-            model.getObject(path, loadTables,
-                function(jqXHR, textStatus, errorThrown) {
+            model.getObject(path)
+                .done(loadTables)
+                .fail(function(jqXHR, textStatus, errorThrown) {
                     self.pathname = '';
                     if (self.elm.parent().hasClass('ui-dialog')) {
                         self.close();
@@ -96,8 +97,7 @@ openmdao.PropertiesFrame = function(id,model) {
                     else {
                         loadTables({});
                     }
-                }
-            );
+                });
         }
         return this;
     };

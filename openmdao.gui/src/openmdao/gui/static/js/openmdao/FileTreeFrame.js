@@ -59,7 +59,7 @@ openmdao.FileTreeFrame = function(id, model) {
                 (function (i) {
                     var reader = new FileReader();
                     reader.onload = function (e) {
-                       model.setFile(files[i].name,e.target.result);
+                       model.setFile(files[i].name, e.target.result);
                     };
                     reader.readAsText(files[i]);
                 })(i);
@@ -118,7 +118,12 @@ openmdao.FileTreeFrame = function(id, model) {
         _self.elm.find('a.jstree-clicked').each(function() {
             filepaths.push(this.getAttribute("path"));
         });
-        model.removeFiles(filepaths);
+        model.removeFiles(filepaths)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                alert('Error removing files: ' + textStatus);
+                debug.error('Error removing files', path, name,
+                            jqXHR, textStatus, errorThrown);
+            });
     }
 
     /** toggle the hidden files filter */
@@ -238,7 +243,12 @@ openmdao.FileTreeFrame = function(id, model) {
                                 var old = path.split('/');
                                 old = old[old.length-1];
                                 openmdao.Util.promptForValue('New name for '+old, function(name) {
-                                    model.renameFile(path, name);
+                                    model.renameFile(path, name)
+                                        .fail(function(jqXHR, textStatus, errorThrown) {
+                                            alert('Error renaming file: ' + textStatus);
+                                            debug.error('Error renaming file', path, name,
+                                                        jqXHR, textStatus, errorThrown);
+                                        });
                                 });
                            }
             };
@@ -257,13 +267,25 @@ openmdao.FileTreeFrame = function(id, model) {
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
-                "action" : function(node) { model.removeFile(path); }
+                "action" : function(node) { model.removeFile(path)
+                                                .fail(function(jqXHR, textStatus, errorThrown) {
+                                                    alert('Error removing file: ' + textStatus);
+                                                    debug.error('Error removing file', path, name,
+                                                                jqXHR, textStatus, errorThrown);
+                                                });
+                                           }
             };
         }
         else if (isEmptyFolder) {
             menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
-                "action" : function(node) { model.removeFile(path); }
+                "action" : function(node) { model.removeFile(path)
+                                                .fail(function(jqXHR, textStatus, errorThrown) {
+                                                    alert('Error removing folder: ' + textStatus);
+                                                    debug.error('Error renaming folder', path, name,
+                                                                jqXHR, textStatus, errorThrown);
+                                                });
+                                           }
             };
         }
 
@@ -393,7 +415,12 @@ openmdao.FileTreeFrame = function(id, model) {
 
     /** update the display, with data from the model */
     this.update = function() {
-        model.getFiles(updateFiles);
+        model.getFiles()
+            .done(updateFiles)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error('Error getting files',
+                            jqXHR, textStatus, errorThrown);
+            });
     };
 
     // load initial file data
@@ -411,8 +438,8 @@ openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new file',
         function(name) {
-            openmdao.model.newFile(name, path,
-                function(data, textStatus, jqXHR) {
+            openmdao.model.newFile(name, path)
+                .done(function() {
                     var pathname = '/'+name;
                     if (path) {
                         pathname = path + name;
@@ -424,6 +451,10 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
                     if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify('New file created');
                     }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error('Error creating file', name, path,
+                                jqXHR, textStatus, errorThrown);
                 });
         });
 };
@@ -431,7 +462,7 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
 /** create a new folder in the current project */
 openmdao.FileTreeFrame.prototype.newFolder = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new folder',
-                     function(name) { openmdao.model.newFolder(name,path); } );
+        function(name) { openmdao.model.newFolder(name, path); } );
 };
 
 /** choose & add one or more files, optionally specifying a dest folder */
@@ -489,6 +520,11 @@ openmdao.FileTreeFrame.prototype.deleteFiles = function() {
     jQuery('#ftree_pane a.jstree-clicked').each(function() {
         filepaths.push(this.getAttribute("path"));
     });
-    openmdao.model.removeFiles(filepaths);
+    openmdao.model.removeFiles(filepaths)
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            alert('Error removing files: ' + textStatus);
+            debug.error('Error removing files', path, name,
+                        jqXHR, textStatus, errorThrown);
+        });
 };
 

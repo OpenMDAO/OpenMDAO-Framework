@@ -260,8 +260,8 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 prompt = 'Specify a name for the new '+dropped_name+'<br>'+
                          '(It will be added to '+target_parent +' and to <br>'+
                          'the workflow of '+ target_pathname+')';
-                openmdao.Util.addComponent(dropped_pathname, dropped_name,
-                                           target_parent, prompt, function(name) {
+                openmdao.model.addObject(dropped_pathname, dropped_name,
+                                         target_parent, prompt, function(name) {
                     // If successful, then add to workflow as well.
                     cmd = target_pathname+'.workflow.add("'+name+'")';
                     model.issueCommand(cmd);

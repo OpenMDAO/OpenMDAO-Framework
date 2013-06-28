@@ -165,9 +165,12 @@ openmdao.PassthroughsFrame = function(model, pathname) {
 
     /** get passthrough data and update the input and output passthrough trees */
     function update() {
-        model.getPassthroughs(pathname, updateTrees, function(err) {
-            debug.error('Error getting passthrough data:', err);
-        });
+        model.getPassthroughs(pathname)
+            .done(updateTrees)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error('Error getting passthoughs for', pathname,
+                            jqXHR, textStatus, errorThrown);
+            });
     }
 
     /** update when notified of change in assembly */

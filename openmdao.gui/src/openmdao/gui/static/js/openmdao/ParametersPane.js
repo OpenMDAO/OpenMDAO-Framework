@@ -53,8 +53,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
    }
     parms.onClick.subscribe(function (e) {
         var cell = parms.getCellFromEvent(e);
-        if (cell.cell==0) {
-            var delname = parms.getData()[cell.row].name
+        if (cell.cell === 0) {
+            var delname = parms.getData()[cell.row].name;
             if (delname.split(",").length>1) {
                 cmd = pathname+'.remove_parameter('+delname+');';
             }
@@ -116,7 +116,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             var comppath = comp.pathname.split('.').slice(-1)[0];
 
             // Loop through inputs in component and fill our table of candidates
-            model.getObject(comp.pathname, function findInputs(cjson) {
+            model.getObject(comp.pathname).done(function findInputs(cjson) {
                 var highlimit, lowlimit;
                 jQuery.each(cjson.Inputs, function(idx, input) {
 
@@ -124,7 +124,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     // TODO: Recurse into subdriver workflows.
                     if (input.connected) {
                         return;
-                    };
+                    }
 
                     // Do not include parameters already connected in any workflow.
                     // TODO: Should limit it to this workflow.
@@ -136,11 +136,11 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     highlimit = null;
                     if (input.low !== null) {
                         lowlimit = input.low;
-                    };
+                    }
                     if (input.high !== null) {
                         highlimit = input.high;
-                    };
-                    fullpath = comppath + '.' + input.name
+                    }
+                    fullpath = comppath + '.' + input.name;
                     candidates.push(fullpath);
                     limits[fullpath] = [lowlimit, highlimit];
                 });
@@ -257,7 +257,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         model.getDataflow(parentpath)
             .done(function(wjson) { findComps(wjson, callback); })
             .fail(function(jqXHR, textStatus, errorThrown) {
-                debug.error("Error while trying to find candidate parameters.", jqXHR, textStatus, errorThrown);
+                debug.error("Error while trying to find candidate parameters.",
+                            parentpath, jqXHR, textStatus, errorThrown);
             });
     }
 

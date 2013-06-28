@@ -48,14 +48,16 @@ openmdao.DrawingFrame = function(id,model,pathname) {
         else {
             self.pathname = pathname;
         }
+
         if (self.pathname.length > 0) {
             model.addListener(self.pathname, handleMessage);
-            model.getValue(self.pathname,
-                              updateDrawing,
-                              function(jqXHR, textStatus, errorThrown) {
-                                  self.pathname = '';
-                                  debug.error("Error getting drawing:", jqXHR);
-                              });
+            model.getValue(self.pathname)
+                .done(updateDrawing)
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error("Error getting drawing for:", self.pathname,
+                        jqXHR, textStatus, errorThrown);
+                    self.pathname = '';
+                });
         }
     }
 

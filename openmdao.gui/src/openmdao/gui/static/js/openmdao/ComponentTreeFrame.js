@@ -167,7 +167,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         menu.remove = {
             "label"  : 'Remove',
             "action" :  function(node) {
-                            model.removeComponent(path);
+                            model.removeObject(path);
                         }
         };
         return menu;
@@ -196,7 +196,12 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
     /** update the tree, with data from the model  */
     this.update = function() {
-        model.getComponents(updateTree);
+        model.getComponents()
+            .done(updateTree)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error('Error getting components',
+                            jqXHR, textStatus, errorThrown);
+            });
     };
 
     // load initial component data

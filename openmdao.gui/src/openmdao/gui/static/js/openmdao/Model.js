@@ -119,16 +119,17 @@ openmdao.Model=function(listeners_ready) {
     */
     function openStream(stream_name, handler) {
         // make ajax call (to url) to get the address of the websocket
-        return  jQuery.ajax({
-                    type: 'GET',
-                    url:  'stream/'+stream_name
-                })
-                .fail(function(jqXHR, textStatus, err) {
-                    debug.error('Error getting websocket url', jqXHR ,textStatus, err);
-                })
-                .pipe(function(addr) {
-                    return openWebSocket(addr, handler);
-                });
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'stream/'+stream_name
+                    })
+                    .fail(function(jqXHR, textStatus, err) {
+                        debug.error('Error getting websocket url', jqXHR ,textStatus, err);
+                    })
+                    .pipe(function(addr) {
+                        return openWebSocket(addr, handler);
+                    });
+        return jqXHR.promise();
     }
 
     /** publish message to subscribed listeners. */
@@ -152,9 +153,11 @@ openmdao.Model=function(listeners_ready) {
 
     /** Set 'modified' flag and publish to '@model-modified' topic. */
     function setModified(value) {
-        _modified = value;
-        publish(['@model-modified', _modified]);
-    };
+        if (value !== _modified) {
+            _modified = value;
+            publish(['@model-modified', _modified]);
+        }
+    }
 
     /** handle an output message, which is just passed on to all _subscribers */
     function handleOutMessage(message) {
@@ -208,7 +211,7 @@ openmdao.Model=function(listeners_ready) {
     if (! listeners_ready) { // to keep js_unit_test from failing
         listeners_ready = jQuery.Deferred();
         listeners_ready.resolve();
-    };
+    }
 
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
@@ -266,36 +269,28 @@ openmdao.Model=function(listeners_ready) {
 
     /** get the list of object types that are available for creation */
     this.getTypes = function() {
-        return jQuery.ajax({
-            type: 'GET',
-            url:  'types',
-            dataType: 'json',
-        })
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'types',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** get constructor signature for a type */
-    this.getSignature = function(typename, callback, errorHandler) {
-        jQuery.ajax({
-            type: 'GET',
-            url:  'type/'+typename+'/signature',
-            dataType: 'json',
-            success: callback,
-            error: errorHandler
-        });
-    };
-
-    /** get a new (empty) model */
-    this.newModel = function() {
-        return jQuery.ajax({
-            type: 'POST',
-            url:  'model'
-        });
+    this.getSignature = function(typename) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'type/'+typename+'/signature',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** I split this function out from commit so I could call it directly
        from js_unit_test */
     this.commit_with_comment = function(comment) {
-        defrd = jQuery.ajax({
+        jQuery.ajax({
             type: 'POST',
             url:  'project',
             data: { 'comment': comment },
@@ -306,7 +301,6 @@ openmdao.Model=function(listeners_ready) {
                       }
         });
         setModified(false);
-        return defrd.promise();
     };
 
     /** commit the current project to the repository (after supplying a comment)*/
@@ -316,22 +310,21 @@ openmdao.Model=function(listeners_ready) {
 
     /** revert back to the most recent commit of the project */
     this.revert = function(errorHandler) {
-        openmdao.Util.confirm("Remove all uncommitted changes?",
-            function() {
-                jQuery.ajax({
-                    type: 'POST',
-                    url:  'project_revert',
-                    success: function(data, textStatus, jqXHR) {
-                        _self.reload();
-                    },
-                    error: errorHandler,
-                    complete: function(jqXHR, textStatus) {
-                                  if (typeof openmdao_test_mode !== 'undefined') {
-                                      openmdao.Util.notify('Revert complete: ' +textStatus);
-                                  }
+        openmdao.Util.confirm("Remove all uncommitted changes?", function() {
+            jQuery.ajax({
+                type: 'POST',
+                url:  'project_revert',
+                success: function(data, textStatus, jqXHR) {
+                    _self.reload();
+                },
+                error: errorHandler,
+                complete: function(jqXHR, textStatus) {
+                              if (typeof openmdao_test_mode !== 'undefined') {
+                                  openmdao.Util.notify('Revert complete: ' +textStatus);
                               }
-                });
-                setModified(false);
+                          }
+            });
+            setModified(false);
         });
     };
 
@@ -340,11 +333,12 @@ openmdao.Model=function(listeners_ready) {
         if (!pathname) {
             pathname = 'None';
         }
-        return jQuery.ajax({
-            type: 'GET',
-            url:  'object/'+pathname+'/workflow',
-            dataType: 'json',
-        });
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/workflow',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** get the structure (data flow)) of an assembly */
@@ -352,137 +346,149 @@ openmdao.Model=function(listeners_ready) {
         if (!pathname) {
             pathname = 'None';
         }
-        return jQuery.ajax({
-            type: 'GET',
-            url:  'object/'+pathname+'/dataflow',
-            dataType: 'json',
-        });
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/dataflow',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** get  hierarchical list of components */
-    this.getComponents = function(callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'objects',
-                dataType: 'json',
-                success: callback,
-                error: errorHandler
-            });
-        }
+    this.getComponents = function() {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'objects',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** get the inputs and outputs of the assembly's child components and
         an indicator for each whether or not it is a passthrough variable */
-    this.getPassthroughs = function(pathname, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+pathname+'/passthroughs',
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            });
-        }
+    this.getPassthroughs = function(pathname) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/passthroughs',
+                        dataType: 'json',
+                        data: {}
+                    });
+        return jqXHR.promise();
     };
 
-    /** get  attributes of any slotable object */
-    this.getObject = function(name, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+name,
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            });
-        }
+    /** get  attributes of an object */
+    this.getObject = function(name) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+name,
+                        dataType: 'json',
+                        data: {}
+                    });
+        return jqXHR.promise();
     };
 
     /** get all available events in a workflow */
-    this.getAvailableEvents = function(pathname, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+pathname+'/events',
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            });
-        }
+    this.getAvailableEvents = function(pathname) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/events',
+                        dataType: 'json',
+                        data: {}
+                    });
+        return jqXHR.promise();
     };
 
-
     /** get value for pathname */
-    this.getValue = function(pathname, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'value/'+pathname,
-                success: callback,
-                error: errorHandler
-            });
-        }
+    this.getValue = function(pathname) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'value/'+pathname,
+                        success: callback,
+                        error: errorHandler
+                    });
+        return jqXHR.promise();
     };
 
     /** get connections between two components in an assembly */
-    this.getConnections = function(pathname, src_name, dst_name, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
+    this.getConnections = function(pathname, src_name, dst_name) {
+        // src and dst names are optional
+        // (no src or dst means the src or dst is the assembly itself)
+        var args = {};
+        if (src_name) {
+            args.source = src_name;
         }
-        else {
-            // src and dst names are optional
-            // (no src or dst means the src or dst is the assembly itself)
-            var args = {};
-            if (src_name) {
-                args.source = src_name;
-            }
-            if (dst_name) {
-                args.target = dst_name;
-            }
-            jQuery.ajax({
-                type: 'GET',
-                url:  'object/'+pathname+'/connections',
-                dataType: 'json',
-                data: args,
-                success: callback,
-                error: errorHandler
-            });
+        if (dst_name) {
+            args.target = dst_name;
         }
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/connections',
+                        dataType: 'json',
+                        data: args
+                    });
+        return jqXHR.promise();
     };
+
 
     /** create or replace object with pathname with a new object of the specified type */
-    this.putObject = function(pathname, typepath, args, callback, errorHandler) {
-        jQuery.ajax({
+    this.putObject = function(pathname, typepath, args) {
+        var jqXHR = jQuery.ajax({
             type: 'PUT',
             url:  'object/'+pathname,
-            data: {'type': typepath, 'args': args},
-            success: callback,
-            error: errorHandler
+            data: {'type': typepath, 'args': args}
         });
         setModified(true);
+        return jqXHR.promise();
     };
 
-    /** remove the component with the given pathname */
-    this.removeComponent = function(pathname) {
+    /**
+     * Get name and arguments for new object, add it to parent object,
+     * and optionally invoke callback.
+     *
+     * typePath:   python path for type of object.
+     * typeName:   last component of typePath.
+     * parentPath: pathname for new object's parent.
+     * prompt:     optional prompt use when requesting name.
+     * callback:   optional callback invoked after adding object to model.
+     */
+    this.addObject = function(typePath, typeName, parentPath, prompt) {
+        prompt = prompt || 'Enter name for new '+ typeName;
+        _self.getSignature(typePath).done(function(signature) {
+            openmdao.Util.promptForArgs(prompt, signature, function(name, args) {
+                if (parentPath) {
+                    name = parentPath + '.' + name;
+                }
+                _self.putObject(name, typePath, args);
+            });
+        });
+    },
+
+    /**
+     * Confirm and then replace object.
+     *
+     * typePath: python path for type of replacement object.
+     * typeName: last component of typePath.
+     * objPath: pathname for replaced object.
+     */
+    this.replaceObject = function(typePath, typeName, objPath) {
+        prompt = 'Replace '+objPath+' with '+typeName;
+        openmdao.Util.confirm(prompt, function() {
+            openmdao.model.getSignature(typePath).done(function(signature) {
+                if (signature.args.length) {
+                    prompt = 'Replacement '+typeName;
+                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                        openmdao.model.putObject(objPath, typePath, args);
+                    }, true);
+                }
+                else {
+                    openmdao.model.putObject(objPath, typePath, '');
+                }
+            });
+        });
+    },
+
+    /** remove the object with the given pathname */
+    this.removeObject = function(pathname) {
         var parent = openmdao.Util.getPath(pathname);
         if (parent.length > 0 ) {
             cmd = parent+'.remove("'+openmdao.Util.getName(pathname)+'")';
@@ -495,201 +501,165 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** issue the specified command against the model */
-    this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'command',
-            data: { 'command': cmd },
-            success: callback,
-            error: errorHandler,
-            complete: completeHandler
-        });
+    this.issueCommand = function(cmd) {
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  'command',
+                        data: { 'command': cmd }
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** set the value of the variable with to rhs */
-    this.setVariableValue = function(pathname, rhs, type, callback, errorHandler, completeHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'variable/'+encodeURIComponent(pathname),   // escape any brackets, etc.
-            data: {
-                'rhs': rhs,
-                'type': type   // need to know if it's a string vs. an expression
-            },
-            success: callback,
-            error: errorHandler,
-            complete: completeHandler
-        });
+    this.setVariableValue = function(pathname, rhs, type) {
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  'variable/'+encodeURIComponent(pathname),   // escape any brackets, etc.
+                        data: { 'rhs': rhs, 'type': type }
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** get a recursize file listing of the model working directory (as JSON) */
-    this.getFiles = function(callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-
-        jQuery.ajax({
-            type: 'GET',
-            url:  'files',
-            dataType: 'json',
-            data: {},
-            success: callback,
-            error: errorHandler
-        });
+    this.getFiles = function() {
+        var jqXHR = jQuery.ajax({
+                        type:     'GET',
+                        url:      'files',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
     };
 
     /** get the contents of the specified file */
-    this.getFile = function(filepath, callback, errorHandler) {
-        if (typeof callback !== 'function') {
-            return;
-        }
-
-        jQuery.ajax({
-            type: 'GET',
-            url:  'file'+filepath.replace(/\\/g,'/'),
-            success: callback,
-            error: errorHandler
-        });
+    this.getFile = function(filepath) {
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'file'+filepath.replace(/\\/g,'/')
+                    });
+        return jqXHR.promise();
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
-        jQuery.ajax({
-            type: 'PUT',
-            url:  'file/'+filepath.replace(/\\/g,'/'),
-            data: { 'contents': contents, 'force': force },
-            success: callback,
-            error: errorHandler,
-            statusCode: {
-                409: handler409
-             }
-        });
+    this.setFile = function(filepath, contents, force) {
+        var jqXHR = jQuery.ajax({
+                        type: 'PUT',
+                        url:  'file/'+filepath.replace(/\\/g,'/'),
+                        data: { 'contents': contents, 'force': force }
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** create new folder with specified path in the model working directory */
-    this.createFolder = function(folderpath, callback, errorHandler) {
-        jQuery.ajax({
-            type: 'PUT',
-            url:  'file/'+folderpath.replace(/\\/g,'/'),
-            data: { 'isFolder': true},
-            success: callback,
-            error: errorHandler
-        });
+    this.createFolder = function(folderpath) {
+        var jqXHR = jQuery.ajax({
+                        type: 'PUT',
+                        url:  'file/'+folderpath.replace(/\\/g,'/'),
+                        data: { 'isFolder': true}
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** create a new file in the model working directory with the specified path  */
-    this.newFile = function(name, folderpath, callback) {
-            if (folderpath) {
-                name = folderpath+'/'+name;
-            }
-            var contents = '';
-            if (/.py$/.test(name)) {
-                contents = '"""\n   '+name+'\n"""\n\n';
-            }
-            if (/.json$/.test(name)) {
-                contents = '[]';
-            }
-            _self.setFile(name, contents, undefined, callback);
-            setModified(true);
+    this.newFile = function(name, folderpath) {
+        if (folderpath) {
+            name = folderpath+'/'+name;
+        }
+        var contents = '';
+        if (/.py$/.test(name)) {
+            contents = '"""\n   '+name+'\n"""\n\n';
+        }
+        if (/.json$/.test(name)) {
+            contents = '[]';
+        }
+        return _self.setFile(name, contents, undefined);
     };
 
     /** prompt for name & create a new folder */
     this.newFolder = function(name, folderpath) {
-            if (folderpath) {
-                name = folderpath+'/'+name;
-            }
-            _self.createFolder(name);
-            setModified(true);
+        if (folderpath) {
+            name = folderpath+'/'+name;
+        }
+        return _self.createFolder(name);
     };
 
     /** rename file with specified path. */
-    this.renameFile = function(filepath, newname, callback) {
+    this.renameFile = function(filepath, newname) {
         // convert to relative path with forward slashes
         var path = filepath.replace(/\\/g,'/');
         if (path[0] === '/') {
             path = path.substring(1, path.length);
         }
         // make the call
-        jQuery.ajax({
-            type: 'POST',
-            url:  'file/'+path,
-            data: { 'rename': newname },
-            success: callback,
-            error: function(jqXHR, textStatus, errorThrown) {
-                       debug.warn("model.renameFile",
-                                  jqXHR, textStatus, errorThrown);
-                   }
-        });
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  'file/'+path,
+                        data: { 'rename': newname }
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
+
     /** delete file with specified path from the model working directory */
-    this.removeFile = function(filepath, callback) {
-        jQuery.ajax({
-            type: 'DELETE',
-            url:  'file'+filepath.replace(/\\/g,'/'),
-            data: { 'file': filepath },
-            success: callback,
-            error: function(jqXHR, textStatus, errorThrown) {
-                        // not sure why this always returns a false error
-                       debug.warn("model.removeFile",
-                                  jqXHR,textStatus,errorThrown);
-                   }
-            });
-            setModified(true);
+    this.removeFile = function(filepath) {
+        var jqXHR = jQuery.ajax({
+                        type: 'DELETE',
+                        url:  'file'+filepath.replace(/\\/g,'/'),
+                        data: { 'file': filepath }
+                    });
+        setModified(true);
+        return jqXHR.promise();
     };
 
     /** delete files with specified path from the model working directory */
-    this.removeFiles = function(filepaths, callback) {
-        jQuery.ajax({
-            type: 'DELETE',
-            url:  'files',
-            data: JSON.stringify({'filepaths': filepaths}),
-            contentType: 'application/json; charset=utf-8',
-            success: callback,
-            error: function(jqXHR, textStatus, errorThrown) {
-                debug.error("model.removeFiles", jqXHR, textStatus, errorThrown);
-            }
-        });
+    this.removeFiles = function(filepaths) {
+        var jqXHR = jQuery.ajax({
+                        type: 'DELETE',
+                        url:  'files',
+                        data: JSON.stringify({'filepaths': filepaths}),
+                        contentType: 'application/json; charset=utf-8'
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** execute a component */
     this.runComponent = function(pathname) {
-        // make the call
-        jQuery.ajax({
-            type: 'POST',
-            url:  'object/'+pathname,
-            success: function(data, textStatus, jqXHR) {
-                         if (typeof openmdao_test_mode !== 'undefined') {
-                             openmdao.Util.notify('Run complete: '+textStatus);
-                         }
-                      },
-            error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
-                       debug.error(jqXHR,textStatus,errorThrown);
-                   }
-        });
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  'object/'+pathname,
+                        success: function(data, textStatus, jqXHR) {
+                                     if (typeof openmdao_test_mode !== 'undefined') {
+                                         openmdao.Util.notify('Run complete: '+textStatus);
+                                     }
+                                  },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                                   debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
+                                   debug.error(jqXHR,textStatus,errorThrown);
+                               }
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** execute the specified file */
-    this.execFile = function(filepath, callback) {
+    this.execFile = function(filepath) {
         // convert to relative path with forward slashes
         var path = filepath.replace(/\\/g,'/');
         if (path[0] === '/') {
             path = path.substring(1,path.length);
         }
         // make the call
-        jQuery.ajax({
-            type: 'POST',
-            url:  'file/'+path,
-            success: callback
-        });
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  'file/'+path
+                    });
         setModified(true);
+        return jqXHR.promise();
     };
 
     /** reload the model */
@@ -701,18 +671,18 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** close the model */
-   this.close = function() {
-       closeWebSockets('close');
-       closeWindows();
-       window.location.replace('/workspace/close');
-   };
+    this.close = function() {
+        closeWebSockets('close');
+        closeWindows();
+        window.location.replace('/workspace/close');
+    };
 
-   /** exit the gui */
-   this.exit = function() {
-       closeWebSockets('exit');
-       closeWindows();
-       window.location.replace('/exit');
-   };
+    /** exit the gui */
+    this.exit = function() {
+        closeWebSockets('exit');
+        closeWindows();
+        window.location.replace('/exit');
+    };
 
     /** add window to the list of windows accociated with this model. */
     this.addWindow = function(win) {
@@ -776,11 +746,11 @@ openmdao.Model=function(listeners_ready) {
             }
         }
         poll();
-    }
+    };
 
     /** For functional testing: Close all WebSockets. */
     this.closeWebSockets = function(reason) {
         closeWebSockets(reason);
-    }
+    };
 };
 

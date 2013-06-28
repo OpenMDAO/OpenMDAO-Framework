@@ -172,17 +172,22 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
 
             openmdao.drag_and_drop_manager.reset();
 
-            openmdao.model.getSignature(droppedPath, function(signature) {
-                if (signature.args.length) {
-                    var prompt = 'Enter arguments for new '+droppedName;
-                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        fill('create("'+droppedPath+'"'+args+')');
-                    }, true);
-                }
-                else {
-                    fill('create("'+droppedPath+'")');
-                }
-            });
+            openmdao.model.getSignature(droppedPath)
+                .done(function(signature)  {
+                    if (signature.args.length) {
+                        var prompt = 'Enter arguments for new '+droppedName;
+                        openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                            fill('create("'+droppedPath+'"'+args+')');
+                        }, true);
+                    }
+                    else {
+                        fill('create("'+droppedPath+'")');
+                    }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error('Error getting signature for', droppedPath,
+                                jqXHR, textStatus, errorThrown);
+                });
         }
     });
 

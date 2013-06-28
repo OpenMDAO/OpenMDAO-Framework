@@ -67,7 +67,7 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
                 droppedPath = droppedObject.attr("modpath");
 
             openmdao.drag_and_drop_manager.reset();
-            openmdao.Util.addComponent(droppedPath, droppedName, self.pathname);
+            openmdao.model.addObject(droppedPath, droppedName, self.pathname);
         }
     });
 

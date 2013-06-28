@@ -34,8 +34,9 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         model.getWorkflow(self.pathname)
             .done(self.loadData)
             .fail(function(jqXHR, textStatus, err) {
+                debug.error("Error getting workflow for", self.pathname,
+                            jqXHR, textStatus, err);
                 self.pathname = '';
-                debug.error("Error getting workflow ", jqXHR, textStatus, err);
             });
     };
 
