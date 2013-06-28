@@ -479,10 +479,11 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
             formData.append('file', files[filename]);
         }
         // now post a new XHR request
-        xhr.open('POST', 'tools/upload');
+        xhr.open('POST', '/workspace/tools/upload');
         xhr.onload = function () {
             if (xhr.status !== 200) {
-                debug.error('error uploading files', files, path);
+                alert('error uploading files ('+xhr.status+', '+xhr.statusText+')');
+                debug.error('error uploading files', xhr, files, path);
             }
         };
         if (path) {
