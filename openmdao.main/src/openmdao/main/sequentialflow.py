@@ -39,6 +39,7 @@ class SequentialWorkflow(Workflow):
         self.derivative_iterset = None
         self._collapsed_graph = None
         self._topsort = None
+        self._find_nondiff_blocks = True
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -60,6 +61,12 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def check_config(self):
+        """Reinitialize some stuff.""" 
+        
+        # Do this whenever we rerun, just in-case.
+        self._find_nondiff_blocks = True
+        
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  If full is True,
         include hidden pseudo-components in the list.
@@ -389,7 +396,7 @@ class SequentialWorkflow(Workflow):
             # Add the pseudo_comps:
             graph.add_node(pa_name)
             
-            # Replace edges
+            # Carefully replace edges
             inputs = set()
             outputs = set()
             for edge in graph.edges():
@@ -435,8 +442,10 @@ class SequentialWorkflow(Workflow):
                                                         inputs, outputs, 
                                                         self)
                 
+        # Execution order may be different after grouping, so topsort
         iterset = nx.topological_sort(graph)
         
+        # Save off list containing comps and pseudo-assemblies
         self.derivative_iterset = []
         scope = self.scope
         for name in iterset:
@@ -445,6 +454,7 @@ class SequentialWorkflow(Workflow):
             else:
                 self.derivative_iterset.append(getattr(scope, name))
                 
+        # Basically only returning the text list to make the test easy.
         return iterset
 
     def derivative_iter(self):
@@ -491,24 +501,28 @@ class SequentialWorkflow(Workflow):
                 self.scope.raise_exception(msg, RuntimeError)
                 
             
-        # TODO: These lines should only be executed once at startup.
-        
-        self._severed_edges = set()
-        self._additional_edges = []
-        self._hidden_edges = set()
-        
-        # New edges for parameters
-        input_edges = [('@in', a) for a in inputs]
-        additional_edges = set(input_edges)
-        
-        # New edges for responses
-        out_edges = [a[0] for a in self.get_interior_edges()]
-        for item in outputs:
-            if item not in out_edges:
-                additional_edges.add((item, '@out'))
-        
-        self._additional_edges = additional_edges                
-        self.group_nondifferentiables()
+        # Only do this once: find additional edges and figure out our
+        # non-differentiable blocks.
+        if self._find_nondiff_blocks:
+            
+            self._severed_edges = set()
+            self._additional_edges = []
+            self._hidden_edges = set()
+            
+            # New edges for parameters
+            input_edges = [('@in', a) for a in inputs]
+            additional_edges = set(input_edges)
+            
+            # New edges for responses
+            out_edges = [a[0] for a in self.get_interior_edges()]
+            for item in outputs:
+                if item not in out_edges:
+                    additional_edges.add((item, '@out'))
+            
+            self._additional_edges = additional_edges                
+            self.group_nondifferentiables()
+            
+            self._find_nondiff_blocks = False
         
         return calc_gradient(self, inputs, outputs)
     

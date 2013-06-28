@@ -31,6 +31,8 @@ class Dataflow(SequentialWorkflow):
     def check_config(self):
         """Check for cyclc graph.""" 
         
+        super(Dataflow, self).check_config()
+        
         graph = self._get_collapsed_graph()
         if not is_directed_acyclic_graph(graph):
             # do a little extra work here to give more info to the user

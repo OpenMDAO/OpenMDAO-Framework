@@ -37,6 +37,8 @@ class CyclicWorkflow(SequentialWorkflow):
         """Any checks we need. For now, drivers are not allowed. You can get
         around this by placing them in an assembly."""         
         
+        super(CyclicWorkflow, self).check_config()
+        
         for comp in self.get_components():
             if has_interface(comp, IDriver):
                 msg = 'Subdriver not supported in a cyclicflow. Please ' \
