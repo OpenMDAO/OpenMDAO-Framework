@@ -115,6 +115,15 @@ class ExprPrinter(ast.NodeVisitor):
     def visit_Name(self, node):
         self.write(node.id)
         
+    def visit_UnaryOp(self, node):
+        if isinstance(node.operand, ast.BinOp):
+            self.visit(node.op)
+            self.write('(')
+            self.visit(node.operand)
+            self.write(')')
+        else:
+            super(ExprPrinter, self).generic_visit(node)
+
     def visit_BinOp(self, node):
         # we have to add parens around any immediate BinOp child
         # that has a lower precedence operation than we do
@@ -259,7 +268,7 @@ class ExprPrinter(ast.NodeVisitor):
     visit_Expr       = _ignore
     visit_Expression = _ignore
     visit_Compare    = _ignore
-    visit_UnaryOp    = _ignore
+    #visit_UnaryOp    = _ignore
     visit_Subscript  = _ignore
     visit_Load       = _ignore
     visit_Store      = _ignore

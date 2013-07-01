@@ -133,7 +133,8 @@ class PseudoComponent(object):
         self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
 
         # this is just the equation string (for debugging)
-        self._eqn = "%s = %s" % (self._destexpr.text, self._srcexpr.text)
+        out = destexpr.text if destexpr.text else 'out0'
+        self._eqn = "%s = %s" % (out, srcexpr.text)
 
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope

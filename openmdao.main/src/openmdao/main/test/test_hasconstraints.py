@@ -6,6 +6,7 @@ from openmdao.main.api import Assembly, Driver, set_as_top
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp
+import openmdao.main.pseudocomp as pcompmod
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -22,8 +23,10 @@ class MyInEqDriver(Driver):
 class HasConstraintsTestCase(unittest.TestCase):
 
     def setUp(self):
+        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.asm = set_as_top(Assembly())
         self.asm.add('comp1', ExecComp(exprs=['c=a+b', 'd=a-b']))
+        self.asm.add('comp2', ExecComp(exprs=['c=a+b', 'd=a-b']))
         
     def test_list_constraints(self):
         drv = self.asm.add('driver', MyDriver())
@@ -34,19 +37,22 @@ class HasConstraintsTestCase(unittest.TestCase):
         drv.add_constraint('comp1.c = comp1.d')
         self.assertEqual(self.asm.driver.is_valid(), False)
         self.assertEqual(self.asm.driver._exec_state, 'INVALID')
-        self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c=comp1.d'])
+        self.assertEqual(drv.list_constraints(), 
+            ['comp1.a<comp1.b','comp1.c=comp1.d'])
         
     def test_list_eq_constraints(self):
         drv = self.asm.add('driver', MyEqDriver())
         drv.add_constraint('comp1.a = comp1.b')
         drv.add_constraint('comp1.c = comp1.d')
-        self.assertEqual(drv.list_constraints(), ['comp1.a=comp1.b','comp1.c=comp1.d'])
+        self.assertEqual(drv.list_constraints(), 
+            ['comp1.a=comp1.b','comp1.c=comp1.d'])
         
     def test_list_ineq_constraints(self):
         drv = self.asm.add('driver', MyDriver())
         drv.add_constraint('comp1.a < comp1.b')
         drv.add_constraint('comp1.c >= comp1.d')
-        self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c>=comp1.d'])
+        self.assertEqual(drv.list_constraints(), 
+            ['comp1.a<comp1.b','comp1.c>=comp1.d'])
         
     def _check_ineq_add_constraint(self, drv):
         self.asm.add('driver', drv)
@@ -288,6 +294,31 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_eval_ineq_constraint(self):
         self._check_ineq_eval_constraints(MyInEqDriver())
+
+    def test_pseudocomps(self):
+        self.asm.add('driver', MyDriver())
+        self.assertEqual(self.asm._depgraph.list_connections(),
+                         [])
+        self.asm.driver.add_constraint('comp1.c-comp2.a>5.')
+        self.assertEqual(self.asm._0._eqn, 'out0 = -(comp1.c-comp2.a-5.0)')
+        self.assertEqual(set(self.asm._depgraph.list_connections()),
+                         set([('comp2.a', '_0.in1'), ('comp1.c', '_0.in0')]))
+        self.assertEqual(set(self.asm._exprmapper.list_connections()),
+                         set([('comp2.a', '_0.in1'), ('comp1.c', '_0.in0')]))
+        self.asm.driver.remove_constraint('comp1.c-comp2.a>5.')
+        self.assertEqual(self.asm._depgraph.list_connections(), [])
+        self.assertEqual(self.asm._exprmapper.list_connections(), [])
+        self.asm.driver.add_constraint('comp1.c > 0.')
+        self.assertEqual(set(self.asm._depgraph.list_connections()),
+                         set([('comp1.c', '_1.in0')]))
+        self.assertEqual(set(self.asm._exprmapper.list_connections()),
+                         set([('comp1.c', '_1.in0')]))
+        self.assertEqual(self.asm._1._eqn, 'out0 = -comp1.c')
+        self.asm.driver.add_constraint('comp1.c-comp2.a<5.')
+        self.assertEqual(self.asm._2._eqn, 'out0 = comp1.c-comp2.a-5.0')
+        self.asm.driver.add_constraint('comp1.c < 0.')
+        self.assertEqual(self.asm._3._eqn, 'out0 = comp1.c')
+        
 
 if __name__ == "__main__":
     unittest.main()

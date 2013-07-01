@@ -722,7 +722,9 @@ class Container(SafeHasTraits):
                                  name, AttributeError)
             
         trait = self.get_trait(name)
-        if trait is not None:
+        if trait is None:
+            delattr(self, name)
+        else:
             # for Slot traits, set their value to None but don't remove
             # the trait
             if trait.is_trait_type(Slot):

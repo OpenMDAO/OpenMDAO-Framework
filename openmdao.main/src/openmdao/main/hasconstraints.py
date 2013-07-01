@@ -90,11 +90,11 @@ class Constraint(object):
         if it evaluates to a value <= 0.
         """
         scope = self.lhs.scope
-        lhsnode = ast.parse(self.lhs.text)
+        lhsnode = ast.parse(self.lhs.text, mode='eval')
         try:
             f = float(self.rhs.text)
         except:
-            rhsnode = ast.parse(self.rhs.text)
+            rhsnode = ast.parse(self.rhs.text, mode='eval')
         else:
             if f == 0:
                 rhsnode = None
@@ -104,7 +104,7 @@ class Constraint(object):
         if self.comparator.startswith('>'):
             # of lhs > rhs, replace with rhs - lhs
             if rhsnode:
-                newnode = ast.BinOp(rhsnode, ast.Sub(), lhsnode)
+                newnode = ast.UnaryOp(ast.USub(), ast.BinOp(lhsnode, ast.Sub(), rhsnode))
             else:
                 newnode = ast.UnaryOp(ast.USub(), lhsnode)
         else:
