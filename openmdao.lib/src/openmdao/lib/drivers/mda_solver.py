@@ -93,6 +93,7 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Find dimension of our problem.
+        self.workflow.group_nondifferentiables()
         nEdge = self.workflow.initialize_residual()
         
         A = LinearOperator((nEdge, nEdge),

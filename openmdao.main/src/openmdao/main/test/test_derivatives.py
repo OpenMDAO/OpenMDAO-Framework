@@ -430,6 +430,15 @@ class Testcase_derivatives(unittest.TestCase):
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        # Put everything in a single pseudo-assy, and run fd with no fake.
+        #self.top.run()
+        #self.top.driver.workflow.check_gradient(inputs=['comp1.x1'],
+        #                                           outputs=['comp5.y1'])
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'], 
+                                                   fd=True)
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())

@@ -11,6 +11,9 @@ class PseudoAssembly(object):
     def __init__(self, name, comps, inputs, outputs, wflow):
         """Initialized with list of components, and the parent workflow."""
         
+        if '~' not in name:
+            name = "~" + name
+            
         self.name = name
         self.comps = comps
         self.wflow = wflow
@@ -21,6 +24,10 @@ class PseudoAssembly(object):
         self.fd = FiniteDifference(self)
         self.J = None
         
+        # By default, use fake finite-difference on components if they have
+        # derivatives.
+        self.ffd_order = 1
+        
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in 
         components."""
@@ -29,6 +36,11 @@ class PseudoAssembly(object):
     def run(self, ffd_order=0, case_id=''):
         """Run all components contained in this assy. Used by finite 
         difference."""
+        
+        # Override fake finite difference if requested. This enables a pure
+        # finite-differences for check_derivatives.
+        if self.ffd_order == 0:
+            ffd_order = 0
         
         for comp in self.comps:
             comp.set_itername(self.itername+'-fd')

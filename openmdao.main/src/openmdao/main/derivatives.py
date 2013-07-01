@@ -196,11 +196,11 @@ class FiniteDifference(object):
         self.get_outputs(self.y_base)
         
         for src, fd_step in zip(self.inputs, self.fd_step):
-            
             i1, i2 = self.in_bounds[src]
 
             for i in range(i1, i2):
                 
+                # Step
                 if i2-i1 == 1:
                     self.set_value(src, fd_step)
                 else:
@@ -212,10 +212,38 @@ class FiniteDifference(object):
                 # Backward difference
                 self.J[:, i] = (self.y - self.y_base)/fd_step
                 
+                # Undo step
                 if i2-i1 == 1:
                     self.set_value(src, -fd_step)
                 else:
                     self.set_value(src, -fd_step, i-i1)
+
+        # Return outputs to a clean state.
+        for src in self.outputs:
+            i1, i2 = self.out_bounds[src]
+            old_val = self.scope.get(src)
+
+            if isinstance(old_val, float):
+                new_val = float(self.y_base[i1:i2])
+            elif isinstance(old_val, ndarray):
+                shape = old_val.shape
+                if len(shape) > 1:
+                    new_val = self.y_base[i1:i2]
+                    new_val = new_val.reshape(shape)
+                else:
+                    new_val = self.y_base[i1:i2]
+            elif isinstance(old_val, VariableTree):
+                new_val = old_val.copy()
+                self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
+
+            self.scope.set(src, new_val, force=True)
+    
+        # Reset OpenMDAO's valid state.
+        # Note: I don't know why i have to do this. Only needed for mda_solver
+        for src in self.inputs:
+            comp_name, dot, var_name = src.partition('.')
+            comp = self.scope.get(comp_name)
+            comp._valid_dict[var_name] = False
     
         return self.J
     

@@ -300,6 +300,16 @@ class DependencyGraph(object):
         in_set = set(self.var_in_edges(comps))
         return in_set.intersection(self.var_edges(comps))
         
+    def get_directional_interior_edges(self, comp1, comp2):
+        """ Behaves like get_ineterior_edges, except that it only
+        returns interior edges that originate in comp1 and and end in comp2.
+        
+        comps: list of str
+            List of component names
+        """
+        in_set = set(self.var_in_edges(comp2))
+        return in_set.intersection(self.var_edges(comp1))
+        
     def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from 
         *srccompname* to *destcompname*. 
