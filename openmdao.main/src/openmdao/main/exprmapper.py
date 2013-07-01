@@ -9,7 +9,6 @@ class ExprMapper(object):
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
-        self._pseudo_count = 0
 
     def get_output_exprs(self):
         """Return all destination expressions at the output boundary"""
@@ -95,7 +94,7 @@ class ExprMapper(object):
                     srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
                     if not isinstance(srccomp, PseudoComponent):
                         src_io = 'in' if srccomp is scope else 'out'
-                        srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
+                        srccomp.get_dyn_trait(srcvarname, src_io)
                         if desttrait is None:
                             dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
@@ -206,11 +205,6 @@ class ExprMapper(object):
 
         return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
 
-    def _new_pseudo_name(self):
-        name = "_%d" % self._pseudo_count
-        self._pseudo_count += 1
-        return name
-
     def _needs_pseudo(self, parent, srcexpr, destexpr):
         """Return True if srcexpr and destexpr require a pseudocomp to be
         created.
@@ -230,12 +224,6 @@ class ExprMapper(object):
             return True
 
         return False
-
-    def _make_pseudo(self, parent, srcexpr, destexpr):
-        """Possibly create a pseudo-component if srcexpr and destexpr require it.
-        Otherwise, return None.
-        """
-        return PseudoComponent(self._new_pseudo_name(), parent, srcexpr, destexpr)
 
     def list_pseudocomps(self):
         return [data['pcomp'].name for u, v, data in 

@@ -6,8 +6,11 @@
 # pylint: disable-msg=E0611,F0401
 import operator
 import ordereddict
+import ast
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.printexpr import print_node
+from openmdao.main.pseudocomp import PseudoComponent
 
 _ops = {
     '>': operator.gt,
@@ -21,68 +24,6 @@ def _check_expr(expr):
     """ force checking for existence of vars referenced in expression """
     if not expr.check_resolve():
         raise ValueError( "Invalid expression '%s'" % str(expr) )
-
-class Constraint(object):
-    """ Object that stores info for a single constraint. """
-    
-    def __init__(self, lhs, comparator, rhs, scaler, adder, scope=None):
-        self.lhs = ExprEvaluator(lhs, scope=scope)
-        if not self.lhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid left-hand-side." \
-                              % ' '.join([lhs, comparator, rhs]))
-        self.comparator = comparator
-        self.rhs = ExprEvaluator(rhs, scope=scope)
-        if not self.rhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid right-hand-side." \
-                              % ' '.join([lhs, comparator, rhs]))
-        
-        if not isinstance(scaler, float):
-            raise ValueError("Scaler parameter should be a float")
-        self.scaler = scaler
-        
-        if scaler <= 0.0:
-            raise ValueError("Scaler parameter should be a float > 0")
-        
-        if not isinstance(adder, float):
-            raise ValueError("Adder parameter should be a float")
-        self.adder = adder
-        
-    def copy(self):
-        return Constraint(self.lhs.text, self.comparator, self.rhs.text, 
-                          self.scaler, self.adder, scope=self.lhs.scope)
-        
-    def evaluate(self, scope):
-        """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
-        
-        lhs = (self.lhs.evaluate(scope) + self.adder)*self.scaler
-        rhs = (self.rhs.evaluate(scope) + self.adder)*self.scaler
-        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
-        
-    def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
-        """Returns the gradient of the constraint eq/inep as a tuple of the
-        form (lhs, rhs, comparator, is_violated)."""
-        
-        lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
-        for key, value in lhs.iteritems():
-            lhs[key] = (value + self.adder)*self.scaler
-            
-        rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
-        for key, value in rhs.iteritems():
-            rhs[key] = (value + self.adder)*self.scaler
-            
-        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
-        
-    def get_referenced_compnames(self):
-        return self.lhs.get_referenced_compnames().union(self.rhs.get_referenced_compnames())
-
-    def __str__(self):
-        return ' '.join([self.lhs.text, self.comparator, self.rhs.text])
-
-    def __eq__(self, other):
-        if not isinstance(other, Constraint): 
-            return False
-        return (self.lhs,self.comparator,self.rhs,self.scaler,self.adder) == \
-               (other.lhs,other.comparator,other.rhs,other.scaler,other.adder)
 
 def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 
@@ -102,14 +43,129 @@ def _remove_spaces(s):
     """ whitespace removal """
     return s.translate(None, ' \n\t\r')
 
-
-def _get_scope(cnst, scope=None):
+def _get_scope(obj, scope=None):
     if scope is None:
         try:
-            return cnst._parent.get_expr_scope()
+            return obj._parent.get_expr_scope()
         except AttributeError:
             pass
     return scope
+
+
+class Constraint(object):
+    """ Object that stores info for a single constraint. """
+    
+    def __init__(self, lhs, comparator, rhs, scope):
+        self.lhs = ExprEvaluator(lhs, scope=scope)
+        if not self.lhs.check_resolve():
+            raise ValueError("Constraint '%s' has an invalid left-hand-side."
+                              % ' '.join([lhs, comparator, rhs]))
+        self.comparator = comparator
+
+        self.rhs = ExprEvaluator(rhs, scope=scope)
+        if not self.rhs.check_resolve():
+            raise ValueError("Constraint '%s' has an invalid right-hand-side."
+                              % ' '.join([lhs, comparator, rhs]))
+
+        self.pcomp_name = None
+           
+    def activate(self):
+        """Make this constraint active by creating the appropriate
+        connections in the dependency graph.
+        """
+        if self.pcomp_name is None:
+            pseudo = PseudoComponent(self.lhs.scope, self._combined_expr())
+            self.pcomp_name = pseudo.name
+            self.lhs.scope.add(pseudo.name, pseudo)
+        getattr(self.lhs.scope, pseudo.name).make_connections()
+
+    def _combined_expr(self):
+        """Given a constraint object, take the lhs, operator, and
+        rhs and combine them into a single expression by moving rhs
+        terms over to the lhs.  For example,
+        for the constraint 'C1.x < C2.y + 7', return the expression
+        'C1.x - C2.y - 7'.  Depending on the direction of the operator,
+        the sign of the expression may be flipped.  The final form of
+        the constraint, when evaluated, will be considered to be satisfied
+        if it evaluates to a value <= 0.
+        """
+        scope = self.lhs.scope
+        lhsnode = ast.parse(self.lhs.text)
+        try:
+            f = float(self.rhs.text)
+        except:
+            rhsnode = ast.parse(self.rhs.text)
+        else:
+            if f == 0:
+                rhsnode = None
+            else:
+                rhsnode = ast.Num(f)
+
+        if self.comparator.startswith('>'):
+            # of lhs > rhs, replace with rhs - lhs
+            if rhsnode:
+                newnode = ast.BinOp(rhsnode, ast.Sub(), lhsnode)
+            else:
+                newnode = ast.UnaryOp(ast.USub(), lhsnode)
+        else:
+            # if lhs < rhs, replace with lhs - rhs
+            if rhsnode:
+                newnode = ast.BinOp(lhsnode, ast.Sub(), rhsnode)
+            else:
+                newnode = lhsnode
+
+        newnode = ast.fix_missing_locations(newnode)
+        return ExprEvaluator(print_node(newnode), scope)
+
+    def copy(self):
+        cnst = Constraint(str(self.lhs), self.comparator, str(self.rhs), 
+                          scope=self.lhs.scope)
+        return cnst
+        
+    def evaluate(self, scope):
+        """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
+        
+        lhs = self.lhs.evaluate(scope)
+        if isinstance(self.rhs, float):
+            rhs = self.rhs
+        else:
+            rhs = self.rhs.evaluate(scope)
+        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
+        
+    def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
+        """Returns the gradient of the constraint eq/inep as a tuple of the
+        form (lhs, rhs, comparator, is_violated)."""
+        
+        lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+        if isinstance(self.rhs, float):
+            rhs = 0.
+        else:
+            rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+            
+        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
+        
+    def get_referenced_compnames(self):
+        if isinstance(self.rhs, float):
+            return self.lhs.get_referenced_compnames()
+        else:
+            return self.lhs.get_referenced_compnames().union(self.rhs.get_referenced_compnames())
+
+    def get_referenced_varpaths(self, copy=True):
+        if isinstance(self.rhs, float):
+            return self.lhs.get_referenced_varpaths(copy=copy)
+        else:
+            return self.lhs.get_referenced_varpaths(copy=copy).union(
+                                      self.rhs.get_referenced_varpaths(copy=copy))
+
+    def __str__(self):
+        return ' '.join([str(self.lhs), self.comparator, str(self.rhs)])
+
+    def __eq__(self, other):
+        if not isinstance(other, Constraint): 
+            return False
+        return (self.lhs, self.comparator, self.rhs) == \
+               (other.lhs, other.comparator, other.rhs)
+
 
 class _HasConstraintsBase(object):
     _do_not_promote = ['get_expr_depends','get_referenced_compnames',
@@ -121,9 +177,12 @@ class _HasConstraintsBase(object):
     
     def remove_constraint(self, key):
         """Removes the constraint with the given string."""
-        try:
-            del self._constraints[_remove_spaces(key)]
-        except KeyError:
+        key = _remove_spaces(key)
+        cnst = self._constraints.get(key)
+        if cnst:
+            _get_scope(self).remove(cnst.pcomp_name)
+            del self._constraints[key]
+        else:
             msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
         self._parent._invalidate()
@@ -145,8 +204,7 @@ class _HasConstraintsBase(object):
             Name of component being removed.
         """
         for cname, constraint in self._constraints.items():
-            if name in constraint.lhs.get_referenced_compnames() or \
-               name in constraint.rhs.get_referenced_compnames():
+            if name in constraint.get_referenced_compnames():
                 self.remove_constraint(cname)
 
     def restore_references(self, refs, name):
@@ -167,7 +225,8 @@ class _HasConstraintsBase(object):
 
     def clear_constraints(self):
         """Removes all constraints."""
-        self._constraints = ordereddict.OrderedDict()
+        for name, cnst in self._constraints.items():
+            self.remove_constraint(name)
         self._parent._invalidate()
         
     def list_constraints(self):
@@ -188,10 +247,8 @@ class _HasConstraintsBase(object):
         conn_list = []
         pname = self._parent.name
         for name, constraint in self._constraints.items():
-            for cname in constraint.lhs.get_referenced_compnames():
-                conn_list.append((cname, pname))
-            for cname in constraint.rhs.get_referenced_compnames():
-                conn_list.append((cname, pname))
+            conn_list.extend([(c,pname) 
+                                for c in constraint.get_referenced_compnames()])
         return conn_list
     
     def get_referenced_compnames(self):
@@ -200,8 +257,7 @@ class _HasConstraintsBase(object):
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.lhs.get_referenced_compnames())
-            names.update(constraint.rhs.get_referenced_compnames())
+            names.update(constraint.get_referenced_compnames())
         return names
     
     def get_referenced_varpaths(self):
@@ -210,23 +266,23 @@ class _HasConstraintsBase(object):
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.lhs.get_referenced_varpaths(copy=False))
-            names.update(constraint.rhs.get_referenced_varpaths(copy=False))
+            names.update(constraint.get_referenced_varpaths(copy=False))
         return names
     
     def mimic(self, target):
         """Tries to mimic the target object's constraints.  Target constraints that
         are incompatible with this object are ignored.
         """
-        old_cnst = self._constraints
+        old = self._constraints
         self._constraints = ordereddict.OrderedDict()
+        scope = _get_scope(target)
 
-        try:
-            for name, cnst in target.copy_constraints().items():
-                self.add_existing_constraint(cnst, name)
-        except Exception:
-            self._constraints = old_cnst
-            raise
+        for name, cnst in target.copy_constraints().items():
+            try:
+                self.add_existing_constraint(scope, cnst, name)
+            except Exception:
+                self._constraints = old
+                raise
         
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from the
@@ -242,8 +298,7 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
-                       scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -253,15 +308,6 @@ class HasEqConstraints(_HasConstraintsBase):
         expr_string: str
             Expression string containing the constraint.
         
-        scaler: float (optional)
-            Multiplicative scale factor applied to both sides of the
-            constraint's boolean expression. It should be a positive nonzero
-            value. Default is unity (1.0).
-            
-        adder: float (optional)
-            Additive scale factor applied to both sides of the constraint's
-            boolean expression. Default is no additive shift (0.0).
-            
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
@@ -276,14 +322,12 @@ class HasEqConstraints(_HasConstraintsBase):
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
+            self._add_eq_constraint(lhs, rhs, name, scope)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
             
-        self._parent._invalidate()
-
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None, scope=None):
+    def _add_eq_constraint(self, lhs, rhs, name=None, scope=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -301,30 +345,34 @@ class HasEqConstraints(_HasConstraintsBase):
             self._parent.raise_exception('A constraint named "%s" already exists '
                                          'in the driver. Add failed.' % name, ValueError)
             
-        constraint = Constraint(lhs, '=', rhs, scaler, adder, scope=_get_scope(self,scope))
-        if name is None:
-            self._constraints[ident] = constraint
-        else:
-            self._constraints[name] = constraint
+        constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self,scope))
+        constraint.activate()
+
+        name = ident if name is None else name        
+        self._constraints[name] = constraint
             
         self._parent._invalidate()
             
             
-    def add_existing_constraint(self, cnst, name=None):
+    def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
         
-        cnst: Constraint object
+        scope: container object where constraint expression will
+            be evaluated.
+
+        constraint: Constraint object
         
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
             
         """
-        if cnst.comparator == '=':
-            self._constraints[name] = cnst
+        if constraint.comparator == '=':
+            constraint.activate()
+            self._constraints[name] = constraint
         else:
             self._parent.raise_exception("Inequality constraint '%s' is not supported on this driver" %
-                                         str(cnst), ValueError)
+                                         str(constraint), ValueError)
             
         self._parent._invalidate()
 
@@ -338,31 +386,18 @@ class HasEqConstraints(_HasConstraintsBase):
         """
         return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
     
-    def allows_constraint_types(self, types):
-        """Returns True if types is ['eq']."""
-        return types == ['eq']
 
 class HasIneqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports inequality
     constraints but does not support equality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
-                       scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
         expr_string: str
             Expression string containing the constraint.
-        
-        scaler: float (optional)
-            Multiplicative scale factor applied to both sides of the
-            constraint's boolean expression. It should be a positive nonzero
-            value. Default is unity (1.0).
-            
-        adder: float (optional)
-            Additive scale factor applied to both sides of the constraint's
-            boolean expression. Default is no additive shift (0.0).
         
         name: str (optional)
             Name to be used to refer to the constraint rather than its
@@ -376,10 +411,9 @@ class HasIneqConstraints(_HasConstraintsBase):
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
-        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name, scope)
+        self._add_ineq_constraint(lhs, rel, rhs, name, scope)
 
-    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder, name=None,
-                             scope=None):
+    def _add_ineq_constraint(self, lhs, rel, rhs, name=None, scope=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -401,7 +435,9 @@ class HasIneqConstraints(_HasConstraintsBase):
             self._parent.raise_exception('A constraint named "%s" already exists '
                                          'in the driver. Add failed.' % name, ValueError)
             
-        constraint = Constraint(lhs, rel, rhs, scaler, adder, scope=_get_scope(self,scope))
+        constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self,scope))
+        constraint.activate()
+
         if name is None:
             self._constraints[ident] = constraint
         else:
@@ -410,21 +446,25 @@ class HasIneqConstraints(_HasConstraintsBase):
         self._parent._invalidate()
             
         
-    def add_existing_constraint(self, cnst, name=None):
+    def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
         
-        cnst: Constraint object
+        scope: container object where constraint expression will
+            be evaluated.
+
+        constraint: Constraint object
         
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
             
         """
-        if cnst.comparator != '=':
-            self._constraints[name] = cnst
+        if constraint.comparator != '=':
+            self._constraints[name] = constraint
+            constraint.activate()
         else:
             self._parent.raise_exception("Equality constraint '%s' is not supported on this driver" % 
-                                         str(cnst), ValueError)
+                                         str(constraint), ValueError)
 
         self._parent._invalidate()
 
@@ -436,10 +476,6 @@ class HasIneqConstraints(_HasConstraintsBase):
         """Returns a list of constraint values"""
         return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
     
-    def allows_constraint_types(self, typ):
-        """Returns True if types is ['ineq']."""
-        return types == ['eq']
-
 
 class HasConstraints(object):
     """Add this class as a delegate if your Driver supports both equality
@@ -461,22 +497,12 @@ class HasConstraints(object):
         """
         return self._eq._item_count() + self._ineq._item_count()
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
-                       scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
         expr_string: str
             Expression string containing the constraint.
-        
-        scaler: float (optional)
-            Multiplicative scale factor applied to both sides of the
-            constraint's boolean expression. It should be a positive nonzero
-            value. Default is unity (1.0).
-            
-        adder: float (optional)
-            Additive scale factor applied to both sides of the constraint's
-            boolean expression. Default is no additive shift (0.0).
         
         name: str (optional)
             Name to be used to refer to the constraint rather than its
@@ -491,28 +517,27 @@ class HasConstraints(object):
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
+            self._eq._add_eq_constraint(lhs, rhs, name, scope)
         else:
-            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name, scope)
+            self._ineq._add_ineq_constraint(lhs, rel, rhs, name, scope)
             
-        self._parent._invalidate()
-            
-    def add_existing_constraint(self, cnst, name=None):
+    def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
         
-        cnst: Constraint object
+        scope: container object where constraint expression will
+            be evaluated.
+
+        constraint: Constraint object
         
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
             
         """
-        if cnst.comparator == '=':
-            self._eq.add_existing_constraint(cnst, name)
+        if constraint.comparator == '=':
+            self._eq.add_existing_constraint(scope, constraint, name)
         else:
-            self._ineq.add_existing_constraint(cnst, name)
-
-        self._parent._invalidate()
+            self._ineq.add_existing_constraint(scope, constraint, name)
 
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
@@ -521,8 +546,6 @@ class HasConstraints(object):
             self._eq.remove_constraint(expr_string)
         else:
             self._ineq.remove_constraint(expr_string)
-            
-        self._parent._invalidate()
         
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -563,8 +586,6 @@ class HasConstraints(object):
         """Removes all constraints."""
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
-        
-        self._parent._invalidate()
         
     def copy_constraints(self):
         dct = self._eq.copy_constraints()
@@ -640,29 +661,11 @@ class HasConstraints(object):
         names.update(self._ineq.get_referenced_varpaths())
         return names
     
-    def allows_constraint_types(self, types):
-        """Returns True if this Driver supports constraints of the given types.
-        
-        types: list of str
-            Types of constraints supported. Valid values are: ['eq', 'ineq']
-        """
-        for kind in types:
-            if kind not in ['eq','ineq']:
-                return False
-        return True
-
     def mimic(self, target):
         """Tries to mimic the target object's constraints.  Target constraints that
         are incompatible with raise an exception.
         """
-        old_eq = self._eq._constraints
-        old_ineq = self._ineq._constraints
-        
         self.clear_constraints()
-        try:
-            for name, cnst in target.copy_constraints().items():
-                self.add_existing_constraint(cnst, name)
-        except Exception:
-            self._eq._constraints = old_eq
-            self._ineq._constraints = old_ineq
-            raise
+        scope = _get_scope(self)
+        for name, cnst in target.copy_constraints().items():
+            self.add_existing_constraint(scope, cnst, name)

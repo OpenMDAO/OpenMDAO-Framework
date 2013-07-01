@@ -9,6 +9,7 @@ from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, applyJ
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.workflow import Workflow
+from openmdao.main.exceptions import RunStopped
 
 try:
     from numpy import ndarray, zeros
@@ -73,7 +74,7 @@ class SequentialWorkflow(Workflow):
             nodes = compnames
 
         try:
-            nodeit = iter(nodes)
+            iter(nodes)
         except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
 
@@ -345,7 +346,7 @@ class SequentialWorkflow(Workflow):
         """
         
         nondiff = []
-        for comp in self:
+        for comp in self.get_components():
             if not hasattr(comp, 'apply_deriv') and \
                not hasattr(comp, 'provideJ'):
                 nondiff.append(comp.name)
@@ -353,14 +354,16 @@ class SequentialWorkflow(Workflow):
         if len(nondiff) == 0:
             return
         
+        collapsed = self._get_collapsed_graph()
+
         # Groups any connected non-differentiable blocks. Each block is a set
         # of component names.
         nondiff_groups = []
         nondiff_groups.append(set([nondiff[0]]))
         for comp in nondiff[1:]:
-            pre = set(self._collapsed_graph.predecessors(comp))
+            pre = collapsed.predecessors(comp)
             for group in nondiff_groups:
-                if len(pre.intersection(group)) > 0:
+                if len(group.intersection(pre)) > 0:
                     group.add(comp)
                     break
             else:
@@ -369,13 +372,13 @@ class SequentialWorkflow(Workflow):
         # We need to copy our graph, and put pseudoasemblies in place
         # of the nondifferentiable components.
         
-        graph = nx.DiGraph(self._get_collapsed_graph())
+        graph = nx.DiGraph(collapsed)
         pseudo_assemblies = {}
         
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
             
-            # Add the pseudo_comps:
+            # Add the pseudo_assemblies:
             graph.add_node(pa_name)
             
             # Replace edges
@@ -459,21 +462,21 @@ class SequentialWorkflow(Workflow):
         all passed inputs.
         """
         
-        if inputs==None:
+        if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
                 inputs = self._parent.get_parameters().keys()
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
             
-        if outputs==None:
+        if outputs is None:
             outputs = []
             if hasattr(self._parent, 'get_objectives'):
-                outputs.extend(self._parent.get_objectives())
+                outputs.extend(self._parent.get_objectives().keys())
             if hasattr(self._parent, 'get_ineq_constraints'):
-                outputs.extend(self._parent.get_ineq_constraints())
+                outputs.extend(self._parent.get_ineq_constraints().keys())
             if hasattr(self._parent, 'get_eq_constraints'):
-                outputs.extend(self._parent.get_eq_constraints())
+                outputs.extend(self._parent.get_eq_constraints().keys())
                 
             if len(outputs)==0:
                 msg = "No outputs given for derivatives."

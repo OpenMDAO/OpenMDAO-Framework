@@ -1,5 +1,6 @@
 
 import ast
+from threading import RLock
 
 from openmdao.main.numpy_fallback import array
 
@@ -9,12 +10,21 @@ from openmdao.main.attrwrapper import UnitsAttrWrapper
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
+_namelock = RLock()
+_count = 0
+
+def _get_new_name():
+    global _count
+    with _namelock:
+        name = "_%d" % _count
+        _count += 1
+    return name
+
 def _get_varname(name):
     idx = name.find('[')
     if idx == -1:
         return name
     return name[:idx]
-
 
 def unit_transform(node, in_units, out_units):
     """Transforms an expression into expr*scaler+adder."""
@@ -31,6 +41,15 @@ def unit_transform(node, in_units, out_units):
                             ast.Num(scaler*adder))
     return ast.copy_location(newnode, node)
 
+class DummyExpr(object):
+    def __init__(self):
+        self.text = ''
+
+    def refs(self):
+        return ['']
+
+    def get_metadata(self):
+        return [('', {})]
 
 class PseudoComponent(object):
     """A 'fake' component that is constructed from an ExprEvaluator.
@@ -38,9 +57,10 @@ class PseudoComponent(object):
     along with 'real' components.
     """
 
-    def __init__(self, name, parent, srcexpr, destexpr):
-        self.name = name
-
+    def __init__(self, parent, srcexpr, destexpr=None):
+        if destexpr is None:
+            destexpr = DummyExpr()
+        self.name = _get_new_name()
         self._mapping = {}
         self._meta = {}
         self._valid = False
@@ -127,11 +147,15 @@ class PseudoComponent(object):
         PseudoComponent is hidden.
         """
         if is_hidden:
-            return [(src, self._outdest) for src in self._mapping.keys()]
+            if self._outdest:
+                return [(src, self._outdest) for src in self._mapping.keys()]
+            else:
+                return []
         else:
             conns = [(src, '.'.join([self.name, dest])) 
                          for src, dest in self._mapping.items()]
-            conns.append(('.'.join([self.name, 'out0']), self._outdest))
+            if self._outdest:
+                conns.append(('.'.join([self.name, 'out0']), self._outdest))
         return conns
 
     def make_connections(self):
@@ -141,9 +165,15 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             self._parent._connect(src, dest)
 
+    def remove_connections(self):
+        """Disconnect all of the inputs and outputs of this comp
+        from other nodes in the dependency graph.
+        """
+        for src, dest in self.list_connections():
+            self._parent.disconnect(src, dest)
+
     def invalidate_deps(self, varnames=None, force=False):
         self._valid = False
-        return None
 
     def connect(self, src, dest):
         self._valid = False
@@ -209,6 +239,8 @@ class PseudoComponent(object):
     def calc_derivatives(self, first=False, second=False, savebase=False):
         if first:
             self.linearize()
+        if second:
+            raise RuntimeError("2nd derivatives not supported in pseudocomponent %s" % self.name)
 
     def linearize(self):
         """Calculate analytical first derivatives."""

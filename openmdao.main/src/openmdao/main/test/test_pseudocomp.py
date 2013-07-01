@@ -8,6 +8,7 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.pseudocomp import unit_transform
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.printexpr import print_node
+import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 class Simple(Component):
     a = Float(iotype='in', units='inch')
@@ -64,6 +65,7 @@ def _simple_model(units=True):
 class PseudoCompTestCase(unittest.TestCase):
 
     def setUp(self):
+        pcompmod._count = 0  # make sure pseudocomp names are consistent
         self.fakes = ['@bin','@bout','@xin','@xout']
 
     def test_basic_nounits(self):
@@ -106,10 +108,10 @@ class PseudoCompTestCase(unittest.TestCase):
         top.run()
         self.assertAlmostEqual(top.comp2.speed, 24.) # speed = 24 inch/s
 
-        self.assertTrue(hasattr(top, '_0'))
-        self.assertTrue(hasattr(top, '_1'))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
                          set(['_0', '_1']))
+        self.assertTrue(hasattr(top, '_0'))
+        self.assertTrue(hasattr(top, '_1'))
         self.assertEqual(set(top.list_connections(visible_only=True)),
                          set([('comp1.time', 'comp2.speed'),
                               ('comp1.dist', 'comp2.speed'),

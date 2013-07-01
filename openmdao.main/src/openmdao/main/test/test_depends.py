@@ -13,6 +13,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 import random
 
@@ -627,6 +628,7 @@ class ExprDependsTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
+        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.top = set_as_top(Assembly())
         self.top.add('c2', ArrayComp())
         self.top.add('c1', ArrayComp())

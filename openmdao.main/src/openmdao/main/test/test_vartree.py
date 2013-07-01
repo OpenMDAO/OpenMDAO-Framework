@@ -10,6 +10,7 @@ from openmdao.main.datatypes.api import Float, File, FileRef, List, VarTree
 from openmdao.main.case import flatten_obj
 
 from openmdao.util.testutil import assert_raises
+import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 
 class DumbVT3(VariableTree):
@@ -109,6 +110,7 @@ class NamespaceTestCase(unittest.TestCase):
         # over from other tests when running under nose, so
         # set it to cwd here just to be safe
         SimulationRoot.chroot(os.getcwd())
+        pcompmod._count = 0
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())

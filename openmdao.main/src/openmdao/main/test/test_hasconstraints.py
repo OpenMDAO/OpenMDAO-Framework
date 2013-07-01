@@ -77,7 +77,7 @@ class HasConstraintsTestCase(unittest.TestCase):
             drv.remove_constraint('comp1.bogus < comp1.d')
         except Exception as err:
             self.assertEqual(str(err), 
-                "driver: Constraint 'comp1.bogus < comp1.d' was not found. Remove failed.")
+                "driver: Constraint 'comp1.bogus<comp1.d' was not found. Remove failed.")
         else:
             self.fail("Exception expected")
         drv.add_constraint(' comp1.a > comp1.b')
@@ -133,7 +133,7 @@ class HasConstraintsTestCase(unittest.TestCase):
             drv.remove_constraint('comp1.bogus = comp1.d')
         except Exception as err:
             self.assertEqual(str(err), 
-                "driver: Constraint 'comp1.bogus = comp1.d' was not found. Remove failed.")
+                "driver: Constraint 'comp1.bogus=comp1.d' was not found. Remove failed.")
         else:
             self.fail("Exception expected")
         self.assertEqual(len(drv.get_eq_constraints()), 0)
@@ -216,36 +216,37 @@ class HasConstraintsTestCase(unittest.TestCase):
         drv = self.asm.add('driver', MyDriver())
         self.asm.comp1.a = 3000
         self.asm.comp1.b = 5000
-        drv.add_constraint('comp1.a < comp1.b', scaler=1.0/1000.0, adder=-4000.0)
+        drv.add_constraint('(comp1.a-4000.)/1000.0 < comp1.b')
         result = drv.eval_ineq_constraints()
         
         self.assertEqual(result[0][0], -1.0)
-        self.assertEqual(result[0][1], 1.0)
+        self.assertEqual(result[0][1], 5000.0)
         
-        drv.remove_constraint('comp1.a < comp1.b') #cant add constraints that are already there
-        try:
-            drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)
-        except ValueError as err:
-            self.assertEqual(str(err), 
-               "Scaler parameter should be a float > 0")
-        else:
-            self.fail('expected ValueError')
+        drv.remove_constraint('(comp1.a-4000.)/1000.0 < comp1.b') #cant add constraints that are already there
         
-        try:
-            drv.add_constraint('comp1.a < comp1.b', scaler=2)
-        except ValueError as err:
-            self.assertEqual(str(err), 
-               "Scaler parameter should be a float")
-        else:
-            self.fail('expected ValueError')
+        #try:
+            #drv.add_constraint('-comp1.a*5.0 < -comp1.b*5.0')
+        #except ValueError as err:
+            #self.assertEqual(str(err), 
+               #"Scaler parameter should be a float > 0")
+        #else:
+            #self.fail('expected ValueError')
+        
+        #try:
+            #drv.add_constraint('comp1.a < comp1.b', scaler=2)
+        #except ValueError as err:
+            #self.assertEqual(str(err), 
+               #"Scaler parameter should be a float")
+        #else:
+            #self.fail('expected ValueError')
     
-        try:
-            drv.add_constraint('comp1.a < comp1.b', adder=2)
-        except ValueError as err:
-            self.assertEqual(str(err), 
-               "Adder parameter should be a float")
-        else:
-            self.fail('expected ValueError')
+        #try:
+            #drv.add_constraint('comp1.a < comp1.b', adder=2)
+        #except ValueError as err:
+            #self.assertEqual(str(err), 
+               #"Adder parameter should be a float")
+        #else:
+            #self.fail('expected ValueError')
     
     def test_add_constraint_eq_eq(self):
         drv = MyDriver()
