@@ -39,7 +39,93 @@
             </div>
             <div class="row">
                 <div id="statusline" class="fps span11"></div>
+                <a href="#myModal" role="button" class="btn" data-toggle="modal">Controls</a>
             </div>
+        </div>
+    </div>
+    <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+            <h2 id="myModalLabel">Controls</h2>
+        </div>
+        <div id="modalBody" class="modal-body">
+            <table id="controlsTable" class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Operating System</th>
+                        <th>Keybinding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="2" style="text-align:center;">
+                            <strong>Pan</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>OS X</td>
+                        <td>Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Windows</td>
+                        <td>Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Linux</td>
+                        <td>Left Click</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align:center;">
+                            <strong>X/Y Axis Rotation</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>OS X</td>
+                        <td>COMMAND + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Windows</td>
+                        <td>CTRL + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Linux</td>
+                        <td>CTRL + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align:center;">
+                            <strong>Z Axis Rotation</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>OS X</td>
+                        <td>ALT + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Windows</td>
+                        <td>ALT + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td>Linux</td>
+                        <td>ALT + Left Click</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="text-align:center;">
+                            <strong>Zoom</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>OS X</td>
+                        <td>Two Finger Scrolling</td>
+                    </tr>
+                    <tr>
+                        <td>Windows</td>
+                        <td>Mouse Wheel</td>
+                    </tr>
+                    <tr>
+                        <td>Linux</td>
+                        <td>Mouse Wheel</td>
+                    </tr>
+            </table>
         </div>
     </div>
 </body>

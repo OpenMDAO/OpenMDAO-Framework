@@ -430,8 +430,8 @@ function wvUpdateUI()
   // now mouse movement
   if (g.dragging) 
   {
-      console.log(g.modifier);
     // alt and shift key is down
+    console.log(g.modifier);
     if (g.modifier & (META_KEY) || g.modifier & (META_KEY | CTRL_KEY) || g.modifier & CTRL_KEY )
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
