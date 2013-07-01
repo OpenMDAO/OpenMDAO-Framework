@@ -49,7 +49,7 @@ follows:
 
     from openmdao.main.api import Assembly
     from openmdao.examples.enginedesign.vehicle import Vehicle
-    from openmdao.lib.drivers.api import CONMINdriver
+    from openmdao.lib.drivers.api import NEWSUMTdriver
 
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
@@ -57,7 +57,7 @@ follows:
         def configure(self):
             """ Creates a new Assembly for vehicle performance optimization."""
             
-            # Create CONMIN Optimizer instance
+            # Create NEWSUMT Optimizer instance
             self.add('driver', NEWSUMTdriver())
         
             # Create Vehicle instance
@@ -66,14 +66,14 @@ follows:
             # add Vehicle to optimizer workflow
             self.driver.workflow.add('vehicle')
     
-            # CONMIN Flags
+            # NEWSUMT Flags
             self.driver.iprint = 0
             self.driver.itmax = 30
             
-            # CONMIN Objective 
+            # NEWSUMT Objective 
             self.driver.add_objective('vehicle.fuel_burn')
         
-            # CONMIN Design Variables 
+            # NEWSUMT Design Variables 
             self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
             self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
