@@ -141,7 +141,6 @@ class Assembly(Component):
     def add(self, name, obj):
         """Call the base class *add*.  Then,
         if obj is a Component, add it to the component graph.
-
         Returns the added object.
         """
         obj = super(Assembly, self).add(name, obj)
@@ -519,9 +518,12 @@ class Assembly(Component):
             if (u,v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
                 
-        #for name in pcomps:
-            #delattr(self, name)
-            #self._depgraph._graph.remove_node(name)
+        for name in pcomps:
+            delattr(self, name)
+            try:
+                self._depgraph._graph.remove_node(name)
+            except:
+                pass
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,

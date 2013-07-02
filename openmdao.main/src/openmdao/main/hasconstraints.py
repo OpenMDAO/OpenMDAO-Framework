@@ -180,7 +180,9 @@ class _HasConstraintsBase(object):
         key = _remove_spaces(key)
         cnst = self._constraints.get(key)
         if cnst:
-            _get_scope(self).remove(cnst.pcomp_name)
+            scope = _get_scope(self)
+            if hasattr(scope, cnst.pcomp_name):
+                scope.remove(cnst.pcomp_name)
             del self._constraints[key]
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key

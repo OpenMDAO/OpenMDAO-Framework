@@ -127,7 +127,6 @@ class DependencyGraph(object):
         an error if the component is not found in the graph.
         """
         self.disconnect(name)
-        self._graph.remove_node(name)
                                     
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all

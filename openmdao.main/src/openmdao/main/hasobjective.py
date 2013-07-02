@@ -93,7 +93,8 @@ class HasObjectives(object):
         obj = self._objectives.get(expr)
         if obj:
             scope = self._get_scope()
-            scope.remove(obj.pcomp_name)
+            if hasattr(scope, obj.pcomp_name):
+                scope.remove(obj.pcomp_name)
             del self._objectives[expr]
         else:
             self._parent.raise_exception("Trying to remove objective '%s' "
