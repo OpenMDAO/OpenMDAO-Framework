@@ -79,6 +79,8 @@ class HasObjectives(object):
         pseudo.make_connections()
       
         self._objectives[name] = expreval
+
+        # just attach the pseudocomp name to the objective object
         expreval.pcomp_name = pseudo.name
             
         self._parent._invalidate()

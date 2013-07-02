@@ -50,7 +50,7 @@ def SymGrad(ex, vars):
     newex=ex
     for i in xrange(len(vars)):
         newex = newex.replace(vars[i],"s["+str(i)+"]") 
-    exec "newex="+newex
+    exec "newex="+newex.replace('math.', '')
     grad=[]
     for i in xrange(len(vars)):
         d = diff(newex, Symbol(vars[i])).evalf()

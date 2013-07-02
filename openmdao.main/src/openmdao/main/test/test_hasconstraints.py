@@ -384,11 +384,13 @@ class HasConstraintsTestCase(unittest.TestCase):
         # comp2.d = 2
         self.asm.driver.add_constraint('comp2.c - 2*comp1.d > 5')
         self.asm.driver.add_constraint('comp2.c - 2*comp1.d < 5')
+        self.asm.driver.add_constraint('comp2.d < 0')
         
         self.asm.run()
                 
         self.assertEqual(self.asm._pseudo_5.out0, 1.0)
         self.assertEqual(self.asm._pseudo_6.out0, -1.0)
+        self.assertEqual(self.asm._pseudo_7.out0, 2.0)
 
 if __name__ == "__main__":
     unittest.main()

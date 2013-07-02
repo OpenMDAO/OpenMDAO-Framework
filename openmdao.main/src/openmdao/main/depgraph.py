@@ -446,7 +446,7 @@ class DependencyGraph(object):
             if link:
                 link.disconnect(srcvarname, destvarname)
                 if len(link) == 0:
-                    self._graph.remove_edge(srccompname, destcompname)
+                    graph.remove_edge(srccompname, destcompname)
         
         try:
             del self._allsrcs[destpath]
@@ -455,6 +455,10 @@ class DependencyGraph(object):
         dpdot = destpath+'.'
         for d in [k for k in self._allsrcs if k.startswith(dpdot)]:
             del self._allsrcs[d]
+            
+        to_remove = [n for n in graph.nodes() if not n.startswith('@') and 
+                                                 len(graph.pred[n])==0 and len(graph.succ[n])==0]
+        graph.remove_nodes_from(to_remove)
 
     def dump(self, stream=sys.stdout):
         """Prints out a simple sorted text representation of the graph."""
