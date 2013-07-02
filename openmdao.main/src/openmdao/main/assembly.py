@@ -559,7 +559,7 @@ class Assembly(Component):
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
             if valids[expr.text] is False:
-                srctxt = self._exprmapper.get_source(expr.text)
+                srctxt = self._depgraph.get_source(expr.text)
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
                 # setattr(self, dest, srccomp.get_wrapped_attr(src))
@@ -1165,18 +1165,23 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj):
+def dump_iteration_tree(obj, full=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
+    
+    If full is True, show pseudocomponents as well.
     """
     def _dump_iteration_tree(obj, f, tablevel):
         if is_instance(obj, Driver):
             f.write(' ' * tablevel)
             f.write(obj.get_pathname())
             f.write('\n')
+            names = set(obj.workflow.get_names())
             for comp in obj.workflow:
+                if not full and comp.name not in names:
+                    continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
                     _dump_iteration_tree(comp, f, tablevel + 3)
                 else:

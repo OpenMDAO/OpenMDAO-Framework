@@ -16,7 +16,7 @@ _count = 0
 def _get_new_name():
     global _count
     with _namelock:
-        name = "_%d" % _count
+        name = "_pseudo_%d" % _count
         _count += 1
     return name
 
@@ -50,6 +50,12 @@ class DummyExpr(object):
 
     def get_metadata(self):
         return [('', {})]
+    
+def _invert_dict(dct):
+    out = {}
+    for k,v in dct.items():
+        out[v] = k
+    return out
 
 class PseudoComponent(object):
     """A 'fake' component that is constructed from an ExprEvaluator.
@@ -133,8 +139,11 @@ class PseudoComponent(object):
         self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
 
         # this is just the equation string (for debugging)
-        out = destexpr.text if destexpr.text else 'out0'
-        self._eqn = "%s = %s" % (out, srcexpr.text)
+        if destexpr and destexpr.text:
+            out = destexpr.text
+        else:
+            out = 'out0'
+        self._eqn = "%s = %s" % (out, transform_expression(self._srcexpr.text, _invert_dict(self._mapping)))
 
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope

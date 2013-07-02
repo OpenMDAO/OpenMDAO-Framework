@@ -2,10 +2,12 @@
 
 import unittest
 
-from openmdao.main.api import Assembly, Driver, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp
+from openmdao.units.units import PhysicalQuantity
 import openmdao.main.pseudocomp as pcompmod
 
 @add_delegate(HasConstraints)
@@ -20,13 +22,52 @@ class MyEqDriver(Driver):
 class MyInEqDriver(Driver):
     pass
 
+class SimpleUnits(Component):
+    a = Float(iotype='in', units='inch')
+    b = Float(iotype='in', units='inch')
+    c = Float(iotype='out', units='ft')
+    d = Float(iotype='out', units='ft')
+    arr = Array([1.,2.,3.], iotype='in', units='inch')
+    arr_out = Array([1.,2.,3.], iotype='out', units='ft')
+    
+    def __init__(self):
+        super(SimpleUnits, self).__init__()
+        self.a = 1
+        self.b = 2
+        self.c = 3
+        self.d = -1
+
+    def execute(self):
+        self.c = PhysicalQuantity(self.a + self.b, 'inch').in_units_of('ft').value
+        self.d = PhysicalQuantity(self.a - self.b, 'inch').in_units_of('ft').value
+        
+class Simple(Component):
+    a = Float(iotype='in')
+    b = Float(iotype='in')
+    c = Float(iotype='out')
+    d = Float(iotype='out')
+    
+    def __init__(self):
+        super(Simple, self).__init__()
+        self.a = 1
+        self.b = 2
+        self.c = 3
+        self.d = -1
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+
 class HasConstraintsTestCase(unittest.TestCase):
 
     def setUp(self):
         pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.asm = set_as_top(Assembly())
-        self.asm.add('comp1', ExecComp(exprs=['c=a+b', 'd=a-b']))
-        self.asm.add('comp2', ExecComp(exprs=['c=a+b', 'd=a-b']))
+        self.asm.add('comp1', Simple())
+        self.asm.add('comp2', Simple())
+        self.asm.add('comp3', SimpleUnits())
+        self.asm.add('comp4', SimpleUnits())
         
     def test_list_constraints(self):
         drv = self.asm.add('driver', MyDriver())
@@ -229,6 +270,8 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(result[0][1], 5000.0)
         
         drv.remove_constraint('(comp1.a-4000.)/1000.0 < comp1.b') #cant add constraints that are already there
+        result = drv.eval_ineq_constraints()
+        self.assertEqual(result, [])
         
         #try:
             #drv.add_constraint('-comp1.a*5.0 < -comp1.b*5.0')
@@ -297,28 +340,55 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_pseudocomps(self):
         self.asm.add('driver', MyDriver())
+        self.asm.driver.workflow.add(['comp1','comp2','comp3','comp4'])
         self.assertEqual(self.asm._depgraph.list_connections(),
                          [])
         self.asm.driver.add_constraint('comp1.c-comp2.a>5.')
-        self.assertEqual(self.asm._0._eqn, 'out0 = -(comp1.c-comp2.a-5.0)')
+        self.assertEqual(self.asm._pseudo_0._eqn, 'out0 = -(comp1.c-comp2.a-5.0)')
         self.assertEqual(set(self.asm._depgraph.list_connections()),
-                         set([('comp2.a', '_0.in1'), ('comp1.c', '_0.in0')]))
+                         set([('comp2.a', '_pseudo_0.in1'), ('comp1.c', '_pseudo_0.in0')]))
         self.assertEqual(set(self.asm._exprmapper.list_connections()),
-                         set([('comp2.a', '_0.in1'), ('comp1.c', '_0.in0')]))
+                         set([('comp2.a', '_pseudo_0.in1'), ('comp1.c', '_pseudo_0.in0')]))
+        
         self.asm.driver.remove_constraint('comp1.c-comp2.a>5.')
         self.assertEqual(self.asm._depgraph.list_connections(), [])
         self.assertEqual(self.asm._exprmapper.list_connections(), [])
+        
         self.asm.driver.add_constraint('comp1.c > 0.')
         self.assertEqual(set(self.asm._depgraph.list_connections()),
-                         set([('comp1.c', '_1.in0')]))
+                         set([('comp1.c', '_pseudo_1.in0')]))
         self.assertEqual(set(self.asm._exprmapper.list_connections()),
-                         set([('comp1.c', '_1.in0')]))
-        self.assertEqual(self.asm._1._eqn, 'out0 = -comp1.c')
-        self.asm.driver.add_constraint('comp1.c-comp2.a<5.')
-        self.assertEqual(self.asm._2._eqn, 'out0 = comp1.c-comp2.a-5.0')
-        self.asm.driver.add_constraint('comp1.c < 0.')
-        self.assertEqual(self.asm._3._eqn, 'out0 = comp1.c')
+                         set([('comp1.c', '_pseudo_1.in0')]))
+        self.assertEqual(self.asm._pseudo_1._eqn, 'out0 = -comp1.c')
         
+        self.asm.driver.add_constraint('comp1.c-comp2.a<5.')
+        self.assertEqual(self.asm._pseudo_2._eqn, 'out0 = comp1.c-comp2.a-5.0')
+        
+        self.asm.driver.add_constraint('comp1.c < 0.')
+        self.assertEqual(self.asm._pseudo_3._eqn, 'out0 = comp1.c')
+        
+        # unit conversions don't show up in constraints or objectives
+        self.asm.driver.add_constraint('comp3.c-comp4.a>5.')
+        self.assertEqual(self.asm._pseudo_4._eqn, 'out0 = -(comp3.c-comp4.a-5.0)')
+        
+        self.asm.driver.clear_constraints()
+        
+        self.asm.comp1.a = 2
+        self.asm.comp1.b = 1
+        self.asm.comp2.a = 4
+        self.asm.comp2.b = 2
+        
+        # comp1.c = 3
+        # comp1.d = 1
+        # comp2.c = 6
+        # comp2.d = 2
+        self.asm.driver.add_constraint('comp2.c - 2*comp1.d > 5')
+        self.asm.driver.add_constraint('comp2.c - 2*comp1.d < 5')
+        
+        self.asm.run()
+                
+        self.assertEqual(self.asm._pseudo_5.out0, 1.0)
+        self.assertEqual(self.asm._pseudo_6.out0, -1.0)
 
 if __name__ == "__main__":
     unittest.main()
