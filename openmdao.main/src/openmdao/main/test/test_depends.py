@@ -13,6 +13,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 import random
 
@@ -627,6 +628,7 @@ class ExprDependsTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
+        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.top = set_as_top(Assembly())
         self.top.add('c2', ArrayComp())
         self.top.add('c1', ArrayComp())
@@ -804,8 +806,8 @@ class ExprDependsTestCase(unittest.TestCase):
         top.sub.connect('comp1.c', 'comp3.b')
         top.sub.disconnect('comp1.c','comp3.b')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('comp1.c*3.0', 'comp4.a'), ('_0.out0', 'comp4.a'), 
-                              ('comp1.c', '_0.in0')]))
+                         set([('comp1.c*3.0', 'comp4.a'), ('_pseudo_0.out0', 'comp4.a'), 
+                              ('comp1.c', '_pseudo_0.in0')]))
         self.assertEqual(initial_connections-set(top.sub.list_connections()), 
                          set())
         for u,v in self._all_nested_connections(top.sub):

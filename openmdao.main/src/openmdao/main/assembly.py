@@ -18,7 +18,6 @@ from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitectu
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
-from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import Slot
@@ -29,7 +28,7 @@ from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
-from openmdao.main.exprmapper import ExprMapper
+from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.depgraph import cvt_fake
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -276,9 +275,7 @@ class Assembly(Component):
         it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
         self.disconnect(name)
-        self._exprmapper.remove(name)
         if has_interface(cont, IComponent):
-            self._depgraph.remove(name)
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
@@ -475,8 +472,8 @@ class Assembly(Component):
                     self.raise_exception(msg, RuntimeError)
 
         if needpseudocomp:
-            pseudocomp = self._exprmapper._make_pseudo(self, srcexpr, destexpr)
-            setattr(self, pseudocomp.name, pseudocomp)
+            pseudocomp = PseudoComponent(self, srcexpr, destexpr)
+            self.add(pseudocomp.name, pseudocomp)
             pseudocomp.make_connections()
         else:
             pseudocomp = None
@@ -562,7 +559,7 @@ class Assembly(Component):
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
             if valids[expr.text] is False:
-                srctxt = self._exprmapper.get_source(expr.text)
+                srctxt = self._depgraph.get_source(expr.text)
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
                 # setattr(self, dest, srccomp.get_wrapped_attr(src))
@@ -1125,18 +1122,23 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj):
+def dump_iteration_tree(obj, full=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
+    
+    If full is True, show pseudocomponents as well.
     """
     def _dump_iteration_tree(obj, f, tablevel):
         if is_instance(obj, Driver):
             f.write(' ' * tablevel)
             f.write(obj.get_pathname())
             f.write('\n')
+            names = set(obj.workflow.get_names())
             for comp in obj.workflow:
+                if not full and comp.name not in names:
+                    continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
                     _dump_iteration_tree(comp, f, tablevel + 3)
                 else:

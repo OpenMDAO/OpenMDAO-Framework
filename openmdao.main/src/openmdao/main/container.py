@@ -715,9 +715,16 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, NameError)
-        trait = self.get_trait(name)
-        if trait is not None:
+        try:
             obj = getattr(self, name)
+        except:
+            self.raise_exception("cannot remove '%s': not found" %
+                                 name, AttributeError)
+            
+        trait = self.get_trait(name)
+        if trait is None:
+            delattr(self, name)
+        else:
             # for Slot traits, set their value to None but don't remove
             # the trait
             if trait.is_trait_type(Slot):
@@ -727,10 +734,8 @@ class Container(SafeHasTraits):
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
-            return obj
-        else:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
+                
+        return obj
 
     @rbac(('owner', 'user'))
     def configure(self):

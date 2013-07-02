@@ -68,4 +68,3 @@ class PseudoAssembly(object):
         """ Return the value of a variable in the Pseudoassembly"""
         
         return self.wflow.scope.get(varname)
-            
