@@ -22,27 +22,32 @@
 <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
 <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"> </script>
+<script type="text/javascript" src="/static/bootstrap/js/bootstrap-responsive.min.js"> </script>
 
 <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
 
 <body onload="wvStart()">
-    <div class="row"> 
-        <div class="span3" id='leftframe'>
-        </div>
-        <div class="span11">
-            <div class="row">
-                <div class="span11" id='riteframe'>
-            	<canvas id="WebViewer">
-                		If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
-            	</canvas>
+    <div class="row-fluid"> 
+        <div class="span2" id='leftframe'></div>
+        <div class="span9" id='riteframe'>
+            <div class="row-fluid">
+                <div class="span9">
+                    <canvas id="WebViewer">
+                                    If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
+                    </canvas>
                 </div>
             </div>
-            <div class="row">
-                <div id="statusline" class="fps span11"></div>
-                <a href="#myModal" role="button" class="btn" data-toggle="modal">Controls</a>
+
+            <div class="row-fluid">
+                <div id="statusline" class="fps span9"></div>
             </div>
         </div>
+
+        <div class="span1" id="helpframe">
+            <a href="#myModal" role="button" class="btn btn-small" data-toggle="modal"><i class="icon-info-sign"></i></a>
+        </div>
     </div>
+
     <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
@@ -209,41 +214,6 @@
     .fps {
         color: white;
     }
-    
-    td {
-    padding-left:               5px;
-    padding-right:              5px;
-    padding-top:                0px;
-    padding-bottom:             0px;
-	background-color: #FFFFDF;
-    }
-	/* real text that looks like a link that is "on" (blue)*/
-	.fakelinkon {
-	    cursor:                 pointer;
-	    font-weight:               bold;
-	    color:                  #0000FF;
-	}
-
-	/* real text that looks like a link that is "off" (red)*/
-	.fakelinkoff {
-	    cursor:                 pointer;
-	    font-weight:               bold;
-	    color:                  #FF0000;
-	}
-	/* frame on top left that contains menus, trees, etc */
-	/*#leftframe {
-	    width:                    250px;
-	    height:                   600px;
-	    float:                     left;
-	    overflow:                auto;
-	    font-size:                  9pt;
-	}*/
-	
-	/*#riteframe {
-	    float:left;
-	    width: 100%;
-	    height: 100%;
-	}*/
 </style>
 </head>
 </html>
