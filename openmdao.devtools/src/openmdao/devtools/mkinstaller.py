@@ -251,28 +251,28 @@ def _update_activate(bindir):
             activate_base = 'activate.bat'
         else:
             activate_base = 'activate'
-                
+
         absbin = os.path.abspath(bindir)
         activate_fname = os.path.join(absbin, activate_base)
         with open(activate_fname, 'r') as inp:
             content = inp.read()
-            
+
         if 'get_full_libpath' not in content:
             if is_win:
                 content += '''\\nfor /f "delims=" %%%%A in ('get_full_libpath') do @set PATH=%%%%A\\n\\n'''
             else:
                 content += "\\n%%s=$(get_full_libpath)\\nexport %%s\\n\\n" %% (libpathvname, libpathvname)
-            
+
         with open(activate_fname, 'w') as out:
             out.write(content)
-            
+
 def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
-    # fail when built in a virtualenv 
+    # fail when built in a virtualenv
     # (still broken as of virtualenv 1.9.1, under python 2.7.4)
     # because distutils looks for libpython?.?.lib under sys.prefix/libs.
     # virtualenv does not (at this time) create a libs directory.
-    
+
     import fnmatch
     libsdir = os.path.join(home_dir, 'libs')
     if not os.path.isdir(libsdir):
@@ -287,15 +287,15 @@ def _copy_winlibs(home_dir, activated):
     for pat in ['*python*', '*msvc*']:
         for name in fnmatch.filter(names, pat):
             if not os.path.isfile(os.path.join(libsdir, name)):
-                shutil.copyfile(os.path.join(sysdir, name), 
+                shutil.copyfile(os.path.join(sysdir, name),
                                 os.path.join(libsdir, name))
 
 def _update_easy_manifest(home_dir):
     # distribute requires elevation when run on 32 bit windows,
     # apparently because Windows assumes that any program with
-    # 'install' in the name should require elevation.  The 
+    # 'install' in the name should require elevation.  The
     # solution is to create a manifest file for easy_install.exe
-    # that tells Windows that it doesn't require elevated 
+    # that tells Windows that it doesn't require elevated
     # access.
     template = \"\"\"
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -325,11 +325,18 @@ def _update_easy_manifest(home_dir):
 
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
-    
+
+    print "REMOVING FILE"
+    setuptools_version = "0.7.4"
+    setuptools_egg = \"setuptools-%%s-py%%s.egg\" %% (setuptools_version, sys.version[:3])
+    print setuptools_egg
+
+    if(os.path.exists(setuptools_egg)):
+        os.remove(setuptools_egg)
+
     reqs = %(reqs)s
     guireqs = %(guireqs)s
     guitestreqs = %(guitestreqs)s
-    
     if options.findlinks is None:
         url = '%(url)s'
     else:
@@ -356,7 +363,6 @@ def after_install(options, home_dir, activated=False):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-        
     if is_win:
         _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
@@ -556,7 +562,6 @@ def after_install(options, home_dir, activated=False):
     # pin setuptools to this version
     setuptools_version = "0.7.4"
     setuptools_url = "https://openmdao.org/dists/setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
-    
     optdict = { 
         'mkdir_pkg' : offline_[3],
         'extarg1' : offline_[0],

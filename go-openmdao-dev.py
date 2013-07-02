@@ -2007,28 +2007,28 @@ def _update_activate(bindir):
             activate_base = 'activate.bat'
         else:
             activate_base = 'activate'
-                
+
         absbin = os.path.abspath(bindir)
         activate_fname = os.path.join(absbin, activate_base)
         with open(activate_fname, 'r') as inp:
             content = inp.read()
-            
+
         if 'get_full_libpath' not in content:
             if is_win:
                 content += '''\nfor /f "delims=" %%A in ('get_full_libpath') do @set PATH=%%A\n\n'''
             else:
                 content += "\n%s=$(get_full_libpath)\nexport %s\n\n" % (libpathvname, libpathvname)
-            
+
         with open(activate_fname, 'w') as out:
             out.write(content)
-            
+
 def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
-    # fail when built in a virtualenv 
+    # fail when built in a virtualenv
     # (still broken as of virtualenv 1.9.1, under python 2.7.4)
     # because distutils looks for libpython?.?.lib under sys.prefix/libs.
     # virtualenv does not (at this time) create a libs directory.
-    
+
     import fnmatch
     libsdir = os.path.join(home_dir, 'libs')
     if not os.path.isdir(libsdir):
@@ -2043,15 +2043,15 @@ def _copy_winlibs(home_dir, activated):
     for pat in ['*python*', '*msvc*']:
         for name in fnmatch.filter(names, pat):
             if not os.path.isfile(os.path.join(libsdir, name)):
-                shutil.copyfile(os.path.join(sysdir, name), 
+                shutil.copyfile(os.path.join(sysdir, name),
                                 os.path.join(libsdir, name))
 
 def _update_easy_manifest(home_dir):
     # distribute requires elevation when run on 32 bit windows,
     # apparently because Windows assumes that any program with
-    # 'install' in the name should require elevation.  The 
+    # 'install' in the name should require elevation.  The
     # solution is to create a manifest file for easy_install.exe
-    # that tells Windows that it doesn't require elevated 
+    # that tells Windows that it doesn't require elevated
     # access.
     template = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2081,11 +2081,18 @@ def _update_easy_manifest(home_dir):
 
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
-    
+
+    print "REMOVING FILE"
+    setuptools_version = "0.7.4"
+    setuptools_egg = "setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
+    print setuptools_egg
+
+    if(os.path.exists(setuptools_egg)):
+        os.remove(setuptools_egg)
+
     reqs = ['SetupDocs==1.0.5', 'docutils==0.10', 'networkx==1.3', 'Pyevolve==0.6', 'slsqp==1.0.1', 'virtualenv==1.8.4', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'pyV3D==0.4.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'tornado==2.2.1', 'conmin==1.0.1', 'pycrypto==2.3']
     guireqs = ['argh==0.15.1', 'pyzmq-static==2.1.11.1', 'pathtools==0.1.2', 'watchdog==0.6.0', 'PyYAML==3.10']
     guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
-    
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
     else:
@@ -2112,7 +2119,6 @@ def after_install(options, home_dir, activated=False):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-        
     if is_win:
         _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
