@@ -5,7 +5,7 @@
  *
  *  Arguments:
  *      elm:      the parent element in the DOM for this pane
- *      model:    object that provides access to the openmdao model
+ *      project:  object that provides access to the openmdao project
  *      pathname: the pathname of the object containing the Slots
  *      name:     not used
  *      editable: not used
@@ -13,7 +13,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
+openmdao.SlotsPane = function(elm, project, pathname, name, editable) {
 
     /***********************************************************************
      *  private
@@ -56,13 +56,13 @@ openmdao.SlotsPane = function(elm, model, pathname, name, editable) {
         jQuery.each(json, function(idx, slot) {
             var slotName = pathname+'.'+slot.name;
             if (slot.containertype === 'dict') {
-                openmdao.SlotDictFigure(slotsDiv, model, slotName, slot);
+                openmdao.SlotDictFigure(slotsDiv, project, slotName, slot);
             }
             else if (slot.containertype === 'list') {
-                openmdao.SlotListFigure(slotsDiv, model, slotName, slot);
+                openmdao.SlotListFigure(slotsDiv, project, slotName, slot);
             }
             else {
-                openmdao.SlotFigure(slotsDiv, model, slotName, slot);
+                openmdao.SlotFigure(slotsDiv, project, slotName, slot);
             }
         });
     }

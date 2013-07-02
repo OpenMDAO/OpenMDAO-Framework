@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConsoleFrame = function(id,model) {
+openmdao.ConsoleFrame = function(id, project) {
     openmdao.ConsoleFrame.prototype.init.call(this,id,'Console');
 
     /***********************************************************************
@@ -49,7 +49,7 @@ openmdao.ConsoleFrame = function(id,model) {
 
     // create context menu for history
     contextMenu.append(jQuery('<li title="Show stack trace for last error">Trace</li>').click(function(ev) {
-        model.issueCommand('trace');
+        project.issueCommand('trace');
     }));
     contextMenu.append(jQuery('<li title="Clear console history">Clear</li>').click(function(ev) {
         history.html('');
@@ -73,7 +73,7 @@ openmdao.ConsoleFrame = function(id,model) {
             i_command_current = num_commands + 1;
             localStorage.setItem("cmd" + num_commands, cmd);
 
-            model.issueCommand(cmd)
+            project.issueCommand(cmd)
                 .done(function(responseText) {
                     if (responseText.length > 0) {
                         updateHistory(responseText);
@@ -115,11 +115,11 @@ openmdao.ConsoleFrame = function(id,model) {
         updateHistory(text+'\n');
     }
 
-    // ask model for an update whenever something changes
-    model.addListener('outstream', updateHistory);
+    // ask project for an update whenever something changes
+    project.addListener('outstream', updateHistory);
 
-    // ask model for an update whenever a console error occurs.
-    model.addListener('console_errors', consoleError);
+    // ask project for an update whenever a console error occurs.
+    project.addListener('console_errors', consoleError);
 };
 
 /** set prototype */
@@ -128,10 +128,10 @@ openmdao.ConsoleFrame.prototype.constructor = openmdao.ConsoleFrame;
 
 /** initialize a console in a child window */
 openmdao.PopoutConsoleFrame = function() {
-    openmdao.model = opener.openmdao.model;
-    openmdao.model.addWindow(window);
+    openmdao.project = opener.openmdao.project;
+    openmdao.project.addWindow(window);
     jQuery('body').append('<div id="console"></div>');
-    new openmdao.ConsoleFrame("console",  openmdao.model);
+    new openmdao.ConsoleFrame("console",  openmdao.project);
     window.document.title='OpenMDAO Console';
 };
 

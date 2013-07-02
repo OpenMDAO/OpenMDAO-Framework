@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.CodeFrame = function(id, model) {
+openmdao.CodeFrame = function(id, project) {
     openmdao.CodeFrame.prototype.init.call(this, id, 'Code');
 
     /***********************************************************************
@@ -202,9 +202,9 @@ openmdao.CodeFrame = function(id, model) {
             }
         }
 
-        /** 409 response when saving file indicates model reload will be necessary */
+        /** 409 response when saving file indicates project reload will be necessary */
         function handle409(jqXHR, textStatus, errorThrown) {
-            var win = jQuery('<div>Changing this file can alter the model configuration. '+
+            var win = jQuery('<div>Changing this file can alter the project configuration. '+
                              'If you save this file, you must reload the project.</div>');
             jQuery(win).dialog({
                 'modal': true,
@@ -215,8 +215,8 @@ openmdao.CodeFrame = function(id, model) {
                       id:    overwriteID,
                       click: function() {
                                 jQuery(this).dialog('close');
-                                    model.setFile(filepath, currentCode, 1)
-                                        .done(function() { model.reload(); })
+                                    project.setFile(filepath, currentCode, 1)
+                                        .done(function() { project.reload(); })
                                         .fail(failedSave);
                              }
                     },
@@ -231,7 +231,7 @@ openmdao.CodeFrame = function(id, model) {
         }
 
         if (currentCode !== lastCode) {
-            model.setFile(filepath, currentCode, 0)
+            project.setFile(filepath, currentCode, 0)
                 .done(function(data, textStatus, jqXHR) {
                     // store saved file for comparison
                     session.prevContent = currentCode;
@@ -334,8 +334,8 @@ openmdao.CodeFrame = function(id, model) {
         openmdao.Util.notify(text, 'File Error', 'file-error');
     }
 
-    // ask model for an update whenever a file error occurs.
-    model.addListener('file_errors', fileError);
+    // ask project for an update whenever a file error occurs.
+    project.addListener('file_errors', fileError);
 
     /***********************************************************************
      *  privileged
@@ -349,7 +349,7 @@ openmdao.CodeFrame = function(id, model) {
         return fileTabs.find('.ui-tabs-active a').text();
     };
 
-    /** get contents of specified file from model, load into editor */
+    /** get contents of specified file from project, load into editor */
     this.editFile = function(filepath) {
         if (! filepath) {
             alert("Error: file name not specified");
@@ -363,7 +363,7 @@ openmdao.CodeFrame = function(id, model) {
         }
         else {
             // file not being edited, make new tab
-            model.getFile(filepath)
+            project.getFile(filepath)
                 .done(function(contents) {
                     newTab(contents, filepath, tabName);
                     editor.navigateFileStart();

@@ -44,7 +44,7 @@ if sys.platform.startswith("linux"):
       - %(gd)s/static/js/slickgrid/*.js
       - %(gd)s/static/js/ba-debug.min.js
       - %(gd)s/static/js/openmdao/Util.js
-      - %(gd)s/static/js/openmdao/Model.js
+      - %(gd)s/static/js/openmdao/Project.js
       - %(gd)s/static/js/openmdao/CellEditor.js
       - %(gd)s/static/js/openmdao/ValueEditor.js
 
@@ -99,16 +99,17 @@ if sys.platform.startswith("linux"):
                 raise SkipTest("The browser '%s' is not available for use in "
                                "GUI JavaScript unit testing" % browser_name)
 
+            opts = {
+                'java_cmd':  java_cmd,
+                'jstd_path': jstestdriver_path,
+                'port_num':  port_number,
+                'browser':   browser_exe_filepath,
+            }
+
             # Set some env vars used by jsTestDriver
-            os.environ['JSTESTDRIVER'] = """%(java_cmd)s -jar %(jstd_path)s
-                                                         --port %(port_num)d
-                                                         --captureConsole
-                                                         --browser %(browser)s""" % \
-                {'java_cmd':  java_cmd,
-                 'jstd_path': jstestdriver_path,
-                 'port_num':  port_number,
-                 'browser':   browser_exe_filepath,
-                }
+            os.environ['JSTESTDRIVER'] = \
+                """%(java_cmd)s -jar %(jstd_path)s --port %(port_num)d
+                                --captureConsole --browser %(browser)s""" % opts
             os.environ['JSTESTDRIVER_PORT'] = str(port_number)
             os.environ['JSTESTDRIVER_SERVER'] = \
                        'http://localhost:%d' % (port_number)

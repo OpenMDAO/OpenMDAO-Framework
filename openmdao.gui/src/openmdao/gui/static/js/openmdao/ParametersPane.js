@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
+openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
     var parms,
         parmsDiv = jQuery("<div id='"+name+"_parms' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Parameter</button>").button(),
@@ -45,10 +45,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     parms = new Slick.Grid(parmsDiv, [], columns, options);
     if (editable) {
         parms.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            // TODO: better way to do this (e.g. project.setProperty(path,name,value)
             // TODO: check type and behave appropriately (quotes around strings?)
             cmd = pathname+'.'+args.item.name+'='+args.item.value;
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         });
    }
     parms.onClick.subscribe(function (e) {
@@ -61,7 +61,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             else {
                 cmd = pathname+'.remove_parameter("'+delname+'");';
             }
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }
     });
 
@@ -102,7 +102,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     function findComps(wjson, callback) {
@@ -116,7 +116,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             var comppath = comp.pathname.split('.').slice(-1)[0];
 
             // Loop through inputs in component and fill our table of candidates
-            model.getObject(comp.pathname).done(function findInputs(cjson) {
+            project.getObject(comp.pathname).done(function findInputs(cjson) {
                 var highlimit, lowlimit;
                 jQuery.each(cjson.Inputs, function(idx, input) {
 
@@ -251,10 +251,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     }
 
     /** Breakout dialog for adding a new parameter */
-    function promptForParameter(callback, model) {
+    function promptForParameter(callback, project) {
         // Figure out all of our candidates for parameter addition.
         var parentpath = pathname.split('.').slice(0, -1).join('.');
-        model.getDataflow(parentpath)
+        project.getDataflow(parentpath)
             .done(function(wjson) { findComps(wjson, callback); })
             .fail(function(jqXHR, textStatus, errorThrown) {
                 debug.error("Error while trying to find candidate parameters.",
@@ -265,10 +265,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     /** clear all parameters */
     function clearParameters() {
         cmd = pathname+".clear_parameters();";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
-    addButton.click(function() { promptForParameter(addParameter, model); });
+    addButton.click(function() { promptForParameter(addParameter, project); });
     clrButton.click(function() { clearParameters(); });
 
 

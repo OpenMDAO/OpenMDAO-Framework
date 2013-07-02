@@ -12,7 +12,7 @@
  *  context menu.
  *
  *  Arguments:
- *      model:    object that provides access to the openmdao model
+ *      project:  object that provides access to the openmdao project
  *      pathname: the pathname of the assembly
  *      src_comp: (optional) the source component to select initially
  *      dst_comp: (optional) the destination component to select initially
@@ -20,7 +20,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
+openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
     var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname));
@@ -80,7 +80,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                                 openmdao.Util.notify('Invalid target variable');
                             }
                             else {
-                                model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
+                                project.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
                                 src_var_selector.val('');
                                 dst_var_selector.val('');
                             }
@@ -476,7 +476,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                         menuItem = jQuery('<li>Disconnect '+src_name+'</li>')
                             .click(function(e) {
                                 cmd = self.pathname+'.disconnect("'+src_name+'")';
-                                model.issueCommand(cmd);
+                                project.issueCommand(cmd);
                             });
                         removeItem = function() {
                             menuItem.remove();
@@ -511,7 +511,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                                     }
                                     else {
                                         cmd = cmd+src_name+'","'+tgt_name+'")';
-                                        model.issueCommand(cmd);
+                                        project.issueCommand(cmd);
                                     }
                                 }
                                 else if (source.data('input') && !target.data('input')) {
@@ -521,7 +521,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
                                     }
                                     else {
                                         cmd = cmd+tgt_name+'","'+src_name+'")';
-                                        model.issueCommand(cmd);
+                                        project.issueCommand(cmd);
                                     }
                                 }
                             }
@@ -536,7 +536,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
             busyDiv.show();
-            model.getConnections(self.pathname, self.src_comp, self.dst_comp)
+            project.getConnections(self.pathname, self.src_comp, self.dst_comp)
                 .done(function(data) {
                     if (!data || !data.sources || !data.destinations) {
                         // don't have what we need, probably something got deleted
@@ -576,7 +576,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
      *  privileged
      ***********************************************************************/
 
-    /** if there is an object loaded, update it from the model */
+    /** if there is an object loaded, update it from the project */
     this.update = function() {
         if (self.pathname && self.pathname.length > 0) {
             self.editAssembly(self.pathname,self.src_comp,self.dst_comp);
@@ -587,16 +587,16 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
     this.editAssembly = function(path, src_comp, dst_comp) {
         if (self.pathname !== path) {
            if (self.pathname !== null) {
-                model.removeListener(self.pathname, handleMessage);
+                project.removeListener(self.pathname, handleMessage);
             }
             self.pathname = path;
-            model.addListener(self.pathname, handleMessage);
+            project.addListener(self.pathname, handleMessage);
         }
 
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        model.getObject(path)
+        project.getObject(path)
             .done(loadComponentData)
             .fail(function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',
@@ -608,7 +608,7 @@ openmdao.ConnectionsFrame = function(model, pathname, src_comp, dst_comp) {
 
     this.destructor = function() {
         if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
+            project.removeListener(self.pathname, handleMessage);
         }
     };
 
