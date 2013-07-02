@@ -4,10 +4,11 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 import networkx as nx
 
-from openmdao.main.vartree import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, applyJ
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
+from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.exceptions import RunStopped
 
@@ -30,13 +31,16 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
         # Bookkeeping for calculating the residual.
-        self._severed_edges = set()
+        self._severed_edges = []
         self._additional_edges = []
         self._hidden_edges = set()
         self.res = None
         self.bounds = None
         
         self.derivative_iterset = None
+        self._collapsed_graph = None
+        self._topsort = None
+        self._find_nondiff_blocks = True
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -49,6 +53,7 @@ class SequentialWorkflow(Workflow):
         return comp in self._names
 
     def index(self, comp):
+        """Return index number for a component in this workflow."""
         return self._names.index(comp)
 
     def __eq__(self, other):
@@ -57,12 +62,19 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def check_config(self):
+        """Reinitialize some stuff.""" 
+        
+        # Do this whenever we rerun, just in-case.
+        self._find_nondiff_blocks = True
+        
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  If full is True,
         include hidden pseudo-components in the list.
         """
         if full:
-            return self._names + list(self.scope._depgraph.find_betweens(self._names))
+            return self._names + \
+                   list(self.scope._depgraph.find_betweens(self._names))
         else:
             return self._names[:]
 
@@ -120,9 +132,10 @@ class SequentialWorkflow(Workflow):
                     self._names.insert(index, node)
                     index += 1
             else:
-                raise TypeError("Components must be added by name to a workflow.")
+                msg = "Components must be added by name to a workflow."
+                raise TypeError(msg)
 
-        # We seem to need this so that our get_attributes is correct for the GUI.
+        # We seem to need this so that get_attributes is correct for the GUI.
         if check:
             self.config_changed()
 
@@ -131,7 +144,8 @@ class SequentialWorkflow(Workflow):
         error if the specified component is not found.
         """
         if not isinstance(compname, basestring):
-            raise TypeError("Components must be removed by name from a workflow.")
+            msg = "Components must be removed by name from a workflow."
+            raise TypeError(msg)
         try:
             self._names.remove(compname)
         except ValueError:
@@ -143,9 +157,14 @@ class SequentialWorkflow(Workflow):
 
     def get_interior_edges(self):
         """ Returns an alphabetical list of all output edges that are
-        interior to the set of components supplied."""
+        interior to the set of components supplied. When used for derivative
+        calculation, the parameter inputs and response outputs are also
+        included. If there are non-differentiable blocks grouped in
+        pseudo-assemblies, then those interior edges are excluded.
+        """
         
-        edges = self.scope._depgraph.get_interior_edges(self.get_names(full=True))
+        graph = self.scope._depgraph
+        edges = graph.get_interior_edges(self.get_names(full=True))
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
                 
@@ -158,7 +177,7 @@ class SequentialWorkflow(Workflow):
         nEdge = 0
         self.bounds = {}
         for edge in self.get_interior_edges():
-            if edge[0]=='@in':
+            if edge[0] == '@in':
                 src = edge[1]
             else:
                 src = edge[0]
@@ -316,11 +335,10 @@ class SequentialWorkflow(Workflow):
             if edge[0] == '@in':
                 i1, i2 = self.bounds[edge]
                 comp_name, dot, var_name = edge[1].partition('.')
-                for i in range(i1, i2):
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    outputs[comp_name][var_name] = arg[i1:i2]
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2]
 
         # Poke results into the return vector
         result = zeros(len(arg))
@@ -328,7 +346,7 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src=='@in':
+            if src == '@in':
                 src = target
                 
             comp_name, dot, var_name = src.partition('.')
@@ -375,32 +393,52 @@ class SequentialWorkflow(Workflow):
         graph = nx.DiGraph(collapsed)
         pseudo_assemblies = {}
         
+        # for cyclic workflows, remove cut edges.
+        for edge in self._severed_edges:
+            comp1, _, _ = edge[0].partition('.')
+            comp2, _, _ = edge[1].partition('.')
+            
+            graph.remove_edge(comp1, comp2)
+        
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
             
             # Add the pseudo_assemblies:
             graph.add_node(pa_name)
             
-            # Replace edges
+            # Carefully replace edges
             inputs = set()
             outputs = set()
             for edge in graph.edges():
                 
+                dgraph = self.scope._depgraph
+                
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
-                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    var_edge = dgraph.get_interior_edges(edge)
                     self._hidden_edges = self._hidden_edges.union(var_edge)
                 elif edge[0] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(pa_name, edge[1])
-                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     outputs = outputs.union(var_edge)
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
-                    var_edge = self.scope._depgraph.get_interior_edges(edge)
+                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     inputs = inputs.union(var_edge)
                     
+            # Input and outputs that crossed the cut line should be included
+            # for the pseudo-assembly.
+            for edge in self._severed_edges:
+                comp1, _, _ = edge[0].partition('.')
+                comp2, _, _ = edge[1].partition('.')
+                
+                if comp1 in group:
+                    outputs = outputs.union([edge])
+                elif comp2 in group:
+                    inputs = inputs.union([edge])
+            
             # Remove old nodes
             for node in group:
                 graph.remove_node(node)
@@ -427,8 +465,10 @@ class SequentialWorkflow(Workflow):
                                                         inputs, outputs, 
                                                         self)
                 
+        # Execution order may be different after grouping, so topsort
         iterset = nx.topological_sort(graph)
         
+        # Save off list containing comps and pseudo-assemblies
         self.derivative_iterset = []
         scope = self.scope
         for name in iterset:
@@ -437,6 +477,7 @@ class SequentialWorkflow(Workflow):
             else:
                 self.derivative_iterset.append(getattr(scope, name))
                 
+        # Basically only returning the text list to make the test easy.
         return iterset
 
     def derivative_iter(self):
@@ -457,7 +498,7 @@ class SequentialWorkflow(Workflow):
             if self._stop:
                 raise RunStopped('Stop requested')
 
-    def calc_gradient(self, inputs=None, outputs=None):
+    def calc_gradient(self, inputs=None, outputs=None, fd=False):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
@@ -478,30 +519,69 @@ class SequentialWorkflow(Workflow):
             if hasattr(self._parent, 'get_eq_constraints'):
                 outputs.extend(self._parent.get_eq_constraints().keys())
                 
-            if len(outputs)==0:
+            if len(outputs) == 0:
                 msg = "No outputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
-                
+
+        # Override to do straight finite-difference of the whole model, with
+        # no fake fd.
+        if fd == True:
             
-        # TODO: These lines should only be executed once at startup.
-        
-        self._severed_edges = set()
-        self._additional_edges = []
-        self._hidden_edges = set()
-        
-        # New edges for parameters
-        input_edges = [('@in', a) for a in inputs]
-        additional_edges = set(input_edges)
-        
-        # New edges for responses
-        out_edges = [a for a, b in self.get_interior_edges()]
-        for item in outputs:
-            if item not in out_edges:
-                additional_edges.add((item, '@out'))
-        
-        self._additional_edges = additional_edges                
-        self.group_nondifferentiables()
+            # Finite difference the whole thing by putting the whole workflow in a
+            # pseudo-assembly. This requires being a little creative.
+            comps = [comp for comp in self]
+            pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, self)
+            pseudo.ffd_order = 0
+            graph = self.scope._depgraph
+            self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
+            self.derivative_iterset = [pseudo]
+            
+            # Make sure to undo our big pseudo-assembly next time we calculate the
+            # gradient.
+            self._find_nondiff_blocks = True
+            
+        # Only do this once: find additional edges and figure out our
+        # non-differentiable blocks.
+        elif self._find_nondiff_blocks:
+            
+            self._severed_edges = []
+            self._additional_edges = []
+            self._hidden_edges = set()
+            
+            # New edges for parameters
+            input_edges = [('@in', a) for a in inputs]
+            additional_edges = set(input_edges)
+            
+            # New edges for responses
+            out_edges = [a[0] for a in self.get_interior_edges()]
+            for item in outputs:
+                if item not in out_edges:
+                    additional_edges.add((item, '@out'))
+            
+            self._additional_edges = additional_edges
+            self.group_nondifferentiables()
+            
+            self._find_nondiff_blocks = False
         
         return calc_gradient(self, inputs, outputs)
     
+    def check_gradient(self, inputs=None, outputs=None):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (ApplyDer and ProvideJ.)
+        Note that fake finite difference is turned off so that we are
+        doing a straight comparison."""
+    
+        J = self.calc_gradient(inputs, outputs)
+        Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
+        print 24*'-'
+        print 'Calculated Gradient'
+        print 24*'-'
+        print J
+        print 24*'-'
+        print 'Finite Difference Comparison'
+        print 24*'-'
+        print Jbase
+
+        

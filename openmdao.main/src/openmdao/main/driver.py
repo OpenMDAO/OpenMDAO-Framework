@@ -338,10 +338,6 @@ class Driver(Component):
         """
         return self.workflow.calc_gradient(inputs, outputs)
 
-    # def check_derivatives(self, order, driver_inputs, driver_outputs):
-    #     """ Check derivatives for all components in this workflow."""
-    #     self.workflow.check_derivatives(order, driver_inputs, driver_outputs)
-
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration

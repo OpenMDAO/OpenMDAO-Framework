@@ -126,12 +126,6 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Run check_derivatives on all components in workflow."""
-
-        for node in self.__iter__():
-            node.check_derivatives(order, driver_inputs, driver_outputs)
-
     def stop(self):
         """
         Stop all Components in this Workflow.
