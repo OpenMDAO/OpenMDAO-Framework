@@ -96,6 +96,9 @@ class MDASolver(Driver):
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
         
+        # Initial Run
+        self.run_iteration()
+        
         # Find dimension of our problem.
         self.workflow.group_nondifferentiables()
         nEdge = self.workflow.initialize_residual()
@@ -104,9 +107,6 @@ class MDASolver(Driver):
                            matvec=self.workflow.matvecFWD,
                            dtype=float)
             
-        # Initial Run
-        self.run_iteration()
-        
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
         print "Residual vector norm:\n", norm

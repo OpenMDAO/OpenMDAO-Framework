@@ -31,7 +31,7 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
         # Bookkeeping for calculating the residual.
-        self._severed_edges = set()
+        self._severed_edges = []
         self._additional_edges = []
         self._hidden_edges = set()
         self.res = None
@@ -519,7 +519,7 @@ class SequentialWorkflow(Workflow):
             if hasattr(self._parent, 'get_eq_constraints'):
                 outputs.extend(self._parent.get_eq_constraints().keys())
                 
-            if len(outputs)==0:
+            if len(outputs) == 0:
                 msg = "No outputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
 
@@ -544,7 +544,7 @@ class SequentialWorkflow(Workflow):
         # non-differentiable blocks.
         elif self._find_nondiff_blocks:
             
-            self._severed_edges = set()
+            self._severed_edges = []
             self._additional_edges = []
             self._hidden_edges = set()
             
