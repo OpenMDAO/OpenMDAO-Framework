@@ -21,12 +21,16 @@ except ImportError as err:
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
 from openmdao.main.datatypes.api import Float, Int, Bool
+from openmdao.main.interfaces import ISolver, implements
 from openmdao.util.decorators import stub_if_missing_deps
 
 
 @stub_if_missing_deps('numpy', 'scipy')
 class MDASolver(Driver):
     
+    implements(ISolver)
+    
+    # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
