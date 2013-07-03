@@ -123,14 +123,11 @@ class Constraint(object):
         return cnst
         
     def evaluate(self, scope):
-        """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
-        
-        lhs = self.lhs.evaluate(scope)
-        if isinstance(self.rhs, float):
-            rhs = self.rhs
-        else:
-            rhs = self.rhs.evaluate(scope)
-        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
+        """Returns the value of the constraint."""
+        pcomp = getattr(scope, self.pcomp_name)
+        if not pcomp._valid:
+            pcomp.update_outputs(['out0'])
+        return pcomp.out0
         
     def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
         """Returns the gradient of the constraint eq/inep as a tuple of the
