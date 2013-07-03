@@ -416,6 +416,8 @@ class DependencyGraph(object):
         if destpath is None:
             for src, dest in self.connections_to(srcpath):
                 self.disconnect(src, dest)
+                if srcpath in self._graph:
+                    self._graph.remove_node(srcpath)
             return
 
         graph = self._graph
@@ -465,10 +467,6 @@ class DependencyGraph(object):
         for d in [k for k in self._allsrcs if k.startswith(dpdot)]:
             del self._allsrcs[d]
             
-        to_remove = [n for n in graph.nodes() if not n.startswith('@') and 
-                                                 len(graph.pred[n])==0 and len(graph.succ[n])==0]
-        graph.remove_nodes_from(to_remove)
-
     def dump(self, stream=sys.stdout):
         """Prints out a simple sorted text representation of the graph."""
         tupdict = {}
@@ -490,7 +488,7 @@ class DependencyGraph(object):
         given list, or they have a node between themselves and the boundary.
         """
         
-        orig = set(nodes)
+        orig = set(nodes+_fakes)
         betweens = set()
         pred = self._graph.pred
         succ = self._graph.succ

@@ -182,7 +182,7 @@ class _HasConstraintsBase(object):
         if cnst:
             scope = _get_scope(self)
             if hasattr(scope, cnst.pcomp_name):
-                scope.remove(cnst.pcomp_name)
+                scope.disconnect(cnst.pcomp_name)
             del self._constraints[key]
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key

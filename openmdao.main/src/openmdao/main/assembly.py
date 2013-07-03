@@ -519,10 +519,13 @@ class Assembly(Component):
                 super(Assembly, self).disconnect(u, v)
                 
         for name in pcomps:
-            delattr(self, name)
+            try:
+                self.remove_trait(name)
+            except AttributeError:
+                pass
             try:
                 self._depgraph._graph.remove_node(name)
-            except:
+            except nx.exception.NetworkXError:
                 pass
 
     def config_changed(self, update_parent=True):

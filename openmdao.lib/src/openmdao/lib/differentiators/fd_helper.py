@@ -6,6 +6,7 @@ on it."""
 from copy import deepcopy
 
 # pylint: disable-msg=E0611,F0401
+from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.distributioncasedriver import \
          DistributionCaseDriver, FiniteDifferenceGenerator
@@ -154,9 +155,10 @@ class FDhelper(object):
         # Add the execution count from the copies to the originals.
         for comp in self.model.driver.workflow.__iter__():
             source_comp = self.copy_source.get(comp.name)
-            source_comp.exec_count += comp.exec_count
+            if not isinstance(comp, PseudoComponent):
+                source_comp.exec_count += comp.exec_count
+                source_comp.derivative_exec_count += comp.derivative_exec_count
             comp.exec_count = 0
-            source_comp.derivative_exec_count += comp.derivative_exec_count
             comp.derivative_exec_count = 0
         
         return derivs

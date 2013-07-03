@@ -94,7 +94,7 @@ class HasObjectives(object):
         if obj:
             scope = self._get_scope()
             if hasattr(scope, obj.pcomp_name):
-                scope.remove(obj.pcomp_name)
+                scope.disconnect(obj.pcomp_name)
             del self._objectives[expr]
         else:
             self._parent.raise_exception("Trying to remove objective '%s' "
@@ -144,11 +144,8 @@ class HasObjectives(object):
     
     def clear_objectives(self):
         """Removes all objectives."""
-        scope = self._get_scope()
-        for obj in self._objectives.values():
-            scope.remove(obj.pcomp_name)
-        self._objectives = ordereddict.OrderedDict()
-        self._parent._invalidate()
+        for name in self._objectives.keys():
+            self.remove_objective(name)
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
