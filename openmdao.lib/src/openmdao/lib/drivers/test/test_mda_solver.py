@@ -111,7 +111,6 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        print self.top.d1.exec_count
         self.assertTrue(self.top.d1.exec_count < 6)
         
     def test_newton_mixed(self):
@@ -153,7 +152,6 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d2.y_out[1],
                                self.top.d1.y_in[1],
                                1.0e-4)
-        print self.top.d1.exec_count
         self.assertTrue(self.top.d1.exec_count < 4)
         
         
