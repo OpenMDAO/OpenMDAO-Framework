@@ -384,17 +384,12 @@ class Driver(Component):
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                if '>' in val[2]:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[0] - val[1]])
-                else:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)

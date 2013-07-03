@@ -141,11 +141,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         # evaluate constraint functions
         if info == 2:
             for i, v in enumerate(driver.get_ineq_constraints().values()):
-                val = v.evaluate(driver.parent)
-                if '>' in val[2]:
-                    g[i] = val[0]-val[1]
-                else:
-                    g[i] = val[1]-val[0]
+                g[i] = v.evaluate(driver.parent)
                     
         # save constraint values in driver if this isn't a finite difference
         if imode != 1:

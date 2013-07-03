@@ -393,11 +393,7 @@ class CONMINdriver(DriverUsesDerivatives):
 
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
-                val = v.evaluate(self.parent)
-                if '>' in val[2]:
-                    self.constraint_vals[i] = val[1]-val[0]
-                else:
-                    self.constraint_vals[i] = val[0]-val[1]
+                self.constraint_vals[i] = v.evaluate(self.parent)
                 
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 

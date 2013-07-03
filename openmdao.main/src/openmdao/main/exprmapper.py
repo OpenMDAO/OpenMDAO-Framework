@@ -171,10 +171,14 @@ class ExprMapper(object):
             try:
                 pcomp = graph[src][dest]['pcomp']
             except KeyError:
-                pass
-            else:
-                added.extend(pcomp.list_connections())
-                pcomps.append(pcomp.name)
+                if src.startswith('_pseudo_'):
+                    pcomp = getattr(self._scope, src.split('.', 1)[0])
+                elif dest.startswith('_pseudo_'):
+                    pcomp = getattr(self._scope, dest.split('.', 1)[0])
+                else:
+                    continue
+            added.extend(pcomp.list_connections())
+            pcomps.append(pcomp.name)
 
         to_remove.update(added)
 

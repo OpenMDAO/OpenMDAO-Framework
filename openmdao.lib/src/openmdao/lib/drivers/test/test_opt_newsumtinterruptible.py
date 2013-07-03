@@ -632,7 +632,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
 
         if baseerror > newerror:
-            self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
+            self.fail("Coarsening NEWSUMT gradient step size did not make the objective worse.")
 
             
 class OptRosenSuzukiComponent_Deriv(Component):

@@ -127,7 +127,6 @@ class DependencyGraph(object):
         an error if the component is not found in the graph.
         """
         self.disconnect(name)
-        self._graph.remove_node(name)
                                     
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
@@ -417,6 +416,8 @@ class DependencyGraph(object):
         if destpath is None:
             for src, dest in self.connections_to(srcpath):
                 self.disconnect(src, dest)
+                if srcpath in self._graph:
+                    self._graph.remove_node(srcpath)
             return
 
         graph = self._graph
@@ -456,7 +457,7 @@ class DependencyGraph(object):
             if link:
                 link.disconnect(srcvarname, destvarname)
                 if len(link) == 0:
-                    self._graph.remove_edge(srccompname, destcompname)
+                    graph.remove_edge(srccompname, destcompname)
         
         try:
             del self._allsrcs[destpath]
@@ -465,7 +466,7 @@ class DependencyGraph(object):
         dpdot = destpath+'.'
         for d in [k for k in self._allsrcs if k.startswith(dpdot)]:
             del self._allsrcs[d]
-
+            
     def dump(self, stream=sys.stdout):
         """Prints out a simple sorted text representation of the graph."""
         tupdict = {}
@@ -487,7 +488,7 @@ class DependencyGraph(object):
         given list, or they have a node between themselves and the boundary.
         """
         
-        orig = set(nodes)
+        orig = set(nodes+_fakes)
         betweens = set()
         pred = self._graph.pred
         succ = self._graph.succ
