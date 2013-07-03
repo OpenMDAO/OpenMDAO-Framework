@@ -222,14 +222,11 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm.comp1.a = 4
         self.asm.comp1.b = 5
         self.asm.comp1.c = 9
-        self.asm.comp1.d = 9
+        self.asm.comp1.d = -1
         
         vals = drv.eval_eq_constraints()
         self.assertEqual(len(vals), 1)
-        self.assertEqual(vals[0][0], 9)
-        self.assertEqual(vals[0][1], 9)
-        self.assertEqual(vals[0][2], '=')
-        self.assertEqual(vals[0][3], False)
+        self.assertEqual(vals[0], 10.)
         
         vals = drv.get_eq_constraints()
         self.assertEqual(len(vals), 1)
@@ -246,14 +243,11 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm.comp1.a = 4
         self.asm.comp1.b = 5
         self.asm.comp1.c = 9
-        self.asm.comp1.d = 9
+        self.asm.comp1.d = -1
         
         vals = drv.eval_ineq_constraints()
         self.assertEqual(len(vals), 1)
-        self.assertEqual(vals[0][0], 4)
-        self.assertEqual(vals[0][1], 5)
-        self.assertEqual(vals[0][2], '>')
-        self.assertEqual(vals[0][3], True)
+        self.assertEqual(vals[0], 1)
 
         vals = drv.get_ineq_constraints()
         self.assertEqual(len(vals), 1)
@@ -266,8 +260,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         drv.add_constraint('(comp1.a-4000.)/1000.0 < comp1.b')
         result = drv.eval_ineq_constraints()
         
-        self.assertEqual(result[0][0], -1.0)
-        self.assertEqual(result[0][1], 5000.0)
+        self.assertEqual(result[0], -5001.0)
         
         drv.remove_constraint('(comp1.a-4000.)/1000.0 < comp1.b') #cant add constraints that are already there
         result = drv.eval_ineq_constraints()

@@ -150,7 +150,13 @@ class HasObjectives(object):
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
         scope = self._get_scope()
-        return [obj.evaluate(scope) for obj in self._objectives.values()]
+        objs = []
+        for obj in self._objectives.values():
+            pcomp = getattr(scope, obj.pcomp_name)
+            if not pcomp._valid:
+                pcomp.update_outputs(['out0'])
+            objs.append(pcomp.out0)
+        return objs
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)

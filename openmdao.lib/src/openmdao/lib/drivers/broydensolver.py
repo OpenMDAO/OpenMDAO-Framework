@@ -215,8 +215,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate(self.parent)
-                self.F[i] = term[0] - term[1]
+                self.F[i] = val.evaluate(self.parent)
                 
             self.record_case()
 
@@ -273,8 +272,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate(self.parent)
-                self.F[i] = term[0] - term[1]
+                self.F[i] = val.evaluate(self.parent)
 
             self.record_case()
     

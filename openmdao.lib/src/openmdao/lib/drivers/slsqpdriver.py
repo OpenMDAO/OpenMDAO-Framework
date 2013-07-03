@@ -188,7 +188,6 @@ class SLSQPdriver(DriverUsesDerivatives):
             con_list = [v.evaluate(self.parent) for v in self.get_constraints().values()]
             g = array(con_list)
             
-            
         if self.iprint > 0:
             pyflush(self.iout)
             

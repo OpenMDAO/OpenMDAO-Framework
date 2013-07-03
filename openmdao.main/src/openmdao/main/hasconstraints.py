@@ -90,32 +90,24 @@ class Constraint(object):
         if it evaluates to a value <= 0.
         """
         scope = self.lhs.scope
-        lhsnode = ast.parse(self.lhs.text, mode='eval')
+        zero = False
         try:
             f = float(self.rhs.text)
         except:
-            rhsnode = ast.parse(self.rhs.text, mode='eval')
+            pass
         else:
             if f == 0:
-                rhsnode = None
-            else:
-                rhsnode = ast.Num(f)
+                zero = True
 
-        if self.comparator.startswith('>'):
-            # of lhs > rhs, replace with rhs - lhs
-            if rhsnode:
-                newnode = ast.UnaryOp(ast.USub(), ast.BinOp(lhsnode, ast.Sub(), rhsnode))
-            else:
-                newnode = ast.UnaryOp(ast.USub(), lhsnode)
+        if zero:
+            newexpr = self.lhs.text
         else:
-            # if lhs < rhs, replace with lhs - rhs
-            if rhsnode:
-                newnode = ast.BinOp(lhsnode, ast.Sub(), rhsnode)
-            else:
-                newnode = lhsnode
-
-        newnode = ast.fix_missing_locations(newnode)
-        return ExprEvaluator(print_node(newnode), scope)
+            newexpr = '%s-(%s)' % (self.lhs.text, self.rhs.text)
+        
+        if self.comparator.startswith('>'):
+            newexpr = "-(%s)" % newexpr
+            
+        return ExprEvaluator(newexpr, scope)
 
     def copy(self):
         cnst = Constraint(str(self.lhs), self.comparator, str(self.rhs), 
@@ -380,8 +372,7 @@ class HasEqConstraints(_HasConstraintsBase):
         return self._constraints
 
     def eval_eq_constraints(self, scope=None): 
-        """Returns a list of tuples of the 
-        form (lhs, rhs, comparator, is_violated).
+        """Returns a list of constraint values.
         """
         return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
     
@@ -619,14 +610,12 @@ class HasConstraints(object):
         return dict(self._eq.get_eq_constraints().items()+self._ineq.get_ineq_constraints().items())
 
     def eval_eq_constraints(self, scope=None): 
-        """Returns a list of tuples of the form (lhs, rhs, comparator,
-        is_violated) from evalution of equality constraints.
+        """Returns a list of constraint values.
         """
         return self._eq.eval_eq_constraints(scope)
     
     def eval_ineq_constraints(self, scope=None): 
-        """Returns a list of tuples of the form (lhs, rhs, comparator,
-        is_violated) from evalution of inequality constraints.
+        """Returns a list of constraint values.
         """
         return self._ineq.eval_ineq_constraints(scope)
     
