@@ -22,7 +22,6 @@
 <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"> </script>
 <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"> </script>
 <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"> </script>
-<script type="text/javascript" src="/static/bootstrap/js/bootstrap-responsive.min.js"> </script>
 
 <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
 
@@ -31,7 +30,7 @@
         <div class="span2" id='leftframe'></div>
         <div class="span9" id='riteframe'>
             <div class="row-fluid">
-                <div class="span9">
+                <div class="span12">
                     <canvas id="WebViewer">
                                     If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
                     </canvas>
@@ -39,7 +38,8 @@
             </div>
 
             <div class="row-fluid">
-                <div id="statusline" class="fps span9"></div>
+                <div id="statusline" class="fps span12"></div>
+            <a href="#myModal" role="button" class="btn btn-small" data-toggle="modal"><i class="icon-info-sign"></i></a>
             </div>
         </div>
 
@@ -199,11 +199,6 @@
         overflow: hidden;
         background: black;
     }
-    canvas {
-        /* border: 2px solid black; */
-        display: block;
-    }
-
     .text {
         /*position:absolute;*/
         top:100px;

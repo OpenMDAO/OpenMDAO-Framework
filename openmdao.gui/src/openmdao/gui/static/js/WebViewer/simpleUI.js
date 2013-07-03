@@ -503,7 +503,7 @@ function reshape(gl)
     var canvas = document.getElementById('WebViewer');
 
     canvas.height = window.innerHeight * 0.95;
-    canvas.width = window.innerWidth * 0.95;
+    //canvas.width = jQuery("#riteframe").css("width");
 
     if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;
