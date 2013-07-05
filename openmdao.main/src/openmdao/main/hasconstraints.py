@@ -121,7 +121,7 @@ class Constraint(object):
             newexpr = "%s" % first
         else:
             newexpr = '%s-(%s)' % (first, second)
-        print newexpr, first, second    
+            
         return ExprEvaluator(newexpr, scope)
 
     def copy(self):

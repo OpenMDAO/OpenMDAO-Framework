@@ -367,11 +367,9 @@ class ExprEvaluator(object):
     """
     
     def __init__(self, text, scope=None, getter='get'):
-        print "first call",  text
         self._scope = None
         self.scope = scope
         self.text = text
-        print text, self.text
         self.getter = getter
         self.var_names = set()
     

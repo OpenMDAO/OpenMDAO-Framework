@@ -134,12 +134,18 @@ class ExprPrinter(ast.NodeVisitor):
         else:
             self.visit(node.left)
         self.visit(node.op)
-        # Always parenthesis a BinOp on the right.
-        #if isinstance(node.right, ast.BinOp) and _pred_cmp(node.right.op, node.op) < 0:
         if isinstance(node.right, ast.BinOp):
-            self.write('(')
-            self.visit(node.right)
-            self.write(')')
+            pred_comp = _pred_cmp(node.right.op, node.op)
+            # Subtraction is not commutative, so when the operator precedence
+            # is equal, we still need parentheses.
+            if pred_comp < 0 or \
+              (pred_comp == 0 and \
+               isinstance(node.op, ast.Sub)):
+                self.write('(')
+                self.visit(node.right)
+                self.write(')')
+            else:
+                self.visit(node.right)
         else:
             self.visit(node.right)
 
