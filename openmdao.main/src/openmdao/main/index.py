@@ -36,6 +36,8 @@ def process_index_entry(obj, idx):
 
     """
     if not isinstance(idx, tuple):
+        print obj, type(obj)
+        print obj[idx]
         return obj[idx]
     if idx[0] == INDEX:
         return obj[idx[1]]

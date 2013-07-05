@@ -168,6 +168,20 @@ class SequentialWorkflow(Workflow):
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
                 
+        # Somtimes we connect an input to an input (particularly with
+        # constraints). These need to be rehooked to corresponding source
+        # edges.
+        
+        self.input_outputs = []
+        for edge in edges:
+            src, target = edge
+            if src == '@in' or target=='@out' or '_pseudo_' in src:
+                continue
+            compname, _, var = src.partition('.')
+            comp = self.scope.get(compname)
+            if var in comp.list_inputs():
+                self.input_outputs.append(src)
+                
         return sorted(list(edges))
 
     def initialize_residual(self):
@@ -320,6 +334,7 @@ class SequentialWorkflow(Workflow):
                 inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyJ on each component
+        
         for comp in self.derivative_iter():
             name = comp.name
             
@@ -349,12 +364,22 @@ class SequentialWorkflow(Workflow):
             if src == '@in':
                 src = target
                 
+            # Input-input connections are not in the jacobians. We need
+            # to add the derivative (which is 1.0).
+            elif src in self.input_outputs:
+                comp_name, dot, var_name = src.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                continue
+                
             comp_name, dot, var_name = src.partition('.')
             if comp_name in pa_ref:
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
-            
+        print arg, result
         return result
     
     def group_nondifferentiables(self):

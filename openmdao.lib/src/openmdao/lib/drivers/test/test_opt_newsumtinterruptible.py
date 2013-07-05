@@ -526,50 +526,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
         
-    def test_no_design_vars(self):
-        # test to see if code responds correctly to no
-        #   design vars
-        
-        self.top.driver.add_objective( 'comp.result' )
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 
-                "driver: no parameters specified")
-        else:
-            self.fail('RuntimeError expected')
-    
-    def test_get_objective(self):
-        # test getting the objective function
-        self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual(['comp.result'], self.top.driver.get_objectives().keys())
-    
-    def test_update_objective(self):
-
-        try:
-            self.top.driver.eval_objective()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('Exception expected')
-            
-        self.top.comp.result = 88.
-        self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual(self.top.driver.eval_objective(), 88.)
-        
-    
-    def test_bad_design_vars(self):
-        # test to see if the code handles bad design vars
-        try:
-            map(self.top.driver.add_parameter, 
-                ['comp_bogus.x[0]', 'comp.x[1]'] )
-        except AttributeError, err:
-            self.assertEqual(str(err), 
-                "driver: Can't add parameter 'comp_bogus.x[0]'" + \
-                " because it doesn't exist.")
-        else:
-            self.fail('AttributeError expected')
-    
     def test_bounds_swapped(self):
         # test for when lower and upper bounds are swapped
         self.top.driver.add_objective( 'comp.result' )

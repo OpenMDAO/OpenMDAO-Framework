@@ -183,9 +183,10 @@ class SLSQPdriver(DriverUsesDerivatives):
             msg = "Numerical overflow in the objective."
             self.raise_exception(msg, RuntimeError)
             
-        # Constraints
+        # Constraints. Note that SLSQP defines positive as satisfied.
         if self.ncon > 0 :
-            con_list = [v.evaluate(self.parent) for v in self.get_constraints().values()]
+            con_list = [-v.evaluate(self.parent) for \
+                        v in self.get_constraints().values()]
             g = array(con_list)
             
         if self.iprint > 0:
@@ -193,7 +194,7 @@ class SLSQPdriver(DriverUsesDerivatives):
             
         # Write out some relevant information to the recorder
         self.record_case()
-
+        
         return f, g
     
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -222,8 +223,7 @@ class SLSQPdriver(DriverUsesDerivatives):
 
         J = self.workflow.calc_gradient(inputs, obj + con)
         
-        #print J
-        #print df, dg
-            
+        print J
+        print df, dg    
         return df, dg
     

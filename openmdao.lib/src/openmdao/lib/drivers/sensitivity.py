@@ -67,15 +67,14 @@ class SensitivityDriver(DriverUsesDerivatives):
         
         self._check()
         
-        # Calculate gradient of the workflow
-        self.ffd_order = 1
-        self.differentiator.calc_gradient()
-        self.ffd_order = 0
-            
         inputs = self.get_parameters().keys()
         objs = self.get_objectives().keys()
         constraints = list(self.get_eq_constraints().keys() + \
                            self.get_ineq_constraints().keys())
+        obj = ["%s.out0" % item.pcomp_name for item in \
+                self.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name for item in \
+                       self.get_constraints().values()]
         
         self.dF = zeros((len(objs), len(inputs)), 'd')
         self.dG = zeros((len(constraints), len(inputs)), 'd')
@@ -85,6 +84,15 @@ class SensitivityDriver(DriverUsesDerivatives):
         self.dF_names = []
         self.dG_names = []
         self.dx_names = []
+        
+        # Calculate gradient of the workflow
+        self.ffd_order = 1
+        self.differentiator.calc_gradient()
+        self.ffd_order = 0
+        
+        J = self.workflow.calc_gradient(inputs, obj + con)
+        print J
+        print self.differentiator.gradient
         
         for i, input_name in enumerate(inputs):
             
