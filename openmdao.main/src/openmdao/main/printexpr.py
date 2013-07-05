@@ -134,7 +134,9 @@ class ExprPrinter(ast.NodeVisitor):
         else:
             self.visit(node.left)
         self.visit(node.op)
-        if isinstance(node.right, ast.BinOp) and _pred_cmp(node.right.op, node.op) < 0:
+        # Always parenthesis a BinOp on the right.
+        #if isinstance(node.right, ast.BinOp) and _pred_cmp(node.right.op, node.op) < 0:
+        if isinstance(node.right, ast.BinOp):
             self.write('(')
             self.visit(node.right)
             self.write(')')

@@ -273,6 +273,7 @@ class PseudoCompTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.spd_out, 24.) # spd_out = 24 inch/s
         
 
+
     # disconnect() for a boundary var in an expr  
        
 

@@ -161,55 +161,6 @@ class CONMINdriverTestCase(unittest.TestCase):
                                self.top.comp.x[3], places=1)
 
 
-    def test_no_design_vars(self):
-        self.top.driver.add_objective('comp.result')
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 
-                "driver: no parameters specified")
-        else:
-            self.fail('RuntimeError expected')
-    
-    def test_no_objective(self):
-        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                            'comp.x[2]', 'comp.x[3]'])
-        try:
-            self.top.run()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('Exception expected')
-            
-    def test_get_objective(self):
-        self.top.driver.add_objective('comp.result')
-        self.assertEqual(['comp.result'],
-                         self.top.driver.get_objectives().keys())
-    
-    def test_update_objective(self):
-        try:
-            self.top.driver.eval_objective()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('Exception expected')
-            
-        self.top.comp.result = 88.
-        self.top.driver.add_objective('comp.result')
-        self.assertEqual(self.top.driver.eval_objective(), 88.)
-        
-    
-    def test_bad_design_vars(self):
-        try:
-            self.top.driver.add_parameter('comp_bogus.x[0]')
-            self.top.driver.add_parameter('comp.x[1]')
-        except AttributeError, err:
-            self.assertEqual(str(err), 
-                "driver: Can't add parameter 'comp_bogus.x[0]' because it doesn't exist.")
-        else:
-            self.fail('Exception expected')
-    
-    
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
         
