@@ -312,13 +312,12 @@ class SequentialWorkflow(Workflow):
                     key = item.partition('.')[0]
                     pa_ref[key] = name
 
-
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src != '@in':
+            if src != '@in' and src not in self.input_outputs:
                 comp_name, dot, var_name = src.partition('.')
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
@@ -342,7 +341,6 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinv'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinv(inputs[name], pre_inputs)
-            
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -379,7 +377,7 @@ class SequentialWorkflow(Workflow):
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
-        print arg, result
+            
         return result
     
     def group_nondifferentiables(self):
@@ -467,7 +465,7 @@ class SequentialWorkflow(Workflow):
             # Remove old nodes
             for node in group:
                 graph.remove_node(node)
-                
+
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]
             outputs = [a for a, b in outputs]
@@ -484,6 +482,11 @@ class SequentialWorkflow(Workflow):
                 if comp_name in group:
                     inputs.append(target)
                 
+            # Input to input connections lead to extra outputs.
+            for item in self.input_outputs:
+                if item in outputs:
+                    outputs.remove(item)
+
             # Create pseudo_assy
             comps = [getattr(self.scope, name) for name in group]
             pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
