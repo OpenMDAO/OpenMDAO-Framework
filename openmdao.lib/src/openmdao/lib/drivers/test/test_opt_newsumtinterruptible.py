@@ -46,7 +46,6 @@ import numpy
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -388,18 +387,25 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
 
-        self.top.driver.differentiator = FiniteDifference()
+        self.top.driver.newsumt_diff = False
         
-        self.top.run()
+        # OpenMDAO diff not supported until we have 2nd derivatives -- KTM
+        try:
+            self.top.run()
+        except NotImplementedError as err:
+            msg = "Hessians currently not supported by OpenMDAO differentiator"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('expected NotImplementedError')
         
-        assert_rel_error(self,
-                         self.top.comp.opt_objective, 
-                         self.top.driver.eval_objective(),
-                         0.001)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
-                               self.top.comp.x[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=2)
+        #assert_rel_error(self,
+                         #self.top.comp.opt_objective, 
+                         #self.top.driver.eval_objective(),
+                         #0.001)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               #self.top.comp.x[0], places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               #self.top.comp.x[1], places=2)
         
 class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""
@@ -711,19 +717,26 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
             'comp.x1**2-comp.x1+2*comp.x2**2+comp.x3**2+2*comp.x4**2-comp.x4 < 10',
             '2*comp.x1**2+2*comp.x1+comp.x2**2-comp.x2+comp.x3**2-comp.x4 < 5'])
         
-        self.top.driver.differentiator = FiniteDifference()
-        self.top.run()
+        self.top.driver.newsumt_diff = False
+        # OpenMDAO diff not supported until we have 2nd derivatives -- KTM
+        try:
+            self.top.run()
+        except NotImplementedError as err:
+            msg = "Hessians currently not supported by OpenMDAO differentiator"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('expected NotImplementedError')
 
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
-                               self.top.comp.x1, places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x2, places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x3, places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
-                               self.top.comp.x4, places=1)
+        #self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               #self.top.driver.eval_objective(), places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               #self.top.comp.x1, places=1)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               #self.top.comp.x2, places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               #self.top.comp.x3, places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               #self.top.comp.x4, places=1)
 
     def test_opt2(self):
         # NEWSUMT Finite Difference

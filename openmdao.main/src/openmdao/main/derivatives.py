@@ -300,7 +300,7 @@ class FiniteDifference(object):
 
             if '[' in src:
                 src, _, idx = src.partition('[')
-                idx = float(idx[:-1])
+                idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] = new_val
                 self.scope.set(src, old_val, force=True)
@@ -308,7 +308,6 @@ class FiniteDifference(object):
                 self.scope.set(src, new_val, force=True)
     
         # Reset OpenMDAO's valid state.
-        # Note: I don't know why i have to do this. Only needed for mda_solver
         for src in self.inputs:
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -344,7 +343,7 @@ class FiniteDifference(object):
         if index==None:
             if '[' in src:
                 src, _, idx = src.partition('[')
-                idx = float(idx[:-1])
+                idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] += val
                 self.scope.set(src, old_val, force=True)
@@ -357,6 +356,9 @@ class FiniteDifference(object):
         # Prevent OpenMDAO from stomping on our poked input.
         comp = self.scope.get(comp_name)
         comp._valid_dict[var_name] = True
+        
+        # Make sure we execute!
+        comp._call_execute = True
             
                       
 #-------------------------------------------

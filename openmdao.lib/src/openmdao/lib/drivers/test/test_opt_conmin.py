@@ -109,7 +109,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
 
-    def test_opt1_with_OpenMDAO_gradient(self):
+    def test_opt1_with_CONMIN_gradient(self):
+        # Note: all other tests use OpenMDAO gradient
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
         self.top.driver.add_parameter('comp.x[1]', fd_step=.00001)
@@ -122,7 +123,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])  
         
-        self.top.driver.differentiator = FiniteDifference()
+        self.top.driver.conmin_diff = True
         self.top.run()
         
         # pylint: disable-msg=E1101
@@ -131,9 +132,9 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=1)
+                               self.top.comp.x[1], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=1)
+                               self.top.comp.x[2], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
 

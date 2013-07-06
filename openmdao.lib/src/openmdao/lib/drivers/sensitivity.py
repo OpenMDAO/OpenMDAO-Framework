@@ -16,7 +16,7 @@ import logging
 from openmdao.main.numpy_fallback import zeros
 
 from openmdao.main.datatypes.api import Array, List
-from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
+from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
@@ -25,7 +25,7 @@ from openmdao.main.interfaces import IHasParameters, IHasObjectives, \
                                      IHasConstraints, implements
 
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
-class SensitivityDriver(DriverUsesDerivatives):
+class SensitivityDriver(Driver):
     """Driver to calculate the gradient of a workflow and return
     it as a driver output. The gradient is calculated from all
     inputs (Parameters) to all outputs (Objectives and Constraints).
@@ -67,6 +67,9 @@ class SensitivityDriver(DriverUsesDerivatives):
         
         self._check()
         
+        # Run our iteration once, since we can't guarantee it has been.
+        self.run_iteration()
+        
         inputs = self.get_parameters().keys()
         objs = self.get_objectives().keys()
         constraints = list(self.get_eq_constraints().keys() + \
@@ -76,43 +79,33 @@ class SensitivityDriver(DriverUsesDerivatives):
         con = ["%s.out0" % item.pcomp_name for item in \
                        self.get_constraints().values()]
         
-        self.dF = zeros((len(objs), len(inputs)), 'd')
-        self.dG = zeros((len(constraints), len(inputs)), 'd')
-        self.F = zeros(len(objs), 'd')
-        self.G = zeros(len(constraints), 'd')
-        self.x = zeros(len(inputs), 'd')
-        self.dF_names = []
-        self.dG_names = []
-        self.dx_names = []
+        nparm = len(inputs)
+        nobj = len(obj)
+        ncon = len(con)
         
-        # Calculate gradient of the workflow
-        self.ffd_order = 1
-        self.differentiator.calc_gradient()
-        self.ffd_order = 0
+        self.dF = zeros((nobj, nparm), 'd')
+        self.dG = zeros((ncon, nparm), 'd')
+        self.F = zeros(nobj, 'd')
+        self.G = zeros(ncon, 'd')
+        self.x = zeros(nparm, 'd')
         
+        self.dF_names = objs
+        self.dG_names = constraints
+        self.dx_names = inputs
+        
+        self.F = self.eval_objectives()
+        self.G = [v.evaluate(self.parent) for \
+                       v in self.get_constraints().values()]
+        self.x = [v.evaluate(self.parent) for \
+                       v in self.get_parameters().values()]
+        
+        # Finally, calculate gradient
         J = self.workflow.calc_gradient(inputs, obj + con)
-        print J
-        print self.differentiator.gradient
         
-        for i, input_name in enumerate(inputs):
-            
-            self.dx_names.append(input_name)
-            self.x[i] = self.differentiator.base_param[input_name]
-            
-            for j, output_name in enumerate(objs):
-                self.dF[j][i] = self.differentiator.get_derivative(output_name, 
-                                                                   wrt=input_name)
-                self.dF_names.append(output_name)
-                self.F[j] = self.differentiator.base_data[output_name]
-                
-            for j, output_name in enumerate(constraints):
-                self.dG[j][i] = self.differentiator.get_derivative(output_name, 
-                                                                   wrt=input_name)
-                self.dG_names.append(output_name)
-                self.G[j] = self.differentiator.base_data[output_name]
-        # Sensitivity is sometimes run sequentially using different submodels,
-        # so we need to return the state to the baseline value.
-        self.differentiator.reset_state()
+        self.dF = J[0:nobj, :]
+        n1 = nobj
+        n2 = nobj + ncon
+        self.dG = J[n1:n2, :]
         
         self.record_case()
                                 

@@ -218,10 +218,11 @@ class SLSQPdriver(Driver):
         nobj = len(obj)
         df[0:self.nparam] = J[0:nobj, :].flatten()
         
+        ncon = self.ncon + self.neqcon
         n1 = nobj
-        n2 = nobj + self.ncon + self.neqcon
-        if n2 > n1:
-            dg[0, 0:self.nparam] = J[n1:n2, :].flatten()
+        n2 = nobj + ncon
+        if ncon > 0:
+            dg[0:ncon, 0:self.nparam] = J[n1:n2, :]
         
         return df, dg
     

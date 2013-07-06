@@ -41,6 +41,7 @@ class SequentialWorkflow(Workflow):
         self._collapsed_graph = None
         self._topsort = None
         self._find_nondiff_blocks = True
+        self._input_outputs = []
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -172,15 +173,16 @@ class SequentialWorkflow(Workflow):
         # constraints). These need to be rehooked to corresponding source
         # edges.
         
-        self.input_outputs = []
+        self._input_outputs = []
         for edge in edges:
             src, target = edge
             if src == '@in' or target=='@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
+            var = var.split('[')[0]
             comp = self.scope.get(compname)
             if var in comp.list_inputs():
-                self.input_outputs.append(src)
+                self._input_outputs.append(src)
                 
         return sorted(list(edges))
 
@@ -317,7 +319,7 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src != '@in' and src not in self.input_outputs:
+            if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
@@ -364,7 +366,7 @@ class SequentialWorkflow(Workflow):
                 
             # Input-input connections are not in the jacobians. We need
             # to add the derivative (which is 1.0).
-            elif src in self.input_outputs:
+            elif src in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
@@ -377,7 +379,7 @@ class SequentialWorkflow(Workflow):
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
-            
+        
         return result
     
     def group_nondifferentiables(self):
@@ -483,7 +485,7 @@ class SequentialWorkflow(Workflow):
                     inputs.append(target)
                 
             # Input to input connections lead to extra outputs.
-            for item in self.input_outputs:
+            for item in self._input_outputs:
                 if item in outputs:
                     outputs.remove(item)
 

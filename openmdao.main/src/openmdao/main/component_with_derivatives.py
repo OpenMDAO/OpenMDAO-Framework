@@ -5,9 +5,7 @@ from openmdao.main.component import Component
 from openmdao.util.log import logger
 
 class ComponentWithDerivatives(Component):
-    """This is the base class for all objects containing Traits that are \
-    accessible to the OpenMDAO framework and are "runnable."
-    """
+    """This is Deprecated."""
     
     def __init__(self, *args, **kwargs):
         """ Deprecated."""

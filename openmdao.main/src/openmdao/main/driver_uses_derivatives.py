@@ -11,18 +11,14 @@ from openmdao.main.interfaces import IDifferentiator
 from openmdao.main.driver import Driver
 
 class DriverUsesDerivatives(Driver): 
-    """This class provides an implementation of the derivatives delegates."""
+    """This is Deprecated."""
 
-    differentiator = Slot(IDifferentiator, 
-                          desc = "Slot for a differentiator")
-    
-    def _differentiator_changed(self, old, new):
-        """When a new differentiator is slotted, give it a handle to the
-        parent."""
+    def __init__(self, *args, **kwargs):
+        """ Deprecated."""
         
-        if self.differentiator is not None:
-            self.differentiator._parent = self
-    
+        logger.warning('DriverUsesDerivatives is deprecated. You can ' + 
+                        'use Component instead.')
         
+        super(DriverUsesDerivatives, self).__init__(*args, **kwargs)        
         
         
