@@ -9,7 +9,6 @@ import numpy
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 

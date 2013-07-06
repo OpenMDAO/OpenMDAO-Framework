@@ -1,9 +1,7 @@
 """
     sensitivity.py -- Driver to calculate the gradient of a workflow and return
-    it as a driver output. 
+    it as a driver output. OpenMDAO's gradient capability is utilized.
     
-    SensitivityDriver includes a differentiator slot where the differentiation
-    method can be plugged. Fake Finite Difference is supported.
 """
 
 # pylint: disable-msg=C0103
@@ -85,9 +83,6 @@ class SensitivityDriver(Driver):
         
         self.dF = zeros((nobj, nparm), 'd')
         self.dG = zeros((ncon, nparm), 'd')
-        self.F = zeros(nobj, 'd')
-        self.G = zeros(ncon, 'd')
-        self.x = zeros(nparm, 'd')
         
         self.dF_names = objs
         self.dG_names = constraints
@@ -103,6 +98,7 @@ class SensitivityDriver(Driver):
         J = self.workflow.calc_gradient(inputs, obj + con)
         
         self.dF = J[0:nobj, :]
+        
         n1 = nobj
         n2 = nobj + ncon
         self.dG = J[n1:n2, :]

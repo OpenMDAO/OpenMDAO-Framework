@@ -20,7 +20,6 @@ except ImportError as err:
     
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
 from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.main.hasparameters import HasParameters
