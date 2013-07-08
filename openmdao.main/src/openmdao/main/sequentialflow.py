@@ -402,15 +402,10 @@ class SequentialWorkflow(Workflow):
         # Groups any connected non-differentiable blocks. Each block is a set
         # of component names.
         nondiff_groups = []
-        nondiff_groups.append(set([nondiff[0]]))
-        for comp in nondiff[1:]:
-            pre = collapsed.predecessors(comp)
-            for group in nondiff_groups:
-                if len(group.intersection(pre)) > 0:
-                    group.add(comp)
-                    break
-            else:
-                nondiff_groups.append(set([comp]))
+        sub = collapsed.subgraph(nondiff)
+        nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
+        for item in nd_graphs:
+            nondiff_groups.append(item.nodes())
                 
         # We need to copy our graph, and put pseudoasemblies in place
         # of the nondifferentiable components.
@@ -461,8 +456,11 @@ class SequentialWorkflow(Workflow):
                 
                 if comp1 in group:
                     outputs = outputs.union([edge])
-                elif comp2 in group:
+                if comp2 in group:
                     inputs = inputs.union([edge])
+                    
+                if edge in self._hidden_edges:
+                    self._hidden_edges.remove(edge)
             
             # Remove old nodes
             for node in group:
@@ -518,17 +516,19 @@ class SequentialWorkflow(Workflow):
             return [getattr(self.scope, n) for n in self.get_names(full=True)]
         return self.derivative_iterset
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
 
         self._stop = False
         for node in self.derivative_iter():
-            node.calc_derivatives(first, second, savebase)
+            node.calc_derivatives(first, second, savebase, extra_in, extra_out)
             if self._stop:
                 raise RunStopped('Stop requested')
 
-    def calc_gradient(self, inputs=None, outputs=None, fd=False):
+    def calc_gradient(self, inputs=None, outputs=None, fd=False, 
+                      upscope=False):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
@@ -575,7 +575,7 @@ class SequentialWorkflow(Workflow):
         elif self._find_nondiff_blocks:
             
             self._severed_edges = []
-            self._additional_edges = []
+            self._additional_edges = set()
             self._hidden_edges = set()
             
             # New edges for parameters
@@ -590,6 +590,28 @@ class SequentialWorkflow(Workflow):
             
             self._additional_edges = additional_edges
             self.group_nondifferentiables()
+            
+            self._find_nondiff_blocks = False
+            
+        # Some reorganization to add additional edges when scoped outside
+        # the driver that owns this workflow.
+        elif upscope:
+            
+            # New edges for parameters
+            input_edges = [('@in', a) for a in inputs]
+            additional_edges = set(input_edges)
+            
+            # New edges for responses
+            out_edges = [a[0] for a in self.get_interior_edges()]
+            for item in outputs:
+                if item not in out_edges:
+                    additional_edges.add((item, '@out'))
+            
+            newset = self._additional_edges.union(additional_edges)
+            if len(newset) > len(self._additional_edges):
+                self._additional_edges = newset
+                self._hidden_edges = set()
+                self.group_nondifferentiables()
             
             self._find_nondiff_blocks = False
         

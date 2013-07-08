@@ -437,11 +437,11 @@ class Component(Container):
             setattr(self, name,
                     self.derivatives.calculate_output(name, ffd_order))
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
-        requested. The user must supply *calculate_first_derivatives()*
-        and/or *calculate_second_derivatives()* in the component.
+        requested. The user must supply *linearize* in the component.
         
         This function should not be overriden.
         
@@ -454,6 +454,12 @@ class Component(Container):
         savebase: Bool
             If set to true, then we save our baseline state for fake finite
             difference.
+            
+        extra_in:
+            Not needed by Component
+        
+        extra_out
+            Not needed by Component
         """
         
         executed = False
@@ -464,21 +470,14 @@ class Component(Container):
             self.linearize()
             self.derivative_exec_count += 1
             
-        # Calculate first derivatives in user-defined function
-        if first and hasattr(self, 'calculate_first_derivatives'):
-            self.calculate_first_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
-            
-        # Calculate second derivatives in user-defined function
-        if second and hasattr(self, 'calculate_second_derivatives'):
-            self.calculate_second_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
-            
         # Save baseline state
         if savebase and executed:
-            self.derivatives.save_baseline(self)
+            
+            for name in self.J_inputs:
+                self._ffd_inputs[name] = self.parent.get(name)
+    
+            for name in self.J_outputs:
+                self._ffd_outputs[name] = self.parent.get(name)
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -536,7 +535,7 @@ class Component(Container):
                 #print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 and \
-                   hasattr(self, 'calculate_first_derivatives'):
+                   (hasattr(self, 'provideJ') or hasattr(self, 'apply_deriv')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(1)
@@ -545,7 +544,7 @@ class Component(Container):
                    hasattr(self, 'calculate_second_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
-                    self._execute_ffd(2)
+                    pass
 
                 else:
                     # Component executes as normal

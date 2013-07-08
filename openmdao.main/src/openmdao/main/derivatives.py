@@ -240,7 +240,7 @@ class FiniteDifference(object):
                     self.get_outputs(self.y)
                     
                     # Backward difference
-                    self.J[:, i] = (self.y - self.y_base)/fd_step
+                    self.J[:, i] = (self.y_base - self.y)/fd_step
                     
                     # Undo step
                     if i2-i1 == 1:
@@ -271,7 +271,7 @@ class FiniteDifference(object):
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y2)
                     
-                    # Backward difference
+                    # Central difference
                     self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
                     
                     # Undo step
@@ -280,6 +280,12 @@ class FiniteDifference(object):
                     else:
                         self.set_value(src, fd_step, i-i1)
 
+                # Reset OpenMDAO's valid state.
+                comp_name, dot, var_name = src.partition('.')
+                #var_name = var_name.split('[')[0]
+                comp = self.scope.get(comp_name)
+                comp._valid_dict[var_name] = False
+                    
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
@@ -306,12 +312,6 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
-    
-        # Reset OpenMDAO's valid state.
-        for src in self.inputs:
-            comp_name, dot, var_name = src.partition('.')
-            comp = self.scope.get(comp_name)
-            comp._valid_dict[var_name] = False
     
         return self.J
     
@@ -360,6 +360,40 @@ class FiniteDifference(object):
         # Make sure we execute!
         comp._call_execute = True
             
+def apply_linear_model(self, comp, ffd_order):
+    """Returns the Fake Finite Difference output for the given output
+    name using the stored baseline and derivatives along with the
+    new inputs in the component.
+    """
+    
+    input_keys, output_keys, J = comp.provideJ()
+    
+    # First order derivatives
+    if order == 1:
+        
+        for j, out_name in enumerate(output_keys):
+            y = comp.get(out_name)
+            for i, in_name in enumerate(input_keys):
+                y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
+                setattr(comp, name, y) 
+               
+    # Second order derivatives
+    #elif order == 2:
+    #    
+    #    for in_name1, item in self.second_derivatives[out_name].iteritems():
+    #        for in_name2, dx in item.iteritems():
+    #            y += 0.5*dx* \
+    #              (self.parent.get(in_name1) - self.inputs[in_name1])* \
+    #              (self.parent.get(in_name2) - self.inputs[in_name2])
+    #
+    else:
+        msg = 'Fake Finite Difference does not currently support an ' + \
+              'order of %s.' % order
+        raise NotImplementedError(msg)
+    
+    return y
+
+
                       
 #-------------------------------------------
 # Everything below here will be deprecated.

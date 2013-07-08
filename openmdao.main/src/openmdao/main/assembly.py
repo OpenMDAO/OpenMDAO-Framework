@@ -771,38 +771,33 @@ class Assembly(Component):
 
     def linearize(self):
         '''An assembly calculates its Jacobian by calling the calc_gradient
-        method on its base driver.'''
+        method on its base driver. Note, derivatives are only calculated for
+        floats and iterable items containing floats.'''
         
         input_keys = []
         output_keys = []
+        self.J_input_keys = []
+        self.J_output_keys = []
         for src, target in self.list_connections():
-            if '.' in src:
-                output_keys.append(src)
-            elif '.' in target:
-                input_keys.append(target)
-            else:
-                msg = "Something wrong with this assembly connection: " + \
-                      "'%s' and '%s' " % (src, target)
-                raise RuntimeError(msg)
+            if '.' in src and '.' not in target:
+                val = self.get(src)
+                if isinstance(val, float) or \
+                   hasattr(val, '__iter__') and isinstance(val[0], float):
+                    output_keys.append(src)
+                    self.J_output_keys.append(target)
+            elif '.' in target and '.' not in src:
+                val = self.get(target)
+                if isinstance(val, float) or \
+                   hasattr(val, '__iter__') and isinstance(val[0], float):
+                    input_keys.append(target)
+                    self.J_input_keys.append(src)
                 
         self.J = self.driver.calc_gradient(input_keys, output_keys)
         
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''
         
-        input_keys = []
-        output_keys = []
-        for src, target in self.list_connections():
-            if '.' in src:
-                output_keys.append(target)
-            elif '.' in target:
-                input_keys.append(src)
-            else:
-                msg = "Something wrong with this assembly connection: " + \
-                      "'%s' and '%s' " % (src, target)
-                raise RuntimeError(msg)
-            
-        return input_keys, output_keys, self.J
+        return self.J_input_keys, self.J_output_keys, self.J
     
     # KTM - This is deprecated in favor of the Component's behavior.
     #def calc_derivatives(self, first=False, second=False, savebase=False):
