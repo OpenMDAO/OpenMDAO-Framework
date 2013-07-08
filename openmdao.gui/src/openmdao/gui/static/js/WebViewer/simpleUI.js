@@ -110,42 +110,31 @@ function wvInitUI()
 
   g.statusline = new StatusLine("statusline");
   g.debug = true;
+
 }
 
 function getDisplayControl(display, isActive){
-    var span = jQuery("<span></span>");
-    span.html(display);
 
-    var button = jQuery("<button></button>");
-    button.addClass("btn btn-primary btn-small");
-    button.addClass(display);
-    button.attr("type", "button");
+    isActive = isActive ? "active" : "";
 
-    if(isActive){
-        button.addClass("active");
-    }
-
-    button.append(span);
-
-    return button
+    return " \
+            <button type='button' class='btn btn-primary btn-small " + display + " " + isActive + "'> \
+                <span>" + display + "</span> \
+            </button>";
 }
 
 function getDisplayControls(attrs){
-    var html = jQuery("<div></div>");
-    html.addClass("btn-group");
-    html.attr("data-toggle", "buttons-checkbox");
+    return jQuery("<div class='btn-group' data-toggle='buttons-checkbox'></div>")
+                .append(getDisplayControl("viz", isAttributeSet(attrs, g.plotAttrs.ON)),
+                        getDisplayControl("grd", isAttributeSet(attrs, g.plotAttrs.LINES | g.plotAttrs.POINTS)),
+                        getDisplayControl("trn", isAttributeSet(attrs, g.plotAttrs.TRANSPARENT)),
+                        getDisplayControl("ori", isAttributeSet(attrs, g.plotAttrs.ORIENTATION)));
 
-    html.append(getDisplayControl("viz", isAttributeSet(attrs, g.plotAttrs.ON)));
-    html.append(getDisplayControl("grd", isAttributeSet(attrs, g.plotAttrs.LINES | g.plotAttrs.POINTS)));
-    html.append(getDisplayControl("trn", isAttributeSet(attrs, g.plotAttrs.TRANSPARENT)));
-    html.append(getDisplayControl("ori", isAttributeSet(attrs, g.plotAttrs.ORIENTATION)));
-
-    return html;    
 }
 
 function handleControlClick(attribute, mask){
     
-    function updateTree( root ){
+    function updateTree( root, flag ){
         var control = getNodeControl( root, attribute );
         var activateControl = !isControlActive( control );
         var children = getNodeChildren( root );
@@ -153,34 +142,36 @@ function handleControlClick(attribute, mask){
         var data = undefined;
         var dataKey = "gprim";
 
-        var flag = 0;
-
         if( children.length > 0  ){
             dataKey = "attrs";
             data = getNodeData( root, dataKey );
             
-            flag = (data & mask) > 0 ? 0 : mask;
-
             data = setAttribute( getNodeData( root, dataKey ), mask, flag );
             setNodeData( root, dataKey, data );
 
             children.each( function( index, child ){
                 child = jQuery(child);
                 setNodeControl( child, getNodeControl( child, attribute ), activateControl );     
-                updateTree( child );
+                updateTree( child, flag );
             });
         }
 
         else{
             data = getNodeData( root, dataKey );
-            flag = (data.attrs & mask)  > 0 ? 0 : mask;
             data.attrs = setAttribute( data.attrs, mask, flag );
             setNodeData( root, dataKey, data );
         }
     }
 
     return function( e ){
-        updateTree( jQuery( this ).is( "button" ) ? jQuery( this ).parent().parent() : jQuery( this ).parent() );
+        var root = jQuery( this ).is( "button" ) ? jQuery( this ).parent().parent() : jQuery( this ).parent();
+        var data = getNodedata( root, "gprim" );
+
+        data =  data ? data : getNodeData( root, "attrs" );
+
+        var flag = data & mask > 0 ? 0 : mask;
+
+        updateTree( root, flag );
         g.sceneUpd = 1;
     };
 }
@@ -197,44 +188,12 @@ function setAttribute(attributes, mask, value){
     return (attributes & (~mask)) | (value & mask);
 }
 
-function nodeHasChildren( node ){
-    return getNodeChildren(node).length > 0;
-}
-
-function addNode( id, title, parentId ){
-    var position = undefined;
-    var parentNode = getNode(id);
-  
-    if( ! parentNode ){
-        position = 1;
-    }
-
-    else{
-        position = "inside";
-    }
-
-    parentNode = ( parentId !== undefined ) ? getNode(parentId) : -1;
-    jQuery("#leftframe").jstree("create_node", parentNode, position, {
-        "attr" : { 
-            "id" : id,
-        },
-        "data" : title,
-        "state" : "closed",
-    });
-
-    return getNode(id);
-}
-
 function getNode(id){
-    return jQuery.jstree._reference( "#leftframe" )._get_node( "#" + id );
+    return jQuery.jstree._reference( "#tree" )._get_node( "#" + id );
 }
 
 function getNodeChildren(node){
-    return jQuery.jstree._reference( "#leftframe" )._get_children( node );
-}
-
-function nodeExists(id){
-    return getNode(id).length !== 0;
+    return jQuery.jstree._reference( "#tree" )._get_children( node );
 }
 
 function gprimToId(gprim){
@@ -247,16 +206,6 @@ function setNodeData(node, dataKey, data){
 
 function getNodeData(node, dataKey){
     return node.data(dataKey);
-}
-
-function appendNodeControls(node, controls){
-    if( nodeHasChildren( node ) ){
-        jQuery("ul", node).before(controls);
-    }
-
-    else{
-        node.append( controls );
-    }
 }
 
 function getNodeControl(node, controlName){
@@ -282,37 +231,58 @@ function wvUpdateUI()
             alert("g.sceneGraph is undefined --- but we need it");
         }
 
-        var node = undefined;
-        var primitives = Object.keys(g.sceneGraph);
-        var newPrimitives = [];
+        var nodes = [[],[]];
+        var parentIndex = 0;
+        var node = undefined; 
 
-        for( var i = 0; i < primitives.length; i++ ){
-            if( ! getNode( gprimToId( primitives[i] ))){
-                newPrimitives.push(primitives[i]);
+        if( jQuery("#tree").length === 0 ){
+            for( var gprim in g.sceneGraph ){
+                parentIndex = ( g.sceneGraph[gprim].GPtype === 1 ) ? 0 : 1;
+                
+                node = jQuery("<li id='" + gprimToId(gprim) + "'><a href='#'>" + gprim + "</a></li>");
+                node.data("gprim", g.sceneGraph[gprim]);
+                node.append(getDisplayControls( g.sceneGraph[gprim].attrs ) );
+
+                nodes[parentIndex].push(node);
             }
-        }
-        
-        if( newPrimitives.length > 0){
-            for( var i=0; i<newPrimitives.length; i++){
-                var gprim = newPrimitives[i]; 
-                var primitiveType = g.sceneGraph[gprim].GPtype === 1 ? "Edges" : "Faces";
-                var gprimObject = g.sceneGraph[gprim];
-                    if( ! getNode( primitiveType )){
-                        node = addNode(primitiveType, primitiveType);
-                        appendNodeControls( node, getDisplayControls( gprimObject.attrs ) );
-                        setNodeData( node, "attrs", gprimObject.attrs );
-                    }
-                    
-                    node = addNode( gprimToId( gprim ), gprim, primitiveType );
-                    appendNodeControls( node, getDisplayControls( gprimObject.attrs ) );
-                    setNodeData( node, "gprim", gprimObject );
-            }
+
+            var edges = jQuery("<ul></ul>");
+            var faces = jQuery("<ul></ul>");
+            var tree = jQuery("<ul></ul>");
+
+            edges.append(nodes[0]);
+            faces.append(nodes[1]);
             
+            edges = jQuery("<li id='Edges'><a href='#'>Edges</a></li>").append(edges);
+            faces = jQuery("<li id='Faces'><a href='#'>Faces</li>").append(faces);
+            
+            jQuery("ul", edges).before(getDisplayControls( 1 ));
+            jQuery("ul", faces).before(getDisplayControls( 9 ));
+
+            edges.data("attrs", 1);
+            faces.data("attrs", 9);
+
+            tree.append(edges, faces);
+            tree = jQuery("<div id='tree'></div>").append(tree);
+
+            jQuery("#leftframe").append(tree);
+                
             jQuery(".viz").click(handleControlClick("viz", g.plotAttrs.ON));
             jQuery(".grd").click(handleControlClick("grd", g.plotAttrs.LINES | g.plotAttrs.POINTS));
             jQuery(".trn").click(handleControlClick("trn", g.plotAttrs.TRANSPARENT));
             jQuery(".ori").click(handleControlClick("ori", g.plotAttrs.ORIENTATION));
+
+            jQuery("#tree").jstree({
+                "plugins" : ["html_data", "themes", "ui", "sort"],
+
+                "themes" : { 
+                    "theme" : "openmdao",
+                },
+            });
+
+            
         }
+            
 
         g.sgUpdate = 0;
     }
@@ -420,7 +390,7 @@ function wvUpdateUI()
 
   if (g.wheelDelta !== 0)
   {
-    var scale = Math.exp(g.wheelDelta/16.0);
+    var scale = Math.exp(g.wheelDelta/128.0);
     g.mvMatrix.scale(scale, scale, scale);
     g.scale   *= scale;
     g.sceneUpd = 1;
@@ -430,8 +400,8 @@ function wvUpdateUI()
   // now mouse movement
   if (g.dragging) 
   {
+    console.log("Something is busted.");
     // alt and shift key is down
-    console.log(g.modifier);
     if (g.modifier & (META_KEY) || g.modifier & (META_KEY | CTRL_KEY) || g.modifier & CTRL_KEY )
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
@@ -481,9 +451,7 @@ function wvUpdateUI()
 
     g.startX = g.cursorX;
     g.startY = g.cursorY;
-//    g.modifier = 0;
   }
-
 }
 
 
@@ -502,15 +470,16 @@ function reshape(gl)
 {
     var canvas = document.getElementById('WebViewer');
 
-    canvas.height = window.innerHeight * 0.95;
+    canvas.height = jQuery("#WebViewer").parent().height();
+    canvas.width = jQuery("#WebViewer").parent().width();
     //canvas.width = jQuery("#riteframe").css("width");
 
-    if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
+    if (g.offTop !== canvas.offsetTop || g.offLeft !== canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;
         g.offLeft = canvas.offsetLeft;
     }
 
-    if (g.width == canvas.width && g.height == canvas.height) return;
+    if (g.width === canvas.width && g.height === canvas.height) return;
 
     g.width  = canvas.width;
     g.height = canvas.height;
