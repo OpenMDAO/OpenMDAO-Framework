@@ -107,12 +107,13 @@ if sys.platform.startswith("linux"):
             }
 
             # Set some env vars used by jsTestDriver
-            os.environ['JSTESTDRIVER'] = \
-                """%(java_cmd)s -jar %(jstd_path)s --port %(port_num)d
-                                --captureConsole --browser %(browser)s""" % opts
+            os.environ['JSTESTDRIVER'] = "%(java_cmd)s -jar %(jstd_path)s " \
+                "--port %(port_num)d --captureConsole --browser %(browser)s" \
+                "--runnerMode DEBUG" % opts
             os.environ['JSTESTDRIVER_PORT'] = str(port_number)
             os.environ['JSTESTDRIVER_SERVER'] = \
                        'http://localhost:%d' % (port_number)
+            print os.environ
 
         def tearDown(self):
             #os.unlink(self.config_filename)

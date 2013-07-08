@@ -74,7 +74,8 @@ class CloseHandler(ReqHandler):
 class CommandHandler(ReqHandler):
     ''' POST: execute a command and return the console-like response.
               required arguments are:
-                  command - the command to execute
+
+              command - the command to execute
     '''
 
     @web.authenticated
@@ -114,9 +115,8 @@ class FileHandler(ReqHandler):
         DELETE: delete a file.
 
         POST:   if request contains a 'rename' argument,
-                    rename file to the value of rename argument
-                otherwise
-                    execute the file
+                rename file to the value of rename argument
+                otherwise execute the file
     '''
 
     @web.authenticated
@@ -172,8 +172,10 @@ class FilesHandler(ReqHandler):
     ''' GET: get heirarchical list of files.
 
         DELETE: delete files
+
                 required arguments are:
-                    filepaths - the pathnames of the files to delete
+                filepaths - the pathnames of the files to delete
+
                 returns 'True' if all files were successfully deleted
     '''
 
@@ -439,8 +441,9 @@ class SubscriptionHandler(ReqHandler):
 
 class TypeHandler(ReqHandler):
     ''' GET:    Get the attributes of a type.
+
                 param is required and must be one of:
-                    'signature'
+                'signature'
     '''
 
     @web.authenticated

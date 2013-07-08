@@ -460,12 +460,14 @@ def get_browser_download_location_path(browser):
         This leaves the browser window open
     '''
 
-    browser.get("chrome://settings-frame/settings")
+    try:
+        browser.get("chrome://settings-frame/settings")
+    except Exception as err:
+        print 'Error getting chrome settings page:', err
 
     element = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element(By.ID, 'downloadLocationPath'))
     download_location_path = element.get_attribute('value')
-
     return download_location_path
 
 
