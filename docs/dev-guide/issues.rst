@@ -108,5 +108,5 @@ page (under the project name) and click *Done* on the drop-down menu. The DONE c
 appear showing you the list of completed stories.
 
 So, if you wish to check the status of code development in OpenMDAO, just follow this link to
-the OpenMDAO-Framework project in Pivotal Tracker:  https://www.pivotaltracker.com/projects/470293. 
+the OpenMDAO-Framework project in Pivotal Tracker:  https://www.pivotaltracker.com/s/projects/470293. 
 
