@@ -99,21 +99,19 @@ if sys.platform.startswith("linux"):
                 raise SkipTest("The browser '%s' is not available for use in "
                                "GUI JavaScript unit testing" % browser_name)
 
-            opts = {
+            # Set some env vars used by jsTestDriver
+            jstd_opts = {
                 'java_cmd':  java_cmd,
                 'jstd_path': jstestdriver_path,
                 'port_num':  port_number,
                 'browser':   browser_exe_filepath,
             }
-
-            # Set some env vars used by jsTestDriver
             os.environ['JSTESTDRIVER'] = "%(java_cmd)s -jar %(jstd_path)s " \
                 "--port %(port_num)d --captureConsole --browser %(browser)s" \
-                "--runnerMode DEBUG" % opts
+                % jstd_opts
             os.environ['JSTESTDRIVER_PORT'] = str(port_number)
             os.environ['JSTESTDRIVER_SERVER'] = \
                        'http://localhost:%d' % (port_number)
-            print os.environ
 
         def tearDown(self):
             #os.unlink(self.config_filename)
