@@ -6,10 +6,8 @@
 # pylint: disable-msg=E0611,F0401
 import operator
 import ordereddict
-import ast
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.printexpr import print_node
 from openmdao.main.pseudocomp import PseudoComponent
 
 _ops = {
