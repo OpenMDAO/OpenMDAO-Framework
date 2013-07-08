@@ -84,7 +84,7 @@ TestCase("ProjectTest", {
         openmdao.project.commit_with_comment('a comment');
 
         // Check the requests
-        assertEquals("project", this.requests[0].url);
+        assertEquals("project/commit", this.requests[0].url);
         assertEquals("POST", this.requests[0].method);
         assertEquals(true, this.requests[0].async);
         assertEquals(1, this.requests.length);

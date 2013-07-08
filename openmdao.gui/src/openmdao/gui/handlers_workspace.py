@@ -63,14 +63,6 @@ class AddOnsHandler(BaseHandler):
         self.render('workspace/addons.html')
 
 
-class CloseHandler(ReqHandler):
-
-    @web.authenticated
-    def get(self):
-        self.delete_server()
-        self.redirect('/')
-
-
 class CommandHandler(ReqHandler):
     ''' POST: execute a command and return the console-like response.
               required arguments are:
@@ -171,10 +163,9 @@ class FileHandler(ReqHandler):
 class FilesHandler(ReqHandler):
     ''' GET: get heirarchical list of files.
 
-        DELETE: delete files
+        DELETE: delete files, arguments are:
 
-                required arguments are:
-                filepaths - the pathnames of the files to delete
+                filepaths - the pathnames of the files to delete (required)
 
                 returns 'True' if all files were successfully deleted
     '''
@@ -222,13 +213,15 @@ class GeometryHandler(ReqHandler):
 class ObjectHandler(ReqHandler):
     ''' GET:    Get the attributes of an object.
                 param is optional and can be one of:
-                    'dataflow', 'workflow', 'events', 'passthroughs', 'connections'
+                    dataflow
+                    workflow
+                    events
+                    passthroughs
+                    connections
 
-        PUT:    create or replace an object.
-                required arguments are:
-                    type - the type of the new object
-                optional arguments are:
-                    args - arguments required to create the new object
+        PUT:    create or replace an object. arguments are:
+                    type - the type of the new object (required)
+                    args - arguments required to create the new object (optional)
 
         POST:   execute an object.
 
@@ -345,54 +338,33 @@ class ObjectsHandler(ReqHandler):
                 break
 
 
-class ProjectLoadHandler(ReqHandler):
-    ''' GET:  load model from the given project archive,
-              or reload remembered project for session if no file given.
-    '''
-    @web.authenticated
-    def get(self):
-        path = self.get_argument('projpath', default=None)
-        if path:
-            self.set_secure_cookie('projpath', path)
-        else:
-            path = self.get_secure_cookie('projpath')
-        if path:
-            cserver = self.get_server()
-            cserver.load_project(path)
-            self.redirect(self.application.reverse_url('workspace'))
-        else:
-            self.redirect('/')
-
-
-class ProjectRevertHandler(ReqHandler):
-    ''' POST:  revert back to the most recent commit of the project.
-    '''
-    @web.authenticated
-    def post(self):
-        commit_id = self.get_argument('commit_id', default=None)
-        cserver = self.get_server()
-        ret = cserver.revert_project(commit_id)
-        if isinstance(ret, Exception):
-            self.send_error(500)
-        else:
-            self.write('Reverted.')
-
-
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
+              (loading a project is a two step process, this is the first step
+               in which the server is initialized... this should be followed
+               by a POST to project/load that will actually load the project)
 
-        POST: commit the current project.
+        POST: perform the specified processing directive on the current project.
+              param is required and must be one of:
+
+              load:     load model from the given project archive or reload
+                        the current project for session if no projpath given.
+
+                        args: projpath (optional)
+
+              commit    commit the current project.
+
+                        args: comment (optional)
+
+              revert:   revert back to the most recent commit of the project.
+
+                        args: commit_id (optional)
+
+              close:    close the current project
     '''
 
     @web.authenticated
-    def post(self):
-        comment = self.get_argument('comment', default='')
-        cserver = self.get_server()
-        cserver.commit_project(comment)
-        self.write('Committed.')
-
-    @web.authenticated
-    def get(self):
+    def get(self, param):
         path = self.get_argument('projpath', default=None)
         if path:
             self.set_secure_cookie('projpath', path)
@@ -407,6 +379,46 @@ class ProjectHandler(ReqHandler):
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
+
+    @web.authenticated
+    def post(self, param):
+        cserver = self.get_server()
+        if param:
+            param = param.lower()
+            if param == 'load':
+                path = self.get_argument('projpath', default=None)
+                if path:
+                    self.set_secure_cookie('projpath', path)
+                else:
+                    path = self.get_secure_cookie('projpath')
+                if path:
+                    cserver = self.get_server()
+                    cserver.load_project(path)
+                    self.redirect(self.application.reverse_url('workspace'))
+                else:
+                    self.redirect('/')
+            elif param == 'commit':
+                comment = self.get_argument('comment', default='')
+                cserver = self.get_server()
+                cserver.commit_project(comment)
+                self.write('Committed.')
+            elif param == 'revert':
+                commit_id = self.get_argument('commit_id', default=None)
+                cserver = self.get_server()
+                ret = cserver.revert_project(commit_id)
+                if isinstance(ret, Exception):
+                    self.send_error(500)
+                else:
+                    self.write('Reverted.')
+            elif param == 'close':
+                self.delete_server()
+                self.clear_cookie('projpath')
+                self.add_header('Location', '/')    # redirect to index
+                self.flush()
+            else:
+                self.send_error(400)  # bad request
+        else:
+            self.send_error(400)  # bad request
 
 
 class StreamHandler(ReqHandler):
@@ -553,84 +565,30 @@ class WorkspaceHandler(ReqHandler):
 
 
 handlers = [
-    web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
-    web.url(r'/workspace/project/?',        ProjectHandler),
-    web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
-    web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
+    web.url(r'/workspace/?',                    WorkspaceHandler, name='workspace'),
 
-
-    # new and improved
     web.url(r'/workspace/command',                                          CommandHandler),
 
     web.url(r'/workspace/files/?',                                          FilesHandler),
     web.url(r'/workspace/file/(.*)',                                        FileHandler),
 
+    web.url(r'/workspace/objects/?',                                        ObjectsHandler),
     web.url(r'/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?',  ObjectHandler),
+
+    web.url(r'/workspace/project/?(?P<param>[^\/]+)?',                      ProjectHandler),
 
     web.url(r'/workspace/stream/(.*)',                                      StreamHandler),
 
     web.url(r'/workspace/subscription/(.*)',                                SubscriptionHandler),
 
-    web.url(r'/workspace/types/?',                                          TypesHandler),
-    web.url(r'/workspace/type/(?P<typename>[^\/]+)/?(?P<param>[^\/]+)?',    TypeHandler),
+    web.url(r'/workspace/types',                                            TypesHandler),
+    web.url(r'/workspace/type/(?P<typename>[^\/]+)/(?P<param>[^\/]+)',      TypeHandler),
 
     web.url(r'/workspace/variable/(.*)',                                    VariableHandler),
 
     # tools
-    web.url(r'/workspace/tools/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/tools/editor/?',         EditorHandler),
-    web.url(r'/workspace/tools/geometry',         GeometryHandler),
-    web.url(r'/workspace/tools/upload/?',         UploadHandler),
+    web.url(r'/workspace/tools/addons/?',       AddOnsHandler),
+    web.url(r'/workspace/tools/editor/?',       EditorHandler),
+    web.url(r'/workspace/tools/geometry',       GeometryHandler),
+    web.url(r'/workspace/tools/upload/?',       UploadHandler),
 ]
-
-
-"""
-
-# POST   command, {command: command}
-
-# GET    files
-# DELETE files, {filepaths: [file1, file2, ...]}
-
-# GET    file/name
-# PUT    file/name, {contents: new_contents}
-# POST   file/name, {rename: newname}
-# DELETE file/name
-
-# GET    objects
-
-# GET    object/name
-# GET    object/name/connections
-# GET    object/name/dataflow
-# GET    object/name/workflow
-# GET    object/name/events
-# GET    object/name/passthroughs
-# PUT    object/name, {type: new_type, args: args}
-# DELETE object/name
-# POST   object/name   (exec)
-
-# GET    types
-
-# GET    type/name/signature
-
-# GET    stream/pub
-# GET    stream/out
-
-# GET    subscription/name
-# DELETE subscription/name
-
-GET    project/id
-POST   project/id, {version: previous_version} # no version means commit
-
-# GET    variable/name
-# PUT    variable/name, {value: value}
-
-
-
-/// utils
-
-GET editor
-GET upload
-GET addons
-GET close
-"""

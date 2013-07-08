@@ -49,11 +49,11 @@ openmdao.Project=function(listeners_ready) {
                 socket = new WebSocket(addr);
                 socket.binaryType = "arraybuffer"; // when binary msgs are received, treat as ArrayBuffers
                 _websockets.push(socket);
-                socket.onopen = function (e) {
+                socket.onopen = function(e) {
                     defrd.resolve(socket);
                     //debug.info('websocket opened '+socket.readyState,socket,e); displaySockets();
                 };
-                socket.onclose = function (e) {
+                socket.onclose = function(e) {
                     //debug.info('websocket closed',socket,e); displaySockets();
                     index = _websockets.indexOf(this);
                     if (index >= 0) {
@@ -78,12 +78,12 @@ openmdao.Project=function(listeners_ready) {
                     handler(e.data);
                 };
 
-                socket.onerror = function (e) {
+                socket.onerror = function(e) {
                     if (typeof errHandler === 'function') {
                         errHandler(e);
                     }
                     else {
-                        debug.error('websocket error',socket,e);
+                        debug.error('websocket error', socket, e);
                     }
                 };
             }
@@ -216,7 +216,7 @@ openmdao.Project=function(listeners_ready) {
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
     jQuery.when(ws_ready, listeners_ready).done(function() {
-        jQuery.ajax({ type: 'GET', url: 'project_load' })
+        jQuery.ajax({ type: 'POST', url: 'project/load' })
               .done(function() { _self.project_ready.resolve(); })
               .fail(function() { _self.project_ready.reject();  });
     });
@@ -292,7 +292,7 @@ openmdao.Project=function(listeners_ready) {
     this.commit_with_comment = function(comment) {
         jQuery.ajax({
             type: 'POST',
-            url:  'project',
+            url:  'project/commit',
             data: { 'comment': comment },
             complete: function(jqXHR, textStatus) {
                           if (typeof openmdao_test_mode !== 'undefined') {
@@ -313,7 +313,7 @@ openmdao.Project=function(listeners_ready) {
         openmdao.Util.confirm("Remove all uncommitted changes?", function() {
             jQuery.ajax({
                 type: 'POST',
-                url:  'project_revert',
+                url:  'project/revert',
                 success: function(data, textStatus, jqXHR) {
                     _self.reload();
                 },
@@ -670,11 +670,25 @@ openmdao.Project=function(listeners_ready) {
         window.location.replace('/workspace/project');
     };
 
-    /** close the project */
+    /** close the project and redirect */
     this.close = function() {
         closeWebSockets('close');
         closeWindows();
-        window.location.replace('/workspace/close');
+        jQuery.ajax({
+            type: 'POST',
+            url:  'project/close'
+        })
+        .done(function(data, textStatus, jqXHR) {
+            // closing the project will send us to a new url (the project list)
+            var url = jqXHR.getResponseHeader('Location');
+            if (url) {
+                window.location.replace(url);
+            }
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            debug.error('Error closing project',
+                        jqXHR, textStatus, errorThrown);
+        });
     };
 
     /** exit the gui */

@@ -5,12 +5,10 @@ openmdao.FileTreeFrame = function(id, project) {
     var _menu = [
         {   "text": "File",
             "items": [
-                { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
-                { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
-                { "text": "Add Files",  "onclick": "openmdao.FileTreeFrame.prototype.addFile();" },
-                { "text": "Delete Files",  "onclick": "openmdao.FileTreeFrame.prototype.deleteFiles();" },
-                { "text": "Toggle Hidden Files",  "onclick": "openmdao.FileTreeFrame.prototype.toggleFilter();" }
-
+                { "text": "New File",     "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
+                { "text": "New Folder",   "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
+                { "text": "Add Files",    "onclick": "openmdao.FileTreeFrame.prototype.addFile();" },
+                { "text": "Delete Files", "onclick": "openmdao.FileTreeFrame.prototype.deleteFiles();" }
             ]
         }
     ];
@@ -528,4 +526,3 @@ openmdao.FileTreeFrame.prototype.deleteFiles = function() {
                         jqXHR, textStatus, errorThrown);
         });
 };
-
