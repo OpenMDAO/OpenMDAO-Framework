@@ -74,8 +74,9 @@ end
         self.assertEqual(expected_inputs, 
             set([k for k,v in params if v['iotype']=='in']))
         expected_outs = set(['zcg', 'zmax', 'xcg', 'zmin', 'Ixz', 'Izx', 'Ixx', 'Ixy', 
-                'baseHt', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody', 'ymax', 'nnode', 'ycg', 'nface', 
-                'volume', 'Iyy', 'Iyx', 'Iyz', 'area', 'nedge', 'xmax'])
+                'baseHt', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody1', 'ibody2', 'ymax', 'nnode', 
+                'ycg', 'nface', 'volume', 'Iyy', 'Iyx', 'Iyz', 'area', 'nedge', 'xmax', 'iedge', 
+                'length', 'iface', 'inode', 'nbody'])
         self.assertEqual(expected_outs, set([k for k,v in params if v['iotype']=='out']))
 
         vals = geom.get_parameters(['baseHt'])
