@@ -169,6 +169,7 @@ class FiniteDifference(object):
         self.scope = pa.wflow.scope
         
         self.fd_step = 1.0e-6*ones((len(self.inputs)))
+        self.form = 'forward'
         
         in_size = 0
         for src in self.inputs:
@@ -188,6 +189,7 @@ class FiniteDifference(object):
         self.y_base = zeros((out_size,))
         self.x = zeros((in_size,))
         self.y = zeros((out_size,))
+        self.y2 = zeros((out_size,))
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
@@ -200,23 +202,83 @@ class FiniteDifference(object):
 
             for i in range(i1, i2):
                 
-                # Step
-                if i2-i1 == 1:
-                    self.set_value(src, fd_step)
-                else:
-                    self.set_value(src, fd_step, i-i1)
+                #--------------------
+                # Forward difference
+                #--------------------
+                if self.form == 'forward':
                     
-                self.pa.run(ffd_order=1)
-                self.get_outputs(self.y)
-                
+                    # Step
+                    if i2-i1 == 1:
+                        self.set_value(src, fd_step)
+                    else:
+                        self.set_value(src, fd_step, i-i1)
+                        
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+                    
+                    # Forward difference
+                    self.J[:, i] = (self.y - self.y_base)/fd_step
+                    
+                    # Undo step
+                    if i2-i1 == 1:
+                        self.set_value(src, -fd_step)
+                    else:
+                        self.set_value(src, -fd_step, i-i1)
+
+                #--------------------
                 # Backward difference
-                self.J[:, i] = (self.y - self.y_base)/fd_step
-                
-                # Undo step
-                if i2-i1 == 1:
-                    self.set_value(src, -fd_step)
-                else:
-                    self.set_value(src, -fd_step, i-i1)
+                #--------------------
+                elif self.form == 'backward':
+                    
+                    # Step
+                    if i2-i1 == 1:
+                        self.set_value(src, -fd_step)
+                    else:
+                        self.set_value(src, -fd_step, i-i1)
+                        
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+                    
+                    # Backward difference
+                    self.J[:, i] = (self.y - self.y_base)/fd_step
+                    
+                    # Undo step
+                    if i2-i1 == 1:
+                        self.set_value(src, fd_step)
+                    else:
+                        self.set_value(src, fd_step, i-i1)
+
+                #--------------------
+                # Central difference
+                #--------------------
+                elif self.form == 'central':
+                    
+                    # Forward Step
+                    if i2-i1 == 1:
+                        self.set_value(src, fd_step)
+                    else:
+                        self.set_value(src, fd_step, i-i1)
+                        
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+                    
+                    # Backward Step
+                    if i2-i1 == 1:
+                        self.set_value(src, -2.0*fd_step)
+                    else:
+                        self.set_value(src, -2.0*fd_step, i-i1)
+                        
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y2)
+                    
+                    # Backward difference
+                    self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
+                    
+                    # Undo step
+                    if i2-i1 == 1:
+                        self.set_value(src, fd_step)
+                    else:
+                        self.set_value(src, fd_step, i-i1)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -236,10 +298,16 @@ class FiniteDifference(object):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
 
-            self.scope.set(src, new_val, force=True)
+            if '[' in src:
+                src, _, idx = src.partition('[')
+                idx = int(idx[:-1])
+                old_val = self.scope.get(src)
+                old_val[idx] = new_val
+                self.scope.set(src, old_val, force=True)
+            else:
+                self.scope.set(src, new_val, force=True)
     
         # Reset OpenMDAO's valid state.
-        # Note: I don't know why i have to do this. Only needed for mda_solver
         for src in self.inputs:
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -270,17 +338,27 @@ class FiniteDifference(object):
         
         i1, i2 = self.in_bounds[src]
         old_val = self.scope.get(src)
+        comp_name, dot, var_name = src.partition('.')
         
         if index==None:
-            self.scope.set(src, old_val+val, force=True)
+            if '[' in src:
+                src, _, idx = src.partition('[')
+                idx = int(idx[:-1])
+                old_val = self.scope.get(src)
+                old_val[idx] += val
+                self.scope.set(src, old_val, force=True)
+            else:
+                self.scope.set(src, old_val+val, force=True)
         else:
             old_val[index] += val
             self.scope.set(src, old_val, force=True)
             
         # Prevent OpenMDAO from stomping on our poked input.
-        comp_name, dot, var_name = src.partition('.')
         comp = self.scope.get(comp_name)
         comp._valid_dict[var_name] = True
+        
+        # Make sure we execute!
+        comp._call_execute = True
             
                       
 #-------------------------------------------

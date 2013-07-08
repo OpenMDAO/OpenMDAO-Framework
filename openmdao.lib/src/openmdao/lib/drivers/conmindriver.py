@@ -37,7 +37,7 @@ except ImportError as err:
     zeros = lambda *args, **kwargs: None 
     numpy_int = int
 
-from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
+from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
@@ -179,7 +179,7 @@ class _consav(object):
 
 @stub_if_missing_deps('numpy', 'conmin')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
-class CONMINdriver(DriverUsesDerivatives):
+class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
@@ -238,6 +238,8 @@ class CONMINdriver(DriverUsesDerivatives):
                    desc='Absolute convergence tolerance.')
     linobj = Bool(False, iotype='in', desc='Linear objective function flag. '
                     'Set to True if objective is linear.')
+    conmin_diff = Bool(False, iotype='in', desc='Set to True to let CONMIN'
+                       'calculate the gradient.')
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '
                       'indicate convergence (relative or absolute).')
         
@@ -402,21 +404,42 @@ class CONMINdriver(DriverUsesDerivatives):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            self.ffd_order = 1
-            self.differentiator.calc_gradient()
-            self.ffd_order = 0
+            #self.ffd_order = 1
+            #self.differentiator.calc_gradient()
+            #self.ffd_order = 0
                 
-            self.d_obj[:-2] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
+            #self.d_obj[:-2] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
+            
+            #for i in range(len(self.cons_active_or_violated)):
+                #self.cons_active_or_violated[i] = 0
+                
+            #self.cnmn1.nac = 0
+            #for i, name in enumerate(self.get_ineq_constraints().keys()):
+                #if self.constraint_vals[i] >= self.cnmn1.ct:
+                    #self.cons_active_or_violated[self.cnmn1.nac] = i+1
+                    #self.d_const[:-2, self.cnmn1.nac] = \
+                        #self.differentiator.get_gradient(name)
+                    #self.cnmn1.nac += 1
+                    
+            inputs = self.get_parameters().keys()
+            obj = ["%s.out0" % item.pcomp_name for item in \
+                   self.get_objectives().values()]
+            con = ["%s.out0" % item.pcomp_name for item in \
+                   self.get_ineq_constraints().values()]
+    
+            J = self.workflow.calc_gradient(inputs, obj + con)
+
+            nobj = len(obj)
+            self.d_obj[:-2] = J[0:nobj, :].flatten()
             
             for i in range(len(self.cons_active_or_violated)):
                 self.cons_active_or_violated[i] = 0
                 
             self.cnmn1.nac = 0
-            for i, name in enumerate(self.get_ineq_constraints().keys()):
+            for i in range(len(self.get_ineq_constraints())):
                 if self.constraint_vals[i] >= self.cnmn1.ct:
                     self.cons_active_or_violated[self.cnmn1.nac] = i+1
-                    self.d_const[:-2, self.cnmn1.nac] = \
-                        self.differentiator.get_gradient(name)
+                    self.d_const[:-2, self.cnmn1.nac] = -J[nobj+i, :]
                     self.cnmn1.nac += 1
                     
         else:
@@ -510,11 +533,11 @@ class CONMINdriver(DriverUsesDerivatives):
         # array of active or violated constraints (ic in CONMIN)
         self.cons_active_or_violated = zeros(n3, 'i')
         
-        # stuff for gradients
-        if self.differentiator:
-            self.nfdg = 1
-        else:
+        # Let CONMIN calc gradients
+        if self.conmin_diff:
             self.nfdg = 0
+        else:
+            self.nfdg = 1
                 
         self.d_const = zeros((int(n1), int(n3)), 'd')
         self.d_obj = zeros(num_dvs+2, 'd')

@@ -41,6 +41,7 @@ class SequentialWorkflow(Workflow):
         self._collapsed_graph = None
         self._topsort = None
         self._find_nondiff_blocks = True
+        self._input_outputs = []
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -167,6 +168,21 @@ class SequentialWorkflow(Workflow):
         edges = graph.get_interior_edges(self.get_names(full=True))
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
+                
+        # Somtimes we connect an input to an input (particularly with
+        # constraints). These need to be rehooked to corresponding source
+        # edges.
+        
+        self._input_outputs = []
+        for edge in edges:
+            src, target = edge
+            if src == '@in' or target=='@out' or '_pseudo_' in src:
+                continue
+            compname, _, var = src.partition('.')
+            var = var.split('[')[0]
+            comp = self.scope.get(compname)
+            if var in comp.list_inputs():
+                self._input_outputs.append(src)
                 
         return sorted(list(edges))
 
@@ -298,13 +314,12 @@ class SequentialWorkflow(Workflow):
                     key = item.partition('.')[0]
                     pa_ref[key] = name
 
-
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            if src != '@in':
+            if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
@@ -320,6 +335,7 @@ class SequentialWorkflow(Workflow):
                 inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyJ on each component
+        
         for comp in self.derivative_iter():
             name = comp.name
             
@@ -327,7 +343,6 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinv'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinv(inputs[name], pre_inputs)
-            
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -349,12 +364,22 @@ class SequentialWorkflow(Workflow):
             if src == '@in':
                 src = target
                 
+            # Input-input connections are not in the jacobians. We need
+            # to add the derivative (which is 1.0).
+            elif src in self._input_outputs:
+                comp_name, dot, var_name = src.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                continue
+                
             comp_name, dot, var_name = src.partition('.')
             if comp_name in pa_ref:
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
-            
+        
         return result
     
     def group_nondifferentiables(self):
@@ -442,7 +467,7 @@ class SequentialWorkflow(Workflow):
             # Remove old nodes
             for node in group:
                 graph.remove_node(node)
-                
+
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]
             outputs = [a for a, b in outputs]
@@ -459,6 +484,11 @@ class SequentialWorkflow(Workflow):
                 if comp_name in group:
                     inputs.append(target)
                 
+            # Input to input connections lead to extra outputs.
+            for item in self._input_outputs:
+                if item in outputs:
+                    outputs.remove(item)
+
             # Create pseudo_assy
             comps = [getattr(self.scope, name) for name in group]
             pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 

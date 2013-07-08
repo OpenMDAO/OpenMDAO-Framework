@@ -64,11 +64,11 @@ class MDASolver(Driver):
     def execute_Gauss_Seidel(self):
         """ Solver execution loop: fixed point iteration. """
         
-        # Find dimension of our problem.
-        self.workflow.initialize_residual()
-        
         # Initial Run
         self.run_iteration()
+        
+        # Find dimension of our problem.
+        self.workflow.initialize_residual()
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())

@@ -21,10 +21,10 @@ OpenMDAO Developer Guide
 .. toctree::
    :maxdepth: 1
    
-   documenting/index
-   plugin-guide/index
    dev-guide/index
+   plugin-guide/index
    code-contribution-example
+   documenting/index
    
 ==============================
 Appendix and Glossary

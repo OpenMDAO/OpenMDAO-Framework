@@ -90,22 +90,37 @@ class Constraint(object):
         if it evaluates to a value <= 0.
         """
         scope = self.lhs.scope
-        zero = False
+        
+        if self.comparator.startswith('>'):
+            first = self.rhs.text
+            second = self.lhs.text
+        else:
+            first = self.lhs.text
+            second = self.rhs.text
+
+        first_zero = False
         try:
-            f = float(self.rhs.text)
+            f = float(first)
         except:
             pass
         else:
             if f == 0:
-                zero = True
-
-        if zero:
-            newexpr = self.lhs.text
+                first_zero = True
+        second_zero = False
+        try:
+            f = float(second)
+        except:
+            pass
         else:
-            newexpr = '%s-(%s)' % (self.lhs.text, self.rhs.text)
-        
-        if self.comparator.startswith('>'):
-            newexpr = "-(%s)" % newexpr
+            if f == 0:
+                second_zero = True
+
+        if first_zero:
+            newexpr = "-(%s)" % second
+        elif second_zero:
+            newexpr = "%s" % first
+        else:
+            newexpr = '%s-(%s)' % (first, second)
             
         return ExprEvaluator(newexpr, scope)
 

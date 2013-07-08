@@ -456,7 +456,6 @@ class Testcase_derivatives(unittest.TestCase):
         
         top.comp1.x = 2.0
         top.run()
-        #top.driver.differentiator.calc_gradient()
         
         J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
         assert_rel_error(self, J[0,0], 48.0, .001)
