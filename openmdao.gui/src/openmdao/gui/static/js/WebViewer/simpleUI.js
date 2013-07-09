@@ -165,9 +165,9 @@ function handleControlClick(attribute, mask){
 
     return function( e ){
         var root = jQuery( this ).is( "button" ) ? jQuery( this ).parent().parent() : jQuery( this ).parent();
-        var data = getNodedata( root, "gprim" );
+        var data = getNodeData( root, "gprim" );
 
-        data =  data ? data : getNodeData( root, "attrs" );
+        data =  data ? data.attrs : getNodeData( root, "attrs" );
 
         var flag = data & mask > 0 ? 0 : mask;
 
@@ -470,9 +470,8 @@ function reshape(gl)
 {
     var canvas = document.getElementById('WebViewer');
 
-    canvas.height = jQuery("#WebViewer").parent().height();
-    canvas.width = jQuery("#WebViewer").parent().width();
-    //canvas.width = jQuery("#riteframe").css("width");
+    canvas.height = window.innerHeight * 0.95;
+    canvas.width = jQuery("#riteframe").parent().width();
 
     if (g.offTop !== canvas.offsetTop || g.offLeft !== canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;

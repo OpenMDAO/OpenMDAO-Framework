@@ -5,7 +5,7 @@
  */
  -->
 <html>
-<head>
+    <head></head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
 <link href="/static/css/mdao-styles.css" rel="stylesheet" media="screen">
@@ -27,10 +27,11 @@
 
 <body onload="wvStart()">
     <div class="row-fluid"> 
-        <div class="span2" id='leftframe'></div>
+        <div class="span3" id='leftframe'></div>
         <div class="span9" id='riteframe'>
             <div class="row-fluid">
                 <div class="span9">
+                    <a id="modal_button" href="#myModal" role="button" class="btn btn-small" data-toggle="modal"><i class="icon-info-sign"></i></a>
                     <canvas id="WebViewer">
                                     If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
                     </canvas>
@@ -42,9 +43,6 @@
             </div>
         </div>
 
-        <div class="span1" id="helpframe">
-            <a href="#myModal" role="button" class="btn btn-small" data-toggle="modal"><i class="icon-info-sign"></i></a>
-        </div>
     </div>
 
     <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -157,30 +155,6 @@
         g.messageQ.push(message[1]);
     };
 
-    //var myTree = new Tree(document, "myTree");
-    /*var myTree = jQuery("#leftframe").jstree({
-        "plugins" : ["json_data", "themes", "ui", "sort"],
-
-        "json_data" : {
-            "data" : [],
-        },
-
-        "themes" : { 
-            "theme" : "openmdao",
-        },
-
-        "sort" : function( a, b ){
-            var aIndices = this.get_text(a).split(" ");
-            var bIndices = this.get_text(b).split(" ");
-
-            var aIndex = aIndices.length > 1 ? aIndices[1] : this.get_text(a);
-            var bIndex = bIndices.length > 1 ? bIndices[1] : this.get_text(b);
-
-            return aIndex > bIndex ? 1 : -1;
-        },
-
-    });*/
-
     window.opener.openmdao.model.addListener("{{geom_name}}", handleMsg);
     //var myTree = new Tree(document, "myTree", "Viz", "on", "Grd", "off", "Trn", "off");
 
@@ -198,17 +172,17 @@
         overflow: hidden;
         background: black;
     }
-    .text {
-        /*position:absolute;*/
-        top:100px;
-        left:20px;
-        font-size:2em;
-        color: white;
-    }
     .fps {
         color: white;
     }
 
+    #modal_button {
+        position: absolute;
+        top: 0px;
+        right: 0px;
+    }
+
+
+
 </style>
-</head>
 </html>
