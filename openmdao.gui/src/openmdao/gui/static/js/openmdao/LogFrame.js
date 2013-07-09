@@ -56,7 +56,7 @@ openmdao.LogFrame = function(id, model) {
 
     // Open log in separate window.
     function doPopout(ev) {
-        var init_fn = 'jQuery(function() { openmdao.PopoutLogFrame() })';
+        var init_fn = 'jQuery(function(){openmdao.PopoutLogFrame()})';
         openmdao.Util.scriptWindow('', init_fn);
         self.close();
     }
@@ -73,8 +73,7 @@ openmdao.LogFrame = function(id, model) {
                 self.filterCriteria = [];
                 var allChecked = true;
                 jQuery.each(levels, function(idx, level) {
-                    var level = levels[idx],
-                        id = baseId+'-'+level,
+                    var id = baseId+'-'+level,
                         element = jQuery('#'+id);
                     if (element.attr('checked')) {
                         self.filterCriteria.push(level.charAt(0).toUpperCase());

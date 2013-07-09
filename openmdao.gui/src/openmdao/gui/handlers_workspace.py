@@ -550,6 +550,8 @@ class WorkspaceHandler(ReqHandler):
 
 
 handlers = [
+    web.url(r'/workspace/base/?',           ReqHandler),
+
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
