@@ -19,26 +19,26 @@ class ReqHandler(BaseHandler):
 
     @web.authenticated
     def post(self):
-        attributes = {}
+        args = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
-                attributes[field] = self.request.arguments[field][0]
+                args[field] = self.request.arguments[field][0]
             else:
-                attributes[field] = False
-        self.render('workspace/base.html', **attributes)
+                args[field] = False
+        self.render('workspace/base.html', **args)
 
     @web.authenticated
     def get(self):
-        attributes = {}
+        args = {}
         for field in ['head_script']:
             if field in self.request.arguments.keys():
                 s = self.request.arguments[field][0]
                 s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
                 s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
-                attributes[field] = s
+                args[field] = s
             else:
-                attributes[field] = False
-        self.render('workspace/base.html', **attributes)
+                args[field] = False
+        self.render('workspace/base.html', **args)
 
 
 class AddOnsHandler(BaseHandler):
@@ -219,7 +219,8 @@ class GeometryHandler(ReqHandler):
 
 
 class ObjectHandler(ReqHandler):
-    ''' GET:    get the attributes of object `pathname`. param is optional and can be one of:
+    ''' GET:    get the attributes of object `pathname`
+                `attr` is optional and can specify one of the following:
                     dataflow
                     workflow
                     events
@@ -238,45 +239,48 @@ class ObjectHandler(ReqHandler):
     '''
 
     @web.authenticated
-    def get(self, pathname, param):
+    def get(self, pathname, attr):
         if pathname.lower() == 'none':
             pathname = None
         cserver = self.get_server()
-        attr = {}
+        result = {}
         for retry in range(3):
             try:
-                if param:
-                    param = param.lower()
-                    if param == 'dataflow':
-                        attr = cserver.get_dataflow(pathname)
-                    elif param == 'workflow':
-                        attr = cserver.get_workflow(pathname)
-                    elif param == 'events':
-                        attr = cserver.get_available_events(pathname)
-                    elif param == 'passthroughs':
-                        attr = cserver.get_passthroughs(pathname)
-                    elif param == 'connections':
+                if attr:
+                    attr = attr.lower()
+                    if attr == 'dataflow':
+                        result = cserver.get_dataflow(pathname)
+                    elif attr == 'workflow':
+                        result = cserver.get_workflow(pathname)
+                    elif attr == 'events':
+                        result = cserver.get_available_events(pathname)
+                    elif attr == 'passthroughs':
+                        result = cserver.get_passthroughs(pathname)
+                    elif attr == 'connections':
                         source = self.get_argument('source', default=None)
                         target = self.get_argument('target', default=None)
-                        attr = cserver.get_connections(pathname, source, target)
+                        result = cserver.get_connections(pathname, source, target)
                     else:
                         self.send_error(400)  # bad request
                 else:
-                    attr = cserver.get_attributes(pathname)
+                    result = cserver.get_attributes(pathname)
 
                 self.content_type = 'application/javascript'
-                self.write(attr)
+                self.write(result)
             except AssertionError as exc:
-                # Have had issues with `attr` being ZMQ_RPC.invoke args.
+                # Have had issues with `result` being ZMQ_RPC.invoke args.
                 print >>sys.stderr, "ObjectHandler: Can't write %r: %s" \
-                                    % (attr, str(exc) or repr(exc))
+                                    % (result, str(exc) or repr(exc))
                 if retry >= 2:
                     raise
             else:
                 break
 
     @web.authenticated
-    def put(self, pathname, param):
+    def put(self, pathname, attr):
+        if attr:
+            self.send_error(400)  # bad request
+
         arg_keys = self.request.arguments.keys()
         if not 'type' in arg_keys:
             self.send_error(400)  # bad request
@@ -301,7 +305,10 @@ class ObjectHandler(ReqHandler):
         self.write(result)
 
     @web.authenticated
-    def post(self, pathname, param):
+    def post(self, pathname, attr):
+        if attr:
+            self.send_error(400)  # bad request
+
         cserver = self.get_server()
         result = ''
         try:
@@ -315,7 +322,10 @@ class ObjectHandler(ReqHandler):
             self.write(result)
 
     @web.authenticated
-    def delete(self, pathname, param):
+    def delete(self, pathname, attr):
+        if attr:
+            self.send_error(400)  # bad request
+
         cserver = self.get_server()
         result = ''
         try:
@@ -352,34 +362,35 @@ class ObjectsHandler(ReqHandler):
 
 
 class ProjectHandler(ReqHandler):
-    ''' GET:  start up an empty workspace and prepare to load a project.
-              (loading a project is a two step process, this is the first step
-               in which the server is initialized and the workspace is loaded...
-               when workspace is loaded and websockets are connected, this
-               should be followed up with a POST to project/load that will
-               actually load the project in to the server)
+    ''' GET:    start up an empty workspace and prepare to load a project.
+                (loading a project is a two step process, this is the first step
+                in which the server is initialized and the workspace is loaded...
+                when workspace is loaded and websockets are connected, this
+                should be followed up with a POST to project/load that will
+                actually load the project in to the server)
 
-        POST: perform the specified processing directive on the current project.
-              param is required and must be one of:
+        POST:   perform the specified action on the current project, arguments are:
 
-              load:     load project into the current server
-                        if no project path is given, get from session cookie.
+                action: one of the following (required)
 
-                        args: projpath (optional)
+                    load:   load project into the current server
+                            if no project path is given, get from session cookie.
 
-              commit    commit the current project.
+                            additional args: projpath (optional)
 
-                        args: comment (optional)
+                    commit: commit the current project.
 
-              revert:   revert back to the most recent commit of the project.
+                            additional args: comment (optional)
 
-                        args: commit_id (optional)
+                    revert: revert back to the most recent commit of the project.
 
-              close:    close the current project
+                            additional args: commit_id (optional)
+
+                    close:  close the current project
     '''
 
     @web.authenticated
-    def get(self, param):
+    def get(self):
         path = self.get_argument('projpath', default=None)
         if path:
             self.set_secure_cookie('projpath', path)
@@ -396,11 +407,12 @@ class ProjectHandler(ReqHandler):
             self.redirect('/')
 
     @web.authenticated
-    def post(self, param):
-        cserver = self.get_server()
-        if param:
-            param = param.lower()
-            if param == 'load':
+    def post(self):
+        action = self.get_argument('action', default=None)
+        if action:
+            cserver = self.get_server()
+            action = action.lower()
+            if action == 'load':
                 path = self.get_argument('projpath', default=None)
                 if path:
                     self.set_secure_cookie('projpath', path)
@@ -409,26 +421,26 @@ class ProjectHandler(ReqHandler):
                 if path:
                     cserver = self.get_server()
                     cserver.load_project(path)
-                    self.write('Loaded.')
+                    self.set_status(204)  # successful, no data in response
                 else:
                     self.send_error(400)  # bad request
-            elif param == 'commit':
+            elif action == 'commit':
                 comment = self.get_argument('comment', default='')
                 cserver = self.get_server()
                 cserver.commit_project(comment)
-                self.write('Committed.')
-            elif param == 'revert':
+                self.set_status(204)  # successful, no data in response
+            elif action == 'revert':
                 commit_id = self.get_argument('commit_id', default=None)
                 cserver = self.get_server()
                 ret = cserver.revert_project(commit_id)
                 if isinstance(ret, Exception):
                     self.send_error(500)
                 else:
-                    self.write('Reverted.')
-            elif param == 'close':
+                    self.set_status(204)  # successful, no data in response
+            elif action == 'close':
                 self.delete_server()
                 self.clear_cookie('projpath')
-                self.write('Closed.')
+                self.set_status(204)  # successful, no data in response
             else:
                 self.send_error(400)  # bad request
         else:
@@ -467,18 +479,18 @@ class SubscriptionHandler(ReqHandler):
 
 class TypeHandler(ReqHandler):
     ''' GET:    get attributes of type `typename`
-                param is required and must be one of:
+                `attr` is required and must be one of:
 
                 signature:  arguments required to create an instance of `typename`
     '''
 
     @web.authenticated
-    def get(self, typename, param):
+    def get(self, typename, attr):
         cserver = self.get_server()
         result = ''
-        if param:
-            param = param.lower()
-            if param == 'signature':
+        if attr:
+            attr = attr.lower()
+            if attr == 'signature':
                 signature = cserver.get_signature(typename)
                 result = json.dumps(signature)
             else:
@@ -593,16 +605,16 @@ handlers = [
     web.url(r'/workspace/file/(.*)',                                        FileHandler),
 
     web.url(r'/workspace/objects/?',                                        ObjectsHandler),
-    web.url(r'/workspace/object/(?P<pathname>[^\/]+)/?(?P<param>[^\/]+)?',  ObjectHandler),
+    web.url(r'/workspace/object/(?P<pathname>[^\/]+)/?(?P<attr>[^\/]+)?',   ObjectHandler),
 
-    web.url(r'/workspace/project/?(?P<param>[^\/]+)?',                      ProjectHandler),
+    web.url(r'/workspace/project',                                          ProjectHandler),
 
     web.url(r'/workspace/stream/(.*)',                                      StreamHandler),
 
     web.url(r'/workspace/subscription/(.*)',                                SubscriptionHandler),
 
     web.url(r'/workspace/types',                                            TypesHandler),
-    web.url(r'/workspace/type/(?P<typename>[^\/]+)/(?P<param>[^\/]+)',      TypeHandler),
+    web.url(r'/workspace/type/(?P<typename>[^\/]+)/(?P<attr>[^\/]+)',       TypeHandler),
 
     web.url(r'/workspace/variable/(.*)',                                    VariableHandler),
 

@@ -216,7 +216,7 @@ openmdao.Project=function(listeners_ready) {
     // this makes project loading wait until after the listeners have
     // been registered and the websockets opened
     jQuery.when(ws_ready, listeners_ready).done(function() {
-        jQuery.ajax({ type: 'POST', url: 'project/load' })
+        jQuery.ajax({ type: 'POST', url: 'project', data: {'action': 'load'} })
               .done(function() { _self.project_ready.resolve(); })
               .fail(function() { _self.project_ready.reject();  });
     });
@@ -292,8 +292,8 @@ openmdao.Project=function(listeners_ready) {
     this.commit_with_comment = function(comment) {
         jQuery.ajax({
             type: 'POST',
-            url:  'project/commit',
-            data: { 'comment': comment },
+            url:  'project',
+            data: { 'action': 'commit', 'comment': comment },
             complete: function(jqXHR, textStatus) {
                           if (typeof openmdao_test_mode !== 'undefined') {
                               openmdao.Util.notify('Commit complete: ' +textStatus);
@@ -313,7 +313,8 @@ openmdao.Project=function(listeners_ready) {
         openmdao.Util.confirm("Remove all uncommitted changes?", function() {
             jQuery.ajax({
                 type: 'POST',
-                url:  'project/revert',
+                url:  'project',
+                data: {'action': 'revert'},
                 success: function(data, textStatus, jqXHR) {
                     _self.reload();
                 },
@@ -370,8 +371,7 @@ openmdao.Project=function(listeners_ready) {
         var jqXHR = jQuery.ajax({
                         type: 'GET',
                         url:  'object/'+pathname+'/passthroughs',
-                        dataType: 'json',
-                        data: {}
+                        dataType: 'json'
                     });
         return jqXHR.promise();
     };
@@ -381,8 +381,7 @@ openmdao.Project=function(listeners_ready) {
         var jqXHR = jQuery.ajax({
                         type: 'GET',
                         url:  'object/'+name,
-                        dataType: 'json',
-                        data: {}
+                        dataType: 'json'
                     });
         return jqXHR.promise();
     };
@@ -392,8 +391,7 @@ openmdao.Project=function(listeners_ready) {
         var jqXHR = jQuery.ajax({
                         type: 'GET',
                         url:  'object/'+pathname+'/events',
-                        dataType: 'json',
-                        data: {}
+                        dataType: 'json'
                     });
         return jqXHR.promise();
     };
@@ -675,7 +673,8 @@ openmdao.Project=function(listeners_ready) {
         closeWebSockets('close');
         jQuery.ajax({
             type: 'POST',
-            url:  'project/close'
+            url:  'project',
+            data: {'action': 'close'}
         })
         .done(function() {
             window.location.replace(url);
