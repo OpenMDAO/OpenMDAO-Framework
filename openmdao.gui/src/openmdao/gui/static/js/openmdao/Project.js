@@ -603,7 +603,6 @@ openmdao.Project=function(listeners_ready) {
         return jqXHR.promise();
     };
 
-
     /** delete file with specified path from the project working directory */
     this.removeFile = function(filepath) {
         var jqXHR = jQuery.ajax({
@@ -670,7 +669,7 @@ openmdao.Project=function(listeners_ready) {
         window.location.replace('/workspace/project');
     };
 
-    /** close the project and redirect to the specidied url */
+    /** close the project and redirect to the specified url */
     this.close = function(url) {
         closeWindows();
         closeWebSockets('close');
@@ -679,8 +678,12 @@ openmdao.Project=function(listeners_ready) {
             url:  'project/close'
         })
         .done(function() {
-            debug.info('Project.close() done, redirecting to:', url);
-            // window.location.replace(url);
+            window.location.replace(url);
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            debug.error('Error closing project',
+                        jqXHR, textStatus, errorThrown);
+            alert('Error closing project: '+textStatus+'\n'+errorThrown);
         });
     };
 

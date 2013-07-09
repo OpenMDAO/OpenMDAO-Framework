@@ -4,7 +4,7 @@
         { "text": "Commit",        "id": "project-commit",  "onclick": "openmdao.project.commit();" },
         { "text": "Revert",        "id": "project-revert",  "onclick": "openmdao.project.revert();" },
         { "text": "Reload",        "id": "project-reload",  "onclick": "openmdao.project.reload();" },
-        { "text": "Close",         "id": "project-close",   "onclick": "openmdao.project.close('/close');" },
+        { "text": "Close",         "id": "project-close",   "onclick": "openmdao.project.close('/');" },
         { "text": "Exit",          "id": "project-exit",    "onclick": "openmdao.project.close('/exit');" }
       ]
     },

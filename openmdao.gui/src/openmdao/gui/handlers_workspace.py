@@ -81,7 +81,8 @@ class CommandHandler(ReqHandler):
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception as exc:
-                print exc
+                print >>sys.stderr, "CommandHandler: Error issuing command %s: %s" \
+                                    % (command, str(exc) or repr(exc))
                 result += str(sys.exc_info())
             if result:
                 result += '\n'
@@ -154,7 +155,8 @@ class FileHandler(ReqHandler):
             else:
                 result = cserver.execfile(filename)
         except Exception as exc:
-            print exc
+            print >>sys.stderr, "FileHandler: Error %s file: %s" \
+                % ('renaming' if newname else 'executing', str(exc) or repr(exc))
             result = result + str(sys.exc_info()) + '\n'
         self.content_type = 'text/html'
         self.write(result)
@@ -285,7 +287,8 @@ class ObjectHandler(ReqHandler):
             cserver = self.get_server()
             cserver.put_object(pathname, type, args)
         except Exception as exc:
-            print exc
+            print >>sys.stderr, "ObjectHandler: Error putting %r: %s" \
+                                % (pathname, str(exc) or repr(exc))
             result = str(sys.exc_info())
         self.content_type = 'text/html'
         self.write(result)
@@ -542,7 +545,8 @@ class VariableHandler(ReqHandler):
                 cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception as exc:
-                print exc
+                print >>sys.stderr, "VariableHandler: Error issuing command %s: %s" \
+                                    % (command, str(exc) or repr(exc))
                 result += str(sys.exc_info())
             if result:
                 result += '\n'
