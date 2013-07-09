@@ -52,7 +52,7 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
 openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
                          ]
 
-def _get_adjust_options(options, version, setuptools_url):
+def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
@@ -86,10 +86,13 @@ def adjust_options(options, args):
 
     try:
         download('%s')
+        import ez_setup
+        ez_setup.use_setuptools(version='%s', download_base='https://openmdao.org/dists')
+        os.remove('ez_setup.py')
     except Exception as err:
         logger.warn(str(err))
 
-""" % (code, setuptools_url)
+""" % (code, setuptools_url, setuptools_version)
 
 def main(args=None):
     if args is None:
@@ -326,7 +329,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.7.4"
+    setuptools_version = "0.8"
     setuptools_egg = \"setuptools-%%s-py%%s.egg\" %% (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
@@ -558,7 +561,7 @@ def after_install(options, home_dir, activated=False):
     guitestreqs = list(guitestreqs)
 
     # pin setuptools to this version
-    setuptools_version = "0.7.4"
+    setuptools_version = "0.8"
     setuptools_url = "https://openmdao.org/dists/setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
     optdict = { 
         'mkdir_pkg' : offline_[3],
@@ -574,7 +577,7 @@ def after_install(options, home_dir, activated=False):
         'url': options.findlinks,
         'make_dev_eggs': make_dev_eggs,
         'make_docs': make_docs,
-        'adjust_options': _get_adjust_options(options, version, setuptools_url),
+        'adjust_options': _get_adjust_options(options, version, setuptools_url, setuptools_version),
         'openmdao_prereqs': openmdao_prereqs,
     }
     
