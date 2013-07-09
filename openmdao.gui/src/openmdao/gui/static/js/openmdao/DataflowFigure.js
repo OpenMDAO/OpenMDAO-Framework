@@ -1,7 +1,7 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfaces) {
-    this.openmdao_model = model;
+openmdao.DataflowFigure=function(project, pathname, prop_fn, type, valid, interfaces) {
+    this.project = project;
     this.pathname = pathname;
     this.prop_fn = prop_fn;
     this.name = openmdao.Util.getName(pathname);
@@ -85,7 +85,7 @@ openmdao.DataflowFigure=function(model, pathname, prop_fn, type, valid, interfac
 
         // listen for changes to valid status due to execution
         topic = pathname+'.exec_state';
-        model.addListener(topic, this.setExecState.bind(this));
+        this.project.addListener(topic, this.setExecState.bind(this));
     }
 };
 
@@ -95,7 +95,7 @@ openmdao.DataflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.DataflowFigure.prototype.destroy=function(){
     // remove listener
     topic = this.pathname+'.exec_state';
-    this.openmdao_model.removeListener(topic,this.setExecState.bind(this));
+    this.project.removeListener(topic,this.setExecState.bind(this));
 };
 
 /** Remove component figure. */
@@ -233,7 +233,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
            but it ends up in a layer below it
         */
         var self = this,
-            model = this.openmdao_model,
             maxmin = this.maxmin,
             elm = jQuery(item);
 
@@ -280,11 +279,11 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.reset();
 
                 if (maxmin !== '') {
-                    openmdao.model.addObject(droppedPath, droppedName,
+                    openmdao.project.addObject(droppedPath, droppedName,
                                              elm.data("pathname"));
                 }
                 else {
-                    openmdao.model.replaceObject(droppedPath, droppedName,
+                    openmdao.project.replaceObject(droppedPath, droppedName,
                                                  elm.data("pathname"));
                 }
             }
@@ -323,7 +322,7 @@ openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
 
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){
-    new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
+    new openmdao.ObjectFrame(this.project, this.pathname);
 };
 
 /** hook into setWorkflow to add input & ouput ports */
@@ -356,9 +355,9 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
             this.fbInputPort.setId(this.pathname+"-fbInput");
         }
 
-        var model = this.openmdao_model,
-            name = this.name,
-            pathname = this.pathname;
+        var name = this.name,
+            pathname = this.pathname,
+            project = this.project;
 
         var onDragstart = function(x, y) {
             var dragStarted = draw2d.OutputPort.prototype.onDragstart.call(this, x, y);
@@ -392,7 +391,7 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(pathname),
                         src  = name,
                         dst  = request.source.getParent().name;
-                    var f = new openmdao.ConnectionsFrame(model,path,src,dst);
+                    var f = new openmdao.ConnectionsFrame(project,path,src,dst);
                 }
                 return null;
             }
@@ -502,7 +501,6 @@ openmdao.DataflowFigure.prototype.setBackgroundColor=function(color){
 openmdao.DataflowFigure.prototype.getContextMenu=function(){
     var self = this,
         menu = new draw2d.Menu(),
-        model = this.openmdao_model,
         pathname = this.pathname,
         name = this.name,
         connections = this.connections,
@@ -515,18 +513,18 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // edit
         menu.appendMenuItem(new draw2d.MenuItem("Edit", null, function(){
-            cf = new openmdao.ObjectFrame(model, pathname);
+            cf = new openmdao.ObjectFrame(self.project, pathname);
         }));
 
         // properties
         menu.appendMenuItem(new draw2d.MenuItem("Properties", null, function() {
             var id = (pathname+'-properties').replace(/\./g,'-');
-            f = new openmdao.PropertiesFrame(id, model).editObject(pathname);
+            f = new openmdao.PropertiesFrame(id, self.project).editObject(pathname);
         }));
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
-            model.runComponent(pathname);
+            self.project.runComponent(pathname);
         }));
 
 
@@ -537,7 +535,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         // if maximized, add menu items for editing/toggling connections
         if (this.maxmin === '-') {
             menu.appendMenuItem(new draw2d.MenuItem("Edit Data Connections", null, function() {
-                var f = new openmdao.ConnectionsFrame(model, pathname);
+                var f = new openmdao.ConnectionsFrame(self.project, pathname);
             }));
 
             if (this.drawDataFlows) {
@@ -568,7 +566,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
             // Edit passthroughs
             menu.appendMenuItem(new draw2d.MenuItem("Edit Passthroughs", null, function() {
-                var f = new openmdao.PassthroughsFrame(model, pathname);
+                var f = new openmdao.PassthroughsFrame(self.project, pathname);
 
             }));
 
@@ -582,13 +580,13 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         if ((this.maxmin !== '-') && (asm.length > 0)) {
             menu.appendMenuItem(new draw2d.MenuItem("Disconnect", null, function() {
                 var cmd = asm + '.disconnect("'+name+'");';
-                model.issueCommand(cmd);
+                self.project.issueCommand(cmd);
             }));
         }
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove", null, function() {
-            model.removeObject(pathname);
+            self.project.removeObject(pathname);
         }));
 
         menu.setZOrder(999999);
@@ -660,9 +658,9 @@ openmdao.DataflowFigure.prototype.maximize=function() {
         this.top_right.style.background=circleIMG+" no-repeat top right";
     }
 
-    // get child data from model and redraw with child figures
+    // get child data from project and redraw with child figures
     var self = this;
-    this.openmdao_model.getDataflow(self.pathname)
+    self.project.getDataflow(self.pathname)
         .done(self.updateDataflow.bind(self))
         .fail(function(jqXHR, textStatus, errorThrown) {
             debug.error('Error getting dataflow for', self,
@@ -732,7 +730,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             else {
                 figname = name;
             }
-            fig = new openmdao.DataflowFigure(self.openmdao_model, figname, self.prop_fn,
+            fig = new openmdao.DataflowFigure(self.project, figname, self.prop_fn,
                                               type, valid, interfaces);
             fig.pythonID = comp.python_id;
             fig.precedence = precedence;
@@ -855,7 +853,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 if (type === 'data') {
                     menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
                         function(){
-                            var f = new openmdao.ConnectionsFrame(self.openmdao_model,
+                            var f = new openmdao.ConnectionsFrame(self.project,
                                                  self.pathname,src_name,dst_name);
                         })
                     );
@@ -864,9 +862,9 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                     var driver = (type === 'parameter') ? src_name : dst_name;
                     menu.appendMenuItem(new draw2d.MenuItem("Edit Driver", null,
                         function() {
-                            var f = new openmdao.ObjectFrame(self.openmdao_model,
-                                                                self.pathname+'.'+driver,
-                                                                tabName);
+                            var f = new openmdao.ObjectFrame(self.project,
+                                                             self.pathname+'.'+driver,
+                                                             tabName);
                         })
                     );
                 }
@@ -879,15 +877,14 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             if ((src_name.length > 0) && (dst_name.length > 0)) {
                 if (type === 'data') {
                     con.onDoubleClick = function() {
-                        var f = new openmdao.ConnectionsFrame(self.openmdao_model,
-                                                 self.pathname,src_name,dst_name);
+                        var f = new openmdao.ConnectionsFrame(self.project, self.pathname,
+                                                              src_name, dst_name);
                     };
                 }
                 else {
                     var driver = (type === 'parameter') ? src_name : dst_name;
                     con.onDoubleClick = function() {
-                        var f = new openmdao.ObjectFrame(self.openmdao_model,
-                                                            self.pathname+'.'+driver);
+                        var f = new openmdao.ObjectFrame(self.project, self.pathname+'.'+driver);
                     };
                 }
             }

@@ -2,7 +2,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.TriggersPane = function(elm, model, pathname, name) {
+openmdao.TriggersPane = function(elm, project, pathname, name) {
     var events,
         eventsDiv = jQuery("<div id='"+name+"_triggers' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Event</button>").button(),
@@ -38,7 +38,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
         if (cell.cell === 0) {
             var delname = events.getData()[cell.row].target,
                 cmd = pathname+'.remove_event("'+delname+'")';
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }
     });
 
@@ -49,7 +49,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
     /** add a new event */
     function addEvent(target) {
         var cmd = pathname+".add_event('"+target+"')";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     /** prompt for new event */
@@ -57,7 +57,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
 
         var candidates = [];
 
-        model.getAvailableEvents(pathname).done(function(cjson) {
+        project.getAvailableEvents(pathname).done(function(cjson) {
             candidates = cjson;
 
             // Build dialog markup
@@ -130,7 +130,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
     /** clear all events */
     function clearEvents() {
         var cmd = pathname+".clear_events()";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     addButton.click(function() { promptForEvent(addEvent); });

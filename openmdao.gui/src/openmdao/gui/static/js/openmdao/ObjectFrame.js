@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectFrame = function(model, pathname, selectTabName) {
+openmdao.ObjectFrame = function(project, pathname, selectTabName) {
     var divID = 'ObjectFrame_'+pathname.replace(/(\.|\[|\]|\'|\")/g,'-');
 
     // if there's an existing frame with this id, then just bring it to the front
@@ -54,57 +54,57 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name === 'Inputs') {
-            _panes[name] = new openmdao.PropertiesPane(contentPane, model,
+            _panes[name] = new openmdao.PropertiesPane(contentPane, project,
                                 pathname, name, true, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Outputs') {
-            _panes[name] = new openmdao.PropertiesPane(contentPane, model,
+            _panes[name] = new openmdao.PropertiesPane(contentPane, project,
                                 pathname, name, false, true);
             _panes[name].loadData(val);
         }
         else if (name === 'CouplingVars') {
-            _panes[name] = new openmdao.CouplingVarsPane(contentPane, model,
+            _panes[name] = new openmdao.CouplingVarsPane(contentPane, project,
                                 pathname, name, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Objectives') {
-            _panes[name] = new openmdao.ObjectivesPane(contentPane, model,
+            _panes[name] = new openmdao.ObjectivesPane(contentPane, project,
                                 pathname, name, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Parameters') {
-            _panes[name] = new openmdao.ParametersPane(contentPane, model,
+            _panes[name] = new openmdao.ParametersPane(contentPane, project,
                                 pathname, name, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Constraints') {
-            _panes[name] = new openmdao.ConstraintsPane(contentPane, model,
+            _panes[name] = new openmdao.ConstraintsPane(contentPane, project,
                                 pathname, name, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Workflow') {
-            _panes[name] = new openmdao.WorkflowPane(contentPane, model,
+            _panes[name] = new openmdao.WorkflowPane(contentPane, project,
                                 pathname, name);
             _panes[name].loadData(val);
         }
         else if (name === 'Dataflow') {
-            _panes[name] = new openmdao.DataflowPane(contentPane ,model,
+            _panes[name] = new openmdao.DataflowPane(contentPane ,project,
                                 pathname, name);
             _panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            _panes[name] = new openmdao.SlotsPane(contentPane, model,
+            _panes[name] = new openmdao.SlotsPane(contentPane, project,
                                 pathname, name, false);
             _panes[name].loadData(val);
         }
         else if (name === 'Triggers') {
-            _panes[name] = new openmdao.TriggersPane(contentPane, model,
+            _panes[name] = new openmdao.TriggersPane(contentPane, project,
                                                     pathname, name);
             _panes[name].loadData(val);
         }
         else if (name === 'Events') {
-            _panes[name] = new openmdao.EventsPane(contentPane, model,
+            _panes[name] = new openmdao.EventsPane(contentPane, project,
                                                   pathname, name);
             _panes[name].loadData(val);
         }
@@ -229,7 +229,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
 
         _self.selectTab(selectTabName);
 
-        model.addListener(pathname, handleMessage);
+        project.addListener(pathname, handleMessage);
 
         if (typeof openmdao_test_mode !== 'undefined') {
             openmdao.Util.notify(pathname+' loaded');
@@ -240,10 +240,10 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
      *  privileged
      ***********************************************************************/
 
-    /** get the object properties from model, load data into tabbed panes */
+    /** get the object properties from project, load data into tabbed panes */
     this.update = function(callback) {
         callback = callback || loadData;
-        model.getObject(pathname)
+        project.getObject(pathname)
             .done(callback)
             .fail(function(jqXHR, textStatus, error) {
                 debug.warn('ObjectFrame.editObject() Error:', jqXHR, textStatus, error);
@@ -266,7 +266,7 @@ openmdao.ObjectFrame = function(model, pathname, selectTabName) {
             removePane(paneName);
         }
         if (pathname && pathname.length>0) {
-            model.removeListener(pathname, handleMessage);
+            project.removeListener(pathname, handleMessage);
         }
     };
 

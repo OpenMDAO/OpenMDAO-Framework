@@ -4,20 +4,20 @@
 
 jQuery(function() {
     if (opener && opener.openmdao) {
-        openmdao.model = opener.openmdao.model;
+        openmdao.project = opener.openmdao.project;
     }
     else {
         // define openmdao namespace & create interface to openmdao in global scope
         openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
-        openmdao.model = new openmdao.Model();
+        openmdao.project = new openmdao.Project();
     }
 
-    var editor = new openmdao.CodeFrame('code_pane', openmdao.model);
-    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model);
+    var editor = new openmdao.CodeFrame('code_pane', openmdao.project);
+    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.project);
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {
-        openmdao.model.codeEditor = undefined;
+        openmdao.project.codeEditor = undefined;
         editor.close();
         ftree.close();
     });
@@ -55,6 +55,6 @@ jQuery(function() {
     }
 
     // save ref to editor for others to use
-    openmdao.model.codeEditor = editor;
+    openmdao.project.codeEditor = editor;
 });
 

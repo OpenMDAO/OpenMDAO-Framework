@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
+openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
     openmdao.WorkflowTreeFrame.prototype.init.call(this, id, 'Workflow');
 
     /***********************************************************************
@@ -16,7 +16,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
 
     self.pathname = false;
 
-    /** convert model.json to structure required for jstree */
+    /** convert json to structure required for jstree */
     function convertJSON(json, parent, openNodes) {
         var data = [];
         jQuery.each(json, function(idx, item) {
@@ -77,7 +77,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         return data;
     }
 
-    /** update the tree with JSON model data */
+    /** update the tree with JSON project data */
     function updateTree(json) {
 
         // Grab paths of currently open nodes.
@@ -170,7 +170,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                         }
                         if (cmd) {
                             //console.log(cmd);
-                            model.issueCommand(cmd);
+                            project.issueCommand(cmd);
                         }
                     }
                 });
@@ -212,7 +212,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                                 subpath = path;
                             }
                             var id = (subpath+'-properties').replace(/\./g,'-');
-                            new openmdao.PropertiesFrame(id, model).editObject(subpath);
+                            new openmdao.PropertiesFrame(id, project).editObject(subpath);
                         }
         };
         if (jQuery.inArray('IAssembly',interfaces) >= 0) {
@@ -241,7 +241,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
         menu.run = {
             "label"  : 'Run this Component',
             "action" :  function(node) {
-                            model.runComponent(path);
+                            project.runComponent(path);
                         }
         };
         if (parent !== '') {
@@ -250,7 +250,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
                 "action" :  function(node) {
                                 var cmd = parent +".workflow.remove('" + name + "')";
                                 //console.log(cmd);
-                                model.issueCommand(cmd);
+                                project.issueCommand(cmd);
                             }
             };
         }
@@ -273,19 +273,19 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
     }
 
     // listen for 'workflow' messages and update object tree accordingly
-    model.addListener('', handleMessage);
+    project.addListener('', handleMessage);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     this.destructor = function() {
-        model.removeListener('', handleMessage);
+        project.removeListener('', handleMessage);
     };
 
-    /** update the tree, with data from the model  */
+    /** update the tree, with data from the project  */
     this.update = function() {
-        model.getWorkflow('')
+        project.getWorkflow('')
             .done(updateTree)
             .fail(function(jqXHR, textStatus, err) {
                 debug.error("Error getting workflow", jqXHR, textStatus, err);
@@ -293,7 +293,7 @@ openmdao.WorkflowTreeFrame = function(id, model, select_fn, dblclick_fn, workflo
     };
 
     // load initial component data
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
        self.update();
     });
 };

@@ -20,7 +20,7 @@ openmdao.NAME_SIZE = 256;
 //g.messageQ = [];              // a place to put the binary messages
 
 
-// openmdao.GeomFrame = function(id, model, pathname) {
+// openmdao.GeomFrame = function(id, project, pathname) {
 
 //     id = id.replace(/\./g, "_"); // jQuery id selector doesn't like '.' in name
 //     id = id.replace(/\//g, "_");  // same with '/'
@@ -92,13 +92,13 @@ openmdao.NAME_SIZE = 256;
 //         g.messageQ.push(message[1]); // FIXME: add namespacing to WebViewer stuff
 //     }
 
-//     // subscribe to model for data
+//     // subscribe to project for data
 //     function setGeometry(pathname) {
 //         if (geometry !== null) {
-//             model.removeListener(geometry, handleMessage);
+//             project.removeListener(geometry, handleMessage);
 //         }
 //         geometry = pathname;
-//         model.addListener(pathname, handleMessage);
+//         project.addListener(pathname, handleMessage);
 //     }
 
 //     // prompt for a new geometry
@@ -127,7 +127,7 @@ openmdao.NAME_SIZE = 256;
 
 //     this.destructor = function() {
 //         if ( geometry !== null ) {
-//             model.removeListener(geometry, handleMessage);
+//             project.removeListener(geometry, handleMessage);
 //         }
 //     };
 

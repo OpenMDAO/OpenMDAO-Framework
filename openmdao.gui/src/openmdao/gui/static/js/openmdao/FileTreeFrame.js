@@ -1,16 +1,14 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.FileTreeFrame = function(id, model) {
+openmdao.FileTreeFrame = function(id, project) {
     var _menu = [
         {   "text": "File",
             "items": [
-                { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
-                { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
-                { "text": "Add Files",  "onclick": "openmdao.FileTreeFrame.prototype.addFile();" },
-                { "text": "Delete Files",  "onclick": "openmdao.FileTreeFrame.prototype.deleteFiles();" },
-                { "text": "Toggle Hidden Files",  "onclick": "openmdao.FileTreeFrame.prototype.toggleFilter();" }
-
+                { "text": "New File",     "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
+                { "text": "New Folder",   "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
+                { "text": "Add Files",    "onclick": "openmdao.FileTreeFrame.prototype.addFile();" },
+                { "text": "Delete Files", "onclick": "openmdao.FileTreeFrame.prototype.deleteFiles();" }
             ]
         }
     ];
@@ -59,7 +57,7 @@ openmdao.FileTreeFrame = function(id, model) {
                 (function (i) {
                     var reader = new FileReader();
                     reader.onload = function (e) {
-                       model.setFile(files[i].name, e.target.result);
+                       project.setFile(files[i].name, e.target.result);
                     };
                     reader.readAsText(files[i]);
                 })(i);
@@ -118,7 +116,7 @@ openmdao.FileTreeFrame = function(id, model) {
         _self.elm.find('a.jstree-clicked').each(function() {
             filepaths.push(this.getAttribute("path"));
         });
-        model.removeFiles(filepaths)
+        project.removeFiles(filepaths)
             .fail(function(jqXHR, textStatus, errorThrown) {
                 alert('Error removing files: ' + textStatus);
                 debug.error('Error removing files', path, name,
@@ -215,14 +213,14 @@ openmdao.FileTreeFrame = function(id, model) {
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
-                "action" : function(node) { openmdao.model.editFile(path); }
+                "action" : function(node) { openmdao.project.editFile(path); }
             };
 
             // if it's a py file, let them execute it
             if (/.py$/.test(path)) {
                 menu.execFile = {
                     "label"  : 'Execute File',
-                    "action" : function(node) { model.execFile(path); }
+                    "action" : function(node) { project.execFile(path); }
                 };
             }
 
@@ -233,7 +231,7 @@ openmdao.FileTreeFrame = function(id, model) {
             if (/.stl$/.test(path) || /.csm$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { openmdao.model.viewGeometry(path.replace(/\\/g,'/')); }
+                    "action" : function(node) { openmdao.project.viewGeometry(path.replace(/\\/g,'/')); }
                 };
             }
 
@@ -243,7 +241,7 @@ openmdao.FileTreeFrame = function(id, model) {
                                 var old = path.split('/');
                                 old = old[old.length-1];
                                 openmdao.Util.promptForValue('New name for '+old, function(name) {
-                                    model.renameFile(path, name)
+                                    project.renameFile(path, name)
                                         .fail(function(jqXHR, textStatus, errorThrown) {
                                             alert('Error renaming file: ' + textStatus);
                                             debug.error('Error renaming file', path, name,
@@ -267,7 +265,7 @@ openmdao.FileTreeFrame = function(id, model) {
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
-                "action" : function(node) { model.removeFile(path)
+                "action" : function(node) { project.removeFile(path)
                                                 .fail(function(jqXHR, textStatus, errorThrown) {
                                                     alert('Error removing file: ' + textStatus);
                                                     debug.error('Error removing file', path, name,
@@ -279,7 +277,7 @@ openmdao.FileTreeFrame = function(id, model) {
         else if (isEmptyFolder) {
             menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
-                "action" : function(node) { model.removeFile(path)
+                "action" : function(node) { project.removeFile(path)
                                                 .fail(function(jqXHR, textStatus, errorThrown) {
                                                     alert('Error removing folder: ' + textStatus);
                                                     debug.error('Error renaming folder', path, name,
@@ -356,7 +354,7 @@ openmdao.FileTreeFrame = function(id, model) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                openmdao.model.editFile(path);
+                openmdao.project.editFile(path);
             }
             else if (node.hasClass('folder')) {
                 // what do, what do
@@ -403,19 +401,19 @@ openmdao.FileTreeFrame = function(id, model) {
     }
 
     // listen for 'files' messages and update file data accordingly
-    model.addListener('files', handleMessage);
+    project.addListener('files', handleMessage);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     this.destructor = function() {
-        model.removeListener('files', handleMessage);
+        project.removeListener('files', handleMessage);
     };
 
-    /** update the display, with data from the model */
+    /** update the display, with data from the project */
     this.update = function() {
-        model.getFiles()
+        project.getFiles()
             .done(updateFiles)
             .fail(function(jqXHR, textStatus, errorThrown) {
                 debug.error('Error getting files',
@@ -424,7 +422,7 @@ openmdao.FileTreeFrame = function(id, model) {
     };
 
     // load initial file data
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
        _self.update();
     });
 
@@ -438,15 +436,15 @@ openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new file',
         function(name) {
-            openmdao.model.newFile(name, path)
+            openmdao.project.newFile(name, path)
                 .done(function() {
                     var pathname = '/'+name;
                     if (path) {
                         pathname = path + name;
                     }
                     // if the editor is already open, load the new file
-                    if (openmdao.model.codeEditor) {
-                        openmdao.model.editFile(pathname);
+                    if (openmdao.project.codeEditor) {
+                        openmdao.project.editFile(pathname);
                     }
                     if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify('New file created');
@@ -462,7 +460,7 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
 /** create a new folder in the current project */
 openmdao.FileTreeFrame.prototype.newFolder = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new folder',
-        function(name) { openmdao.model.newFolder(name, path); } );
+        function(name) { openmdao.project.newFolder(name, path); } );
 };
 
 /** choose & add one or more files, optionally specifying a dest folder */
@@ -521,11 +519,10 @@ openmdao.FileTreeFrame.prototype.deleteFiles = function() {
     jQuery('#ftree_pane a.jstree-clicked').each(function() {
         filepaths.push(this.getAttribute("path"));
     });
-    openmdao.model.removeFiles(filepaths)
+    openmdao.project.removeFiles(filepaths)
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert('Error removing files: ' + textStatus);
             debug.error('Error removing files', path, name,
                         jqXHR, textStatus, errorThrown);
         });
 };
-

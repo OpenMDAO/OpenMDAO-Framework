@@ -527,7 +527,7 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
-    def put_object(self, pathname, classname, args):
+    def put_object(self, pathname, classname, args=None):
         ''' Create or replace object with the given pathname with a new object
             of the specified type.
         '''
@@ -544,6 +544,8 @@ class ConsoleServer(cmd.Cmd):
         parentname, dot, name = pathname.rpartition('.')
         if isidentifier(name):
             name = name.encode('utf8')
+            if args is None:
+                args = ''
             cmd = 'create("%s"%s)' % (classname, args)
             if parentname:
                 cmd = '%s.add("%s", %s)' % (parentname, name, cmd)
@@ -558,7 +560,7 @@ class ConsoleServer(cmd.Cmd):
                               ' "%s" is not a valid identifier' % name)
 
     @modifies_model
-    def replace_object(self, pathname, classname, args):
+    def replace_object(self, pathname, classname, args=None):
         ''' Replace existing object with object of the given type.
         '''
         pathname = pathname.encode('utf8')

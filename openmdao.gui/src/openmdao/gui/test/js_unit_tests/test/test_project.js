@@ -1,10 +1,10 @@
-/* Test the functions in Model.js */
+/* Test the functions in Project.js */
 /* Uses the Sinon library http://sinonjs.org/ */
 
 
-TestCase("ModelTest", {
+TestCase("ProjectTest", {
     setUp: function() {
-        openmdao.model = new openmdao.Model();
+        openmdao.project = new openmdao.Project();
 
         this.fakeXhr = sinon.useFakeXMLHttpRequest();
         var requests = this.requests = [];
@@ -36,7 +36,7 @@ TestCase("ModelTest", {
 
         // addListener will make an ajax call telling the server to publish
         // that topic
-        openmdao.model.addListener('some.path.name', callback1);
+        openmdao.project.addListener('some.path.name', callback1);
         assertEquals("subscription/some.path.name", this.requests[0].url);
         assertEquals("GET", this.requests[0].method);
         assertEquals(true, this.requests[0].async);
@@ -55,7 +55,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy(function(jqXHR, textStatus, errorThrown) {
         });
 
-        openmdao.model.getTypes()
+        openmdao.project.getTypes()
             .done(success_handler)
             .fail(error_handler);
 
@@ -79,12 +79,12 @@ TestCase("ModelTest", {
 
     "test commitProject": function() {
         callback1 = sinon.spy();
-        openmdao.model.addListener('', callback1);
+        openmdao.project.addListener('', callback1);
 
-        openmdao.model.commit_with_comment('a comment');
+        openmdao.project.commit_with_comment('a comment');
 
         // Check the requests
-        assertEquals("project", this.requests[0].url);
+        assertEquals("project/commit", this.requests[0].url);
         assertEquals("POST", this.requests[0].method);
         assertEquals(true, this.requests[0].async);
         assertEquals(1, this.requests.length);
@@ -103,7 +103,7 @@ TestCase("ModelTest", {
         var success_handler = sinon.spy();
         var error_handler = sinon.spy();
 
-        openmdao.model.getWorkflow("driverpath")
+        openmdao.project.getWorkflow("driverpath")
             .done(success_handler)
             .fail(error_handler);
 
@@ -122,7 +122,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith({"id" : 1223, "name": "workflowname"}));
 
         // test call of error handler
-        openmdao.model.getWorkflow("workflowpath")
+        openmdao.project.getWorkflow("workflowpath")
             .done(success_handler)
             .fail(error_handler);
 
@@ -131,7 +131,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(error_handler);
 
         // test what happens when workflowpathname is None
-        openmdao.model.getWorkflow("None")
+        openmdao.project.getWorkflow("None")
             .done(success_handler)
             .fail(error_handler);
 
@@ -149,7 +149,7 @@ TestCase("ModelTest", {
         var success_handler = sinon.spy();
         var error_handler = sinon.spy();
 
-        openmdao.model.getComponents()
+        openmdao.project.getComponents()
             .done(success_handler)
             .fail(error_handler);
 
@@ -167,7 +167,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith({"id": 1223, "name": "componentname"}));
 
         // test call of error handler
-        openmdao.model.getComponents()
+        openmdao.project.getComponents()
             .done(success_handler)
             .fail(error_handler);
 
@@ -179,7 +179,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(error_handler);
 
         // test what happens when componentspathname is empty
-        openmdao.model.getComponents()
+        openmdao.project.getComponents()
             .done(success_handler)
             .fail(error_handler);
         assertEquals("objects", this.requests[2].url);
@@ -196,7 +196,7 @@ TestCase("ModelTest", {
         var success_handler = sinon.spy();
         var error_handler = sinon.spy();
 
-        openmdao.model.getObject("componentname")
+        openmdao.project.getObject("componentname")
             .done(success_handler)
             .fail(error_handler);
 
@@ -214,7 +214,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith({"id": 1223, "name": "componentname"}));
 
         // test call of error handler
-        openmdao.model.getObject("componentname")
+        openmdao.project.getObject("componentname")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500,
@@ -225,7 +225,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(error_handler);
 
         // test what happens when pathname is empty
-        openmdao.model.getObject("")
+        openmdao.project.getObject("")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("object/", this.requests[2].url);
@@ -242,7 +242,7 @@ TestCase("ModelTest", {
         var success_handler = sinon.spy();
         var error_handler = sinon.spy();
 
-        openmdao.model.getConnections("connectionspathname", "src_name", "dst_name")
+        openmdao.project.getConnections("connectionspathname", "src_name", "dst_name")
             .done(success_handler)
             .fail(error_handler);
 
@@ -262,7 +262,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith({"id": 1223, "name": "connectionspathname"}));
 
         // test call of error handler
-        openmdao.model.getConnections("connectionspathname", "src_name", "dst_name")
+        openmdao.project.getConnections("connectionspathname", "src_name", "dst_name")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500,
@@ -277,7 +277,7 @@ TestCase("ModelTest", {
         var callback = sinon.spy();
 
         // Normal execution
-        openmdao.model.putObject("component_name", "typepath", "")
+        openmdao.project.putObject("component_name", "typepath", "")
             .done(callback);
         assertEquals("object/component_name", this.requests[0].url);
         assertEquals("PUT", this.requests[0].method);
@@ -287,7 +287,7 @@ TestCase("ModelTest", {
         assertEquals(callback.args[0][0], "");
 
         // Are listeners updated?
-        openmdao.model.putObject("typepath", "component_name", "")
+        openmdao.project.putObject("typepath", "component_name", "")
             .done(callback);
         this.requests[1].respond(200, 'response', '');  // the ajax call just queues up the request
         sinon.assert.calledTwice(callback);
@@ -298,7 +298,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal execution
-        openmdao.model.issueCommand("command")
+        openmdao.project.issueCommand("command")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("command", this.requests[0].url);
@@ -312,14 +312,14 @@ TestCase("ModelTest", {
         assertEquals({"status" : "OK"}, success_handler.args[0][0]);
 
         // Are listeners updated?
-        openmdao.model.issueCommand("command")
+        openmdao.project.issueCommand("command")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(200, 'response', '');  // the ajax call just queues up the request
         sinon.assert.calledTwice(success_handler);
 
         // Does error handler get called?
-        openmdao.model.issueCommand("command")
+        openmdao.project.issueCommand("command")
             .done(success_handler)
             .fail(error_handler);
         this.requests[2].respond(500,
@@ -336,7 +336,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal execution
-        openmdao.model.setVariableValue("varname", "value", "vtype")
+        openmdao.project.setVariableValue("varname", "value", "vtype")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("variable/varname", this.requests[0].url);
@@ -347,14 +347,14 @@ TestCase("ModelTest", {
         assertEquals({"status" : "OK"}, success_handler.args[0][0]);
 
         // Are listeners updated?
-        openmdao.model.setVariableValue("varname","value","vtype")
+        openmdao.project.setVariableValue("varname","value","vtype")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(200, 'response', ''); // the ajax call just queues up the request
         sinon.assert.calledTwice(success_handler);
 
         // Does error handler get called?
-        openmdao.model.setVariableValue("varname", "value", "vtype")
+        openmdao.project.setVariableValue("varname", "value", "vtype")
             .done(success_handler)
             .fail(error_handler);
         this.requests[2].respond(500, {"Content-Type": "application/json"}, '{}');
@@ -368,7 +368,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal operation
-        openmdao.model.getFiles()
+        openmdao.project.getFiles()
             .done(success_handler)
             .fail(error_handler);
         assertEquals("files", this.requests[0].url);
@@ -380,7 +380,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith({"files": ["file1", "file2"]}));
 
         // Check error handler
-        openmdao.model.getFiles()
+        openmdao.project.getFiles()
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500, {"Content-Type": "application/json"}, '{}');
@@ -393,7 +393,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal operation
-        openmdao.model.getFile("filepath")
+        openmdao.project.getFile("filepath")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("filefilepath", this.requests[0].url);
@@ -405,7 +405,7 @@ TestCase("ModelTest", {
         assert(success_handler.calledWith("file contents"));
 
         // Check error handler
-        openmdao.model.getFile("filepath")
+        openmdao.project.getFile("filepath")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500, {"Content-Type": "text/plain"}, '');
@@ -413,7 +413,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(error_handler);
 
         // test what happens when backslash is in filepath
-        openmdao.model.getFile("file\\path")
+        openmdao.project.getFile("file\\path")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("filefile/path", this.requests[2].url);
@@ -428,7 +428,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal operation
-        openmdao.model.setFile("filepath", "file contents", undefined)
+        openmdao.project.setFile("filepath", "file contents", undefined)
             .done(success_handler)
             .fail(error_handler);
         assertEquals("file/filepath", this.requests[0].url);
@@ -439,7 +439,7 @@ TestCase("ModelTest", {
         sinon.assert.notCalled(error_handler);
 
         // Check error handler
-        openmdao.model.setFile("filepath", "file contents", undefined)
+        openmdao.project.setFile("filepath", "file contents", undefined)
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500, {"Content-Type": "text/plain"}, '');
@@ -447,7 +447,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(error_handler);
 
         // test what happens when backslash is in filepath
-        openmdao.model.setFile("file\\path", "file contents", undefined)
+        openmdao.project.setFile("file\\path", "file contents", undefined)
             .done(success_handler)
             .fail(error_handler);
         assertEquals("file/file/path", this.requests[2].url);
@@ -462,7 +462,7 @@ TestCase("ModelTest", {
         var error_handler = sinon.spy();
 
         // Normal operation
-        openmdao.model.createFolder("folderpath")
+        openmdao.project.createFolder("folderpath")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("file/folderpath", this.requests[0].url);
@@ -473,7 +473,7 @@ TestCase("ModelTest", {
         sinon.assert.notCalled(error_handler);
 
         // Check error handler
-        openmdao.model.createFolder("folderpath")
+        openmdao.project.createFolder("folderpath")
             .done(success_handler)
             .fail(error_handler);
         this.requests[1].respond(500, {"Content-Type": "text/plain"}, '');
@@ -481,7 +481,7 @@ TestCase("ModelTest", {
         sinon.assert.calledOnce(success_handler);
 
         // test what happens when backslash is in folderpath
-        openmdao.model.createFolder("folder\\path")
+        openmdao.project.createFolder("folder\\path")
             .done(success_handler)
             .fail(error_handler);
         assertEquals("file/folder/path", this.requests[2].url);
@@ -493,7 +493,7 @@ TestCase("ModelTest", {
 
     "test newFile": function() {
         // Normal operation with JSON new file name
-        openmdao.model.newFile("newfilename.json", "folderpath");
+        openmdao.project.newFile("newfilename.json", "folderpath");
         // It calls setFile so check to see if that happens as expected
         assertEquals("file/folderpath/newfilename.json", this.requests[0].url);
         assertEquals(this.requests[0].method, "PUT");
@@ -501,7 +501,7 @@ TestCase("ModelTest", {
         this.requests[0].respond(200, {"Content-Type": "text/plain"}, '');
 
         // Normal operation with .py new file name
-        openmdao.model.newFile("newfilename.py", "folderpath");
+        openmdao.project.newFile("newfilename.py", "folderpath");
         // It calls setFile so check to see if that happens as expected
         assertEquals("file/folderpath/newfilename.py", this.requests[1].url);
         assertEquals(this.requests[1].method, "PUT");
@@ -510,7 +510,7 @@ TestCase("ModelTest", {
         this.requests[1].respond(200, {"Content-Type": "text/plain"}, '');
 
         // Normal operation with no extension on file name
-        openmdao.model.newFile("newfilename", "folderpath");
+        openmdao.project.newFile("newfilename", "folderpath");
         // It calls setFile so check to see if that happens as expected
         assertEquals("file/folderpath/newfilename", this.requests[2].url);
         assertEquals(this.requests[2].method, "PUT");
@@ -520,7 +520,7 @@ TestCase("ModelTest", {
 
     "test newFolder": function() {
         // Normal operation
-        openmdao.model.newFolder("newfoldername", "folderpath");
+        openmdao.project.newFolder("newfoldername", "folderpath");
         // It calls createFolder so check to see if that happens as expected
         assertEquals("file/folderpath/newfoldername", this.requests[0].url);
         assertEquals(this.requests[0].method, "PUT");
@@ -530,7 +530,7 @@ TestCase("ModelTest", {
 
     "test removeFile": function() {
         // Normal operation
-        openmdao.model.removeFile("filepath");
+        openmdao.project.removeFile("filepath");
         assertEquals("filefilepath", this.requests[0].url);
         assertEquals(this.requests[0].method, "DELETE");
         assertEquals("file=filepath", this.requests[0].requestBody);
@@ -542,7 +542,7 @@ TestCase("ModelTest", {
 
     "test execFile": function() {
       // Normal execution
-      openmdao.model.execFile("/path\\filename");
+      openmdao.project.execFile("/path\\filename");
       assertEquals("file/path/filename", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
       this.requests[0].respond(200, {"Content-Type": "text/plain"}, 'OK');

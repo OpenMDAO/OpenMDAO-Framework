@@ -111,8 +111,8 @@ class ZMQServerManager(object):
             print 'Error cleaning up proxy', exc
 
     def get_websocket_url(self, server_id, stream_name, target_url):
-        ''' Get the publisher socket web server for the server associated with
-            an id; create one if none exists.
+        ''' Get the url of the websocket for the specified stream of the
+            specified server; if websocket server does not exist, start it.
 
                 server_id:      the id of the server
                 stream_name:    the name of the stream ('out' or 'pub')
