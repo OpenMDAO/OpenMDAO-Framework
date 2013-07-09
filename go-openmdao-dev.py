@@ -2099,7 +2099,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.7.4"
+    setuptools_version = "0.8"
     setuptools_egg = "setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
