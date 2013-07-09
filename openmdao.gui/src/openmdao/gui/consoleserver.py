@@ -531,7 +531,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Create or replace object with the given pathname with a new object
             of the specified type.
         '''
-        obj, root = self.get_object(pathname)
+        obj, root = self.get_object(pathname, report=False)
         if obj:
             self.replace_object(pathname, classname, args)
         else:
