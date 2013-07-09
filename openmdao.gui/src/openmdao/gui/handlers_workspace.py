@@ -19,8 +19,6 @@ class ReqHandler(BaseHandler):
 
     @web.authenticated
     def post(self):
-        ''' Render the base template with the posted content.
-        '''
         attributes = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
@@ -45,29 +43,28 @@ class ReqHandler(BaseHandler):
 
 class AddOnsHandler(BaseHandler):
     ''' Add-on installation utility.
-    Eventually we will probably wrap the OpenMDAO plugin
-    functions to work through here.
+        (TODO: wrap the OpenMDAO plugin functions to work through here...)
+
+        GET:    render the addon installation utility template
+
+        POST:   install the POSTed addon
     '''
     addons_url = 'http://openmdao.org/dists'
 
     @web.authenticated
-    def post(self):
-        ''' Easy_install the POSTed add-on.
-        '''
-        pass
+    def get(self):
+        self.render('workspace/addons.html')
 
     @web.authenticated
-    def get(self):
-        ''' Show available plugins; prompt for plugin to be installed.
-        '''
-        self.render('workspace/addons.html')
+    def post(self):
+        pass
 
 
 class CommandHandler(ReqHandler):
     ''' POST: execute a command and return the console-like response.
               required arguments are:
 
-              command - the command to execute
+              command:  command to execute
     '''
 
     @web.authenticated
@@ -91,25 +88,30 @@ class CommandHandler(ReqHandler):
 
 
 class EditorHandler(ReqHandler):
+    ''' code editor utility
+
+        GET:    render the code editor, arguments are:
+
+                filename:   full pathname of file to edit (optional)
+    '''
 
     @web.authenticated
     def get(self):
-        '''Code Editor
-        '''
         filename = self.get_argument('filename', default=None)
         self.render('workspace/editor.html', filename=filename)
 
 
 class FileHandler(ReqHandler):
-    ''' GET:    Get the contents of a file.
+    ''' GET:    get the contents of file `filename`
 
-        PUT:    Write contents to a file.
+        PUT:    write contents to file `filename`
 
-        DELETE: delete a file.
+        DELETE: delete file `filename`
 
-        POST:   if request contains a 'rename' argument,
-                rename file to the value of rename argument
-                otherwise execute the file
+        POST:   rename file `filename` if rename argument is provided,
+                otherwise execute file `filename`. arguments are:
+
+                rename: new name for file `filename` (optional)
     '''
 
     @web.authenticated
@@ -163,11 +165,11 @@ class FileHandler(ReqHandler):
 
 
 class FilesHandler(ReqHandler):
-    ''' GET: get heirarchical list of files.
+    ''' GET:    get heirarchical list of files in the current project
 
         DELETE: delete files, arguments are:
 
-                filepaths - the pathnames of the files to delete (required)
+                filepaths - full pathnames of files to delete (required)
 
                 returns 'True' if all files were successfully deleted
     '''
@@ -200,11 +202,15 @@ class FilesHandler(ReqHandler):
 
 
 class GeometryHandler(ReqHandler):
+    ''' geometry viewer utility
+
+        GET:    render the geometry viewer, arguments are:
+
+                path:   full path name of geometry object or file
+    '''
 
     @web.authenticated
     def get(self):
-        ''' Geometry viewer.
-        '''
         path = self.get_argument('path')
         #self.render('workspace/o3dviewer.html', filename=path)
         if path.startswith('file/'):
@@ -213,21 +219,22 @@ class GeometryHandler(ReqHandler):
 
 
 class ObjectHandler(ReqHandler):
-    ''' GET:    Get the attributes of an object.
-                param is optional and can be one of:
+    ''' GET:    get the attributes of object `pathname`. param is optional and can be one of:
                     dataflow
                     workflow
                     events
                     passthroughs
                     connections
 
-        PUT:    create or replace an object. arguments are:
-                    type - the type of the new object (required)
-                    args - arguments required to create the new object (optional)
+        PUT:    create or replace object `pathname`, arguments are:
 
-        POST:   execute an object.
+                type: the type of the new object (required)
 
-        DELETE: delete an object.
+                args: arguments required to create the new object (optional)
+
+        POST:   execute object `pathname`
+
+        DELETE: delete object `pathname`
     '''
 
     @web.authenticated
@@ -322,6 +329,9 @@ class ObjectHandler(ReqHandler):
 
 
 class ObjectsHandler(ReqHandler):
+    ''' GET:    get heirarchical list of objects in the current project
+                (NOTE: currently only lists 'Component' objects...)
+    '''
 
     @web.authenticated
     def get(self):
@@ -345,14 +355,15 @@ class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
               (loading a project is a two step process, this is the first step
                in which the server is initialized and the workspace is loaded...
-               this should be followed by a POST to project/load that will
+               when workspace is loaded and websockets are connected, this
+               should be followed up with a POST to project/load that will
                actually load the project in to the server)
 
         POST: perform the specified processing directive on the current project.
               param is required and must be one of:
 
-              load:     load model from the given project archive or reload
-                        the current project for session if no projpath given.
+              load:     load project into the current server
+                        if no project path is given, get from session cookie.
 
                         args: projpath (optional)
 
@@ -425,7 +436,7 @@ class ProjectHandler(ReqHandler):
 
 
 class StreamHandler(ReqHandler):
-    ''' GET: get the url of the websocket server for `stream_name`.
+    ''' GET:    get the url of the websocket server for stream `stream_name`.
     '''
 
     @web.authenticated
@@ -437,10 +448,10 @@ class StreamHandler(ReqHandler):
 
 
 class SubscriptionHandler(ReqHandler):
-    ''' GET: get a subscription to a topic
-             (messages will be published via the pub websocket)
+    ''' GET:    get a subscription to `topic`
+                (messages will be published via the pub websocket)
 
-        DELETE: remove a subscription to a topic
+        DELETE: remove a subscription to `topic`
     '''
 
     @web.authenticated
@@ -455,10 +466,10 @@ class SubscriptionHandler(ReqHandler):
 
 
 class TypeHandler(ReqHandler):
-    ''' GET:    Get the attributes of a type.
-
+    ''' GET:    get attributes of type `typename`
                 param is required and must be one of:
-                'signature'
+
+                signature:  arguments required to create an instance of `typename`
     '''
 
     @web.authenticated
@@ -479,7 +490,7 @@ class TypeHandler(ReqHandler):
 
 
 class TypesHandler(ReqHandler):
-    ''' GET: Get the list of available types.
+    ''' GET:    get the list of available types
     '''
 
     @web.authenticated
@@ -491,8 +502,17 @@ class TypesHandler(ReqHandler):
 
 
 class UploadHandler(ReqHandler):
-    ''' File upload utility.
+    ''' file upload utility
+
+        GET:    render the upload form
+
+        POST:   add the POSTed files to the current project
     '''
+
+    @web.authenticated
+    def get(self):
+        path = self.get_argument('path', default=None)
+        self.render('workspace/upload.html', path=path)
 
     @web.authenticated
     def post(self):
@@ -510,16 +530,11 @@ class UploadHandler(ReqHandler):
         else:
             self.render('workspace/upload.html', path=path)
 
-    @web.authenticated
-    def get(self):
-        path = self.get_argument('path', default=None)
-        self.render('workspace/upload.html', path=path)
-
 
 class VariableHandler(ReqHandler):
-    ''' GET:    get the value of a variable.
+    ''' GET:    get the value of variable `pathname`.
 
-        PUT:    set the value of a variable.
+        PUT:    set the value of variable `pathname`.
     '''
 
     @web.authenticated
@@ -558,7 +573,7 @@ class VariableHandler(ReqHandler):
 
 
 class WorkspaceHandler(ReqHandler):
-    ''' GET:    Render the workspace.
+    ''' GET:    render the workspace.
     '''
 
     @web.authenticated
