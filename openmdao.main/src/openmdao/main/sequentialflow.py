@@ -5,7 +5,8 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 
 from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      calc_gradient, applyJ
+                                      calc_gradient, calc_gradient_adjoint, \
+                                      applyJ, applyJT
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.vartree import VariableTree
@@ -324,7 +325,7 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
                 inputs[comp_name][var_name] = arg[i1:i2]
 
             if target != '@out':
@@ -340,9 +341,9 @@ class SequentialWorkflow(Workflow):
             name = comp.name
             
             # A component can also define a preconditioner
-            if hasattr(comp, 'applyMinv'):
-                pre_inputs = inputs[name].copy()
-                comp.applyMinv(inputs[name], pre_inputs)
+            #if hasattr(comp, 'applyMinv'):
+            #    pre_inputs = inputs[name].copy()
+            #    comp.applyMinv(inputs[name], pre_inputs)
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -380,6 +381,100 @@ class SequentialWorkflow(Workflow):
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
         
+        print 'FWD', arg, result
+        return result
+    
+    def matvecREV(self, arg):
+        '''Callback function for performing the transpose matrix vector
+        product of the workflow's full Jacobian with an incoming vector
+        arg.'''
+
+        # Bookkeeping dictionaries
+        inputs = {}
+        outputs = {}
+
+        # Start with zero-valued dictionaries cotaining keys for all inputs
+        pa_ref = {}
+        for comp in self.derivative_iter():
+            name = comp.name
+            inputs[name] = {}
+            outputs[name] = {}
+            
+            # Interior Edges use original names, so we need to know
+            # what comps are in a pseudo-assy.
+            if '~' in name:
+                for item in comp.inputs + comp.outputs:
+                    key = item.partition('.')[0]
+                    pa_ref[key] = name
+
+        # Fill input dictionaries with values from input arg.
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+            
+            if src != '@in' and src not in self._input_outputs:
+                comp_name, dot, var_name = src.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                inputs[comp_name][var_name] = arg[i1:i2]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
+
+            if target != '@out':
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
+
+        # Call ApplyJT on each component
+        
+        for comp in self.derivative_iter():
+            name = comp.name
+            
+            # A component can also define a preconditioner
+            #if hasattr(comp, 'applyMinv'):
+            #    pre_inputs = inputs[name].copy()
+            #    comp.applyMinvT(inputs[name], pre_inputs)
+            applyJT(comp, inputs[name], outputs[name])
+
+        # Each output adds a contribution
+        for edge in self._additional_edges:
+            if edge[1] == '@out':
+                i1, i2 = self.bounds[edge]
+                comp_name, dot, var_name = edge[0].partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2]
+
+        # Poke results into the return vector
+        result = zeros(len(arg))
+        
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+            
+            if target == '@out':
+                target = src
+                
+            # Input-input connections are not in the jacobians. We need
+            # to add the derivative (which is 1.0).
+            elif target in self._input_outputs:
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                continue
+                
+            comp_name, dot, var_name = target.partition('.')
+            if comp_name in pa_ref:
+                var_name = '%s.%s' % (comp_name, var_name)
+                comp_name = pa_ref[comp_name]
+            result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
+            
+        print 'REV', arg, result
         return result
     
     def group_nondifferentiables(self):
@@ -528,7 +623,7 @@ class SequentialWorkflow(Workflow):
                 raise RunStopped('Stop requested')
 
     def calc_gradient(self, inputs=None, outputs=None, fd=False, 
-                      upscope=False):
+                      upscope=False, mode='auto'):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
@@ -615,7 +710,15 @@ class SequentialWorkflow(Workflow):
             
             self._find_nondiff_blocks = False
         
-        return calc_gradient(self, inputs, outputs)
+        # Auto-determine which mode to use.
+        if mode=='auto':
+            # TODO - determine based on size and presence of apply_derT
+            mode = 'forward'
+            
+        if mode == 'adjoint':
+            return calc_gradient_adjoint(self, inputs, outputs)
+        else:
+            return calc_gradient(self, inputs, outputs)
     
     def check_gradient(self, inputs=None, outputs=None):
         """Compare the OpenMDAO-calculated gradient with one calculated

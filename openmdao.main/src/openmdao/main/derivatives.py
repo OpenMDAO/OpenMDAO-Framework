@@ -65,8 +65,7 @@ def calc_gradient(wflow, inputs, outputs):
     
     # Locate the output keys:
     obounds = {}
-    # This is not efficient, but we need more info on how things 
-    # will work with the pseudocomps.
+    # Not necessarily efficient, but outputs can be anywhere
     for item in outputs:
         for edge in wflow.get_interior_edges():
             if item == edge[0]:
@@ -96,6 +95,52 @@ def calc_gradient(wflow, inputs, outputs):
             i += k2-k1
         
     return J
+
+def calc_gradient_adjoint(wflow, inputs, outputs):
+    """Returns the gradient of the passed outputs with respect to
+    all passed inputs. Calculation is done in adjoint mode.
+    """    
+            
+    # Size the problem
+    nEdge = wflow.initialize_residual()
+    A = LinearOperator((nEdge, nEdge),
+                       matvec=wflow.matvecREV,
+                       dtype=float)
+    J = zeros((len(outputs), len(inputs)))
+    
+    # Locate the output keys:
+    obounds = {}
+    # Not necessarily efficient, but outputs can be anywhere
+    for item in outputs:
+        for edge in wflow.get_interior_edges():
+            if item == edge[0]:
+                obounds[item] = wflow.bounds[edge]
+                break
+            
+    # Each comp calculates its own derivatives at the current
+    # point. (i.e., linearizes)
+    wflow.calc_derivatives(first=True)
+    
+    # Adjoint mode, solve linear system for each output
+    for j, output in enumerate(outputs):
+        RHS = zeros((nEdge, 1))
+        i1, i2 = obounds[output]
+        for i in range(i1, i2):
+            RHS[i, 0] = 1.0
+    
+        # Call GMRES to solve the linear system
+        dx, info = gmres(A, RHS,
+                         tol=1.0e-6,
+                         maxiter=100)
+
+        i = 0
+        for param in inputs:
+            k1, k2 = wflow.bounds[('@in', param)]
+            J[j, i:i+(k2-k1)] = dx[k1:k2]
+            i += k2-k1
+        
+    return J
+
 
 def applyJ(obj, arg, result):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
@@ -146,6 +191,61 @@ def applyJ(obj, arg, result):
                     tmp = flattened_value('.'.join((obj.name, ikey)),
                                           arg[ikey]).reshape(1, -1)
                     Jsub = J[o1:o2, i1:i2]
+                    tmp = inner(Jsub, tmp)
+                    if o2 - o1 == 1:
+                        result[okey] += float(tmp)
+                    else:
+                        result[okey] += tmp.reshape(result[okey].shape)
+
+def applyJT(obj, arg, result):
+    """Multiply an input vector by the transposed Jacobian. For an Explicit
+    Component, this automatically forms the "fake" residual, and calls into
+    the function hook "apply_derivT".
+    """
+    for key in arg:
+        result[key] = -arg[key]
+
+    if hasattr(obj, 'apply_derivT'):
+        obj.apply_derivT(arg, result)
+        return
+
+    # Optional specification of the Jacobian
+    # (Subassemblies do this by default)
+    input_keys, output_keys, J = obj.provideJ()
+
+    ibounds = {}
+    nvar = 0
+    for key in output_keys:
+        val = obj.get(key)
+        width = flattened_size('.'.join((obj.name, key)), val)
+        ibounds[key] = (nvar, nvar+width)
+        nvar += width
+
+    obounds = {}
+    nvar = 0
+    for key in input_keys:
+        val = obj.get(key)
+        width = flattened_size('.'.join((obj.name, key)), val)
+        obounds[key] = (nvar, nvar+width)
+        nvar += width
+
+    for okey in result:
+        for ikey in arg:
+            if okey not in arg:
+                i1, i2 = ibounds[ikey]
+                o1, o2 = obounds[okey]
+                if i2 - i1 == 1:
+                    if o2 - o1 == 1:
+                        Jsub = float(J[i1, o1])
+                        result[okey] += Jsub*arg[ikey]
+                    else:
+                        Jsub = J[i1:i2, o1:o2]
+                        tmp = Jsub*arg[ikey]
+                        result[okey] += tmp.reshape(result[okey].shape)
+                else:
+                    tmp = flattened_value('.'.join((obj.name, ikey)),
+                                          arg[ikey]).reshape(1, -1)
+                    Jsub = J[i1:i2, o1:o2]
                     tmp = inner(Jsub, tmp)
                     if o2 - o1 == 1:
                         result[okey] += float(tmp)
