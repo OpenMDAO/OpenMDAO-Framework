@@ -169,7 +169,7 @@ function handleControlClick(attribute, mask){
 
         data =  data ? data.attrs : getNodeData( root, "attrs" );
 
-        var flag = data & mask > 0 ? 0 : mask;
+        var flag = (data & mask) > 0 ? 0 : mask;
 
         updateTree( root, flag );
         g.sceneUpd = 1;
@@ -390,7 +390,7 @@ function wvUpdateUI()
 
   if (g.wheelDelta !== 0)
   {
-    var scale = Math.exp(g.wheelDelta/32.0);
+    var scale = Math.exp(g.wheelDelta/16.0);
     g.mvMatrix.scale(scale, scale, scale);
     g.scale   *= scale;
     g.sceneUpd = 1;
