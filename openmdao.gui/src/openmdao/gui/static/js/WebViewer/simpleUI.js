@@ -390,7 +390,7 @@ function wvUpdateUI()
 
   if (g.wheelDelta !== 0)
   {
-    var scale = Math.exp(g.wheelDelta/128.0);
+    var scale = Math.exp(g.wheelDelta/32.0);
     g.mvMatrix.scale(scale, scale, scale);
     g.scale   *= scale;
     g.sceneUpd = 1;
