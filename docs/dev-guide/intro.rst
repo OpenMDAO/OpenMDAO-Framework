@@ -107,6 +107,7 @@ compilers.
 
         [build_ext]
         compiler=mingw32
+        
       On Windows, your home directory can be determined by typing the following command in your command-prompt:
 
         ::
