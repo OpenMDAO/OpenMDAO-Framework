@@ -417,11 +417,11 @@ class HasParameters(object):
                                              sorted(list(dups)), ValueError)
 
             try:
-                parameters = [Parameter(name, low=low, high=high,
+                parameters = [Parameter(n, low=low, high=high,
                                         scaler=scaler, adder=adder, start=start,
                                         fd_step=fd_step, name=key,
                                         scope=self._get_scope(scope))
-                              for name in names]
+                              for n in names]
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
