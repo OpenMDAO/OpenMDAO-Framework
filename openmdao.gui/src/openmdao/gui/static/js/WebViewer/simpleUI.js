@@ -263,9 +263,9 @@ function wvUpdateUI()
             faces.data("attrs", 9);
 
             tree.append(edges, faces);
-            tree = jQuery("<div id='tree'></div>").append(tree);
+            //tree = jQuery("<div id='tree'></div>").append(tree);
 
-            jQuery("#leftframe").append(tree);
+            jQuery("#leftframe").append("<div id='tree'></div>");
                 
             jQuery(".viz").click(handleControlClick("viz", g.plotAttrs.ON));
             jQuery(".grd").click(handleControlClick("grd", g.plotAttrs.LINES | g.plotAttrs.POINTS));
@@ -277,6 +277,10 @@ function wvUpdateUI()
 
                 "themes" : { 
                     "theme" : "openmdao",
+                },
+
+                "html_data" : {
+                    "data" : tree.html(),
                 },
             });
 
