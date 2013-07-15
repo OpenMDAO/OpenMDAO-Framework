@@ -122,28 +122,51 @@ def update_libpath():
         else:
             activate_base = 'activate'
 
+        if sys.platform.startswith('win'):
+            template = \
+"""REM begin libpath update
+for /f "delims=" %%A in ('combine_paths %(libpathvname)s "%(newpath)s"') do @set PATH=%%A
+REM end libpath update
+"""
+        else:
+            template = \
+"""# begin libpath update
+%(libpathvname)s=$(combine_paths %(libpathvname)s "%(newpath)s")
+export %(libpathvname)s
+# end libpath update
+"""
+
+        newpath = get_env_libpath()
+        template_dict = {
+            'libpathvname': libpathvname,
+            'newpath': newpath,
+        }
+
+        updated = []
         absbin = os.path.abspath(bindir)
         activate_fname = os.path.join(absbin, activate_base)
         with open(activate_fname, 'r') as inp:
-            content = inp.read()
-
-        newpath = get_env_libpath()
-
-        lines = content.split('\n')
-
-        if sys.platform.startswith('win'):
-            newline = '''for /f "delims=" %%A in ('combine_paths %s "%s"') do @set PATH=%%A''' % (libpathvname, newpath)
-        else:
-            newline = '%s=$(combine_paths %s "%s"); export %s' % (libpathvname, 
-                                                                  libpathvname, 
-                                                                  newpath, libpathvname)
-        for i,line in enumerate(lines):
-            if 'combine_paths' in line:
-                lines[i] = newline
-                break
-        else: 
-            lines.append(newline)
+            replacing = False
+            for line in inp:
+                if 'begin libpath update' in line:
+                    replacing = True
+                elif replacing:
+                    if 'end libpath update' in line:
+                        replacing = False
+                else:
+                    updated.append(line)
 
         with open(activate_fname, 'w') as out:
-            for line in lines:
-                out.write(line+'\n')
+            for line in updated:
+                out.write(line)
+
+            out.write(template % template_dict)
+
+        print """
+
+The activate script has been updated with a new  %(libpathvname)s. The new
+%(libpathvname)s will not take effect until you deactivate and reactivate your
+virtual environment.
+
+        """ % template_dict
+
