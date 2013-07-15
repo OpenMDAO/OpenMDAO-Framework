@@ -64,7 +64,7 @@ setup(name='openmdao.gui',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'pyzmq-static>=2.1.11.1',
+          'pyzmq>=13.0.1',
           'tornado>=2.2',
           'watchdog',
       ],
