@@ -96,7 +96,10 @@ def add_to_pathvar(pathvarname, newpaths):
             pset.add(path)
             parts.append(path)
 
-    return os.pathsep.join(parts)
+    # remove any paths that don't exist
+    final = [p for p in parts if p.startswith('.') or os.path.isdir(p)]
+
+    return os.pathsep.join(final)
 
 def combine_paths():
     """Calls add_to_varpath with the first two command line args and
