@@ -1,6 +1,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.typegroups import real_types, int_types
 
 
@@ -10,6 +11,7 @@ class Parameter(object):
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None):
         self._metadata = None
+        self.pcomp_name = None
 
         if scaler is None and adder is None:
             self._transform = self._do_nothing
@@ -192,6 +194,16 @@ class Parameter(object):
         return (self.target, self.low, self.high, self.fd_step,
                 self.scaler, self.adder, self.start, self.name)
 
+    def override(self, low=None, high=None, 
+                 scaler=None, adder=None, start=None,
+                 fd_step=None, name=None):
+        if low is not None: self.low = low
+        if high is not None: self.high = high
+        if scaler is not None: self.scaler = scaler
+        if start is not None: self.start = start
+        if fd_step is not None: self.fd_step = fd_step
+        if name is not None: self.name = name
+
 
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
@@ -294,6 +306,16 @@ class ParameterGroup(object):
     def get_config(self):
         return [p.get_config() for p in self._params]
 
+    def override(self, low=None, high=None, 
+                 scaler=None, adder=None, start=None,
+                 fd_step=None, name=None):
+        if low is not None: self.low = low
+        if high is not None: self.high = high
+        if scaler is not None: self.scaler = scaler
+        if start is not None: self.start = start
+        if fd_step is not None: self.fd_step = fd_step
+        if name is not None: self.name = name
+
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -312,17 +334,6 @@ class HasParameters(object):
         replacing object doesn't have this delegate.
         """
         return len(self._parameters)
-
-    def _override_param(self, param, low=None, high=None, 
-                        scaler=None, adder=None, start=None,
-                        fd_step=None, name=None):
-        if low is not None: param.low = low
-        if high is not None: param.high = high
-        if scaler is not None: param.scaler = scaler
-        if start is not None: param.start = start
-        if fd_step is not None: param.fd_step = fd_step
-        if name is not None: param.name = name
-        return param
 
     def add_parameter(self, target, low=None, high=None, 
                       scaler=None, adder=None, start=None,
@@ -386,17 +397,14 @@ class HasParameters(object):
                                                                  RuntimeError)
 
         if isinstance(target, Parameter): 
-            self._parameters[target.name] = self._override_param(target, low, high, 
-                                                                 scaler, adder, start,
-                                                                 fd_step, name)
+            self._parameters[target.name] = target
+            target.override(low, high, scaler, adder, start, fd_step, name)
         elif isinstance(target, ParameterGroup): 
-            self._parameters[target.name] = self._override_param(target, low, high, 
-                                                                 scaler, adder, start,
-                                                                 fd_step, name)
+            self._parameters[target.name] = target
+            target.override(low, high, scaler, adder, start, fd_step, name)
             for param in target._params: 
-                self._override_param(param, low, high, 
-                                     scaler, adder, start,
-                                     fd_step, name)
+                param.override(low, high, scaler, adder, start,
+                               fd_step, name)
         else:     
             if isinstance(target, basestring): 
                 names = [target]
