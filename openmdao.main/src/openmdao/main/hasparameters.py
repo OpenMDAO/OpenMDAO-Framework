@@ -197,12 +197,18 @@ class Parameter(object):
     def override(self, low=None, high=None, 
                  scaler=None, adder=None, start=None,
                  fd_step=None, name=None):
-        if low is not None: self.low = low
-        if high is not None: self.high = high
-        if scaler is not None: self.scaler = scaler
-        if start is not None: self.start = start
-        if fd_step is not None: self.fd_step = fd_step
-        if name is not None: self.name = name
+        if low is not None: 
+            self.low = low
+        if high is not None: 
+            self.high = high
+        if scaler is not None: 
+            self.scaler = scaler
+        if start is not None: 
+            self.start = start
+        if fd_step is not None: 
+            self.fd_step = fd_step
+        if name is not None: 
+            self.name = name
 
 
 class ParameterGroup(object):
