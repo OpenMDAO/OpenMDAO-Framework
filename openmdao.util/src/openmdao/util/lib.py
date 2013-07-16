@@ -125,7 +125,7 @@ def update_libpath():
         if sys.platform.startswith('win'):
             template = \
 """REM begin libpath update
-for /f "delims=" %%A in ('combine_paths %(libpathvname)s "%(newpath)s"') do @set PATH=%%A
+for /f "delims=" %%%%A in ('combine_paths %(libpathvname)s "%(newpath)s"') do @set PATH=%%%%A
 REM end libpath update
 """
         else:
