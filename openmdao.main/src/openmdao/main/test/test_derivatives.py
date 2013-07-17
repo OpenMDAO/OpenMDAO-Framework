@@ -12,10 +12,10 @@ except ImportError as err:
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, implements
-from openmdao.main.derivatives import applyJ
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -71,7 +71,7 @@ class MyComp(Component):
         return input_keys, output_keys, self.J
 
 
-class Testcase_applyJ(unittest.TestCase):
+class Testcase_provideJ(unittest.TestCase):
     """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
@@ -255,8 +255,15 @@ class Testcase_derivatives(unittest.TestCase):
         
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
                                               outputs=['nest.f_xy'])
-        assert_rel_error(self, J[0,0], 5.0, 0.0001)
-        assert_rel_error(self, J[0,1], 21.0, 0.0001)
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                              outputs=['nest.f_xy'], mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
     def test_large_dataflow(self):
         
@@ -314,6 +321,12 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
@@ -459,6 +472,106 @@ class Testcase_derivatives(unittest.TestCase):
         
         J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
         assert_rel_error(self, J[0,0], 48.0, .001)
+        
+        
+class Comp2(Component):
+    """ two-input, two-output"""
+    
+    x1 = Float(1.0, iotype='in', units='ft')
+    x2 = Float(1.0, iotype='in', units='ft')
+    y1 = Float(1.0, iotype='out', units='ft')
+    y2 = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        
+        pass
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[3.0, 5.0], [7.0, 11.0]])
+        
+    def provideJ(self):
+        
+        input_keys = ('x1', 'x2')
+        output_keys = ('y1', 'y2')
+        return input_keys, output_keys, self.J
+
+class Testcase_applyJT(unittest.TestCase):
+    """ Unit test for conversion of provideJ to applyJT """
+
+    def test_applyJ_and_applyJT(self):
+        
+        comp = Comp2()
+        comp.linearize()
+        
+        arg = {}
+        arg['x1'] = 1.0
+        arg['x2'] = 1.0
+        arg['y1'] = 0.0
+        arg['y2'] = 0.0
+        
+        result = {}
+        result['y1'] = 0.0
+        result['y2'] = 0.0
+        
+        applyJ(comp, arg, result)
+        
+        self.assertEqual(result['y1'], 8.0)
+        self.assertEqual(result['y2'], 18.0)
+                        
+        arg = {}
+        arg['y1'] = 1.0
+        arg['y2'] = 1.0
+        
+        result = {}
+        result['x1'] = 0.0
+        result['x2'] = 0.0
+        result['y1'] = 0.0
+        result['y2'] = 0.0
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x1'], 10.0)
+        self.assertEqual(result['x2'], 16.0)
+        
+    def test_matvecREV2(self):
+        # Larger system
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', Comp2())
+        top.add('comp2', Comp2())
+        top.connect('comp1.y1', 'comp2.x1')
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+            
+        src = ['comp1.x1', 'comp1.x2']
+        resp = ['comp2.y1', 'comp2.y2']
+        J1 = top.driver.workflow.calc_gradient(src, resp)
+        J2 = top.driver.workflow.calc_gradient(src, resp, mode='adjoint')
+        diff = J1 - J2
+        print J1
+        print J2
+        assert_rel_error(self, diff.max(), 0.0, 1e-8)
+        
+        J = zeros([5, 5])
+        arg = zeros([5, 1])
+        for j in range(5):
+            arg[j] = 1.0
+            J[:, j] = top.driver.workflow.matvecFWD(arg)
+            arg[j] = 0.0
+            
+        Jt = zeros([5, 5])
+        for j in range(5):
+            arg[j] = 1.0
+            Jt[:, j] = top.driver.workflow.matvecREV(arg)
+            arg[j] = 0.0
+            
+        print J
+        print Jt
+        diff = J.T - Jt
+        self.assertEqual(diff.max(), 0.0)
         
 if __name__ == '__main__':
     import nose

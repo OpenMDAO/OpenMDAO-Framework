@@ -10,7 +10,7 @@ from openmdao.lib.drivers.mda_solver import MDASolver
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline2_WithDerivatives, \
-                                            Discipline1
+                                            Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.util.testutil import assert_rel_error
@@ -62,6 +62,53 @@ class Sellar_MDA_Mixed(Assembly):
         
         self.add('driver', MDASolver())
         self.driver.workflow.add(['d1', 'd2'])
+        
+class Sellar_MDA_Mixed_Flipped(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('driver', MDASolver())
+        self.driver.workflow.add(['d1', 'd2'])
+        
+class Sellar_MDA_None(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('driver', MDASolver())
+        self.driver.workflow.add(['d1', 'd2'])
+        
         
         
 class Scalable_MDA(Assembly):
@@ -116,6 +163,34 @@ class MDA_SolverTestCase(unittest.TestCase):
     def test_newton_mixed(self):
         
         self.top = set_as_top(Sellar_MDA_Mixed())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        
+    def test_newton_mixed_flipped(self):
+        
+        self.top = set_as_top(Sellar_MDA_Mixed_Flipped())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        
+    def test_newton_none(self):
+        
+        self.top = set_as_top(Sellar_MDA_None())
         self.top.driver.newton = True
         
         self.top.run()

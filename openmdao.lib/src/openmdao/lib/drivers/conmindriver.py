@@ -369,18 +369,18 @@ class CONMINdriver(Driver):
             # user-defined gradients via Fake Finite Difference.
             if self.cnmn1.igoto == 3:
                 # Save baseline states and calculate derivatives
-                if self.baseline_point:
-                    self.calc_derivatives(first=True, savebase=True)
-                self.baseline_point = False
+                #if self.baseline_point:
+                #    self.calc_derivatives(first=True, savebase=True)
+                #self.baseline_point = False
                 
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
                 self.set_parameters(dvals)
         
                 # Run model under Fake Finite Difference
-                self.ffd_order = 1
+                #self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
-                self.ffd_order = 0
+                #self.ffd_order = 0
             else:
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]

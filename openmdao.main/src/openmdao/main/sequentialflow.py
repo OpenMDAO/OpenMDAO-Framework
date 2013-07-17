@@ -5,7 +5,8 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 
 from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      calc_gradient, applyJ
+                                      calc_gradient, calc_gradient_adjoint, \
+                                      applyJ, applyJT
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.vartree import VariableTree
@@ -324,7 +325,7 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
                 inputs[comp_name][var_name] = arg[i1:i2]
 
             if target != '@out':
@@ -340,9 +341,9 @@ class SequentialWorkflow(Workflow):
             name = comp.name
             
             # A component can also define a preconditioner
-            if hasattr(comp, 'applyMinv'):
-                pre_inputs = inputs[name].copy()
-                comp.applyMinv(inputs[name], pre_inputs)
+            #if hasattr(comp, 'applyMinv'):
+            #    pre_inputs = inputs[name].copy()
+            #    comp.applyMinv(inputs[name], pre_inputs)
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -380,6 +381,100 @@ class SequentialWorkflow(Workflow):
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
         
+        print 'FWD', arg, result
+        return result
+    
+    def matvecREV(self, arg):
+        '''Callback function for performing the transpose matrix vector
+        product of the workflow's full Jacobian with an incoming vector
+        arg.'''
+
+        # Bookkeeping dictionaries
+        inputs = {}
+        outputs = {}
+
+        # Start with zero-valued dictionaries cotaining keys for all inputs
+        pa_ref = {}
+        for comp in self.derivative_iter():
+            name = comp.name
+            inputs[name] = {}
+            outputs[name] = {}
+            
+            # Interior Edges use original names, so we need to know
+            # what comps are in a pseudo-assy.
+            if '~' in name:
+                for item in comp.inputs + comp.outputs:
+                    key = item.partition('.')[0]
+                    pa_ref[key] = name
+
+        # Fill input dictionaries with values from input arg.
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+            
+            if src != '@in' and src not in self._input_outputs:
+                comp_name, dot, var_name = src.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                inputs[comp_name][var_name] = arg[i1:i2]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
+
+            if target != '@out':
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2].copy()
+
+        # Call ApplyJT on each component
+        
+        for comp in self.derivative_iter():
+            name = comp.name
+            
+            # A component can also define a preconditioner
+            #if hasattr(comp, 'applyMinv'):
+            #    pre_inputs = inputs[name].copy()
+            #    comp.applyMinvT(inputs[name], pre_inputs)
+            applyJT(comp, inputs[name], outputs[name])
+
+        # Each output adds a contribution
+        for edge in self._additional_edges:
+            if edge[1] == '@out':
+                i1, i2 = self.bounds[edge]
+                comp_name, dot, var_name = edge[0].partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                outputs[comp_name][var_name] = arg[i1:i2]
+
+        # Poke results into the return vector
+        result = zeros(len(arg))
+        
+        for edge in self.get_interior_edges():
+            src, target = edge
+            i1, i2 = self.bounds[edge]
+            
+            if target == '@out':
+                target = src
+                
+            # Input-input connections are not in the jacobians. We need
+            # to add the derivative (which is 1.0).
+            elif target in self._input_outputs:
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                continue
+                
+            comp_name, dot, var_name = target.partition('.')
+            if comp_name in pa_ref:
+                var_name = '%s.%s' % (comp_name, var_name)
+                comp_name = pa_ref[comp_name]
+            result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
+            
+        print 'REV', arg, result
         return result
     
     def group_nondifferentiables(self):
@@ -402,15 +497,10 @@ class SequentialWorkflow(Workflow):
         # Groups any connected non-differentiable blocks. Each block is a set
         # of component names.
         nondiff_groups = []
-        nondiff_groups.append(set([nondiff[0]]))
-        for comp in nondiff[1:]:
-            pre = collapsed.predecessors(comp)
-            for group in nondiff_groups:
-                if len(group.intersection(pre)) > 0:
-                    group.add(comp)
-                    break
-            else:
-                nondiff_groups.append(set([comp]))
+        sub = collapsed.subgraph(nondiff)
+        nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
+        for item in nd_graphs:
+            nondiff_groups.append(item.nodes())
                 
         # We need to copy our graph, and put pseudoasemblies in place
         # of the nondifferentiable components.
@@ -461,8 +551,11 @@ class SequentialWorkflow(Workflow):
                 
                 if comp1 in group:
                     outputs = outputs.union([edge])
-                elif comp2 in group:
+                if comp2 in group:
                     inputs = inputs.union([edge])
+                    
+                if edge in self._hidden_edges:
+                    self._hidden_edges.remove(edge)
             
             # Remove old nodes
             for node in group:
@@ -518,17 +611,19 @@ class SequentialWorkflow(Workflow):
             return [getattr(self.scope, n) for n in self.get_names(full=True)]
         return self.derivative_iterset
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
 
         self._stop = False
         for node in self.derivative_iter():
-            node.calc_derivatives(first, second, savebase)
+            node.calc_derivatives(first, second, savebase, extra_in, extra_out)
             if self._stop:
                 raise RunStopped('Stop requested')
 
-    def calc_gradient(self, inputs=None, outputs=None, fd=False):
+    def calc_gradient(self, inputs=None, outputs=None, fd=False, 
+                      upscope=False, mode='auto'):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
         """
@@ -575,7 +670,7 @@ class SequentialWorkflow(Workflow):
         elif self._find_nondiff_blocks:
             
             self._severed_edges = []
-            self._additional_edges = []
+            self._additional_edges = set()
             self._hidden_edges = set()
             
             # New edges for parameters
@@ -592,8 +687,38 @@ class SequentialWorkflow(Workflow):
             self.group_nondifferentiables()
             
             self._find_nondiff_blocks = False
+            
+        # Some reorganization to add additional edges when scoped outside
+        # the driver that owns this workflow.
+        elif upscope:
+            
+            # New edges for parameters
+            input_edges = [('@in', a) for a in inputs]
+            additional_edges = set(input_edges)
+            
+            # New edges for responses
+            out_edges = [a[0] for a in self.get_interior_edges()]
+            for item in outputs:
+                if item not in out_edges:
+                    additional_edges.add((item, '@out'))
+            
+            newset = self._additional_edges.union(additional_edges)
+            if len(newset) > len(self._additional_edges):
+                self._additional_edges = newset
+                self._hidden_edges = set()
+                self.group_nondifferentiables()
+            
+            self._find_nondiff_blocks = False
         
-        return calc_gradient(self, inputs, outputs)
+        # Auto-determine which mode to use.
+        if mode=='auto':
+            # TODO - determine based on size and presence of apply_derT
+            mode = 'forward'
+            
+        if mode == 'adjoint':
+            return calc_gradient_adjoint(self, inputs, outputs)
+        else:
+            return calc_gradient(self, inputs, outputs)
     
     def check_gradient(self, inputs=None, outputs=None):
         """Compare the OpenMDAO-calculated gradient with one calculated

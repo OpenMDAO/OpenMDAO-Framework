@@ -246,11 +246,13 @@ class PseudoComponent(object):
     def set_itername(self, itername):
         self._itername = itername
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         if first:
             self.linearize()
         if second:
-            raise RuntimeError("2nd derivatives not supported in pseudocomponent %s" % self.name)
+            msg = "2nd derivatives not supported in pseudocomponent %s"
+            raise RuntimeError(msg % self.name)
 
     def linearize(self):
         """Calculate analytical first derivatives."""

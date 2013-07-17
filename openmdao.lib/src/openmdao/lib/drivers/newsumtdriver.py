@@ -116,17 +116,17 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             # the first order differences.
             
             # Save baseline states and calculate derivatives
-            if driver.baseline_point:
-                driver.calc_derivatives(first=True, savebase=True)
-            driver.baseline_point = False
+            #if driver.baseline_point:
+            #    driver.calc_derivatives(first=True, savebase=True)
+            #driver.baseline_point = False
             
             # update the parameters in the model
             driver.set_parameters(x)
     
             # Run model under Fake Finite Difference
-            driver.ffd_order = 1
+            #driver.ffd_order = 1
             super(NEWSUMTdriver, driver).run_iteration()
-            driver.ffd_order = 0
+            #driver.ffd_order = 0
         else:
 
             # Optimization step

@@ -325,10 +325,12 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in = None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase)
+        self.workflow.calc_derivatives(first, second, savebase, 
+                                       extra_in, extra_out)
 
     def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to
@@ -336,7 +338,7 @@ class Driver(Component):
         on its workflow. However, some driver (optimizers in particular) may
         want to define their own behavior.
         """
-        return self.workflow.calc_gradient(inputs, outputs)
+        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
 
     def post_iteration(self):
         """Called after each iteration."""

@@ -46,7 +46,8 @@ class PseudoAssembly(object):
             comp.set_itername(self.itername+'-fd')
             comp.run(ffd_order=ffd_order, case_id=case_id)
             
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
         
@@ -56,7 +57,7 @@ class PseudoAssembly(object):
         if first:
             for comp in self.comps:
                 if hasattr(comp, 'apply_deriv') or hasattr(comp, 'provideJ'):
-                    comp.calc_derivatives(first, second, savebase)
+                    comp.calc_derivatives(first, second, savebase=True)
                 
         self.J = self.fd.calculate()
             
