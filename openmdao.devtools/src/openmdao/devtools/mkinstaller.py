@@ -37,16 +37,16 @@ openmdao_prereqs = ['numpy', 'scipy']
 # of '.' to indicate that the parent dir is the top of the repository. The
 # package type should be 'sdist' or 'bdist_egg' for binary packages
 openmdao_packages = [
-    ('openmdao.util', '', 'sdist'),
+    ('openmdao.util',  '', 'sdist'),
     ('openmdao.units', '', 'sdist'),
-    ('openmdao.main', '', 'sdist'),
-    ('openmdao.lib', '', 'sdist'),
-    ('openmdao.test', '', 'sdist'),
-    ('openmdao.gui', '', 'sdist'),
-    ('openmdao.examples.simple', 'examples', 'sdist'),
-    ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
-    ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
-    ('openmdao.examples.mdao', 'examples', 'sdist'),
+    ('openmdao.main',  '', 'sdist'),
+    ('openmdao.lib',   '', 'sdist'),
+    ('openmdao.test',  '', 'sdist'),
+    ('openmdao.gui',   '', 'sdist'),
+    ('openmdao.examples.simple',               'examples', 'sdist'),
+    ('openmdao.examples.bar3simulation',       'examples', 'bdist_egg'),
+    ('openmdao.examples.enginedesign',         'examples', 'bdist_egg'),
+    ('openmdao.examples.mdao',                 'examples', 'sdist'),
     ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
 ]
 
@@ -333,7 +333,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_egg = \"setuptools-%%s-py%%s.egg\" %% (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
@@ -567,7 +567,7 @@ def after_install(options, home_dir, activated=False):
     guitestreqs = list(guitestreqs)
 
     # pin setuptools to this version
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_url = "https://openmdao.org/dists/setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
 
     optdict = {

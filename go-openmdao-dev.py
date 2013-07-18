@@ -491,7 +491,7 @@ def _install_req(py_executable, unzip=False, distribute=False,
         search_dirs = file_search_dirs()
 
     if not distribute:
-        egg_path = 'setuptools-0.8-py%s.egg' % sys.version[:3]
+        egg_path = 'setuptools-0.9.5-py%s.egg' % sys.version[:3]
         found, egg_path = _find_file(egg_path, search_dirs)
         project_name = 'setuptools'
         bootstrap_script = EZ_SETUP_PY
@@ -1953,9 +1953,9 @@ def adjust_options(options, args):
         after_install(options, virtual_env, activated=True)
 
     try:
-        download('https://openmdao.org/dists/setuptools-0.8-py2.7.egg')
+        download('https://openmdao.org/dists/setuptools-0.9.5-py2.7.egg')
         import ez_setup
-        ez_setup.use_setuptools(version='0.8', download_base='https://openmdao.org/dists')
+        ez_setup.use_setuptools(version='0.9.5', download_base='https://openmdao.org/dists')
         os.remove('ez_setup.py')
     except Exception as err:
         logger.warn(str(err))
@@ -2099,7 +2099,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_egg = "setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
