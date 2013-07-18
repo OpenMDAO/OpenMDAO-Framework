@@ -1,7 +1,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.pseudocomp import ParamPseudoComponent
 from openmdao.util.typegroups import real_types, int_types
 
 
@@ -9,9 +9,7 @@ class Parameter(object):
 
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
-                 fd_step=None, scope=None, name=None):
-        self._metadata = None
-        self.pcomp_name = None
+                 fd_step=None, scope=None, name=None, in_group=False):
 
         if scaler is None and adder is None:
             self._transform = self._do_nothing
@@ -32,12 +30,17 @@ class Parameter(object):
                 except (TypeError, ValueError):
                     raise ValueError("Bad value given for parameter's 'adder' attribute.")
 
+        self._metadata = None
+        self.pcomp_name = None
+
         self.low = low
         self.high = high
-        self.start = start
         self.scaler = scaler
         self.adder = adder
+        self.start = start
         self.fd_step = fd_step
+        self.in_group = in_group
+
         if name is not None:
             self.name = name
         else:
@@ -118,6 +121,14 @@ class Parameter(object):
             raise ValueError("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high))
 
+        if in_group: # don't create a PseudoComp. ParameterGroup will do it
+            pass
+        else:
+            pseudo = ParamPseudoComponent(scope, target, scaler, adder)
+            self.pcomp_name = pseudo.name
+            scope.add(self.pcomp_name, pseudo)
+            pseudo.make_connections()
+
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return False
@@ -154,7 +165,8 @@ class Parameter(object):
 
     def evaluate(self, scope=None):
         """Returns the value of this parameter."""
-        return self._untransform(self._expreval.evaluate(scope))
+        #return self._untransform(self._expreval.evaluate(scope))
+        return 
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
@@ -223,13 +235,25 @@ class ParameterGroup(object):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
 
         self._params = params[:]
+        param0 = self._params[0]
+
         self.low = max([x.low for x in self._params])
         self.high = min([x.high for x in self._params])
-        self.start = self._params[0].start
-        self.scaler = self._params[0].scaler
-        self.adder = self._params[0].adder
-        self.fd_step = self._params[0].fd_step
-        self.name = self._params[0].name
+        self.start = param0.start
+        self.scaler = param0.scaler
+        self.adder = param0.adder
+        self.fd_step = param0.fd_step
+        self.name = param0.name
+
+        pseudo = ParamPseudoComponent(param0._expreval.scope, 
+                                      param0._expreval.text, 
+                                      self.scaler, self.adder)
+        self.pcomp_name = pseudo.name
+        param0._expreval.scope.add(self.pcomp_name, pseudo)
+        for param in self._params[1:]:
+            pseudo.add_target(param._expreval.text)
+        pseudo.make_connections()
+
 
     def __eq__(self, other):
         if not isinstance(other,ParameterGroup):
@@ -430,30 +454,35 @@ class HasParameters(object):
                 self._parent.raise_exception("%s are already Parameter targets" %
                                              sorted(list(dups)), ValueError)
 
-            try:
-                parameters = [Parameter(n, low=low, high=high,
-                                        scaler=scaler, adder=adder, start=start,
-                                        fd_step=fd_step, name=key,
-                                        scope=self._get_scope(scope))
-                              for n in names]
-            except Exception as err:
-                self._parent.raise_exception(str(err), type(err))
-
             if key in self._parameters:
                 self._parent.raise_exception("%s is already a Parameter" % key,
                                              ValueError)
+            try:
+                if len(names) == 1:
+                    self._parameters[key] = \
+                        Parameter(names[0], low=low, high=high,
+                                  scaler=scaler, adder=adder, start=start,
+                                  fd_step=fd_step, name=key,
+                                  scope=self._get_scope(scope))
+                else:  # defining a ParameterGroup
+                    parameters = [Parameter(n, low=low, high=high,
+                                            scaler=scaler, adder=adder, 
+                                            start=start,
+                                            fd_step=fd_step, name=key,
+                                            scope=self._get_scope(scope),
+                                            in_group=True)
+                                  for n in names]
+                    types = set([p.valtypename for p in parameters])
+                    if len(types) > 1: 
+                        raise ValueError("Can't add parameter %s because "
+                                         "%s are not all of the same type" %
+                                         (key," and ".join(names)))
+                    pg = ParameterGroup(parameters)
+                    pg.typename = parameters[0].valtypename
+                    self._parameters[key] = pg
+            except Exception as err:
+                self._parent.raise_exception(str(err), type(err))
 
-            if len(parameters) == 1:
-                self._parameters[key] = parameters[0]
-            else:  # defining a ParameterGroup
-                types = set([p.valtypename for p in parameters])
-                if len(types) > 1: 
-                    self._parent.raise_exception("Can't add parameter %s because "
-                        "%s are not all of the same type" %
-                        (key," and ".join(names)), ValueError)
-                pg = ParameterGroup(parameters)
-                pg.typename = parameters[0].valtypename
-                self._parameters[key] = pg
 
             #if start is given, then initialze the var now
             if start is not None:

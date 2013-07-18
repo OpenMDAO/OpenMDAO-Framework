@@ -5,7 +5,7 @@ import ast
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.pseudocomp import unit_transform
+from openmdao.main.pseudocomp import unit_xform
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.printexpr import print_node
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
@@ -286,13 +286,13 @@ class UnitXformerTestCase(unittest.TestCase):
 
     def test_simple_conversion(self):
         node = ast.parse('a')
-        cnv = unit_transform(node, 'ft', 'inch')
+        cnv = unit_xform(node, 'ft', 'inch')
         newexpr = print_node(cnv)
         self.assertEqual(newexpr, 'a*12.0')
 
     def test_scaler_adder_conversion(self):
         node = ast.parse('a')
-        cnv = unit_transform(node, 'degC', 'degF')
+        cnv = unit_xform(node, 'degC', 'degF')
         newexpr = print_node(cnv)
         self.assertEqual(newexpr, 'a*1.8+32.0')
         

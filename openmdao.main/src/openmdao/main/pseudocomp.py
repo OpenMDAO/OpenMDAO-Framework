@@ -26,20 +26,31 @@ def _get_varname(name):
         return name
     return name[:idx]
 
-def unit_transform(node, in_units, out_units):
-    """Transforms an expression into expr*scaler+adder."""
+def do_nothing_xform(node):
+    return node
+
+def scaler_adder_xform(node, scaler, adder):
+    """Returns an ast for the form (node+adder)*scaler"""
+    if adder != 0.0:
+        newnode = ast.BinOp(node, ast.Add(), ast.Num(adder))
+    else:
+        newnode = node
+    if scaler != 1.0: # do the add and the mult
+        newnode = ast.BinOp(newnode, ast.Mult(), ast.Num(scaler))
+    return ast.copy_location(newnode, node)
+
+def unit_xform(node, in_units, out_units):
+    """Transforms an ast into expr*scaler+adder where scaler
+    and adder are from units conversion.
+    """
     inpq = PhysicalQuantity(1.0, in_units)
     outpq = PhysicalQuantity(1.0, out_units)
     try:
         scaler, adder = inpq.unit.conversion_tuple_to(outpq.unit)
     except TypeError:
         raise TypeError("units '%s' are incompatible with assigning units of '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
-        
-    newnode = ast.BinOp(node, ast.Mult(), ast.Num(scaler))
-    if adder != 0.0: # do the multiply and the add
-        newnode = ast.BinOp(newnode, ast.Add(), 
-                            ast.Num(scaler*adder))
-    return ast.copy_location(newnode, node)
+    return scaler_adder_xform(node, scaler, adder)
+
 
 class DummyExpr(object):
     def __init__(self):
@@ -63,15 +74,19 @@ class PseudoComponent(object):
     along with 'real' components.
     """
 
-    def __init__(self, parent, srcexpr, destexpr=None):
+    def __init__(self, parent, srcexpr, destexpr=None, translate=True):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
-        self._mapping = {}
+        self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
         self._valid = False
         self._parent = parent
         self._inputs = []
+        if destexpr.text:
+            self._outdests = [destexpr.text]
+        else:
+            self._outdests = []
 
         varmap = {}
         for name, meta in srcexpr.get_metadata():
@@ -80,11 +95,9 @@ class PseudoComponent(object):
         for i,ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
-            self._mapping[ref] = in_name
+            self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
-
-        self._outdest = destexpr.text
 
         refs = list(destexpr.refs())
         if refs:
@@ -104,9 +117,13 @@ class PseudoComponent(object):
         newmeta['out0'] = self._meta[_get_varname(refs[0])]
         self._meta = newmeta
 
-        xformed_src = transform_expression(srcexpr.text, self._mapping)
-        xformed_dest = transform_expression(destexpr.text, { destexpr.text: 'out0'})
-
+        if translate:
+            xformed_src = transform_expression(srcexpr.text, self._inmap)
+        else:
+            xformed_src = srcexpr.text
+        xformed_dest = transform_expression(destexpr.text, 
+                                           { destexpr.text: 'out0'})
+ 
         out_units = self._meta['out0'].get('units')
         if out_units is not None:
             # evaluate the src expression using UnitsOnlyPQ objects
@@ -126,7 +143,7 @@ class PseudoComponent(object):
 
             unitnode = ast.parse(xformed_src)
             try:
-                unitxform = unit_transform(unitnode, self._srcunits, out_units)
+                unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
                 raise TypeError("Can't connect '%s' to '%s': %s" % (srcexpr.text, 
                                                                     destexpr.text, err))
@@ -136,14 +153,21 @@ class PseudoComponent(object):
             self._srcunits = None
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
-        self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
+        self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self,
+                                                is_dest=True)
 
         # this is just the equation string (for debugging)
         if destexpr and destexpr.text:
             out = destexpr.text
         else:
             out = 'out0'
-        self._eqn = "%s = %s" % (out, transform_expression(self._srcexpr.text, _invert_dict(self._mapping)))
+        if translate:
+            src = transform_expression(self._srcexpr.text, 
+                                       _invert_dict(self._inmap))
+        else:
+            src = self._srcexpr.text
+
+        self._eqn = "%s = %s" % (out, src)
 
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
@@ -157,15 +181,17 @@ class PseudoComponent(object):
         PseudoComponent is hidden.
         """
         if is_hidden:
-            if self._outdest:
-                return [(src, self._outdest) for src in self._mapping.keys()]
+            if self._outdests:
+                return [(src, self._outdests[0]) 
+                           for src in self._inmap.keys() if src]
             else:
                 return []
         else:
             conns = [(src, '.'.join([self.name, dest])) 
-                         for src, dest in self._mapping.items()]
-            if self._outdest:
-                conns.append(('.'.join([self.name, 'out0']), self._outdest))
+                         for src, dest in self._inmap.items()]
+            if self._outdests:
+                conns.extend([('.'.join([self.name, 'out0']), dest) 
+                                           for dest in self._outdests])
         return conns
 
     def make_connections(self):
@@ -261,3 +287,41 @@ class PseudoComponent(object):
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J
+
+
+class ParamPseudoComponent(PseudoComponent):
+    """PseudoComponent used to apply scalers/adders to a parameter.
+    This type of PseudoComponent has no input connections and one or
+    more output connections.
+    """
+
+    def __init__(self, parent, target, scaler=1.0, adder=0.0):
+        if scaler is None:
+            scaler = 1.0
+        if adder is None:
+            adder = 0.0
+        if scaler == 1.0 and adder == 0.0:
+            src = 'in0'
+        elif scaler == 1.0:
+            src = 'in0+%.15g' % adder
+        elif adder == 0.0:
+            src = 'in0*%.15g' % scaler
+        else:
+            src = '(in0+%.15g)*%.15g' % (adder, scaler)
+
+        self.scaler, self.adder = scaler, adder
+        srcexpr = ConnectedExprEvaluator(src, scope=self)
+        destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
+        super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
+                                                   destexpr, translate=False)
+
+    def add_target(self, target):
+        self._outdests.append(target)
+
+    def list_connections(self, is_hidden=False):
+        """The only connections for a ParamPseudoComponent are output connections."""
+
+        if is_hidden:
+            return []
+        else:
+            return [('.'.join([self.name, 'out0']), dest) for dest in self._outdests]
