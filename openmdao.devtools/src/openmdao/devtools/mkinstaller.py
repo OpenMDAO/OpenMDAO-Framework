@@ -1,6 +1,6 @@
 """
 Generates either a ``go-openmdao.py`` script for installation
-of an openmdao release or ``a go-openmdao-dev.py`` script for creating a 
+of an openmdao release or ``a go-openmdao-dev.py`` script for creating a
 virtualenv with "develop" versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
 
@@ -10,7 +10,8 @@ This script should be run from within an activated OpenMDAO virtual environment
 in order to capture all of the required dependencies correctly.
 """
 
-import sys, os
+import sys
+import os
 import virtualenv
 import pprint
 import StringIO
@@ -35,22 +36,26 @@ openmdao_prereqs = ['numpy', 'scipy']
 # a dev install and is ignored in the user install. '' should be used instead
 # of '.' to indicate that the parent dir is the top of the repository. The
 # package type should be 'sdist' or 'bdist_egg' for binary packages
-openmdao_packages = [('openmdao.util', '', 'sdist'), 
-                     ('openmdao.units', '', 'sdist'), 
-                     ('openmdao.main', '', 'sdist'), 
-                     ('openmdao.lib', '', 'sdist'), 
-                     ('openmdao.test', '', 'sdist'),
-                     ('openmdao.gui', '', 'sdist'),
-                     ('openmdao.examples.simple', 'examples', 'sdist'),
-                     ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
-                     ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
-                     ('openmdao.examples.mdao', 'examples', 'sdist'),
-                     ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
-                    ]
+openmdao_packages = [
+    ('openmdao.util',  '', 'sdist'),
+    ('openmdao.units', '', 'sdist'),
+    ('openmdao.main',  '', 'sdist'),
+    ('openmdao.lib',   '', 'sdist'),
+    ('openmdao.test',  '', 'sdist'),
+    ('openmdao.gui',   '', 'sdist'),
+    ('openmdao.examples.simple',               'examples', 'sdist'),
+    ('openmdao.examples.bar3simulation',       'examples', 'bdist_egg'),
+    ('openmdao.examples.enginedesign',         'examples', 'bdist_egg'),
+    ('openmdao.examples.mdao',                 'examples', 'sdist'),
+    ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
+]
+
 
 # if it's a dev installer, these packages will also be included
-openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
-                         ]
+openmdao_dev_packages = [
+    ('openmdao.devtools', '', 'sdist'),
+]
+
 
 def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     """Return a string containing the definition of the adjust_options function
@@ -70,7 +75,7 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     if len(args) == 0:
         args.append('openmdao-%%s' %% '%s')
 """ % version
-    
+
     return """
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
@@ -94,24 +99,25 @@ def adjust_options(options, args):
 
 """ % (code, setuptools_url, setuptools_version)
 
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
 
     parser = OptionParser()
-    parser.add_option("--dev", action="store_true", dest='dev', 
+    parser.add_option("--dev", action="store_true", dest='dev',
                       help="if present, a development script will be generated instead of a release script")
-    parser.add_option("--dest", action="store", type="string", dest='dest', 
+    parser.add_option("--dest", action="store", type="string", dest='dest',
                       help="specify destination directory", default='.')
-    parser.add_option("--offline", action="store", type="string", dest='offline', 
-                      help="make offline gathering script", default='')    
-    parser.add_option("-f", "--findlinks", action="store", type="string", 
+    parser.add_option("--offline", action="store", type="string", dest='offline',
+                      help="make offline gathering script", default='')
+    parser.add_option("-f", "--findlinks", action="store", type="string",
                       dest="findlinks",
                       default='http://openmdao.org/dists',
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
-    
+
     (options, args) = parser.parse_args(args)
-    
+
     if len(args) > 0:
         print 'unrecognized args: %s' % args
         parser.print_help()
@@ -133,7 +139,7 @@ def main(args=None):
                 if not options.gui and pkg == 'openmdao.gui':
                     continue
                 os.chdir(join(topdir, pdir, pkg))
-                cmdline = [join(absbin, 'python'), 'setup.py', 
+                cmdline = [join(absbin, 'python'), 'setup.py',
                            'develop', '-N'] + cmds
                 try:
                     call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
@@ -153,7 +159,7 @@ def main(args=None):
     else:  # making a release installer
         make_dev_eggs = ''
         make_docs = ''
-        
+
     if options.offline == "gather":
         offline_ = ["'-zmaxd'", "'-zmaxd'", ", 'pkg'", "os.mkdir('pkg')", "['-f', url]", "['-f', openmdao_url]"]
         f_prefix = "gather-"
@@ -163,9 +169,7 @@ def main(args=None):
     else:
         offline_ = ["'-Z'", "'-NZ'", '', '', "['-f', url]", "['-f', openmdao_url]"]
         f_prefix = ""
-        
-         
-        
+
     script_str = """
 
 openmdao_prereqs = %(openmdao_prereqs)s
@@ -173,20 +177,20 @@ openmdao_prereqs = %(openmdao_prereqs)s
 %(mkdir_pkg)s
 
 def extend_parser(parser):
-    parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
+    parser.add_option("-r","--req", action="append", type="string", dest='reqs',
                       help="specify additional required distributions", default=[])
-    parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
+    parser.add_option("--noprereqs", action="store_true", dest='noprereqs',
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_false", dest='gui', default=True,
                       help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("--nodocs", action="store_false", dest='docs', default=True,
                       help="do not build the docs")
-    parser.add_option("-f", "--findlinks", action="store", type="string", 
+    parser.add_option("-f", "--findlinks", action="store", type="string",
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
-    parser.add_option("--testurl", action="store", type="string", dest='testurl', 
+    parser.add_option("--testurl", action="store", type="string", dest='testurl',
                       help="specify url where openmdao.* distribs are located (used for release testing only)")
-                      
+
     # go back to old behavior that includes system site packages by default
     parser.set_defaults(system_site_packages=True)
 
@@ -196,7 +200,7 @@ def extend_parser(parser):
 def download(url, dest='.'):
     import urllib2
     dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
-    
+
     resp = urllib2.urlopen(url)
     outpath = os.path.join(dest, os.path.basename(url))
     bs = 1024*8
@@ -222,7 +226,7 @@ def _get_mingw_dlls():
         zipped.extractall(dest)
         zipped.close()
         os.remove(zippath)
-    
+
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
@@ -329,7 +333,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_egg = \"setuptools-%%s-py%%s.egg\" %% (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
@@ -338,6 +342,7 @@ def after_install(options, home_dir, activated=False):
     reqs = %(reqs)s
     guireqs = %(guireqs)s
     guitestreqs = %(guitestreqs)s
+
     if options.findlinks is None:
         url = '%(url)s'
     else:
@@ -364,6 +369,7 @@ def after_install(options, home_dir, activated=False):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
+
     if is_win:
         _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
@@ -403,7 +409,7 @@ def after_install(options, home_dir, activated=False):
             print "These must be installed in the system level python before installing OpenMDAO."
             print "To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__
             sys.exit(-1)
-    
+
     cmds = %(cmds_str)s
     openmdao_cmds = %(openmdao_cmds_str)s
     try:
@@ -411,14 +417,14 @@ def after_install(options, home_dir, activated=False):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            allreqs = allreqs + guitestreqs 
-            
+            allreqs = allreqs + guitestreqs
+
         for req in allreqs:
             if req.startswith('openmdao.'):
                 _single_install(openmdao_cmds, req, bin_dir, failures)
             else:
                 _single_install(cmds, req, bin_dir, failures)
-        
+
 %(make_dev_eggs)s
 
         # add any additional packages specified on the command line
@@ -435,7 +441,7 @@ def after_install(options, home_dir, activated=False):
             source_command = '.'
             python = os.path.join(bin_dir, 'python')
             openmdao = os.path.join(bin_dir, 'openmdao')
-        
+
 %(make_docs)s
         if is_win: # retrieve MinGW DLLs from server
             try:
@@ -448,9 +454,9 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %%s" %% str(err)
         sys.exit(-1)
-    
+
     _update_activate(bin_dir)
-    
+
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
@@ -470,7 +476,7 @@ def after_install(options, home_dir, activated=False):
                 os.chmod(path, mode)
 
     abshome = os.path.abspath(home_dir)
-    
+
     if failures:
         failures.sort()
         print '\\n\\n***** The following packages failed to install: %%s.' %% failures
@@ -498,45 +504,45 @@ def after_install(options, home_dir, activated=False):
             else:
                 print '. bin/activate'
             print '\\nto activate your environment and start using OpenMDAO.'
-    
+
     sys.exit(1 if failures else 0)
     """
-    
+
     reqs = set()
     guireqs = set()
     guitestreqs = set()
-    
+
     version = '?.?.?'
     excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
-    dists = working_set.resolve([Requirement.parse(r[0]) 
-                                   for r in openmdao_packages if r[0]!='openmdao.gui'])
+    dists = working_set.resolve([Requirement.parse(r[0])
+                                   for r in openmdao_packages if r[0] != 'openmdao.gui'])
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
     guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
     guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes-guinames
-    
+
     try:
         setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]
     except:
         setupdoc_dist = None
-        
+
     for dist in dists:
         if dist.project_name not in distnames:
             continue
         if dist.project_name == 'openmdao.main':
             version = dist.version
-        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+        if options.dev:  # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
             if not dist.project_name.startswith('openmdao.'):
                 reqs.add('%s' % dist.as_requirement())
         else:
             reqs.add('%s' % dist.as_requirement())
-            
+
     for dist in gui_dists:
         if dist.project_name not in guinames:
             continue
-        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+        if options.dev:  # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
             if not dist.project_name.startswith('openmdao.'):
                 guireqs.add('%s' % dist.as_requirement())
         else:
@@ -545,7 +551,7 @@ def after_install(options, home_dir, activated=False):
     for dist in guitest_dists:
         if dist.project_name not in guitestnames:
             continue
-        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+        if options.dev:  # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
             if not dist.project_name.startswith('openmdao.'):
                 guitestreqs.add('%s' % dist.as_requirement())
         else:
@@ -556,37 +562,38 @@ def after_install(options, home_dir, activated=False):
         _reqs = [str(setupdoc_dist.as_requirement())]
     else:
         _reqs = ['setupdocs>=1.0']
-    reqs = _reqs + list(reqs) 
+    reqs = _reqs + list(reqs)
     guireqs = list(guireqs)
     guitestreqs = list(guitestreqs)
 
     # pin setuptools to this version
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_url = "https://openmdao.org/dists/setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
-    optdict = { 
-        'mkdir_pkg' : offline_[3],
-        'extarg1' : offline_[0],
-        'extarg2' : offline_[1],
-        'dldir' : offline_[2],
-        'cmds_str':offline_[4],
-        'openmdao_cmds_str':offline_[5],
-        'reqs': reqs, 
-        'guireqs': guireqs,
-        'guitestreqs': guitestreqs,
-        'version': version, 
-        'url': options.findlinks,
-        'make_dev_eggs': make_dev_eggs,
-        'make_docs': make_docs,
-        'adjust_options': _get_adjust_options(options, version, setuptools_url, setuptools_version),
-        'openmdao_prereqs': openmdao_prereqs,
+
+    optdict = {
+        'mkdir_pkg':         offline_[3],
+        'extarg1':           offline_[0],
+        'extarg2':           offline_[1],
+        'dldir':             offline_[2],
+        'cmds_str':          offline_[4],
+        'openmdao_cmds_str': offline_[5],
+        'reqs':              reqs,
+        'guireqs':           guireqs,
+        'guitestreqs':       guitestreqs,
+        'version':           version,
+        'url':               options.findlinks,
+        'make_dev_eggs':     make_dev_eggs,
+        'make_docs':         make_docs,
+        'adjust_options':    _get_adjust_options(options, version, setuptools_url, setuptools_version),
+        'openmdao_prereqs':  openmdao_prereqs,
     }
-    
+
     dest = os.path.abspath(options.dest)
     if options.dev:
         scriptname = os.path.join(dest, f_prefix + 'go-openmdao-dev.py')
     else:
         scriptname = os.path.join(dest, f_prefix + 'go-openmdao-%s.py' % version)
-        
+
     if os.path.isfile(scriptname):
         shutil.copyfile(scriptname, scriptname+'.old'
                         )
@@ -596,11 +603,11 @@ def after_install(options, home_dir, activated=False):
         for line in virtualenv.create_bootstrap_script(script_str % optdict).split('\n'):
             if line == fixline:
                 line = line.replace('*', setuptools_version)
-            elif ", '-U'" in line: # remove forcing it to look for latest setuptools version
+            elif ", '-U'" in line:  # remove forcing it to look for latest setuptools version
                 line = line.replace(", '-U'", "")
             f.write('%s\n' % line)
     os.chmod(scriptname, 0755)
- 
+
 
 if __name__ == '__main__':
     main()
