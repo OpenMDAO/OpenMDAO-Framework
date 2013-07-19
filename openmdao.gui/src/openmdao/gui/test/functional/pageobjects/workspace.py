@@ -36,7 +36,6 @@ class WorkspacePage(BasePageObject):
     project_menu      = ButtonElement((By.ID, 'project-menu'))
     commit_button     = ButtonElement((By.ID, 'project-commit'))
     revert_button     = ButtonElement((By.ID, 'project-revert'))
-    run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
     exit_button       = ButtonElement((By.ID, 'project-exit'))
@@ -139,7 +138,7 @@ class WorkspacePage(BasePageObject):
             lambda browser: len(self.get_dataflow_figures()) > 0)
 
         # Now wait for all WebSockets open.
-        browser.execute_script('openmdao.Util.webSocketsReady(2);')
+        browser.execute_script('openmdao.project.webSocketsReady(2);')
 
         try:  # We may get 2 notifiers: sockets open and sockets closed.
             NotifierPage.wait(self, base_id='ws_open')
@@ -192,12 +191,6 @@ class WorkspacePage(BasePageObject):
             time.sleep(delay)
         return element
 
-    def run(self, timeout=TMO):
-        """ Run current component. """
-        self('project_menu').click()
-        self('run_button').click()
-        NotifierPage.wait(self, timeout)
-
     def do_command(self, cmd, timeout=TMO, ack=True):
         """ Execute a command. """
         self.command = cmd
@@ -209,7 +202,7 @@ class WorkspacePage(BasePageObject):
         """ Close the workspace page. Returns :class:`ProjectsPage`. """
         if commit:
             self.commit_project()
-        self.browser.execute_script('openmdao.Util.closeWebSockets();')
+        self.browser.execute_script('openmdao.project.closeWebSockets();')
         NotifierPage.wait(self, base_id='ws_closed')
         self('project_menu').click()
         self('close_button').click()
@@ -226,7 +219,7 @@ class WorkspacePage(BasePageObject):
         if expectDialog:
             dialog = ConfirmationPage(self)
             if confirm:  # close without saving
-                self.browser.execute_script('openmdao.Util.closeWebSockets();')
+                self.browser.execute_script('openmdao.project.closeWebSockets();')
                 NotifierPage.wait(self)
                 dialog.click_ok()
                 from project import ProjectsPage
@@ -362,7 +355,7 @@ class WorkspacePage(BasePageObject):
         for filename in file_paths:
             element = self.find_file(filename)
             chain = ActionChains(self.browser)
-            chain.key_down( Keys.CONTROL ).click(element).key_up( Keys.CONTROL ).perform()
+            chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         self('files_tab').click()
         self('file_menu').click()
