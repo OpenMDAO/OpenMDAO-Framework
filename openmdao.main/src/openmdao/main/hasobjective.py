@@ -2,10 +2,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent
-
-def _remove_spaces(s):
-    return s.translate(None, ' \n\t\r')
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 
 class HasObjectives(object): 

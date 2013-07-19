@@ -113,9 +113,9 @@ class Driver(Component):
                 reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-            # calling get_components() here just makes sure that all of the
-            # components can be resolved
-            comps = self.workflow.get_components()
+                # calling get_components() here just makes sure that all of the
+                # components can be resolved
+                comps = self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
 
@@ -127,7 +127,7 @@ class Driver(Component):
         if len(self.workflow) == 0:
             for compname in self._get_required_compnames():
                 self.workflow.add(compname)
-        for child in self.workflow.get_components():
+        for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())

@@ -503,7 +503,7 @@ class DependencyGraph(object):
                     betweens.add(node)
                 elif s and node in succ['@bin']: # between a list node and the input boundary
                     betweens.add(node)
-                elif p and node.startswith('_pseudo_'):
+                elif (p or s) and node.startswith('_pseudo_'):
                     betweens.add(node)
         return betweens
             

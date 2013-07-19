@@ -13,6 +13,9 @@ from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 _namelock = RLock()
 _count = 0
 
+def _remove_spaces(s):
+    return s.translate(None, ' \n\t\r')
+
 def _get_new_name():
     global _count
     with _namelock:
@@ -216,7 +219,7 @@ class PseudoComponent(object):
 
     def run(self, ffd_order=0, case_id=''):
         if not self._valid:
-            self._parent.update_inputs(self.name, None)
+            self.update_inputs()
 
         src = self._srcexpr.evaluate()
         if isinstance(src, PhysicalQuantity):
@@ -228,6 +231,9 @@ class PseudoComponent(object):
         self._destexpr.set(src)
         self._valid = True
 
+    def update_inputs(self):
+        self._parent.update_inputs(self.name, None)
+        
     def update_outputs(self, names):
         self.run()
 
@@ -237,6 +243,7 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
+        self._valid = False
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
@@ -295,11 +302,13 @@ class ParamPseudoComponent(PseudoComponent):
     more output connections.
     """
 
-    def __init__(self, parent, target, scaler=1.0, adder=0.0):
-        if scaler is None:
-            scaler = 1.0
-        if adder is None:
-            adder = 0.0
+    def __init__(self, param):
+        #parent, target, scaler=1.0, adder=0.0, start=None):
+        parent = param._expreval.scope
+        target = param._expreval.text
+        scaler = param.scaler
+        adder  = param.adder
+
         if scaler == 1.0 and adder == 0.0:
             src = 'in0'
         elif scaler == 1.0:
@@ -314,6 +323,10 @@ class ParamPseudoComponent(PseudoComponent):
         destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
         super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
                                                    destexpr, translate=False)
+        if param.start is not None:
+            self.in0 = param.start
+        else:
+            self.in0 = param._untransform(destexpr.evaluate(scope=parent))
 
     def add_target(self, target):
         self._outdests.append(target)
@@ -325,3 +338,7 @@ class ParamPseudoComponent(PseudoComponent):
             return []
         else:
             return [('.'.join([self.name, 'out0']), dest) for dest in self._outdests]
+
+    def update_inputs(self):
+        pass # param pseudocomp will never have inputs that are connected to anything
+        

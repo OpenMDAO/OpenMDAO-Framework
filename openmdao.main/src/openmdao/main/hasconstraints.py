@@ -8,7 +8,7 @@ import operator
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -37,10 +37,6 @@ def _parse_constraint(expr_string):
     msg = "Constraints require an explicit comparator (=, <, >, <=, or >=)"
     raise ValueError( msg )
     
-def _remove_spaces(s):
-    """ whitespace removal """
-    return s.translate(None, ' \n\t\r')
-
 def _get_scope(obj, scope=None):
     if scope is None:
         try:

@@ -9,11 +9,13 @@ class Parameter(object):
 
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
-                 fd_step=None, scope=None, name=None, in_group=False):
+                 fd_step=None, scope=None, name=None):
 
         if scaler is None and adder is None:
             self._transform = self._do_nothing
             self._untransform = self._do_nothing
+            scaler = 1.0
+            adder = 0.0
         else:
             if scaler is None:
                 scaler = 1.0
@@ -37,9 +39,8 @@ class Parameter(object):
         self.high = high
         self.scaler = scaler
         self.adder = adder
-        self.start = start
+        self.start = self._untransform(start) if start is not None else start
         self.fd_step = fd_step
-        self.in_group = in_group
 
         if name is not None:
             self.name = name
@@ -121,13 +122,16 @@ class Parameter(object):
             raise ValueError("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high))
 
-        if in_group: # don't create a PseudoComp. ParameterGroup will do it
-            pass
-        else:
-            pseudo = ParamPseudoComponent(scope, target, scaler, adder)
+    def activate(self, scope):
+        """Make this parameter active by creating the appropriate
+        connections in the dependency graph.  This should NOT be called
+        on parameters that are part of a ParameterGroup.
+        """
+        if self.pcomp_name is None:
+            pseudo = ParamPseudoComponent(self)
             self.pcomp_name = pseudo.name
-            scope.add(self.pcomp_name, pseudo)
-            pseudo.make_connections()
+            scope.add(pseudo.name, pseudo)
+        getattr(scope, pseudo.name).make_connections()
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -166,11 +170,20 @@ class Parameter(object):
     def evaluate(self, scope=None):
         """Returns the value of this parameter."""
         #return self._untransform(self._expreval.evaluate(scope))
-        return 
+        if scope is None:
+            scope = self._expreval.scope
+        pcomp = getattr(scope, self.pcomp_name)
+        if not pcomp._valid:
+            pcomp.update_outputs(['out0'])
+        return pcomp.out0
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
-        self._expreval.set(self._transform(val), scope)
+        #self._expreval.set(self._transform(val), scope)
+        if scope is None:
+            scope = self._expreval.scope
+        pcomp = getattr(scope, self.pcomp_name)
+        pcomp.set('in0', val)
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
@@ -244,16 +257,7 @@ class ParameterGroup(object):
         self.adder = param0.adder
         self.fd_step = param0.fd_step
         self.name = param0.name
-
-        pseudo = ParamPseudoComponent(param0._expreval.scope, 
-                                      param0._expreval.text, 
-                                      self.scaler, self.adder)
-        self.pcomp_name = pseudo.name
-        param0._expreval.scope.add(self.pcomp_name, pseudo)
-        for param in self._params[1:]:
-            pseudo.add_target(param._expreval.text)
-        pseudo.make_connections()
-
+        self.pcomp_name = None
 
     def __eq__(self, other):
         if not isinstance(other,ParameterGroup):
@@ -339,12 +343,26 @@ class ParameterGroup(object):
     def override(self, low=None, high=None, 
                  scaler=None, adder=None, start=None,
                  fd_step=None, name=None):
-        if low is not None: self.low = low
-        if high is not None: self.high = high
-        if scaler is not None: self.scaler = scaler
-        if start is not None: self.start = start
+        if low is not None:     self.low = low
+        if high is not None:    self.high = high
+        if scaler is not None:  self.scaler = scaler
+        if start is not None:   self.start = start
         if fd_step is not None: self.fd_step = fd_step
-        if name is not None: self.name = name
+        if name is not None:    self.name = name
+
+    def activate(self, scope):
+        """Make this parameter active by creating the appropriate pseudocomp
+        connections in the dependency graph.  The pseudocomponent is created
+        if it doesn't already exist.
+        """
+        if self.pcomp_name is None:
+            pseudo = ParamPseudoComponent(self._params[0])
+            self.pcomp_name = pseudo.name
+            self._params[0]._expreval.scope.add(pseudo.name, pseudo)
+            for param in self._params[1:]:
+                pseudo.add_target(param._expreval.text)
+                param.pcomp_name = pseudo.name
+        getattr(self._params[0]._expreval.scope, self.pcomp_name).make_connections()
 
 
 class HasParameters(object): 
@@ -429,12 +447,14 @@ class HasParameters(object):
         if isinstance(target, Parameter): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
+            target.activate(self._get_scope())
         elif isinstance(target, ParameterGroup): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
             for param in target._params: 
                 param.override(low, high, scaler, adder, start,
                                fd_step, name)
+            target.activate(self._get_scope())
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -464,13 +484,13 @@ class HasParameters(object):
                                   scaler=scaler, adder=adder, start=start,
                                   fd_step=fd_step, name=key,
                                   scope=self._get_scope(scope))
+                    self._parameters[key].activate(self._get_scope(scope))
                 else:  # defining a ParameterGroup
                     parameters = [Parameter(n, low=low, high=high,
                                             scaler=scaler, adder=adder, 
                                             start=start,
                                             fd_step=fd_step, name=key,
-                                            scope=self._get_scope(scope),
-                                            in_group=True)
+                                            scope=self._get_scope(scope))
                                   for n in names]
                     types = set([p.valtypename for p in parameters])
                     if len(types) > 1: 
@@ -480,6 +500,7 @@ class HasParameters(object):
                     pg = ParameterGroup(parameters)
                     pg.typename = parameters[0].valtypename
                     self._parameters[key] = pg
+                    pg.activate(self._get_scope(scope))
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
@@ -492,9 +513,13 @@ class HasParameters(object):
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
-        try:
+        param = self._parameters.get(name)
+        if param:
+            scope = self._get_scope()
+            if hasattr(scope, param.pcomp_name):
+                scope.disconnect(param.pcomp_name)
             del self._parameters[name]
-        except KeyError:
+        else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
