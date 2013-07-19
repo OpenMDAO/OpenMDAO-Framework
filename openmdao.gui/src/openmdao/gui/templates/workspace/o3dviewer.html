@@ -38,12 +38,12 @@
         jQuery(function() {
             // define openmdao namespace & create interface to openmdao in global scope
             openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
-            if (opener && opener.openmdao && opener.openmdao.model ) {
-                openmdao.model = opener.openmdao.model;
-                openmdao.model.addWindow(window);
+            if (opener && opener.openmdao && opener.openmdao.project ) {
+                openmdao.project = opener.openmdao.project;
+                openmdao.project.addWindow(window);
             }
             else {
-                openmdao.model = new openmdao.Model();
+                openmdao.project = new openmdao.Model();
             }
             new openmdao.O3DViewerFrame("geometry","{{ filename }}")
         });

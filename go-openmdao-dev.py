@@ -1953,7 +1953,8 @@ def adjust_options(options, args):
         after_install(options, virtual_env, activated=True)
 
     try:
-        download('https://openmdao.org/dists/setuptools-0.9.5-py2.7.egg')
+        if not is_win:
+            download('https://openmdao.org/dists/setuptools-0.9.5-py2.7.egg')
         import ez_setup
         ez_setup.use_setuptools(version='0.9.5', download_base='https://openmdao.org/dists')
         os.remove('ez_setup.py')

@@ -22,7 +22,7 @@
     "use strict";
 
     var g = {};                 // place to store "globals"
-    
+
     g.NAME_SIZE=window.opener.openmdao.NAME_SIZE;   // our messages have the first NAME_SIZE bytes allocated for a topic name
     g.MSG_START = g.NAME_SIZE;
 
@@ -30,11 +30,11 @@
     g.zFar  = 11.0;
 
     g.messageQ = [];              // a place to put the binary messages
-  
+
     //getSockets("ws://"+window.location.host, "{{geom_name}}" );
     var handleMsg = function(message) {
         // NOTE: the message here is the entire ArrayBuffer containing the padded topic name + the
-        // actual message being sent to the WebViewer.  This is done so we can avoid copying 
+        // actual message being sent to the WebViewer.  This is done so we can avoid copying
         // the buffer.
         g.messageQ.push(message[1]);
     };
@@ -75,7 +75,7 @@
 
 <body onload="wvStart()">
 <canvas id="WebViewer">
-    If you're seeing this your web browser doesn't support the &lt;canvas>&gt; element. Ouch!
+    If you're seeing this your web browser doesn't support the &lt;canvas&gt; element. Ouch!
 </canvas>
 <div id="statusline" class="fps"></div>
 </body>

@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.CouplingVarsPane = function(elm,model,pathname,name,editable) {
+openmdao.CouplingVarsPane = function(elm, project, pathname, name, editable) {
     var couplingVars,
         couplingVarsDiv = jQuery("<div id='"+name+"_CouplingVars' >"),
         addButton = jQuery("<button>Add Coupling Variables</button>").button(),
@@ -33,16 +33,16 @@ openmdao.CouplingVarsPane = function(elm,model,pathname,name,editable) {
     couplingVars = new Slick.Grid(couplingVarsDiv, [], columns, options);
     if (editable) {
         couplingVars.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            // TODO: better way to do this (e.g. project.setProperty(path,name,value)
             cmd = pathname+'.'+args.item.name+'='+args.item.value;
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         });
    }
 
     /** add a new objective */
     function addCouplingVars(indep,dep,scope) {
         cmd = pathname+".add_coupling_var('"+indep+"','"+dep+")'";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     /** prompt for new objective */
@@ -81,7 +81,7 @@ openmdao.CouplingVarsPane = function(elm,model,pathname,name,editable) {
     /** clear all CouplingVars */
     function clearCouplingVars() {
         cmd = pathname+".clear_coupling_vars();";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     addButton.click(function() { promptForCouplingVars(addCouplingVars); });

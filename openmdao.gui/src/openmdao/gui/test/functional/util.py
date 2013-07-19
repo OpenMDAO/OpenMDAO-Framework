@@ -15,6 +15,11 @@ import time
 import urllib2
 import zipfile
 
+try:
+    WindowsError
+except NameError:
+    WindowsError = None
+
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -456,16 +461,19 @@ def begin(browser):
 
 
 def get_browser_download_location_path(browser):
-    '''Get the location of the browser download directory.
-        This leaves the browser window open
-    '''
-
-    browser.get("chrome://settings-frame/settings")
+    """
+    Get the location of the browser download directory.
+    This leaves the browser window open
+    """
+    try:
+        browser.get("chrome://settings-frame/settings")
+    except Exception as err:
+        print 'Error getting chrome settings page:', err
+        raise SkipTest('Could not access Chrome settings to get download path')
 
     element = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element(By.ID, 'downloadLocationPath'))
     download_location_path = element.get_attribute('value')
-
     return download_location_path
 
 

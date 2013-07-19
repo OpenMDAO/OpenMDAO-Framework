@@ -19,16 +19,15 @@ from openmdao.main.variable import json_default
 from pyV3D import WV_Wrapper
 
 _lock = RLock()
-_binpub_types = None # classes for sending complex binary reps of objects
+_binpub_types = None  # classes for sending complex binary reps of objects
 _binpubs = {}  # [count, sender] corresponding to specific topics
-
 
 
 class Pub_WV_Wrapper(WV_Wrapper):
     """A wrapper for the wv library that is used by a Sender to
     send updates to the Publisher.
     """
-    
+
     def __init__(self, name):
         super(Pub_WV_Wrapper, self).__init__()
         self.objname = name
@@ -39,13 +38,13 @@ class Pub_WV_Wrapper(WV_Wrapper):
         if first:
             self.send_GPrim(self, 1, self.send_binary_data)  # send init packet
             self.send_GPrim(self, -1, self.send_binary_data)  # send initial suite of GPrims
-        else:  
+        else:
             self.send_GPrim(self, -1, self.send_binary_data)  # send initial suite of GPrims
 
         self.finish_sends()
-        
+
     def send_binary_data(self, wsi, buf, ibuf):
-        """This is called multiple times during the sending of a 
+        """This is called multiple times during the sending of a
         set of graphics primitives.
         """
         try:
@@ -61,7 +60,7 @@ class Publisher(object):
     __publisher = None
     __enabled = True
     silent = False
-    
+
     def __init__(self, context, url, use_stream=True):
         # Socket to talk to pub socket
         sock = context.socket(zmq.PUB)
@@ -83,7 +82,7 @@ class Publisher(object):
                     logger.debug("sending binary value for topic %s" % topic)
                     self._sender.send_multipart([topic.encode('utf-8'), value])
                 elif topic in _binpubs:
-                    # if a binary publisher exists for this topic, use that to 
+                    # if a binary publisher exists for this topic, use that to
                     # publish the value. It will call publish again (possibly multiple times)
                     # with binary=True
                     logger.debug("sending value via binpub for topic %s" % topic)
@@ -153,7 +152,7 @@ class Publisher(object):
                             logger.error(traceback.format_exc())
                         _binpubs[topic] = [1, sender]
                         break
-                    
+
         if sender is not None:
             sender.send(obj, first=True)
 
@@ -168,7 +167,7 @@ class Publisher(object):
                     del _binpubs[topic]
                 else:
                     _binpubs[topic][0] -= 1
-                
+
 
 def publish(topic, msg, binary=False):
     try:
@@ -176,8 +175,8 @@ def publish(topic, msg, binary=False):
     except AttributeError:
         if not Publisher.silent:
             raise RuntimeError("Publisher has not been initialized")
-        
-        
+
+
 def load_binpubs():
     """Loads all binpubs entry points."""
     global _binpub_types
@@ -185,7 +184,7 @@ def load_binpubs():
 
     if _binpub_types is None:
         _binpub_types = []
-    
+
         # find all of the installed binpubs
         for ep in working_set.iter_entry_points('openmdao.binpub'):
             try:
@@ -196,7 +195,3 @@ def load_binpubs():
                 logger.debug("adding binpub entry point: %s" % str(ep).split()[0])
                 with _lock:
                     _binpub_types.append(klass)
-                
-
-
-

@@ -2,14 +2,14 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.TriggersPane = function(elm, model, pathname, name) {
+openmdao.TriggersPane = function(elm, project, pathname, name) {
     var events,
         eventsDiv = jQuery("<div id='"+name+"_triggers' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Event</button>").button(),
         clrButton = jQuery("<button>Clear Events</button>").button(),
         columns = [
             {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
-            {id:"target",  name:"Target",  field:"target",  width:500},
+            {id:"target",  name:"Target",  field:"target",  width:500}
         ],
         options = {
             asyncEditorLoading: false,
@@ -18,7 +18,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
             autoEdit: false
         };
 
-    function buttonFormatter(row, cell, value, columnDef, dataContext) {  
+    function buttonFormatter(row, cell, value, columnDef, dataContext) {
         button = '<div class="ui-icon-trash"></div>';
         return button;
     }
@@ -38,10 +38,10 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
         if (cell.cell === 0) {
             var delname = events.getData()[cell.row].target,
                 cmd = pathname+'.remove_event("'+delname+'")';
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }
-    });   
-    
+    });
+
     eventsDiv.bind('resizeCanvas', function() {
         events.resizeCanvas();
     });
@@ -49,28 +49,28 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
     /** add a new event */
     function addEvent(target) {
         var cmd = pathname+".add_event('"+target+"')";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     /** prompt for new event */
     function promptForEvent(callback) {
-    
+
         var candidates = [];
-        
-        model.getAvailableEvents(pathname, function (cjson) {
+
+        project.getAvailableEvents(pathname).done(function(cjson) {
             candidates = cjson;
 
             // Build dialog markup
             var win = jQuery('<div id="event-dialog"></div>'),
                 target = jQuery('<input id="event-target" type="text" style="width:100%"></input>');
-                
+
             win.append(jQuery('<div>Target: </div>').append(target));
             event_selector = win.find('#event-target');
-    
+
             // update the event selector.
             event_selector.html('');
             event_selector.autocomplete({ source: candidates, minLength:0});
-    
+
             function handleResponse(ok) {
                 win.dialog('close');
                 if (ok) {
@@ -78,14 +78,14 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
                 }
                 win.remove();
             }
-        
+
             function setupSelector(selector) {
-        
+
                 // process new selector value when selector loses focus
                 selector.bind('blur', function(e) {
                     selector.autocomplete('close');
                 });
-        
+
                 // set autocomplete to trigger blur (remove focus)
                 selector.autocomplete({
                     select: function(event, ui) {
@@ -95,7 +95,7 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
                     delay: 0,
                     minLength: 0
                 });
-        
+
                 // set enter key to trigger blur (remove focus)
                 selector.bind('keypress.enterkey', function(e) {
                     if (e.which === 13) {
@@ -104,9 +104,9 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
                     }
                 });
             }
-        
+
             setupSelector(event_selector);
-    
+
             // Display dialog
             jQuery(win).dialog({
                 modal: true,
@@ -130,12 +130,12 @@ openmdao.TriggersPane = function(elm, model, pathname, name) {
     /** clear all events */
     function clearEvents() {
         var cmd = pathname+".clear_events()";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     addButton.click(function() { promptForEvent(addEvent); });
     clrButton.click(function() { clearEvents(); });
-    
+
     /** load the table with the given properties */
     this.loadData = function(properties) {
         if (properties) {
