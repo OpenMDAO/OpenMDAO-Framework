@@ -90,7 +90,8 @@ def adjust_options(options, args):
         after_install(options, virtual_env, activated=True)
 
     try:
-        download('%s')
+        if not is_win:
+            download('%s')
         import ez_setup
         ez_setup.use_setuptools(version='%s', download_base='https://openmdao.org/dists')
         os.remove('ez_setup.py')
