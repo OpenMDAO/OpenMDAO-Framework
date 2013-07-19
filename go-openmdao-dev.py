@@ -491,7 +491,7 @@ def _install_req(py_executable, unzip=False, distribute=False,
         search_dirs = file_search_dirs()
 
     if not distribute:
-        egg_path = 'setuptools-0.8-py%s.egg' % sys.version[:3]
+        egg_path = 'setuptools-0.9.5-py%s.egg' % sys.version[:3]
         found, egg_path = _find_file(egg_path, search_dirs)
         project_name = 'setuptools'
         bootstrap_script = EZ_SETUP_PY
@@ -1916,20 +1916,20 @@ openmdao_prereqs = ['numpy', 'scipy']
 
 
 def extend_parser(parser):
-    parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
+    parser.add_option("-r","--req", action="append", type="string", dest='reqs',
                       help="specify additional required distributions", default=[])
-    parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
+    parser.add_option("--noprereqs", action="store_true", dest='noprereqs',
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_false", dest='gui', default=True,
                       help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("--nodocs", action="store_false", dest='docs', default=True,
                       help="do not build the docs")
-    parser.add_option("-f", "--findlinks", action="store", type="string", 
+    parser.add_option("-f", "--findlinks", action="store", type="string",
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
-    parser.add_option("--testurl", action="store", type="string", dest='testurl', 
+    parser.add_option("--testurl", action="store", type="string", dest='testurl',
                       help="specify url where openmdao.* distribs are located (used for release testing only)")
-                      
+
     # go back to old behavior that includes system site packages by default
     parser.set_defaults(system_site_packages=True)
 
@@ -1953,9 +1953,10 @@ def adjust_options(options, args):
         after_install(options, virtual_env, activated=True)
 
     try:
-        download('https://openmdao.org/dists/setuptools-0.8-py2.7.egg')
+        if not is_win:
+            download('https://openmdao.org/dists/setuptools-0.9.5-py2.7.egg')
         import ez_setup
-        ez_setup.use_setuptools(version='0.8', download_base='https://openmdao.org/dists')
+        ez_setup.use_setuptools(version='0.9.5', download_base='https://openmdao.org/dists')
         os.remove('ez_setup.py')
     except Exception as err:
         logger.warn(str(err))
@@ -1966,7 +1967,7 @@ def adjust_options(options, args):
 def download(url, dest='.'):
     import urllib2
     dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
-    
+
     resp = urllib2.urlopen(url)
     outpath = os.path.join(dest, os.path.basename(url))
     bs = 1024*8
@@ -1992,7 +1993,7 @@ def _get_mingw_dlls():
         zipped.extractall(dest)
         zipped.close()
         os.remove(zippath)
-    
+
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
@@ -2099,7 +2100,7 @@ def _update_easy_manifest(home_dir):
 def after_install(options, home_dir, activated=False):
     global logger, openmdao_prereqs
 
-    setuptools_version = "0.8"
+    setuptools_version = "0.9.5"
     setuptools_egg = "setuptools-%s-py%s.egg" % (setuptools_version, sys.version[:3])
 
     if(os.path.exists(setuptools_egg)):
@@ -2108,6 +2109,7 @@ def after_install(options, home_dir, activated=False):
     reqs = ['SetupDocs==1.0.5', 'docutils==0.10', 'Pyevolve==0.6', 'networkx==1.3', 'slsqp==1.0.1', 'virtualenv==1.9.1', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'pyV3D==0.4.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'tornado==2.2.1', 'conmin==1.0.1', 'pycrypto==2.3']
     guireqs = ['argh==0.15.1', 'pathtools==0.1.2', 'watchdog==0.6.0', 'pyzmq==13.1.0', 'PyYAML==3.10']
     guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
+
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
     else:
@@ -2134,6 +2136,7 @@ def after_install(options, home_dir, activated=False):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
+
     if is_win:
         _copy_winlibs(home_dir, activated)
         _update_easy_manifest(home_dir)
@@ -2173,7 +2176,7 @@ def after_install(options, home_dir, activated=False):
             print "These must be installed in the system level python before installing OpenMDAO."
             print "To run a limited version of OpenMDAO without the prerequisites, try 'python %s --noprereqs'" % __file__
             sys.exit(-1)
-    
+
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
     try:
@@ -2181,14 +2184,14 @@ def after_install(options, home_dir, activated=False):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            allreqs = allreqs + guitestreqs 
-            
+            allreqs = allreqs + guitestreqs
+
         for req in allreqs:
             if req.startswith('openmdao.'):
                 _single_install(openmdao_cmds, req, bin_dir, failures)
             else:
                 _single_install(cmds, req, bin_dir, failures)
-        
+
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
@@ -2212,7 +2215,7 @@ def after_install(options, home_dir, activated=False):
                 if not options.gui and pkg == 'openmdao.gui':
                     continue
                 os.chdir(join(topdir, pdir, pkg))
-                cmdline = [join(absbin, 'python'), 'setup.py', 
+                cmdline = [join(absbin, 'python'), 'setup.py',
                            'develop', '-N'] + cmds
                 try:
                     call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
@@ -2236,7 +2239,7 @@ def after_install(options, home_dir, activated=False):
             source_command = '.'
             python = os.path.join(bin_dir, 'python')
             openmdao = os.path.join(bin_dir, 'openmdao')
-        
+
 
         if options.docs:
             if(os.system('%s %s && %s %s build_docs && deactivate'
@@ -2256,9 +2259,9 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
-    
+
     _update_activate(bin_dir)
-    
+
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
@@ -2278,7 +2281,7 @@ def after_install(options, home_dir, activated=False):
                 os.chmod(path, mode)
 
     abshome = os.path.abspath(home_dir)
-    
+
     if failures:
         failures.sort()
         print '\n\n***** The following packages failed to install: %s.' % failures
@@ -2306,7 +2309,7 @@ def after_install(options, home_dir, activated=False):
             else:
                 print '. bin/activate'
             print '\nto activate your environment and start using OpenMDAO.'
-    
+
     sys.exit(1 if failures else 0)
     
 
