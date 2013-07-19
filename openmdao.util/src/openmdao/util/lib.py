@@ -19,6 +19,7 @@ def get_env_libpath():
     libpathvname = _lpdict.get(sys.platform)
 
     if libpathvname:
+        print "\nScanning virtualenv for shared libraries..."
         topdir = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable)))
 
         libfiles = []
@@ -62,6 +63,10 @@ def get_env_libpath():
                         libfiles.remove(p)
 
         added = set([os.path.dirname(n) for n in libfiles])
+        if added:
+            print "adding the following dirs to %s" % libpathvname
+        for name in added:
+            print name
         return os.pathsep.join(added)
     return ''
 
