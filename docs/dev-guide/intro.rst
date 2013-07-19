@@ -99,7 +99,7 @@ compilers.
 
     You can find mingw32 `here`__. You must do the following things when installing it:
 
-    - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
+    - Check the C++ and Fortran compiler installation options to get g++ (required to run OpenMDAO)
 
     - Create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
 
@@ -107,9 +107,26 @@ compilers.
 
         [build_ext]
         compiler=mingw32
+        
+      On Windows, your home directory can be determined by typing the following command in your command-prompt:
+
+        ::
+
+          echo %USERPROFILE%
 
     - Make sure to put the ``bin`` directory of the mingw32 install in your path.
 
+      To check if this directory is already in your path, type the following in your command-prompt:
+
+        ::
+
+          echo %PATH%
+
+      If you do not see the directory, you can add it to your path once again from command-prompt:
+
+        ::
+
+          set PATH=%PATH%;/path/to/bin_dir
 
   - *Visual C++ 2008 (Optional)*
 

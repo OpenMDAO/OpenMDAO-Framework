@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
+openmdao.DataflowFrame = function(id, project, pathname, prop_fn) {
     openmdao.DataflowFrame.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
 
     /***********************************************************************
@@ -10,7 +10,7 @@ openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
 
     // initialize private variables
     var self = this,
-        pane = new openmdao.DataflowPane(jQuery('#'+id), model, pathname, 'Dataflow', prop_fn);
+        pane = new openmdao.DataflowPane(jQuery('#'+id), project, pathname, 'Dataflow', prop_fn);
 
     self.pathname = false;
 
@@ -34,7 +34,7 @@ openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
      *  privileged
      ***********************************************************************/
 
-    /** update the schematic with data from the model */
+    /** update the schematic with data from the project */
     this.update = function() {
         pane.update();
     };
@@ -44,12 +44,12 @@ openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
         // if not already showing dataflow for this pathname
         if (path !== self.pathname) {
             if (self.pathname !== false) {
-                model.removeListener(self.pathname, handleMessage);
+                project.removeListener(self.pathname, handleMessage);
             }
             self.pathname = path;
             self.setTitle('Dataflow: '+path);
             pane.showDataflow(path);
-            model.addListener(path,handleMessage);
+            project.addListener(path, handleMessage);
         }
     };
 
@@ -58,7 +58,7 @@ openmdao.DataflowFrame = function(id, model, pathname, prop_fn) {
         return self.pathname;
     };
 
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.showDataflow(pathname);
     });
 };

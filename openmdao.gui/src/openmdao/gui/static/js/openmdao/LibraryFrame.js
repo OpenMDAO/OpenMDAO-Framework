@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.LibraryFrame = function(id,model) {
+openmdao.LibraryFrame = function(id, project) {
     openmdao.LibraryFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
@@ -236,18 +236,18 @@ openmdao.LibraryFrame = function(id,model) {
      *  privileged
      ***********************************************************************/
 
-    /** update the display, with data from the model */
+    /** update the display, with data from the project */
     this.update = function() {
         self.elm.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
-        model.getTypes(updateLibrary);
+        project.getTypes().done(updateLibrary);
     };
 
-    // ask model for an update whenever something changes
-    model.addListener('types', handleMessage);
+    // ask project for an update whenever something changes
+    project.addListener('types', handleMessage);
 
     // initial update
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.update();
     });
 };

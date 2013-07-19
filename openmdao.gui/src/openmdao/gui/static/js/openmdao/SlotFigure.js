@@ -9,14 +9,14 @@
  *
  *  Arguments:
  *      elm:       the parent element in the DOM for this figure
- *      model:     object that provides access to the openmdao model
+ *      project:   object that provides access to the openmdao project
  *      pathname:  the pathname of the slot
  *      slot:      the attributes/contents of the slot
  ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotFigure=function(elm, model, pathname, slot) {
+openmdao.SlotFigure=function(elm, project, pathname, slot) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -56,7 +56,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
     function edit() {
         var editor;
         if (fig.hasClass('filled')) {
-            editor = new openmdao.ObjectFrame(model, pathname);
+            editor = new openmdao.ObjectFrame(project, pathname);
         }
         else {
             openmdao.Util.notify('Slot is empty!');
@@ -77,7 +77,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
                 cmd = openmdao.Util.getPath(pathname)
                     + ".remove('"+openmdao.Util.getName(pathname)+"')";
             }
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }
         else {
             openmdao.Util.notify('Slot is already empty!');
@@ -110,7 +110,7 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
                 }
             }
         }
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     // create context menu
@@ -172,17 +172,22 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
 
             openmdao.drag_and_drop_manager.reset();
 
-            openmdao.model.getSignature(droppedPath, function(signature) {
-                if (signature.args.length) {
-                    var prompt = 'Enter arguments for new '+droppedName;
-                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        fill('create("'+droppedPath+'"'+args+')');
-                    }, true);
-                }
-                else {
-                    fill('create("'+droppedPath+'")');
-                }
-            });
+            openmdao.project.getSignature(droppedPath)
+                .done(function(signature)  {
+                    if (signature.args.length) {
+                        var prompt = 'Enter arguments for new '+droppedName;
+                        openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
+                            fill('create("'+droppedPath+'"'+args+')');
+                        }, true);
+                    }
+                    else {
+                        fill('create("'+droppedPath+'")');
+                    }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error('Error getting signature for', droppedPath,
+                                jqXHR, textStatus, errorThrown);
+                });
         }
     });
 
@@ -249,12 +254,12 @@ openmdao.SlotFigure=function(elm, model, pathname, slot) {
  *
  *  Arguments:
  *      elm:      the parent element in the DOM for this figure
- *      model:    object that provides access to the openmdao model
+ *      project:    object that provides access to the openmdao project
  *      pathname: the pathname of the slot
  *      slot:     the contents of the slot list
  ***********************************************************************/
 
-openmdao.SlotListFigure=function(elm, model, pathname, slot) {
+openmdao.SlotListFigure=function(elm, project, pathname, slot) {
     var lbrktSVG = '<svg height="60" width="25">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">[</text>'
                  + '</svg>',
@@ -285,14 +290,14 @@ openmdao.SlotListFigure=function(elm, model, pathname, slot) {
             name: slotName+'['+idx+']'
         };
 
-        openmdao.SlotFigure(listDiv, model, pathname+'['+idx+']', slot_info);
+        openmdao.SlotFigure(listDiv, project, pathname+'['+idx+']', slot_info);
 
         listDiv.append(commaSVG);
         counter = counter + 1;
     });
 
     // add an empty slot to the end of the list as a drop target
-    openmdao.SlotFigure(listDiv, model, pathname, {
+    openmdao.SlotFigure(listDiv, project, pathname, {
         containertype: "list",
         desc: slot.desc,
         filled: false,
@@ -312,12 +317,12 @@ openmdao.SlotListFigure=function(elm, model, pathname, slot) {
  *
  *  Arguments:
  *      elm:      the parent element in the DOM for this figure
- *      model:    object that provides access to the openmdao model
+ *      project:    object that provides access to the openmdao project
  *      pathname: the pathname of the slot
  *      slot:     the contents of the slot dictionary
  ***********************************************************************/
 
-openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
+openmdao.SlotDictFigure=function(elm, project, pathname, slot) {
     var lcrlySVG = '<svg height="60" width="30">'
                  + '    <text x="0" y="48" font-size="60" style="fill:gray">{</text>'
                  + '</svg>',
@@ -350,7 +355,7 @@ openmdao.SlotDictFigure=function(elm, model, pathname, slot) {
                 name: key
             };
 
-            openmdao.SlotFigure(dictDiv, model, pathname+'["'+key+'"]', slot_info, true);
+            openmdao.SlotFigure(dictDiv, project, pathname+'["'+key+'"]', slot_info, true);
 
             if (slotCnt > 1) {
                 dictDiv.append(commaSVG);

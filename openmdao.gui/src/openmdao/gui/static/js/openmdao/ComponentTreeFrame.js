@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
+openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
     openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Components');
 
     /***********************************************************************
@@ -15,7 +15,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
             .appendTo('<div style="height:100%">')
             .appendTo("#"+id);
 
-    /** convert model.json to structure required for jstree */
+    /** convert json to structure required for jstree */
     function convertJSON(json, path, openNodes) {
         var data = [];
 
@@ -47,7 +47,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         return data;
     }
 
-    /** update the tree with JSON model data */
+    /** update the tree with JSON project data */
     function updateTree(json) {
         // Grab paths of currently open nodes.
         var openNodes = [];
@@ -84,8 +84,8 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' a').draggable({ 
-                //helper: 'clone', 
+            jQuery('#'+id+' a').draggable({
+                //helper: 'clone',
                 appendTo: 'body',
                 helper: function(event) {
                     return jQuery('<span style="white-space:nowrap;background-color:black;color:white;"/>')
@@ -120,7 +120,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
             "label"  : 'Properties',
             "action" :  function(node) {
                             var id = (path+'-properties').replace(/\./g,'-');
-                            new openmdao.PropertiesFrame(id,model).editObject(path);
+                            new openmdao.PropertiesFrame(id,project).editObject(path);
                         }
         };
         if (jQuery.inArray('IAssembly',interfaces) >= 0) {
@@ -149,7 +149,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         menu.run = {
             "label"  : 'Run this Component',
             "action" :  function(node) {
-                            model.runComponent(path);
+                            project.runComponent(path);
                         }
         };
         menu.toggle = {
@@ -167,7 +167,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         menu.remove = {
             "label"  : 'Remove',
             "action" :  function(node) {
-                            model.removeComponent(path);
+                            project.removeObject(path);
                         }
         };
         return menu;
@@ -184,23 +184,28 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     }
 
     // listen for 'components' messages and update object tree accordingly
-    model.addListener('components', handleMessage);
+    project.addListener('components', handleMessage);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     this.destructor = function() {
-        model.removeListener('components', handleMessage);
+        project.removeListener('components', handleMessage);
     };
 
-    /** update the tree, with data from the model  */
+    /** update the tree, with data from the project  */
     this.update = function() {
-        model.getComponents(updateTree);
+        project.getComponents()
+            .done(updateTree)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error('Error getting components',
+                            jqXHR, textStatus, errorThrown);
+            });
     };
 
     // load initial component data
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
        self.update();
     });
 };
@@ -208,4 +213,3 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 /** set prototype */
 openmdao.ComponentTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.ComponentTreeFrame.prototype.constructor = openmdao.ComponentTreeFrame;
-

@@ -15,7 +15,12 @@ var NO_MODIFIER = 0;
 var ALT_KEY = 1;
 var SHIFT_KEY = 2;
 var CTRL_KEY = 4;
+var META_KEY = 8;
 var WHEEL_DELTA = 120;
+
+// work around for global variables
+var brch=0;
+var pmtr=0;
 function getCursorXY(e) 
 {
   if (!e) e = event;
@@ -45,6 +50,7 @@ function getMouseDown(e)
   if (e.shiftKey) g.modifier |= SHIFT_KEY;
   if (e.altKey)   g.modifier |= ALT_KEY;
   if (e.ctrlKey)  g.modifier |= CTRL_KEY;
+  if (e.metaKey)  g.modifier |= META_KEY;
 }
 
 
@@ -103,13 +109,188 @@ function wvInitUI()
   document.addEventListener('keypress',   getKeyPress,  false);
 
   g.statusline = new StatusLine("statusline");
+  g.debug = true;
+
+}
+
+function getDisplayControl(display, isActive){
+
+    isActive = isActive ? "active" : "";
+
+    return " \
+            <button type='button' class='btn btn-primary btn-small " + display + " " + isActive + "'> \
+                <span>" + display + "</span> \
+            </button>";
+}
+
+function getDisplayControls(attrs){
+    return jQuery("<div class='btn-group' data-toggle='buttons-checkbox'></div>")
+                .append(getDisplayControl("viz", isAttributeSet(attrs, g.plotAttrs.ON)),
+                        getDisplayControl("grd", isAttributeSet(attrs, g.plotAttrs.LINES | g.plotAttrs.POINTS)),
+                        getDisplayControl("trn", isAttributeSet(attrs, g.plotAttrs.TRANSPARENT)),
+                        getDisplayControl("ori", isAttributeSet(attrs, g.plotAttrs.ORIENTATION)));
+
+}
+
+function handleControlClick(attribute, mask){
+    
+    function updateTree( root, flag ){
+        var control = getNodeControl( root, attribute );
+        var activateControl = !isControlActive( control );
+        var children = getNodeChildren( root );
+
+        var data = undefined;
+        var dataKey = "gprim";
+
+        if( children.length > 0  ){
+            dataKey = "attrs";
+            data = getNodeData( root, dataKey );
+            
+            data = setAttribute( getNodeData( root, dataKey ), mask, flag );
+            setNodeData( root, dataKey, data );
+
+            children.each( function( index, child ){
+                child = jQuery(child);
+                setNodeControl( child, getNodeControl( child, attribute ), activateControl );     
+                updateTree( child, flag );
+            });
+        }
+
+        else{
+            data = getNodeData( root, dataKey );
+            data.attrs = setAttribute( data.attrs, mask, flag );
+            setNodeData( root, dataKey, data );
+        }
+    }
+
+    return function( e ){
+        var root = jQuery( this ).is( "button" ) ? jQuery( this ).parent().parent() : jQuery( this ).parent();
+        var data = getNodeData( root, "gprim" );
+
+        data =  data ? data.attrs : getNodeData( root, "attrs" );
+
+        var flag = (data & mask) > 0 ? 0 : mask;
+
+        updateTree( root, flag );
+        g.sceneUpd = 1;
+    };
+}
+
+function isControlActive( control ){
+    return control.hasClass( "active" );
+}
+
+function isAttributeSet(setValue, currentValue){
+    return (currentValue & setValue) >= 1;
+} 
+
+function setAttribute(attributes, mask, value){
+    return (attributes & (~mask)) | (value & mask);
+}
+
+function getNode(id){
+    return jQuery.jstree._reference( "#tree" )._get_node( "#" + id );
+}
+
+function getNodeChildren(node){
+    return jQuery.jstree._reference( "#tree" )._get_children( node );
+}
+
+function gprimToId(gprim){
+    return gprim.replace(/ /g, "_");
+}
+
+function setNodeData(node, dataKey, data){
+    node.data(dataKey, data);
+}
+
+function getNodeData(node, dataKey){
+    return node.data(dataKey);
+}
+
+function getNodeControl(node, controlName){
+    return jQuery( "." + controlName, node).first();
+}
+
+function setNodeControl(node, control, activate){
+    if( activate ){
+        control.addClass("active");
+    }
+    else{
+        control.removeClass("active");
+    }
 }
 
 function wvUpdateUI()
 {
+// if the tree has not been created but the scene graph (possibly) exists...
+// if the scene graph and Parameters have been updated, (re-)build the Tree
+    if (g.sgUpdate == 1){ 
 
-  //
-  // deal with key presses
+        if (g.sceneGraph === undefined) {
+            alert("g.sceneGraph is undefined --- but we need it");
+        }
+
+        var nodes = [[],[]];
+        var parentIndex = 0;
+        var node = undefined; 
+
+        if( jQuery("#tree").length === 0 ){
+            for( var gprim in g.sceneGraph ){
+                parentIndex = ( g.sceneGraph[gprim].GPtype === 1 ) ? 0 : 1;
+                
+                node = jQuery("<li id='" + gprimToId(gprim) + "'><a href='#'>" + gprim + "</a></li>");
+                node.data("gprim", g.sceneGraph[gprim]);
+                node.append(getDisplayControls( g.sceneGraph[gprim].attrs ) );
+
+                nodes[parentIndex].push(node);
+            }
+
+            var edges = jQuery("<ul></ul>");
+            var faces = jQuery("<ul></ul>");
+            var tree = jQuery("<ul></ul>");
+
+            edges.append(nodes[0]);
+            faces.append(nodes[1]);
+            
+            edges = jQuery("<li id='Edges'><a href='#'>Edges</a></li>").append(edges);
+            faces = jQuery("<li id='Faces'><a href='#'>Faces</li>").append(faces);
+            
+            jQuery("ul", edges).before(getDisplayControls( 1 ));
+            jQuery("ul", faces).before(getDisplayControls( 9 ));
+
+            edges.data("attrs", 1);
+            faces.data("attrs", 9);
+
+            tree.append(edges, faces);
+            //tree = jQuery("<div id='tree'></div>").append(tree);
+
+            jQuery("#leftframe").append("<div id='tree'></div>");
+                
+            jQuery(".viz").click(handleControlClick("viz", g.plotAttrs.ON));
+            jQuery(".grd").click(handleControlClick("grd", g.plotAttrs.LINES | g.plotAttrs.POINTS));
+            jQuery(".trn").click(handleControlClick("trn", g.plotAttrs.TRANSPARENT));
+            jQuery(".ori").click(handleControlClick("ori", g.plotAttrs.ORIENTATION));
+
+            jQuery("#tree").jstree({
+                "plugins" : ["html_data", "themes", "ui", "sort"],
+
+                "themes" : { 
+                    "theme" : "openmdao",
+                },
+
+                "html_data" : {
+                    "data" : tree.html(),
+                },
+            });
+
+            
+        }
+            
+
+        g.sgUpdate = 0;
+    }
+
   if (g.keyPress != -1) 
   {
   
@@ -213,7 +394,7 @@ function wvUpdateUI()
 
   if (g.wheelDelta !== 0)
   {
-    var scale = Math.exp(g.wheelDelta/128.0);
+    var scale = Math.exp(g.wheelDelta/16.0);
     g.mvMatrix.scale(scale, scale, scale);
     g.scale   *= scale;
     g.sceneUpd = 1;
@@ -223,8 +404,9 @@ function wvUpdateUI()
   // now mouse movement
   if (g.dragging) 
   {
+    console.log("Something is busted.");
     // alt and shift key is down
-    if (g.modifier === (ALT_KEY|SHIFT_KEY) )
+    if (g.modifier & (META_KEY) || g.modifier & (META_KEY | CTRL_KEY) || g.modifier & CTRL_KEY )
     {
       var angleX =  (g.startY-g.cursorY)/4.0;
       var angleY = -(g.startX-g.cursorX)/4.0;
@@ -237,7 +419,7 @@ function wvUpdateUI()
     }
     
     // alt is down
-    if (g.modifier === ALT_KEY)
+    if (g.modifier & ALT_KEY )
     {
       var xf = g.startX - g.width/2;
       var yf = g.startY - g.height/2;
@@ -274,7 +456,6 @@ function wvUpdateUI()
     g.startX = g.cursorX;
     g.startY = g.cursorY;
   }
-
 }
 
 
@@ -294,14 +475,14 @@ function reshape(gl)
     var canvas = document.getElementById('WebViewer');
 
     canvas.height = window.innerHeight * 0.95;
-    canvas.width = window.innerWidth * 0.95;
+    canvas.width = jQuery("#riteframe").parent().width();
 
-    if (g.offTop != canvas.offsetTop || g.offLeft != canvas.offsetLeft) {
+    if (g.offTop !== canvas.offsetTop || g.offLeft !== canvas.offsetLeft) {
         g.offTop  = canvas.offsetTop;
         g.offLeft = canvas.offsetLeft;
     }
 
-    if (g.width == canvas.width && g.height == canvas.height) return;
+    if (g.width === canvas.width && g.height === canvas.height) return;
 
     g.width  = canvas.width;
     g.height = canvas.height;
@@ -347,7 +528,6 @@ function jack(gl, x,y,z, delta)
   
 }
 
-           
 //
 // Status Line object
 //

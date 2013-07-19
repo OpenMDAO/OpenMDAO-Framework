@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
+openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta) {
     var self = this,
         props,
         dataView,
@@ -397,7 +397,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             if ( dataView.getItem(cell.row).value === "Geometry" ) {
                 var p = self.pathname + '.' + dataView.getItem(cell.row).id;
-                openmdao.viewGeometry(p);          
+                openmdao.project.viewGeometry(p);
             }
         });
 
@@ -405,7 +405,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             dataView.updateItem(args.item.id, args.item);
         });
 
-        // wire up model events to drive the grid
+        // wire up project events to drive the grid
         dataView.onRowCountChanged.subscribe(function (e, args) {
             props.resizeCanvas();
         });
@@ -421,13 +421,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 // the editor for the next variable down (a la Excel)
                 e.stopImmediatePropagation();
 
-                // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+                // TODO: better way to do this (e.g. project.setProperty(path,name,value)
                 var subpath = args.item.id;
                 if (subpath.charAt(0) === '~') {
                     // Drop prefix seen on framework vars.
                     subpath = subpath.substr(1);
                 }
-                model.setVariableValue(self.pathname + '.' + subpath,
+                project.setVariableValue(self.pathname + '.' + subpath,
                                        args.item.value, args.item.type);
             });
         }
@@ -454,7 +454,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
         if ( dataContext.value === "Geometry"){
-            return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' + 
+            return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' +
                    'role="button" aria-disabled="false">View Geom</button>' ;
         }
         return value ;

@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowPane = function(elm,model,pathname,name) {
+openmdao.WorkflowPane = function(elm, project, pathname, name) {
 
     /***********************************************************************
      *  private
@@ -28,15 +28,16 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
      *  privileged
      ***********************************************************************/
 
-    /** update the schematic with data from the model */
+    /** update the schematic with data from the project */
     this.showWorkflow = function(pathname) {
         self.pathname = pathname;
-        model.getWorkflow(self.pathname,
-                          self.loadData,
-                          function(jqXHR, textStatus, errorThrown) {
-                              self.pathname = '';
-                              debug.error("Error getting workflow ", jqXHR);
-                          });
+        project.getWorkflow(self.pathname)
+            .done(self.loadData)
+            .fail(function(jqXHR, textStatus, err) {
+                debug.error("Error getting workflow for", self.pathname,
+                            jqXHR, textStatus, err);
+                self.pathname = '';
+            });
     };
 
     /** update workflow diagram */
@@ -82,7 +83,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         // draw new flows
         jQuery.each(json, function(idx, flow) {
             if (drawnFlows.indexOf(flow.pathname) < 0) {
-                flows[flow.pathname] = new openmdao.WorkflowFigure(workflow, model, '', flow);
+                flows[flow.pathname] = new openmdao.WorkflowFigure(workflow, project, '', flow);
                 drawnFlows.push(flow.pathname);
             }
         });

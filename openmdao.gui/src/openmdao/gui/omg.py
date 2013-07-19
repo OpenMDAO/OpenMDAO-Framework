@@ -260,7 +260,7 @@ def main():
     ''' Process command line arguments and run.
     '''
     enable_console()
- 
+
     parser = AppServer.get_argument_parser()
     options, args = parser.parse_known_args()
     run(parser, options, args)

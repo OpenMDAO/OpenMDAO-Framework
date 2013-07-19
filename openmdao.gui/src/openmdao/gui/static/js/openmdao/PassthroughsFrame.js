@@ -8,13 +8,13 @@
  *  variable as a passthrough variable.
  *
  *  Arguments:
- *      model:    object that provides access to the openmdao model
+ *      project:    object that provides access to the openmdao project
  *      pathname: the pathname of the assembly
  ***********************************************************************/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PassthroughsFrame = function(model, pathname) {
+openmdao.PassthroughsFrame = function(project, pathname) {
     var id = ('PassthroughsFrame-'+pathname).replace(/\./g,'-');
     openmdao.PassthroughsFrame.prototype.init.call(this, id,
         'Passthroughs: ' + pathname);
@@ -44,7 +44,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
             comp_path = parts.slice(assembly_idx + 1).join("."),
             cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
 
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     /** remove passthrough */
@@ -54,7 +54,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
             vname = parts[parts.length - 1],
             cmd = "_ = " + pathname +".remove('"+vname+"')";
 
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     /** create or remove passthrough when checkbox is clicked */
@@ -165,9 +165,12 @@ openmdao.PassthroughsFrame = function(model, pathname) {
 
     /** get passthrough data and update the input and output passthrough trees */
     function update() {
-        model.getPassthroughs(pathname, updateTrees, function(err) {
-            debug.error('Error getting passthrough data:', err);
-        });
+        project.getPassthroughs(pathname)
+            .done(updateTrees)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error('Error getting passthoughs for', pathname,
+                            jqXHR, textStatus, errorThrown);
+            });
     }
 
     /** update when notified of change in assembly */
@@ -193,7 +196,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
     // cancel subscriptions before you die
     this.destructor = function() {
         if (pathname && pathname.length>0) {
-            model.removeListener(pathname, update);
+            project.removeListener(pathname, update);
         }
     };
 
@@ -201,7 +204,7 @@ openmdao.PassthroughsFrame = function(model, pathname) {
     update();
 
     // listen for changes to the assembly
-    model.addListener(pathname, handleMessage);
+    project.addListener(pathname, handleMessage);
 };
 
 /** set prototype */
