@@ -396,6 +396,12 @@ class Testcase_derivatives(unittest.TestCase):
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
         # Case 2 - differentiable (none)
         
         self.top.replace('comp4', ExecComp(exp4))
@@ -406,6 +412,12 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
@@ -427,6 +439,12 @@ class Testcase_derivatives(unittest.TestCase):
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
         # Case 4 - differentiable (comp1, comp3, comp5)
         
         self.top.replace('comp1', ExecCompWithDerivatives(exp1, deriv1))
@@ -440,6 +458,12 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
@@ -471,6 +495,9 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         
         J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
+        assert_rel_error(self, J[0,0], 48.0, .001)
+        
+        J = top.driver.workflow.calc_gradient(outputs=['comp2.y'], mode='adjoint')
         assert_rel_error(self, J[0,0], 48.0, .001)
         
         
@@ -551,8 +578,6 @@ class Testcase_applyJT(unittest.TestCase):
         J1 = top.driver.workflow.calc_gradient(src, resp)
         J2 = top.driver.workflow.calc_gradient(src, resp, mode='adjoint')
         diff = J1 - J2
-        print J1
-        print J2
         assert_rel_error(self, diff.max(), 0.0, 1e-8)
         
         J = zeros([5, 5])
@@ -568,8 +593,6 @@ class Testcase_applyJT(unittest.TestCase):
             Jt[:, j] = top.driver.workflow.matvecREV(arg)
             arg[j] = 0.0
             
-        print J
-        print Jt
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
         
