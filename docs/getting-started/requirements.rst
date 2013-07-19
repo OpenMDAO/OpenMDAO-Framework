@@ -13,20 +13,17 @@ additional :ref:`system requirements <developer-requirements>` on certain platfo
 
 OpenMDAO requires that the following software be installed at the system level on all platforms:
 
-- Python (2.6.x or 2.7.x)
+- Python (2.7.x)
 
   - In general, OpenMDAO supports the specified versions of Python found at ``python.org``.  Alternative Python
     builds, such as Enthought, ActiveState Python, or Python(x,y) are not officially supported at this time,
     though some may work with OpenMDAO.    
 
-  - OpenMDAO does not support Python 3.x; nor does it support Python versions below 2.6.5.  Having the
-    incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
-    will only lead to problems.
+  - OpenMDAO does not support Python 3.x or any Python versions below 2.7. Having the incorrect Python
+    installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only
+    lead to problems.
 
-  - Although we support Python 2.6, it's the older version. Unless you have a strong reason to use 2.6, we recommend 
-    getting Python 2.7.
-
-
+  
 - NumPy (version 1.6 or higher) 
 
 - SciPy (version .10 or higher)
@@ -72,7 +69,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 **Windows**: 
 
-- `Python 2.6.x or 2.7.x <http://www.python.org/download/releases/>`_
+- `Python 2.7.x <http://www.python.org/download/releases/>`_
 
 - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
 
