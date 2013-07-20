@@ -20,7 +20,7 @@ openmdao.NAME_SIZE = 256;
 //g.messageQ = [];              // a place to put the binary messages
 
 
-// openmdao.GeomFrame = function(id, model, pathname) {
+// openmdao.GeomFrame = function(id, project, pathname) {
 
 //     id = id.replace(/\./g, "_"); // jQuery id selector doesn't like '.' in name
 //     id = id.replace(/\//g, "_");  // same with '/'
@@ -62,7 +62,7 @@ openmdao.NAME_SIZE = 256;
 //     g.offTop   =  0;    // offset to upper-left corner of the canvas
 //     g.offLeft  =  0;
 //     g.dragging = false;
-  
+
 //   //var canvas = document.getElementById("WebViewer");
 //     g.canvas.addEventListener('mousemove',  getCursorXY,  false);
 //     g.canvas.addEventListener('mousedown',  getMouseDown, false);
@@ -87,18 +87,18 @@ openmdao.NAME_SIZE = 256;
 
 //     function handleMessage(message) {
 //         // NOTE: the message here is the entire ArrayBuffer containing the padded topic name + the
-//         // actual message being sent to the WebViewer.  This is done so we can avoid copying 
+//         // actual message being sent to the WebViewer.  This is done so we can avoid copying
 //         // the buffer.
 //         g.messageQ.push(message[1]); // FIXME: add namespacing to WebViewer stuff
 //     }
 
-//     // subscribe to model for data
+//     // subscribe to project for data
 //     function setGeometry(pathname) {
 //         if (geometry !== null) {
-//             model.removeListener(geometry, handleMessage);
+//             project.removeListener(geometry, handleMessage);
 //         }
 //         geometry = pathname;
-//         model.addListener(pathname, handleMessage);
+//         project.addListener(pathname, handleMessage);
 //     }
 
 //     // prompt for a new geometry
@@ -127,14 +127,14 @@ openmdao.NAME_SIZE = 256;
 
 //     this.destructor = function() {
 //         if ( geometry !== null ) {
-//             model.removeListener(geometry, handleMessage);
+//             project.removeListener(geometry, handleMessage);
 //         }
 //     };
 
 //     /** nothing to see here, we get our data elsewhere */
 //     this.update = function() {};
 
-//     wvStart(); 
+//     wvStart();
 // };
 
 // /** set prototype */

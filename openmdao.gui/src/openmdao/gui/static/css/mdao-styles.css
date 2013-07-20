@@ -286,6 +286,11 @@ nav ul ul a.omg-disabled:hover {
     color:rgba(100,180,255,255);
 }
 
+/* specific styling for controls for gemoetry viewer */
+.jstree-geom a {
+    color:white;
+}
+
 /* specific icons for the items in the component tree */
 .jstree-openmdao a > ins.jstree-assembly {
     background-image:url("/static/images/icons.png"); 

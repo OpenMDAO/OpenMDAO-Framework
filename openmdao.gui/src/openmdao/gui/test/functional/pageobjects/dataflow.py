@@ -17,14 +17,14 @@ class DataflowFigure(BasePageObject):
 
     name = TextElement((By.CLASS_NAME, 'DataflowFigureHeader'))
 
-    top_left = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
-    header = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
-    top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
+    top_left     = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
+    header       = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
+    top_right    = ButtonElement((By.CLASS_NAME,  'DataflowFigureTopRight'))
     content_area = GenericElement((By.CLASS_NAME, 'DataflowFigureContentArea'))
 
-    bottom_left = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
+    bottom_left  = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
     bottom_right = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomRight'))
-    footer = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
+    footer       = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
 
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))

@@ -7,7 +7,7 @@
 
 openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-// initialize preferences (TODO: persistent prefs, per user and per model)
+// initialize preferences (TODO: persistent prefs, per user and per project)
 openmdao.preferences = {
     FileTreeFrame: {
         highlightOnUpdate: false   // highlight the file tree when it is updated
