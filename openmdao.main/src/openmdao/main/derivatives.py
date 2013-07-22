@@ -87,7 +87,7 @@ def calc_gradient(wflow, inputs, outputs):
         dx, info = gmres(A, RHS,
                          tol=1.0e-6,
                          maxiter=100)
-
+        print dx
         i = 0
         for item in outputs:
             k1, k2 = obounds[item]
