@@ -340,7 +340,7 @@ class SequentialWorkflow(Workflow):
             name = comp.name
             if hasattr(comp, 'applyMinv'):
                 pre_inputs = inputs[name].copy()
-                comp.applyMinv(inputs[name], pre_inputs)
+                comp.applyMinv(pre_inputs, inputs[name])
             
         # Call ApplyJ on each component
         for comp in self.derivative_iter():
@@ -437,12 +437,14 @@ class SequentialWorkflow(Workflow):
             name = comp.name
             if hasattr(comp, 'applyMinvT'):
                 pre_inputs = inputs[name].copy()
-                comp.applyMinvT(inputs[name], pre_inputs)
+                comp.applyMinvT(pre_inputs, inputs[name])
+                print pre_inputs, inputs[name]
             
         # Call ApplyJT on each component
         for comp in self.derivative_iter():
             name = comp.name
             applyJT(comp, inputs[name], outputs[name])
+            print 'j', inputs, outputs
 
         # Poke results into the return vector
         result = zeros(len(arg))
@@ -471,6 +473,7 @@ class SequentialWorkflow(Workflow):
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
+            print 'res', result[i1:i2], outputs[comp_name][var_name], edge
         
         return result
     

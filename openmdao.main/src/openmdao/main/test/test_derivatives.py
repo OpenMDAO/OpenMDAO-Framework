@@ -8,7 +8,7 @@ import unittest
 try:
     from numpy import zeros, array, identity
 except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array
+    from openmdao.main.numpy_fallback import zeros, array, identity
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -594,6 +594,69 @@ class Testcase_applyJT(unittest.TestCase):
             
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
+        
+        
+class PreComp(Component):
+    '''Comp with preconditioner'''
+    
+    x1 = Float(1.0, iotype='in', units='inch')
+    x2 = Float(1.0, iotype='in', units='inch')
+    y1 = Float(1.0, iotype='out', units='inch')
+    y2 = Float(1.0, iotype='out', units='inch')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y1 = 2.0*self.x1 + 7.0*self.x2
+        self.y2 = 13.0*self.x1 - 3.0*self.x2
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 13.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x1', 'x2')
+        output_keys = ('y1', 'y2')
+        return input_keys, output_keys, self.J
+    
+    def applyMinv(self, arg, result):
+        
+        result['x1'] = 0.03092784*arg['x1'] + 0.07216495*arg['x2']
+        result['x2'] = 0.13402062*arg['x1'] - 0.02061856*arg['x2']
+    
+    def applyMinvT(self, arg, result):
+        
+        #result['y1'] = 0.03092784*arg['y1'] + 0.13402062*arg['y2']
+        #result['y2'] = 0.07216495*arg['y1'] - 0.02061856*arg['y2']
+        result['y1'] = arg['y1']
+        result['y2'] = arg['y2']
+    
+    
+class Testcase_preconditioning(unittest.TestCase):
+    """ Unit test for applyMinv and applyMinvT """
+
+    def test_simple(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', PreComp())
+        top.driver.workflow.add('comp')
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                              outputs=['comp.y1', 'comp.y2'])
+        
+        print J
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                              outputs=['comp.y1', 'comp.y2'],
+                                              mode='adjoint')
+        
+        print J
         
 if __name__ == '__main__':
     import nose
