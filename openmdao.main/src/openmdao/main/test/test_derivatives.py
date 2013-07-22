@@ -367,7 +367,6 @@ class Testcase_derivatives(unittest.TestCase):
                   'dy1_dx2 = 3.0',
                   'dy1_dx3 = 2.0']
         
-        #self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
         self.top.add('comp1', ExecComp(exp1))
         self.top.add('comp2', ExecComp(exp2))
         self.top.add('comp3', ExecComp(exp3))

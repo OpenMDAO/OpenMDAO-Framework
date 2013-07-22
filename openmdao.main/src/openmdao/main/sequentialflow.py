@@ -335,15 +335,16 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 inputs[comp_name][var_name] = arg[i1:i2]
 
-        # Call ApplyJ on each component
-        
+        # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
+            if hasattr(comp, 'applyMinv'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinv(inputs[name], pre_inputs)
             
-            # A component can also define a preconditioner
-            #if hasattr(comp, 'applyMinv'):
-            #    pre_inputs = inputs[name].copy()
-            #    comp.applyMinv(inputs[name], pre_inputs)
+        # Call ApplyJ on each component
+        for comp in self.derivative_iter():
+            name = comp.name
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -431,15 +432,16 @@ class SequentialWorkflow(Workflow):
                     # Interior comp edges contribute a -1.0 on diag
                     outputs[comp_name][var_name] = -arg[i1:i2].copy()
 
-        # Call ApplyJT on each component
-        
+        # Call ApplyMinvT on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
+            if hasattr(comp, 'applyMinvT'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinvT(inputs[name], pre_inputs)
             
-            # A component can also define a preconditioner
-            #if hasattr(comp, 'applyMinv'):
-            #    pre_inputs = inputs[name].copy()
-            #    comp.applyMinvT(inputs[name], pre_inputs)
+        # Call ApplyJT on each component
+        for comp in self.derivative_iter():
+            name = comp.name
             applyJT(comp, inputs[name], outputs[name])
 
         # Poke results into the return vector
