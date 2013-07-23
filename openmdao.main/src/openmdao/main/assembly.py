@@ -459,16 +459,16 @@ class Assembly(Component):
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
 
-        # Check if dest is declared as a parameter in any driver in the assembly
-        for item in self.list_containers():
-            comp = self.get(item)
-            if isinstance(comp, Driver) and \
-               hasattr(comp, 'list_param_targets'):
-                if dest in comp.list_param_targets():
-                    msg = "Can't connect '%s' to '%s' " % (src, dest)
-                    msg += "because the target is a Parameter in " + \
-                           "driver '%s'." % comp.name
-                    self.raise_exception(msg, RuntimeError)
+        ## Check if dest is declared as a parameter in any driver in the assembly
+        #for item in self.list_containers():
+            #comp = self.get(item)
+            #if isinstance(comp, Driver) and \
+               #hasattr(comp, 'list_param_targets'):
+                #if dest in comp.list_param_targets():
+                    #msg = "Can't connect '%s' to '%s' " % (src, dest)
+                    #msg += "because the target is a Parameter in " + \
+                           #"driver '%s'." % comp.name
+                    #self.raise_exception(msg, RuntimeError)
 
         if needpseudocomp:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr)

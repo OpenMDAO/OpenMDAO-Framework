@@ -131,7 +131,7 @@ class Parameter(object):
             pseudo = ParamPseudoComponent(self)
             self.pcomp_name = pseudo.name
             scope.add(pseudo.name, pseudo)
-        getattr(scope, pseudo.name).make_connections()
+        getattr(scope, self.pcomp_name).make_connections()
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -359,6 +359,7 @@ class ParameterGroup(object):
             pseudo = ParamPseudoComponent(self._params[0])
             self.pcomp_name = pseudo.name
             self._params[0]._expreval.scope.add(pseudo.name, pseudo)
+            self._params[0].pcomp_name = pseudo.name
             for param in self._params[1:]:
                 pseudo.add_target(param._expreval.text)
                 param.pcomp_name = pseudo.name
@@ -440,9 +441,8 @@ class HasParameters(object):
             parent_cnns = self._parent.parent.list_connections()
             for lhs, rhs in parent_cnns:
                 if rhs == target:
-                    self._parent.raise_exception('Cannot add target'
-                    ' parameter "%s" - incoming connection exists' % target,
-                                                                 RuntimeError)
+                    self._parent.raise_exception("'%s' is already a Parameter target" % target,
+                                                 RuntimeError)
 
         if isinstance(target, Parameter): 
             self._parameters[target.name] = target
@@ -518,6 +518,7 @@ class HasParameters(object):
             scope = self._get_scope()
             if hasattr(scope, param.pcomp_name):
                 scope.disconnect(param.pcomp_name)
+                param.pcomp_name = None
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
@@ -573,6 +574,8 @@ class HasParameters(object):
 
     def clear_parameters(self):
         """Removes all parameters."""
+        for name in self._parameters.keys():
+            self.remove_parameter(name)
         self._parameters = ordereddict.OrderedDict()
         self._parent._invalidate()
 
