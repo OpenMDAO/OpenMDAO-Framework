@@ -131,7 +131,13 @@ class Parameter(object):
             pseudo = ParamPseudoComponent(self)
             self.pcomp_name = pseudo.name
             scope.add(pseudo.name, pseudo)
-        getattr(scope, self.pcomp_name).make_connections()
+        else:
+            pseudo = getattr(scope, self.pcomp_name)
+        pseudo.make_connections()
+        if self.start is None:
+            self.set(self._untransform(self._expreval.evaluate(scope)))
+        else:
+            self.set(self.start, scope)
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -173,9 +179,9 @@ class Parameter(object):
         if scope is None:
             scope = self._expreval.scope
         pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp._valid:
+        if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
-        return pcomp.out0
+        return pcomp.in0
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
@@ -184,6 +190,9 @@ class Parameter(object):
             scope = self._expreval.scope
         pcomp = getattr(scope, self.pcomp_name)
         pcomp.set('in0', val)
+        
+        pcomp.run()
+        self._expreval.set(pcomp.out0, src='.'.join([self.pcomp_name, 'out0']))
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
@@ -503,11 +512,6 @@ class HasParameters(object):
                     pg.activate(self._get_scope(scope))
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
-
-
-            #if start is given, then initialze the var now
-            if start is not None:
-                self._parameters[key].set(start, self._get_scope(scope))
 
         self._parent._invalidate()
 

@@ -71,6 +71,7 @@ def _invert_dict(dct):
         out[v] = k
     return out
 
+
 class PseudoComponent(object):
     """A 'fake' component that is constructed from an ExprEvaluator.
     This fake component can be added to a dependency graph and executed
@@ -83,7 +84,7 @@ class PseudoComponent(object):
         self.name = _get_new_name()
         self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
-        self._valid = False
+        self._valids = {}
         self._parent = parent
         self._inputs = []
         if destexpr.text:
@@ -101,6 +102,7 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
+            self._valids[in_name] = True
 
         refs = list(destexpr.refs())
         if refs:
@@ -119,6 +121,7 @@ class PseudoComponent(object):
             
         newmeta['out0'] = self._meta[_get_varname(refs[0])]
         self._meta = newmeta
+        self._valids['out0'] = False
 
         if translate:
             xformed_src = transform_expression(srcexpr.text, self._inmap)
@@ -212,14 +215,21 @@ class PseudoComponent(object):
             self._parent.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
-        self._valid = False
+        if varnames is None:
+            varnames = self._inputs
+        for name in varnames:
+            self._valids[name] = False
+        self._valids['out0'] = False
 
     def connect(self, src, dest):
+        for name in self._inputs:
+            self._valid[name] = False
         self._valid = False
 
     def run(self, ffd_order=0, case_id=''):
-        if not self._valid:
-            self.update_inputs()
+        invalid_ins = [n for n in self._inputs if not self._valids[n]]
+        if invalid_ins:
+            self.update_inputs(invalid_ins)
 
         src = self._srcexpr.evaluate()
         if isinstance(src, PhysicalQuantity):
@@ -229,10 +239,11 @@ class PseudoComponent(object):
             else:
                 src = src.value
         self._destexpr.set(src)
-        self._valid = True
+        for name in self._valids:
+            self._valids[name] = True
 
-    def update_inputs(self):
-        self._parent.update_inputs(self.name, None)
+    def update_inputs(self, inputs):
+        self._parent.update_inputs(self.name, inputs)
         
     def update_outputs(self, names):
         self.run()
@@ -243,7 +254,7 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
-        self._valid = False
+        self._valids['out0'] = False
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
@@ -271,10 +282,13 @@ class PseudoComponent(object):
         return None
 
     def get_valid(self, names):
-        return [self._valid]*len(names)
+        return [self._valids[n] for n in names]
 
     def is_valid(self):
-        return self._valid
+        for k,v in self._valids.items():
+            if not v:
+                return False
+        return True
 
     def set_itername(self, itername):
         self._itername = itername
