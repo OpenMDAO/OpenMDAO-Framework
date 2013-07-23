@@ -107,8 +107,7 @@ class BroydenSolver(Driver):
         dependents = self.get_eq_constraints().values()
         self.F = numpy.zeros(len(dependents),'d')
         for i, val in enumerate(dependents):
-            term = val.evaluate(self.parent)
-            self.F[i] = term[0] - term[1]
+            self.F[i] = val.evaluate(self.parent)
                 
         # pick solver algorithm
         if self.algorithm == 'broyden2':
@@ -150,8 +149,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate(self.parent)
-                self.F[i] = term[0] - term[1]
+                self.F[i] = val.evaluate(self.parent)
             
             self.record_case()
     
@@ -217,8 +215,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate(self.parent)
-                self.F[i] = term[0] - term[1]
+                self.F[i] = val.evaluate(self.parent)
                 
             self.record_case()
 
@@ -275,8 +272,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate(self.parent)
-                self.F[i] = term[0] - term[1]
+                self.F[i] = val.evaluate(self.parent)
 
             self.record_case()
     

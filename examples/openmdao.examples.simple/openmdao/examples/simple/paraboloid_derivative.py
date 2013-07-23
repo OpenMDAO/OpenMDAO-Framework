@@ -2,6 +2,8 @@
     paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
 """
 
+from numpy import array
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
@@ -38,7 +40,23 @@ class ParaboloidDerivative(Component):
         y = self.y
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-
+        
+    def linearize(self):
+        """Caculate the Jacobian"""
+        
+        df_dx = 2.0*self.x - 6.0 + self.y
+        df_dy = 2.0*self.y + 8.0 + self.x
+    
+        self.J = array([[df_dx, df_dy]])
+        
+    def provideJ(self):
+        """Provide full Jacobian."""
+        
+        input_keys = ('x', 'y')
+        output_keys = ('f_xy',)
+        
+        return input_keys, output_keys, self.J
+    
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
         

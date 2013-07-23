@@ -325,14 +325,20 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in = None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase)
+        self.workflow.calc_derivatives(first, second, savebase, 
+                                       extra_in, extra_out)
 
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Check derivatives for all components in this workflow."""
-        self.workflow.check_derivatives(order, driver_inputs, driver_outputs)
+    def calc_gradient(self, inputs=None, outputs=None):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs. The basic driver behavior is to call calc_gradient
+        on its workflow. However, some driver (optimizers in particular) may
+        want to define their own behavior.
+        """
+        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -380,17 +386,12 @@ class Driver(Component):
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                if '>' in val[2]:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[0] - val[1]])
-                else:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)

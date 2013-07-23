@@ -147,6 +147,7 @@ class MultiDriverTestCase(unittest.TestCase):
                           'adder1', 'adder2', 'adder3'])
         
         drv.itmax = 30
+        #drv.conmin_diff = True
         drv.add_objective('adder3.sum+50.')
         drv.add_parameter('comp1.x', -10., 99.)
         drv.add_parameter('comp2.x', -10., 99.)
@@ -176,8 +177,8 @@ class MultiDriverTestCase(unittest.TestCase):
         print "*** test_one_driver ***"
         self.rosen_setUp()
         self.top.run()
-        self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.eval_objective(), places=2)
+        assert_rel_error(self, self.opt_objective, 
+                         self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
@@ -203,19 +204,21 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.workflow.add(['comp1a', 'comp2a'])
         
         drv.itmax = 40
+        # Note, this is a bad test for our gradient stuff. It has 2 local
+        # minima, and pretty much requires forward or backward difference
+        # to reach one of them if you start at 0.0. Still, it works. -- KTM
         drv.add_objective('comp2a.f_x')
         drv.add_parameter('comp1a.x', low=0, high=99)
         
         self.top.run()
         
-        self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.eval_objective(), places=2)
+        assert_rel_error(self, self.opt_objective, 
+                         self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
         assert_rel_error(self, self.opt_design_vars[2], self.top.comp3.x, 0.01)
-        self.assertAlmostEqual(self.opt_design_vars[3], 
-                               self.top.comp4.x, places=1)
+        assert_rel_error(self, self.opt_design_vars[3], self.top.comp4.x, 0.01)
         self.assertAlmostEqual(-6.2498054387439232, 
                                self.top.driver1a.eval_objective(), 
                                places=2)

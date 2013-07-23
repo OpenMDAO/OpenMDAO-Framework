@@ -36,6 +36,8 @@ def process_index_entry(obj, idx):
 
     """
     if not isinstance(idx, tuple):
+        print obj, type(obj)
+        print obj[idx]
         return obj[idx]
     if idx[0] == INDEX:
         return obj[idx[1]]
@@ -65,7 +67,7 @@ def index_retains_metadata(index):
     return True
         
 
-def get_indexed_value(obj, name, index):
+def get_indexed_value(obj, name, index=None):
     if name:
         obj = getattr(obj, name)
     if index:

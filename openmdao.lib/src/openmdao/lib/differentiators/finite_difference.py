@@ -396,20 +396,12 @@ class FiniteDifference(Container):
         # Get Inequality Constraints
         if self.ineqconst_names:
             for key, item in self._parent.get_ineq_constraints().iteritems():
-                val = item.evaluate(self._parent.parent)
-                if '>' in val[2]:
-                    data[key] = val[1]-val[0]
-                else:
-                    data[key] = val[0]-val[1]
+                data[key] = item.evaluate(self._parent.parent)
         
         # Get Equality Constraints
         if self.eqconst_names:
             for key, item in self._parent.get_eq_constraints().iteritems():
-                val = item.evaluate(self._parent.parent)
-                if '>' in val[2]:
-                    data[key] = val[1]-val[0]
-                else:
-                    data[key] = val[0]-val[1]
+                data[key] = item.evaluate(self._parent.parent)
         
         return data
                     

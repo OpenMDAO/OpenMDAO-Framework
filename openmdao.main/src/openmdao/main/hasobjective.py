@@ -1,12 +1,12 @@
 
-import weakref
 import ordereddict
 
-from openmdao.main.expreval import ExprEvaluator
-
+from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.main.pseudocomp import PseudoComponent
 
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
+
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
@@ -65,16 +65,23 @@ class HasObjectives(object):
                                          "'%s' to driver using name '%s', but name is already used" % (expr,name),
                                          AttributeError)
             
-        expreval = ExprEvaluator(expr, self._get_scope(scope))
-        
+        scope = self._get_scope(scope)
+        expreval = ConnectedExprEvaluator(expr, scope, 
+                                          getter='get_wrapped_attr')
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
-            
-        if name is None:
-            self._objectives[expr] = expreval
-        else:
-            self._objectives[name] = expreval
+
+        name = expr if name is None else name
+
+        pseudo = PseudoComponent(scope, expreval)
+        scope.add(pseudo.name, pseudo)
+        pseudo.make_connections()
+      
+        self._objectives[name] = expreval
+
+        # just attach the pseudocomp name to the objective object
+        expreval.pcomp_name = pseudo.name
             
         self._parent._invalidate()
             
@@ -83,9 +90,13 @@ class HasObjectives(object):
         the expression are ignored.
         """
         expr = _remove_spaces(expr)
-        try:
+        obj = self._objectives.get(expr)
+        if obj:
+            scope = self._get_scope()
+            if hasattr(scope, obj.pcomp_name):
+                scope.disconnect(obj.pcomp_name)
             del self._objectives[expr]
-        except KeyError:
+        else:
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
@@ -133,12 +144,19 @@ class HasObjectives(object):
     
     def clear_objectives(self):
         """Removes all objectives."""
-        self._objectives = ordereddict.OrderedDict()
-        self._parent._invalidate()
+        for name in self._objectives.keys():
+            self.remove_objective(name)
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
-        return [obj.evaluate(self._get_scope()) for obj in self._objectives.values()]
+        scope = self._get_scope()
+        objs = []
+        for obj in self._objectives.values():
+            pcomp = getattr(scope, obj.pcomp_name)
+            if not pcomp._valid:
+                pcomp.update_outputs(['out0'])
+            objs.append(pcomp.out0)
+        return objs
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
@@ -147,7 +165,7 @@ class HasObjectives(object):
         pname = self._parent.name
         conn_list = []
         for obj in self._objectives.values():
-            conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
+            conn_list.extend([(c,pname) for c in obj.get_referenced_compnames()])
         return conn_list
     
     def get_referenced_compnames(self):
@@ -178,15 +196,11 @@ class HasObjectives(object):
             self._parent.raise_exception("This driver allows a maximum of %d objectives, but the driver being replaced has %d" %
                                          (self._max_objectives, len(target._objectives)),
                                          RuntimeError)
-        old_obj = self._objectives
         self.clear_objectives()
-        try:
-            for name,obj in target._objectives.items():
-                self.add_objective(obj.text, name=name, scope=obj.scope)
-        except Exception:
-            self._objectives = old_obj
-            raise
-        
+        for name,obj in target._objectives.items():
+            self.add_objective(obj.text, name=name, scope=obj.scope)
+
+
 class HasObjective(HasObjectives):
     def __init__(self, parent):
         super(HasObjective, self).__init__(parent, max_objectives=1)

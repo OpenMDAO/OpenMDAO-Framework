@@ -29,13 +29,13 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Array, Float, Int
+from openmdao.lib.datatypes.api import Array, Float, Int, Bool
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
+from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
                                      IHasObjective, implements, IOptimizer
@@ -116,17 +116,17 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             # the first order differences.
             
             # Save baseline states and calculate derivatives
-            if driver.baseline_point:
-                driver.calc_derivatives(first=True, savebase=True)
-            driver.baseline_point = False
+            #if driver.baseline_point:
+            #    driver.calc_derivatives(first=True, savebase=True)
+            #driver.baseline_point = False
             
             # update the parameters in the model
             driver.set_parameters(x)
     
             # Run model under Fake Finite Difference
-            driver.ffd_order = 1
+            #driver.ffd_order = 1
             super(NEWSUMTdriver, driver).run_iteration()
-            driver.ffd_order = 0
+            #driver.ffd_order = 0
         else:
 
             # Optimization step
@@ -141,11 +141,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         # evaluate constraint functions
         if info == 2:
             for i, v in enumerate(driver.get_ineq_constraints().values()):
-                val = v.evaluate(driver.parent)
-                if '>' in val[2]:
-                    g[i] = val[0]-val[1]
-                else:
-                    g[i] = val[1]-val[0]
+                g[i] = -v.evaluate(driver.parent)
                     
         # save constraint values in driver if this isn't a finite difference
         if imode != 1:
@@ -156,7 +152,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         #     of the objective function
 
         # NEWSUMT bug: sometimes we end up here when ifd=-4
-        if not driver.differentiator:
+        if driver.newsumt_diff:
             return obj, dobj, ddobj, g, dg
         
         driver.ffd_order = 1
@@ -184,7 +180,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             # NEWSUMT bug - During initial run, NEWSUMT will ask for analytic
             # derivatives of the linear constraints even when ifd=-4. The only
             # thing we can do is return zero.
-            if not driver.differentiator:
+            if driver.newsumt_diff:
                 return obj, dobj, ddobj, g, dg
 
             driver.ffd_order = 1
@@ -266,7 +262,7 @@ class _countr(object):
 # pylint: disable-msg=R0913,R0902
 @stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
-class NEWSUMTdriver(DriverUsesDerivatives):
+class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT. 
         
     
@@ -322,6 +318,8 @@ class NEWSUMTdriver(DriverUsesDerivatives):
     mflag = Int(0, iotype='in', desc='Flag for penalty multiplier. \
                      If 0, initial value computed by NEWSUMT. \
                      If 1, initial value set by ra.')
+    newsumt_diff = Bool(True, iotype='in', desc='Set to True to let NEWSUMT'
+                       'calculate the gradient.')
     
     def __init__(self):
         super(NEWSUMTdriver, self).__init__()
@@ -369,7 +367,15 @@ class NEWSUMTdriver(DriverUsesDerivatives):
 
         self.isdone = False
         self.resume = False
-        self.uses_Hessians = False
+        
+    def check_config(self):
+        """ OpenMDAO Hessian unsupported right now. """
+        
+        super(Driver, self).check_config()
+        
+        if not self.newsumt_diff:
+            msg = "Hessians currently not supported by OpenMDAO differentiator"
+            raise NotImplementedError(msg)        
         
     def start_iteration(self):
         """Perform the optimization."""
@@ -477,10 +483,10 @@ class NEWSUMTdriver(DriverUsesDerivatives):
             if param.fd_step:
                 self.fdcv[i] = param.fd_step
 
-        if self.differentiator:
-            ifd = 0
-        else:
+        if self.newsumt_diff:
             ifd = -4
+        else:
+            ifd = 0
                 
         self.n1 = ndv
         ncon = len( self.get_ineq_constraints() )

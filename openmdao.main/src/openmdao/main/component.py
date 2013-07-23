@@ -13,20 +13,12 @@ import pkg_resources
 import sys
 import weakref
 
-try:
-    from numpy import inner
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import inner
-
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.derivatives import Derivatives, \
-                                      flattened_size, flattened_value
+from openmdao.main.derivatives import Derivatives
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -445,11 +437,11 @@ class Component(Container):
             setattr(self, name,
                     self.derivatives.calculate_output(name, ffd_order))
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
-        requested. The user must supply *calculate_first_derivatives()*
-        and/or *calculate_second_derivatives()* in the component.
+        requested. The user must supply *linearize* in the component.
         
         This function should not be overriden.
         
@@ -462,6 +454,12 @@ class Component(Container):
         savebase: Bool
             If set to true, then we save our baseline state for fake finite
             difference.
+            
+        extra_in:
+            Not needed by Component
+        
+        extra_out
+            Not needed by Component
         """
         
         executed = False
@@ -472,30 +470,14 @@ class Component(Container):
             self.linearize()
             self.derivative_exec_count += 1
             
-        # Calculate first derivatives in user-defined function
-        if first and hasattr(self, 'calculate_first_derivatives'):
-            self.calculate_first_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
-            
-        # Calculate second derivatives in user-defined function
-        if second and hasattr(self, 'calculate_second_derivatives'):
-            self.calculate_second_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
-            
         # Save baseline state
         if savebase and executed:
-            self.derivatives.save_baseline(self)
-
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ComponentsWithDerivatives overloads this function to check for
-        missing derivatives.
-
-        This function is overridden by ComponentWithDerivatives.
-        """
-
-        pass
+            
+            for name in self.J_inputs:
+                self._ffd_inputs[name] = self.parent.get(name)
+    
+            for name in self.J_outputs:
+                self._ffd_outputs[name] = self.parent.get(name)
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -553,7 +535,7 @@ class Component(Container):
                 #print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 and \
-                   hasattr(self, 'calculate_first_derivatives'):
+                   (hasattr(self, 'provideJ') or hasattr(self, 'apply_deriv')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(1)
@@ -562,7 +544,7 @@ class Component(Container):
                    hasattr(self, 'calculate_second_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
-                    self._execute_ffd(2)
+                    pass
 
                 else:
                     # Component executes as normal
@@ -1885,60 +1867,6 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
-
-    def applyJ(self, arg, result):
-        """Multiply an input vector by the Jacobian. For an Explicit Component,
-        this automatically forms the "fake" residual, and calls into the
-        function hook "apply_deriv.
-        """
-        for key in result:
-            result[key] = -arg[key]
-
-        if hasattr(self, 'apply_deriv'):
-            self.apply_deriv(arg, result)
-            return
-
-        # Optional specification of the Jacobian
-        input_keys, output_keys, J = self.provideJ()
-
-        ibounds = {}
-        nvar = 0
-        for key in input_keys:
-            val = self.get(key)
-            width = flattened_size('.'.join((self.name, key)), val)
-            ibounds[key] = (nvar, nvar+width)
-            nvar += width
-
-        obounds = {}
-        nvar = 0
-        for key in output_keys:
-            val = self.get(key)
-            width = flattened_size('.'.join((self.name, key)), val)
-            obounds[key] = (nvar, nvar+width)
-            nvar += width
-
-        for okey in result:
-            for ikey in arg:
-                if ikey not in result:
-                    i1, i2 = ibounds[ikey]
-                    o1, o2 = obounds[okey]
-                    if i2 - i1 == 1:
-                        if o2 - o1 == 1:
-                            Jsub = float(J[o1, i1])
-                            result[okey] += Jsub*arg[ikey]
-                        else:
-                            Jsub = J[o1:o2, i1:i2]
-                            tmp = Jsub*arg[ikey]
-                            result[okey] += tmp.reshape(result[okey].shape)
-                    else:
-                        tmp = flattened_value('.'.join((self.name, ikey)),
-                                              arg[ikey]).reshape(1, -1)
-                        Jsub = J[o1:o2, i1:i2]
-                        tmp = inner(Jsub, tmp)
-                        if o2 - o1 == 1:
-                            result[okey] += float(tmp)
-                        else:
-                            result[okey] += tmp.reshape(result[okey].shape)
 
 
 def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover

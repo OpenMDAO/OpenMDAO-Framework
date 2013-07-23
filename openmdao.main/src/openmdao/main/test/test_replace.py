@@ -131,6 +131,8 @@ class ReplaceTestCase(unittest.TestCase):
         except Exception as err:
             self.assertEqual(str(err), 
                              ": Couldn't replace 'driver' of type EqInEqdriver with type InEqdriver: driver: Equality constraint 'comp1.d-comp1.c = .5' is not supported on this driver")
+        else:
+            self.fail("Exception expected")
             
         top.replace('driver', Eqdriver())
         self.assertEqual(old_params, top.driver.get_parameters())

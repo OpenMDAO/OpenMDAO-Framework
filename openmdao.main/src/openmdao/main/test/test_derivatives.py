@@ -1,19 +1,133 @@
 """
-Test of the derivatives capability.
+This mainly tests the CyclicWorkflow's ability to generate its topological
+sort.
 """
 
 import unittest
 
-# pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, Assembly, DriverUsesDerivatives, \
-                              SequentialWorkflow, set_as_top
-from openmdao.lib.datatypes.api import Float, Int
-from openmdao.util.testutil import assert_rel_error
+try:
+    from numpy import zeros, array, identity
+except ImportError as err:
+    from openmdao.main.numpy_fallback import zeros, array, identity
+
+from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
+from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
+from openmdao.util.testutil import assert_rel_error
 
-class Paraboloid_Derivative(Component):
+class Tree2(VariableTree):
+
+    d1 = Array(zeros((1, 2)))
+
+class Tree1(VariableTree):
+
+    a1 = Float(3.)
+    vt1 = VarTree(Tree2())
+
+class MyComp(Component):
+
+    x1 = Float(0.0, iotype='in')
+    x2 = Float(0.0, iotype='in')
+    x3 = Array(zeros((2, 1)), iotype='in')
+    x4 = Array(zeros((2, 2)), iotype='in')
+    vt = VarTree(Tree1(), iotype='in')
+
+    xx1 = Float(0.0, iotype='out')
+    xx2 = Float(0.0, iotype='out')
+    xx3 = Array(zeros((2, 1)), iotype='out')
+    xx4 = Array(zeros((2, 2)), iotype='out')
+    vvt = VarTree(Tree1(), iotype='out')
+
+    def execute(self):
+        """ doubler """
+        pass
+
+    def linearize(self):
+        """ calculates the Jacobian """
+
+        self.J = array([[1.5, 3.7, 2.5, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1, 11.1],
+                        [7.4, 23.7, 1.1, 4.2, 5.2, 6.2, 7.2, 8.2, 9.2, 10.2, 11.2],
+                        [5.5, 8.7, 1.9, 4.3, 5.3, 6.3, 7.3, 8.3, 9.3, 10.3, 11.3],
+                        [1.4, 2.4, 3.4, 4.4, 5.4, 6.4, 7.4, 8.4, 9.4, 10.4, 11.4],
+                        [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5],
+                        [1.6, 2.6, 3.6, 4.6, 5.6, 6.6, 7.6, 8.6, 9.6, 10.6, 11.6],
+                        [1.7, 2.7, 3.7, 4.7, 5.7, 6.7, 7.7, 8.7, 9.7, 10.7, 11.7],
+                        [1.8, 2.8, 3.8, 4.8, 5.8, 6.8, 7.8, 8.8, 9.8, 10.8, 11.8],
+                        [1.9, 2.9, 3.9, 4.9, 5.9, 6.9, 7.9, 8.9, 9.9, 10.9, 11.9],
+                        [1.10, 2.10, 3.10, 4.10, 5.10, 6.10, 7.10, 8.10, 9.10, 10.10, 11.10],
+                        [1.11, 2.11, 3.11, 4.11, 5.11, 6.11, 7.11, 8.11, 9.11, 10.11, 11.11]])
+
+    def provideJ(self):
+        """ returns the Jacobian """
+
+        input_keys = ('x1', 'x2', 'x3', 'x4', 'vt.a1', 'vt.vt1.d1')
+        output_keys = ('xx1', 'xx2', 'xx3', 'xx4', 'vvt.a1', 'vvt.vt1.d1')
+
+        return input_keys, output_keys, self.J
+
+
+class Testcase_provideJ(unittest.TestCase):
+    """ Test run/step/stop aspects of a simple workflow. """
+
+    def setUp(self):
+        """ Called before each test. """
+        pass
+
+    def tearDown(self):
+        """ Called after each test. """
+        pass
+    
+    def test_provideJ(self):
+
+        comp = MyComp()
+        comp.linearize()
+
+        inputs = {}
+        outputs = { 'xx1': None,
+                    'xx2': None,
+                    'xx3': None,
+                    'xx4': None,
+                    'vvt.a1': None,
+                    'vvt.vt1.d1': None}
+
+        num = 11
+        ident = identity(num)
+
+        for i in range(num):
+
+            inputs['x1'] = ident[i, 0]
+            inputs['x2'] = ident[i, 1]
+            inputs['x3'] = ident[i, 2:4].reshape((2, 1))
+            inputs['x4'] = ident[i, 4:8].reshape((2, 2))
+            inputs['vt.a1'] = ident[i, 8]
+            inputs['vt.vt1.d1'] = ident[i, 9:11].reshape((1, 2))
+
+            inputs['xx1'] = 0
+            inputs['xx2'] = 0
+            inputs['xx3'] = zeros((2, 1))
+            inputs['xx4'] = zeros((2, 2))
+            inputs['vvt.a1'] = 0
+            inputs['vvt.vt1.d1'] = zeros((1, 2))
+
+            applyJ(comp, inputs, outputs)
+
+            self.assertEqual(outputs['xx1'], comp.J[0, i])
+            self.assertEqual(outputs['xx2'], comp.J[1, i])
+            for j in range(2):
+                self.assertEqual(outputs['xx3'][j], comp.J[2+j, i])
+            for j in range(4):
+                self.assertEqual(outputs['xx4'].flat[j], comp.J[4+j, i])
+            self.assertEqual(outputs['vvt.a1'], comp.J[8, i])
+            for j in range(2):
+                self.assertEqual(outputs['vvt.vt1.d1'].flat[j], comp.J[9+j, i])
+
+
+class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
     # set up interface to the framework  
@@ -23,21 +137,6 @@ class Paraboloid_Derivative(Component):
 
     f_xy = Float(iotype='out', desc='F(x,y)')
 
-        
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
-        
-        super(Paraboloid_Derivative, self).__init__()
-
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
-        self.derivatives.declare_first_derivative('f_xy', 'x')
-        self.derivatives.declare_first_derivative('f_xy', 'y')
-        
-        self.ran_real = False
-
-        
     def execute(self):
         """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
         Optimal solution (minimum): x = 6.6667; y = -7.3333
@@ -47,529 +146,524 @@ class Paraboloid_Derivative(Component):
         y = self.y
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-
-        self.ran_real = True
         
-        
-    def calculate_first_derivatives(self):
+    def linearize(self):
         """Analytical first derivatives"""
         
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
     
-        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        self.J = array([[df_dx, df_dy]])
         
-    def calculate_second_derivatives(self):
-        """Analytical second derivatives"""
+    def provideJ(self):
         
-        df_dxdx = 2.0
-        df_dxdy = 1.0
-        df_dydy = 2.0
-        
-        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
+        input_keys = ('x', 'y')
+        output_keys = ('f_xy',)
+        return input_keys, output_keys, self.J
 
-class SimpleAssembly(Assembly):
-    """ Simple assembly"""
-    
-    def configure(self):
-        self.add('comp1', Paraboloid_Derivative())
-        self.driver.workflow.add(['comp1'])
-        
-class BottomAssembly(Assembly):
-    """ Simple assembly"""
-    
-    def configure(self):
 
-        self.add('comp1', Paraboloid_Derivative())
-        self.driver.workflow.add(['comp1'])
-        
-        self.create_passthrough('comp1.x')
-        self.create_passthrough('comp1.y')
-        self.create_passthrough('comp1.f_xy')
-        
-class TopAssembly(Assembly):
-    """ Simple assembly"""
-    
-    def configure(self):
-        self.add('assy1', BottomAssembly())
-        self.driver.workflow.add(['assy1'])
-        
-class A(Component):
-    """ Simple Comp with no Deriv """
-
-    x1 = Float(0.0, iotype='in', desc='The variable x1')
-    x2 = Float(0.0, iotype='in', desc='The variable x2')
-    y1 = Float(0.0, iotype='out', desc='The variable y1')
-    y2 = Float(0.0, iotype='out', desc='The variable y2')
-
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
-        
-        super(A, self).__init__()
-
-        self.ran_real = False
-
-        
-    def execute(self):
-        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-        Optimal solution (minimum): x = 6.6667; y = -7.3333
-        """
-        
-        x1 = self.x1
-        x2 = self.x2
-        
-        self.y1 = 2.0*x1 - 0.5*x2*x2
-        self.y2 = 3.0*x1 - 0.2*x2*x2
-
-        self.ran_real = True
-        #print self.name
-        #print "%f, %f, %f, %f" % (self.x1, self.x2, self.y1, self.y2)
-
-class A_D(A):
-    """ Simple Comp with Deriv """
-
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
-        
-        super(A_D, self).__init__()
-
-        self.derivatives.declare_first_derivative('y1', 'x1')
-        self.derivatives.declare_first_derivative('y1', 'x2')
-        self.derivatives.declare_first_derivative('y2', 'x1')
-        self.derivatives.declare_first_derivative('y2', 'x2')
-        self.derivatives.declare_second_derivative('y1', 'x1', 'x1')
-        self.derivatives.declare_second_derivative('y1', 'x1', 'x2')
-        self.derivatives.declare_second_derivative('y1', 'x2', 'x2')
-        self.derivatives.declare_second_derivative('y2', 'x1', 'x1')
-        self.derivatives.declare_second_derivative('y2', 'x1', 'x2')
-        self.derivatives.declare_second_derivative('y2', 'x2', 'x2')
-        
-        self.ran_real = False
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-            
-        dy1_dx1 = 2.0
-        dy2_dx1 = 3.0
-        dy1_dx2 = -self.x2
-        dy2_dx2 = -0.4*self.x2
-    
-        self.derivatives.set_first_derivative('y1', 'x1', dy1_dx1)
-        self.derivatives.set_first_derivative('y1', 'x2', dy1_dx2)
-        self.derivatives.set_first_derivative('y2', 'x1', dy2_dx1)
-        self.derivatives.set_first_derivative('y2', 'x2', dy2_dx2)
-        
-    def calculate_second_derivatives(self):
-        """Analytical second derivatives"""
-        
-        dy1_dx2dx2 = -1.0
-        dy2_dx2dx2 = -0.4
-        
-        self.derivatives.set_second_derivative('y1', 'x2', 'x2', dy1_dx2dx2)
-        self.derivatives.set_second_derivative('y2', 'x2', 'x2', dy2_dx2dx2)
-
-class MultiAssy(Assembly):
-    """ A reasonably complicated assembly with multiple connections"""
-    
-    def configure(self):
-
-        self.add('A1', A())
-        self.add('A2', A_D())
-        self.add('A3', A())
-        self.add('A4', A_D())
-        self.add('A5', A())
-        self.driver.workflow.add(['A1', 'A2', 'A3', 'A4', 'A5'])
-        
-        self.connect('A1.y1','A2.x1')
-        self.connect('A1.y2','A3.x2')
-        self.connect('A2.y1','A4.x1')
-        self.connect('A3.y2','A4.x2')
-        self.connect('A4.y1','A5.x1')
-        self.connect('A4.y2','A5.x2')
-        
-        
-class DerivativesTestCase(unittest.TestCase):
-    """ Test of Component. """
-
-    def setUp(self):
-        self.comp = Paraboloid_Derivative()
-        self.comp.x = 3
-        self.comp.y = 5
-        self.comp.run()
-        self.comp.ran_real = False
-        
-    def test_first_derivative(self):
-
-        eps = 1000.0
-        self.comp.calc_derivatives(first=True, second=False, savebase=True)
-
-        self.comp.x = 3.0 + eps
-        self.comp.run(ffd_order=1)
-        fp = self.comp.f_xy
-        self.comp.x = 3.0 - eps
-        self.comp.run(ffd_order=1)
-        fm = self.comp.f_xy
-        d_fd_x = (fp-fm)/(2*eps)
-    
-        self.comp.x = 3
-        self.comp.y = 5.0 + eps
-        self.comp.run(ffd_order=1)
-        fp = self.comp.f_xy
-        self.comp.y = 5.0 - eps
-        self.comp.run(ffd_order=1)
-        fm = self.comp.f_xy
-        d_fd_y = (fp-fm)/(2*eps)
-        
-        self.assertEqual(d_fd_x, 5.0)
-        self.assertEqual(d_fd_y, 21.0)
-        self.assertEqual(self.comp.ran_real, False)
-
-    def test_second_derivative(self):
-
-        f0 = self.comp.f_xy
-        
-        eps = 1000.0
-        self.comp.calc_derivatives(first=False, second=True, savebase=True)
-        
-        self.comp.y = 5.0
-        self.comp.x = 3.0 + eps
-        self.comp.run(ffd_order=2)
-        fp = self.comp.f_xy
-        self.comp.x = 3.0 - eps
-        self.comp.run(ffd_order=2)
-        fm = self.comp.f_xy
-        d_fd_xx = (fp - 2.0*f0 + fm)/(eps)**2
-        
-        self.comp.x = 3
-        self.comp.y = 5.0 + eps
-        self.comp.run(ffd_order=2)
-        fp = self.comp.f_xy
-        self.comp.y = 5.0 - eps
-        self.comp.run(ffd_order=2)
-        fm = self.comp.f_xy
-        d_fd_yy = (fp - 2.0*f0 + fm)/(eps)**2
-        
-        self.comp.x = 3.0 + eps
-        self.comp.y = 5.0 + eps
-        self.comp.run(ffd_order=2)
-        fpp = self.comp.f_xy
-        self.comp.x = 3.0 + eps
-        self.comp.y = 5.0 - eps
-        self.comp.run(ffd_order=2)
-        fpm = self.comp.f_xy
-        self.comp.x = 3.0 - eps
-        self.comp.y = 5.0 + eps
-        self.comp.run(ffd_order=2)
-        fmp = self.comp.f_xy
-        self.comp.y = 3.0 - eps
-        self.comp.y = 5.0 - eps
-        self.comp.run(ffd_order=2)
-        fmm = self.comp.f_xy
-        d_fd_xy = (fpp - fpm - fmp + fmm)/(2*eps)**2
-    
-        self.assertEqual(d_fd_xx, 2.0)
-        self.assertEqual(d_fd_yy, 2.0)
-        self.assertEqual(d_fd_xy, 1.0)
-        self.assertEqual(self.comp.ran_real, False)
-
-    def test_bad_variable_declaration(self):
-        
-        try:
-            self.comp.derivatives.declare_first_derivative('x', 'y')
-        except RuntimeError, err:
-            msg = 'Variable x ' + \
-                  'should be an output. '+ \
-                  'Derivatives need to be declared for outputs with respect' + \
-                  ' to inputs.'
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('RuntimeError expected')
-            
-        try:
-            self.comp.derivatives.declare_first_derivative('f_xy', 'f_xy')
-        except RuntimeError, err:
-            msg = 'Variable f_xy ' + \
-                  'should be an input. '+ \
-                  'Derivatives need to be declared for outputs with respect' + \
-                  ' to inputs.'
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('RuntimeError expected')
-            
-        try:
-            self.comp.derivatives.declare_second_derivative('x', 'y', 'x')
-        except RuntimeError, err:
-            msg = 'Variable x ' + \
-                  'should be an output. '+ \
-                  'Derivatives need to be declared for outputs with respect' + \
-                  ' to inputs.'
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('RuntimeError expected')
-
-        self.comp.add('zint', Int(7777, iotype='in'))
-        
-        try:
-            self.comp.derivatives.declare_first_derivative('f_xy', 'zint')
-        except RuntimeError, err:
-            msg = 'At present, derivatives can only be declared for float-' + \
-                  'valued variables. Variable zint ' + \
-                  "is of type <type 'str'>."
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('RuntimeError expected')
-            
-
-    def test_forgot_to_declare_first_derivatives(self):
-        
-        self.comp.add('zx', Float(64.0, iotype='in'))
-        self.comp.add('zy', Float(64.0, iotype='in'))
-        self.comp.add('zz', Float(64.0, iotype='out'))
-        
-        try:
-            self.comp.derivatives.set_first_derivative('f_xy', 'zx', 33.4)
-        except KeyError, err:
-            msg = "Derivative of f_xy " + \
-                  "with repect to zx " + \
-                  "must be declared before being set."            
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('KeyError expected')
-
-        try:
-            self.comp.derivatives.set_first_derivative('zz', 'zx', 33.4)
-        except KeyError, err:
-            msg = "Derivative of zz " + \
-                  "with repect to zx " + \
-                  "must be declared before being set."            
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('KeyError expected')
-
-    def test_forgot_to_declare_second_derivatives(self):
-        
-        self.comp.add('zx', Float(64.0, iotype='in'))
-        self.comp.add('zy', Float(64.0, iotype='in'))
-        self.comp.add('zz', Float(64.0, iotype='out'))
-        
-        try:
-            self.comp.derivatives.set_second_derivative('zz', 'zy', 'zy', 33.4)
-        except KeyError, err:
-            msg = "Derivative of zz " + \
-                  "with repect to zy and zy " + \
-                  "must be declared before being set."
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('KeyError expected')
-
-        try:
-            self.comp.derivatives.set_second_derivative('f_xy', 'x', 'zx', 33.4)
-        except KeyError, err:
-            msg = "Derivative of f_xy " + \
-                  "with repect to x and zx " + \
-                  "must be declared before being set."            
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('KeyError expected')
-            
-    def test_unsupported_order(self):
-        
-        self.comp.calc_derivatives(first=True, second=False, savebase=True)
-        try:
-            self.comp.derivatives.calculate_output('f_xy', 3)
-        except NotImplementedError, err:
-            msg = 'Fake Finite Difference does not currently support an ' + \
-                  'order of 3.'
-            self.assertEqual(err[0], msg)
-        else:
-            self.fail('NotImplementedError expected')
-        
-    def test_validate_simple(self):
-
-        # Just making sure it works.
-        self.comp.derivatives.validate(1, [], [])
-        
-    def test_in_assembly(self):
-        
-        simple = set_as_top(SimpleAssembly())
-        simple.comp1.x = 3.0
-        simple.comp1.y = 5.0
-        simple.run()
-        simple.comp1.ran_real = False
-        
-        eps = 1000.0
-        simple.calc_derivatives(first=True, second=False, savebase=True)
-
-        simple.comp1.x = 3.0 + eps
-        simple.run(ffd_order=1)
-        fp = simple.comp1.f_xy
-        simple.comp1.x = 3.0 - eps
-        simple.run(ffd_order=1)
-        fm = simple.comp1.f_xy
-        d_fd_x = (fp-fm)/(2*eps)
-    
-        simple.comp1.x = 3.0
-        simple.comp1.y = 5.0 + eps
-        simple.run(ffd_order=1)
-        fp = simple.comp1.f_xy
-        simple.comp1.y = 5.0 - eps
-        simple.run(ffd_order=1)
-        fm = simple.comp1.f_xy
-        d_fd_y = (fp-fm)/(2.0*eps)
-        
-        self.assertEqual(d_fd_x, 5.0)
-        self.assertEqual(d_fd_y, 21.0)
-        self.assertEqual(simple.comp1.ran_real, False)
-
-    def test_in_nested_assembly(self):
-        
-        simple = set_as_top(TopAssembly())
-        simple.assy1.x = 3.0
-        simple.assy1.y = 5.0
-        simple.run()
-        simple.assy1.comp1.ran_real = False
-        
-        eps = 1000.0
-        simple.calc_derivatives(first=True, second=False, savebase=True)
-
-        simple.assy1.x = 3.0 + eps
-        simple.run(ffd_order=1)
-        fp = simple.assy1.f_xy
-        simple.assy1.x = 3.0 - eps
-        simple.run(ffd_order=1)
-        fm = simple.assy1.f_xy
-        d_fd_x = (fp-fm)/(2.0*eps)
-    
-        simple.assy1.x = 3.0
-        simple.assy1.y = 5.0 + eps
-        simple.run(ffd_order=1)
-        fp = simple.assy1.f_xy
-        simple.assy1.y = 5.0 - eps
-        simple.run(ffd_order=1)
-        fm = simple.assy1.f_xy
-        d_fd_y = (fp-fm)/(2.0*eps)
-        
-        self.assertEqual(d_fd_x, 5.0)
-        self.assertEqual(d_fd_y, 21.0)
-        self.assertEqual(simple.assy1.comp1.ran_real, False)
-
-    def test_multiblock(self):
-        
-        comp = set_as_top(MultiAssy())
-        comp.A1.x1 = base1 = 1.0
-        comp.A1.x2 = base2 = 2.0
-        comp.run()
-        comp.calc_derivatives(first=True, second=False, savebase=True)
-        
-        eps = 0.01
-        order = 1
-        comp.A1.ran_real = False
-        comp.A2.ran_real = False
-        comp.A3.ran_real = False
-        comp.A4.ran_real = False
-        comp.A5.ran_real = False
-        
-        comp.A1.x1 = base1 + eps
-        comp.run(ffd_order=order)
-        fp = comp.A5.y1
-        comp.A1.x1 = base1 - eps
-        comp.run(ffd_order=order)
-        fm = comp.A5.y1
-        dy1_dx1 = (fp-fm)/(2.0*eps)
-    
-        comp.A1.x1 = base1
-        comp.A1.x2 = base2 + eps
-        comp.run(ffd_order=order)
-        fp = comp.A5.y1
-        comp.A1.x2 = base2 - eps
-        comp.run(ffd_order=order)
-        fm = comp.A5.y1
-        dy1_dx2 = (fp-fm)/(2.0*eps)
-        
-        assert_rel_error(self, dy1_dx1, 12.946, .001)
-        assert_rel_error(self, dy1_dx2, -16.835, .001)
-        self.assertEqual(comp.A1.ran_real, True)
-        self.assertEqual(comp.A2.ran_real, False)
-        self.assertEqual(comp.A3.ran_real, True)
-        self.assertEqual(comp.A4.ran_real, False)
-        self.assertEqual(comp.A5.ran_real, True)
-        self.assertEqual(comp.A1.exec_count, 5)
-        self.assertEqual(comp.A2.exec_count, 1)
-        self.assertEqual(comp.A4.exec_count, 1)
-        self.assertEqual(comp.A5.exec_count, 5)
-        self.assertEqual(comp.A1.derivative_exec_count, 0)
-        self.assertEqual(comp.A2.derivative_exec_count, 1)
-        self.assertEqual(comp.A4.derivative_exec_count, 1)
-        self.assertEqual(comp.A5.derivative_exec_count, 0)
-        
-# Next up: test to make sure that we can pass tuples of parameters through assembly
-# without tripping up its check_derivatives 
-
-class Dummy(Component):
-    dummy2 = Float(321, iotype='out')
-    dummy3 = Float(322, iotype="in")
-    dummy4 = Float(322, iotype="in")
-
-    def __init__(self):
-        super(Dummy,self).__init__()
-
-    def execute(self):
-        self.dummy2 = self.dummy3**2 + self.dummy4**2
-
-class DummyAssembly(Assembly): 
-
-    dummy2 = Float(321, iotype='out')
-    dummy3 = Float(322, iotype="in")
-    dummy4 = Float(322, iotype="in")
-    
 @add_delegate(HasParameters, HasObjective)
-class Smarty(DriverUsesDerivatives):
+class SimpleDriver(Driver):
+    """Driver with Parameters"""
 
-    def __init__(self):
-        super(Smarty,self).__init__()
-
-class TestAssembly(Assembly):
-    def configure(self):
-        self.add('driver',Smarty())
-        self.add('dumcomp',Dummy())
-        self.add('dum2',DummyAssembly())
-
-        self.driver.add_parameter(("dumcomp.dummy3",'dum2.dummy3'),low=-1000,high=1000)
-        self.driver.add_parameter(("dumcomp.dummy4",'dum2.dummy4'),low=-1000,high=1000)
-
-        self.driver.add_objective('dumcomp.dummy2')  #Doesn't work.
-
-        self.driver.workflow = SequentialWorkflow()
-        self.driver.workflow.add(['dumcomp','dum2'])        
-
-
-        
-class CheckDerivativesTestCase(unittest.TestCase):
-    """ Test of Component. """
-
-    def setUp(self):
-        pass
+    implements(IHasParameters)
     
-    def test_assy(self):
         
-        # Just make sure we don't error out 
-        
-        sim = TestAssembly()
-        sim.run()
-        
-        
-if __name__ == "__main__":
+class CompFoot(Component):
+    """ Evaluates the equation y=x^2"""
+    
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
 
-    sim = TestAssembly()
-    print "TEST"
-    sim.dumcomp.dummy3 = 10
-    print sim.dumcomp.dummy2
-    sim.run()
-    print sim.dumcomp.dummy2
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.J = array([[dy_dx]])
+        
+    def provideJ(self):
+        
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys, self.J
+
+        
+class CompInch(Component):
+    """ Evaluates the equation y=x^2"""
+    
+    x = Float(1.0, iotype='in', units='inch')
+    y = Float(1.0, iotype='out', units='inch')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.J = array([[dy_dx]])
+
+    def provideJ(self):
+        
+        input_keys = ('x',)
+        output_keys = ('y',)
+        return input_keys, output_keys, self.J
 
 
+class Testcase_derivatives(unittest.TestCase):
+    """ Test derivative aspects of a simple workflow. """
+
+    def test_first_derivative(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, 
+                                           high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, 
+                                           high=1000)
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.comp.run()
+        
+        J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'])
+        assert_rel_error(self, J[0,0], 5.0, 0.0001)
+        assert_rel_error(self, J[0,1], 21.0, 0.0001)
+
+    def test_nested(self):
+        
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp', Paraboloid())
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        top.nest.create_passthrough('comp.f_xy')
+        top.nest.x = 3
+        top.nest.y = 5
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                              outputs=['nest.f_xy'])
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                              outputs=['nest.f_xy'], mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+    def test_large_dataflow(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+    
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+        
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+    
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+        
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+        
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+    
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+        
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('1.0*comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp5.x2')
+        self.top.connect('comp4.y3', 'comp5.x3')
+        
+        #obj = 'comp5.y1'
+        #con = 'comp5.y1-comp3.y1 > 0'
+        #self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
+        #self.top.driver.add_objective(obj)
+        #self.top.driver.add_constraint(con)
+    
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        #grad = self.top.driver.differentiator.get_gradient(obj)
+        #assert_rel_error(self, grad[0], 626.0, .001)
+        
+        #grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
+        #assert_rel_error(self, grad[0], -626.0+10.5, .001)
+        
+        
+    def test_nondifferentiable_blocks(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+    
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+        
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+    
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+        
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+        
+        self.top.add('comp1', ExecComp(exp1))
+        self.top.add('comp2', ExecComp(exp2))
+        self.top.add('comp3', ExecComp(exp3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecComp(exp5))
+    
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+        
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp5.x2')
+        self.top.connect('comp4.y3', 'comp5.x3')
+    
+        # Case 1 - differentiable (comp4)
+        
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        # Case 2 - differentiable (none)
+        
+        self.top.replace('comp4', ExecComp(exp4))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0'] == iterlist)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        # Case 3 - differentiable (comp5)
+        
+        self.top.replace('comp5', ExecCompWithDerivatives(exp5, deriv5))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0', 'comp5'] == iterlist)
+        removed = set([('comp1', 'comp2'),
+                       ('comp1', 'comp3'),
+                       ('comp2', 'comp4'),
+                       ('comp3', 'comp4')])
+        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        # Case 4 - differentiable (comp1, comp3, comp5)
+        
+        self.top.replace('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.replace('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
+        removed = set([('comp3', 'comp4')])
+        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'])
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        # Put everything in a single pseudo-assy, and run fd with no fake.
+        #self.top.run()
+        #self.top.driver.workflow.check_gradient(inputs=['comp1.x1'],
+        #                                           outputs=['comp5.y1'])
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'], 
+                                                   fd=True)
+        assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        
+    def test_first_derivative_with_units(self):
+        top = set_as_top(Assembly())
+        
+        top.add('comp1', CompFoot())
+        top.add('comp2', CompInch())
+        
+        top.connect('comp1.y', 'comp2.x')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        
+        top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        top.driver.add_objective('comp2.y')
+        
+        top.comp1.x = 2.0
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(outputs=['comp2.y'])
+        assert_rel_error(self, J[0,0], 48.0, .001)
+        
+        J = top.driver.workflow.calc_gradient(outputs=['comp2.y'], mode='adjoint')
+        assert_rel_error(self, J[0,0], 48.0, .001)
+        
+        
+class Comp2(Component):
+    """ two-input, two-output"""
+    
+    x1 = Float(1.0, iotype='in', units='ft')
+    x2 = Float(1.0, iotype='in', units='ft')
+    y1 = Float(1.0, iotype='out', units='ft')
+    y2 = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        
+        pass
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[3.0, 5.0], [7.0, 11.0]])
+        
+    def provideJ(self):
+        
+        input_keys = ('x1', 'x2')
+        output_keys = ('y1', 'y2')
+        return input_keys, output_keys, self.J
+
+class Testcase_applyJT(unittest.TestCase):
+    """ Unit test for conversion of provideJ to applyJT """
+
+    def test_applyJ_and_applyJT(self):
+        
+        comp = Comp2()
+        comp.linearize()
+        
+        arg = {}
+        arg['x1'] = 1.0
+        arg['x2'] = 1.0
+        arg['y1'] = 0.0
+        arg['y2'] = 0.0
+        
+        result = {}
+        result['y1'] = 0.0
+        result['y2'] = 0.0
+        
+        applyJ(comp, arg, result)
+        
+        self.assertEqual(result['y1'], 8.0)
+        self.assertEqual(result['y2'], 18.0)
+                        
+        arg = {}
+        arg['y1'] = 1.0
+        arg['y2'] = 1.0
+        
+        result = {}
+        result['x1'] = 0.0
+        result['x2'] = 0.0
+        result['y1'] = 0.0
+        result['y2'] = 0.0
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x1'], 10.0)
+        self.assertEqual(result['x2'], 16.0)
+        
+    def test_matvecREV2(self):
+        # Larger system
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', Comp2())
+        top.add('comp2', Comp2())
+        top.connect('comp1.y1', 'comp2.x1')
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+            
+        src = ['comp1.x1', 'comp1.x2']
+        resp = ['comp2.y1', 'comp2.y2']
+        J1 = top.driver.workflow.calc_gradient(src, resp)
+        J2 = top.driver.workflow.calc_gradient(src, resp, mode='adjoint')
+        diff = J1 - J2
+        assert_rel_error(self, diff.max(), 0.0, 1e-8)
+        
+        J = zeros([5, 5])
+        arg = zeros([5, 1])
+        for j in range(5):
+            arg[j] = 1.0
+            J[:, j] = top.driver.workflow.matvecFWD(arg)
+            arg[j] = 0.0
+            
+        Jt = zeros([5, 5])
+        for j in range(5):
+            arg[j] = 1.0
+            Jt[:, j] = top.driver.workflow.matvecREV(arg)
+            arg[j] = 0.0
+            
+        diff = J.T - Jt
+        self.assertEqual(diff.max(), 0.0)
+        
+        
+class PreComp(Component):
+    '''Comp with preconditioner'''
+    
+    x1 = Float(1.0, iotype='in', units='inch')
+    x2 = Float(1.0, iotype='in', units='inch')
+    y1 = Float(1.0, iotype='out', units='inch')
+    y2 = Float(1.0, iotype='out', units='inch')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y1 = 2.0*self.x1 + 7.0*self.x2
+        self.y2 = 13.0*self.x1 - 3.0*self.x2
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 13.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x1', 'x2')
+        output_keys = ('y1', 'y2')
+        return input_keys, output_keys, self.J
+    
+    def applyMinv(self, arg, result):
+        
+        result['x1'] = 0.03092784*arg['x1'] + 0.07216495*arg['x2']
+        result['x2'] = 0.13402062*arg['x1'] - 0.02061856*arg['x2']
+    
+    def applyMinvT(self, arg, result):
+        
+        result['y1'] = 0.03092784*arg['y1'] + 0.13402062*arg['y2']
+        result['y2'] = 0.07216495*arg['y1'] - 0.02061856*arg['y2']
+    
+    
+class Testcase_preconditioning(unittest.TestCase):
+    """ Unit test for applyMinv and applyMinvT """
+
+    def test_simple(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', PreComp())
+        top.driver.workflow.add('comp')
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                              outputs=['comp.y1', 'comp.y2'])
+        
+        print J
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+                                              outputs=['comp.y1', 'comp.y2'],
+                                              mode='adjoint')
+        
+        print J
+        assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 7.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 13.0, 0.0001)
+        assert_rel_error(self, J[1, 1], -3.0, 0.0001)
+        
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    import sys
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
+

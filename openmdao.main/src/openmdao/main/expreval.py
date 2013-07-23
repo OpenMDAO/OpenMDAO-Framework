@@ -6,12 +6,9 @@ __all__ = ["ExprEvaluator"]
 import weakref
 import math
 import ast
-import copy
-import re
 import __builtin__
 
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
-from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
@@ -85,13 +82,8 @@ class ExprTransformer(ast.NodeTransformer):
         if self.expreval.is_local(name):
             return node
         
-        #scope = self.expreval.scope
-        #if scope:
-        parts = name.split('.',1)
         names = ['scope']
         self.expreval.var_names.add(name)
-        #else:
-            #raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
@@ -543,8 +535,8 @@ class ExprEvaluator(object):
     
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect to 
-        each of the referenced varpaths. The gradient is calculated by 1st order central
-        difference for now. 
+        each of the referenced varpaths. The gradient is calculated by 1st order 
+        central difference for now. 
         
         stepsize: float
             Step size for finite difference.
@@ -557,7 +549,7 @@ class ExprEvaluator(object):
         scope = self._get_updated_scope(scope)
         inputs = list(self.refs(copy=False))
 
-        if wrt==None:
+        if wrt is None:
             wrt = inputs
         elif isinstance(wrt, str):
             wrt = [wrt]
@@ -812,10 +804,10 @@ class ConnectedExprEvaluator(ExprEvaluator):
     def _parse(self):
         super(ConnectedExprEvaluator, self)._parse()
         self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'), self)
-        if len(self._examiner.refs) != 1:
-            raise RuntimeError("bad connected expression '%s' must reference exactly one variable" %
-                               self.text)
         if self._is_dest:
+            if len(self._examiner.refs) != 1:
+                raise RuntimeError("bad connected expression '%s' must reference exactly one variable" %
+                                   self.text)
             if not self._examiner.const_indices:
                 raise RuntimeError("bad destination expression '%s': only constant indices are allowed for arrays and slices" %
                                    self.text)

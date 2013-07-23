@@ -28,13 +28,16 @@ class CyclicWorkflow(SequentialWorkflow):
         """
         self._collapsed_graph = None
         self._topsort = None
-        self._severed_edges = None
+        self._severed_edges = []
+        self._hidden_edges = set()
         self.res = None
         self.bounds = None
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
         around this by placing them in an assembly."""         
+        
+        super(CyclicWorkflow, self).check_config()
         
         for comp in self.get_components():
             if has_interface(comp, IDriver):

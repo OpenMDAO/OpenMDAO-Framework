@@ -11,6 +11,7 @@ from openmdao.lib.differentiators.fd_helper import FDhelper
 from openmdao.main.api import Driver, Assembly, Container
 from openmdao.main.container import find_name
 from openmdao.main.driver import Run_Once
+from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.interfaces import implements, IDifferentiator, ISolver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array
@@ -368,6 +369,8 @@ class ChainRule(Container):
         
         workflow_list = []
         for node in dscope.workflow.__iter__():
+            if isinstance(node, PseudoComponent):
+                continue
             
             node_name = node.name
             

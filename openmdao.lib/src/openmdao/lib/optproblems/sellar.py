@@ -103,11 +103,11 @@ class Discipline1_WithDerivatives(Component):
                 #result[key] += self.J[0, 3]*arg['z2']
                 
     def provideJ(self):
-        """Experimental interface/alternative specification."""
+        """Alternative specification."""
         
-        input_keys = ['x1', 'y2', 'z1', 'z2']
+        input_keys = ('x1', 'y2', 'z1', 'z2')
         
-        output_keys = ['y1']
+        output_keys = ('y1',)
         
         return input_keys, output_keys, self.J
                 

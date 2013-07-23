@@ -68,8 +68,7 @@ class FixedPointIterator(Driver):
         
         for i, val in enumerate(self.get_eq_constraints().values()):
             
-            term = val.evaluate(self.parent)
-            history[0, i] = term[0] - term[1]
+            history[0, i] = val.evaluate(self.parent)
 
         if self.norm_order == 'Infinity':
             order = float('inf')
@@ -104,8 +103,7 @@ class FixedPointIterator(Driver):
             # check convergence
             for i, val in enumerate(self.get_eq_constraints().values()):
             
-                term = val.evaluate(self.parent)
-                delta[i] = term[0] - term[1]
+                delta[i] = val.evaluate(self.parent)
             history[self.current_iteration] = delta
             
             if norm(delta, order) < self.tolerance:
