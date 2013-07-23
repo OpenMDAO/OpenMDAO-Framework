@@ -6,9 +6,8 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import Slot
-from openmdao.main.interfaces import IDifferentiator
 from openmdao.main.driver import Driver
+from openmdao.util.log import logger
 
 class DriverUsesDerivatives(Driver): 
     """This is Deprecated."""
