@@ -150,7 +150,7 @@ class HasObjectives(object):
         objs = []
         for obj in self._objectives.values():
             pcomp = getattr(scope, obj.pcomp_name)
-            if not pcomp._valid:
+            if not pcomp.is_valid():
                 pcomp.update_outputs(['out0'])
             objs.append(pcomp.out0)
         return objs

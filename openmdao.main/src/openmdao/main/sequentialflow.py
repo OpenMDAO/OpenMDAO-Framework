@@ -43,6 +43,15 @@ class SequentialWorkflow(Workflow):
         self._topsort = None
         self._find_nondiff_blocks = True
         self._input_outputs = []
+
+        # we can't have multiple drivers using the same param 
+        # in the Assembly depgraph because we don't allow multiple
+        # connections to the same input. So if we have a conflict,
+        # we store the 'local' param here so that later when
+        # we build the subgraph specific to our driver, we can
+        # add the connection for our local params (and disconnect
+        # any conflicting Assembly level params)
+        self._local_params = {} 
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""

@@ -126,7 +126,7 @@ class Constraint(object):
     def evaluate(self, scope):
         """Returns the value of the constraint."""
         pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp._valid:
+        if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
         return pcomp.out0
         
