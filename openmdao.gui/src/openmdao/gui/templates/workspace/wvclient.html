@@ -25,7 +25,7 @@
 
 <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
 
-<body onload="wvStart()">
+<body onload="wvStart()" oncontextmenu="return false;">
     <div class="row-fluid">
         <div class="span3" id='leftframe'></div>
         <div class="span9" id='riteframe'>
@@ -54,34 +54,34 @@
             <table id="controlsTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th style="vertical-align:text-top;">Operating <br> System</th>
-                        <th style="vertical-align:text-top;">Pan</th>
-                        <th style="vertical-align:text-top;">X/Y Axis <br> Rotation</th>
-                        <th style="vertical-align:text-top;">Z Axis <br> Rotation</th>
-                        <th style="vertical-align:text-top;">Zoom</th>
+                        <th>Operating <br> System   </th>
+                        <th>Pan                     </th>
+                        <th>X/Y Axis  <br> Rotation </th>
+                        <th>Z Axis    <br> Rotation </th>
+                        <th>Zoom                    </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="white-space:nowrap;">OS X</td>
-                        <td style="white-space:nowrap;">Left Click</td>
-                        <td style="white-space:nowrap;">CMD + Left Click</td>
-                        <td style="white-space:nowrap;">ALT + Left Click</td>
-                        <td style="white-space:nowrap;">Two Finger Scroll</td>
+                        <td>OS X                    </td>
+                        <td>Left Click              </td>
+                        <td>CMD + Left Click        </td>
+                        <td>ALT + Left Click        </td>
+                        <td>Two Finger Scroll       </td>
                     </tr>
                     <tr>
-                        <td style="white-space:nowrap;">Windows</td>
-                        <td style="white-space:nowrap;">Left Click</td>
-                        <td style="white-space:nowrap;">CTRL + Left Click</td>
-                        <td style="white-space:nowrap;">ALT + Left Click</td>
-                        <td style="white-space:nowrap;">Mouse Wheel</td>
+                        <td>Windows                 </td>
+                        <td>Left Click              </td>
+                        <td>CTRL + Left Click       </td>
+                        <td>ALT + Left Click        </td>
+                        <td>Mouse Wheel             </td>
                     </tr>
                     <tr>
-                        <td style="white-space:nowrap;">Linux</td>
-                        <td style="white-space:nowrap;">Left Click</td>
-                        <td style="white-space:nowrap;">CTRL + Left Click</td>
-                        <td style="white-space:nowrap;">ALT + Left Click</td>
-                        <td style="white-space:nowrap;">Mouse Wheel</td>
+                        <td>Linux                   </td>
+                        <td>Left Click              </td>
+                        <td>CTRL + Left Click       </td>
+                        <td>ALT + Left Click        </td>
+                        <td>Mouse Wheel             </td>
                     </tr>
 
             </table>
@@ -129,6 +129,7 @@
         overflow: hidden;
         background: black;
     }
+
     .fps {
         color: white;
     }
@@ -137,6 +138,14 @@
         position: absolute;
         top: 0px;
         right: 0px;
+    }
+
+    .modal-body, th {
+        vertical-align: text-top;
+    }
+
+    .modal-body, td {
+        white-space: nowrap;
     }
 
 </style>
