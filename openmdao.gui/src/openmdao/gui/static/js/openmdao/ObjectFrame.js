@@ -149,11 +149,11 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             return;
         }
 
-        if (!properties || properties.length === 0) {
-            alert('No properties found for ', pathname);
+        if (!properties || (Object.keys(properties).length === 0)) {
+            openmdao.Util.notify('No properties found for: ' + pathname,
+                                 'No properties found');
             return;
         }
-
         names = getSortedNames(properties);
 
         // if object has no interfaces, assume it's been removed
@@ -215,6 +215,13 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
 
     /** initialize the frame with the given properties */
     function init(properties) {
+        if (!properties || (Object.keys(properties).length === 0)) {
+            _self.close();
+            openmdao.Util.notify('No properties found for: ' + pathname,
+                                 'No properties found');
+            return;
+        }
+
         _self.elm.height(400);
         _self.elm.width(720);
         _self.elm.tabs({
