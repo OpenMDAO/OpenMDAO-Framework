@@ -162,6 +162,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
         
         i1, i2 = obounds[output]
         for irhs in range(i1, i2):
+            
             RHS = zeros((nEdge, 1))
             RHS[irhs, 0] = 1.0
     
