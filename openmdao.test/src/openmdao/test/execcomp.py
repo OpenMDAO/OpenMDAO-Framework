@@ -74,7 +74,7 @@ class ExecComp(Component):
             exec(expr, _expr_dict, self.__dict__ )
             
         if self.sleep:
-            time.sleep(self.sleep)            
+            time.sleep(self.sleep)
 
 
 class ExecCompWithDerivatives(Component):

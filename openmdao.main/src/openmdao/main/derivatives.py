@@ -454,7 +454,7 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
-    
+        print self.pa.name, self.J
         return self.J
     
     def get_inputs(self, x):
@@ -462,7 +462,7 @@ class FiniteDifference(object):
        
         for src in self.inputs:
             src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            src_val = flattened_value(src, src_val)
             i1, i2 = self.in_bounds[src]
             x[i1:i2] = src_val
 
@@ -471,7 +471,7 @@ class FiniteDifference(object):
        
         for src in self.outputs:
             src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
             x[i1:i2] = src_val
             
@@ -501,7 +501,7 @@ class FiniteDifference(object):
         
         # Make sure we execute!
         comp._call_execute = True
-            
+        
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output
     name using the stored baseline and derivatives along with the

@@ -230,6 +230,8 @@ class ArrayComp1(Component):
         self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
         self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
 
+        print self.name, 'ran', self.x, self.y
+
     def linearize(self):
         """Analytical first derivatives"""
         
@@ -425,6 +427,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
         
+        top.run()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
                                               mode='adjoint')
@@ -437,6 +440,17 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         #J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
         #                                      outputs=['comp2.y[0]'])
         #print J
+
+        # this tests the finite difference code.
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              fd=True)
+        assert_rel_error(self, J[0, 0], 39.0, .001)
+        assert_rel_error(self, J[0, 1], -7.0, .001)
+        assert_rel_error(self, J[1, 0], -5.0, .001)
+        assert_rel_error(self, J[1, 1], 44.0, .001)
+        
         
     def test_large_dataflow(self):
         
