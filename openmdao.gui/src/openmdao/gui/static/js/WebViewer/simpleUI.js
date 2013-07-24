@@ -163,14 +163,18 @@ function handleControlClick(attribute, mask){
         }
     }
 
+    console.log('handleControlClick, attribute=', attribute, 'mask=', mask);
+
     return function( e ){
         var root = jQuery( this ).is( "button" ) ? jQuery( this ).parent().parent() : jQuery( this ).parent();
+        console.log(this, 'button?', jQuery(this).is("button"), 'root:', root, 'data:', root.data());
         var data = getNodeData( root, "gprim" );
 
         data =  data ? data.attrs : getNodeData( root, "attrs" );
 
         var flag = (data & mask) > 0 ? 0 : mask;
 
+        console.log('handleControlClick, attribute=', attribute, 'mask=', mask, 'data=', data, 'flag=', flag);
         updateTree( root, flag );
         g.sceneUpd = 1;
     };
@@ -235,6 +239,8 @@ function wvUpdateUI()
         var parentIndex = 0;
         var node = undefined; 
 
+        console.log('g:', g);
+
         if( jQuery("#tree").length === 0 ){
             for( var gprim in g.sceneGraph ){
                 parentIndex = ( g.sceneGraph[gprim].GPtype === 1 ) ? 0 : 1;
@@ -245,6 +251,8 @@ function wvUpdateUI()
 
                 nodes[parentIndex].push(node);
             }
+
+            console.log('nodes:', nodes);
 
             var edges = jQuery("<ul></ul>");
             var faces = jQuery("<ul></ul>");
@@ -263,16 +271,11 @@ function wvUpdateUI()
             faces.data("attrs", 9);
 
             tree.append(edges, faces);
-            //tree = jQuery("<div id='tree'></div>").append(tree);
 
-            jQuery("#leftframe").append("<div id='tree'></div>");
-                
-            jQuery(".viz").click(handleControlClick("viz", g.plotAttrs.ON));
-            jQuery(".grd").click(handleControlClick("grd", g.plotAttrs.LINES | g.plotAttrs.POINTS));
-            jQuery(".trn").click(handleControlClick("trn", g.plotAttrs.TRANSPARENT));
-            jQuery(".ori").click(handleControlClick("ori", g.plotAttrs.ORIENTATION));
+            var treeDiv = jQuery("<div id='tree'></div>")
+                .appendTo("#leftframe");
 
-            jQuery("#tree").jstree({
+            treeDiv.jstree({
                 "plugins" : ["html_data", "themes", "ui", "sort"],
 
                 "themes" : { 
@@ -282,9 +285,13 @@ function wvUpdateUI()
                 "html_data" : {
                     "data" : tree.html(),
                 },
+            })
+            .bind("loaded.jstree", function(event, data) {
+                treeDiv.find(".viz").click(handleControlClick("viz", g.plotAttrs.ON));
+                treeDiv.find(".grd").click(handleControlClick("grd", g.plotAttrs.LINES | g.plotAttrs.POINTS));
+                treeDiv.find(".trn").click(handleControlClick("trn", g.plotAttrs.TRANSPARENT));
+                treeDiv.find(".ori").click(handleControlClick("ori", g.plotAttrs.ORIENTATION));
             });
-
-            
         }
             
 
