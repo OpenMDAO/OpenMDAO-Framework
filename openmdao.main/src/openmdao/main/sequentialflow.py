@@ -802,7 +802,7 @@ class SequentialWorkflow(Workflow):
         if suspects:
             print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
             for output, input in suspects:
-                print >> stream, '%*s / %*s' % (output, input) 
+                print >> stream, '%*s / %*s' % (out_width, output, inp_width, input) 
         print >> stream
 
         if close_stream:
