@@ -344,15 +344,16 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 inputs[comp_name][var_name] = arg[i1:i2]
 
-        # Call ApplyJ on each component
-        
+        # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
+            if hasattr(comp, 'applyMinv'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinv(pre_inputs, inputs[name])
             
-            # A component can also define a preconditioner
-            #if hasattr(comp, 'applyMinv'):
-            #    pre_inputs = inputs[name].copy()
-            #    comp.applyMinv(inputs[name], pre_inputs)
+        # Call ApplyJ on each component
+        for comp in self.derivative_iter():
+            name = comp.name
             applyJ(comp, inputs[name], outputs[name])
 
         # Each parameter adds an equation
@@ -390,7 +391,6 @@ class SequentialWorkflow(Workflow):
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
         
-        print 'FWD', arg, result
         return result
     
     def matvecREV(self, arg):
@@ -434,28 +434,24 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
+                if edge[0] == '@in':
+                    # Extra eqs for parameters contribute a 1.0 on diag
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
+                else:
+                    # Interior comp edges contribute a -1.0 on diag
+                    outputs[comp_name][var_name] = -arg[i1:i2].copy()
 
-        # Call ApplyJT on each component
-        
+        # Call ApplyMinvT on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
+            if hasattr(comp, 'applyMinvT'):
+                pre_inputs = inputs[name].copy()
+                comp.applyMinvT(pre_inputs, inputs[name])
             
-            # A component can also define a preconditioner
-            #if hasattr(comp, 'applyMinv'):
-            #    pre_inputs = inputs[name].copy()
-            #    comp.applyMinvT(inputs[name], pre_inputs)
+        # Call ApplyJT on each component
+        for comp in self.derivative_iter():
+            name = comp.name
             applyJT(comp, inputs[name], outputs[name])
-
-        # Each output adds a contribution
-        for edge in self._additional_edges:
-            if edge[1] == '@out':
-                i1, i2 = self.bounds[edge]
-                comp_name, dot, var_name = edge[0].partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2]
 
         # Poke results into the return vector
         result = zeros(len(arg))
@@ -464,6 +460,8 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
+            #if target == '@out':
+            #    target = src
             if target == '@out':
                 target = src
                 
@@ -482,8 +480,7 @@ class SequentialWorkflow(Workflow):
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
-            
-        print 'REV', arg, result
+        
         return result
     
     def group_nondifferentiables(self):

@@ -61,7 +61,20 @@ def calc_gradient(wflow, inputs, outputs):
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
-    J = zeros((len(outputs), len(inputs)))
+    
+    num_in = 0
+    for item in inputs:
+        val = wflow.scope.get(item)    
+        width = flattened_size(item, val)
+        num_in += width
+        
+    num_out = 0
+    for item in outputs:
+        val = wflow.scope.get(item)    
+        width = flattened_size(item, val)
+        num_out += width
+       
+    J = zeros((num_out, num_in))
     
     # Locate the output keys:
     obounds = {}
@@ -77,22 +90,32 @@ def calc_gradient(wflow, inputs, outputs):
     wflow.calc_derivatives(first=True)
     
     # Forward mode, solve linear system for each parameter
-    for j, param in enumerate(inputs):
-        RHS = zeros((nEdge, 1))
+    j = 0
+    for param in inputs:
+        
         i1, i2 = wflow.bounds[('@in', param)]
-        for i in range(i1, i2):
-            RHS[i, 0] = 1.0
+        for irhs in range(i1, i2):
+            
+            RHS = zeros((nEdge, 1))
+            RHS[irhs, 0] = 1.0
     
-        # Call GMRES to solve the linear system
-        dx, info = gmres(A, RHS,
-                         tol=1.0e-6,
-                         maxiter=100)
-
-        i = 0
-        for item in outputs:
-            k1, k2 = obounds[item]
-            J[i:i+(k2-k1), j] = dx[k1:k2]
-            i += k2-k1
+            # Call GMRES to solve the linear system
+            dx, info = gmres(A, RHS,
+                             tol=1.0e-6,
+                             maxiter=100)
+            
+            i = 0
+            for item in outputs:
+                k1, k2 = obounds[item]
+                if k2-k1 > 1:
+                    J[i:i+(k2-k1+1), j] = dx[k1:k2]
+                else:
+                    J[i, j] = dx[k1:k2]
+                print dx[k1:k2]
+                print J
+                i += k2-k1
+                
+            j += 1
         
     return J
 
@@ -106,7 +129,19 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecREV,
                        dtype=float)
-    J = zeros((len(outputs), len(inputs)))
+    num_in = 0
+    for item in inputs:
+        val = wflow.scope.get(item)    
+        width = flattened_size(item, val)
+        num_in += width
+        
+    num_out = 0
+    for item in outputs:
+        val = wflow.scope.get(item)    
+        width = flattened_size(item, val)
+        num_out += width
+       
+    J = zeros((num_out, num_in))
     
     # Locate the output keys:
     obounds = {}
@@ -122,22 +157,32 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     wflow.calc_derivatives(first=True)
     
     # Adjoint mode, solve linear system for each output
-    for j, output in enumerate(outputs):
-        RHS = zeros((nEdge, 1))
+    j = 0
+    for output in outputs:
+        
         i1, i2 = obounds[output]
-        for i in range(i1, i2):
-            RHS[i, 0] = 1.0
+        for irhs in range(i1, i2):
+            
+            RHS = zeros((nEdge, 1))
+            RHS[irhs, 0] = 1.0
     
-        # Call GMRES to solve the linear system
-        dx, info = gmres(A, RHS,
-                         tol=1.0e-6,
-                         maxiter=100)
-
-        i = 0
-        for param in inputs:
-            k1, k2 = wflow.bounds[('@in', param)]
-            J[j, i:i+(k2-k1)] = dx[k1:k2]
-            i += k2-k1
+            # Call GMRES to solve the linear system
+            dx, info = gmres(A, RHS,
+                             tol=1.0e-6,
+                             maxiter=100)
+    
+            i = 0
+            for param in inputs:
+                k1, k2 = wflow.bounds[('@in', param)]
+                if k2-k1 > 1:
+                    J[j, i:i+(k2-k1+1)] = dx[k1:k2]
+                else:
+                    J[j, i] = dx[k1:k2]
+                print dx[k1:k2]
+                print J
+                i += k2-k1
+                
+            j += 1
         
     return J
 
@@ -196,6 +241,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
+                        
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit

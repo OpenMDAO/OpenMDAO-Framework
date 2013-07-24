@@ -6,7 +6,7 @@ jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
     var listeners_ready = jQuery.Deferred();
-    openmdao.model = new openmdao.Model(listeners_ready);
+    openmdao.project = new openmdao.Project(listeners_ready);
     openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
     // register value editors for supported OpenMDAO data types
@@ -50,14 +50,14 @@ jQuery(function() {
 
     // add gui functionality to designated DOM nodes
     (function() {
-        var model = openmdao.model;
-        new openmdao.ConsoleFrame("console",  model);
+        var project = openmdao.project;
+        new openmdao.ConsoleFrame("console",  project);
 
-        var prop = new openmdao.PropertiesFrame("properties_pane", model);
+        var prop = new openmdao.PropertiesFrame("properties_pane", project);
         function prop_fn(path) { prop.editObject(path); }
 
-        var data = new openmdao.DataflowFrame("dataflow_pane", model,'', prop_fn),
-            work = new openmdao.WorkflowFrame("workflow_pane", model,'');
+        var data = new openmdao.DataflowFrame("dataflow_pane", project,'', prop_fn),
+            work = new openmdao.WorkflowFrame("workflow_pane", project,'');
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -76,20 +76,12 @@ jQuery(function() {
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
-        function comp_fn(path) { new openmdao.ObjectFrame(model,path); }
-        function code_fn(path) {
-            if (openmdao.model.editor) {
-                openmdao.model.editor.editFile(path);
-            }
-            else {
-                openmdao.Util.popupWindow('editor?filename='+path, 'Code Editor');
-            }
-        }
+        function comp_fn(path) { new openmdao.ObjectFrame(project,path); }
 
-        //new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.WorkflowTreeFrame("wtree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.FileTreeFrame("ftree_pane", model, code_fn);
-        new openmdao.LibraryFrame("library_pane",  model);
+        //new openmdao.ComponentTreeFrame("otree_pane", project, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.WorkflowTreeFrame("wtree_pane", project, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.FileTreeFrame("ftree_pane", project);
+        new openmdao.LibraryFrame("library_pane",  project);
 
         listeners_ready.resolve();
     }());

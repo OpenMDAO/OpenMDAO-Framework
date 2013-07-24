@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao) ? {} : openmdao ;
 
-openmdao.LogFrame = function(id, model) {
+openmdao.LogFrame = function(id, project) {
     openmdao.LogFrame.prototype.init.call(this, id, 'OpenMDAO Log');
 
     /***********************************************************************
@@ -56,8 +56,8 @@ openmdao.LogFrame = function(id, model) {
 
     // Open log in separate window.
     function doPopout(ev) {
-        var init_fn = 'jQuery(function() { openmdao.PopoutLogFrame() })';
-        openmdao.Util.popupScript('', init_fn);
+        var init_fn = 'jQuery(function(){openmdao.PopoutLogFrame()})';
+        openmdao.Util.scriptWindow('', init_fn);
         self.close();
     }
 
@@ -73,8 +73,7 @@ openmdao.LogFrame = function(id, model) {
                 self.filterCriteria = [];
                 var allChecked = true;
                 jQuery.each(levels, function(idx, level) {
-                    var level = levels[idx],
-                        id = baseId+'-'+level,
+                    var id = baseId+'-'+level,
                         element = jQuery('#'+id);
                     if (element.attr('checked')) {
                         self.filterCriteria.push(level.charAt(0).toUpperCase());
@@ -87,10 +86,10 @@ openmdao.LogFrame = function(id, model) {
                 }
 
                 // Filter log by completely reloading.
-                model.removeListener('log_msgs', updateLog);
+                project.removeListener('log_msgs', updateLog);
                 logData.html('');
                 current = false;
-                model.addListener('log_msgs', updateLog);
+                project.addListener('log_msgs', updateLog);
             }
             win.dialog('close');
             win.remove();
@@ -218,11 +217,11 @@ openmdao.LogFrame = function(id, model) {
         }
     }
 
-    // Ask model for an update whenever a log message is written.
-    model.addListener('log_msgs', updateLog);
+    // Ask project for an update whenever a log message is written.
+    project.addListener('log_msgs', updateLog);
 
     this.destructor = function() {
-        model.removeListener('log_msgs', updateLog);
+        project.removeListener('log_msgs', updateLog);
     };
 };
 
@@ -232,15 +231,15 @@ openmdao.LogFrame.prototype.constructor = openmdao.LogFrame;
 
 /** initialize a log viewer in a child window */
 openmdao.DisplayLogFrame = function() {
-    frame = new openmdao.LogFrame('logframe', openmdao.model);
+    frame = new openmdao.LogFrame('logframe', openmdao.project);
 };
 
 /** initialize a log viewer in a separate window */
 openmdao.PopoutLogFrame = function() {
-    openmdao.model = opener.openmdao.model;
-    openmdao.model.addWindow(window);
+    openmdao.project = opener.openmdao.project;
+    openmdao.project.addWindow(window);
     jQuery('body').attr('id', 'logbody');
-    frame = new openmdao.LogFrame('logbody', openmdao.model);
+    frame = new openmdao.LogFrame('logbody', openmdao.project);
     window.document.title = 'OpenMDAO Log';
 };
 

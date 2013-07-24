@@ -12,7 +12,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
-from pageobjects.util import ArgsPrompt, NotifierPage
+from pageobjects.util import NotifierPage
 from pageobjects.component import ComponentPage
 from pageobjects.slot import find_slot_figure
 
@@ -149,7 +149,10 @@ def _test_connect(browser):
     props.close()
 
     # Run the simulation.
-    workspace_page.run()
+    top = workspace_page.get_dataflow_figure('top')
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
 
     # Verify outputs.
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
@@ -454,7 +457,7 @@ def _test_driverflows(browser):
         eq(row, expected[i])
     editor.close()
 
-#FIXME: can't seem to do context-click on output port.
+    #FIXME: can't seem to do context-click on output port.
 
     top.display_driverflows(False)
     time.sleep(0.5)
@@ -1064,6 +1067,7 @@ def _test_remove_tla(browser):
 
     # clean up
     closeout(project_dict, workspace_page)
+
 
 def _test_display_differentiator(browser):
     # Verify that we can display a differentiator (based on Container).

@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
+openmdao.DataflowPane = function(elm, project, pathname, name, prop_fn) {
 
     /***********************************************************************
      *  private
@@ -67,7 +67,7 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
                 droppedPath = droppedObject.attr("modpath");
 
             openmdao.drag_and_drop_manager.reset();
-            openmdao.Util.addComponent(droppedPath, droppedName, self.pathname);
+            openmdao.project.addObject(droppedPath, droppedName, self.pathname);
         }
     });
 
@@ -94,12 +94,12 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
             dataflow.removeFigure(dataflowFig);
             dataflowFig.destroy();
         }
-        dataflowFig = new openmdao.DataflowFigure(model, self.pathname, prop_fn);
+        dataflowFig = new openmdao.DataflowFigure(project, self.pathname, prop_fn);
         dataflow.addFigure(dataflowFig,20,20);
         dataflowFig.maximize();
     };
 
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.showDataflow(pathname);
     });
 };
