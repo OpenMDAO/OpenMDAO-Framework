@@ -194,18 +194,6 @@ class SLSQPdriver(Driver):
         
         Note: m, me, la, n, f, g, df, and dg are unused inputs."""
         
-        #self.ffd_order = 1
-        #self.differentiator.calc_gradient()
-        #self.ffd_order = 0
-        
-        #df[0:self.nparam] = \
-            #self.differentiator.get_gradient(self.get_objectives().keys()[0])
-
-        #if self.ncon > 0 :
-            #for i, con in enumerate(self.get_constraints().keys()):
-                #dg[i][0:self.nparam] = \
-                    #-self.differentiator.get_gradient(con)
-        
         inputs = self.get_parameters().keys()
         obj = ["%s.out0" % item.pcomp_name for item in \
                self.get_objectives().values()]

@@ -137,7 +137,6 @@ class ExecCompWithDerivatives(Component):
             names = regex.findall(lhs)
             num = names[0][0]
             wrt = names[0][1]
-            self.derivatives.declare_first_derivative(num, wrt)
             
             self.derivative_names.append( (lhs, num, wrt) )
     
@@ -202,17 +201,3 @@ class ExecCompWithDerivatives(Component):
                                                 iotype='out')]
         return input_keys, output_keys, self.J
             
-    def calculate_first_derivatives(self):
-        ''' Calculate the first derivatives '''
-        
-        global _expr_dict
-        
-        for expr in self.derivative_codes:
-            exec(expr, _expr_dict, self.__dict__ )
-            
-        for item in self.derivative_names:
-            self.derivatives.set_first_derivative(item[1], item[2], 
-                                                  getattr(self, item[0]))
-            
-        if self.dsleep:
-            time.sleep(self.dsleep)

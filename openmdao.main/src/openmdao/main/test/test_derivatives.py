@@ -433,9 +433,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
-                                              outputs=['comp2.y[0]'])
-        print J
+        # TODO: Support for slices here
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
+        #                                      outputs=['comp2.y[0]'])
+        #print J
         
     def test_large_dataflow(self):
         
@@ -483,12 +484,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.connect('comp4.y2', 'comp5.x2')
         self.top.connect('comp4.y3', 'comp5.x3')
         
-        #obj = 'comp5.y1'
-        #con = 'comp5.y1-comp3.y1 > 0'
-        #self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
-        #self.top.driver.add_objective(obj)
-        #self.top.driver.add_constraint(con)
-    
         self.top.comp1.x1 = 2.0
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
@@ -502,9 +497,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
-        #grad = self.top.driver.differentiator.get_gradient(obj)
-        #assert_rel_error(self, grad[0], 626.0, .001)
-        
+        # (only keeping these lines so I don't lose the answer)
         #grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
         #assert_rel_error(self, grad[0], -626.0+10.5, .001)
         

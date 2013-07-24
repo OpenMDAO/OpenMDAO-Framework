@@ -16,8 +16,8 @@ class CO(Architecture):
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
         self.has_global_des_vars = True
+        
     def configure(self): 
-         
          
         global_dvs = self.parent.get_global_des_vars()        
         local_dvs = self.parent.get_local_des_vars()

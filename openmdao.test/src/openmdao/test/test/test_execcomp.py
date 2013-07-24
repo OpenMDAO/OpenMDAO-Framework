@@ -45,10 +45,10 @@ class execCompTest(unittest.TestCase):
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2'],
                                                    outputs=['comp1.y1', 'comp1.y2'])
         
-        assert_rel_error(self, J[0,0], 2.0, 0.0001)
-        assert_rel_error(self, J[0,1], 10.0, 0.0001)
-        assert_rel_error(self, J[1,0], 15.0, 0.0001)
-        assert_rel_error(self, J[1,1], 9.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 10.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 15.0, 0.0001)
+        assert_rel_error(self, J[1, 1], 9.0, 0.0001)
         self.assertEqual(self.top.comp1.y2, 45.0)
 
         
