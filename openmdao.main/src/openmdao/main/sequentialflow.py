@@ -3,6 +3,7 @@ order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
 import networkx as nx
+import sys
 
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       calc_gradient, calc_gradient_adjoint, \
@@ -177,7 +178,7 @@ class SequentialWorkflow(Workflow):
         self._input_outputs = []
         for edge in edges:
             src, target = edge
-            if src == '@in' or target=='@out' or '_pseudo_' in src:
+            if src == '@in' or target == '@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
             var = var.split('[')[0]
@@ -708,7 +709,7 @@ class SequentialWorkflow(Workflow):
             self._find_nondiff_blocks = False
         
         # Auto-determine which mode to use.
-        if mode=='auto':
+        if mode == 'auto':
             # TODO - determine based on size and presence of apply_derT
             mode = 'forward'
             
@@ -717,23 +718,93 @@ class SequentialWorkflow(Workflow):
         else:
             return calc_gradient(self, inputs, outputs)
     
-    def check_gradient(self, inputs=None, outputs=None):
+    def check_gradient(self, inputs=None, outputs=None, stream=None):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (ApplyDer and ProvideJ.)
         Note that fake finite difference is turned off so that we are
-        doing a straight comparison."""
+        doing a straight comparison.
+
+        stream: file-like object or string
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename.
+        """
+        stream = stream or sys.stdout
+        if isinstance(stream, basestring):
+            stream = open(stream, 'w')
+            close_stream = True
+        else:
+            close_stream = False
     
         J = self.calc_gradient(inputs, outputs)
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
-        print 24*'-'
-        print 'Calculated Gradient'
-        print 24*'-'
-        print J
-        print 24*'-'
-        print 'Finite Difference Comparison'
-        print 24*'-'
-        print Jbase
+        print >> stream, 24*'-'
+        print >> stream, 'Calculated Gradient'
+        print >> stream, 24*'-'
+        print >> stream, J
+        print >> stream, 24*'-'
+        print >> stream, 'Finite Difference Comparison'
+        print >> stream, 24*'-'
+        print >> stream, Jbase
 
-        
+        if inputs is None:
+            if hasattr(self._parent, 'get_parameters'):
+                inputs = self._parent.get_parameters().keys()
+            # Should be caught in calc_gradient()
+            else:  # pragma no cover
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+            
+        if outputs is None:
+            outputs = []
+            if hasattr(self._parent, 'get_objectives'):
+                outputs.extend(self._parent.get_objectives().keys())
+            if hasattr(self._parent, 'get_ineq_constraints'):
+                outputs.extend(self._parent.get_ineq_constraints().keys())
+            if hasattr(self._parent, 'get_eq_constraints'):
+                outputs.extend(self._parent.get_eq_constraints().keys())
+            # Should be caught in calc_gradient()
+            if len(outputs) == 0:  # pragma no cover
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+
+        out_width = max([len(out) for out in outputs])
+        inp_width = max([len(inp) for inp in inputs])
+        label_width = out_width + inp_width + 4
+
+        print >> stream
+        print >> stream, label_width*' ', \
+              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
+        print >> stream, (label_width+(3*18)+3)*'-'
+
+        suspect_limit = 1e-5
+        error_n = error_sum = 0
+        error_max = error_loc = None
+        suspects = []
+        for i, output in enumerate(outputs):
+            for j, input in enumerate(inputs):
+                calc = J[i, j]
+                finite = Jbase[i, j]
+                error = (calc - finite) / finite
+                error_n += 1
+                error_sum += abs(error)
+                if error_max is None or abs(error) > abs(error_max):
+                    error_max = error
+                    error_loc = (output, input)
+                if abs(error) > suspect_limit:
+                    suspects.append((output, input))
+                print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+                      % (out_width, output, inp_width, input, calc, finite, error)
+        print >> stream
+        print >> stream, 'Average RelError:', error_sum / error_n
+        print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if suspects:
+            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
+            for output, input in suspects:
+                print >> stream, '%*s / %*s' % (output, input) 
+        print >> stream
+
+        if close_stream:
+            stream.close()
+
