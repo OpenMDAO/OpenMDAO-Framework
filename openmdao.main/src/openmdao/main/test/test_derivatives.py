@@ -216,6 +216,33 @@ class CompInch(Component):
         output_keys = ('y',)
         return input_keys, output_keys, self.J
 
+class ArrayComp1(Component):
+    '''Comp with preconditioner'''
+    
+    x = Array(zeros([2]), iotype='in')
+    y = Array(zeros([2]), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
+        self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 5.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x', )
+        output_keys = ('y', )
+        return input_keys, output_keys, self.J
+    
 
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
@@ -265,6 +292,119 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+    def test_5in_1out(self):
+        
+        self.top = set_as_top(Assembly())
+        
+        exp1 = ['y1 = 1.0*x1 + 2.0*x2 + 3.0*x3 + 4.0*x4 + 5.0*x5']
+        deriv1 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy1_dx3 = 3.0',
+                  'dy1_dx4 = 4.0',
+                  'dy1_dx5 = 5.0']
+        
+        self.top.add('comp', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.driver.workflow.add(['comp'])
+        
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1',
+                                                           'comp.x2',
+                                                           'comp.x3',
+                                                           'comp.x4',
+                                                           'comp.x5'],
+                                                   outputs=['comp.y1'])
+        
+        assert_rel_error(self, J[0, 0], 1.0, .001)
+        assert_rel_error(self, J[0, 1], 2.0, .001)
+        assert_rel_error(self, J[0, 2], 3.0, .001)
+        assert_rel_error(self, J[0, 3], 4.0, .001)
+        assert_rel_error(self, J[0, 4], 5.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1',
+                                                           'comp.x2',
+                                                           'comp.x3',
+                                                           'comp.x4',
+                                                           'comp.x5'],
+                                                   outputs=['comp.y1'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 1.0, .001)
+        assert_rel_error(self, J[0, 1], 2.0, .001)
+        assert_rel_error(self, J[0, 2], 3.0, .001)
+        assert_rel_error(self, J[0, 3], 4.0, .001)
+        assert_rel_error(self, J[0, 4], 5.0, .001)
+        
+    def test_1in_5out(self):
+        
+        self.top = set_as_top(Assembly())
+        
+        exp1 = ['y1 = 1.0*x1',
+                'y2 = 2.0*x1',
+                'y3 = 3.0*x1',
+                'y4 = 4.0*x1',
+                'y5 = 5.0*x1']
+        deriv1 = ['dy1_dx1 = 1.0',
+                  'dy2_dx1 = 2.0',
+                  'dy3_dx1 = 3.0',
+                  'dy4_dx1 = 4.0',
+                  'dy5_dx1 = 5.0']
+        
+        self.top.add('comp', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.driver.workflow.add(['comp'])
+        
+        self.top.run()
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1'],
+                                                   outputs=['comp.y1',
+                                                            'comp.y2',
+                                                            'comp.y3',
+                                                            'comp.y4',
+                                                            'comp.y5'])
+        
+        assert_rel_error(self, J[0, 0], 1.0, .001)
+        assert_rel_error(self, J[1, 0], 2.0, .001)
+        assert_rel_error(self, J[2, 0], 3.0, .001)
+        assert_rel_error(self, J[3, 0], 4.0, .001)
+        assert_rel_error(self, J[4, 0], 5.0, .001)
+        
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp.x1'],
+                                                   outputs=['comp.y1',
+                                                            'comp.y2',
+                                                            'comp.y3',
+                                                            'comp.y4',
+                                                            'comp.y5'],
+                                                   mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], 1.0, .001)
+        assert_rel_error(self, J[1, 0], 2.0, .001)
+        assert_rel_error(self, J[2, 0], 3.0, .001)
+        assert_rel_error(self, J[3, 0], 4.0, .001)
+        assert_rel_error(self, J[4, 0], 5.0, .001)
+        
+    def test_arrays(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', ArrayComp1())
+        top.add('comp2', ArrayComp1())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.y', 'comp2.x')
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'])
+        assert_rel_error(self, J[0, 0], 39.0, .001)
+        assert_rel_error(self, J[0, 1], -7.0, .001)
+        assert_rel_error(self, J[1, 0], -5.0, .001)
+        assert_rel_error(self, J[1, 1], 44.0, .001)
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        print J
+        assert_rel_error(self, J[0, 0], 39.0, .001)
+        assert_rel_error(self, J[0, 1], -7.0, .001)
+        assert_rel_error(self, J[1, 0], -5.0, .001)
+        assert_rel_error(self, J[1, 1], 44.0, .001)
+        
     def test_large_dataflow(self):
         
         self.top = set_as_top(Assembly())
