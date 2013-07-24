@@ -3,6 +3,8 @@ This mainly tests the CyclicWorkflow's ability to generate its topological
 sort.
 """
 
+from cStringIO import StringIO
+import re
 import unittest
 
 try:
@@ -265,6 +267,33 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'])
         assert_rel_error(self, J[0,0], 5.0, 0.0001)
         assert_rel_error(self, J[0,1], 21.0, 0.0001)
+
+        stream = StringIO()
+        top.driver.workflow.check_gradient(outputs=['comp.f_xy'], stream=stream)
+        expected = """\
+------------------------
+Calculated Gradient
+------------------------
+\[\[  5.  21.\]\]
+------------------------
+Finite Difference Comparison
+------------------------
+\[\[  5.[0-9]+[ ]+21.[0-9]+\]\]
+
+                    Calculated         FiniteDiff         RelError          
+----------------------------------------------------------------------------
+comp.f_xy / comp.x: 5.0                5.[0-9]+[ ]+[^\n]+
+comp.f_xy / comp.y: 21.0               21.[0-9]+[ ]+[^\n]+
+
+Average RelError: [^\n]+
+Max RelError: [^ ]+ for comp.f_xy / comp.x
+
+"""
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
 
     def test_nested(self):
         
@@ -617,7 +646,6 @@ class Testcase_derivatives(unittest.TestCase):
                                                    outputs=['comp5.y1'], 
                                                    fd=True)
         assert_rel_error(self, J[0, 0], 313.0, .001)
-        
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())
