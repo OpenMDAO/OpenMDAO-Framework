@@ -950,9 +950,9 @@ def plugin_build_docs(parser, options, args=None):
 
     _verify_dist_dir(dist_dir)
 
-    pfiles = fnmatch.filter(os.listdir(options.srcdir), '*.py')
-    if not pfiles:
-        options.srcdir = dist_dir
+    #pfiles = fnmatch.filter(os.listdir(options.srcdir), '*.py')
+    #if not pfiles:
+    #    options.srcdir = dist_dir
 
     cfgfile = os.path.join(dist_dir, 'setup.cfg')
     cfg = SafeConfigParser(dict_type=OrderedDict)
