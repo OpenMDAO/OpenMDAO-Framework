@@ -399,7 +399,6 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
                                               mode='adjoint')
-        print J
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
@@ -789,6 +788,10 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'])
         
         print J
+        #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
+        #assert_rel_error(self, J[1, 0], 13.0, 0.0001)
+        #assert_rel_error(self, J[1, 1], -3.0, 0.0001)
         
         J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
                                               outputs=['comp.y1', 'comp.y2'],

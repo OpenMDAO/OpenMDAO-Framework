@@ -451,8 +451,6 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            #if target == '@out':
-            #    target = src
             if target == '@out':
                 target = src
                 

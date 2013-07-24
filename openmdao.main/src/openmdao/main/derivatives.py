@@ -111,8 +111,6 @@ def calc_gradient(wflow, inputs, outputs):
                     J[i:i+(k2-k1+1), j] = dx[k1:k2]
                 else:
                     J[i, j] = dx[k1:k2]
-                print dx[k1:k2]
-                print J
                 i += k2-k1
                 
             j += 1
@@ -178,8 +176,6 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                     J[j, i:i+(k2-k1+1)] = dx[k1:k2]
                 else:
                     J[j, i] = dx[k1:k2]
-                print dx[k1:k2]
-                print J
                 i += k2-k1
                 
             j += 1
@@ -285,13 +281,13 @@ def applyJT(obj, arg, result):
                         Jsub = float(J[i1, o1])
                         result[okey] += Jsub*arg[ikey]
                     else:
-                        Jsub = J[i1:i2, o1:o2]
+                        Jsub = J[i1:i2, o1:o2].T
                         tmp = Jsub*arg[ikey]
                         result[okey] += tmp.reshape(result[okey].shape)
                 else:
                     tmp = flattened_value('.'.join((obj.name, ikey)),
                                           arg[ikey]).reshape(1, -1)
-                    Jsub = J[i1:i2, o1:o2]
+                    Jsub = J[i1:i2, o1:o2].T
                     tmp = inner(Jsub, tmp)
                     if o2 - o1 == 1:
                         result[okey] += float(tmp)
