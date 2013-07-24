@@ -403,6 +403,10 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
+                                              outputs=['comp2.y[0]'])
+        print J
         
     def test_large_dataflow(self):
         
