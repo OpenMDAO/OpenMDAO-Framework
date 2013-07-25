@@ -104,7 +104,7 @@ class Driver(Component):
         # use parameters, objectives and/or constraint expressions to
         # determine the necessary workflow members
         try:
-            iterset = set(c.name for c in self.iteration_set())
+            iterset = set([c.name for c in self.iteration_set()])
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
             if len(self.workflow) == 0:
@@ -115,7 +115,7 @@ class Driver(Component):
                                         if name not in iterset])
                 # calling get_components() here just makes sure that all of the
                 # components can be resolved
-                comps = self.workflow.get_components()
+                self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
 

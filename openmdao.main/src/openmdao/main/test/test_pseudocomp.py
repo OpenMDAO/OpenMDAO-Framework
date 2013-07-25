@@ -294,7 +294,7 @@ class UnitXformerTestCase(unittest.TestCase):
         node = ast.parse('a')
         cnv = unit_xform(node, 'degC', 'degF')
         newexpr = print_node(cnv)
-        self.assertEqual(newexpr, 'a*1.8+32.0')
+        self.assertEqual(newexpr, '(a+17.7777777778)*1.8')
         
 
 

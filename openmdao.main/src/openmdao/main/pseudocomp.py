@@ -271,11 +271,8 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
-        """Retrieve the metadata associated with the trait found using
-        traitpath.  If metaname is None, return the entire metadata dictionary
-        for the specified trait. Otherwise, just return the specified piece
-        of metadata.  If the specified piece of metadata is not part of
-        the trait, None is returned.
+        """PseudoComponents have not metadata, so just return
+        an empty dict or None.
         """
         if metaname is None:
             return {}
@@ -317,11 +314,12 @@ class ParamPseudoComponent(PseudoComponent):
     """
 
     def __init__(self, param):
-        #parent, target, scaler=1.0, adder=0.0, start=None):
         parent = param._expreval.scope
         target = param._expreval.text
         scaler = param.scaler
         adder  = param.adder
+        self.param = param
+        self._outexprs = []
 
         if scaler == 1.0 and adder == 0.0:
             src = 'in0'
@@ -332,7 +330,6 @@ class ParamPseudoComponent(PseudoComponent):
         else:
             src = '(in0+%.15g)*%.15g' % (adder, scaler)
 
-        self.scaler, self.adder = scaler, adder
         srcexpr = ConnectedExprEvaluator(src, scope=self)
         destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
         super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
@@ -342,8 +339,13 @@ class ParamPseudoComponent(PseudoComponent):
         else:
             self.in0 = param._untransform(destexpr.evaluate(scope=parent))
 
+        # use these to push values to targets when we run
+        self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
+
+
     def add_target(self, target):
         self._outdests.append(target)
+        self._outexprs.append(ConnectedExprEvaluator(target, self._parent))
 
     def list_connections(self, is_hidden=False):
         """The only connections for a ParamPseudoComponent are output connections."""
@@ -351,8 +353,47 @@ class ParamPseudoComponent(PseudoComponent):
         if is_hidden:
             return []
         else:
-            return [('.'.join([self.name, 'out0']), dest) for dest in self._outdests]
+            return [('.'.join([self.name, 'out0']), dest) 
+                                   for dest in self._outdests]
+
+    def _update_callbacks(self, remove):
+        for path in self._outdests:
+            parts = path.split('.', 1)
+            if len(parts) == 1:
+                comp = self._parent
+                vname = path
+            else:
+                comp = getattr(self._parent, parts[0])
+                vname = parts[1]
+            comp.on_trait_change(self.target_changedCB, vname.split('[',1)[0],
+                                 remove=remove)        
+
+    def make_connections(self, workflow=None):
+        """Set up the target_changed callback.
+        """
+        self._update_callbacks(remove=False)
+        if workflow is not None:
+            workflow.add_pseudocomp(self)
+
+    def remove_connections(self, workflow=None):
+        """Remove the target_changed callback.
+        """
+        self._update_callbacks(remove=True)
+        if workflow is not None:
+            workflow.remove_pseudocomp(self)
+
+    def target_changedCB(self, obj, name, old, new):
+        """We need to update the pseudocomp input whenever values are set
+        directly into the target.
+        """
+        self.set('in0', 
+                 self.param._untransform(self.param._expreval.evaluate()))
 
     def update_inputs(self):
         pass # param pseudocomp will never have inputs that are connected to anything
         
+    def run(self, ffd_order=0, case_id=''):
+        super(ParamPseudoComponent, self).run(ffd_order, case_id)
+        # now push out out0 value out to the target(s)
+        for expr in self._outexprs:
+            expr.set(self.out0)

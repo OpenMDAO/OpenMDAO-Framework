@@ -206,7 +206,8 @@ class SLSQPdriver(Driver):
                 #dg[i][0:self.nparam] = \
                     #-self.differentiator.get_gradient(con)
         
-        inputs = self.get_parameters().keys()
+        inputs = self.get_param_inputs()
+        #inputs = self.get_parameters().keys()
         obj = ["%s.out0" % item.pcomp_name for item in \
                self.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \

@@ -42,20 +42,11 @@ class Dataflow(SequentialWorkflow):
                                        ' the following: %s'
                                        % str(strcon[0]), RuntimeError)
     
-    def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name. """
-        super(Dataflow, self).add(compnames, index, check)
-        self.config_changed()
-
-    def remove(self, compname):
-        """Remove a component from this Workflow by name."""
-        super(Dataflow, self).remove(compname)
-        self.config_changed()
-
     def config_changed(self):
         """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
+        super(Dataflow, self).config_changed()
         self._collapsed_graph = None
         self._topsort = None
         self._duplicates = None
@@ -89,21 +80,27 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         graph = scope._depgraph.copy_graph()
         
-        contents = self.get_components()
+        #contents = self.get_components() # get non-pseudo comps
         
-        # add any dependencies due to ExprEvaluators
-        for comp in contents:
-            graph.add_edges_from([tup for tup in comp.get_expr_depends()])
+        ## add any dependencies due to ExprEvaluators
+        #for comp in contents:
+            #graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
+        # add edges for parameters
+        for pcomp_name in self._pseudocomps:
+            comp = getattr(scope, pcomp_name)
+            graph.add_edges_from(comp.list_connections())
+
         collapsed_graph = nx.DiGraph(graph)  # this way avoids a deep copy of edge/node data
 
         # find all of the incoming and outgoing edges to/from all of the
         # components in each driver's iteration set so we can add edges to/from
         # the driver in our collapsed graph
-        cnames = set(self.get_names(full=True))
+        comps = self.get_components(full=True)
+        cnames = set([c.name for c in comps])
         removes = set()
         itersets = {}
-        for comp in self.get_components(full=True):
+        for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]

@@ -11,7 +11,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.depgraph import find_pseudos
 
 try:
     from numpy import ndarray, zeros
@@ -44,14 +44,10 @@ class SequentialWorkflow(Workflow):
         self._find_nondiff_blocks = True
         self._input_outputs = []
 
-        # we can't have multiple drivers using the same param 
-        # in the Assembly depgraph because we don't allow multiple
-        # connections to the same input. So if we have a conflict,
-        # we store the 'local' param here so that later when
-        # we build the subgraph specific to our driver, we can
-        # add the connection for our local params (and disconnect
-        # any conflicting Assembly level params)
-        self._local_params = {} 
+        # keep names of pseudocomponents that we need to add
+        # to our local dependency graph, e.g., pseudocomps for
+        # parameters
+        self._pseudocomps = []
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -73,11 +69,25 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def check_config(self):
-        """Reinitialize some stuff.""" 
-        
-        # Do this whenever we rerun, just in-case.
+    def config_changed(self):
+        """Notifies the Workflow that its configuration (dependencies, etc.)
+        has changed.
+        """
+        super(SequentialWorkflow, self).config_changed()
         self._find_nondiff_blocks = True
+        self.derivative_iterset = None
+        self._collapsed_graph = None
+        self._topsort = None
+        self._find_nondiff_blocks = True
+        self._input_outputs = []
+
+    def add_pseudocomp(self, pcomp):
+        self._pseudocomps.append(pcomp.name)
+        self.config_changed()
+
+    def remove_pseudocomp(self, pcomp):
+        self._pseudocomps.remove(pcomp.name)
+        self.config_changed()
         
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  If full is True,
@@ -85,7 +95,9 @@ class SequentialWorkflow(Workflow):
         """
         if full:
             return self._names + \
-                   list(self.scope._depgraph.find_betweens(self._names))
+                   list(find_pseudos(self.scope._depgraph._graph, 
+                                     self._names)) + \
+                   self._pseudocomps
         else:
             return self._names[:]
 
@@ -100,6 +112,9 @@ class SequentialWorkflow(Workflow):
             iter(nodes)
         except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
+
+        # We seem to need this so that get_attributes is correct for the GUI.
+        self.config_changed()
 
         for node in nodes:
             if isinstance(node, basestring):
@@ -146,9 +161,6 @@ class SequentialWorkflow(Workflow):
                 msg = "Components must be added by name to a workflow."
                 raise TypeError(msg)
 
-        # We seem to need this so that get_attributes is correct for the GUI.
-        if check:
-            self.config_changed()
 
     def remove(self, compname):
         """Remove a component from the workflow by name. Do not report an
@@ -159,12 +171,14 @@ class SequentialWorkflow(Workflow):
             raise TypeError(msg)
         try:
             self._names.remove(compname)
+            self.config_changed()
         except ValueError:
             pass
 
     def clear(self):
         """Remove all components from this workflow."""
         self._names = []
+        self.config_changed()
 
     def get_interior_edges(self):
         """ Returns an alphabetical list of all output edges that are
@@ -184,8 +198,7 @@ class SequentialWorkflow(Workflow):
         # edges.
         
         self._input_outputs = []
-        for edge in edges:
-            src, target = edge
+        for src, target in edges:
             if src == '@in' or target=='@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
@@ -490,7 +503,7 @@ class SequentialWorkflow(Workflow):
         """
         
         nondiff = []
-        for comp in self.get_components():
+        for comp in self.get_components(full=True):
             if not hasattr(comp, 'apply_deriv') and \
                not hasattr(comp, 'provideJ'):
                 nondiff.append(comp.name)
@@ -656,7 +669,7 @@ class SequentialWorkflow(Workflow):
 
         # Override to do straight finite-difference of the whole model, with
         # no fake fd.
-        if fd == True:
+        if fd is True:
             
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.

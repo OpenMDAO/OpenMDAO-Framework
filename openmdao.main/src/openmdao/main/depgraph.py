@@ -69,6 +69,24 @@ def cvt_fake(name):
 #fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']
 
+
+def find_pseudos(graph, nodes):
+    """Return a set of pseudocomponent nodes that are connected
+    to nodes in the given list.
+    """
+    
+    pseudos = set()
+    pred = graph.pred
+    succ = graph.succ
+    
+    for node in nodes:
+        if node in graph:
+            pseudos.update([n for n in pred[node] if n.startswith('_pseudo_')])
+            pseudos.update([n for n in succ[node] if n.startswith('_pseudo_')])
+        
+    return pseudos
+            
+
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
 # _exprset = set('+-/*[]()&| %<>!')
@@ -482,31 +500,6 @@ class DependencyGraph(object):
             for src, dests in link._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
         
-    def find_betweens(self, nodes):
-        """Return a set of nodes that are between nodes in the given list, i.e., the
-        returned nodes have an immediate predecessor and an immediate successor in the
-        given list, or they have a node between themselves and the boundary.
-        """
-        
-        orig = set(nodes+_fakes)
-        betweens = set()
-        pred = self._graph.pred
-        succ = self._graph.succ
-        
-        for node in self._graph.nodes():
-            if node not in orig:
-                p = orig.intersection(pred[node].keys())
-                s = orig.intersection(succ[node].keys())
-                if p and s:   # in between two nodes in the list
-                    betweens.add(node)
-                elif p and node in pred['@bout']: # between a list node and the output boundary
-                    betweens.add(node)
-                elif s and node in succ['@bin']: # between a list node and the input boundary
-                    betweens.add(node)
-                elif (p or s) and node.startswith('_pseudo_'):
-                    betweens.add(node)
-        return betweens
-            
     def find_all_connecting(self, start, end):
         """Return the set of all nodes along all paths between 
         start and end.  The start and end nodes are included
