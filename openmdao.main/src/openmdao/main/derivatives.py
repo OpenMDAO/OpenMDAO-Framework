@@ -479,10 +479,10 @@ class FiniteDifference(object):
         """Set a value in the model"""
         
         i1, i2 = self.in_bounds[src]
-        old_val = self.scope.get(src)
         comp_name, dot, var_name = src.partition('.')
         
         if index==None:
+            old_val = self.scope.get(src)
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = int(idx[:-1])
@@ -492,6 +492,7 @@ class FiniteDifference(object):
             else:
                 self.scope.set(src, old_val+val, force=True)
         else:
+            old_val = self.scope.get(src).copy()
             old_val[index] += val
             self.scope.set(src, old_val, force=True)
             

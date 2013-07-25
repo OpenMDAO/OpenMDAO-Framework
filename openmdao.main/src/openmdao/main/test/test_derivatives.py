@@ -230,8 +230,6 @@ class ArrayComp1(Component):
         self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
         self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
 
-        print self.name, 'ran', self.x, self.y
-
     def linearize(self):
         """Analytical first derivatives"""
         
@@ -450,7 +448,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
-        
         
     def test_large_dataflow(self):
         

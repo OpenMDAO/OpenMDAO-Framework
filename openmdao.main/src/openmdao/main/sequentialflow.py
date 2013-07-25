@@ -656,7 +656,23 @@ class SequentialWorkflow(Workflow):
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
             self.derivative_iterset = [pseudo]
-            
+
+            # Allow for the rare case the user runs this manually, first, in
+            # which case the in/out edges haven't been defined yet.
+            if len(self._additional_edges) == 0:
+                
+                # New edges for parameters
+                input_edges = [('@in', a) for a in inputs]
+                additional_edges = set(input_edges)
+                
+                # New edges for responses
+                out_edges = [a[0] for a in self.get_interior_edges()]
+                for item in outputs:
+                    if item not in out_edges:
+                        additional_edges.add((item, '@out'))
+                
+                self._additional_edges = additional_edges
+
             # Make sure to undo our big pseudo-assembly next time we calculate the
             # gradient.
             self._find_nondiff_blocks = True
