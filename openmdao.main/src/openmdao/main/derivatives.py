@@ -50,6 +50,25 @@ def flattened_value(name, val):
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
 
+def flattened_names(name, val, names=None):
+    """ Return list of names for values in `val`. """
+    if names is None:
+        names = []
+    if isinstance(val, float):
+        names.append(name)
+    elif isinstance(val, ndarray):
+        for i in range(len(val)):
+            value = val[i]
+            flattened_names('%s[%s]' % (name, i), value, names)
+    elif isinstance(val, VariableTree):
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            flattened_names('.'.join((name, key)), value, names)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+    return names
+
 
 def calc_gradient(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
@@ -483,7 +502,7 @@ class FiniteDifference(object):
         comp = self.scope.get(comp_name)
         old_val = self.scope.get(src)
         
-        if index==None:
+        if index is None:
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = int(idx[:-1])
