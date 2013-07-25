@@ -480,24 +480,29 @@ class FiniteDifference(object):
         
         i1, i2 = self.in_bounds[src]
         comp_name, dot, var_name = src.partition('.')
+        comp = self.scope.get(comp_name)
+        old_val = self.scope.get(src)
         
         if index==None:
-            old_val = self.scope.get(src)
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] += val
-                self.scope.set(src, old_val, force=True)
+                #self.scope.set(src, old_val, force=True)
+                comp._input_updated(var_name.split('[')[0])
+                
             else:
                 self.scope.set(src, old_val+val, force=True)
         else:
-            old_val = self.scope.get(src).copy()
             old_val[index] += val
-            self.scope.set(src, old_val, force=True)
+            #self.scope.set(src, old_val, force=True)
+            
+            # In-place array editing doesn't activate callback, so we must
+            # do it manually.
+            comp._input_updated(var_name)
             
         # Prevent OpenMDAO from stomping on our poked input.
-        comp = self.scope.get(comp_name)
         comp._valid_dict[var_name] = True
         
         # Make sure we execute!
