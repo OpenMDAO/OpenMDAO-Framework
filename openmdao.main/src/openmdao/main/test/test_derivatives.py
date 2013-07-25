@@ -824,6 +824,7 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'])
         
         print J
+        # TODO: transform back to original coords
         #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
         #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
         #assert_rel_error(self, J[1, 0], 13.0, 0.0001)
