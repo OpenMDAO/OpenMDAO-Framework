@@ -6,6 +6,7 @@ import networkx as nx
 import sys
 
 from openmdao.main.derivatives import flattened_size, flattened_value, \
+                                      flattened_names, \
                                       calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT
 from openmdao.main.exceptions import RunStopped
@@ -767,8 +768,18 @@ class SequentialWorkflow(Workflow):
                 msg = "No outputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
 
-        out_width = max([len(out) for out in outputs])
-        inp_width = max([len(inp) for inp in inputs])
+        out_width = 0
+        for output in outputs:
+            out_val = self.scope.get(output)
+            out_names = flattened_names(output, out_val)
+            out_width = max(out_width, max([len(out) for out in out_names]))
+
+        inp_width = 0
+        for input in inputs:
+            inp_val = self.scope.get(input)
+            inp_names = flattened_names(input, inp_val)
+            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
+
         label_width = out_width + inp_width + 4
 
         print >> stream
@@ -780,27 +791,40 @@ class SequentialWorkflow(Workflow):
         error_n = error_sum = 0
         error_max = error_loc = None
         suspects = []
-        for i, output in enumerate(outputs):
-            for j, input in enumerate(inputs):
-                calc = J[i, j]
-                finite = Jbase[i, j]
-                error = (calc - finite) / finite
-                error_n += 1
-                error_sum += abs(error)
-                if error_max is None or abs(error) > abs(error_max):
-                    error_max = error
-                    error_loc = (output, input)
-                if abs(error) > suspect_limit:
-                    suspects.append((output, input))
-                print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
-                      % (out_width, output, inp_width, input, calc, finite, error)
+        i = -1
+        for output in outputs:
+            out_val = self.scope.get(output)
+            for out_name in flattened_names(output, out_val):
+                i += 1
+                j = -1
+                for input in inputs:
+                    inp_val = self.scope.get(input)
+                    for inp_name in flattened_names(input, inp_val):
+                        j += 1
+                        calc = J[i, j]
+                        finite = Jbase[i, j]
+                        if finite:
+                            error = (calc - finite) / finite
+                        else:
+                            error = calc
+                        error_n += 1
+                        error_sum += abs(error)
+                        if error_max is None or abs(error) > abs(error_max):
+                            error_max = error
+                            error_loc = (out_name, inp_name)
+                        if abs(error) > suspect_limit:
+                            suspects.append((out_name, inp_name))
+                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+                              % (out_width, out_name, inp_width, inp_name,
+                                 calc, finite, error)
         print >> stream
         print >> stream, 'Average RelError:', error_sum / error_n
         print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
         if suspects:
             print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
-            for output, input in suspects:
-                print >> stream, '%*s / %*s' % (out_width, output, inp_width, input) 
+            for out_name, inp_name in suspects:
+                print >> stream, '%*s / %*s' \
+                      % (out_width, out_name, inp_width, inp_name) 
         print >> stream
 
         if close_stream:
