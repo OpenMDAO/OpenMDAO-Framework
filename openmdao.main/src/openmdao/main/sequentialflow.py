@@ -3,8 +3,10 @@ order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
 import networkx as nx
+import sys
 
 from openmdao.main.derivatives import flattened_size, flattened_value, \
+                                      flattened_names, \
                                       calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT
 from openmdao.main.exceptions import RunStopped
@@ -199,7 +201,7 @@ class SequentialWorkflow(Workflow):
         
         self._input_outputs = []
         for src, target in edges:
-            if src == '@in' or target=='@out' or '_pseudo_' in src:
+            if src == '@in' or target == '@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
             var = var.split('[')[0]
@@ -473,8 +475,6 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             i1, i2 = self.bounds[edge]
             
-            #if target == '@out':
-            #    target = src
             if target == '@out':
                 target = src
                 
@@ -679,7 +679,23 @@ class SequentialWorkflow(Workflow):
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
             self.derivative_iterset = [pseudo]
-            
+
+            # Allow for the rare case the user runs this manually, first, in
+            # which case the in/out edges haven't been defined yet.
+            if len(self._additional_edges) == 0:
+                
+                # New edges for parameters
+                input_edges = [('@in', a) for a in inputs]
+                additional_edges = set(input_edges)
+                
+                # New edges for responses
+                out_edges = [a[0] for a in self.get_interior_edges()]
+                for item in outputs:
+                    if item not in out_edges:
+                        additional_edges.add((item, '@out'))
+                
+                self._additional_edges = additional_edges
+
             # Make sure to undo our big pseudo-assembly next time we calculate the
             # gradient.
             self._find_nondiff_blocks = True
@@ -730,7 +746,7 @@ class SequentialWorkflow(Workflow):
             self._find_nondiff_blocks = False
         
         # Auto-determine which mode to use.
-        if mode=='auto':
+        if mode == 'auto':
             # TODO - determine based on size and presence of apply_derT
             mode = 'forward'
             
@@ -739,23 +755,116 @@ class SequentialWorkflow(Workflow):
         else:
             return calc_gradient(self, inputs, outputs)
     
-    def check_gradient(self, inputs=None, outputs=None):
+    def check_gradient(self, inputs=None, outputs=None, stream=None):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (ApplyDer and ProvideJ.)
         Note that fake finite difference is turned off so that we are
-        doing a straight comparison."""
+        doing a straight comparison.
+
+        stream: file-like object or string
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename.
+        """
+        stream = stream or sys.stdout
+        if isinstance(stream, basestring):
+            stream = open(stream, 'w')
+            close_stream = True
+        else:
+            close_stream = False
     
         J = self.calc_gradient(inputs, outputs)
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
-        print 24*'-'
-        print 'Calculated Gradient'
-        print 24*'-'
-        print J
-        print 24*'-'
-        print 'Finite Difference Comparison'
-        print 24*'-'
-        print Jbase
+        print >> stream, 24*'-'
+        print >> stream, 'Calculated Gradient'
+        print >> stream, 24*'-'
+        print >> stream, J
+        print >> stream, 24*'-'
+        print >> stream, 'Finite Difference Comparison'
+        print >> stream, 24*'-'
+        print >> stream, Jbase
 
-        
+        if inputs is None:
+            if hasattr(self._parent, 'get_parameters'):
+                inputs = self._parent.get_parameters().keys()
+            # Should be caught in calc_gradient()
+            else:  # pragma no cover
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+            
+        if outputs is None:
+            outputs = []
+            if hasattr(self._parent, 'get_objectives'):
+                outputs.extend(self._parent.get_objectives().keys())
+            if hasattr(self._parent, 'get_ineq_constraints'):
+                outputs.extend(self._parent.get_ineq_constraints().keys())
+            if hasattr(self._parent, 'get_eq_constraints'):
+                outputs.extend(self._parent.get_eq_constraints().keys())
+            # Should be caught in calc_gradient()
+            if len(outputs) == 0:  # pragma no cover
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+
+        out_width = 0
+        for output in outputs:
+            out_val = self.scope.get(output)
+            out_names = flattened_names(output, out_val)
+            out_width = max(out_width, max([len(out) for out in out_names]))
+
+        inp_width = 0
+        for input in inputs:
+            inp_val = self.scope.get(input)
+            inp_names = flattened_names(input, inp_val)
+            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
+
+        label_width = out_width + inp_width + 4
+
+        print >> stream
+        print >> stream, label_width*' ', \
+              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
+        print >> stream, (label_width+(3*18)+3)*'-'
+
+        suspect_limit = 1e-5
+        error_n = error_sum = 0
+        error_max = error_loc = None
+        suspects = []
+        i = -1
+        for output in outputs:
+            out_val = self.scope.get(output)
+            for out_name in flattened_names(output, out_val):
+                i += 1
+                j = -1
+                for input in inputs:
+                    inp_val = self.scope.get(input)
+                    for inp_name in flattened_names(input, inp_val):
+                        j += 1
+                        calc = J[i, j]
+                        finite = Jbase[i, j]
+                        if finite:
+                            error = (calc - finite) / finite
+                        else:
+                            error = calc
+                        error_n += 1
+                        error_sum += abs(error)
+                        if error_max is None or abs(error) > abs(error_max):
+                            error_max = error
+                            error_loc = (out_name, inp_name)
+                        if abs(error) > suspect_limit:
+                            suspects.append((out_name, inp_name))
+                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+                              % (out_width, out_name, inp_width, inp_name,
+                                 calc, finite, error)
+        print >> stream
+        print >> stream, 'Average RelError:', error_sum / error_n
+        print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if suspects:
+            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
+            for out_name, inp_name in suspects:
+                print >> stream, '%*s / %*s' \
+                      % (out_width, out_name, inp_width, inp_name) 
+        print >> stream
+
+        if close_stream:
+            stream.close()
+

@@ -148,7 +148,6 @@ The output produced is more detailed:
       uuid: c32f6c1c-6f91-11e1-bebc-005056b50025
       inputs:
          driver.accuracy: 1e-06
-         driver.differentiator: <openmdao.lib.differentiators.finite_difference.FiniteDifference object at 0x1cbad350>
          driver.directory: 
          driver.force_execute: True
          driver.iout: 6

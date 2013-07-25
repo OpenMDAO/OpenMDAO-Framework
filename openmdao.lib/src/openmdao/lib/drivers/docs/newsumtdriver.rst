@@ -92,9 +92,9 @@ This section contains the basic parameters for NEWSUMT.
 
 The default behavior for NEWSUMT is to calculate its own gradients and Hessians
 of the objective and constraints using a first-order forward finite difference.
-The second derivatives are approximated from the first order differences. You
-can replace NEWSUMT's finite difference with OpenMDAO's built-in capability by
-inserting a differentiator into the Differentiator slot in the driver.
+The second derivatives are approximated from the first order differences. Presently,
+OpenMDAO's built-in differentiation capability does not support second derivatives, so
+NEWSUMT's gradient and Hessian calculation is the only available option.
 
 If you want to use NEWSUMT for the finite difference calculation and want the
 same finite difference step size in all your variables, you can set the ``default_fd_stepsize``

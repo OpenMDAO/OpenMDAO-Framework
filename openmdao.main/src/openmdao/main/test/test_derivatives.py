@@ -3,6 +3,8 @@ This mainly tests the CyclicWorkflow's ability to generate its topological
 sort.
 """
 
+from cStringIO import StringIO
+import re
 import unittest
 
 try:
@@ -266,6 +268,33 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0,0], 5.0, 0.0001)
         assert_rel_error(self, J[0,1], 21.0, 0.0001)
 
+        stream = StringIO()
+        top.driver.workflow.check_gradient(outputs=['comp.f_xy'], stream=stream)
+        expected = """\
+------------------------
+Calculated Gradient
+------------------------
+\[\[  5.  21.\]\]
+------------------------
+Finite Difference Comparison
+------------------------
+\[\[  5.[0-9]+[ ]+21.[0-9]+\]\]
+
+                    Calculated         FiniteDiff         RelError          
+----------------------------------------------------------------------------
+comp.f_xy / comp.x: 5.0                5.[0-9]+[ ]+[^\n]+
+comp.f_xy / comp.y: 21.0               21.[0-9]+[ ]+[^\n]+
+
+Average RelError: [^\n]+
+Max RelError: [^ ]+ for comp.f_xy / comp.x
+
+"""
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
     def test_nested(self):
         
         top = Assembly()
@@ -396,10 +425,25 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
         
+        top.run()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
                                               mode='adjoint')
-        print J
+        assert_rel_error(self, J[0, 0], 39.0, .001)
+        assert_rel_error(self, J[0, 1], -7.0, .001)
+        assert_rel_error(self, J[1, 0], -5.0, .001)
+        assert_rel_error(self, J[1, 1], 44.0, .001)
+
+        # TODO: Support for slices here
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
+        #                                      outputs=['comp2.y[0]'])
+        #print J
+
+        # this tests the finite difference code.
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              fd=True)
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
@@ -451,12 +495,6 @@ class Testcase_derivatives(unittest.TestCase):
         self.top.connect('comp4.y2', 'comp5.x2')
         self.top.connect('comp4.y3', 'comp5.x3')
         
-        #obj = 'comp5.y1'
-        #con = 'comp5.y1-comp3.y1 > 0'
-        #self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
-        #self.top.driver.add_objective(obj)
-        #self.top.driver.add_constraint(con)
-    
         self.top.comp1.x1 = 2.0
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
@@ -470,9 +508,7 @@ class Testcase_derivatives(unittest.TestCase):
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
-        #grad = self.top.driver.differentiator.get_gradient(obj)
-        #assert_rel_error(self, grad[0], 626.0, .001)
-        
+        # (only keeping these lines so I don't lose the answer)
         #grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
         #assert_rel_error(self, grad[0], -626.0+10.5, .001)
         
@@ -614,7 +650,6 @@ class Testcase_derivatives(unittest.TestCase):
                                                    outputs=['comp5.y1'], 
                                                    fd=True)
         assert_rel_error(self, J[0, 0], 313.0, .001)
-        
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())
@@ -789,6 +824,11 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'])
         
         print J
+        # TODO: transform back to original coords
+        #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
+        #assert_rel_error(self, J[1, 0], 13.0, 0.0001)
+        #assert_rel_error(self, J[1, 1], -3.0, 0.0001)
         
         J = top.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
                                               outputs=['comp.y1', 'comp.y2'],

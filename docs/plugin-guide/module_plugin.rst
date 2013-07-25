@@ -263,7 +263,7 @@ case looks like this:
     provides-dist = 
     obsoletes-dist = 
     requires-python = 
-        >=2.6
+        >=2.7
         <3.0
     requires-externals = 
     project-url = 

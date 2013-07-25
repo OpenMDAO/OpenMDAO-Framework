@@ -77,7 +77,6 @@ openmdao.LibraryFrame = function(id, project) {
                     "CaseRecorder",
                     "CaseIterator",
                     "Component",
-                    "Differentiator",
                     "DOEgenerator",
                     "Driver",
                     "Optimizer",

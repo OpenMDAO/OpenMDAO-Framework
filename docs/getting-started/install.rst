@@ -35,7 +35,7 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
    variable will not be configured to point to the Python installation directory. You will have to
    put the correct Python version in the path. For help doing this, please see the following `video
    <http://showmedo.com/videotutorials/video?name=960000&fromSeriesID=96>`_. Please note that this
-   video is for Python 2.5, and you want to use **Python 2.6.x or 2.7.x**.  
+   video is for Python 2.5, and you want to use **Python 2.7.x**.  
 
 2. Run the script. 
 
@@ -49,7 +49,7 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
 
 
    This script will check the version of Python you are running. Currently you
-   must be running at least version 2.6. After the script completes successfully, you
+   must be running at least version 2.7. After the script completes successfully, you
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
 

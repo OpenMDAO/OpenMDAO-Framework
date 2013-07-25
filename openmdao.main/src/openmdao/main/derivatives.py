@@ -50,6 +50,25 @@ def flattened_value(name, val):
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
 
+def flattened_names(name, val, names=None):
+    """ Return list of names for values in `val`. """
+    if names is None:
+        names = []
+    if isinstance(val, float):
+        names.append(name)
+    elif isinstance(val, ndarray):
+        for i in range(len(val)):
+            value = val[i]
+            flattened_names('%s[%s]' % (name, i), value, names)
+    elif isinstance(val, VariableTree):
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            flattened_names('.'.join((name, key)), value, names)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+    return names
+
 
 def calc_gradient(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
@@ -113,8 +132,6 @@ def calc_gradient(wflow, inputs, outputs):
                     J[i:i+(k2-k1+1), j] = dx[k1:k2]
                 else:
                     J[i, j] = dx[k1:k2]
-                print dx[k1:k2]
-                print J
                 i += k2-k1
                 
             j += 1
@@ -180,8 +197,6 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                     J[j, i:i+(k2-k1+1)] = dx[k1:k2]
                 else:
                     J[j, i] = dx[k1:k2]
-                print dx[k1:k2]
-                print J
                 i += k2-k1
                 
             j += 1
@@ -287,13 +302,13 @@ def applyJT(obj, arg, result):
                         Jsub = float(J[i1, o1])
                         result[okey] += Jsub*arg[ikey]
                     else:
-                        Jsub = J[i1:i2, o1:o2]
+                        Jsub = J[i1:i2, o1:o2].T
                         tmp = Jsub*arg[ikey]
                         result[okey] += tmp.reshape(result[okey].shape)
                 else:
                     tmp = flattened_value('.'.join((obj.name, ikey)),
                                           arg[ikey]).reshape(1, -1)
-                    Jsub = J[i1:i2, o1:o2]
+                    Jsub = J[i1:i2, o1:o2].T
                     tmp = inner(Jsub, tmp)
                     if o2 - o1 == 1:
                         result[okey] += float(tmp)
@@ -460,7 +475,7 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
-    
+        print self.pa.name, self.J
         return self.J
     
     def get_inputs(self, x):
@@ -468,7 +483,7 @@ class FiniteDifference(object):
        
         for src in self.inputs:
             src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            src_val = flattened_value(src, src_val)
             i1, i2 = self.in_bounds[src]
             x[i1:i2] = src_val
 
@@ -477,7 +492,7 @@ class FiniteDifference(object):
        
         for src in self.outputs:
             src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
+            src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
             x[i1:i2] = src_val
             
@@ -485,29 +500,35 @@ class FiniteDifference(object):
         """Set a value in the model"""
         
         i1, i2 = self.in_bounds[src]
-        old_val = self.scope.get(src)
         comp_name, dot, var_name = src.partition('.')
+        comp = self.scope.get(comp_name)
+        old_val = self.scope.get(src)
         
-        if index==None:
+        if index is None:
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] += val
-                self.scope.set(src, old_val, force=True)
+                #self.scope.set(src, old_val, force=True)
+                comp._input_updated(var_name.split('[')[0])
+                
             else:
                 self.scope.set(src, old_val+val, force=True)
         else:
             old_val[index] += val
-            self.scope.set(src, old_val, force=True)
+            #self.scope.set(src, old_val, force=True)
+            
+            # In-place array editing doesn't activate callback, so we must
+            # do it manually.
+            comp._input_updated(var_name)
             
         # Prevent OpenMDAO from stomping on our poked input.
-        comp = self.scope.get(comp_name)
         comp._valid_dict[var_name] = True
         
         # Make sure we execute!
         comp._call_execute = True
-            
+        
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output
     name using the stored baseline and derivatives along with the
