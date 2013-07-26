@@ -15,7 +15,6 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.depgraph import find_unit_pseudos
 
-
 try:
     from numpy import ndarray, zeros
 except ImportError as err:
@@ -322,9 +321,8 @@ class SequentialWorkflow(Workflow):
             # Interior Edges use original names, so we need to know
             # what comps are in a pseudo-assy.
             if '~' in name:
-                for item in comp.inputs + comp.outputs:
-                    key = item.partition('.')[0]
-                    pa_ref[key] = name
+                for item in comp.list_all_comps():
+                    pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
@@ -414,9 +412,8 @@ class SequentialWorkflow(Workflow):
             # Interior Edges use original names, so we need to know
             # what comps are in a pseudo-assy.
             if '~' in name:
-                for item in comp.inputs + comp.outputs:
-                    key = item.partition('.')[0]
-                    pa_ref[key] = name
+                for item in comp.list_all_comps():
+                    pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
         for edge in self.get_interior_edges():
@@ -593,7 +590,24 @@ class SequentialWorkflow(Workflow):
             pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
                                                         inputs, outputs, 
                                                         self)
+            
+        #If any of our PA's contain drivers, then we may need to bookkeep
+        #some additional edges that cross the boundary.
+        for edge in list(self._additional_edges):
+            src, target = edge
+            
+            comp_name, dot, var_name = src.partition('.')
+            if src != '@in' and src not in self.get_names():
+                for name, pseudo in pseudo_assemblies.iteritems():
+                    if comp_name in pseudo.recursed_comp_names:
+                        pseudo.outputs.append(src)
                 
+            comp_name, dot, var_name = target.partition('.')
+            if target != '@out' and target not in self.get_names():
+                for name, pseudo in pseudo_assemblies.iteritems():
+                    if comp_name in pseudo.recursed_comp_names:
+                        pseudo.inputs.append(target)
+                    
         # Execution order may be different after grouping, so topsort
         iterset = nx.topological_sort(graph)
         
