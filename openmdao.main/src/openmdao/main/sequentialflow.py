@@ -185,7 +185,7 @@ class SequentialWorkflow(Workflow):
         # constraints). These need to be rehooked to corresponding source
         # edges.
         
-        self._input_outputs = []
+        self._input_outputs = set()
         for src, target in edges:
             if src == '@in' or target == '@out' or '_pseudo_' in src:
                 continue
@@ -193,7 +193,8 @@ class SequentialWorkflow(Workflow):
             var = var.split('[')[0]
             comp = self.scope.get(compname)
             if var in comp.list_inputs():
-                self._input_outputs.append(src)
+                self._input_outputs.add(src)
+        self._input_outputs = list(self._input_outputs)
                 
         return sorted(list(edges))
 

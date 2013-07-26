@@ -86,7 +86,7 @@ class Dataflow(SequentialWorkflow):
         #for comp in contents:
             #graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
-        # add edges for parameters
+        # add edges for parameters, constraints, and objectives
         for pcomp_name in self._parent.list_pseudocomps():
             pcomp = getattr(scope, pcomp_name)
             graph.add_edges_from(pcomp.list_comp_connections())
@@ -107,10 +107,10 @@ class Dataflow(SequentialWorkflow):
                 itersets[cname] = iterset
                 removes.update(iterset)
                 for u,v in graph.edges_iter(nbunch=iterset): # outgoing edges
-                    if v != cname and v not in iterset:
+                    if v != cname and v not in iterset and not v.startswith('_pseudo_'):
                         collapsed_graph.add_edge(cname, v)
                 for u,v in graph.in_edges_iter(nbunch=iterset): # incoming edges
-                    if u != cname and u not in iterset:
+                    if u != cname and u not in iterset and not u.startswith('_pseudo_'):
                         collapsed_graph.add_edge(u, cname)
 
         # connect all of the edges from each driver's iterset members to itself
