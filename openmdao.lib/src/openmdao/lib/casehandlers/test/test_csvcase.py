@@ -443,5 +443,20 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.top.driver.recorders[0].num_backups = 0
 
+    def test_iterate_twice(self):
+
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.run()
+        
+        data = self.top.driver.recorders[0].get_iterator()
+        
+        for case in data:
+            keys1 = case.keys()
+        
+        for case in data:
+            keys2 = case.keys()
+        
+        self.assertEqual(keys1, keys2)
+        
 if __name__ == '__main__':
     unittest.main()

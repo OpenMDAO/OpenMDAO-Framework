@@ -144,6 +144,8 @@ class CSVCaseIterator(object):
                        retries=retries, max_retries=max_retries, \
                        parent_uuid=parent_uuid, msg=msg)
 
+        self.need_fieldnames = True
+
     def _parse_fieldnames(self, row):
         ''' Parse our input and output fieldname dictionaries
         '''
