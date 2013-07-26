@@ -36,6 +36,8 @@ class PseudoAssembly(object):
             if has_interface(comp, IDriver):
                 names = comp.workflow.get_names(full=True)
                 self.recursed_comp_names.extend(names)
+                
+        #TODO - Need to propagate any comp names from sub-sub-drivers
         
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in 
@@ -90,4 +92,3 @@ class PseudoAssembly(object):
         return [item.name for item in self.comps] + \
                self.recursed_comp_names
     
-    #def 
