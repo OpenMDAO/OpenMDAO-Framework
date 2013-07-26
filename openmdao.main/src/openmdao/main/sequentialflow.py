@@ -589,13 +589,13 @@ class SequentialWorkflow(Workflow):
             
             comp_name, dot, var_name = src.partition('.')
             if src != '@in' and src not in self.get_names():
-                for pseudo in pseudo_assemblies.values():
+                for name, pseudo in pseudo_assemblies.iteritems():
                     if comp_name in pseudo.recursed_comp_names:
                         pseudo.outputs.append(src)
                 
             comp_name, dot, var_name = target.partition('.')
             if target != '@out' and target not in self.get_names():
-                for pseudo in pseudo_assemblies.values():
+                for name, pseudo in pseudo_assemblies.iteritems():
                     if comp_name in pseudo.recursed_comp_names:
                         pseudo.inputs.append(target)
                     

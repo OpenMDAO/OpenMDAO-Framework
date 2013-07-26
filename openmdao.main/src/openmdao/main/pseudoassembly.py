@@ -60,6 +60,8 @@ class PseudoAssembly(object):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
         
+        # We don't do this in __init__ because some inputs and outputs
+        # are added after creation (for nested driver support).
         if not self.fd:
             self.fd = FiniteDifference(self)
             
