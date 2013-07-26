@@ -29,16 +29,28 @@
 
     <!-- styles -->
     <style type="text/css">
-        html, body {
+        html, body, #leftframe, #riteframe {
             width: 100%;
             height: 100%;
             margin: 0px;
             overflow: hidden;
-            background: black;
+            background-color: gray;
         }
 
-        .fps {
-            color: white;
+        #leftframe, #riteframe, #WebViewer {
+            border:1px solid #222;
+        }
+
+        #tree {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+            overflow: auto;
+            background-color: black;
+        }
+
+        #WebViewer {
+            background: url("/static/images/grid_10.png");
         }
 
         #modal_button {
@@ -61,7 +73,8 @@
         // set the layout (note: global scope)
         layout = jQuery('body').layout({
             west__paneSelector:   '#leftframe',
-            center__paneSelector: '#riteframe'
+            center__paneSelector: '#riteframe',
+            west__size: 300
         });
 
         // place to store "globals"
@@ -96,7 +109,7 @@
     </script>
 </head>
 
-<body oncontextmenu="return false;" bgcolor="gray">
+<body oncontextmenu="return false;">
     <div class="row-fluid">
         <div id='leftframe' class='ui-layout-west' style='background-color:gray;'></div>
         <div id='riteframe' class='ui-layout-center'>
@@ -124,7 +137,7 @@
             <table id="controlsTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th>Function               </th>
+                        <th>                       </th>
                         <th>Linux                  </th>
                         <th>OS X                   </th>
                         <th>Windows                </th>
