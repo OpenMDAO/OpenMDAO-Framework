@@ -2,6 +2,8 @@
 provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
+from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
@@ -20,13 +22,20 @@ class PseudoAssembly(object):
         self.inputs = list(inputs)
         self.outputs = list(outputs)
         self.itername = ''
+        self.recursed_comp_names = []
         
-        self.fd = FiniteDifference(self)
+        self.fd = None
         self.J = None
         
         # By default, use fake finite-difference on components if they have
         # derivatives.
         self.ffd_order = 1
+        
+        # Figure out our set of all recursed component names.
+        for comp in self.comps:
+            if has_interface(comp, IDriver):
+                names = comp.workflow.get_names(full=True)
+                self.recursed_comp_names.extend(names)
         
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in 
@@ -51,6 +60,9 @@ class PseudoAssembly(object):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
         
+        if not self.fd:
+            self.fd = FiniteDifference(self)
+            
         # First, linearize about operating point.
         # Note: Only needed for differentiable islands, which are handled
         # with Fake Finite Difference.
@@ -69,3 +81,11 @@ class PseudoAssembly(object):
         """ Return the value of a variable in the Pseudoassembly"""
         
         return self.wflow.scope.get(varname)
+    
+    def list_all_comps(self):
+        """list all components, including any sub-driver components that
+        interact with the outer driver"""
+        return [item.name for item in self.comps] + \
+               self.recursed_comp_names
+    
+    #def 
