@@ -490,6 +490,9 @@ class SequentialWorkflow(Workflow):
             return
         
         collapsed = self._get_collapsed_graph()
+        print self._parent.name
+        print collapsed.edges()
+        print collapsed.nodes()
 
         # Groups any connected non-differentiable blocks. Each block is a set
         # of component names.
