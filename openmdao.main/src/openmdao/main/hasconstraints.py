@@ -240,6 +240,12 @@ class _HasConstraintsBase(object):
             dct[key] = val.copy()
         return dct
 
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return [c.pcomp_name for c in self._constraints.values()]
+
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)
         for each component name referenced by a constraint.
@@ -634,6 +640,12 @@ class HasConstraints(object):
         lst.extend(self._eq.list_constraints())
         return lst
     
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return self._eq.list_pseudocomps() + self._ineq.list_pseudocomps()
+
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a constraint.

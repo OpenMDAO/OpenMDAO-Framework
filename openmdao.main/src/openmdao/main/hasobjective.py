@@ -155,6 +155,12 @@ class HasObjectives(object):
             objs.append(pcomp.out0)
         return objs
 
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return [obj.pcomp_name for obj in self._objectives.values()]
+
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
         for each component referenced by our objectives.

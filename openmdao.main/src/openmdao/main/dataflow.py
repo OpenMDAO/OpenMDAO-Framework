@@ -87,9 +87,9 @@ class Dataflow(SequentialWorkflow):
             #graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
         # add edges for parameters
-        for pcomp_name in self._pseudocomps:
-            comp = getattr(scope, pcomp_name)
-            graph.add_edges_from(comp.list_connections())
+        for pcomp_name in self._parent.list_pseudocomps():
+            pcomp = getattr(scope, pcomp_name)
+            graph.add_edges_from(pcomp.list_comp_connections())
 
         collapsed_graph = nx.DiGraph(graph)  # this way avoids a deep copy of edge/node data
 

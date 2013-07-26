@@ -58,7 +58,27 @@ def _cvt_names_to_graph(srcpath, destpath):
         
     return (srccompname, srcvarname, destcompname, destvarname)
 
-
+def find_unit_pseudos(graph, nodes):
+    """Return a set of pseudocomponent nodes that are between the
+    nodes in the given list or between them and a boundary.
+    """
+    
+    orig = set(nodes+_fakes)
+    pseudos = set()
+    pred = graph.pred
+    succ = graph.succ
+    outpred = pred['@bout']
+    insucc = succ['@bin']
+    
+    for node in graph.nodes():
+        if node.startswith('_pseudo_') and node not in orig:
+            p = orig.intersection(pred[node].keys())
+            s = orig.intersection(succ[node].keys())
+            if (p and s) or (p and node in outpred) or (s and node in insucc):
+                pseudos.add(node)
+        
+    return list(pseudos)
+            
 def cvt_fake(name):
     """removes 'fake' name from a path"""
     if name[0] == '@':
@@ -69,23 +89,6 @@ def cvt_fake(name):
 #fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']
 
-
-def find_pseudos(graph, nodes):
-    """Return a set of pseudocomponent nodes that are connected
-    to nodes in the given list.
-    """
-    
-    pseudos = set()
-    pred = graph.pred
-    succ = graph.succ
-    
-    for node in nodes:
-        if node in graph:
-            pseudos.update([n for n in pred[node] if n.startswith('_pseudo_')])
-            pseudos.update([n for n in succ[node] if n.startswith('_pseudo_')])
-        
-    return pseudos
-            
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator

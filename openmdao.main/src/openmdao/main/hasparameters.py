@@ -647,13 +647,6 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def get_param_inputs(self):
-        """Returns the names of the pseudocomponent inputs
-        corresponding to the parameters.
-        """
-        return ['.'.join([p.pcomp_name, 'in0']) 
-                         for p in self._parameters.values()]
-
     def init_parameters(self): 
         """Sets all parameters to their start value if a 
         start value is given
@@ -726,7 +719,13 @@ class HasParameters(object):
             for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
-    
+
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return [p.pcomp_name for p in self._parameters.values()]
+
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
         pathnames of Variables referenced in our target strings. 

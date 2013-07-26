@@ -148,6 +148,19 @@ class Driver(Component):
                 new_list.append((src, dest))
         return new_list
 
+    @rbac(('owner', 'user'))
+    def list_pseudocomps(self):
+        """Return a list of pseudocomps resulting from our parameters, 
+        objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
+
     def _get_required_compnames(self):
         """Returns a set of names of components that are required by
         this Driver in order to evaluate parameters, objectives

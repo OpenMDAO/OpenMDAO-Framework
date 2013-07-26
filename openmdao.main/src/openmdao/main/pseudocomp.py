@@ -182,9 +182,9 @@ class PseudoComponent(object):
         return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
 
     def list_connections(self, is_hidden=False):
-        """list all of the inputs and outputs of this comp. If is_hidden
-        is True, list the connections that a user would see if this
-        PseudoComponent is hidden.
+        """list all of the inputs and output connections of this PseudoComponent. 
+        If is_hidden is True, list the connections that a user would see 
+        if this PseudoComponent is hidden.
         """
         if is_hidden:
             if self._outdests:
@@ -198,6 +198,17 @@ class PseudoComponent(object):
             if self._outdests:
                 conns.extend([('.'.join([self.name, 'out0']), dest) 
                                            for dest in self._outdests])
+        return conns
+
+    def list_comp_connections(self):
+        """Return a list of connections between our pseudocomp and
+        parent components of our sources/destinations.
+        """
+        conns = [(src.split('.',1)[0], self.name) 
+                     for src, dest in self._inmap.items()]
+        if self._outdests:
+            conns.extend([(self.name, dest.split('.',1)[0]) 
+                                    for dest in self._outdests])
         return conns
 
     def make_connections(self):
@@ -372,15 +383,11 @@ class ParamPseudoComponent(PseudoComponent):
         """Set up the target_changed callback.
         """
         self._update_callbacks(remove=False)
-        if workflow is not None:
-            workflow.add_pseudocomp(self)
 
     def remove_connections(self, workflow=None):
         """Remove the target_changed callback.
         """
         self._update_callbacks(remove=True)
-        if workflow is not None:
-            workflow.remove_pseudocomp(self)
 
     def target_changedCB(self, obj, name, old, new):
         """We need to update the pseudocomp input whenever values are set

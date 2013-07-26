@@ -13,7 +13,8 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.depgraph import find_pseudos
+from openmdao.main.depgraph import find_unit_pseudos
+
 
 try:
     from numpy import ndarray, zeros
@@ -45,11 +46,6 @@ class SequentialWorkflow(Workflow):
         self._topsort = None
         self._find_nondiff_blocks = True
         self._input_outputs = []
-
-        # keep names of pseudocomponents that we need to add
-        # to our local dependency graph, e.g., pseudocomps for
-        # parameters
-        self._pseudocomps = []
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -83,23 +79,14 @@ class SequentialWorkflow(Workflow):
         self._find_nondiff_blocks = True
         self._input_outputs = []
 
-    def add_pseudocomp(self, pcomp):
-        self._pseudocomps.append(pcomp.name)
-        self.config_changed()
-
-    def remove_pseudocomp(self, pcomp):
-        self._pseudocomps.remove(pcomp.name)
-        self.config_changed()
-        
     def get_names(self, full=False):
-        """Return a list of component names in this workflow.  If full is True,
-        include hidden pseudo-components in the list.
+        """Return a list of component names in this workflow.  
+        If full is True, include hidden pseudo-components in the list.
         """
         if full:
-            return self._names + \
-                   list(find_pseudos(self.scope._depgraph._graph, 
-                                     self._names)) + \
-                   self._pseudocomps
+            return self._names + self._parent.list_pseudocomps() + \
+                    find_unit_pseudos(self._scope._depgraph._graph,
+                                      self._names)
         else:
             return self._names[:]
 
@@ -503,7 +490,7 @@ class SequentialWorkflow(Workflow):
         """
         
         nondiff = []
-        for comp in self.get_components(full=True):
+        for comp in self.get_components():
             if not hasattr(comp, 'apply_deriv') and \
                not hasattr(comp, 'provideJ'):
                 nondiff.append(comp.name)
