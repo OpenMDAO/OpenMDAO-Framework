@@ -14,6 +14,7 @@
     <script>jQuery.jstree._themes = "/static/css/jstree-themes/";                </script>
 
     <!--  WebViewer stuff  -->
+    <script> var wv = {};           // global namespace for WebViewer            </script>
     <script type="text/javascript" src="/static/js/WebViewer/webgl-utils.js"    ></script>
     <script type="text/javascript" src="/static/js/WebViewer/webgl-debug.js"    ></script>
     <script type="text/javascript" src="/static/js/WebViewer/J3DIMath.js"       ></script>
@@ -22,7 +23,9 @@
     <script type="text/javascript" src="/static/js/WebViewer/wv-gPrim.js"       ></script>
     <script type="text/javascript" src="/static/js/WebViewer/wv-sGraph.js"      ></script>
     <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"      ></script>
-    <script type="text/javascript" src="/static/js/WebViewer/simpleUI.js"       ></script>
+    <script type="text/javascript" src="/static/js/WebViewer/wv-tree.js"        ></script>
+    <script type="text/javascript" src="/static/js/openmdao/WVTreeFrame.js"     ></script>
+    <script type="text/javascript" src="/static/js/openmdao/WVCanvasFrame.js"   ></script>
 
     <!--  bootstrap  -->
     <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"> </script>
@@ -38,7 +41,7 @@
             background-color: gray;
         }
 
-        #leftframe, #riteframe, #WebViewer {
+        #leftframe, #riteframe, #wv_canvas {
             border:1px solid #222;
         }
 
@@ -50,7 +53,7 @@
             background-color: black;
         }
 
-        #WebViewer {
+        #wv_canvas {
             background: url("/static/images/grid_10.png");
         }
 
@@ -82,25 +85,22 @@
             }
         });
 
-        // place to store "globals"
-        g = {};
-
         // our messages have the first NAME_SIZE bytes allocated for a topic name
-        g.NAME_SIZE=window.opener.openmdao.NAME_SIZE;
-        g.MSG_START = g.NAME_SIZE;
+        wv.NAME_SIZE = window.opener.openmdao.NAME_SIZE;
+        wv.MSG_START = wv.NAME_SIZE;
 
         // have some values for Zscreen
-        g.zNear =  1.0;
-        g.zFar  = 11.0;
+        wv.zNear =  1.0;
+        wv.zFar  = 11.0;
 
         // a place to put the binary messages
-        g.messageQ = [];
+        wv.messageQ = [];
 
         var handleMsg = function(message) {
             // NOTE: the message here is the entire ArrayBuffer containing the
             // padded topic name + the actual message being sent to the WebViewer.
             // This is done so we can avoid copying the buffer.
-            g.messageQ.push(message[1]);
+            wv.messageQ.push(message[1]);
         };
 
         window.opener.openmdao.project.addListener("{{geom_name}}", handleMsg);
@@ -109,7 +109,26 @@
             window.opener.openmdao.project.removeListener("{{geom_name}}");
         };
 
-        wvStart();
+        // Note: wv requires the canvas name to be "WebViewer"
+        var tf = new openmdao.WVTreeFrame(wv, "leftframe");
+        var cf = new openmdao.WVCanvasFrame(wv, "WebViewer", "wv_status");
+
+        // wv requires these functions to be in the global namespace
+        wvInitUI        = cf.wvInitUI;
+        wvUpdateUI      = function() {
+            // wv.sgUpdate will be set to 1 if the sceneGraph has changed
+            // should be set back to 0 after UI responds
+            tf.wvUpdateUI();
+            cf.wvUpdateUI();
+            wv.sgUpdate = 0;
+        }
+        wvUpdateCanvas  = cf.wvUpdateCanvas;
+        wvUpdateView    = cf.wvUpdateView;
+        wvServerMessage = cf.wvServerMessage;
+        reshape         = cf.reshape;
+        jack            = cf.jack;
+
+        wv.Start();
     });
     </script>
 </head>
@@ -118,16 +137,16 @@
     <div class="row-fluid">
         <div id='leftframe' class='ui-layout-west'></div>
         <div id='riteframe' class='ui-layout-center'>
-            <div>
-                <div>
-                    <a id="modal_button" href="#myModal" role="button" class="btn btn-small" data-toggle="modal"><i class="icon-info-sign"></i></a>
-                    <canvas id="WebViewer">
-                        If you're seeing this your web browser doesn't support the &lt;canvas&gt; element. Ouch!
-                    </canvas>
-                </div>
+            <a id="modal_button" href="#myModal" role="button" class="btn btn-small" data-toggle="modal">
+                <i class="icon-info-sign"></i>
+            </a>
+            <div id="wv_canvas">
+                <canvas id="WebViewer">
+                    Your web browser doesn't support the &lt;canvas&gt; element.
+                </canvas>
             </div>
             <div class="row-fluid">
-                <div id="statusline" class="fps"></div>
+                <div id="wv_status" class="fps"></div>
             </div>
         </div>
 

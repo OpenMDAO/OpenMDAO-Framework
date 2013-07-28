@@ -3,7 +3,7 @@
  *
  *              Scene Graph Functions
  *
- *      Copyright 2011-2012, Massachusetts Institute of Technology
+ *      Copyright 2011-2013, Massachusetts Institute of Technology
  *      Licensed under The GNU Lesser General Public License, version 2.1
  *      See http://www.opensource.org/licenses/lgpl-2.1.php
  *
@@ -12,19 +12,19 @@
 //
 // replace data in a gPrim
 //
-function editGPrim(ctx, name, stripe, gType, vType, data)
+wv["editGPrim"] = function(ctx, name, stripe, gType, vType, data)
 {
 
-  if (g.sceneGraph[name] == undefined) 
+  if (wv.sceneGraph[name] == undefined) 
   {
-    logger(" Edit with no gPrim in SceneGraph: name = " + name);
+    wv.logger(" Edit with no gPrim in SceneGraph: name = " + name);
     return;
   }
-  var graphic = g.sceneGraph[name];
+  var graphic = wv.sceneGraph[name];
   if ((stripe >= graphic.nStrip) || (stripe < 0))
   {
-    logger(" Edit with Stripe = " + stripe + 
-           " in gPrim with name = " + name);
+    wv.logger(" Edit with Stripe = " + stripe + 
+              " in gPrim with name = " + name);
     return;
   }
   
@@ -33,15 +33,15 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     // points
     if (gType != 0) 
     {
-      logger(" Point Edit with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Point Edit with gType = " + gType + 
+                " in gPrim with name = " + name);
       return;
     }
     if (vType == 0)
     {
-      if (toType(data) != "Float32Array") {
-        logger(" Point Edit Vertices Type = " + toType(data) +
-               " should be Float32Array!");
+      if (wv.toType(data) != "Float32Array") {
+        wv.logger(" Point Edit Vertices Type = " + wv.toType(data) +
+                  " should be Float32Array!");
         return;
       }
       ctx.deleteBuffer(graphic.points[stripe].vertex);
@@ -53,9 +53,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     } 
     else if (vType == 1)
     {
-      if (toType(data) != "Uint16Array") {
-        logger(" Point Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Point Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.points[stripe].nIndices != undefined)
@@ -70,9 +70,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (vType == 2)
     {
-      if (toType(data) != "Uint8Array") {
-        logger(" Point Edit Colors Type = " + toType(data) +
-               " should be Uint8Array!");
+      if (wv.toType(data) != "Uint8Array") {
+        wv.logger(" Point Edit Colors Type = " + wv.toType(data) +
+                  " should be Uint8Array!");
         return;
       }
       if (graphic.points[stripe].color != undefined)
@@ -87,8 +87,8 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else
     {
-      logger(" Point Edit with vType = " + vType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Point Edit with vType = " + vType + 
+                " in gPrim with name = " + name);
       return;
     }
   }
@@ -100,13 +100,13 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     {
       if (vType != 1)
       {
-        logger(" Line/Point Edit with vType = " + vType + 
-               " in gPrim with name = " + name);
+        wv.logger(" Line/Point Edit with vType = " + vType + 
+                  " in gPrim with name = " + name);
         return;
       }
-      if (toType(data) != "Uint16Array") {
-        logger(" Line/Point Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Line/Point Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.points[stripe].nIndices != undefined)
@@ -122,15 +122,15 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (gType != 1) 
     {
-      logger(" Line Edit with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Line Edit with gType = " + gType + 
+                " in gPrim with name = " + name);
       return;
     }
     if (vType == 0)
     {
-      if (toType(data) != "Float32Array") {
-        logger(" Line Edit Vertices Type = " + toType(data) +
-               " should be Float32Array!");
+      if (wv.toType(data) != "Float32Array") {
+        wv.logger(" Line Edit Vertices Type = " + wv.toType(data) +
+                  " should be Float32Array!");
         return;
       }
       ctx.deleteBuffer(graphic.lines[stripe].vertex);
@@ -149,9 +149,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     } 
     else if (vType == 1)
     {
-      if (toType(data) != "Uint16Array") {
-        logger(" Line Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Line Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.lines[stripe].nIndices != undefined)
@@ -166,9 +166,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (vType == 2)
     {
-      if (toType(data) != "Uint8Array") {
-        logger(" Line Edit Colors Type = " + toType(data) +
-               " should be Uint8Array!");
+      if (wv.toType(data) != "Uint8Array") {
+        wv.logger(" Line Edit Colors Type = " + wv.toType(data) +
+                  " should be Uint8Array!");
         return;
       }
       if (graphic.lines[stripe].color != undefined)
@@ -183,9 +183,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if ((vType == 3) && (stripe == 0))
     {
-      if (toType(data) != "Float32Array") {
-        logger(" Line Edit Triangle Type = " + toType(data) +
-               " should be Float32Array!");
+      if (wv.toType(data) != "Float32Array") {
+        wv.logger(" Line Edit Triangle Type = " + wv.toType(data) +
+                  " should be Float32Array!");
         return;
       }
       if (graphic.triangles.vertex != undefined) {
@@ -207,8 +207,8 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else
     {
-      logger(" Line Edit with vType = " + vType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Line Edit with vType = " + vType + 
+                " in gPrim with name = " + name);
       return;
     }
   }
@@ -220,13 +220,13 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     {
       if (vType != 1)
       {
-        logger(" Triangle/Point Edit with vType = " + vType + 
-               " in gPrim with name = " + name);
+        wv.logger(" Triangle/Point Edit with vType = " + vType + 
+                  " in gPrim with name = " + name);
         return;
       }
-      if (toType(data) != "Uint16Array") {
-        logger(" Triangle/Point Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Triangle/Point Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.points[stripe].nIndices != undefined)
@@ -244,13 +244,13 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     {
       if (vType != 1)
       {
-        logger(" Triangle/Line Edit with vType = " + vType + 
-               " in gPrim with name = " + name);
+        wv.logger(" Triangle/Line Edit with vType = " + vType + 
+                  " in gPrim with name = " + name);
         return;
       }
-      if (toType(data) != "Uint16Array") {
-        logger(" Triangle/Line Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Triangle/Line Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.lines[stripe].nIndices != undefined)
@@ -266,15 +266,15 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (gType > 2) 
     {
-      logger(" Triangle Edit with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Triangle Edit with gType = " + gType + 
+                " in gPrim with name = " + name);
       return;
     }
     if (vType == 0)
     {
-      if (toType(data) != "Float32Array") {
-        logger(" Triangle Edit Vertices Type = " + toType(data) +
-               " should be Float32Array!");
+      if (wv.toType(data) != "Float32Array") {
+        wv.logger(" Triangle Edit Vertices Type = " + wv.toType(data) +
+                  " should be Float32Array!");
         return;
       }
       ctx.deleteBuffer(graphic.triangles[stripe].vertex);
@@ -286,9 +286,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     } 
     else if (vType == 1)
     {
-      if (toType(data) != "Uint16Array") {
-        logger(" Triangle Edit Indices Type = " + toType(data) +
-               " should be Uint16Array!");
+      if (wv.toType(data) != "Uint16Array") {
+        wv.logger(" Triangle Edit Indices Type = " + wv.toType(data) +
+                  " should be Uint16Array!");
         return;
       }
       if (graphic.triangles[stripe].nIndices != undefined)
@@ -303,9 +303,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (vType == 2)
     {
-      if (toType(data) != "Uint8Array") {
-        logger(" Triangle Edit Colors Type = " + toType(data) +
-               " should be Uint8Array!");
+      if (wv.toType(data) != "Uint8Array") {
+        wv.logger(" Triangle Edit Colors Type = " + wv.toType(data) +
+                  " should be Uint8Array!");
         return;
       }
       if (graphic.triangles[stripe].color != undefined)
@@ -320,9 +320,9 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else if (vType == 3)
     {
-      if (toType(data) != "Float32Array") {
-        logger(" Triangle Edit Normals Type = " + toType(data) +
-               " should be Float32Array!");
+      if (wv.toType(data) != "Float32Array") {
+        wv.logger(" Triangle Edit Normals Type = " + wv.toType(data) +
+                  " should be Float32Array!");
         return;
       }
       if (graphic.triangles[stripe].normal != undefined)
@@ -337,8 +337,8 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
     }
     else
     {
-      logger(" Triangle Edit with vType = " + vType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Triangle Edit with vType = " + vType + 
+                " in gPrim with name = " + name);
       return;
     }
   }
@@ -348,40 +348,40 @@ function editGPrim(ctx, name, stripe, gType, vType, data)
 //
 // Delete a gPrim
 //
-function deleteGPrim(ctx, name)
+wv["deleteGPrim"] = function(ctx, name)
 {
-  if (g.sceneGraph[name] == undefined) 
+  if (wv.sceneGraph[name] == undefined) 
   {
-    logger(" Delete with no gPrim in SceneGraph: name = " + name);
+    wv.logger(" Delete with no gPrim in SceneGraph: name = " + name);
     return;
   }
-  var graphic = g.sceneGraph[name];
+  var graphic = wv.sceneGraph[name];
   var nStripe = graphic.nStrip;
   
   if (graphic.GPtype == 0)
   {
-    for (var i = 0; i < nStripe; i++) releaseVBO(ctx, graphic.points[i]);
+    for (var i = 0; i < nStripe; i++) wv.releaseVBO(ctx, graphic.points[i]);
   }
   else if (graphic.GPtype == 1)
   {
     for (var i = 0; i < nStripe; i++) 
     {
       if (graphic.points[i] != undefined) 
-        releaseIndexVBO(ctx, graphic.points[i]);
-      releaseVBO(ctx, graphic.lines[i]);
+        wv.releaseIndexVBO(ctx, graphic.points[i]);
+      wv.releaseVBO(ctx, graphic.lines[i]);
     }
     if (graphic.trianges != undefined)
-      releaseVBO(ctx, graphic.triangles);
+      wv.releaseVBO(ctx, graphic.triangles);
   }
   else
   {
     for (var i = 0; i < nStripe; i++) 
     {
       if (graphic.points[i] != undefined) 
-        releaseIndexVBO(ctx, graphic.points[i]);
+        wv.releaseIndexVBO(ctx, graphic.points[i]);
       if (graphic.lines[i] != undefined) 
-        releaseIndexVBO(ctx, graphic.lines[i]);
-      releaseVBO(ctx, graphic.triangles[i]);
+        wv.releaseIndexVBO(ctx, graphic.lines[i]);
+      wv.releaseVBO(ctx, graphic.triangles[i]);
     }
 
   }
@@ -392,24 +392,24 @@ function deleteGPrim(ctx, name)
 //
 // Delete a stripe
 //
-function deleteStripe(ctx, name, stripe, gtype)
+wv["deleteStripe"] = function(ctx, name, stripe, gtype)
 {
-  if (g.sceneGraph[name] == undefined) 
+  if (wv.sceneGraph[name] == undefined) 
   {
-    logger(" deleteStripe with no gPrim in SceneGraph: name = " + name);
+    wv.logger(" deleteStripe with no gPrim in SceneGraph: name = " + name);
     return;
   }
-  var graphic = g.sceneGraph[name];
+  var graphic = wv.sceneGraph[name];
   if ((stripe >= graphic.nStrip) || (stripe < 0))
   {
-    logger(" deleteStripe in SceneGraph: name = " + name +
-           "  stripe = " + stripe);
+    wv.logger(" deleteStripe in SceneGraph: name = " + name +
+              "  stripe = " + stripe);
     return;
   }
 
   if (graphic.GPtype == 0)
   {
-    releaseVBO(ctx, graphic.points[stripe]);
+    wv.releaseVBO(ctx, graphic.points[stripe]);
     graphic.points[stripe] = undefined;
   }
   else if (graphic.GPtype == 1)
@@ -417,14 +417,14 @@ function deleteStripe(ctx, name, stripe, gtype)
     if (gtype == 0)
     {
       if (graphic.points[stripe] != undefined)
-        releaseIndexVBO(ctx, graphic.points[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.points[stripe]);
       graphic.points[stripe] = undefined;
     }
     else
     {
       if (graphic.points[stripe] != undefined)
-        releaseIndexVBO(ctx, graphic.points[stripe]);
-      releaseVBO(ctx, graphic.lines[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.points[stripe]);
+      wv.releaseVBO(ctx, graphic.lines[stripe]);
       graphic.points[stripe] = undefined;
       graphic.lines[stripe]  = undefined;
     }
@@ -434,22 +434,22 @@ function deleteStripe(ctx, name, stripe, gtype)
     if (gtype == 0)
     {
       if (graphic.points[stripe] != undefined)
-        releaseIndexVBO(ctx, graphic.points[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.points[stripe]);
       graphic.points[stripe] = undefined;
     }
     else if (gtype == 1)
     {
       if (graphic.lines[stripe] != undefined)
-        releaseIndexVBO(ctx, graphic.lines[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.lines[stripe]);
       graphic.lines[stripe] = undefined;
     }
     else
     {
       if (graphic.points[stripe] != undefined)
-        releaseIndexVBO(ctx, graphic.points[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.points[stripe]);
       if (graphic.lines[stripe]  != undefined)
-        releaseIndexVBO(ctx, graphic.lines[stripe]);
-      releaseVBO(ctx, graphic.triangles[stripe]);
+        wv.releaseIndexVBO(ctx, graphic.lines[stripe]);
+      wv.releaseVBO(ctx, graphic.triangles[stripe]);
       graphic.points[stripe]    = undefined;
       graphic.lines[stripe]     = undefined;
       graphic.triangles[stripe] = undefined;
@@ -462,18 +462,19 @@ function deleteStripe(ctx, name, stripe, gtype)
 //
 // Fill in a stripe for a new gPrim
 //
-function newStripe(ctx, name, stripe, gType, vertices, colors, indices, normals)
+wv["newStripe"] = function(ctx, name, stripe, gType, vertices, colors, indices,
+                           normals)
 {
-  if (g.sceneGraph[name] == undefined) 
+  if (wv.sceneGraph[name] == undefined) 
   {
-    logger(" newStripe with no gPrim in SceneGraph: name = " + name);
+    wv.logger(" newStripe with no gPrim in SceneGraph: name = " + name);
     return;
   }
-  var graphic = g.sceneGraph[name];
+  var graphic = wv.sceneGraph[name];
   if ((stripe >= graphic.nStrip) || (stripe < 0))
   {
-    logger(" newStripe with Stripe = " + stripe + 
-           " in gPrim with name = " + name);
+    wv.logger(" newStripe with Stripe = " + stripe + 
+              " in gPrim with name = " + name);
     return;
   }
 
@@ -482,11 +483,12 @@ function newStripe(ctx, name, stripe, gType, vertices, colors, indices, normals)
     // points
     if (gType != 0) 
     {
-      logger(" Point newStripe with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Point newStripe with gType = " + gType + 
+                " in gPrim with name = " + name);
       return;
     }
-    graphic.points[stripe] = createVBO(ctx, vertices, colors, indices, undefined);
+    graphic.points[stripe] = wv.createVBO(ctx, vertices, colors, indices,
+                                          undefined);
   }
   
   else if (graphic.GPtype == 1)
@@ -494,22 +496,23 @@ function newStripe(ctx, name, stripe, gType, vertices, colors, indices, normals)
     // lines
     if (gType == 0)
     {
-      graphic.points[stripe] = createIndexVBO(ctx, indices);
+      graphic.points[stripe] = wv.createIndexVBO(ctx, indices);
     }
     else if (gType != 1) 
     {
-      logger(" Line newStripe with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Line newStripe with gType = " + gType + 
+                " in gPrim with name = " + name);
     }
     else 
     {
-      graphic.lines[stripe] = createVBO(ctx, vertices, colors, indices, undefined);
+      graphic.lines[stripe] = wv.createVBO(ctx, vertices, colors, indices,
+                                           undefined);
       if ((stripe == 0) && (normals != undefined))
       {
         var len  = normals.length/2;
         var vert = normals.subarray(0, len);
         var norm = normals.subarray(len);
-        graphic.triangles = createVBO(ctx, vert, undefined, undefined, norm);      
+        graphic.triangles = wv.createVBO(ctx, vert, undefined, undefined, norm);
       }
     }
   }
@@ -519,21 +522,22 @@ function newStripe(ctx, name, stripe, gType, vertices, colors, indices, normals)
     // triangles
     if (gType == 0)
     {
-      graphic.points[stripe] = createIndexVBO(ctx, indices);
+      graphic.points[stripe] = wv.createIndexVBO(ctx, indices);
     }
     else if (gType == 1) 
     {
-      graphic.lines[stripe] = createIndexVBO(ctx, indices);
+      graphic.lines[stripe] = wv.createIndexVBO(ctx, indices);
     }
     else if (gType != 2)
     {
-      logger(" Triangle newStripe with gType = " + gType + 
-             " in gPrim with name = " + name);
+      wv.logger(" Triangle newStripe with gType = " + gType + 
+                " in gPrim with name = " + name);
       return;
     }
     else
     {
-      graphic.triangles[stripe] = createVBO(ctx, vertices, colors, indices, normals);
+      graphic.triangles[stripe] = wv.createVBO(ctx, vertices, colors, indices,
+                                               normals);
     }
   }
 
