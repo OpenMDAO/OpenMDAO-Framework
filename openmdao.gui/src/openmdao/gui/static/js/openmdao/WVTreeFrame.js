@@ -28,12 +28,17 @@ openmdao.WVTreeFrame = function(wv, id) {
     function setAttribute(gprim_name, attr, enabled) {
         var gprim = wv.sceneGraph[gprim_name];
 
+        console.log('setAttribute()', gprim_name, attr, enabled);
+        console.log('BEFORE: isAttributeSet?', gprim.attrs, isAttributeSet(gprim.attrs, attr));
+
         if (enabled) {
             gprim.attrs |= attr;
         }
         else {
             gprim.attrs &= ~attr;
         }
+
+      console.log('AFTER: isAttributeSet?', gprim.attrs, isAttributeSet(gprim.attrs, attr));
 
         wv.sceneUpd = 1;
     }
@@ -49,6 +54,9 @@ openmdao.WVTreeFrame = function(wv, id) {
             if (wv.sceneGraph === undefined) {
                 alert("wv.sceneGraph is undefined --- but we need it");
             }
+
+            console.log('wv.sceneGraph:', wv.sceneGraph);
+            console.log('wv.plotAttrs:', wv.plotAttrs);
 
             // create tree data structures for the edge and face primitives
             // in the scenegraph. the attributes for each primitive in the tree
@@ -68,11 +76,11 @@ openmdao.WVTreeFrame = function(wv, id) {
                         attr: {
                             viz: template
                                     .replace('NAME',    gprim_name)
-                                    .replace('VALUE',   'viz')
+                                    .replace('VALUE',   wv.plotAttrs.ON)
                                     .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.ON) ? 'checked="yes"' : ''),
                             grd: template
                                     .replace('NAME',    gprim_name)
-                                    .replace('VALUE',   wv.plotAttrs.LINES)
+                                    .replace('VALUE',   wv.plotAttrs.POINTS)
                                     .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.LINES) ? 'checked="yes"' : ''),
                             ori: template
                                     .replace('NAME',    gprim_name)
@@ -116,16 +124,16 @@ openmdao.WVTreeFrame = function(wv, id) {
                     attr: {
                         viz: template
                                 .replace('NAME',    'Edges')
-                                .replace('VALUE',   'viz')
-                                .replace('CHECKED', 'no'),
+                                .replace('VALUE',   wv.plotAttrs.ON)
+                                .replace('CHECKED', ''),
                         grd: template
                                 .replace('NAME',    'Edges')
-                                .replace('VALUE',   'grd')
-                                .replace('CHECKED', 'no'),
+                                .replace('VALUE',   wv.plotAttrs.POINTS)
+                                .replace('CHECKED', ''),
                         ori: template
                                 .replace('NAME',    'Edges')
-                                .replace('VALUE',   'ori')
-                                .replace('CHECKED', 'no')
+                                .replace('VALUE',   wv.plotAttrs.ORIENTATION)
+                                .replace('CHECKED', '')
                     },
                     children: edges
                 }]},
@@ -156,16 +164,16 @@ openmdao.WVTreeFrame = function(wv, id) {
                     attr: {
                         viz: template
                                 .replace('NAME',    'Faces')
-                                .replace('VALUE',   'viz')
-                                .replace('CHECKED', 'no'),
+                                .replace('VALUE',   wv.plotAttrs.ON)
+                                .replace('CHECKED', ''),
                         grd: template
                                 .replace('NAME',    'Faces')
-                                .replace('VALUE',   'grd')
-                                .replace('CHECKED', 'no'),
+                                .replace('VALUE',   wv.plotAttrs.LINES)
+                                .replace('CHECKED', ''),
                         trn: template
                                 .replace('NAME',    'Faces')
-                                .replace('VALUE',   'trn')
-                                .replace('CHECKED', 'no')
+                                .replace('VALUE',   wv.plotAttrs.TRANSPARENT)
+                                .replace('CHECKED', '')
                     },
                     children: faces
                 }]},
