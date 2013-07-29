@@ -360,6 +360,7 @@ class SequentialWorkflow(Workflow):
         for comp in self.derivative_iter():
             name = comp.name
             applyJ(comp, inputs[name], outputs[name])
+            print name, inputs[name], outputs[name]
 
         # Each parameter adds an equation
         for edge in self._additional_edges:
@@ -491,6 +492,10 @@ class SequentialWorkflow(Workflow):
         assembly, which can provide its own Jacobian via finite difference.
         """
         
+        # Hack: parameters not in directional graph
+        param_list = [param.pcomp_name for param in \
+                      self._parent.get_parameters().values()]
+        
         nondiff = []
         for comp in self.get_components():
             if not hasattr(comp, 'apply_deriv') and \
@@ -548,7 +553,13 @@ class SequentialWorkflow(Workflow):
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
+                    
+                    # Hack: parameters not in directional graph
+                    if edge[0] in param_list:
+                        pcomp = getattr(self.scope, edge[0])
+                        var_edge = set(pcomp.list_connections())
+                    else:
+                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     inputs = inputs.union(var_edge)
                     
             # Input and outputs that crossed the cut line should be included
