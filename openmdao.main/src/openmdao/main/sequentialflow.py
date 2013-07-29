@@ -179,6 +179,10 @@ class SequentialWorkflow(Workflow):
         graph = self.scope._depgraph
         edges = graph.get_interior_edges(self.get_names(full=True))
         edges = edges.union(self._additional_edges)
+        if hasattr(self._parent, 'get_parameters'):
+            for param in self._parent.get_parameters().values():
+                pcomp = getattr(self.scope, param.pcomp_name)
+                edges.update(pcomp.list_connections())
         edges = edges - self._hidden_edges
                 
         # Somtimes we connect an input to an input (particularly with
