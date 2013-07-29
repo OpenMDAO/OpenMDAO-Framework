@@ -8,7 +8,7 @@ import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
-from enthought.traits.trait_handlers import TraitListObject, TraitDictObject
+from traits.trait_handlers import TraitListObject, TraitDictObject
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator

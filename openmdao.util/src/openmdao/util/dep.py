@@ -270,7 +270,7 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
 
         if mod_excludes is None:
-            self.mod_excludes = set(['enthought','zope','ast'])
+            self.mod_excludes = set(['traits','zope','ast'])
         else:
             self.mod_excludes = mod_excludes
 

@@ -25,12 +25,11 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Python, \
-                                 push_exception_handler, TraitType, CTrait
-from enthought.traits.trait_handlers import TraitListObject
-from enthought.traits.has_traits import FunctionType, _clone_trait, \
-                                        MetaHasTraits
-from enthought.traits.trait_base import not_none
+from traits.api import HasTraits, Missing, Python, \
+                       push_exception_handler, TraitType, CTrait
+from traits.trait_handlers import TraitListObject
+from traits.has_traits import FunctionType, _clone_trait, MetaHasTraits
+from traits.trait_base import not_none
 
 from multiprocessing import connection
 

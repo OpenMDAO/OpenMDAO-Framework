@@ -13,7 +13,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from enthought.traits.trait_handlers import TraitListObject 
+from traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       Optional, QuotedString, Suppress, Word, alphanums, \

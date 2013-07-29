@@ -7,9 +7,8 @@ Sphinx documentation.
 
 from sys import maxint, float_info
 
-from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, \
-                                 Instance
-from enthought.traits.trait_types import _InstanceArgs
+from traits.api import HasTraits, MetaHasTraits, Any, Python, Instance
+from traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
 from openmdao.main.datatypes.api import Slot, Event
@@ -65,8 +64,8 @@ def get_traits_info(app, what, name, obj, options, lines):
         cls = getmembers(obj, isclass)
         for n1, v1 in cls:
             module = v1.__module__
-            if module=="enthought.traits.trait_types":
-                filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
+            if module == "traits.trait_types":
+                filename2 = "http://docs.enthought.com/traits/traits_api_refernece/trait_types.html"
                 lines.append("`%s <%s>`_" %(n1, filename2))
             else:
                 filename2 = module + ".py"

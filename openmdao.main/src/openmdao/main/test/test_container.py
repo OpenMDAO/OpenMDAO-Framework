@@ -7,7 +7,7 @@ import StringIO
 import nose
 import copy
 
-from enthought.traits.api import HasTraits
+from traits.api import HasTraits
 
 from openmdao.util import eggsaver as constants
 from openmdao.main.container import Container, deep_hasattr, \

@@ -6,7 +6,7 @@ Trait for enumerations, with optional alias list.
 __all__ = ["Enum"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Enum as TraitEnum
+from traits.api import Enum as TraitEnum
 
 from openmdao.main.variable import Variable, gui_excludes
 

@@ -3,7 +3,7 @@
 import copy
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.has_traits import FunctionType
+from traits.has_traits import FunctionType
 
 from openmdao.main.interfaces import IVariable
 from openmdao.main.container import Container

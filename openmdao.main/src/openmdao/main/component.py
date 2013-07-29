@@ -21,8 +21,8 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import inner
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.trait_base import not_event
-from enthought.traits.api import Property
+from traits.trait_base import not_event
+from traits.api import Property
 
 from openmdao.main.container import Container
 from openmdao.main.derivatives import Derivatives, \

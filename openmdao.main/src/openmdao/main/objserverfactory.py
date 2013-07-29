@@ -374,7 +374,7 @@ class ObjServer(object):
         except ImportError:
             pass
         else:
-            from enthought.traits.trait_numeric import AbstractArray
+            from traits.trait_numeric import AbstractArray
             dummy = AbstractArray()
 
     @rbac(('owner', 'user'))

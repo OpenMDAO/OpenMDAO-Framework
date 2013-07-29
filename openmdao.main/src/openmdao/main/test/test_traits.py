@@ -7,8 +7,8 @@ about how these things work.
 import unittest
 import copy
 
-from enthought.traits.api import HasTraits, TraitType, implements, \
-                                 Interface, Instance, Int
+from traits.api import HasTraits, TraitType, implements, \
+                       Interface, Instance, Int
 
 class MyClass(object):
     def __init__(self):

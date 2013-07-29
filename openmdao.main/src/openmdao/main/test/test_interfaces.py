@@ -4,8 +4,8 @@ Tests involving checking of Traits Interfaces
 
 import unittest
 
-from enthought.traits.api import HasTraits, implements, Interface, Instance
-from enthought.traits.trait_types import validate_implements
+from traits.api import HasTraits, implements, Interface, Instance
+from traits.trait_types import validate_implements
 
 from openmdao.lib.datatypes.api import Int, Str
 

@@ -9,7 +9,7 @@ import shutil
 import sys
 import unittest
 
-from enthought.traits.api import TraitError
+from traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Bool, File, FileRef, Str, List

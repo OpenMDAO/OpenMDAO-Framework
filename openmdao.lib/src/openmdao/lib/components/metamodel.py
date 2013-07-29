@@ -20,8 +20,8 @@
 
 from copy import deepcopy, copy
 
-from enthought.traits.trait_base import not_none
-from enthought.traits.has_traits import _clone_trait
+from traits.trait_base import not_none
+from traits.has_traits import _clone_trait
 
 from openmdao.main.case import flatteners
 from openmdao.main.api import Component, Case, VariableTree

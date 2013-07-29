@@ -23,7 +23,7 @@
 
 import unittest
 
-from enthought.traits.api import HasTraits
+from traits.api import HasTraits
 
 from openmdao.main.api import Component, Assembly, VariableTree, set_as_top, Case
 from openmdao.main.interfaces import implements, ICaseRecorder
