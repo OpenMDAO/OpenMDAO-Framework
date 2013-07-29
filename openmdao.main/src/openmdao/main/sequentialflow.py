@@ -330,7 +330,8 @@ class SequentialWorkflow(Workflow):
                     pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
-        for edge in self.get_interior_edges():
+        edges = self.get_interior_edges()
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -373,7 +374,14 @@ class SequentialWorkflow(Workflow):
 
         # Poke results into the return vector
         result = zeros(len(arg))
-        for edge in self.get_interior_edges():
+        
+        input_input_xref = {}
+        edge_outs = [a for a, b in edges]
+        for edge in edges:
+            if edge[1] in self._input_outputs:
+                input_input_xref[edge[1]] = edge
+            
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -387,8 +395,10 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
-                #result[i1:i2] = 1.0 + arg[i1:i2]
+                ref_edge = input_input_xref[src]
+                i3, i4 = self.bounds[ref_edge]
+                print result[i1:i2]
+                result[i1:i2] = arg[i3:i4]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
