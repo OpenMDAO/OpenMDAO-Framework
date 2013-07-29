@@ -389,6 +389,7 @@ class SequentialWorkflow(Workflow):
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                #result[i1:i2] = 1.0 + arg[i1:i2]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
@@ -582,7 +583,7 @@ class SequentialWorkflow(Workflow):
 
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]
-            outputs = [a for a, b in outputs]
+            outputs = list(set([a for a, b in outputs]))
                 
             # Boundary edges must be added to inputs and outputs
             for edge in list(self._additional_edges):
@@ -606,6 +607,7 @@ class SequentialWorkflow(Workflow):
             pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
                                                         inputs, outputs, 
                                                         self)
+            print 'creating', comps, inputs, outputs
             
         #If any of our PA's contain drivers, then we may need to bookkeep
         #some additional edges that cross the boundary.
