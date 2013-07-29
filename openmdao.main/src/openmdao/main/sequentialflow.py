@@ -360,7 +360,6 @@ class SequentialWorkflow(Workflow):
         for comp in self.derivative_iter():
             name = comp.name
             applyJ(comp, inputs[name], outputs[name])
-            print name, inputs[name], outputs[name]
 
         # Each parameter adds an equation
         for edge in self._additional_edges:
@@ -607,7 +606,6 @@ class SequentialWorkflow(Workflow):
             pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
                                                         inputs, outputs, 
                                                         self)
-            print 'creating', comps, inputs, outputs
             
         #If any of our PA's contain drivers, then we may need to bookkeep
         #some additional edges that cross the boundary.

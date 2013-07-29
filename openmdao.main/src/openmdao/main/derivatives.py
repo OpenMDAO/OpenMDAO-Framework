@@ -219,7 +219,7 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-    print input_keys, output_keys, J
+    
     ibounds = {}
     nvar = 0
     for key in input_keys:
