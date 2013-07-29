@@ -375,6 +375,7 @@ class SequentialWorkflow(Workflow):
         # Poke results into the return vector
         result = zeros(len(arg))
         
+        # Reference back to the source for input-input connections.
         input_input_xref = {}
         edge_outs = [a for a, b in edges]
         for edge in edges:
@@ -389,16 +390,11 @@ class SequentialWorkflow(Workflow):
                 src = target
                 
             # Input-input connections are not in the jacobians. We need
-            # to add the derivative (which is 1.0).
+            # to add the derivative using out cross reference.
             elif src in self._input_outputs:
-                comp_name, dot, var_name = src.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
                 ref_edge = input_input_xref[src]
                 i3, i4 = self.bounds[ref_edge]
-                print result[i1:i2]
-                result[i1:i2] = arg[i3:i4]
+                result[i1:i2] = arg[i3:i4] + arg[i1:i2]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
@@ -679,7 +675,8 @@ class SequentialWorkflow(Workflow):
         
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = self._parent.get_parameters().keys()
+                inputs = ['%s.in0' % param.pcomp_name for param in \
+                          self._parent.get_parameters().values()]
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
@@ -708,6 +705,17 @@ class SequentialWorkflow(Workflow):
             pseudo.ffd_order = 0
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
+            
+            # Hack: parameter output edges aren't in the assy depgraph, so we 
+            # have to manually find and remove them.
+            if hasattr(self._parent, 'get_parameters'):
+                for param in self._parent.get_parameters().values():
+                    param_out = '%s.in0' % param.pcomp_name
+                    if param_out in inputs:
+                        pcomp = getattr(self.scope, param.pcomp_name)
+                        pset = set(pcomp.list_connections())
+                        self._hidden_edges = pset.union(self._hidden_edges)
+            
             self.derivative_iterset = [pseudo]
 
             # Allow for the rare case the user runs this manually, first, in
@@ -739,6 +747,7 @@ class SequentialWorkflow(Workflow):
             self._hidden_edges = set()
             
             # New edges for parameters
+            
             input_edges = [('@in', a) for a in inputs]
             additional_edges = set(input_edges)
             

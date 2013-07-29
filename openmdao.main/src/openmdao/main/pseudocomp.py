@@ -84,7 +84,7 @@ class PseudoComponent(object):
         self.name = _get_new_name()
         self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
-        self._valids = {}
+        self._valid_dict = {}
         self._parent = parent
         self._inputs = []
         if destexpr.text:
@@ -102,7 +102,7 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
-            self._valids[in_name] = True
+            self._valid_dict[in_name] = True
 
         refs = list(destexpr.refs())
         if refs:
@@ -121,7 +121,7 @@ class PseudoComponent(object):
             
         newmeta['out0'] = self._meta[_get_varname(refs[0])]
         self._meta = newmeta
-        self._valids['out0'] = False
+        self._valid_dict['out0'] = False
 
         if translate:
             xformed_src = transform_expression(srcexpr.text, self._inmap)
@@ -229,8 +229,8 @@ class PseudoComponent(object):
         if varnames is None:
             varnames = self._inputs
         for name in varnames:
-            self._valids[name] = False
-        self._valids['out0'] = False
+            self._valid_dict[name] = False
+        self._valid_dict['out0'] = False
 
     def connect(self, src, dest):
         for name in self._inputs:
@@ -238,7 +238,7 @@ class PseudoComponent(object):
         self._valid = False
 
     def run(self, ffd_order=0, case_id=''):
-        invalid_ins = [n for n in self._inputs if not self._valids[n]]
+        invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
         if invalid_ins:
             self.update_inputs(invalid_ins)
 
@@ -250,8 +250,8 @@ class PseudoComponent(object):
             else:
                 src = src.value
         self._destexpr.set(src)
-        for name in self._valids:
-            self._valids[name] = True
+        for name in self._valid_dict:
+            self._valid_dict[name] = True
 
     def update_inputs(self, inputs):
         self._parent.update_inputs(self.name, inputs)
@@ -265,7 +265,7 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
-        self._valids['out0'] = False
+        self._valid_dict['out0'] = False
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
@@ -290,10 +290,10 @@ class PseudoComponent(object):
         return None
 
     def get_valid(self, names):
-        return [self._valids[n] for n in names]
+        return [self._valid_dict[n] for n in names]
 
     def is_valid(self):
-        for k,v in self._valids.items():
+        for k,v in self._valid_dict.items():
             if not v:
                 return False
         return True
@@ -352,6 +352,10 @@ class ParamPseudoComponent(PseudoComponent):
 
         # use these to push values to targets when we run
         self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
+        
+        # Param pseudo-assembly has no validity, but when finite difference
+        # everything, it still needs to have this dictionary.
+        #self._valid_dict = {}
 
 
     def add_target(self, target):
@@ -396,7 +400,7 @@ class ParamPseudoComponent(PseudoComponent):
         self.set('in0', 
                  self.param._untransform(self.param._expreval.evaluate()))
 
-    def update_inputs(self):
+    def update_inputs(self, dummy):
         pass # param pseudocomp will never have inputs that are connected to anything
         
     def run(self, ffd_order=0, case_id=''):
