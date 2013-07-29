@@ -473,7 +473,7 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
-        print self.pa.name, self.J
+        
         return self.J
     
     def get_inputs(self, x):

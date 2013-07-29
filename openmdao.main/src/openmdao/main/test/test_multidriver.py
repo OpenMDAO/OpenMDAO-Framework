@@ -356,6 +356,65 @@ class MultiDriverTestCase(unittest.TestCase):
             '\n   driver\n      driver1\n         comp1\n         comp3\n'
             '         comp2\n         comp4\n')
         
+    def test_2_nested_drivers_same_assembly_extra_comp(self):
+        print "*** test_2_nested_drivers_same_assembly ***"
+        #
+        # Same as above, but one extra trailing component in outer
+        # workflow.
+        # 
+        # Optimal solution: x = 6.6667; y = -7.3333
+        self.top = set_as_top(Assembly())
+        top = self.top
+        # create the outer driver
+        outer_driver = top.add('driver', CONMINdriver())
+        
+        # create the inner driver
+        inner_driver = top.add('driver1', CONMINdriver())
+        
+        top.add('comp1', ExprComp(expr='x-3'))
+        top.add('comp2', ExprComp(expr='-3'))
+        top.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
+        top.add('comp4', ExprComp2(expr='x+y'))
+        top.add('comp5', ExprComp(expr='x'))
+        top.comp1.x = 50
+        top.comp3.y = -50
+        
+        # Hook stuff up
+        top.connect('comp1.f_x', 'comp3.x')
+        top.connect('comp3.f_xy', 'comp4.y')
+        top.connect('comp2.f_x', 'comp4.x')
+        top.connect('comp4.f_xy', 'comp5.x')
+        
+        # Driver process definition
+        outer_driver.workflow.add(['driver1', 'comp5'])
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        
+        inner_driver.itmax = 30
+        inner_driver.fdch = .000001
+        inner_driver.fdchm = .000001
+        inner_driver.add_objective('comp3.f_xy')
+        inner_driver.add_parameter('comp3.y', low=-50, high=50)
+        
+        outer_driver.itmax = 30
+        outer_driver.fdch = .000001
+        outer_driver.fdchm = .000001
+        outer_driver.add_objective('comp5.f_x')
+        outer_driver.add_parameter('comp1.x', low=-50, high=50)
+        
+        self.top.run()
+
+        # Notes: CONMIN does not quite reach the anlytical minimum
+        # In fact, it only gets to about 2 places of accuracy.
+        # This is also the case for a single 2-var problem.
+        self.assertAlmostEqual(top.comp1.x, 6.66667, places=4)
+        self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
+        
+        # test dumping of iteration tree
+        s = dump_iteration_tree(self.top)
+        self.assertEqual(s, 
+            '\n   driver\n      driver1\n         comp1\n         comp3\n'
+            '         comp2\n         comp4\n      comp5\n')
+        
     def test_2drivers_same_iterset(self):
         #
         #  D1--->
