@@ -508,14 +508,15 @@ class FiniteDifference(object):
                 idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] += val
-                #self.scope.set(src, old_val, force=True)
+                
+                # In-place array editing doesn't activate callback, so we
+                # must do it manually.
                 comp._input_updated(var_name.split('[')[0])
                 
             else:
                 self.scope.set(src, old_val+val, force=True)
         else:
             old_val[index] += val
-            #self.scope.set(src, old_val, force=True)
             
             # In-place array editing doesn't activate callback, so we must
             # do it manually.
