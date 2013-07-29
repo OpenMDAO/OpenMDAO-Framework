@@ -97,11 +97,13 @@ def calc_gradient(wflow, inputs, outputs):
     
     # Locate the output keys:
     obounds = {}
+    interior = wflow.get_interior_edges()
+    
     # Not necessarily efficient, but outputs can be anywhere
-    for item in outputs:
-        for edge in wflow.get_interior_edges():
-            if item == edge[0]:
-                obounds[item] = wflow.bounds[edge]
+    for output in outputs:
+        for edge in interior:
+            if output == edge[0]:
+                obounds[output] = wflow.bounds[edge]
                 break
             
     # Each comp calculates its own derivatives at the current

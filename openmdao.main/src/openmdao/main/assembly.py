@@ -653,7 +653,7 @@ class Assembly(Component):
                 else:
                     getattr(self, cname).update_outputs(vnames)
 
-        # these connections all come from the depgraph, so they will conly
+        # these connections all come from the depgraph, so they will only
         # contain simple expressions, i.e. only one variable ref (may be
         # an array index).
         for u,v in conns:

@@ -8,7 +8,8 @@ import math
 import ast
 import __builtin__
 
-from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
+from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
+                                    transform_expression, ExprPrinter, print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
@@ -462,21 +463,24 @@ class ExprEvaluator(object):
                 raise KeyError("Can't find '%s' in current scope" % name)
         return True
         
-    def _pre_parse(self):
-        try:
-            root = ast.parse(self.text, mode='eval')
-            if not isinstance(root.body, (ast.Attribute, ast.Name, ast.Subscript)):
+    def _pre_parse(self, root=None):
+        if root is None:
+            try:
+                root = ast.parse(self.text, mode='eval')
+            except SyntaxError:
+                # might be an assignment, try mode='exec'
+                root = ast.parse(self.text, mode='exec')
                 self._allow_set = False
-            else:
-                self._allow_set = True
-        except SyntaxError:
-            # might be an assignment, try mode='exec'
-            root = ast.parse(self.text, mode='exec')
+                return root
+        if not isinstance(root.body, 
+                          (ast.Attribute, ast.Name, ast.Subscript)):
             self._allow_set = False
+        else:
+            self._allow_set = True
         return root
         
-    def _parse_get(self):
-        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse())
+    def _parse_get(self, root=None):
+        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse(root))
         
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
@@ -491,10 +495,12 @@ class ExprEvaluator(object):
         code = compile(assign_ast,'<string>','exec')
         return (assign_ast, code)
     
-    def _parse(self):
+    def _parse(self, root=None):
         self.var_names = set()
+        if root is not None:
+            self.text = print_node(root)
         try:
-            new_ast, self._code = self._parse_get()
+            new_ast, self._code = self._parse_get(root)
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s" % (self.text, str(err)))
         

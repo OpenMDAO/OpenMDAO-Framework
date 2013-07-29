@@ -8,7 +8,7 @@ import operator
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -37,10 +37,6 @@ def _parse_constraint(expr_string):
     msg = "Constraints require an explicit comparator (=, <, >, <=, or >=)"
     raise ValueError( msg )
     
-def _remove_spaces(s):
-    """ whitespace removal """
-    return s.translate(None, ' \n\t\r')
-
 def _get_scope(obj, scope=None):
     if scope is None:
         try:
@@ -130,7 +126,7 @@ class Constraint(object):
     def evaluate(self, scope):
         """Returns the value of the constraint."""
         pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp._valid:
+        if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
         return pcomp.out0
         
@@ -243,6 +239,12 @@ class _HasConstraintsBase(object):
         for key, val in self._constraints.items():
             dct[key] = val.copy()
         return dct
+
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return [c.pcomp_name for c in self._constraints.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)
@@ -638,6 +640,12 @@ class HasConstraints(object):
         lst.extend(self._eq.list_constraints())
         return lst
     
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return self._eq.list_pseudocomps() + self._ineq.list_pseudocomps()
+
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a constraint.

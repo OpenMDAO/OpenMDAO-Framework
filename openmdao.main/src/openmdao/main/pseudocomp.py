@@ -13,6 +13,9 @@ from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 _namelock = RLock()
 _count = 0
 
+def _remove_spaces(s):
+    return s.translate(None, ' \n\t\r')
+
 def _get_new_name():
     global _count
     with _namelock:
@@ -26,20 +29,31 @@ def _get_varname(name):
         return name
     return name[:idx]
 
-def unit_transform(node, in_units, out_units):
-    """Transforms an expression into expr*scaler+adder."""
+def do_nothing_xform(node):
+    return node
+
+def scaler_adder_xform(node, scaler, adder):
+    """Returns an ast for the form (node+adder)*scaler"""
+    if adder != 0.0:
+        newnode = ast.BinOp(node, ast.Add(), ast.Num(adder))
+    else:
+        newnode = node
+    if scaler != 1.0: # do the add and the mult
+        newnode = ast.BinOp(newnode, ast.Mult(), ast.Num(scaler))
+    return ast.copy_location(newnode, node)
+
+def unit_xform(node, in_units, out_units):
+    """Transforms an ast into expr*scaler+adder where scaler
+    and adder are from units conversion.
+    """
     inpq = PhysicalQuantity(1.0, in_units)
     outpq = PhysicalQuantity(1.0, out_units)
     try:
         scaler, adder = inpq.unit.conversion_tuple_to(outpq.unit)
     except TypeError:
         raise TypeError("units '%s' are incompatible with assigning units of '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
-        
-    newnode = ast.BinOp(node, ast.Mult(), ast.Num(scaler))
-    if adder != 0.0: # do the multiply and the add
-        newnode = ast.BinOp(newnode, ast.Add(), 
-                            ast.Num(scaler*adder))
-    return ast.copy_location(newnode, node)
+    return scaler_adder_xform(node, scaler, adder)
+
 
 class DummyExpr(object):
     def __init__(self):
@@ -57,21 +71,26 @@ def _invert_dict(dct):
         out[v] = k
     return out
 
+
 class PseudoComponent(object):
     """A 'fake' component that is constructed from an ExprEvaluator.
     This fake component can be added to a dependency graph and executed
     along with 'real' components.
     """
 
-    def __init__(self, parent, srcexpr, destexpr=None):
+    def __init__(self, parent, srcexpr, destexpr=None, translate=True):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
-        self._mapping = {}
+        self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
-        self._valid = False
+        self._valids = {}
         self._parent = parent
         self._inputs = []
+        if destexpr.text:
+            self._outdests = [destexpr.text]
+        else:
+            self._outdests = []
 
         varmap = {}
         for name, meta in srcexpr.get_metadata():
@@ -80,11 +99,10 @@ class PseudoComponent(object):
         for i,ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
-            self._mapping[ref] = in_name
+            self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
-
-        self._outdest = destexpr.text
+            self._valids[in_name] = True
 
         refs = list(destexpr.refs())
         if refs:
@@ -103,10 +121,15 @@ class PseudoComponent(object):
             
         newmeta['out0'] = self._meta[_get_varname(refs[0])]
         self._meta = newmeta
+        self._valids['out0'] = False
 
-        xformed_src = transform_expression(srcexpr.text, self._mapping)
-        xformed_dest = transform_expression(destexpr.text, { destexpr.text: 'out0'})
-
+        if translate:
+            xformed_src = transform_expression(srcexpr.text, self._inmap)
+        else:
+            xformed_src = srcexpr.text
+        xformed_dest = transform_expression(destexpr.text, 
+                                           { destexpr.text: 'out0'})
+ 
         out_units = self._meta['out0'].get('units')
         if out_units is not None:
             # evaluate the src expression using UnitsOnlyPQ objects
@@ -126,7 +149,7 @@ class PseudoComponent(object):
 
             unitnode = ast.parse(xformed_src)
             try:
-                unitxform = unit_transform(unitnode, self._srcunits, out_units)
+                unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
                 raise TypeError("Can't connect '%s' to '%s': %s" % (srcexpr.text, 
                                                                     destexpr.text, err))
@@ -136,14 +159,21 @@ class PseudoComponent(object):
             self._srcunits = None
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
-        self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self)
+        self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self,
+                                                is_dest=True)
 
         # this is just the equation string (for debugging)
         if destexpr and destexpr.text:
             out = destexpr.text
         else:
             out = 'out0'
-        self._eqn = "%s = %s" % (out, transform_expression(self._srcexpr.text, _invert_dict(self._mapping)))
+        if translate:
+            src = transform_expression(self._srcexpr.text, 
+                                       _invert_dict(self._inmap))
+        else:
+            src = self._srcexpr.text
+
+        self._eqn = "%s = %s" % (out, src)
 
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
@@ -152,20 +182,33 @@ class PseudoComponent(object):
         return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
 
     def list_connections(self, is_hidden=False):
-        """list all of the inputs and outputs of this comp. If is_hidden
-        is True, list the connections that a user would see if this
-        PseudoComponent is hidden.
+        """list all of the inputs and output connections of this PseudoComponent. 
+        If is_hidden is True, list the connections that a user would see 
+        if this PseudoComponent is hidden.
         """
         if is_hidden:
-            if self._outdest:
-                return [(src, self._outdest) for src in self._mapping.keys()]
+            if self._outdests:
+                return [(src, self._outdests[0]) 
+                           for src in self._inmap.keys() if src]
             else:
                 return []
         else:
             conns = [(src, '.'.join([self.name, dest])) 
-                         for src, dest in self._mapping.items()]
-            if self._outdest:
-                conns.append(('.'.join([self.name, 'out0']), self._outdest))
+                         for src, dest in self._inmap.items()]
+            if self._outdests:
+                conns.extend([('.'.join([self.name, 'out0']), dest) 
+                                           for dest in self._outdests])
+        return conns
+
+    def list_comp_connections(self):
+        """Return a list of connections between our pseudocomp and
+        parent components of our sources/destinations.
+        """
+        conns = [(src.split('.',1)[0], self.name) 
+                     for src, dest in self._inmap.items()]
+        if self._outdests:
+            conns.extend([(self.name, dest.split('.',1)[0]) 
+                                    for dest in self._outdests])
         return conns
 
     def make_connections(self):
@@ -183,14 +226,21 @@ class PseudoComponent(object):
             self._parent.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
-        self._valid = False
+        if varnames is None:
+            varnames = self._inputs
+        for name in varnames:
+            self._valids[name] = False
+        self._valids['out0'] = False
 
     def connect(self, src, dest):
+        for name in self._inputs:
+            self._valid[name] = False
         self._valid = False
 
     def run(self, ffd_order=0, case_id=''):
-        if not self._valid:
-            self._parent.update_inputs(self.name, None)
+        invalid_ins = [n for n in self._inputs if not self._valids[n]]
+        if invalid_ins:
+            self.update_inputs(invalid_ins)
 
         src = self._srcexpr.evaluate()
         if isinstance(src, PhysicalQuantity):
@@ -200,8 +250,12 @@ class PseudoComponent(object):
             else:
                 src = src.value
         self._destexpr.set(src)
-        self._valid = True
+        for name in self._valids:
+            self._valids[name] = True
 
+    def update_inputs(self, inputs):
+        self._parent.update_inputs(self.name, inputs)
+        
     def update_outputs(self, names):
         self.run()
 
@@ -211,6 +265,7 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
+        self._valids['out0'] = False
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
@@ -227,21 +282,21 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
-        """Retrieve the metadata associated with the trait found using
-        traitpath.  If metaname is None, return the entire metadata dictionary
-        for the specified trait. Otherwise, just return the specified piece
-        of metadata.  If the specified piece of metadata is not part of
-        the trait, None is returned.
+        """PseudoComponents have not metadata, so just return
+        an empty dict or None.
         """
         if metaname is None:
             return {}
         return None
 
     def get_valid(self, names):
-        return [self._valid]*len(names)
+        return [self._valids[n] for n in names]
 
     def is_valid(self):
-        return self._valid
+        for k,v in self._valids.items():
+            if not v:
+                return False
+        return True
 
     def set_itername(self, itername):
         self._itername = itername
@@ -261,3 +316,91 @@ class PseudoComponent(object):
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J
+
+
+class ParamPseudoComponent(PseudoComponent):
+    """PseudoComponent used to apply scalers/adders to a parameter.
+    This type of PseudoComponent has no input connections and one or
+    more output connections.
+    """
+
+    def __init__(self, param):
+        parent = param._expreval.scope
+        target = param._expreval.text
+        scaler = param.scaler
+        adder  = param.adder
+        self.param = param
+        self._outexprs = []
+
+        if scaler == 1.0 and adder == 0.0:
+            src = 'in0'
+        elif scaler == 1.0:
+            src = 'in0+%.15g' % adder
+        elif adder == 0.0:
+            src = 'in0*%.15g' % scaler
+        else:
+            src = '(in0+%.15g)*%.15g' % (adder, scaler)
+
+        srcexpr = ConnectedExprEvaluator(src, scope=self)
+        destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
+        super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
+                                                   destexpr, translate=False)
+        if param.start is not None:
+            self.in0 = param.start
+        else:
+            self.in0 = param._untransform(destexpr.evaluate(scope=parent))
+
+        # use these to push values to targets when we run
+        self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
+
+
+    def add_target(self, target):
+        self._outdests.append(target)
+        self._outexprs.append(ConnectedExprEvaluator(target, self._parent))
+
+    def list_connections(self, is_hidden=False):
+        """The only connections for a ParamPseudoComponent are output connections."""
+
+        if is_hidden:
+            return []
+        else:
+            return [('.'.join([self.name, 'out0']), dest) 
+                                   for dest in self._outdests]
+
+    def _update_callbacks(self, remove):
+        for path in self._outdests:
+            parts = path.split('.', 1)
+            if len(parts) == 1:
+                comp = self._parent
+                vname = path
+            else:
+                comp = getattr(self._parent, parts[0])
+                vname = parts[1]
+            comp.on_trait_change(self.target_changedCB, vname.split('[',1)[0],
+                                 remove=remove)        
+
+    def make_connections(self, workflow=None):
+        """Set up the target_changed callback.
+        """
+        self._update_callbacks(remove=False)
+
+    def remove_connections(self, workflow=None):
+        """Remove the target_changed callback.
+        """
+        self._update_callbacks(remove=True)
+
+    def target_changedCB(self, obj, name, old, new):
+        """We need to update the pseudocomp input whenever values are set
+        directly into the target.
+        """
+        self.set('in0', 
+                 self.param._untransform(self.param._expreval.evaluate()))
+
+    def update_inputs(self):
+        pass # param pseudocomp will never have inputs that are connected to anything
+        
+    def run(self, ffd_order=0, case_id=''):
+        super(ParamPseudoComponent, self).run(ffd_order, case_id)
+        # now push out out0 value out to the target(s)
+        for expr in self._outexprs:
+            expr.set(self.out0)

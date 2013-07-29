@@ -194,7 +194,8 @@ class SLSQPdriver(Driver):
         
         Note: m, me, la, n, f, g, df, and dg are unused inputs."""
         
-        inputs = self.get_parameters().keys()
+        inputs = ["%s.in0" % item.pcomp_name for item in \
+                  self.get_parameters().values()]
         obj = ["%s.out0" % item.pcomp_name for item in \
                self.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \
