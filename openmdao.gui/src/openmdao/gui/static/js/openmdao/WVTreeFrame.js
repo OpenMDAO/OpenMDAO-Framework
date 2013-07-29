@@ -15,191 +15,177 @@ openmdao.WVTreeFrame = function(wv, id) {
 
     // initialize private variables
     var _self = this,
-        _elem = jQuery('#'+id);
+        _elem = jQuery('#'+id),
+        _edges_tree = jQuery('<div>')
+            .appendTo(_elem),
+        _faces_tree =  jQuery('<div>')
+            .appendTo(_elem);
 
-    function isControlActive(control) {
-        return control.hasClass("active");
+    function isAttributeSet(attrs, attr) {
+        return (attrs & attr) !== 0;
     }
 
-    function isAttributeSet(setValue, currentValue) {
-        return (currentValue & setValue) >= 1;
-    }
+    function setAttribute(gprim_name, attr, enabled) {
+        var gprim = wv.sceneGraph[gprim_name];
 
-    function setAttribute(attributes, mask, value) {
-        return (attributes & (~mask)) | (value & mask);
-    }
-
-    function getNode(id) {
-        return jQuery.jstree._reference("#tree")._get_node("#" + id);
-    }
-
-    function getNodeChildren(node) {
-        return jQuery.jstree._reference("#tree")._get_children(node);
-    }
-
-    function gprimToId(gprim) {
-        return gprim.replace(/ /g, "_");
-    }
-
-    function setNodeData(node, dataKey, data) {
-        node.data(dataKey, data);
-    }
-
-    function getNodeData(node, dataKey) {
-        return node.data(dataKey);
-    }
-
-    function getNodeControl(node, controlName) {
-        return jQuery("." + controlName, node).first();
-    }
-
-    function setNodeControl(node, control, activate) {
-        if (activate) {
-            control.addClass("active");
+        if (enabled) {
+            gprim.attrs |= attr;
         }
         else {
-            control.removeClass("active");
-        }
-    }
-
-    function getDisplayControl(display, isActive) {
-        isActive = isActive ? "active" : "";
-        return " \
-                <button type='button' class='btn btn-primary btn-small " + display + " " + isActive + "'> \
-                    <span>" + display + "</span> \
-                </button>";
-    }
-
-    function getDisplayControls(attrs) {
-        return jQuery("<div class='btn-group' data-toggle='buttons-checkbox'></div>")
-                    .append(getDisplayControl("viz", isAttributeSet(attrs, wv.plotAttrs.ON)),
-                            getDisplayControl("grd", isAttributeSet(attrs, wv.plotAttrs.LINES | wv.plotAttrs.POINTS)),
-                            getDisplayControl("trn", isAttributeSet(attrs, wv.plotAttrs.TRANSPARENT)),
-                            getDisplayControl("ori", isAttributeSet(attrs, wv.plotAttrs.ORIENTATION)));
-    }
-
-    function handleControlClick(attribute, mask) {
-        console.log('handleControlClick, attribute=', attribute, 'mask=', mask);
-
-        function updateTree(root, flag) {
-            var control = getNodeControl(root, attribute);
-            var activateControl = !isControlActive(control);
-            var children = getNodeChildren(root);
-
-            var data = undefined;
-            var dataKey = "gprim";
-
-            if (children.length > 0) {
-                dataKey = "attrs";
-                data = getNodeData(root, dataKey);
-
-                data = setAttribute(getNodeData(root, dataKey), mask, flag);
-                setNodeData(root, dataKey, data);
-
-                children.each(function(index, child) {
-                    child = jQuery(child);
-                    setNodeControl(child, getNodeControl(child, attribute), activateControl);
-                    updateTree(child, flag);
-                });
-            }
-            else {
-                data = getNodeData(root, dataKey);
-                data.attrs = setAttribute(data.attrs, mask, flag);
-                setNodeData(root, dataKey, data);
-            }
+            gprim.attrs &= ~attr;
         }
 
-        return function(e) {
-            var root = jQuery(this).is("button") ? jQuery(this).parent().parent() : jQuery(this).parent();
-
-            console.log(this, 'button?', jQuery(this).is("button"), 'root:', root, 'data:', root.data());
-
-            var data = getNodeData(root, "gprim");
-
-            data =  data ? data.attrs : getNodeData(root, "attrs");
-
-            var flag = (data & mask) > 0 ? 0 : mask;
-
-            console.log('handleControlClick, attribute=', attribute, 'mask=', mask, 'data=', data, 'flag=', flag);
-
-            updateTree(root, flag);
-            wv.sceneUpd = 1;
-        };
+        wv.sceneUpd = 1;
     }
-
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     this.wvUpdateUI = function() {
-        // if the tree has not been created but the scene graph (possibly) exists...
-        // if the scene graph and Parameters have been updated, (re-)build the Tree
+        // if the scene graph has been updated, (re-)build the Tree
         if (wv.sgUpdate == 1) {
-            console.log('WVTreeFrame.wvUpdateUI, wv.sgUpdate:', wv.sgUpdate);
 
             if (wv.sceneGraph === undefined) {
                 alert("wv.sceneGraph is undefined --- but we need it");
             }
 
-            var nodes = [[],[]];
-            var parentIndex = 0;
-            var node = undefined;
+            // create tree data structures for the edge and face primitives
+            // in the scenegraph. the attributes for each primitive in the tree
+            // are three GPtype-specific checkboxes for toggling visualization
+            // options for that primitive
+            var gprim,
+                gprim_name,
+                edges = [],
+                faces = [],
+                template = '<input type="checkbox" name="NAME" value="VALUE" CHECKED>';
 
-            console.log('wv:', wv);
-
-            if (_elem.find("#tree").length === 0) {
-                for(var gprim in wv.sceneGraph) {
-                    parentIndex = (wv.sceneGraph[gprim].GPtype === 1) ? 0 : 1;
-
-                    node = jQuery("<li id='" + gprimToId(gprim) + "'><a href='#'>" + gprim + "</a></li>");
-                    node.data("gprim", wv.sceneGraph[gprim]);
-                    node.append(getDisplayControls(wv.sceneGraph[gprim].attrs));
-
-                    nodes[parentIndex].push(node);
+            for (gprim_name in wv.sceneGraph) {
+                gprim = wv.sceneGraph[gprim_name];
+                if (gprim.GPtype === 1) {
+                    edges.push({
+                        data: gprim_name,
+                        attr: {
+                            viz: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   'viz')
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.ON) ? 'checked="yes"' : ''),
+                            grd: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   wv.plotAttrs.LINES)
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.LINES) ? 'checked="yes"' : ''),
+                            ori: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   wv.plotAttrs.ORIENTATION)
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.ORIENTATION) ? 'checked="yes"' : ''),
+                        },
+                        children: []
+                    })
                 }
-
-                console.log('nodes:', nodes);
-
-                var edges = jQuery("<ul></ul>");
-                var faces = jQuery("<ul></ul>");
-                var tree  = jQuery("<ul></ul>");
-
-                edges.append(nodes[0]);
-                faces.append(nodes[1]);
-
-                edges = jQuery("<li id='Edges'><a href='#'>Edges</a></li>").append(edges);
-                faces = jQuery("<li id='Faces'><a href='#'>Faces</li>").append(faces);
-
-                jQuery("ul", edges).before(getDisplayControls(1));
-                jQuery("ul", faces).before(getDisplayControls(9));
-
-                edges.data("attrs", 1);
-                faces.data("attrs", 9);
-
-                tree.append(edges, faces);
-
-                var treeDiv = jQuery("<div id='tree'></div>")
-                    .appendTo(_elem);
-
-                treeDiv.jstree({
-                    "plugins" : ["html_data", "themes", "ui", "sort"],
-
-                    "themes" : {
-                        "theme" : "openmdao",
-                    },
-
-                    "html_data" : {
-                        "data" : tree.html(),
-                    },
-                })
-                .bind("loaded.jstree", function(event, data) {
-                    treeDiv.find(".viz").click(handleControlClick("viz", wv.plotAttrs.ON));
-                    treeDiv.find(".grd").click(handleControlClick("grd", wv.plotAttrs.LINES | wv.plotAttrs.POINTS));
-                    treeDiv.find(".trn").click(handleControlClick("trn", wv.plotAttrs.TRANSPARENT));
-                    treeDiv.find(".ori").click(handleControlClick("ori", wv.plotAttrs.ORIENTATION));
-                });
+                else if (gprim.GPtype === 2) {
+                    faces.push({
+                        data: gprim_name,
+                        attr: {
+                            viz: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   wv.plotAttrs.ON)
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.ON) ? 'checked="yes"' : ''),
+                            grd: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   wv.plotAttrs.LINES)
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.LINES) ? 'checked="yes"' : ''),
+                            trn: template
+                                    .replace('NAME',    gprim_name)
+                                    .replace('VALUE',   wv.plotAttrs.TRANSPARENT)
+                                    .replace('CHECKED', isAttributeSet(gprim.attrs, wv.plotAttrs.TRANSPARENT) ? 'checked="yes"' : ''),
+                        },
+                        children: []
+                    })
+                }
+                else {
+                    console.log('ERROR: unknown GPtype for', gprim_name, '=', gprim.GPtype);
+                }
             }
+
+            // create the tree for the edge primitives
+            _edges_tree.jstree({
+                plugins: ["themes", "json_data", "grid"],
+                themes : { "theme" : "openmdao" },
+                json_data: {data: [{
+                    data: 'Edges',
+                    attr: {
+                        viz: template
+                                .replace('NAME',    'Edges')
+                                .replace('VALUE',   'viz')
+                                .replace('CHECKED', 'no'),
+                        grd: template
+                                .replace('NAME',    'Edges')
+                                .replace('VALUE',   'grd')
+                                .replace('CHECKED', 'no'),
+                        ori: template
+                                .replace('NAME',    'Edges')
+                                .replace('VALUE',   'ori')
+                                .replace('CHECKED', 'no')
+                    },
+                    children: edges
+                }]},
+                grid: {
+                    columns: [
+                        {width: 160, header: "Edges", title:"_DATA_"},
+                        {cellClass: "col1", value: "viz", width: 30, header: "Viz", title: "Visible"},
+                        {cellClass: "col2", value: "grd", width: 30, header: "Grd", title: "Grid"},
+                        {cellClass: "col3", value: "ori", width: 30, header: "Ori", title: "Orientation"}
+                    ],
+                    resizable:true
+                }
+            })
+            .bind("loaded.jstree", function(event, data) {
+                _edges_tree.click(function(e) {
+                    if (jQuery(e.target).is('input:checkbox')) {
+                        setAttribute(e.target.name, Number(e.target.value), e.target.checked);
+                    }
+                });
+            });
+
+            // create the tree for the edge primitives
+            _faces_tree.jstree({
+                plugins: ["themes", "json_data", "grid"],
+                themes : { "theme" : "openmdao" },
+                json_data: {data: [{
+                    data: 'Faces',
+                    attr: {
+                        viz: template
+                                .replace('NAME',    'Faces')
+                                .replace('VALUE',   'viz')
+                                .replace('CHECKED', 'no'),
+                        grd: template
+                                .replace('NAME',    'Faces')
+                                .replace('VALUE',   'grd')
+                                .replace('CHECKED', 'no'),
+                        trn: template
+                                .replace('NAME',    'Faces')
+                                .replace('VALUE',   'trn')
+                                .replace('CHECKED', 'no')
+                    },
+                    children: faces
+                }]},
+                grid: {
+                    columns: [
+                        {width: 160, header: "Faces", title:"_DATA_"},
+                        {cellClass: "col1", value: "viz", width: 30, header: "Viz", title: "Visible"},
+                        {cellClass: "col2", value: "grd", width: 30, header: "Grd", title: "Grid"},
+                        {cellClass: "col3", value: "trn", width: 30, header: "Trn", title: "Transparent"}
+                    ],
+                    resizable:true
+                }
+            })
+            .bind("loaded.jstree", function(event, data) {
+                _faces_tree.click(function(e) {
+                    if (jQuery(e.target).is('input:checkbox')) {
+                        setAttribute(e.target.name, Number(e.target.value), e.target.checked);
+                    }
+                });
+            });
         }
-    };
+    }
 }

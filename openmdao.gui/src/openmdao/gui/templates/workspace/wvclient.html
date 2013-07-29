@@ -12,6 +12,7 @@
     <script type="text/javascript" src="/static/js/jquery.layout-latest.js"     ></script>
     <script type="text/javascript" src="/static/js/jquery.jstree.js"            ></script>
     <script>jQuery.jstree._themes = "/static/css/jstree-themes/";                </script>
+    <script type="text/javascript" src="/static/js/jquery.jstreegrid.js"        ></script>
 
     <!--  WebViewer stuff  -->
     <script> var wv = {};           // global namespace for WebViewer            </script>
@@ -45,7 +46,7 @@
             border:1px solid #222;
         }
 
-        #tree {
+        #treeframe {
             width: 100%;
             height: 100%;
             margin: 0px;
@@ -81,7 +82,7 @@
             },
             west: {
                 paneSelector: '#leftframe',
-                size: 250
+                size: 280
             }
         });
 
@@ -110,7 +111,7 @@
         };
 
         // Note: wv requires the canvas name to be "WebViewer"
-        var tf = new openmdao.WVTreeFrame(wv, "leftframe");
+        var tf = new openmdao.WVTreeFrame(wv, "treeframe");
         var cf = new openmdao.WVCanvasFrame(wv, "WebViewer", "wv_status");
 
         // wv requires these functions to be in the global namespace
@@ -135,7 +136,10 @@
 
 <body oncontextmenu="return false;">
     <div class="row-fluid">
-        <div id='leftframe' class='ui-layout-west'></div>
+        <div id='leftframe' class='ui-layout-west'>
+            <div id='treeframe'>
+            </div>
+        </div>
         <div id='riteframe' class='ui-layout-center'>
             <a id="modal_button" href="#myModal" role="button" class="btn btn-small" data-toggle="modal">
                 <i class="icon-info-sign"></i>
