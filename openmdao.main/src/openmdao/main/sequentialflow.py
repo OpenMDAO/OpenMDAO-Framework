@@ -565,8 +565,11 @@ class SequentialWorkflow(Workflow):
                     
                     # Hack: parameters not in directional graph
                     if edge[0] in param_list:
+                        var_edge = set()
                         pcomp = getattr(self.scope, edge[0])
-                        var_edge = set(pcomp.list_connections())
+                        for pcomp_edge in pcomp.list_connections():
+                            if pcomp_edge[1].split('.')[0] == edge[1]:
+                                var_edge.add(pcomp_edge)
                     else:
                         var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     inputs = inputs.union(var_edge)
