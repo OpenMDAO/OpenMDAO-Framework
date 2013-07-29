@@ -503,8 +503,11 @@ class SequentialWorkflow(Workflow):
         """
         
         # Hack: parameters not in directional graph
-        param_list = [param.pcomp_name for param in \
-                      self._parent.get_parameters().values()]
+        if hasattr(self._parent, 'get_parameters'):
+            param_list = [param.pcomp_name for param in \
+                          self._parent.get_parameters().values()]
+        else:
+            param_list = []
         
         nondiff = []
         for comp in self.get_components():
