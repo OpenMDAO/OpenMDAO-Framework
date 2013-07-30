@@ -7,8 +7,8 @@ __all__ = ["Variable", "gui_excludes"]
 import re
 from keyword import iskeyword
 
-from enthought.traits.api import TraitType
-from enthought.traits.trait_handlers import NoDefaultSpecified
+from traits.api import TraitType
+from traits.trait_handlers import NoDefaultSpecified
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.expreval import _expr_dict
 

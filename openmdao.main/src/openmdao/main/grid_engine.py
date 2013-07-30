@@ -417,7 +417,8 @@ class GridEngineServer(ObjServer):
             elif key == 'email_on_terminated':
                 email_events += 'e'
             elif key == 'job_name':
-                cmd.extend(('-N', self._jobname(value)))
+                if value:
+                    cmd.extend(('-N', self._jobname(value)))
             elif key == 'input_path':
                 cmd.extend(('-i', self._fix_path(value)))
                 inp = value

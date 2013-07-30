@@ -21,8 +21,8 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import inner
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.trait_base import not_event
-from enthought.traits.api import Property
+from traits.trait_base import not_event
+from traits.api import Property
 
 from openmdao.main.container import Container
 from openmdao.main.derivatives import Derivatives, \
@@ -126,7 +126,7 @@ __attributes__ = '__attributes__'
 
 
 class Component(Container):
-    """This is the base class for all objects containing Traits that are \
+    """This is the base class for all objects containing Traits that are
     accessible to the OpenMDAO framework and are "runnable."
     """
 
@@ -165,13 +165,14 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-        # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
-        # and outputs are invalid)
+        # contains validity flag for each io Trait (inputs are valid since
+        # they're not connected yet, and outputs are invalid)
         self._valid_dict = dict([(name, t.iotype == 'in')
             for name, t in self.class_traits().items() if t.iotype])
 
-        # dependency graph between us and our boundaries (bookkeeps connections between our
-        # variables and external ones).  This replaces self._depgraph from Container.
+        # dependency graph between us and our boundaries (bookkeeps connections
+        # between our variables and external ones).
+        # This replaces self._depgraph from Container.
         self._depgraph = DependencyGraph()
 
         # Components with input CaseIterators will be forced to execute whenever run() is
@@ -296,8 +297,8 @@ class Component(Container):
 
         Do not override this function.
 
-        This function calls check_config(), which may be overridden by inheriting
-        classes to perform more specific configuration checks.
+        This function calls check_config(), which may be overridden by
+        inheriting classes to perform more specific configuration checks.
         """
         if self._call_check_config:
             self.check_config()
@@ -519,8 +520,9 @@ class Component(Container):
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
-        """Run this object. This should include fetching input variables (if necessary),
-        executing, and updating output variables. Do not override this function.
+        """Run this object. This should include fetching input variables
+        (if necessary), executing, and updating output variables.
+        Do not override this function.
 
         force: bool
             If True, force component to execute even if inputs have not
@@ -721,8 +723,10 @@ class Component(Container):
                 counts = self.parent.exec_counts(srccomps)
                 for count, tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
-                        self._call_execute = True  # to avoid making this same check unnecessarily later
-                        # update the count information since we've got it, to avoid making another call
+                        self._call_execute = True  # to avoid making this same
+                        # check unnecessarily later, update the count
+                        # information since we've got it, to avoid making
+                        # another call
                         for i, tup in enumerate(self._expr_sources):
                             self._expr_sources[i] = (tup[0], count)
                         return False
@@ -760,7 +764,8 @@ class Component(Container):
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
             self._input_names = list(nset)
-        self._input_names = [name_ for name_ in self._input_names if "[" not in name_]
+        self._input_names = [name_ for name_ in self._input_names
+                                             if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -768,7 +773,8 @@ class Component(Container):
             elif connected is True:
                 return self._connected_inputs
             else:  # connected is False
-                return [n for n in self._input_names if n not in self._connected_inputs]
+                return [n for n in self._input_names
+                                if n not in self._connected_inputs]
 
         valids = self._valid_dict
         ret = self._input_names
@@ -797,7 +803,8 @@ class Component(Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
-        self._output_names = [name_ for name_ in self._output_names if "[" not in name_]
+        self._output_names = [name_ for name_ in self._output_names
+                                              if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -805,7 +812,8 @@ class Component(Container):
             elif connected is True:
                 return self._connected_outputs
             else:  # connected is False
-                return [n for n in self._output_names if n not in self._connected_outputs]
+                return [n for n in self._output_names
+                                if n not in self._connected_outputs]
 
         valids = self._valid_dict
         ret = self._output_names
@@ -910,8 +918,8 @@ class Component(Container):
                         break
                 else:  # current tname wasn't matched to anything in self._delegates_
                     if hasattr(tdel, '_item_count') and tdel._item_count() > 0:
-                        self.raise_exception("target delegate '%s' has no match" % tname,
-                                             RuntimeError)
+                        self.raise_exception("target delegate '%s' has no match"
+                                             % tname, RuntimeError)
 
             for sname, tdel in matches.items():
                 delegate = self._delegates_[sname]
@@ -960,8 +968,9 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def get_expr_sources(self):
-        """Return a list of tuples containing the names of all upstream components that are
-        referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
+        """Return a list of tuples containing the names of all upstream
+        components that are referenced in any of our ExprEvaluators, along with
+        an initial exec_count of 0.
         """
         if self._expr_sources is None:
             self._expr_sources = [(u, 0)
@@ -990,8 +999,8 @@ class Component(Container):
         path = self.directory
         if not isabs(path):
             if self._call_cpath_updated:
-                self.raise_exception("can't call get_abs_directory before hierarchy is defined",
-                                     RuntimeError)
+                self.raise_exception("can't call get_abs_directory before"
+                                     " hierarchy is defined", RuntimeError)
             if self.parent is not None and is_instance(self.parent, Component):
                 parent_dir = self.parent.get_abs_directory()
             else:
@@ -1022,8 +1031,8 @@ class Component(Container):
         try:
             newdir = self._dir_stack.pop()
         except IndexError:
-            self.raise_exception('Called pop_dir() with nothing on the dir stack',
-                                 IndexError)
+            self.raise_exception('Called pop_dir() with nothing on the dir'
+                                 ' stack', IndexError)
         os.chdir(newdir)
 
     def checkpoint(self, outstream, fmt=SAVE_CPICKLE):
@@ -1162,7 +1171,7 @@ class Component(Container):
 
         else:
             self._logger.warning("%s directory '%s' can't be made relative to '%s'.",
-                         comp.get_pathname(), comp_dir, root_dir)
+                                 comp.get_pathname(), comp_dir, root_dir)
 
     def _fix_external_files(self, comp, comp_dir, root_dir, require_relpaths,
                             fixup_meta, src_files):
@@ -1188,7 +1197,7 @@ class Component(Container):
                     % (comp.get_pathname(), path, root_dir), ValueError)
             else:
                 self._logger.warning("%s file '%s' can't be made relative to '%s'.",
-                             comp.get_pathname(), path, root_dir)
+                                     comp.get_pathname(), path, root_dir)
 
     def _fix_file_vars(self, comp, comp_dir, root_dir, require_relpaths,
                        fixup_fvar, src_files):
@@ -1220,8 +1229,8 @@ class Component(Container):
                        path, root_dir), ValueError)
             else:
                 self._logger.warning("%s path '%s' can't be made relative to '%s'.",
-                             '.'.join((comp.get_pathname(), fvarname)),
-                             path, root_dir)
+                                     '.'.join((comp.get_pathname(), fvarname)),
+                                     path, root_dir)
 
     def get_file_vars(self):
         """Return list of (filevarname,filevarvalue,file trait) owned by this
@@ -1326,7 +1335,7 @@ class Component(Container):
                 top._trait_change_notify(False)
 
                 # TODO: (maybe) Seems like we should make top.directory relative
-                # here # instead of absolute, but it doesn't work...
+                # here instead of absolute, but it doesn't work...
                 #top.directory = relpath(os.getcwd(), SimulationRoot.get_root())
                 top.directory = os.getcwd()
 
