@@ -1,6 +1,6 @@
 
 import unittest
-from inspect import getmembers, ismethod, isfunction
+from inspect import getmembers, ismethod
 
 from traits.api import HasTraits, Float
 from zope.interface import Interface, implements, implementedBy

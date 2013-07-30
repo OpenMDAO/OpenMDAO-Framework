@@ -484,8 +484,6 @@ class ContainerTestCase(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import nose
-    import sys
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()

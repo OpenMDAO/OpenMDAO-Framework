@@ -11,7 +11,7 @@ try:
     from numpy import ndarray, array, append, vstack, zeros, \
          int32, int64, float32, float64
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
 
 from traits.trait_handlers import TraitListObject 
 
@@ -642,7 +642,7 @@ class Namelist(object):
         group_id = self.groups.index(group)
         
         for card in self.cards[group_id]:
-            if card.name==name:
+            if card.name == name:
                 return card.value
             
         msg = "Variable %s" % name + \

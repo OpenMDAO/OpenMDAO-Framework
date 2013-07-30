@@ -1,6 +1,5 @@
 """ VariableTree class definition
 """
-import copy
 
 # pylint: disable-msg=E0611,F0401
 from traits.has_traits import FunctionType
@@ -64,8 +63,8 @@ class VariableTree(Container):
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
     def copy(self):
-        """Returns a deep copy of this VariableTree, without deepcopying the its parent.
-        Also installs necessary trait callbacks.
+        """Returns a deep copy of this VariableTree, without deepcopying its
+        parent.  Also installs necessary trait callbacks.
         """
         cp = super(VariableTree, self).copy()
         cp.install_callbacks()
@@ -133,10 +132,10 @@ class VariableTree(Container):
             if p is not None:
                 t = p.trait(vt.name)
                 if t and t.iotype == 'in':
-                    # we need to pass the full pathname of the child that was actually
-                    # modified up to the parent component, and we can't modify the
-                    # arglist of _input_trait_modified, so instead call _input_check
-                    # and _input_updated explicitly
+                    # we need to pass the full pathname of the child that was
+                    # actually modified up to the parent component, and we can't
+                    # modify the arglist of _input_trait_modified, so instead
+                    # call _input_check and _input_updated explicitly
                     p._input_check(vt.name, vt)
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
