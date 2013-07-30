@@ -408,7 +408,7 @@ class ParamPseudoComponent(PseudoComponent):
         # now push out out0 value out to the target(s)
         for expr in self._outexprs:
             expr.set(self.out0)
-        print self.name, "ran", self.in0, self.out0
+        #print self.name, "ran", self.in0, self.out0
 
     def provideJ(self):
         return ('in0',), ('out0',), self.J

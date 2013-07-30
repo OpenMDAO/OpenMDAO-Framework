@@ -212,26 +212,6 @@ class MultiDriverTestCase(unittest.TestCase):
         
         self.top.run()
         
-        from numpy import zeros
-        print self.top.driver1a.workflow.get_interior_edges()
-        J = zeros([4, 4])
-        arg = zeros([4, 1])
-        for j in range(4):
-            arg[j] = 1.0
-            J[:, j] = self.top.driver1a.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-        print J
-        
-        print self.top.driver.workflow.get_interior_edges()
-        J = zeros([4, 4])
-        arg = zeros([4, 1])
-        for j in range(4):
-            arg[j] = 1.0
-            J[:, j] = self.top.driver.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-        print J
-            
-        
         assert_rel_error(self, self.opt_objective, 
                          self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 

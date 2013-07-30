@@ -568,7 +568,7 @@ class SequentialWorkflow(Workflow):
                         var_edge = set()
                         pcomp = getattr(self.scope, edge[0])
                         for pcomp_edge in pcomp.list_connections():
-                            if pcomp_edge[1].split('.')[0] == edge[1]:
+                            if pcomp_edge[1].split('.')[0] in group:
                                 var_edge.add(pcomp_edge)
                     else:
                         var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
