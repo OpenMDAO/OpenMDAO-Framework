@@ -15,11 +15,7 @@ openmdao.WVTreeFrame = function(wv, id) {
 
     // initialize private variables
     var _self = this,
-        _elem = jQuery('#'+id),
-        _edgesTree = jQuery('<div id="'+id+'_edges_tree">')
-            .appendTo(_elem),
-        _facesTree = jQuery('<div id="'+id+'_faces_tree">')
-            .appendTo(_elem);
+        _elem = jQuery('#'+id);
 
     /** determine if an attribute is set in a grpim attributes value */
     function isAttributeSet(attrs, attr) {
@@ -70,7 +66,9 @@ openmdao.WVTreeFrame = function(wv, id) {
         console.log('WVTreeFrame.wvUpdateUI() wv.plotAttrs:', wv.plotAttrs);
 
         var edgesData,
+            edgesTree,
             facesData,
+            facesTree,
             gprim,
             gprim_name,
             template = '<input type="checkbox" name="NAME" value="VALUE" CHECKED>';
@@ -163,11 +161,20 @@ openmdao.WVTreeFrame = function(wv, id) {
             }
         }
 
-        console.log('wvUpdatWVTreeFrame.wvUpdateUI() edgesData:', edgesData);
-        console.log('wvUpdatWVTreeFrame.wvUpdateUI() facesData:', facesData);
+        console.log('WVTreeFrame.wvUpdateUI() edgesData:', edgesData);
+        console.log('WVTreeFrame.wvUpdateUI() facesData:', facesData);
+
+        // remove any existing trees (with their event handlers, etc.)
+        _elem.empty();
+
+        //create new tree elements
+        edgesTree = jQuery('<div id="'+id+'_edges_tree">')
+            .appendTo(_elem),
+        facesTree = jQuery('<div id="'+id+'_faces_tree">')
+            .appendTo(_elem);
 
         // (re)create tree for the edge primitives
-        _edgesTree.jstree({
+        edgesTree.jstree({
             plugins: ["themes", "json_data", "grid"],
             themes : { "theme" : "openmdao" },
             json_data: {data: edgesData},
@@ -182,7 +189,7 @@ openmdao.WVTreeFrame = function(wv, id) {
             }
         })
         .bind("loaded.jstree", function(event, data) {
-            _edgesTree.click(function(e) {
+            edgesTree.click(function(e) {
                 if (jQuery(e.target).is('input:checkbox')) {
                     if (e.target.name === 'Edges') {
                         // FIXME: this is hacky and doesn't update all the checkboxes
@@ -199,7 +206,7 @@ openmdao.WVTreeFrame = function(wv, id) {
         });
 
         // (re)create tree for the face primitives
-        _facesTree.jstree({
+        facesTree.jstree({
             plugins: ["themes", "json_data", "grid"],
             themes : { "theme" : "openmdao" },
             json_data: {data: facesData},
@@ -214,7 +221,7 @@ openmdao.WVTreeFrame = function(wv, id) {
             }
         })
         .bind("loaded.jstree", function(event, data) {
-            _facesTree.click(function(e) {
+            facesTree.click(function(e) {
                 if (jQuery(e.target).is('input:checkbox')) {
                     console.log(e.target, e.target.name);
                     if (e.target.name === 'Faces') {
