@@ -422,8 +422,7 @@ class ParameterGroup(object):
 
         getattr(scope, self.pcomp_name).make_connections(workflow)
 
-        param0.initialize(scope)
-
+        self.initialize(scope)
 
     def deactivate(self, scope, workflow=None):
         """Make this parameter inactive by disconnecting it in the
@@ -439,6 +438,9 @@ class ParameterGroup(object):
             self.pcomp_name = None
             for param in self._params:
                 param.pcomp_name = None
+
+    def initialize(self, scope):
+        self._params[0].initialize(scope)
 
 
 

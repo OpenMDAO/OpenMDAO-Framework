@@ -345,17 +345,9 @@ class ParamPseudoComponent(PseudoComponent):
         destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
         super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
                                                    destexpr, translate=False)
-        if param.start is not None:
-            self.in0 = param.start
-        else:
-            self.in0 = param._untransform(destexpr.evaluate(scope=parent))
 
         # use these to push values to targets when we run
         self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
-        
-        # Param pseudo-assembly has no validity, but when finite difference
-        # everything, it still needs to have this dictionary.
-        #self._valid_dict = {}
 
 
     def add_target(self, target):
@@ -369,36 +361,19 @@ class ParamPseudoComponent(PseudoComponent):
             return []
         else:
             return [('.'.join([self.name, 'out0']), dest) 
-                                   for dest in self._outdests]
-
-    def _update_callbacks(self, remove):
-        for path in self._outdests:
-            parts = path.split('.', 1)
-            if len(parts) == 1:
-                comp = self._parent
-                vname = path
-            else:
-                comp = getattr(self._parent, parts[0])
-                vname = parts[1]
-            comp.on_trait_change(self.target_changedCB, vname.split('[',1)[0],
-                                 remove=remove)        
+                                   for dest in self._outdests]      
 
     def make_connections(self, workflow=None):
         """Set up the target_changed callback.
         """
-        self._update_callbacks(remove=False)
+        #self._update_callbacks(remove=False)
+        pass
 
     def remove_connections(self, workflow=None):
         """Remove the target_changed callback.
         """
-        self._update_callbacks(remove=True)
-
-    def target_changedCB(self, obj, name, old, new):
-        """We need to update the pseudocomp input whenever values are set
-        directly into the target.
-        """
-        self.set('in0', 
-                 self.param._untransform(self.param._expreval.evaluate()))
+        #self._update_callbacks(remove=True)
+        pass
 
     def update_inputs(self, dummy):
         pass # param pseudocomp will never have inputs that are connected to anything
