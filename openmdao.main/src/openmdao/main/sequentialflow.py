@@ -8,9 +8,10 @@ import sys
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       flattened_names, \
                                       calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT
+                                      applyJ, applyJT, recursive_components
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
+from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.depgraph import find_unit_pseudos
@@ -498,13 +499,6 @@ class SequentialWorkflow(Workflow):
         assembly, which can provide its own Jacobian via finite difference.
         """
         
-        # Hack: parameters not in directional graph
-        if hasattr(self._parent, 'get_parameters'):
-            param_list = [param.pcomp_name for param in \
-                          self._parent.get_parameters().values()]
-        else:
-            param_list = []
-        
         nondiff = []
         for comp in self.get_components():
             if not hasattr(comp, 'apply_deriv') and \
@@ -528,6 +522,7 @@ class SequentialWorkflow(Workflow):
         # of the nondifferentiable components.
         
         graph = nx.DiGraph(collapsed)
+        dgraph = self.scope._depgraph
         pseudo_assemblies = {}
         
         # for cyclic workflows, remove cut edges.
@@ -546,29 +541,44 @@ class SequentialWorkflow(Workflow):
             # Carefully replace edges
             inputs = set()
             outputs = set()
-            for edge in graph.edges():
-                
-                dgraph = self.scope._depgraph
+            all_edges = graph.edges()
+            recursed_components = recursive_components(self.scope, group)
+            
+            for edge in all_edges:
                 
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     var_edge = dgraph.get_interior_edges(edge)
                     self._hidden_edges = self._hidden_edges.union(var_edge)
+                    
                 elif edge[0] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(pa_name, edge[1])
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
+                    
+                    # Hack: deal with driver connections that connect to
+                    # a component in a subdriver's workflow.
+                    pcomp = getattr(self.scope, edge[1])
+                    if isinstance(pcomp, OutputPseudoComponent):
+                        var_edge = set()
+                        for pcomp_edge in pcomp.list_connections():
+                            src_edge = pcomp_edge[0].split('.')[0]
+                            if src_edge in recursed_components:
+                                var_edge.add(pcomp_edge)
+                    else:
+                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     outputs = outputs.union(var_edge)
+                    
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
                     
                     # Hack: parameters not in directional graph
-                    if edge[0] in param_list:
+                    pcomp = getattr(self.scope, edge[0])
+                    if isinstance(pcomp, ParamPseudoComponent):
                         var_edge = set()
-                        pcomp = getattr(self.scope, edge[0])
                         for pcomp_edge in pcomp.list_connections():
-                            if pcomp_edge[1].split('.')[0] in group:
+                            target_edge = pcomp_edge[1].split('.')[0]
+                            if target_edge in recursed_components:
                                 var_edge.add(pcomp_edge)
                     else:
                         var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])

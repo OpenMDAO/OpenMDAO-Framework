@@ -318,6 +318,12 @@ class PseudoComponent(object):
         return tuple(self._inputs), ('out0',), self.J
 
 
+class OutputPseudoComponent(PseudoComponent):
+    """PseudoComponent used for Objectives and Constraints. This is a 
+    separate class to make bookkeeping a little easier.
+    """
+
+
 class ParamPseudoComponent(PseudoComponent):
     """PseudoComponent used to apply scalers/adders to a parameter.
     This type of PseudoComponent has no input connections and one or

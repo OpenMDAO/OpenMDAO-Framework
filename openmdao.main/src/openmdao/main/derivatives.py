@@ -4,6 +4,8 @@ perform calculations during a Fake Finite Difference.
 """
 
 from openmdao.main.vartree import VariableTree
+from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones
@@ -109,6 +111,15 @@ def calc_gradient(wflow, inputs, outputs):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
+    
+    print wflow.get_interior_edges()
+    JJ = zeros([nEdge, nEdge])
+    arg = zeros([nEdge, 1])
+    for j in range(nEdge):
+        arg[j] = 1.0
+        JJ[:, j] = wflow.matvecFWD(arg)
+        arg[j] = 0.0
+    print JJ
     
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -218,10 +229,8 @@ def applyJ(obj, arg, result):
 
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
-    try:
-        input_keys, output_keys, J = obj.provideJ()
-    except:
-        print "hey"
+    input_keys, output_keys, J = obj.provideJ()
+    print input_keys, output_keys, J
     
     ibounds = {}
     nvar = 0
@@ -261,7 +270,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    #print obj.name, arg, result
+    print obj.name, arg, result
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -566,6 +575,19 @@ def apply_linear_model(self, comp, ffd_order):
     
     return y
 
+
+def recursive_components(scope, comps):
+    # Recursively find all components contained in subdrivers.
+    
+    recursed_comps = []
+    for name in comps:
+        recursed_comps.append(name)
+        comp = scope.get(name)
+        if has_interface(comp, IDriver):
+            sub_comps = comp.workflow.get_names(full=True)
+            recursed_comps.extend(recursive_components(scope, sub_comps))
+
+    return recursed_comps
 
                       
 #-------------------------------------------
