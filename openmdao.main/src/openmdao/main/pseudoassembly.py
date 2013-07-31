@@ -2,15 +2,14 @@
 provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
-from openmdao.main.interfaces import IDriver
-from openmdao.main.mp_support import has_interface
 
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
     provide derivatives, and thus must be finite differenced. It is not a real
     assembly, and should never be used in an OpenMDAO model."""
     
-    def __init__(self, name, comps, inputs, outputs, wflow):
+    def __init__(self, name, comps, inputs, outputs, wflow, 
+                 recursed_components=None):
         """Initialized with list of components, and the parent workflow."""
         
         if '~' not in name:
@@ -22,7 +21,10 @@ class PseudoAssembly(object):
         self.inputs = list(inputs)
         self.outputs = list(outputs)
         self.itername = ''
+        
         self.recursed_comp_names = []
+        if recursed_components is not None:
+            self.recursed_comp_names = recursed_components
         
         self.fd = None
         self.J = None
@@ -31,13 +33,6 @@ class PseudoAssembly(object):
         # derivatives.
         self.ffd_order = 1
         
-        # Figure out our set of all recursed component names.
-        for comp in self.comps:
-            if has_interface(comp, IDriver):
-                names = comp.workflow.get_names(full=True)
-                self.recursed_comp_names.extend(names)
-                
-        #TODO - Need to propagate any comp names from sub-sub-drivers
         
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in 

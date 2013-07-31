@@ -451,8 +451,15 @@ class SequentialWorkflow(Workflow):
         # Bookkeeping dictionaries
         inputs = {}
         outputs = {}
-        interior = self.get_interior_edges()
+        edges = self.get_interior_edges()
 
+        # Reference back to the source for input-input connections.
+        input_input_xref = {}
+        edge_outs = [a for a, b in edges]
+        for edge in edges:
+            if edge[1] in self._input_outputs:
+                input_input_xref[edge[1]] = edge
+            
         # Start with zero-valued dictionaries cotaining keys for all inputs
         pa_ref = {}
         for comp in self.derivative_iter():
@@ -467,7 +474,7 @@ class SequentialWorkflow(Workflow):
                     pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
-        for edge in interior:
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -506,7 +513,7 @@ class SequentialWorkflow(Workflow):
         # Poke results into the return vector
         result = zeros(len(arg))
         
-        for edge in interior:
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -515,13 +522,18 @@ class SequentialWorkflow(Workflow):
                 
             # Input-input connections are not in the jacobians. We need
             # to add the derivative (which is 1.0).
-            elif target in self._input_outputs:
-                comp_name, dot, var_name = target.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+            if src in self._input_outputs:
+                ref_edge = input_input_xref[src]
+                i3, i4 = self.bounds[ref_edge]
+                result[i1:i2] = arg[i3:i4] + arg[i1:i2]
                 continue
+            
+                #comp_name, dot, var_name = target.partition('.')
+                #if comp_name in pa_ref:
+                    #var_name = '%s.%s' % (comp_name, var_name)
+                    #comp_name = pa_ref[comp_name]
+                #result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                #continue
                 
             comp_name, dot, var_name = target.partition('.')
             if comp_name in pa_ref:
@@ -663,27 +675,10 @@ class SequentialWorkflow(Workflow):
 
             # Create pseudo_assy
             comps = [getattr(self.scope, name) for name in group]
-            pseudo_assemblies[pa_name] = PseudoAssembly(pa_name, comps, 
-                                                        inputs, outputs, 
-                                                        self)
+            pseudo_assemblies[pa_name] = \
+                PseudoAssembly(pa_name, comps, inputs, outputs, self,
+                               recursed_components = recursed_components)
             
-        #If any of our PA's contain drivers, then we may need to bookkeep
-        #some additional edges that cross the boundary.
-        for edge in list(self._additional_edges):
-            src, target = edge
-            
-            comp_name, dot, var_name = src.partition('.')
-            if src != '@in' and src not in self.get_names():
-                for name, pseudo in pseudo_assemblies.iteritems():
-                    if comp_name in pseudo.recursed_comp_names:
-                        pseudo.outputs.append(src)
-                
-            comp_name, dot, var_name = target.partition('.')
-            if target != '@out' and target not in self.get_names():
-                for name, pseudo in pseudo_assemblies.iteritems():
-                    if comp_name in pseudo.recursed_comp_names:
-                        pseudo.inputs.append(target)
-                    
         # Execution order may be different after grouping, so topsort
         iterset = nx.topological_sort(graph)
         

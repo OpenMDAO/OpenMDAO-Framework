@@ -269,6 +269,11 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+        J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'], fd=True)
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
         stream = StringIO()
         top.driver.workflow.check_gradient(outputs=['comp.f_xy'], stream=stream)
         expected = """\
@@ -291,6 +296,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
 """
         actual = stream.getvalue()
+        print actual
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
             print 'Actual:\n%s' % actual
@@ -319,10 +325,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               fd=True)
         assert_rel_error(self, J[0, 0], 8.0, 0.0001)
         
-        # TODO = make this pass.
-        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
-        #                                      mode='adjoint')
-        #assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        top.comp1.x = 1.0
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
         
     def test_nested(self):
         
