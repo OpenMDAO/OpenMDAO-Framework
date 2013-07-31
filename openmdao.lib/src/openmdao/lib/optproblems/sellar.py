@@ -49,22 +49,6 @@ class Discipline1_WithDerivatives(Component):
 
     y1 = Float(iotype='out', desc='Output of this Discipline.')        
    
-    def __init__(self): 
-        super(Discipline1_WithDerivatives,self).__init__()
-        
-        self.derivatives.declare_first_derivative('y1', 'z1')
-        self.derivatives.declare_first_derivative('y1', 'z2')
-        self.derivatives.declare_first_derivative('y1', 'x1')
-        self.derivatives.declare_first_derivative('y1', 'y2')
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-    
-        self.derivatives.set_first_derivative('y1', 'z1', 2.0*self.z1)
-        self.derivatives.set_first_derivative('y1', 'z2', 1.0)
-        self.derivatives.set_first_derivative('y1', 'x1', 1.0)
-        self.derivatives.set_first_derivative('y1', 'y2', -0.2)
-    
     def execute(self):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2."""
@@ -87,26 +71,10 @@ class Discipline1_WithDerivatives(Component):
         self.J[0, 2] = 2.0*self.z1
         self.J[0, 3] = 1.0
         
-    #def apply_deriv(self, arg, result):
-        #"""Multiply an input vector by the Jacobian"""
-        
-        #for key in result:
-            #result[key] = self.J[0, 4]*arg['y1']
-
-            #if 'x1' in arg:
-                #result[key] += self.J[0, 0]*arg['x1']
-            #if 'y2' in arg:
-                #result[key] += self.J[0, 1]*arg['y2']
-            #if 'z1' in arg:
-                #result[key] += self.J[0, 2]*arg['z1']
-            #if 'z2' in arg:
-                #result[key] += self.J[0, 3]*arg['z2']
-                
     def provideJ(self):
         """Alternative specification."""
         
         input_keys = ('x1', 'y2', 'z1', 'z2')
-        
         output_keys = ('y1',)
         
         return input_keys, output_keys, self.J
@@ -148,22 +116,6 @@ class Discipline2_WithDerivatives(Component):
 
     y2 = Float(iotype='out', desc='Output of this Discipline.') 
     
-    def __init__(self): 
-        super(Discipline2_WithDerivatives,self).__init__()
-        
-        self.derivatives.declare_first_derivative('y2', 'z1')
-        self.derivatives.declare_first_derivative('y2', 'z2')
-        self.derivatives.declare_first_derivative('y2', 'y1')
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-    
-        self.derivatives.set_first_derivative('y2', 'z1', 1.0)
-        self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        # Derivative blows up around y1=0, and is imaginary for y1<0
-        # y1 should be kept above 0.
-        self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1))**-0.5) 
-       
     def execute(self):
         """Evaluates the equation  
         y2 = y1**(.5) + z1 + z2."""
@@ -188,18 +140,13 @@ class Discipline2_WithDerivatives(Component):
         self.J[0, 2] = 1.0
         self.J[0, 3] = -1.0        
 
-    def apply_deriv(self, arg, result):
-        """Multiply an input vector by the Jacobian"""
+    def provideJ(self):
+        """Alternative specification."""
         
-        for key in result:
-
-            if 'y1' in arg:
-                result[key] += self.J[0, 0]*arg['y1']
-            if 'z1' in arg:
-                result[key] += self.J[0, 1]*arg['z1']
-            if 'z2' in arg:
-                result[key] += self.J[0, 2]*arg['z2']
-                
+        input_keys = ('y1', 'z1', 'z2')
+        output_keys = ('y2',)
+        
+        return input_keys, output_keys, self.J
 
            
 class SellarProblem(OptProblem):

@@ -291,7 +291,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
 """
         actual = stream.getvalue()
-        print actual
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
             print 'Actual:\n%s' % actual
