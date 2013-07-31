@@ -112,15 +112,6 @@ def calc_gradient(wflow, inputs, outputs):
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
     
-    print wflow.get_interior_edges()
-    JJ = zeros([nEdge, nEdge])
-    arg = zeros([nEdge, 1])
-    for j in range(nEdge):
-        arg[j] = 1.0
-        JJ[:, j] = wflow.matvecFWD(arg)
-        arg[j] = 0.0
-    print JJ
-    
     # Forward mode, solve linear system for each parameter
     j = 0
     for param in inputs:
@@ -175,9 +166,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     
     # Locate the output keys:
     obounds = {}
+    interior = wflow.get_interior_edges()
     # Not necessarily efficient, but outputs can be anywhere
     for item in outputs:
-        for edge in wflow.get_interior_edges():
+        for edge in interior:
             if item == edge[0]:
                 obounds[item] = wflow.bounds[edge]
                 break
@@ -230,7 +222,6 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-    print input_keys, output_keys, J
     
     ibounds = {}
     nvar = 0
@@ -270,7 +261,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    print obj.name, arg, result
+
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit

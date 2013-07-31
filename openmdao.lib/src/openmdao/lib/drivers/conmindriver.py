@@ -429,7 +429,7 @@ class CONMINdriver(Driver):
                    self.get_ineq_constraints().values()]
     
             J = self.workflow.calc_gradient(inputs, obj + con)
-            print self.name, J
+            
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].flatten()
             

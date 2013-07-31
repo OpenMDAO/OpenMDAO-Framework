@@ -38,6 +38,7 @@ class SequentialWorkflow(Workflow):
         self._severed_edges = []
         self._additional_edges = []
         self._hidden_edges = set()
+        self._driver_edges = None
         self.res = None
         self.bounds = None
         
@@ -72,11 +73,14 @@ class SequentialWorkflow(Workflow):
         has changed.
         """
         super(SequentialWorkflow, self).config_changed()
+        self._severed_edges = []
+        self._additional_edges = []
+        self._hidden_edges = set()
+        self._driver_edges = None
         self._find_nondiff_blocks = True
         self.derivative_iterset = None
         self._collapsed_graph = None
         self._topsort = None
-        self._find_nondiff_blocks = True
         self._input_outputs = []
 
     def get_names(self, full=False):
@@ -179,11 +183,8 @@ class SequentialWorkflow(Workflow):
         
         graph = self.scope._depgraph
         edges = graph.get_interior_edges(self.get_names(full=True))
+        edges = edges.union(self.get_driver_edges())
         edges = edges.union(self._additional_edges)
-        if hasattr(self._parent, 'get_parameters'):
-            for param in self._parent.get_parameters().values():
-                pcomp = getattr(self.scope, param.pcomp_name)
-                edges.update(pcomp.list_connections())
         edges = edges - self._hidden_edges
                 
         # Somtimes we connect an input to an input (particularly with
@@ -203,6 +204,42 @@ class SequentialWorkflow(Workflow):
                 
         return sorted(list(edges))
 
+    def get_driver_edges(self):
+        '''Return all edges where our driver connects to any component that
+        is owned by a subdriver's workflow. Also, include the extra parameter
+        edges that don't show up in the parent assembly depgraph.
+        '''
+        
+        # Cache it
+        if self._driver_edges is not None:
+            return self._driver_edges
+        
+        comps = self.get_names(full=True)
+        rcomps = recursive_components(self.scope, comps)
+        
+        sub_edge = set()
+        
+        for comp in comps:
+            
+            pcomp = self.scope.get(comp)
+            
+            # Parameter edges. Include non-recursed ones too.
+            if isinstance(pcomp, ParamPseudoComponent):
+                for pcomp_edge in pcomp.list_connections():
+                    target_edge = pcomp_edge[1].split('.')[0]
+                    if target_edge in rcomps:
+                        sub_edge.add(pcomp_edge)
+
+            # Output edges
+            elif isinstance(pcomp, OutputPseudoComponent):
+                for pcomp_edge in pcomp.list_connections():
+                    src_edge = pcomp_edge[0].split('.')[0]
+                    if src_edge	in rcomps:
+                        sub_edge.add(pcomp_edge)
+
+        self._driver_edges = sub_edge
+        return self._driver_edges
+        
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
@@ -414,6 +451,7 @@ class SequentialWorkflow(Workflow):
         # Bookkeeping dictionaries
         inputs = {}
         outputs = {}
+        interior = self.get_interior_edges()
 
         # Start with zero-valued dictionaries cotaining keys for all inputs
         pa_ref = {}
@@ -429,7 +467,7 @@ class SequentialWorkflow(Workflow):
                     pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
-        for edge in self.get_interior_edges():
+        for edge in interior:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -468,7 +506,7 @@ class SequentialWorkflow(Workflow):
         # Poke results into the return vector
         result = zeros(len(arg))
         
-        for edge in self.get_interior_edges():
+        for edge in interior:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
