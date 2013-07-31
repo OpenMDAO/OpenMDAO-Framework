@@ -8,11 +8,13 @@ import sys
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       flattened_names, \
                                       calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT
+                                      applyJ, applyJT, recursive_components
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
+from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
+from openmdao.main.depgraph import find_unit_pseudos
 
 try:
     from numpy import ndarray, zeros
@@ -65,19 +67,26 @@ class SequentialWorkflow(Workflow):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def check_config(self):
-        """Reinitialize some stuff.""" 
-        
-        # Do this whenever we rerun, just in-case.
+    def config_changed(self):
+        """Notifies the Workflow that its configuration (dependencies, etc.)
+        has changed.
+        """
+        super(SequentialWorkflow, self).config_changed()
         self._find_nondiff_blocks = True
-        
+        self.derivative_iterset = None
+        self._collapsed_graph = None
+        self._topsort = None
+        self._find_nondiff_blocks = True
+        self._input_outputs = []
+
     def get_names(self, full=False):
-        """Return a list of component names in this workflow.  If full is True,
-        include hidden pseudo-components in the list.
+        """Return a list of component names in this workflow.  
+        If full is True, include hidden pseudo-components in the list.
         """
         if full:
-            return self._names + \
-                   list(self.scope._depgraph.find_betweens(self._names))
+            return self._names + self._parent.list_pseudocomps() + \
+                    find_unit_pseudos(self._scope._depgraph._graph,
+                                      self._names)
         else:
             return self._names[:]
 
@@ -92,6 +101,9 @@ class SequentialWorkflow(Workflow):
             iter(nodes)
         except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
+
+        # We seem to need this so that get_attributes is correct for the GUI.
+        self.config_changed()
 
         for node in nodes:
             if isinstance(node, basestring):
@@ -138,9 +150,6 @@ class SequentialWorkflow(Workflow):
                 msg = "Components must be added by name to a workflow."
                 raise TypeError(msg)
 
-        # We seem to need this so that get_attributes is correct for the GUI.
-        if check:
-            self.config_changed()
 
     def remove(self, compname):
         """Remove a component from the workflow by name. Do not report an
@@ -151,12 +160,14 @@ class SequentialWorkflow(Workflow):
             raise TypeError(msg)
         try:
             self._names.remove(compname)
+            self.config_changed()
         except ValueError:
             pass
 
     def clear(self):
         """Remove all components from this workflow."""
         self._names = []
+        self.config_changed()
 
     def get_interior_edges(self):
         """ Returns an alphabetical list of all output edges that are
@@ -169,22 +180,26 @@ class SequentialWorkflow(Workflow):
         graph = self.scope._depgraph
         edges = graph.get_interior_edges(self.get_names(full=True))
         edges = edges.union(self._additional_edges)
+        if hasattr(self._parent, 'get_parameters'):
+            for param in self._parent.get_parameters().values():
+                pcomp = getattr(self.scope, param.pcomp_name)
+                edges.update(pcomp.list_connections())
         edges = edges - self._hidden_edges
                 
         # Somtimes we connect an input to an input (particularly with
         # constraints). These need to be rehooked to corresponding source
         # edges.
         
-        self._input_outputs = []
-        for edge in edges:
-            src, target = edge
+        self._input_outputs = set()
+        for src, target in edges:
             if src == '@in' or target == '@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
             var = var.split('[')[0]
             comp = self.scope.get(compname)
             if var in comp.list_inputs():
-                self._input_outputs.append(src)
+                self._input_outputs.add(src)
+        self._input_outputs = list(self._input_outputs)
                 
         return sorted(list(edges))
 
@@ -316,7 +331,8 @@ class SequentialWorkflow(Workflow):
                     pa_ref[item] = name
 
         # Fill input dictionaries with values from input arg.
-        for edge in self.get_interior_edges():
+        edges = self.get_interior_edges()
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -359,7 +375,15 @@ class SequentialWorkflow(Workflow):
 
         # Poke results into the return vector
         result = zeros(len(arg))
-        for edge in self.get_interior_edges():
+        
+        # Reference back to the source for input-input connections.
+        input_input_xref = {}
+        edge_outs = [a for a, b in edges]
+        for edge in edges:
+            if edge[1] in self._input_outputs:
+                input_input_xref[edge[1]] = edge
+            
+        for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
@@ -367,13 +391,11 @@ class SequentialWorkflow(Workflow):
                 src = target
                 
             # Input-input connections are not in the jacobians. We need
-            # to add the derivative (which is 1.0).
+            # to add the derivative using out cross reference.
             elif src in self._input_outputs:
-                comp_name, dot, var_name = src.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                ref_edge = input_input_xref[src]
+                i3, i4 = self.bounds[ref_edge]
+                result[i1:i2] = arg[i3:i4] + arg[i1:i2]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
@@ -500,6 +522,7 @@ class SequentialWorkflow(Workflow):
         # of the nondifferentiable components.
         
         graph = nx.DiGraph(collapsed)
+        dgraph = self.scope._depgraph
         pseudo_assemblies = {}
         
         # for cyclic workflows, remove cut edges.
@@ -518,23 +541,47 @@ class SequentialWorkflow(Workflow):
             # Carefully replace edges
             inputs = set()
             outputs = set()
-            for edge in graph.edges():
-                
-                dgraph = self.scope._depgraph
+            all_edges = graph.edges()
+            recursed_components = recursive_components(self.scope, group)
+            
+            for edge in all_edges:
                 
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     var_edge = dgraph.get_interior_edges(edge)
                     self._hidden_edges = self._hidden_edges.union(var_edge)
+                    
                 elif edge[0] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(pa_name, edge[1])
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
+                    
+                    # Hack: deal with driver connections that connect to
+                    # a component in a subdriver's workflow.
+                    pcomp = getattr(self.scope, edge[1])
+                    if isinstance(pcomp, OutputPseudoComponent):
+                        var_edge = set()
+                        for pcomp_edge in pcomp.list_connections():
+                            src_edge = pcomp_edge[0].split('.')[0]
+                            if src_edge in recursed_components:
+                                var_edge.add(pcomp_edge)
+                    else:
+                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     outputs = outputs.union(var_edge)
+                    
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
+                    
+                    # Hack: parameters not in directional graph
+                    pcomp = getattr(self.scope, edge[0])
+                    if isinstance(pcomp, ParamPseudoComponent):
+                        var_edge = set()
+                        for pcomp_edge in pcomp.list_connections():
+                            target_edge = pcomp_edge[1].split('.')[0]
+                            if target_edge in recursed_components:
+                                var_edge.add(pcomp_edge)
+                    else:
+                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     inputs = inputs.union(var_edge)
                     
             # Input and outputs that crossed the cut line should be included
@@ -557,7 +604,7 @@ class SequentialWorkflow(Workflow):
 
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]
-            outputs = [a for a, b in outputs]
+            outputs = list(set([a for a, b in outputs]))
                 
             # Boundary edges must be added to inputs and outputs
             for edge in list(self._additional_edges):
@@ -641,7 +688,8 @@ class SequentialWorkflow(Workflow):
         
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = self._parent.get_parameters().keys()
+                inputs = ['%s.in0' % param.pcomp_name for param in \
+                          self._parent.get_parameters().values()]
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
@@ -661,7 +709,7 @@ class SequentialWorkflow(Workflow):
 
         # Override to do straight finite-difference of the whole model, with
         # no fake fd.
-        if fd == True:
+        if fd is True:
             
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.
@@ -670,6 +718,17 @@ class SequentialWorkflow(Workflow):
             pseudo.ffd_order = 0
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
+            
+            # Hack: parameter output edges aren't in the assy depgraph, so we 
+            # have to manually find and remove them.
+            if hasattr(self._parent, 'get_parameters'):
+                for param in self._parent.get_parameters().values():
+                    param_out = '%s.in0' % param.pcomp_name
+                    if param_out in inputs:
+                        pcomp = getattr(self.scope, param.pcomp_name)
+                        pset = set(pcomp.list_connections())
+                        self._hidden_edges = pset.union(self._hidden_edges)
+            
             self.derivative_iterset = [pseudo]
 
             # Allow for the rare case the user runs this manually, first, in
@@ -701,6 +760,7 @@ class SequentialWorkflow(Workflow):
             self._hidden_edges = set()
             
             # New edges for parameters
+            
             input_edges = [('@in', a) for a in inputs]
             additional_edges = set(input_edges)
             

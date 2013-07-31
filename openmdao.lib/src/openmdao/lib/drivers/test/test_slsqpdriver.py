@@ -87,6 +87,18 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
         self.top.run()
+        
+        from numpy import zeros
+        J = zeros([25, 25])
+        arg = zeros([25, 1])
+        print self.top.driver.workflow.get_interior_edges()
+        for j in range(25):
+            arg[j] = 1.0
+            J[:, j] = self.top.driver.workflow.matvecFWD(arg)
+            arg[j] = 0.0
+        print J
+            
+        
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)

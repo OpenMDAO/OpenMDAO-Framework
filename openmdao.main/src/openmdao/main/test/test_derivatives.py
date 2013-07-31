@@ -265,8 +265,9 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp.run()
         
         J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'])
-        assert_rel_error(self, J[0,0], 5.0, 0.0001)
-        assert_rel_error(self, J[0,1], 21.0, 0.0001)
+        
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
         stream = StringIO()
         top.driver.workflow.check_gradient(outputs=['comp.f_xy'], stream=stream)
@@ -295,6 +296,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             print 'Actual:\n%s' % actual
             self.fail("check_gradient() output doesn't match expected")
 
+    def test_input_as_output(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', ExecComp(['y=2.0*x']))
+        top.add('comp2', ExecComp(['y=3.0*x']))
+        top.connect('comp1.y', 'comp2.x')
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.driver.add_objective('comp1.y + comp2.y')
+        
+        objs = top.driver.get_objectives().values()
+        obj = '%s.out0' % objs[0].pcomp_name
+        
+        top.comp1.x = 1.0
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj])
+        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
+                                              fd=True)
+        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        
+        # TODO = make this pass.
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
+        #                                      mode='adjoint')
+        #assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        
     def test_nested(self):
         
         top = Assembly()

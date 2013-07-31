@@ -421,14 +421,15 @@ class CONMINdriver(Driver):
                         #self.differentiator.get_gradient(name)
                     #self.cnmn1.nac += 1
                     
-            inputs = self.get_parameters().keys()
-            obj = ["%s.out0" % item.pcomp_name for item in \
+            inputs = ["%s.in0" % item.pcomp_name for item in \
+                      self.get_parameters().values()]
+            obj = ["%s.out0" % item.pcomp_name for item in
                    self.get_objectives().values()]
-            con = ["%s.out0" % item.pcomp_name for item in \
+            con = ["%s.out0" % item.pcomp_name for item in
                    self.get_ineq_constraints().values()]
     
             J = self.workflow.calc_gradient(inputs, obj + con)
-
+            print self.name, J
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].flatten()
             

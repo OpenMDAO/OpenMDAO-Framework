@@ -2,10 +2,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent
-
-def _remove_spaces(s):
-    return s.translate(None, ' \n\t\r')
+from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
 
 
 class HasObjectives(object): 
@@ -74,7 +71,7 @@ class HasObjectives(object):
 
         name = expr if name is None else name
 
-        pseudo = PseudoComponent(scope, expreval)
+        pseudo = OutputPseudoComponent(scope, expreval)
         scope.add(pseudo.name, pseudo)
         pseudo.make_connections()
       
@@ -153,10 +150,16 @@ class HasObjectives(object):
         objs = []
         for obj in self._objectives.values():
             pcomp = getattr(scope, obj.pcomp_name)
-            if not pcomp._valid:
+            if not pcomp.is_valid():
                 pcomp.update_outputs(['out0'])
             objs.append(pcomp.out0)
         return objs
+
+    def list_pseudocomps(self):
+        """Returns a list of pseudocompont names associcated with our
+        parameters.
+        """
+        return [obj.pcomp_name for obj in self._objectives.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)

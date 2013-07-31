@@ -137,7 +137,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter('comp.x', 0., 1.e99) 
         except Exception, err:
-            msg = 'driver: Cannot add target parameter "comp.x" - incoming connection exists'
+            msg = "driver: 'comp.x' is already a Parameter target"
             self.assertEqual(str(err), msg)
         else:
             self.fail('Exception Expected')
@@ -269,7 +269,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
         try: 
             self.top.driver.add_parameter('comp.y')
-        except ValueError,err: 
+        except Exception,err: 
             self.assertEqual(str(err),"driver: 'comp.y' is already a Parameter target")
         else: 
             self.fail('RuntimeError expected')
@@ -316,7 +316,8 @@ class HasParametersTestCase(unittest.TestCase):
         
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         pg = ParameterGroup([p,p2])
-        self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
+        self.assertEqual(pg.get_metadata(),[('comp.x',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': 0.0}),
+                                           ('comp.y',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': 0.0})])    
 
     def test_connected_input_as_parameter(self):
         self.top.add('comp2', ExecComp(exprs=['c=x+y','d=x-y']))

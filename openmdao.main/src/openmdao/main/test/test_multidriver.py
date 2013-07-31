@@ -306,8 +306,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # the outer loop takes care of x
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
-        self.top = set_as_top(Assembly())
-        top = self.top
+        top = set_as_top(Assembly())
         # create the outer driver
         outer_driver = top.add('driver', CONMINdriver())
         
@@ -342,7 +341,7 @@ class MultiDriverTestCase(unittest.TestCase):
         outer_driver.add_objective('comp4.f_xy')
         outer_driver.add_parameter('comp1.x', low=-50, high=50)
         
-        self.top.run()
+        top.run()
 
         # Notes: CONMIN does not quite reach the anlytical minimum
         # In fact, it only gets to about 2 places of accuracy.
@@ -351,7 +350,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
         
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
+        s = dump_iteration_tree(top)
         self.assertEqual(s, 
             '\n   driver\n      driver1\n         comp1\n         comp3\n'
             '         comp2\n         comp4\n')

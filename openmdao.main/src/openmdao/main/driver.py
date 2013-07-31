@@ -104,7 +104,7 @@ class Driver(Component):
         # use parameters, objectives and/or constraint expressions to
         # determine the necessary workflow members
         try:
-            iterset = set(c.name for c in self.iteration_set())
+            iterset = set([c.name for c in self.iteration_set()])
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
             if len(self.workflow) == 0:
@@ -113,9 +113,9 @@ class Driver(Component):
                 reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-            # calling get_components() here just makes sure that all of the
-            # components can be resolved
-            comps = self.workflow.get_components()
+                # calling get_components() here just makes sure that all of the
+                # components can be resolved
+                self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
 
@@ -127,7 +127,7 @@ class Driver(Component):
         if len(self.workflow) == 0:
             for compname in self._get_required_compnames():
                 self.workflow.add(compname)
-        for child in self.workflow.get_components():
+        for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
@@ -147,6 +147,19 @@ class Driver(Component):
             if src not in iternames and dest not in iternames:
                 new_list.append((src, dest))
         return new_list
+
+    @rbac(('owner', 'user'))
+    def list_pseudocomps(self):
+        """Return a list of pseudocomps resulting from our parameters, 
+        objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
 
     def _get_required_compnames(self):
         """Returns a set of names of components that are required by

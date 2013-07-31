@@ -69,9 +69,9 @@ class GeomCompTestCase(unittest.TestCase):
         base_outs = set(self.geomcomp.list_outputs())
 
         gem_outs = ['zcg', 'zmax', 'xcg', 'zmin', 'Ixz',
-            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody',
+            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody1', 'ibody2',
             'ymax', 'nnode', 'ycg', 'nface', 'volume', 'Iyy', 'Iyx', 'Iyz',
-            'area', 'nedge', 'xmax']
+            'area', 'nedge', 'xmax', 'iedge', 'length', 'iface', 'inode', 'nbody']
 
         csm_input = """
 # bottle2 (from OpenCASCADE tutorial)
