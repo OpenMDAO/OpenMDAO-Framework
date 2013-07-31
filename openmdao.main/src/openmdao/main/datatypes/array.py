@@ -44,7 +44,7 @@ except ImportError as err:
             else:
                 return array(value)
 else:
-    from enthought.traits.api import Array as TraitArray
+    from traits.api import Array as TraitArray
 
 
 class Array(TraitArray):

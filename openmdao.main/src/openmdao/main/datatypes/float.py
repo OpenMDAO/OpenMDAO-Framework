@@ -9,8 +9,8 @@ __all__ = ["Float"]
 from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Range
-from enthought.traits.api import Float as TraitFloat
+from traits.api import Range
+from traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.variable import Variable

@@ -23,14 +23,14 @@
 
 import unittest
 
-from enthought.traits.api import HasTraits
+from traits.api import HasTraits
 
 from openmdao.main.api import Component, Assembly, VariableTree, set_as_top, Case
 from openmdao.main.interfaces import implements, ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
 
-from openmdao.lib.datatypes.api import Float, VarTree, Array
+from openmdao.lib.datatypes.api import Float, VarTree
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, FloatKrigingSurrogate
@@ -483,7 +483,7 @@ class MetaModelTestCase(unittest.TestCase):
         try: 
             metamodel.model = Simple()
         except ValueError,err: 
-            if 'meta: No surrogate was provided for "c". All outputs must have a surrogate'==str(err):
+            if 'meta: No surrogate was provided for "c". All outputs must have a surrogate' == str(err):
                 self.fail('should not get a value error for variable c. It is not included in the metamodel')
         
     def test_multi_surrogate_models(self): 
@@ -719,13 +719,13 @@ class TestMetaModelWithVtree(unittest.TestCase):
 
     def test_in_tree_only_multiple_surrogates(self):
         self.a.mm.model = InTreeOnly()
-        self.a.mm.surrogates['x']= FloatKrigingSurrogate()
+        self.a.mm.surrogates['x'] = FloatKrigingSurrogate()
         self.a.mm.surrogates['y'] = KrigingSurrogate()
         self._run_sweep(self.a, 'ins.a', 'ins.b', 'x', 'y')
 
     def test_in_and_out_tree_multiple_surrogates(self):
         self.a.mm.model = InandOutTree()
-        self.a.mm.surrogates['outs.x']= FloatKrigingSurrogate()
+        self.a.mm.surrogates['outs.x'] = FloatKrigingSurrogate()
         self.a.mm.surrogates['outs.y'] = KrigingSurrogate()
         self._run_sweep(self.a, 'ins.a', 'ins.b', 'outs.x', 'outs.y')
 
