@@ -308,13 +308,16 @@ class PythonSourceTreeAnalyser(object):
 
     def find_classinfo(self, cname):
         cinfo = cname
-        while True:
+        prev = None
+        while cinfo != prev:
+            prev = cinfo
             try:
                 cinfo = self.class_map[cinfo]
             except KeyError:
                 return None
             if isinstance(cinfo, ClassInfo):
                 return cinfo
+        return None
 
     def analyze_file(self, pyfile, use_cache=False):
         # don't analyze the file again if we've already done it and it hasn't
