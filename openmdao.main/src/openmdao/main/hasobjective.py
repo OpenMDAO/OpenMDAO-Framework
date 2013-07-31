@@ -2,7 +2,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
 
 
 class HasObjectives(object): 
@@ -71,7 +71,7 @@ class HasObjectives(object):
 
         name = expr if name is None else name
 
-        pseudo = PseudoComponent(scope, expreval)
+        pseudo = OutputPseudoComponent(scope, expreval)
         scope.add(pseudo.name, pseudo)
         pseudo.make_connections()
       

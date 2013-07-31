@@ -307,6 +307,12 @@ class PseudoComponent(object):
         return tuple(self._inputs), ('out0',), self.J
 
 
+class OutputPseudoComponent(PseudoComponent):
+    """PseudoComponent used for Objectives and Constraints. This is a 
+    separate class to make bookkeeping a little easier.
+    """
+
+
 class ParamPseudoComponent(PseudoComponent):
     """PseudoComponent used to apply scalers/adders to a parameter.
     This type of PseudoComponent has no input connections and one or
@@ -372,6 +378,7 @@ class ParamPseudoComponent(PseudoComponent):
         # now push out out0 value out to the target(s)
         for expr in self._outexprs:
             expr.set(self.out0)
+        #print self.name, "ran", self.in0, self.out0
 
     def set(self, path, value, index=None, src=None, force=False):
         self._valid_dict['out0'] = False

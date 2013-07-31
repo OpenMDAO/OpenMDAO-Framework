@@ -115,6 +115,9 @@ class MultiDriverTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
+        
+    def tearDown(self):
+        self.top = None
 
     def rosen_setUp(self):
         # Chop up the equations for the Rosen-Suzuki optimization problem
@@ -212,26 +215,6 @@ class MultiDriverTestCase(unittest.TestCase):
         
         self.top.run()
         
-        from numpy import zeros
-        print self.top.driver1a.workflow.get_interior_edges()
-        J = zeros([4, 4])
-        arg = zeros([4, 1])
-        for j in range(4):
-            arg[j] = 1.0
-            J[:, j] = self.top.driver1a.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-        print J
-        
-        print self.top.driver.workflow.get_interior_edges()
-        J = zeros([4, 4])
-        arg = zeros([4, 1])
-        for j in range(4):
-            arg[j] = 1.0
-            J[:, j] = self.top.driver.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-        print J
-            
-        
         assert_rel_error(self, self.opt_objective, 
                          self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 
@@ -313,9 +296,13 @@ class MultiDriverTestCase(unittest.TestCase):
 
         # test dumping of iteration tree
         s = dump_iteration_tree(self.top)
+        
+        # Comp2 and Comp3 are ambiguous in the sort
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
             '\n   driver\n      nested\n         nested.driver\n            '
-            'nested.comp1\n            nested.comp3\n            nested.comp2\n'
+            'nested.comp1\n            nested.comp2or3\n            nested.comp2or3\n'
             '            nested.comp4\n')
 
     def test_2_nested_drivers_same_assembly(self):
@@ -326,8 +313,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # the outer loop takes care of x
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
-        self.top = set_as_top(Assembly())
-        top = self.top
+        top = set_as_top(Assembly())
         # create the outer driver
         outer_driver = top.add('driver', CONMINdriver())
         
@@ -362,8 +348,7 @@ class MultiDriverTestCase(unittest.TestCase):
         outer_driver.add_objective('comp4.f_xy')
         outer_driver.add_parameter('comp1.x', low=-50, high=50)
         
-        self.top.run()
-
+        top.run()
         # Notes: CONMIN does not quite reach the anlytical minimum
         # In fact, it only gets to about 2 places of accuracy.
         # This is also the case for a single 2-var problem.
@@ -371,10 +356,12 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
         
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
+        s = dump_iteration_tree(top)
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
-            '\n   driver\n      driver1\n         comp1\n         comp3\n'
-            '         comp2\n         comp4\n')
+            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
+            '         comp2or3\n         comp4\n')
         
     def test_2_nested_drivers_same_assembly_extra_comp(self):
         print "*** test_2_nested_drivers_same_assembly ***"
@@ -431,9 +418,11 @@ class MultiDriverTestCase(unittest.TestCase):
         
         # test dumping of iteration tree
         s = dump_iteration_tree(self.top)
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
-            '\n   driver\n      driver1\n         comp1\n         comp3\n'
-            '         comp2\n         comp4\n      comp5\n')
+            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
+            '         comp2or3\n         comp4\n      comp5\n')
         
     def test_2drivers_same_iterset(self):
         #

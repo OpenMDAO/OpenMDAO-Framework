@@ -4,6 +4,8 @@ perform calculations during a Fake Finite Difference.
 """
 
 from openmdao.main.vartree import VariableTree
+from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones
@@ -164,9 +166,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     
     # Locate the output keys:
     obounds = {}
+    interior = wflow.get_interior_edges()
     # Not necessarily efficient, but outputs can be anywhere
     for item in outputs:
-        for edge in wflow.get_interior_edges():
+        for edge in interior:
             if item == edge[0]:
                 obounds[item] = wflow.bounds[edge]
                 break
@@ -258,7 +261,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    #print obj.name, arg, result
+
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -563,6 +566,19 @@ def apply_linear_model(self, comp, ffd_order):
     
     return y
 
+
+def recursive_components(scope, comps):
+    # Recursively find all components contained in subdrivers.
+    
+    recursed_comps = []
+    for name in comps:
+        recursed_comps.append(name)
+        comp = scope.get(name)
+        if has_interface(comp, IDriver):
+            sub_comps = comp.workflow.get_names(full=True)
+            recursed_comps.extend(recursive_components(scope, sub_comps))
+
+    return recursed_comps
 
                       
 #-------------------------------------------

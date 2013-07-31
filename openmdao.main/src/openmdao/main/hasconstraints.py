@@ -8,7 +8,7 @@ import operator
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -68,7 +68,8 @@ class Constraint(object):
         connections in the dependency graph.
         """
         if self.pcomp_name is None:
-            pseudo = PseudoComponent(self.lhs.scope, self._combined_expr())
+            pseudo = OutputPseudoComponent(self.lhs.scope, 
+                                           self._combined_expr())
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections()
