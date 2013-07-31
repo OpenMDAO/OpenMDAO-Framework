@@ -68,10 +68,11 @@ class SensitivityDriver(Driver):
         # Run our iteration once, since we can't guarantee it has been.
         self.run_iteration()
         
-        inputs = self.get_parameters().keys()
         objs = self.get_objectives().keys()
         constraints = list(self.get_eq_constraints().keys() + \
                            self.get_ineq_constraints().keys())
+        inputs = ["%s.in0" % item.pcomp_name for item in \
+                  self.get_parameters().values()]
         obj = ["%s.out0" % item.pcomp_name for item in \
                 self.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \

@@ -137,7 +137,7 @@ def calc_gradient(wflow, inputs, outputs):
                 i += k2-k1
                 
             j += 1
-        
+       
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -261,7 +261,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-
+    
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
