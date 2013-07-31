@@ -93,9 +93,6 @@ class PseudoComponent(object):
             self._outdests = []
 
         varmap = {}
-        for name, meta in srcexpr.get_metadata():
-            self._meta[name] = meta
-
         for i,ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
@@ -110,17 +107,14 @@ class PseudoComponent(object):
                 setattr(self, 'out0', None)
             else:
                 raise RuntimeError("output of PseudoComponent must reference only one variable")
+        varmap[_get_varname(refs[0])] = 'out0'
+        
+        for name, meta in srcexpr.get_metadata():
+            self._meta[varmap[name]] = meta
 
-        # attach metadata to local var names
-        newmeta = {}
-        for key, val in self._meta.items():
-            newmeta[varmap[key]] = val
-            
         for name, meta in destexpr.get_metadata():
-            self._meta[name] = meta
+            self._meta[varmap[name]] = meta
             
-        newmeta['out0'] = self._meta[_get_varname(refs[0])]
-        self._meta = newmeta
         self._valid_dict['out0'] = False
 
         if translate:
@@ -269,11 +263,18 @@ class PseudoComponent(object):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
-            setattr(self, path, value.pq.value)
+            val = value.pq.value
         elif isinstance(value, PhysicalQuantity):
-            setattr(self, path, value.value)
+            val = value.value
         else:
-            setattr(self, path, value)
+            val = value
+        if path in self._meta:
+            high = self._meta[path].get('high', 1e99)
+            low = self._meta[path].get('low', -1e99)
+            if val < low or val > high:
+                raise ValueError("Attempted to set '%s' to a value (%s) outside of its bounds (%s/%s)" %
+                                 (path, val, high, low))
+        setattr(self, path, val)
 
     def get_wrapped_attr(self, name, index=None):
         if index is not None:
@@ -383,6 +384,22 @@ class ParamPseudoComponent(PseudoComponent):
         # now push out out0 value out to the target(s)
         for expr in self._outexprs:
             expr.set(self.out0)
+
+    def set(self, path, value, index=None, src=None, force=False):
+        self._valid_dict['out0'] = False
+        if index is not None:
+            raise ValueError("index not supported in PseudoComponent.set")
+        if isinstance(value, UnitsAttrWrapper):
+            val = value.pq.value
+        elif isinstance(value, PhysicalQuantity):
+            val = value.value
+        else:
+            val = value
+
+        if val < self.param.low or val > self.param.high:
+            raise ValueError("Attempted to set '%s' to a value (%s) outside of its bounds (%s/%s)" %
+                             (path, val, self.param.high, self.param.low))
+        setattr(self, path, val)
 
     def provideJ(self):
         return ('in0',), ('out0',), self.J

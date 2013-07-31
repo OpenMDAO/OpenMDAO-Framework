@@ -354,11 +354,11 @@ class ParametersTestCase(unittest.TestCase):
         
     def test_transform(self):
 
+        self.top.comp.a = 15.
+        
         # Vars with no bounds params with bounds
         self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.5, adder=1.)
         self.top.driver2.add_parameter('comp.a', low=-6., high=10., scaler=4., adder=-2.)
-        
-        self.top.comp.a = 15.
         
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()
@@ -374,7 +374,46 @@ class ParametersTestCase(unittest.TestCase):
         
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
+
+    def test_scaled_var_with_initial_violation(self):
         
+        self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
+        
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 1.5
+        self.top.driver.start_iteration()
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 2.5
+        try:
+            self.top.driver.run()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is greater than maximum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -0.5
+        self.top.driver.start_iteration()
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -2.5
+        try:
+            self.top.driver.start_iteration()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is less than minimum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)
         self.top.driver.add_parameter(('comp.c','comp.d'),0,1e99)
@@ -410,11 +449,11 @@ class ParametersTestCase(unittest.TestCase):
 
     def test_transform_just_scale_or_add(self):
 
+        self.top.comp.v1 = 15.
+        
         self.top.comp.add_trait('v1', Float(0.0, low=-100.0, high=100.0, iotype='in'))
         self.top.driver.add_parameter('comp.v1', high=12.0, scaler=1.5)
         self.top.driver2.add_parameter('comp.v1', low=-6.0, adder=-2.)
-        
-        self.top.comp.v1 = 15.
         
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()
