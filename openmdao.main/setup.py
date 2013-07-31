@@ -53,7 +53,7 @@ setup(name='openmdao.main',
           'setuptools',
           'Sphinx',
           'sympy',
-          'Traits==3.3.0',
+          'Traits==4.3.0',
           'zope.interface',
       ],
       extras_require = {

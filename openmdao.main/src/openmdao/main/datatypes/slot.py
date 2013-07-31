@@ -16,7 +16,7 @@ __all__ = ["Slot"]
 from inspect import isclass
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, Interface
+from traits.api import Instance, Interface
 import zope.interface
 
 from openmdao.main.variable import Variable, gui_excludes

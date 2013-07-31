@@ -282,7 +282,7 @@ class ExternalCode(Component):
         error_msg = ''
         try:
             # Create resource description for command.
-            rdesc['job_name'] = self.get_pathname()
+            rdesc['job_name'] = self.get_pathname() or self.__class__.__name__
             rdesc['remote_command'] = self.command[0]
             if len(self.command) > 1:
                 rdesc['args'] = self.command[1:]

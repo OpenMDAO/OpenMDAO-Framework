@@ -7,7 +7,7 @@ import StringIO
 import nose
 import copy
 
-from enthought.traits.api import HasTraits
+from traits.api import HasTraits
 
 from openmdao.util import eggsaver as constants
 from openmdao.main.container import Container, deep_hasattr, \
@@ -484,8 +484,6 @@ class ContainerTestCase(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import nose
-    import sys
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
