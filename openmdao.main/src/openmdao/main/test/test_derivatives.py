@@ -269,11 +269,6 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'], fd=True)
-        
-        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
-
         stream = StringIO()
         top.driver.workflow.check_gradient(outputs=['comp.f_xy'], stream=stream)
         expected = """\

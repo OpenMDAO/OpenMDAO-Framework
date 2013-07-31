@@ -859,6 +859,7 @@ class SequentialWorkflow(Workflow):
             close_stream = False
     
         J = self.calc_gradient(inputs, outputs)
+        self._parent.update_parameters()
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
         print >> stream, 24*'-'
