@@ -3,6 +3,7 @@ import ordereddict
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.pseudocomp import ParamPseudoComponent
 from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.log import logger
 
 __missing = object()
 
@@ -11,6 +12,12 @@ class Parameter(object):
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None):
+        """If scaler and/or adder are not None, then high, low, and start, if not None,
+        are assumed to be expressed in unscaled form.  If high and low are not supplied, then
+        their values will be pulled from the target variable (along with a start value), and
+        are assumed to be in scaled form, so their values will be unscaled prior to being 
+        stored in the Paramter.
+        """
 
         if scaler is None and adder is None:
             self._transform = self._do_nothing
@@ -127,7 +134,7 @@ class Parameter(object):
         if self.start is None:
             self.set(self._untransform(self._expreval.evaluate(scope)))
         else:
-            self.set(self._untransform(self.start), scope)
+            self.set(self.start, scope)
 
     def activate(self, scope, workflow=None):
         """Make this parameter active by creating the appropriate
@@ -210,11 +217,13 @@ class Parameter(object):
         #self._expreval.set(self._transform(val), scope)
         if scope is None:
             scope = self._get_scope()
+        if val < self.low or val > self.high:
+            logger.warning("Attempting to set '%s' with a value of (%s) which is outside of the range [%s, %s]" %
+                             (self.target, val, self.low, self.high))
         pcomp = getattr(scope, self.pcomp_name)
         pcomp.set('in0', val)
-        
-        pcomp.run()
-        self._expreval.set(pcomp.out0, src='.'.join([self.pcomp_name, 'out0']))
+        pcomp.run() # updates value of out0
+        self._expreval.set(pcomp.out0, src='.'.join([self.pcomp_name, 'out0'])) # set value into target
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one

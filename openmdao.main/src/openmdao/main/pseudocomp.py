@@ -263,29 +263,17 @@ class PseudoComponent(object):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
-            val = value.pq.value
+            value = value.pq.value
         elif isinstance(value, PhysicalQuantity):
-            val = value.value
-        else:
-            val = value
-        if path in self._meta:
-            high = self._meta[path].get('high', 1e99)
-            low = self._meta[path].get('low', -1e99)
-            if val < low or val > high:
-                raise ValueError("Attempted to set '%s' to a value (%s) outside of its bounds (%s/%s)" %
-                                 (path, val, high, low))
-        setattr(self, path, val)
+            value = value.value
+        setattr(self, path, value)
 
     def get_wrapped_attr(self, name, index=None):
         if index is not None:
             raise RuntimeError("pseudocomponent attr accessed using an index")
-        #return create_attr_wrapper(getattr(self, name), self._meta[name])
         return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
-        """PseudoComponents have not metadata, so just return
-        an empty dict or None.
-        """
         if metaname is None:
             return {}
         return None
@@ -395,10 +383,6 @@ class ParamPseudoComponent(PseudoComponent):
             val = value.value
         else:
             val = value
-
-        if val < self.param.low or val > self.param.high:
-            raise ValueError("Attempted to set '%s' to a value (%s) outside of its bounds (%s/%s)" %
-                             (path, val, self.param.high, self.param.low))
         setattr(self, path, val)
 
     def provideJ(self):

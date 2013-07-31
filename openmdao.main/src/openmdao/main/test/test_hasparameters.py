@@ -1,9 +1,12 @@
 # pylint: disable-msg=C0111,C0103
 import unittest
+import logging
+import StringIO
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int, Event, Float, List, Enum, Str
 from openmdao.util.decorators import add_delegate
+from openmdao.util.log import logger
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
 
@@ -382,19 +385,22 @@ class ParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
         self.top.driver.ctlmin = 1.0
         self.top.comp.svar = 1.5
-        self.top.driver.start_iteration()
+        self.top.driver.run()
 
         self.top.driver.clear_parameters()
         self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
         self.top.driver.ctlmin = 1.0
         self.top.comp.svar = 2.5
-        try:
-            self.top.driver.run()
-        except ValueError, err:
-            msg = 'driver: initial value of: comp.svar is greater than maximum'
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('ValueError expected')
+        
+        sout = StringIO.StringIO()
+        sh = logging.StreamHandler(sout)
+        sh.setLevel(logging.WARNING)
+        logger.addHandler(sh)
+        
+        self.top.driver.run()
+        self.assertEqual(sout.getvalue().strip(), 
+                         "Attempting to set 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
+        oldlogval = sout.getvalue()
 
         self.top.driver.clear_parameters()
         self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
@@ -406,13 +412,13 @@ class ParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
         self.top.driver.ctlmin = 1.0
         self.top.comp.svar = -2.5
-        try:
-            self.top.driver.start_iteration()
-        except ValueError, err:
-            msg = 'driver: initial value of: comp.svar is less than minimum'
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('ValueError expected')
+        
+        lval = sout.getvalue()
+        
+        self.top.driver.run()
+        
+        self.assertEqual(sout.getvalue()[len(oldlogval):].strip(), 
+                         "Attempting to set 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
 
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)
