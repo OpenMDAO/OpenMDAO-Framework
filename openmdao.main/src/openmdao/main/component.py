@@ -1640,7 +1640,7 @@ class Component(Container):
 
         parameters = {}
         implicit = {}
-
+       
         # We need connection information before we process the variables.
         if self.parent is None:
             connected_inputs = []
@@ -1709,13 +1709,22 @@ class Component(Container):
             io_attr['connected'] = ''
 
             connected = []
+            partially_connected = []
+            partially_connected_indices = []
+
             for inp in connected_inputs:
                 cname = inp.split('[')[0]  # Could be 'inp[0]'.
                 if cname == name:
                     connections = self._depgraph._var_connections(inp)
-                    connected.extend([src for src, dst in connections])
+                    partially_connected.extend([src for src, dst in connections])
+                    partially_connected_indices.append(int(inp.split('[')[1].split(']')[0]))
+
             if connected:
                 io_attr['connected'] = str(connected).replace('@xin.', '')
+            
+            if len(partially_connected) > 0:
+                io_attr['partially_connected'] = str(partially_connected).replace('@xin.', '')
+                io_attr['partially_connected_indices'] = str(partially_connected_indices)
 
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)

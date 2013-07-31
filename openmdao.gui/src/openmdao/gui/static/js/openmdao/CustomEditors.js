@@ -375,9 +375,17 @@
                 jQuery(lbracketSVG).appendTo($container);
             }
             
+            var partially_connected = this.splitData(args.item['partially_connected_indices']);
+
             default_length = length;
             for (var i = 0; i< length; i++) {
-                input.push($("<INPUT type=text class='editor-text' size = 6/>").appendTo($container));
+                var array_value = jQuery("<INPUT type=text class='editor-text' size = 6/>")
+                array_value.appendTo($container);
+                if(jQuery.inArray("" + i, partially_connected) > -1){
+                    array_value.prop("disabled", true);
+                }
+
+                input.push(array_value);
                 
                 // New row gets a new line.
                 if (ndim>1 && dim[0] > 1 && (i+1)%dim[1] == 0) { 
