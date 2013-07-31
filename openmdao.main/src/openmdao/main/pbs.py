@@ -332,9 +332,10 @@ class PBS_Server(ObjServer):
         # Write script to be submitted rather than putting everything on
         # 'qsub' command line. We have to do this since otherwise there's
         # no way to set an execution directory or input path.
+        base = None
         if 'job_name' in resource_desc:
             base = self._jobname(resource_desc['job_name'])
-        else:
+        if not base:
             base = os.path.basename(resource_desc['remote_command'])
         script_name = '%s%s' % (base, suffix)
 
@@ -399,6 +400,7 @@ class PBS_Server(ObjServer):
                 elif key == 'email_on_terminated':
                     email_events += 'e'
                 elif key == 'job_name':
+                    value = value or base
                     script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'input_path':
                     inp = value
@@ -522,7 +524,7 @@ class PBS_Server(ObjServer):
         """ Create legal job name from `name`. """
         name = name.strip()[:15]  # 15 characters max.
         name = name.translate(_XLATE)
-        if not name[0].isalpha():
+        if name and not name[0].isalpha():
             name = 'Z%s' % name[1:]
         return name
 

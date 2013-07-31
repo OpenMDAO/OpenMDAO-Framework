@@ -6,7 +6,7 @@ Trait for dictionary variables.
 __all__ = ["Dict"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Dict as Enthought_Dict
+from traits.api import Dict as Enthought_Dict
 
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.interfaces import implements, IVariable

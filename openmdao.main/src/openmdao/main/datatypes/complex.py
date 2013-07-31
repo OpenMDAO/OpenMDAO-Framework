@@ -6,7 +6,7 @@ Trait for complex variables.
 __all__ = ["Complex"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Complex as Enthought_Complex
+from traits.api import Complex as Enthought_Complex
 
 from openmdao.main.variable import Variable
 

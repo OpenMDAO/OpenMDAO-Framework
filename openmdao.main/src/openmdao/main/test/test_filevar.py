@@ -9,7 +9,7 @@ import shutil
 import sys
 import unittest
 
-from enthought.traits.api import TraitError
+from traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Bool, File, FileRef, Str, List
@@ -274,7 +274,6 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     import nose
-    import sys
     sys.argv.append('--cover-package=openmdao.main')
     nose.runmodule()
 

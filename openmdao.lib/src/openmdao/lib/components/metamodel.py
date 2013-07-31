@@ -20,8 +20,8 @@
 
 from copy import deepcopy, copy
 
-from enthought.traits.trait_base import not_none
-from enthought.traits.has_traits import _clone_trait
+from traits.trait_base import not_none
+from traits.has_traits import _clone_trait
 
 from openmdao.main.case import flatteners
 from openmdao.main.api import Component, Case, VariableTree
@@ -30,7 +30,8 @@ from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
 
-from openmdao.lib.datatypes.api import Slot, List, Str, Float, Int, Event, Dict, Bool
+from openmdao.lib.datatypes.api import Slot, List, Str, Float, Int, Event, \
+     Dict, Bool
 
 from openmdao.util.typegroups import int_types, real_types
 
@@ -68,16 +69,17 @@ class MetaModel(Component):
 
     default_surrogate = Slot(ISurrogate, allow_none=True,
                              desc="This surrogate will be used for all "
-                             "outputs that don't have a specific surrogate assigned "
-                             "to them in their sur_<name> slot.")
+                             "outputs that don't have a specific surrogate "
+                             "assigned to them in their sur_<name> slot.")
 
     surrogates = Dict(key_trait=Str,
                       value_trait=Slot(ISurrogate),
                       desc='surrogates for output variables')
 
     report_errors = Bool(True, iotype="in",
-                         desc="If True, metamodel will report errors reported from the component. "
-                         "If False, metamodel will swallow the errors but log that they happened and "
+                         desc="If True, metamodel will report errors reported "
+                         "from the component. If False, metamodel will swallow "
+                         "the errors but log that they happened and "
                          "exclude the case from the training set.")
 
     recorder = Slot(ICaseRecorder,
@@ -100,8 +102,9 @@ class MetaModel(Component):
         self._train = False
         self._new_train_data = False
         self._failed_training_msgs = []
-        self._default_surrogate_copies = {}  # need to maintain separate copy of default surrogate for each sur_* that doesn't
-                                             # have a surrogate defined
+        self._default_surrogate_copies = {}  # need to maintain separate copy of
+                                             # default surrogate for each sur_*
+                                             # that doesn't have a surrogate defined
 
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
@@ -187,17 +190,22 @@ class MetaModel(Component):
                 self.raise_exception('The exclude "%s" is not one of the '
                                      'model inputs or outputs ' % exclude, ValueError)
 
-        # 4. Either there are no surrogates set and no default surrogate ( just do passthrough )
-        #   or
-        # all outputs must have surrogates assigned either explicitly or through
-        #  the default surrogate
+        # 4. Either there are no surrogates set and no default surrogate
+        #    ( just do passthrough )
+        #        or
+        #    all outputs must have surrogates assigned either explicitly
+        #    or through the default surrogate
         if self.default_surrogate is None:
             no_sur = []
             for name in self.surrogate_output_names():
                 if not self.surrogates[name]:
                     no_sur.append(name)
             if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
-                self.raise_exception("No default surrogate model is defined and the following outputs do not have a surrogate model: %s. Either specify default_surrogate, or specify a surrogate model for all outputs." %
+                self.raise_exception("No default surrogate model is defined and"
+                                     " the following outputs do not have a"
+                                     " surrogate model: %s. Either specify"
+                                     " default_surrogate, or specify a"
+                                     " surrogate model for all outputs." %
                                      no_sur, RuntimeError)
 
         # 5. All the explicitly set surrogates[] should match actual outputs of the model
@@ -231,12 +239,14 @@ class MetaModel(Component):
                 for name, output_history in self._training_data.items():
                     case_outputs.append(('.'.join([self.name, name]),
                                          output_history[-1]))
-                # save the case, making sure to add out name to the local input name since
-                # this Case is scoped to our parent Assembly
-                case_inputs = [('.'.join([self.name, name]), val) for name, val in zip(self.surrogate_input_names(),
-                                                                                       inputs)]
+                # save the case, making sure to add out name to the local input
+                # name since this Case is scoped to our parent Assembly
+                case_inputs = [('.'.join([self.name, name]), val)
+                               for name, val in zip(self.surrogate_input_names(),
+                                                    inputs)]
                 if self.recorder:
-                    self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
+                    self.recorder.record(Case(inputs=case_inputs,
+                                              outputs=case_outputs))
 
             self._train = False
         else:
@@ -290,7 +300,9 @@ class MetaModel(Component):
                     inputs.append(val)
 
                 elif val != cval:
-                    self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
+                    self.raise_exception("ERROR: training input '%s' was a"
+                                         " constant value of (%s) but the value"
+                                         " has changed to (%s)." %
                                          (name, cval, val), ValueError)
 
             for name in self._training_data:
@@ -338,15 +350,16 @@ class MetaModel(Component):
         # TODO: check for name collisions between MetaModel class traits and traits from model
 
         if newmodel is not None and not has_interface(newmodel, IComponent):
-            self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
+            self.raise_exception('model of type %s does not implement the'
+                                 ' IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 
         self.reset_training_data = True
 
         if newmodel:
             if not check_model_only_one_level_vartree(newmodel):
-                self.raise_exception('metamodels currently do not support multi level vartrees',
-                                     TypeError)
+                self.raise_exception('metamodels currently do not support multi'
+                                     ' level vartrees', TypeError)
 
         self._update_surrogate_list()
 
@@ -370,7 +383,8 @@ class MetaModel(Component):
         elif isinstance(val, int_types):
             ttype = Int
         else:
-            self.raise_exception("value type of '%s' is not a supported surrogate return value" %
+            self.raise_exception("value type of '%s' is not a supported"
+                                 " surrogate return value" %
                                  val.__class__.__name__)
 
         if "." not in varname:  # non vartree variable
@@ -385,8 +399,8 @@ class MetaModel(Component):
             metamodel_vartree = self.get(vartreename)
             model_vartree_node = self.model.get(vartreename)
             metamodel_vartree.add(subvarname, ttype(default_value=val, iotype='out',
-                                    desc=model_vartree_node.trait(subvarname).desc,
-                                    units=model_vartree_node.trait(subvarname).units))
+                                  desc=model_vartree_node.trait(subvarname).desc,
+                                  units=model_vartree_node.trait(subvarname).units))
             setattr(metamodel_vartree, subvarname, val)
 
         return
@@ -414,7 +428,8 @@ class MetaModel(Component):
 
     def update_inputs(self, compname, varnames):
         if compname != 'model':
-            self.raise_exception("cannot update inputs for child named '%s'" % compname)
+            self.raise_exception("cannot update inputs for child named '%s'"
+                                 % compname)
         self.model.set_valid(varnames, True)
 
     def update_model_inputs(self):
@@ -464,12 +479,14 @@ class MetaModel(Component):
             vartreename, subvarname = name.split(".")
 
             if not hasattr(self, vartreename):
-                self.add_trait(vartreename, _clone_trait(self.model.trait(vartreename)))
+                self.add_trait(vartreename,
+                               _clone_trait(self.model.trait(vartreename)))
                 setattr(self, vartreename, copy(getattr(self.model, vartreename)))
 
             metamodel_vartree_node = self.get(vartreename)
             model_vartree_node = self.model.get(vartreename)
-            metamodel_vartree_node.add_trait(subvarname, _clone_trait(model_vartree_node.trait(subvarname)))
+            metamodel_vartree_node.add_trait(subvarname,
+                                             _clone_trait(model_vartree_node.trait(subvarname)))
             metamodel_vartree_node.set(subvarname, model_vartree_node.get(subvarname))
 
     def _add_output(self, name):
@@ -488,7 +505,8 @@ class MetaModel(Component):
             vartreename = name.split(".")[0]
             subvarname = name.split(".")[1]
             if not hasattr(self, vartreename):
-                self.add_trait(vartreename, _clone_trait(self.model.trait(vartreename)))
+                self.add_trait(vartreename,
+                               _clone_trait(self.model.trait(vartreename)))
                 setattr(self, vartreename, copy(getattr(self.model, vartreename)))
 
             if self.default_surrogate is not None:
@@ -498,7 +516,8 @@ class MetaModel(Component):
             else:
                 metamodel_vartree_node = self.get(vartreename)
                 model_vartree_node = self.model.get(vartreename)
-                metamodel_vartree_node.add_trait(subvarname, _clone_trait(model_vartree_node.trait(subvarname)))
+                metamodel_vartree_node.add_trait(subvarname,
+                                                 _clone_trait(model_vartree_node.trait(subvarname)))
 
         self._training_data[name] = []
 
@@ -553,7 +572,8 @@ class MetaModel(Component):
                         if self._eligible(name) and name not in self._mm_class_traitnames:
                             t = type(self.model.get(name))
                             if t not in [float, int]:
-                                self.raise_exception("Metamodel only supports int and float inputs",
+                                self.raise_exception("Metamodel only supports"
+                                                     " int and float inputs",
                                                      RuntimeError)
                             self._surrogate_input_names.append(name)
                     else:
@@ -563,7 +583,7 @@ class MetaModel(Component):
                                 t = type(self.model.get(subname))
                                 if t not in [float, int]:
                                     self.raise_exception("Metamodel only supports int and float inputs",
-                                                     RuntimeError)
+                                                         RuntimeError)
                                 self._surrogate_input_names.append(subname)
             else:
                 return []
@@ -582,7 +602,8 @@ class MetaModel(Component):
                         if self._eligible(name) and name not in self._mm_class_traitnames:
                             t = type(self.model.get(name))
                             if t not in [float, int]:
-                                self.raise_exception("Metamodel only supports int and float outputs",
+                                self.raise_exception("Metamodel only supports"
+                                                     " int and float outputs",
                                                      RuntimeError)
                             self._surrogate_output_names.append(name)
                     else:
@@ -591,7 +612,8 @@ class MetaModel(Component):
                             if self._eligible(subname) and name not in self._mm_class_traitnames:
                                 t = type(self.model.get(subname))
                                 if t not in [float, int]:
-                                    self.raise_exception("Metamodel only supports int and float outputs",
+                                    self.raise_exception("Metamodel only supports"
+                                                         " int and float outputs",
                                                          RuntimeError)
                                 self._surrogate_output_names.append(subname)
             else:
@@ -636,16 +658,16 @@ class MetaModel(Component):
     def _includes_changed(self, old, new):
         for name in new:
             if "." in name:
-                self.raise_exception("Can only include top level variable trees, not leaves",
-                                     RuntimeError)
+                self.raise_exception("Can only include top level variable"
+                                     " trees, not leaves", RuntimeError)
         self._update_surrogate_list()
         self.config_changed()
 
     def _excludes_changed(self, old, new):
         for name in new:
             if "." in name:
-                self.raise_exception("Can only exclude top level variable trees, not leaves",
-                                     RuntimeError)
+                self.raise_exception("Can only exclude top level variable"
+                                     " trees, not leaves", RuntimeError)
         self._update_surrogate_list()
         self.config_changed()
 
@@ -676,8 +698,8 @@ class MetaModel(Component):
             self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
 
     def _eligible(self, name):
-        """Return True if the named trait is not excluded from the public interface based
-        on the includes and excludes lists.
+        """Return True if the named trait is not excluded from the public
+        interface based on the includes and excludes lists.
         """
 
         # includes and excludes only are allowed at the top level of vartrees
