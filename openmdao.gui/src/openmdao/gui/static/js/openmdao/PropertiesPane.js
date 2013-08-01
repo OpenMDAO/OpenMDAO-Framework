@@ -83,7 +83,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     }
 
     function getExcludes(){
-        return ["info", "name", "value", "units", "desc", "indent", "id", "vt", "parent", "high", "low"];
+        return ["info", "name", "value", "units", "desc", "indent", "partially_connected", "partially_connected_indices", "id", "vt", "parent", "high", "low"];
     }
 
     function excludeField(field, excludes){
@@ -111,10 +111,18 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
            return numberToString(high) + " / " + numberToString(low);
        }
 
+        function connectedToString(connections){
+            var connected = connections.connected !== undefined ? connections.connected : connections;
+            var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
+            
+            return connected + partially_connected;
+        }
+
        var formatters = {
             "high" : numberToString,
             "low" : numberToString,
-            "high-low" : highLowToString
+            "high-low" : highLowToString,
+            "connected" : connectedToString,
        };
 
        function hasFormatter(key){
@@ -161,7 +169,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         var weights = {
             "type"      : 4,
-            "high low"  : 3,
+            "high-low"  : 3,
             "valid"     : 2,
             "connected" : 1,
             "implicit"  : 0
@@ -240,6 +248,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         newItem = itemFormatter.cloneItem(item);
 
         newItem = itemFormatter.groupFields(["high", "low"], "high-low", item);
+        
+        if( "partially_connected" in newItem ){
+            newItem = itemFormatter.groupFields(["connected", "partially_connected"], "connected", item);
+        }
+
         newItem = itemFormatter.removeFields(newItem, getExcludes());
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
@@ -354,7 +367,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     hide : false,
                     show : false,
                     position : {
-                        of : "#CE-" + pathname.replace(/\./g,'-') + "_" + name,
+                        of : "#ObjectFrame_" + pathname.replace(/\./g,'-') + "_" + name,
                         my : "right top",
                         at : "left-20 top"
                     }
