@@ -24,13 +24,12 @@ class SellarIDF(Assembly):
         self.add('dis2', sellar.Discipline2_WithDerivatives())
         
         # Driver process definition
-        #self.driver.workflow.add(['dis1', 'dis2'])
-        self.driver.workflow.add(['dis1'])
+        self.driver.workflow.add(['dis1', 'dis2'])
+        #self.driver.workflow.add(['dis1'])
         
 
         # Optimization parameters
-        #self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
-        self.driver.add_objective('dis1.z2')
+        self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         #Global Design Variables
         self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high=10.0)
@@ -67,7 +66,7 @@ if __name__ == "__main__": # pragma: no cover
     #prob.driver.workflow.run()
     ttot = time.time()-tt
 
-    #prob.driver.workflow.check_gradient()
+    prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
