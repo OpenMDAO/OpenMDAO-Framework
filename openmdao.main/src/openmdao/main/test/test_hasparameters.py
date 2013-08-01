@@ -399,7 +399,7 @@ class ParametersTestCase(unittest.TestCase):
         
         self.top.driver.run()
         self.assertEqual(sout.getvalue().strip(), 
-                         "Attempting to set 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
+                         "Setting 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
         oldlogval = sout.getvalue()
 
         self.top.comp.svar = 0.5 # put svar back in valid range
@@ -416,7 +416,7 @@ class ParametersTestCase(unittest.TestCase):
         self.top.driver.run()
         
         self.assertEqual(sout.getvalue()[len(oldlogval):].strip(), 
-                         "Attempting to set 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
+                         "Setting 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
 
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)

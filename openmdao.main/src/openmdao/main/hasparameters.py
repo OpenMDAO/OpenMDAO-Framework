@@ -218,7 +218,7 @@ class Parameter(object):
         if scope is None:
             scope = self._get_scope()
         if val < self.low or val > self.high:
-            logger.warning("Attempting to set '%s' with a value of (%s) which is outside of the range [%s, %s]" %
+            logger.warning("Setting '%s' with a value of (%s) which is outside of the range [%s, %s]" %
                              (self.target, val, self.low, self.high))
         pcomp = getattr(scope, self.pcomp_name)
         pcomp.set('in0', val)

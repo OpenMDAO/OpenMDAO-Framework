@@ -262,6 +262,9 @@ class Driver(Component):
         for recorder in self.recorders:
             recorder.startup()
 
+        # force param pseudocomps to get updated values to start
+        self.update_parameters()
+
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
