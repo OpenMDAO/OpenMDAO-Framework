@@ -59,7 +59,7 @@ class OptRosenSuzukiComponent(Component):
                        2.*self.x[2]**2 - 21.*self.x[2] + 
                        self.x[3]**2 + 7.*self.x[3] + 50)
         self.obj_string = "Bad"
-        print "rosen", self.x
+        #print "rosen", self.x
 
 
 class CONMINdriverTestCase(unittest.TestCase):
@@ -90,7 +90,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.printvars = ['comp.opt_objective']  
         self.top.driver.iprint = 2
         self.top.run()
-        print self.top.comp.x, self.top.comp.opt_design_vars
+        
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)

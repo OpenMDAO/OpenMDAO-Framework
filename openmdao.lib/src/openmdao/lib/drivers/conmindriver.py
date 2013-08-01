@@ -396,7 +396,7 @@ class CONMINdriver(Driver):
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
                 self.constraint_vals[i] = v.evaluate(self.parent)
-            print self.constraint_vals    
+                
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
         # calculate gradient of constraints and gradient of objective
