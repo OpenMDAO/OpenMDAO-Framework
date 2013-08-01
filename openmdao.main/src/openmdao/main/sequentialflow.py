@@ -758,15 +758,19 @@ class SequentialWorkflow(Workflow):
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
             
-            # Hack: parameter output edges aren't in the assy depgraph, so we 
+            # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.
-            if hasattr(self._parent, 'get_parameters'):
-                for param in self._parent.get_parameters().values():
-                    param_out = '%s.in0' % param.pcomp_name
-                    if param_out in inputs:
-                        pcomp = getattr(self.scope, param.pcomp_name)
-                        pset = set(pcomp.list_connections())
-                        self._hidden_edges = pset.union(self._hidden_edges)
+            for dr_edge in self.get_driver_edges():
+                dr_src = dr_edge[0].split('.')[0]
+                dr_targ = dr_edge[1].split('.')[0]
+                if '%s.in0' % dr_src in inputs:
+                    pcomp = getattr(self.scope, dr_src)
+                    pset = set(pcomp.list_connections())
+                    self._hidden_edges = pset.union(self._hidden_edges)
+                if '%s.out0' % dr_targ in outputs:
+                    pcomp = getattr(self.scope, dr_targ)
+                    pset = set(pcomp.list_connections())
+                    self._hidden_edges = pset.union(self._hidden_edges)
             
             self.derivative_iterset = [pseudo]
 

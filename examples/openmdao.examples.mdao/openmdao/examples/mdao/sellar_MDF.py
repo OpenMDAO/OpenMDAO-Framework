@@ -41,10 +41,8 @@ class SellarMDF(Assembly):
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-1.e99, high=1.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
-        # equivalent form
-        # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         
-        #Driver settings
+        # Solver settings
         self.solver.max_iteration = 1000
         self.solver.tolerance = .0001
         

@@ -63,7 +63,6 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
-    #prob.driver.workflow.run()
     ttot = time.time()-tt
 
     prob.driver.workflow.check_gradient()
