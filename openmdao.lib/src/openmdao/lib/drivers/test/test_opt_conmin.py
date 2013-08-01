@@ -10,7 +10,7 @@ from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.conmindriver import CONMINdriver
-
+from openmdao.util.testutil import assert_rel_error
 
 class OptRosenSuzukiComponent(Component):
     """ From the CONMIN User's Manual:
@@ -59,6 +59,7 @@ class OptRosenSuzukiComponent(Component):
                        2.*self.x[2]**2 - 21.*self.x[2] + 
                        self.x[3]**2 + 7.*self.x[3] + 50)
         self.obj_string = "Bad"
+        print "rosen", self.x
 
 
 class CONMINdriverTestCase(unittest.TestCase):
@@ -86,8 +87,10 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.driver.recorders = [ListCaseRecorder()]
-        self.top.driver.printvars = ['comp.opt_objective']        
+        self.top.driver.printvars = ['comp.opt_objective']  
+        self.top.driver.iprint = 2
         self.top.run()
+        print self.top.comp.x, self.top.comp.opt_design_vars
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)
@@ -95,8 +98,8 @@ class CONMINdriverTestCase(unittest.TestCase):
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=2)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
         
@@ -155,8 +158,8 @@ class CONMINdriverTestCase(unittest.TestCase):
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=2)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
 
@@ -218,34 +221,6 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         self.assertEqual(self.top.driver.iter_count, 2)
 
-    def test_input_minmax_violation(self):
-        
-        self.top.driver.add_objective('comp.result')
-        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                            'comp.x[2]', 'comp.x[3]'])
-        
-        self.top.comp.x[0] = 100
-        try:
-            self.top.run()
-        except ValueError, err:
-            msg = 'driver: initial value of: comp.x[0] is greater than maximum'
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('ValueError expected')
-
-        self.top.comp.x[0] = -50
-        try:
-            self.top.run()
-        except ValueError, err:
-            msg = 'driver: initial value of: comp.x[0] is less than minimum'
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('ValueError expected')
-
-        self.top.comp.x[0] = 99.0001
-        self.top.driver.ctlmin = .001
-        self.top.run()
-            
     def test_remove(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, 

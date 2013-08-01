@@ -222,7 +222,7 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-    print input_keys, output_keys, J 
+    
     ibounds = {}
     nvar = 0
     for key in input_keys:
@@ -261,7 +261,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    print "applyJ", arg, result
+    
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -359,7 +359,7 @@ class FiniteDifference(object):
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
-        
+        print "begin FD"
         self.get_inputs(self.x)
         self.get_outputs(self.y_base)
         
@@ -479,6 +479,7 @@ class FiniteDifference(object):
             else:
                 self.scope.set(src, new_val, force=True)
         
+        print "end FD"
         return self.J
     
     def get_inputs(self, x):

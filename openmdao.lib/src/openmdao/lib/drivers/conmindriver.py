@@ -396,7 +396,7 @@ class CONMINdriver(Driver):
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
                 self.constraint_vals[i] = v.evaluate(self.parent)
-                
+            print self.constraint_vals    
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
         # calculate gradient of constraints and gradient of objective
@@ -440,9 +440,8 @@ class CONMINdriver(Driver):
             for i in range(len(self.get_ineq_constraints())):
                 if self.constraint_vals[i] >= self.cnmn1.ct:
                     self.cons_active_or_violated[self.cnmn1.nac] = i+1
-                    self.d_const[:-2, self.cnmn1.nac] = -J[nobj+i, :]
+                    self.d_const[:-2, self.cnmn1.nac] = J[nobj+i, :]
                     self.cnmn1.nac += 1
-                    
         else:
             self.raise_exception('Unexpected value for flag INFO returned \
                     from CONMIN.', RuntimeError)

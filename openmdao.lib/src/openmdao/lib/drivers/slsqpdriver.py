@@ -210,7 +210,7 @@ class SLSQPdriver(Driver):
         n1 = nobj
         n2 = nobj + ncon
         if ncon > 0:
-            dg[0:ncon, 0:self.nparam] = J[n1:n2, :]
+            dg[0:ncon, 0:self.nparam] = -J[n1:n2, :]
         print df, dg
         return df, dg
     

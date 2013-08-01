@@ -35,7 +35,7 @@ class Discipline1(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)
+        #print "Dis 1 (%f, %f, %f, %f)" % (z1, z2, x1, y2)
         
         
 class Discipline1_WithDerivatives(Component):
@@ -59,7 +59,7 @@ class Discipline1_WithDerivatives(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)        
+        #print "Dis 1 (%f, %f, %f, %f)" % (z1, z2, x1, y2)
 
     def linearize(self):
         """ Calculate the Jacobian """
@@ -104,6 +104,7 @@ class Discipline2(Component):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2
+        #print "Dis 2 (%f, %f, %f)" % (z1, z2, y1)        
         
     
 class Discipline2_WithDerivatives(Component):
@@ -129,6 +130,7 @@ class Discipline2_WithDerivatives(Component):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2         
+        #print "Dis 2 (%f, %f, %f)" % (z1, z2, y1)        
         
     def linearize(self):
         """ Calculate the Jacobian """

@@ -246,7 +246,8 @@ class PseudoComponent(object):
         self._destexpr.set(src)
         for name in self._valid_dict:
             self._valid_dict[name] = True
-
+        print self._eqn, self.out0
+        
     def update_inputs(self, inputs):
         self._parent.update_inputs(self.name, inputs)
         

@@ -40,10 +40,10 @@ class SellarIDF(Assembly):
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
         self.driver.add_parameter('dis2.y1',      low = -1e99,  high=1e99)
         self.driver.add_parameter('dis1.y2',      low = -1e99, high=1e99)
-        #self.driver.add_constraint('3.16 < dis1.y1')
-        #self.driver.add_constraint('dis2.y2 < 24.0')
+        self.driver.add_constraint('3.16 < dis1.y1')
+        self.driver.add_constraint('dis2.y2 < 24.0')
             
-        #self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
         self.driver.add_constraint('(dis2.y2-dis1.y2)**2 <= 0')
   
         self.driver.iprint = 0
@@ -63,11 +63,11 @@ if __name__ == "__main__": # pragma: no cover
     prob.dis2.y1 = 3.16
     
     tt = time.time()
-    #prob.run()
-    prob.driver.workflow.run()
+    prob.run()
+    #prob.driver.workflow.run()
     ttot = time.time()-tt
 
-    prob.driver.workflow.check_gradient()
+    #prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
