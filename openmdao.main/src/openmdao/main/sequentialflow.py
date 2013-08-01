@@ -396,6 +396,7 @@ class SequentialWorkflow(Workflow):
                 comp.applyMinv(pre_inputs, inputs[name])
             
         # Call ApplyJ on each component
+        
         for comp in self.derivative_iter():
             name = comp.name
             applyJ(comp, inputs[name], outputs[name])
@@ -432,7 +433,7 @@ class SequentialWorkflow(Workflow):
             elif src in self._input_outputs:
                 ref_edge = input_input_xref[src]
                 i3, i4 = self.bounds[ref_edge]
-                result[i1:i2] = arg[i3:i4] + arg[i1:i2]
+                result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
@@ -440,7 +441,7 @@ class SequentialWorkflow(Workflow):
                 var_name = '%s.%s' % (comp_name, var_name)
                 comp_name = pa_ref[comp_name]
             result[i1:i2] = outputs[comp_name][var_name]
-        
+            
         return result
     
     def matvecREV(self, arg):
@@ -525,7 +526,7 @@ class SequentialWorkflow(Workflow):
             if src in self._input_outputs:
                 ref_edge = input_input_xref[src]
                 i3, i4 = self.bounds[ref_edge]
-                result[i1:i2] = arg[i3:i4] + arg[i1:i2]
+                result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 continue
             
                 #comp_name, dot, var_name = target.partition('.')
@@ -864,8 +865,11 @@ class SequentialWorkflow(Workflow):
             close_stream = False
     
         self._parent.update_parameters()
+        self.config_changed()
         J = self.calc_gradient(inputs, outputs)
+        
         self._parent.update_parameters()
+        self.config_changed()
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
         print >> stream, 24*'-'

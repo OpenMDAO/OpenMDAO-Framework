@@ -64,7 +64,7 @@ class Discipline1_WithDerivatives(Component):
     def linearize(self):
         """ Calculate the Jacobian """
         
-        self.J = numpy.zeros([1, 5])
+        self.J = numpy.zeros([1, 4])
         
         self.J[0, 0] = 1.0
         self.J[0, 1] = -0.2
@@ -133,12 +133,11 @@ class Discipline2_WithDerivatives(Component):
     def linearize(self):
         """ Calculate the Jacobian """
         
-        self.J = numpy.zeros([1, 4])
+        self.J = numpy.zeros([1, 3])
         
         self.J[0, 0] = .5*(abs(self.y1))**-0.5
         self.J[0, 1] = 1.0
         self.J[0, 2] = 1.0
-        self.J[0, 3] = -1.0        
 
     def provideJ(self):
         """Alternative specification."""
