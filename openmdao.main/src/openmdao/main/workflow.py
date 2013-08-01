@@ -90,9 +90,6 @@ class Workflow(object):
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
         
-        # force param pseudocomps to get updated values to start
-        self._parent.update_parameters()
-
         for comp in self._iterator:
             if not isinstance(comp, PseudoComponent):
                 self._comp_count += 1
