@@ -41,7 +41,7 @@ class SellarMDF(Assembly):
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-1.e99, high=1.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
-        # equivilent form
+        # equivalent form
         # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         
         #Driver settings
@@ -69,13 +69,17 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
+    ttot = time.time()-tt
+    
+    prob.driver.workflow.check_gradient()
+    
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis1.z2, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
-    print "Elapsed time: ", time.time()-tt, "seconds"
+    print "Elapsed time: ", ttot, "seconds"
 
     
 # End sellar_MDF.py

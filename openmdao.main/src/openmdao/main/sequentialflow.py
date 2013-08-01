@@ -730,11 +730,13 @@ class SequentialWorkflow(Workflow):
         if outputs is None:
             outputs = []
             if hasattr(self._parent, 'get_objectives'):
-                outputs.extend(self._parent.get_objectives().keys())
-            if hasattr(self._parent, 'get_ineq_constraints'):
-                outputs.extend(self._parent.get_ineq_constraints().keys())
-            if hasattr(self._parent, 'get_eq_constraints'):
-                outputs.extend(self._parent.get_eq_constraints().keys())
+                obj = ["%s.out0" % item.pcomp_name for item in \
+                        self._parent.get_objectives().values()]
+                outputs.extend(obj)
+            if hasattr(self._parent, 'get_constraints'):
+                con = ["%s.out0" % item.pcomp_name for item in \
+                               self._parent.get_constraints().values()]
+                outputs.extend(con)
                 
             if len(outputs) == 0:
                 msg = "No outputs given for derivatives."
@@ -747,7 +749,10 @@ class SequentialWorkflow(Workflow):
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.
             comps = [comp for comp in self]
-            pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, self)
+            comp_names = self.get_names(full=True)
+            rcomps = recursive_components(self.scope, comp_names)            
+            pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
+                                    self, recursed_components=rcomps)
             pseudo.ffd_order = 0
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
@@ -858,6 +863,7 @@ class SequentialWorkflow(Workflow):
         else:
             close_stream = False
     
+        self._parent.update_parameters()
         J = self.calc_gradient(inputs, outputs)
         self._parent.update_parameters()
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
@@ -873,35 +879,46 @@ class SequentialWorkflow(Workflow):
 
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = self._parent.get_parameters().keys()
+                inputs = ['%s.in0' % param.pcomp_name for param in \
+                          self._parent.get_parameters().values()]
+                input_refs = self._parent.get_parameters().keys()
             # Should be caught in calc_gradient()
             else:  # pragma no cover
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
+        else:
+            input_refs = inputs
             
         if outputs is None:
             outputs = []
+            output_refs = []
             if hasattr(self._parent, 'get_objectives'):
-                outputs.extend(self._parent.get_objectives().keys())
-            if hasattr(self._parent, 'get_ineq_constraints'):
-                outputs.extend(self._parent.get_ineq_constraints().keys())
-            if hasattr(self._parent, 'get_eq_constraints'):
-                outputs.extend(self._parent.get_eq_constraints().keys())
-            # Should be caught in calc_gradient()
+                obj = ["%s.out0" % item.pcomp_name for item in \
+                        self._parent.get_objectives().values()]
+                outputs.extend(obj)
+                output_refs.extend(self._parent.get_objectives().keys())
+            if hasattr(self._parent, 'get_constraints'):
+                con = ["%s.out0" % item.pcomp_name for item in \
+                               self._parent.get_constraints().values()]
+                outputs.extend(con)
+                output_refs.extend(self._parent.get_constraints().keys())
+                
             if len(outputs) == 0:  # pragma no cover
                 msg = "No outputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
+        else:
+            output_refs = outputs
 
         out_width = 0
-        for output in outputs:
+        for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
-            out_names = flattened_names(output, out_val)
+            out_names = flattened_names(oref, out_val)
             out_width = max(out_width, max([len(out) for out in out_names]))
 
         inp_width = 0
-        for input in inputs:
+        for input, iref in zip(inputs, input_refs):
             inp_val = self.scope.get(input)
-            inp_names = flattened_names(input, inp_val)
+            inp_names = flattened_names(str(iref), inp_val)
             inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
 
         label_width = out_width + inp_width + 4
@@ -916,14 +933,14 @@ class SequentialWorkflow(Workflow):
         error_max = error_loc = None
         suspects = []
         i = -1
-        for output in outputs:
+        for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
-            for out_name in flattened_names(output, out_val):
+            for out_name in flattened_names(oref, out_val):
                 i += 1
                 j = -1
-                for input in inputs:
+                for input, iref in zip(inputs, input_refs):
                     inp_val = self.scope.get(input)
-                    for inp_name in flattened_names(input, inp_val):
+                    for inp_name in flattened_names(iref, inp_val):
                         j += 1
                         calc = J[i, j]
                         finite = Jbase[i, j]
