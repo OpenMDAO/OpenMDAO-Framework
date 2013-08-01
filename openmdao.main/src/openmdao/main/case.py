@@ -1,6 +1,5 @@
 
 from uuid import uuid1
-import re
 from array import array
 import traceback
 from StringIO import StringIO
@@ -12,8 +11,7 @@ from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
-class _Missing(object):
-    pass
+_Missing = object()
 
 def _simpleflatten(name, obj):
     return [(name, obj)]

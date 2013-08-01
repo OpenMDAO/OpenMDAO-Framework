@@ -2,6 +2,7 @@
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 
@@ -93,8 +94,9 @@ class Workflow(object):
         self._parent.update_parameters()
 
         for comp in self._iterator:
-            self._comp_count += 1
-            comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+            if not isinstance(comp, PseudoComponent):
+                self._comp_count += 1
+                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
             comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
