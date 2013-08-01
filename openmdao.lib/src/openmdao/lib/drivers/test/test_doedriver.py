@@ -19,6 +19,7 @@ from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial, \
                                            CSVFile
+from openmdao.util.testutil import case_assert_rel_error, assert_rel_error
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -262,8 +263,9 @@ class TestCaseDOE(unittest.TestCase):
                 self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
+                assert_rel_error(self, case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                                 0.0001)
 
     def test_rerun(self):
         logging.debug('')
@@ -283,7 +285,7 @@ class TestCaseDOE(unittest.TestCase):
         self.assertEqual(len(orig_cases), 10)
         self.assertEqual(len(rerun.cases), len(rerun_seq))
         for i, case in enumerate(rerun.cases):
-            self.assertEqual(case, orig_cases[rerun_seq[i]])
+            case_assert_rel_error(case, orig_cases[rerun_seq[i]], self, .0001)
 
 
 class MyModel2(Assembly):
@@ -479,8 +481,9 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
                 self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
+                assert_rel_error(self, case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                                 0.0001)
 
 
 if __name__ == "__main__":
