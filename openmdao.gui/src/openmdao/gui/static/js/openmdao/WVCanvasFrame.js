@@ -22,7 +22,40 @@ openmdao.WVCanvasFrame = function(wv, canvas_id, status_id) {
         _ALT_KEY     = 2,
         _CTRL_KEY    = 4,
         _META_KEY    = 8,
-        _WHEEL_DELTA = 120;
+        _WHEEL_DELTA = 120,
+        _key_platforms =         ['Linux',             'OS X',              'Windows'],
+        _key_bindings = {
+            'Pan':               ['Left Click',        'Left Click',        'Left Click'],
+            'X/Y Axis Rotation': ['CTRL + Left Click', 'CTRL + Left Click', 'CTRL + Left Click'],
+            'Z Axis Rotation':   ['ALT + Left Click',  'ALT + Left Click',  'ALT + Left Click'],
+            'Zoom':              ['Mouse Wheel',       'Two Finger Scroll', 'Mouse Wheel']
+        }
+
+    function getKeyTable() {
+        var html = '<table id="controlsTable" class="table table-striped table-bordered">';
+
+        html += '<thead>';
+        html += '<tr><th></th><tr>';
+        for (var i = 0; i<_key_platforms.length; i++) {
+            html += '<tr><td>'+_key_platforms[i]+'</td></tr>';
+        }
+        html += '</thead>';
+
+        html += '<tbody>';
+        html += '<tr><th></th><tr>';
+        for (var key in _key_bindings) {
+            html += '<tr><td>'+key+'<td>';
+            for (var j = 0; j<_key_bindings[key].length; j++) {
+                html += '<td>'+_key_bindings[key][j]+'</td>';
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+
+        return html;
+    }
+
+console.log('getKeyTable:', getKeyTable());
 
     // Event Handlers
 
