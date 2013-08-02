@@ -15,6 +15,7 @@ import weakref
 
 try:
     from numpy import inner
+    from numpy import ndarray
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
@@ -1649,7 +1650,7 @@ class Component(Container):
 
         parameters = {}
         implicit = {}
-       
+        partial_parameters = {} 
         # We need connection information before we process the variables.
         if self.parent is None:
             connected_inputs = []
@@ -1665,9 +1666,15 @@ class Component(Container):
         if self.parent and has_interface(self.parent, IAssembly):
             dataflow = self.parent.get_dataflow()
             for parameter, target in dataflow['parameters']:
-                if not target in parameters:
-                    parameters[target] = []
-                parameters[target].append(parameter)
+                if "[" in target:
+                    target_name = target.split('[')[0]
+                    if not target_name in partial_parameters:
+                        partial_parameters[target_name] = []
+                    partial_parameters[target_name].append(parameter)
+                else:
+                    if not target in parameters:
+                        parameters[target] = []
+                    parameters[target].append(parameter)
 
             for target, objective in dataflow['objectives']:
                 if target not in implicit:
@@ -1739,6 +1746,17 @@ class Component(Container):
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
+            
+            if name == "inArray":
+                import pdb
+                pdb.set_trace()
+
+            if "%s.%s" % (self.name, name) in partial_parameters:
+                implicit_partial_indices = [int(value.split("[")[1].split("]")[0]) for value in partial_parameters["%s.%s" % (self.name, name)]]
+                io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
+                io_attr['implicit_partial'] = ''
+                io_attr['implicit_partial'] = str([driver_name.split('.')[0] for
+                    driver_name in partial_parameters["%s.%s" % (self.name, name)]])
 
             io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:

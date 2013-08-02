@@ -375,7 +375,7 @@
                 jQuery(lbracketSVG).appendTo($container);
             }
             
-            var partially_connected = this.splitData(args.item['partially_connected_indices']);
+            var partially_connected = args.item["partially_connected_indices"] !== undefined ? this.splitData(args.item['partially_connected_indices']) : [];
 
             default_length = length;
             for (var i = 0; i< length; i++) {
