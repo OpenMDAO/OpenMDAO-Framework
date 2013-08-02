@@ -20,6 +20,38 @@ def test_generator():
         yield _test, browser
 
 
+def _test_partial_array_connections(browser):
+    # Creates a file in the GUI.
+    project_dict, workspace_page = startup(browser)
+
+    # Import variable_editor.py
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/partial_connections.py')
+    workspace_page.add_file(file_path)
+
+    workspace_page.add_library_item_to_dataflow('partial_connections.ConnectingComponents', 'top')
+   
+    perpnerp = workspace_page.get_dataflow_figure("thing2", "top")
+    props = perpnerp.properties_page()
+
+    #array 1d editor - add element, set to 4
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+    add_path = '//*[@id="array-edit-add-X"]'
+    browser.find_element_by_xpath(add_path).click()
+    new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
+    new_cell = browser.find_element_by_xpath(new_cell_path)
+    new_cell.clear()
+    new_cell.send_keys("4.")
+    submit_path = '//*[@id="array-edit-X-submit"]'
+    browser.find_element_by_xpath(submit_path).click()
+    time.sleep(0.5)
+    
+    props.close()
+    
+    # Clean up.
+    closeout(project_dict, workspace_page)
+    
 def _test_value_editors(browser):
     # Creates a file in the GUI.
     project_dict, workspace_page = startup(browser)
