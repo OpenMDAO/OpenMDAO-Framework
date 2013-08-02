@@ -121,8 +121,6 @@ class PseudoComponent(object):
             xformed_src = transform_expression(srcexpr.text, self._inmap)
         else:
             xformed_src = srcexpr.text
-        xformed_dest = transform_expression(destexpr.text, 
-                                           { destexpr.text: 'out0'})
  
         out_units = self._meta['out0'].get('units')
         if out_units is not None:
@@ -153,8 +151,6 @@ class PseudoComponent(object):
             self._srcunits = None
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
-        self._destexpr = ConnectedExprEvaluator(xformed_dest, scope=self,
-                                                is_dest=True)
 
         # this is just the equation string (for debugging)
         if destexpr and destexpr.text:
@@ -236,6 +232,9 @@ class PseudoComponent(object):
         if invalid_ins:
             self.update_inputs(invalid_ins)
 
+        if not invalid_ins and self._valid_dict['out0'] is True:
+            return
+        
         src = self._srcexpr.evaluate()
         if isinstance(src, PhysicalQuantity):
             units = self._meta['out0'].get('units')
@@ -243,7 +242,7 @@ class PseudoComponent(object):
                 src = src.in_units_of(units).value
             else:
                 src = src.value
-        self._destexpr.set(src)
+        setattr(self, 'out0', src)
         for name in self._valid_dict:
             self._valid_dict[name] = True
 
@@ -259,14 +258,17 @@ class PseudoComponent(object):
         return getattr(self, name)
 
     def set(self, path, value, index=None, src=None, force=False):
-        self._valid_dict['out0'] = False
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
         if isinstance(value, UnitsAttrWrapper):
             value = value.pq.value
         elif isinstance(value, PhysicalQuantity):
             value = value.value
-        setattr(self, path, value)
+        if getattr(self, path) != value:
+            setattr(self, path, value)
+            self.invalidate_deps()
+            if self._parent:
+                self._parent.child_invalidated(self.name, None)
 
     def get_wrapped_attr(self, name, index=None):
         if index is not None:
