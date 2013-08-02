@@ -67,8 +67,7 @@ class PseudoAssembly(object):
         # with Fake Finite Difference.
         if first:
             for comp in self.comps:
-                if hasattr(comp, 'apply_deriv') or hasattr(comp, 'provideJ'):
-                    comp.calc_derivatives(first, second, savebase=True)
+                comp.calc_derivatives(first, second, savebase=True)
                 
         self.J = self.fd.calculate()
             

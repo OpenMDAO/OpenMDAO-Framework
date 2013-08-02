@@ -40,6 +40,31 @@ class Sellar_MDA(Assembly):
         self.driver.workflow.add(['d1', 'd2'])
         
         
+class Sellar_MDA_subbed(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('subdriver', MDASolver())
+        self.driver.workflow.add(['subdriver'])
+        self.subdriver.workflow.add(['d1', 'd2'])
+        
+        
 class Sellar_MDA_Mixed(Assembly):
     
     def configure(self):
@@ -146,6 +171,34 @@ class MDA_SolverTestCase(unittest.TestCase):
                                self.top.d2.y2,
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 10)
+        
+        
+    def test_gauss_seidel_sub(self):
+        # Note, Fake Finite Difference is active in this test.
+        
+        self.top = set_as_top(Sellar_MDA_subbed())
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
+        
+        inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
+        outputs = ['d1.y1', 'd2.y2']
+        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs)
+        self.top.run()
+        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs,
+                                                   fd=True)
+        
+        J = (J1 - J2)
+        print J.max()
+        self.assertTrue(J.max() < 1.0e-3)
         
     def test_newton(self):
         

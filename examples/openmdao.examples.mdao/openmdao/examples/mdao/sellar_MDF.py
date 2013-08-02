@@ -52,7 +52,7 @@ class SellarMDF(Assembly):
         self.driver.add_constraint('3.16 < dis1.y1')
         self.driver.add_constraint('dis2.y2 < 24.0')
         
-        self.driver.iprint = 0
+        self.driver.iprint = 3
         
 if __name__ == "__main__": # pragma: no cover         
 
