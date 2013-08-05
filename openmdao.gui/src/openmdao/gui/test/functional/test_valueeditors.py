@@ -29,24 +29,41 @@ def _test_partial_array_connections(browser):
                                                 'files/partial_connections.py')
     workspace_page.add_file(file_path)
 
-    workspace_page.add_library_item_to_dataflow('partial_connections.ConnectingComponents', 'top')
+    workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly', 'top')
    
-    perpnerp = workspace_page.get_dataflow_figure("thing2", "top")
-    props = perpnerp.properties_page()
+    paraboloid = workspace_page.get_dataflow_figure("paraboloid_1", "top")
+    var_fields_path = '//*[@id="inArray-editor"]/input'
 
-    #array 1d editor - add element, set to 4
+    props = paraboloid.properties_page()
+
+    #array 1d editor - check that implicitly connected elements are disabled
     inputs = props.inputs
     inputs.rows[0].cells[1].click()
-    add_path = '//*[@id="array-edit-add-X"]'
-    browser.find_element_by_xpath(add_path).click()
-    new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
-    new_cell = browser.find_element_by_xpath(new_cell_path)
-    new_cell.clear()
-    new_cell.send_keys("4.")
-    submit_path = '//*[@id="array-edit-X-submit"]'
-    browser.find_element_by_xpath(submit_path).click()
-    time.sleep(0.5)
+    array_inputs_path = '//*[@id="inArray-editor"]/input'
+    cancel_path = '//*[@id="array-edit-inArray-cancel"]'
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for array_input in array_inputs:
+        eq(array_input.is_enabled(), False)
     
+    browser.find_element_by_xpath(cancel_path).click()
+
+    props.close()
+
+    paraboloid = workspace_page.get_dataflow_figure("paraboloid_2", "top")
+    props = paraboloid.properties_page()
+
+    #array 1d editor - check that explicitly connected elements are disabled
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for array_input in array_inputs:
+        eq(array_input.is_enabled(), False)
+
+    browser.find_element_by_xpath(cancel_path).click()
     props.close()
     
     # Clean up.
