@@ -563,7 +563,7 @@ class Assembly(Component):
 
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
-            if valids[expr.text] is False:
+            if valids[expr.text.split('[',1)[0]] is False:
                 srctxt = self._depgraph.get_source(expr.text)
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
@@ -624,10 +624,7 @@ class Assembly(Component):
                 conns[i] = (xsrc, tup[1])
 
         srcs = [u for u,v in conns]
-        srcvars = srcs[:]
-        for i in range(len(srcvars)):
-            if '[' in srcvars[i]:
-                srcvars[i] = srcvars[i][:srcvars[i].index('[')]
+        srcvars = [s.split('[',1)[0] for s in srcs]
         invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcvars)) if not valid]
 
         # if source vars are invalid, request an update
@@ -682,10 +679,11 @@ class Assembly(Component):
         specify either direct traits of self or those of children.
         """
 
-        ret = [None] * len(names)
-        posdict = dict([(name, i) for i, name in enumerate(names)])
+        vnames = [n.split('[',1)[0] for n in names]
+        ret = [None] * len(vnames)
+        posdict = dict([(name, i) for i, name in enumerate(vnames)])
 
-        for compname, varnames in partition_names_by_comp(names).items():
+        for compname, varnames in partition_names_by_comp(vnames).items():
             if compname is None:
                 vals = super(Assembly, self).get_valid(varnames)
                 for i, val in enumerate(vals):
@@ -695,14 +693,15 @@ class Assembly(Component):
                 if isinstance(comp, Component) or isinstance(comp, PseudoComponent):
                     vals = comp.get_valid(varnames)
                 else:
-                    vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]
+                    vals = [self._valid_dict['.'.join([compname, vname])] 
+                                     for vname in varnames]
                 for i, val in enumerate(vals):
                     full = '.'.join([compname, varnames[i]])
                     ret[posdict[full]] = val
         return ret
 
     def _input_updated(self, name, fullpath=None):
-        if self._valid_dict[name]:  # if var is not already invalid
+        if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=set([name]))
             if ((outs is None) or outs) and self.parent:
                 self.parent.child_invalidated(self.name, outs)
@@ -746,7 +745,8 @@ class Assembly(Component):
         else:
             invalidated_ins = []
             for name in names:
-                if ('.' not in name and valids[name]) or self.get_valid([name])[0]:
+                short = name.split('[',1)[0]
+                if ('.' not in name and valids[short]) or self.get_valid([short])[0]:
                     invalidated_ins.append(name)
             if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
                 return []
@@ -759,7 +759,8 @@ class Assembly(Component):
                # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
-        outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
+        outs = self._depgraph.invalidate_deps(self, ['@bin'], 
+                                              [invalidated_ins], force)
 
         if outs:
             self.set_valid(outs, False)

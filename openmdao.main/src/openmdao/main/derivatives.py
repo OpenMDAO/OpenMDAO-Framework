@@ -449,7 +449,7 @@ class FiniteDifference(object):
                 comp_name, dot, var_name = src.partition('.')
                 #var_name = var_name.split('[')[0]
                 comp = self.scope.get(comp_name)
-                comp._valid_dict[var_name] = False
+                comp._valid_dict[var_name.split('[',1)[0]] = False
                     
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -528,7 +528,7 @@ class FiniteDifference(object):
             comp._input_updated(var_name)
             
         # Prevent OpenMDAO from stomping on our poked input.
-        comp._valid_dict[var_name] = True
+        comp._valid_dict[var_name.split('[',1)[0]] = True
         
         # Make sure we execute!
         comp._call_execute = True
