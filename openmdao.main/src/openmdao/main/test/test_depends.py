@@ -673,7 +673,7 @@ class ExprDependsTestCase(unittest.TestCase):
             
         # let's disconnect one entry and check the valid dict
         self.top.disconnect('c2.a[1]')
-        self.assertEqual(self.top.c2._valid_dict['a[3]'], True)
+        self.assertEqual(self.top.c2._valid_dict['a'], True)
         self.assertTrue('a[1]' not in self.top.c2._valid_dict)
 
     def test_invalidation(self):
@@ -756,7 +756,7 @@ class ExprDependsTestCase(unittest.TestCase):
         top.run()
         total = top.c1.c[3:]
         top.connect('c1.c[3:]', 'c2.a[0:2]')
-        self.assertEqual(top.c2.get_valid(vnames), [False, True, True, False, False])
+        self.assertEqual(top.c2.get_valid(vnames), [False, False, True, False, False])
         exec_order = []
         top.run()
         self.assertEqual(exec_order, ['c2'])

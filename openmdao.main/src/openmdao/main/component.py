@@ -239,7 +239,7 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self._valid_dict[name]:  # if var is not already invalid
+        if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
@@ -399,16 +399,16 @@ class Component(Container):
             self._call_execute = True
             valids = self._valid_dict
             for name in self.list_inputs():
-                valids[name] = True
+                valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
             invalid_ins = [inp for inp in self.list_inputs(connected=True)
-                                    if valids.get(inp) is False]
+                                    if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
-                    valids[name] = True
+                    valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
@@ -498,10 +498,10 @@ class Component(Container):
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
-            valids[name] = True
+            valids[name.split('[',1)[0]] = True
         ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
-            valids[name] = True
+            valids[name.split('[',1)[0]] = True
         self._call_execute = False
         self._set_exec_state('VALID')
         self.publish_vars()
@@ -765,7 +765,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._input_names
-        ret = [n for n in ret if valids[n] == valid]
+        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_inputs]
@@ -802,7 +802,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._output_names
-        ret = [n for n in ret if valids[n] == valid]
+        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_outputs]
@@ -844,7 +844,7 @@ class Component(Container):
 
         valid_updates = []
         if not srcexpr.refs_parent():
-            if srcexpr.text not in self._valid_dict:
+            if srcexpr.text.split('[',1)[0] not in self._valid_dict:
                 valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
@@ -856,7 +856,7 @@ class Component(Container):
         # this is after the super connect call so if there's a
         # problem we don't have to undo it
         for valids_update in valid_updates:
-            self._valid_dict[valids_update[0]] = valids_update[1]
+            self._valid_dict[valids_update[0].split('[',1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -864,11 +864,11 @@ class Component(Container):
         destination variable.
         """
         super(Component, self).disconnect(srcpath, destpath)
-        if destpath in self._valid_dict:
-            if '.' in destpath or '[' in destpath or ']' in destpath:
-                del self._valid_dict[destpath]
+        if destpath.split('[',1)[0] in self._valid_dict:
+            if '.' in destpath:
+                del self._valid_dict[destpath.split('[',1)[0]]
             else:
-                self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
+                self._valid_dict[destpath.split('[',1)[0]] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -1506,13 +1506,13 @@ class Component(Container):
             Names of variables whose validity is requested.
         """
         valids = self._valid_dict
-        return [valids[n] for n in names]
+        return [valids[n.split('[',1)[0]] for n in names]
 
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
         valids = self._valid_dict
         for name in names:
-            valids[name] = valid
+            valids[name.split('[',1)[0]] = valid
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, force=False):
@@ -1536,21 +1536,21 @@ class Component(Container):
         # should never be invalidated
         if varnames is None:
             for var in self.list_inputs(connected=True):
-                valids[var] = False
+                valids[var.split('[',1)[0]] = False
         else:
             conn = self.list_inputs(connected=True)
             if conn:
                 for var in varnames:
                     if var in conn:
-                        valids[var] = False
+                        valids[var.split('[',1)[0]] = False
 
         # this assumes that all outputs are either valid or invalid
-        if not force and outs and (valids[outs[0]] is False):
+        if not force and outs and (valids[outs[0].split('[',1)[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
 
         for out in outs:
-            valids[out] = False
+            valids[out.split('[',1)[0]] = False
 
         return None  # None indicates that all of our outputs are invalid.
 

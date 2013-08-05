@@ -314,7 +314,7 @@ class SequentialWorkflow(Workflow):
             # Prevent OpenMDAO from stomping on our poked input.
             comp_name, dot, var_name = target.partition('.')
             comp = self.scope.get(comp_name)
-            comp._valid_dict[var_name] = True
+            comp._valid_dict[var_name.split('[',1)[0]] = True
 
             #(An alternative way to prevent the stomping. This is more
             #concise, but setting an output and allowing OpenMDAO to pull it
