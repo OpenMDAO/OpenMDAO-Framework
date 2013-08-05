@@ -138,6 +138,9 @@ def calc_gradient(wflow, inputs, outputs):
                 
             j += 1
       
+    if wflow._parent.name == 'driver':
+        print wflow.get_interior_edges()
+        print wflow.derivative_iter()
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):

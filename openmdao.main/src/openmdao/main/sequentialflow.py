@@ -228,6 +228,7 @@ class SequentialWorkflow(Workflow):
             # Parameter edges. Include non-recursed ones too.
             if comp in incomps and isinstance(pcomp, ParamPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
+                    print 'in', comp, pcomp_edge
                     target_edge = pcomp_edge[1].split('.')[0]
                     if target_edge in rcomps:
                         sub_edge.add(pcomp_edge)
@@ -235,6 +236,7 @@ class SequentialWorkflow(Workflow):
             # Output edges
             elif comp in outcomps and isinstance(pcomp, OutputPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
+                    print 'out', comp, pcomp_edge
                     src_edge = pcomp_edge[0].split('.')[0]
                     if src_edge	in rcomps:
                         sub_edge.add(pcomp_edge)
