@@ -534,10 +534,10 @@ wv["InitDraw"] = function()
 wv["drawPicture"] = function(gl)
 {
   // Make sure the canvas is sized correctly.
-  reshape(gl);
+  wv.Reshape(gl);
 
   // Make a model/view matrix and pass it in
-  wvUpdateView();
+  wv.UpdateView();
   if ((wv.sceneUpd == 0) && (wv.pick == 0) && (wv.locate == 0) &&
       (wv.centerV  == 0)) return;
   wv.mvMatrix.setUniform(gl, wv.u_modelViewMatrixLoc, false);
@@ -699,7 +699,7 @@ wv["drawPicture"] = function(gl)
   
   // allow for custom drawing
 
-  wvUpdateCanvas(gl);
+  wv.UpdateCanvas(gl);
 
 }
 

@@ -27,7 +27,7 @@ wv["wsUtOnMessage"] = function(evt)
 /*
   wv.log(" UI-text WebSocket getMessage: " + evt.data);
  */
-  wvServerMessage(evt.data);
+  wv.ServerMessage(evt.data);
 }
 
 

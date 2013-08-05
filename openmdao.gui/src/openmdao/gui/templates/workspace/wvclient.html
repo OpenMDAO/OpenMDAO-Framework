@@ -24,7 +24,7 @@
     <script type="text/javascript" src="/static/js/WebViewer/wv-gPrim.js"       ></script>
     <script type="text/javascript" src="/static/js/WebViewer/wv-sGraph.js"      ></script>
     <script type="text/javascript" src="/static/js/WebViewer/wv-socket.js"      ></script>
-    <script type="text/javascript" src="/static/js/WebViewer/wv-tree.js"        ></script>
+    <script type="text/javascript" src="/static/js/WebViewer/wv-cbManage.js"    ></script>
     <script type="text/javascript" src="/static/js/openmdao/WVTreeFrame.js"     ></script>
     <script type="text/javascript" src="/static/js/openmdao/WVCanvasFrame.js"   ></script>
 
@@ -93,6 +93,7 @@
         // have some values for Zscreen
         wv.zNear =  1.0;
         wv.zFar  = 11.0;
+        wv.canvasID = "WebViewer";    // must match <canvas id=...> below!
 
         // a place to put the binary messages
         wv.messageQ = [];
@@ -114,20 +115,18 @@
         var tf = new openmdao.WVTreeFrame(wv, "treeframe");
         var cf = new openmdao.WVCanvasFrame(wv, "WebViewer", "wv_status");
 
-        // wv requires these functions to be in the global namespace
-        wvInitUI        = cf.wvInitUI;
-        wvUpdateUI      = function() {
+        // set callback functions for canvas and tree views
+        wv.setCallback("InitUI",        cf.wvInitUI);
+        wv.setCallback("UpdateUI",      function() {
             // wv.sgUpdate will be set to 1 if the sceneGraph has changed
             // should be set back to 0 after UI responds
             tf.wvUpdateUI();
             cf.wvUpdateUI();
             wv.sgUpdate = 0;
-        }
-        wvUpdateCanvas  = cf.wvUpdateCanvas;
-        wvUpdateView    = cf.wvUpdateView;
-        wvServerMessage = cf.wvServerMessage;
-        reshape         = cf.reshape;
-        jack            = cf.jack;
+        })
+        wv.setCallback("UpdateCanvas",  cf.wvUpdateCanvas);
+        wv.setCallback("UpdateView",    cf.wvUpdateView);
+        wv.setCallback("Reshape",       cf.reshape);
 
         wv.Start();
     });

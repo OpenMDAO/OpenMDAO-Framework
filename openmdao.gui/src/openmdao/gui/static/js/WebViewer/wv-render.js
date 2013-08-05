@@ -12,7 +12,7 @@
 
 //
 // A console function is added to the context: wv.logger(msg).
-// By default, it maps to the window.console() function on WebKit and to an
+// By default, it maps to the window.console() function on WebKit and to an 
 // empty function on other browsers.
 wv["logger"] = function(msg)
 {
@@ -162,7 +162,7 @@ var BrowserDetect = {
 
 
 //
-// Initialize the Canvas element with the passed name as a WebGL object and
+// Initialize the Canvas element with the passed name as a WebGL object and 
 // return the WebGLRenderingContext.
 // Turn off anti-aliasing so that picking works at the fringe
 wv["initWebGL"] = function(canvasName)
@@ -202,13 +202,13 @@ wv["loadShader"] = function(ctx, shaderID, shaderType, shaderSrc)
 
 
 //
-// Load shaders with the passed sources and create a program with them. Return
+// Load shaders with the passed sources and create a program with them. Return 
 // this program in the 'program' property of the returned context.
 //
-// For each string in the passed attribs array, bind an attrib with that name
+// For each string in the passed attribs array, bind an attrib with that name 
 // at that index. Once the attribs are bound, link the program and then use it.
 //
-// Set the clear color to the passed array (4 values) and set the clear depth
+// Set the clear color to the passed array (4 values) and set the clear depth 
 // to the passed value.
 // Enable depth testing
 //
@@ -265,7 +265,7 @@ wv["Setup"] = function(gl, vshader, fshader, attribs, clearColor, clearDepth)
 wv["Initialize"] = function()
 {
   var requestId;
-
+  
   // "globals" used:
 
   wv.width    = -1;                                     // "canvas" size
@@ -292,7 +292,7 @@ wv["Initialize"] = function()
   wv.sceneGraph = {};
 
   // initialize WebGL with the id of the Canvas Element
-  var gl = wv.initWebGL("WebViewer");
+  var gl = wv.initWebGL(wv.canvasID);
   if (!gl) return;
 
   //
@@ -325,7 +325,7 @@ wv["Initialize"] = function()
 "",
 "    void main()",
 "    {",
-"        // set the pixel position",
+"        // set the pixel position",    
 "        gl_Position     = u_modelViewProjMatrix * vPosition;",
 "        z_Screen        = gl_Position[2];",
 "        gl_Position[2] += linAdj;",
@@ -479,7 +479,7 @@ wv["Initialize"] = function()
   wv.u_modelViewProjMatrixLoc =
                   gl.getUniformLocation(wv.program, "u_modelViewProjMatrix");
   wv.mvpMatrix         = new J3DIMatrix4();
-
+        
   return gl;
 }
 
@@ -489,10 +489,10 @@ wv["Initialize"] = function()
 //
 wv["Start"] = function()
 {
-  var c = document.getElementById("WebViewer");
+  var c = document.getElementById(wv.canvasID);
   c.addEventListener('webglcontextlost',     wv.handleContextLost,     false);
   c.addEventListener('webglcontextrestored', wv.handleContextRestored, false);
-
+  
   BrowserDetect.init();
   wv.logger(" Running: " + BrowserDetect.browser + " " + BrowserDetect.version +
                   " on " + BrowserDetect.OS);
@@ -509,20 +509,20 @@ wv["Start"] = function()
                                  "  Blue "+nBbits+"  Zbuffer "+nZbits);
   wv.lineBump = -0.0002;
   if (nZbits < 24) wv.lineBump *= 2.0;
-
+  
   //
   // initialize the UI
-  wvInitUI();
+  wv.InitUI();
 
   //
   // setup our render loop
   var f = function() {
-
+  
     if (wv.fov != undefined) wv.drawPicture(gl);
 
     // update the UI and matrices
-    wvUpdateUI();
-
+    wv.UpdateUI();
+    
     //update scene graph
     wv.UpdateScene(gl);
 
@@ -542,7 +542,7 @@ wv["Start"] = function()
 
   wv["handleContextRestored"] = function()
   {
-    wvInit();
+    wv.Initialize();
     f();
   }
 }
