@@ -1747,10 +1747,6 @@ class Component(Container):
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
             
-            if name == "inArray":
-                import pdb
-                pdb.set_trace()
-
             if "%s.%s" % (self.name, name) in partial_parameters:
                 implicit_partial_indices = [int(value.split("[")[1].split("]")[0]) for value in partial_parameters["%s.%s" % (self.name, name)]]
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)

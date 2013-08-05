@@ -376,12 +376,17 @@
             }
             
             var partially_connected = args.item["partially_connected_indices"] !== undefined ? this.splitData(args.item['partially_connected_indices']) : [];
+            var implicit_partial_indices = args.item["implicit_partial_indices"] !== undefined ? this.splitData(args.item['implicit_partial_indices']) : [];
 
             default_length = length;
             for (var i = 0; i< length; i++) {
                 var array_value = jQuery("<INPUT type=text class='editor-text' size = 6/>")
                 array_value.appendTo($container);
                 if(jQuery.inArray("" + i, partially_connected) > -1){
+                    array_value.prop("disabled", true);
+                }
+
+                else if(jQuery.inArray("" + i, implicit_partial_indices) > -1){
                     array_value.prop("disabled", true);
                 }
 
@@ -397,6 +402,7 @@
                     }
                 }
             }
+
             jQuery(rbracketSVG).appendTo($container);
             if (ndim == 2) {
                 jQuery(rbracketSVG).appendTo($container);
