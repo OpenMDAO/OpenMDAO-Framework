@@ -433,9 +433,10 @@ class SequentialWorkflow(Workflow):
             # Input-input connections are not in the jacobians. We need
             # to add the derivative using out cross reference.
             elif src in self._input_outputs:
-                ref_edge = input_input_xref[src]
-                i3, i4 = self.bounds[ref_edge]
-                result[i1:i2] = arg[i3:i4] - arg[i1:i2]
+                if src in input_input_xref:
+                    ref_edge = input_input_xref[src]
+                    i3, i4 = self.bounds[ref_edge]
+                    result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 continue
                 
             comp_name, dot, var_name = src.partition('.')
@@ -526,9 +527,10 @@ class SequentialWorkflow(Workflow):
             # Input-input connections are not in the jacobians. We need
             # to add the derivative (which is 1.0).
             if src in self._input_outputs:
-                ref_edge = input_input_xref[src]
-                i3, i4 = self.bounds[ref_edge]
-                result[i1:i2] = arg[i3:i4] - arg[i1:i2]
+                if src in input_input_xref:
+                    ref_edge = input_input_xref[src]
+                    i3, i4 = self.bounds[ref_edge]
+                    result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 continue
             
                 #comp_name, dot, var_name = target.partition('.')
