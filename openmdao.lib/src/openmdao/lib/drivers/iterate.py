@@ -92,7 +92,7 @@ class FixedPointIterator(Driver):
             # Pass output to input
             val0 += history[self.current_iteration, :]
             self.set_parameters(val0)
-            print val0
+            
             # run the workflow
             self.run_iteration()
             
