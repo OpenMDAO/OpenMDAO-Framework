@@ -1175,13 +1175,15 @@ class Container(SafeHasTraits):
         else:
             obj[idx] = value
 
-        # setting of individual Array entries or sub attributes doesn't seem to trigger
+        # setting of individual Array entries or sub attributes don't trigger
         # _input_trait_modified, so do it manually
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-        if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
-            eq = False
+        try:
+            eq = all(eq)
+        except TypeError:
+            pass
         if not eq:
             self._call_execute = True
             if name in self._valid_dict:

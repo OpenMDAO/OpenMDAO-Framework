@@ -85,7 +85,7 @@ def calc_gradient(wflow, inputs, outputs):
     
     num_in = 0
     for item in inputs:
-        val = wflow.scope.get(item)    
+        val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_in += width
         
@@ -359,7 +359,6 @@ class FiniteDifference(object):
         
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
-        print "begin FD"
         self.get_inputs(self.x)
         self.get_outputs(self.y_base)
         
@@ -479,7 +478,6 @@ class FiniteDifference(object):
             else:
                 self.scope.set(src, new_val, force=True)
         
-        print "end FD"
         return self.J
     
     def get_inputs(self, x):

@@ -78,7 +78,7 @@ def print_funct_call(funct, *args, **kwargs):
     for i,arg in enumerate(args):
         if i>0: s.write(',')
         s.write(quote_if_str(arg))
-    if len(args) > 0:
+    if len(args) > 0 and len(kwargs) > 0:
         s.write(', ')
     for j,tup in enumerate(kwargs.items()):
         if j>0: s.write(', ')
