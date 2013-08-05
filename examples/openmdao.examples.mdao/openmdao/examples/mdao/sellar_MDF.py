@@ -43,8 +43,8 @@ class SellarMDF(Assembly):
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         
         # Solver settings
-        self.solver.max_iteration = 1000
-        self.solver.tolerance = .0001
+        self.solver.max_iteration = 100
+        self.solver.tolerance = .00001
         
         # Optimization parameters
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
@@ -52,7 +52,7 @@ class SellarMDF(Assembly):
         self.driver.add_constraint('3.16 < dis1.y1')
         self.driver.add_constraint('dis2.y2 < 24.0')
         
-        self.driver.iprint = 3
+        self.driver.iprint = 0
         
 if __name__ == "__main__": # pragma: no cover         
 
@@ -69,7 +69,7 @@ if __name__ == "__main__": # pragma: no cover
     prob.run()
     ttot = time.time()-tt
     
-    prob.driver.workflow.check_gradient()
+    #prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
