@@ -8,43 +8,64 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WVCanvasFrame = function(wv, canvas_id, status_id) {
+openmdao.WVCanvasFrame = function(id, wv) {
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     // initialize private variables
     var _self = this,
-        _canvas = document.getElementById(canvas_id),
-        _statusline = new openmdao.StatusLine(status_id),
+        _elem = jQuery('#'+id),
+
+        // create background grid and add canvas to it
+        _canvasBG    = jQuery('<div style="background-image:url(/static/images/grid_10.png);border:1px solid #222;">')
+            .appendTo(_elem),
+        _canvasID    = id + '_canvas',
+        _canvasElem  = jQuery('<canvas id="'+_canvasID+'">')
+            .appendTo(_canvasBG),
+
+        // create status div and wrap with StatusLine object
+        _statusID    = id + '_status',
+        _statusElem  = jQuery('<div class="row-fluid"><div id="'+_statusID+'" class="fps"></div></div>')
+            .appendTo(_elem),
+        _statusLine  = new openmdao.StatusLine(_statusID),
+
+        // convenience names for modifier keys
         _NO_MODIFIER = 0,
         _SHIFT_KEY   = 1,
         _ALT_KEY     = 2,
         _CTRL_KEY    = 4,
         _META_KEY    = 8,
         _WHEEL_DELTA = 120,
+
+        // data to populate the key help table
         _key_platforms =         ['Linux',             'OS X',              'Windows'],
-        _key_bindings = {
+        _key_bindings  = {
             'Pan':               ['Left Click',        'Left Click',        'Left Click'],
             'X/Y Axis Rotation': ['CTRL + Left Click', 'CTRL + Left Click', 'CTRL + Left Click'],
             'Z Axis Rotation':   ['ALT + Left Click',  'ALT + Left Click',  'ALT + Left Click'],
             'Zoom':              ['Mouse Wheel',       'Two Finger Scroll', 'Mouse Wheel']
-        }
+        },
+        _key_button = jQuery('<a class="btn btn-small"><i class="icon-info-sign"></i></a>')
+            .appendTo(_elem)
+            .css({
+                'position': 'absolute',
+                'top':      '0px',
+                'right':    '0px'
+            });
 
     function getKeyTable() {
-        var html = '<table id="controlsTable" class="table table-striped table-bordered">';
+        var html = '<table class="table table-bordered">';
 
-        html += '<thead>';
-        html += '<tr><th></th><tr>';
+        html += '<thead><tr><th></th>';
         for (var i = 0; i<_key_platforms.length; i++) {
-            html += '<tr><td>'+_key_platforms[i]+'</td></tr>';
+            html += '<th>'+_key_platforms[i]+'</th>';
         }
-        html += '</thead>';
+        html += '</tr></thead>';
 
         html += '<tbody>';
-        html += '<tr><th></th><tr>';
         for (var key in _key_bindings) {
-            html += '<tr><td>'+key+'<td>';
+            html += '<tr><td>'+key+'</td>';
             for (var j = 0; j<_key_bindings[key].length; j++) {
                 html += '<td>'+_key_bindings[key][j]+'</td>';
             }
@@ -55,7 +76,19 @@ openmdao.WVCanvasFrame = function(wv, canvas_id, status_id) {
         return html;
     }
 
-console.log('getKeyTable:', getKeyTable());
+    function showKeyTable() {
+        var win = jQuery('<div id="'+id+'_keytable"></div>');
+        win.dialog({
+            autoOpen: false,
+            modal: false,
+            title: 'Key Controls',
+            height: 'auto',
+            width : 'auto'
+        });
+
+        win.append(getKeyTable());
+        win.dialog('open');
+    }
 
     // Event Handlers
 
@@ -103,21 +136,27 @@ console.log('getKeyTable:', getKeyTable());
         wv.wheelDelta = e.wheelDelta/_WHEEL_DELTA;
     }
 
-    _canvas.addEventListener('mousemove',  getCursorXY,   false);
-    _canvas.addEventListener('mousedown',  getMouseDown,  false);
-    _canvas.addEventListener('mouseup',    getMouseUp,    false);
-    _canvas.addEventListener('mousewheel', getMouseWheel, false);
+    // tell wv to use our canvas
+    wv.canvasID = _canvasID;
+
+    // _canvasBG.css({'background-image': '/static/images/grid_10.png'});
+    _canvasElem.on('mousemove',  getCursorXY);
+    _canvasElem.on('mousedown',  getMouseDown);
+    _canvasElem.on('mouseup',    getMouseUp);
+    _canvasElem.on('mousewheel', getMouseWheel);
+    // _canvasElem.on('keypress',   getKeyPress);
     document.addEventListener('keypress',  getKeyPress,   false);
+
+    _key_button.on('click', showKeyTable);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
-    // Required call-back functions
+    // wv call-back functions
 
     this.wvUpdateCanvas = function(gl) {
-        // Show the status line
-        _statusline.snapshot();
+        _statusLine.snapshot();
     };
 
     this.wvInitUI = function() {
@@ -300,21 +339,13 @@ console.log('getKeyTable:', getKeyTable());
         }
     };
 
-
-    this.wvUpdateView = function() {
-        wv.mvMatrix.multiply(wv.uiMatrix);
-    };
-
-    this.wvServerMessage = function(text) {
-        wv.logger(" Server Message: " + text);
-    };
-
     //
     // needed when the canvas size changes or relocates
     this.reshape = function(gl) {
-        if (wv.offTop != _canvas.offsetTop || wv.offLeft != _canvas.offsetLeft) {
-            wv.offTop  = _canvas.offsetTop;
-            wv.offLeft = _canvas.offsetLeft;
+        var offset = _canvasElem.offset();
+        if (wv.offTop != offset.top || wv.offLeft != offset.left) {
+            wv.offTop  = offset.top;
+            wv.offLeft = offset.left;
         }
 
         var windowWidth  = window.innerWidth  - 20;
@@ -325,8 +356,8 @@ console.log('getKeyTable:', getKeyTable());
 
         wv.width       = windowWidth;
         wv.height      = windowHeight;
-        _canvas.width  = wv.width;
-        _canvas.height = wv.height;
+        _canvasElem[0].width = wv.width;
+        _canvasElem[0].height = wv.height;
 
         // Set the viewport and perspective matrix for the scene
         gl.viewport(0, 0, wv.width, wv.height);
@@ -336,32 +367,6 @@ console.log('getKeyTable:', getKeyTable());
         wv.InitDraw();
     };
 
-    // put out a cursor
-    this.jack = function(gl, x,y,z, delta) {
-        if (wv.sceneGraph["jack"] != undefined) {
-            wv.deleteGPrim(gl, "jack");
-            delete wv.sceneGraph["jack"];
-        }
-
-        var vertices = new Float32Array(18);
-        for (var i = 0; i < 6; i++) {
-            vertices[3*i  ] = x;
-            vertices[3*i+1] = y;
-            vertices[3*i+2] = z;
-        }
-        vertices[ 0] -= delta;
-        vertices[ 3] += delta;
-        vertices[ 7] -= delta;
-        vertices[10] += delta;
-        vertices[14] -= delta;
-        vertices[17] += delta;
-
-        var vbo = wv.createVBO(gl, vertices, undefined, undefined, undefined);
-        wv.sceneGraph["jack"] = createGPrim(1, 1, wv.plotAttrs.ON);
-        wv.sceneGraph["jack"].lines[0]  = vbo;
-        wv.sceneGraph["jack"].lineWidth = 3;
-        wv.sceneGraph["jack"].lColor    = [0.0, 0.0, 1.0];
-    };
 }
 
 /*

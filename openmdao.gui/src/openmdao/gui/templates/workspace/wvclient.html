@@ -4,9 +4,12 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title> OpenMDAO Geometry Viewer: {{ geom_name }} </title>
 
-    <link href="/static/css/mdao-styles.css" rel="stylesheet" media="screen">
+    <!-- modernizr -->
+    <script type="text/javascript" src="/static/js/modernizr.js"></script>
 
-    <!-- jQuery stuff -->
+    <!-- jQuery -->
+    <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
+    <link rel="stylesheet" href="/static/css/mdao-styles.css">
     <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery-ui-1.9.1.min.js"      ></script>
     <script type="text/javascript" src="/static/js/jquery.layout-latest.js"     ></script>
@@ -42,34 +45,16 @@
             background-color: gray;
         }
 
-        #leftframe, #riteframe, #wv_canvas {
+        #leftframe, #riteframe {
             border:1px solid #222;
         }
 
-        #treeframe {
+        #tree_frame {
             width: 100%;
             height: 100%;
             margin: 0px;
             overflow: auto;
             background-color: black;
-        }
-
-        #wv_canvas {
-            background: url("/static/images/grid_10.png");
-        }
-
-        #modal_button {
-            position: absolute;
-            top: 0px;
-            right: 0px;
-        }
-
-        .modal-body, th {
-            vertical-align: text-top;
-        }
-
-        .modal-body, td {
-            white-space: nowrap;
         }
     </style>
 
@@ -93,7 +78,6 @@
         // have some values for Zscreen
         wv.zNear =  1.0;
         wv.zFar  = 11.0;
-        wv.canvasID = "WebViewer";    // must match <canvas id=...> below!
 
         // a place to put the binary messages
         wv.messageQ = [];
@@ -112,8 +96,8 @@
         };
 
         // Note: wv requires the canvas name to be "WebViewer"
-        var tf = new openmdao.WVTreeFrame(wv, "treeframe");
-        var cf = new openmdao.WVCanvasFrame(wv, "WebViewer", "wv_status");
+        var tf = new openmdao.WVTreeFrame("tree_frame", wv);
+        var cf = new openmdao.WVCanvasFrame("canvas_frame", wv);
 
         // set callback functions for canvas and tree views
         wv.setCallback("InitUI",        cf.wvInitUI);
@@ -136,66 +120,12 @@
 <body oncontextmenu="return false;">
     <div class="row-fluid">
         <div id='leftframe' class='ui-layout-west'>
-            <div id='treeframe'>
+            <div id='tree_frame'>
             </div>
         </div>
         <div id='riteframe' class='ui-layout-center'>
-            <a id="modal_button" href="#myModal" role="button" class="btn btn-small" data-toggle="modal">
-                <i class="icon-info-sign"></i>
-            </a>
-            <div id="wv_canvas">
-                <canvas id="WebViewer">
-                    Your web browser doesn't support the &lt;canvas&gt; element.
-                </canvas>
+            <div id="canvas_frame">
             </div>
-            <div class="row-fluid">
-                <div id="wv_status" class="fps"></div>
-            </div>
-        </div>
-
-    </div>
-
-    <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
-            <h2 id="myModalLabel">Controls</h2>
-        </div>
-        <div id="modalBody" class="modal-body">
-            <table id="controlsTable" class="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <th>                       </th>
-                        <th>Linux                  </th>
-                        <th>OS X                   </th>
-                        <th>Windows                </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Pan                    </td>
-                        <td>Left Click             </td>
-                        <td>Left Click             </td>
-                        <td>Left Click             </td>
-                    </tr>
-                    <tr>
-                        <td>X/Y Axis <br> Rotation </td>
-                        <td>CTRL + Left Click      </td>
-                        <td>CTRL + Left Click      </td>
-                        <td>CTRL + Left Click      </td>
-                    </tr>
-                    <tr>
-                        <td>Z Axis   <br> Rotation </td>
-                        <td>ALT + Left Click       </td>
-                        <td>ALT + Left Click       </td>
-                        <td>ALT + Left Click       </td>
-                    </tr>
-                    <tr>
-                        <td>Zoom                   </td>
-                        <td>Mouse Wheel            </td>
-                        <td>Two Finger Scroll      </td>
-                        <td>Mouse Wheel            </td>
-                    </tr>
-            </table>
         </div>
     </div>
 </body>

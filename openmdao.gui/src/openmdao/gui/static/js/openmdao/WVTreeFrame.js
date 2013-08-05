@@ -8,7 +8,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao) ? {} : openmdao ;
 
-openmdao.WVTreeFrame = function(wv, id) {
+openmdao.WVTreeFrame = function(id, wv) {
     /***********************************************************************
      *  private
      ***********************************************************************/
