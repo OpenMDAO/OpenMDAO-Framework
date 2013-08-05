@@ -218,20 +218,22 @@ class SequentialWorkflow(Workflow):
         rcomps = recursive_components(self.scope, comps)
         
         sub_edge = set()
+        outcomps = [item[0].split('.')[0] for item in self._additional_edges]
+        incomps = [item[1].split('.')[0] for item in self._additional_edges]
         
         for comp in comps:
             
             pcomp = self.scope.get(comp)
             
             # Parameter edges. Include non-recursed ones too.
-            if isinstance(pcomp, ParamPseudoComponent):
+            if comp in incomps and isinstance(pcomp, ParamPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
                     target_edge = pcomp_edge[1].split('.')[0]
                     if target_edge in rcomps:
                         sub_edge.add(pcomp_edge)
 
             # Output edges
-            elif isinstance(pcomp, OutputPseudoComponent):
+            elif comp in outcomps and isinstance(pcomp, OutputPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
                     src_edge = pcomp_edge[0].split('.')[0]
                     if src_edge	in rcomps:
@@ -662,18 +664,18 @@ class SequentialWorkflow(Workflow):
                 src, target = edge
                 
                 comp_name, dot, var_name = src.partition('.')
-                if comp_name in group:
+                if comp_name in group or comp_name in recursed_components:
                     outputs.append(src)
                     
                 comp_name, dot, var_name = target.partition('.')
-                if comp_name in group:
+                if comp_name in group or comp_name in recursed_components:
                     inputs.append(target)
                 
             # Input to input connections lead to extra outputs.
             for item in self._input_outputs:
                 if item in outputs:
                     outputs.remove(item)
-
+            
             # Create pseudo_assy
             comps = [getattr(self.scope, name) for name in group]
             pseudo_assemblies[pa_name] = \
@@ -758,15 +760,19 @@ class SequentialWorkflow(Workflow):
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
             
-            # Hack: parameter output edges aren't in the assy depgraph, so we 
+            # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.
-            if hasattr(self._parent, 'get_parameters'):
-                for param in self._parent.get_parameters().values():
-                    param_out = '%s.in0' % param.pcomp_name
-                    if param_out in inputs:
-                        pcomp = getattr(self.scope, param.pcomp_name)
-                        pset = set(pcomp.list_connections())
-                        self._hidden_edges = pset.union(self._hidden_edges)
+            for dr_edge in self.get_driver_edges():
+                dr_src = dr_edge[0].split('.')[0]
+                dr_targ = dr_edge[1].split('.')[0]
+                if '%s.in0' % dr_src in inputs:
+                    pcomp = getattr(self.scope, dr_src)
+                    pset = set(pcomp.list_connections())
+                    self._hidden_edges = pset.union(self._hidden_edges)
+                if '%s.out0' % dr_targ in outputs:
+                    pcomp = getattr(self.scope, dr_targ)
+                    pset = set(pcomp.list_connections())
+                    self._hidden_edges = pset.union(self._hidden_edges)
             
             self.derivative_iterset = [pseudo]
 
@@ -774,16 +780,10 @@ class SequentialWorkflow(Workflow):
             # which case the in/out edges haven't been defined yet.
             if len(self._additional_edges) == 0:
                 
-                # New edges for parameters
+                # New edges for all requested inputs and outputs
                 input_edges = [('@in', a) for a in inputs]
-                additional_edges = set(input_edges)
-                
-                # New edges for responses
-                out_edges = [a[0] for a in self.get_interior_edges()]
-                for item in outputs:
-                    if item not in out_edges:
-                        additional_edges.add((item, '@out'))
-                
+                output_edges = [(a, '@out') for a in outputs]
+                additional_edges = set(input_edges + output_edges)
                 self._additional_edges = additional_edges
 
             # Make sure to undo our big pseudo-assembly next time we calculate the
@@ -798,18 +798,13 @@ class SequentialWorkflow(Workflow):
             self._additional_edges = set()
             self._hidden_edges = set()
             
-            # New edges for parameters
+            # New edges for all requested inputs and outputs
             
             input_edges = [('@in', a) for a in inputs]
-            additional_edges = set(input_edges)
-            
-            # New edges for responses
-            out_edges = [a[0] for a in self.get_interior_edges()]
-            for item in outputs:
-                if item not in out_edges:
-                    additional_edges.add((item, '@out'))
-            
+            output_edges = [(a, '@out') for a in outputs]
+            additional_edges = set(input_edges + output_edges)
             self._additional_edges = additional_edges
+            
             self.group_nondifferentiables()
             
             self._find_nondiff_blocks = False

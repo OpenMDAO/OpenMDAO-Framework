@@ -433,9 +433,16 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        for name in self.derivatives.out_names:
-            setattr(self, name,
-                    self.derivatives.calculate_output(name, ffd_order))
+        input_keys, output_keys, J = self.provideJ()
+
+        if ffd_order == 1:
+            for j, out_name in enumerate(output_keys):
+                y = self._ffd_outputs[out_name]
+                for i, in_name in enumerate(input_keys):
+                    y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
+                    
+                self.set(out_name, y, force=True)
+                    
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          extra_in=None, extra_out=None):
@@ -469,15 +476,19 @@ class Component(Container):
         if first and hasattr(self, 'linearize'):
             self.linearize()
             self.derivative_exec_count += 1
+            executed = True
             
         # Save baseline state
         if savebase and executed:
+            self._ffd_inputs = {}
+            self._ffd_outputs = {}
+            ffd_inputs, ffd_outputs, _ = self.provideJ()
             
-            for name in self.J_inputs:
-                self._ffd_inputs[name] = self.parent.get(name)
+            for name in ffd_inputs:
+                self._ffd_inputs[name] = self.get(name)
     
-            for name in self.J_outputs:
-                self._ffd_outputs[name] = self.parent.get(name)
+            for name in ffd_outputs:
+                self._ffd_outputs[name] = self.get(name)
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.

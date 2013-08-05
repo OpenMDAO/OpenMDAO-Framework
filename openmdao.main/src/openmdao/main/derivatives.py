@@ -137,7 +137,7 @@ def calc_gradient(wflow, inputs, outputs):
                 i += k2-k1
                 
             j += 1
-       
+      
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -519,6 +519,7 @@ class FiniteDifference(object):
                 
             else:
                 self.scope.set(src, old_val+val, force=True)
+                
         else:
             old_val[index] += val
             
