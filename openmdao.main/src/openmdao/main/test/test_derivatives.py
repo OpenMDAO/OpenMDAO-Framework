@@ -667,6 +667,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        self.top.driver.update_parameters()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='adjoint')
@@ -674,9 +676,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
         # Put everything in a single pseudo-assy, and run fd with no fake.
-        #self.top.run()
-        #self.top.driver.workflow.check_gradient(inputs=['comp1.x1'],
-        #                                           outputs=['comp5.y1'])
+        self.top.driver.update_parameters()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'], 
                                                    fd=True)
