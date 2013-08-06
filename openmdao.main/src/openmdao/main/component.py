@@ -1727,13 +1727,21 @@ class Component(Container):
             connected = []
             partially_connected = []
             partially_connected_indices = []
-
+            
             for inp in connected_inputs:
-                cname = inp.split('[')[0]  # Could be 'inp[0]'.
-                if cname == name:
-                    connections = self._depgraph._var_connections(inp)
-                    partially_connected.extend([src for src, dst in connections])
-                    partially_connected_indices.append(int(inp.split('[')[1].split(']')[0]))
+                if "[" in inp:
+                    cname = inp.split('[')[0]  # Could be 'inp[0]'.
+                    if cname == name:
+                        shape = self.get(cname).shape
+                        connections = self._depgraph._var_connections(inp)
+                        partially_connected.extend([src for src, dst in connections])
+                        partially_connected_indices.append(int(inp.split('[')[1].split(']')[0]))
+
+                else:
+                    cname = inp
+                    if cname == name:
+                        connections = self._depgraph._var_connections(inp)
+                        connected.extend([src for src, dst in connections])
 
             if connected:
                 io_attr['connected'] = str(connected).replace('@xin.', '')
