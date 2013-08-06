@@ -71,13 +71,13 @@
             }
         });
 
-        // our messages have the first NAME_SIZE bytes allocated for a topic name
-        wv.NAME_SIZE = window.opener.openmdao.NAME_SIZE;
-        wv.MSG_START = wv.NAME_SIZE;
-
         // have some values for Zscreen
         wv.zNear =  1.0;
         wv.zFar  = 11.0;
+
+        // our messages have the first NAME_SIZE bytes allocated for a topic name
+        wv.NAME_SIZE = window.opener.openmdao.NAME_SIZE;
+        wv.MSG_START = wv.NAME_SIZE;
 
         // a place to put the binary messages
         wv.messageQ = [];
@@ -109,7 +109,6 @@
             wv.sgUpdate = 0;
         })
         wv.setCallback("UpdateCanvas",  cf.wvUpdateCanvas);
-        wv.setCallback("UpdateView",    cf.wvUpdateView);
         wv.setCallback("Reshape",       cf.reshape);
 
         wv.Start();

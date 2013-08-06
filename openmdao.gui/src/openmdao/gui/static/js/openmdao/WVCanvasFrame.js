@@ -24,11 +24,11 @@ openmdao.WVCanvasFrame = function(id, wv) {
         _canvasElem  = jQuery('<canvas id="'+_canvasID+'">')
             .appendTo(_canvasBG),
 
-        // create status div and wrap with StatusLine object
+        // create status div and wrap with WVStatusLine object
         _statusID    = id + '_status',
         _statusElem  = jQuery('<div class="row-fluid"><div id="'+_statusID+'" class="fps"></div></div>')
             .appendTo(_elem),
-        _statusLine  = new openmdao.StatusLine(_statusID),
+        _statusLine  = new openmdao.WVStatusLine(_statusID),
 
         // convenience names for modifier keys
         _NO_MODIFIER = 0,
@@ -132,6 +132,10 @@ openmdao.WVCanvasFrame = function(id, wv) {
     }
 
     function getMouseWheel(e) {
+        // jQuery doesn't currently give us wheelDelta
+        if (e && e.originalEvent) {
+            e = e.originalEvent;
+        }
         if (!e) e=event;
         wv.wheelDelta = e.wheelDelta/_WHEEL_DELTA;
     }
@@ -139,13 +143,13 @@ openmdao.WVCanvasFrame = function(id, wv) {
     // tell wv to use our canvas
     wv.canvasID = _canvasID;
 
-    // _canvasBG.css({'background-image': '/static/images/grid_10.png'});
+    // stealing all keypress events :/
+    jQuery('body').keypress(getKeyPress);
+
     _canvasElem.on('mousemove',  getCursorXY);
     _canvasElem.on('mousedown',  getMouseDown);
     _canvasElem.on('mouseup',    getMouseUp);
     _canvasElem.on('mousewheel', getMouseWheel);
-    // _canvasElem.on('keypress',   getKeyPress);
-    document.addEventListener('keypress',  getKeyPress,   false);
 
     _key_button.on('click', showKeyTable);
 
@@ -186,10 +190,12 @@ openmdao.WVCanvasFrame = function(id, wv) {
                     wv.centerV = 1;
                     break;
                 case 60:                // '<' -- coarser tessellation
-                    wv.socketUt.send("coarser");
+                    // we don't have a socketUt
+                    // wv.socketUt.send("coarser");
                     break;
                 case 62:                // '>' -- finer tessellation
-                    wv.socketUt.send("finer");
+                    // we don't have a socketUt
+                    // wv.socketUt.send("finer");
                     break;
                 case 76:                // 'L' -- locating state
                     if (wv.locate == 1) {
@@ -198,6 +204,10 @@ openmdao.WVCanvasFrame = function(id, wv) {
                     else {
                         wv.locate = 1;
                     }
+                    break;
+                case 78:                // 'N' -- next scalar
+                    // we don't have a socketUt
+                    // wv.socketUt.send("next");
                     break;
                 case 80:                // 'P' -- picking state
                     if (wv.pick == 1) {
@@ -378,7 +388,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
  * is updated in the HTML element.
  */
 
-openmdao.StatusLine = function(id) {
+openmdao.WVStatusLine = function(id) {
     /***********************************************************************
      *  private
      ***********************************************************************/

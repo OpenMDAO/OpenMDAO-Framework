@@ -10,7 +10,7 @@
 //
 // Event Handlers
 
-function getCursorXY(e)
+function getCursorXY(e) 
 {
   if (!e) var e = event;
   wv.cursorX  = e.clientX;
@@ -23,9 +23,9 @@ function getCursorXY(e)
   if (e.altKey)   wv.modifier |= 2;
   if (e.ctrlKey)  wv.modifier |= 4;
 }
+ 
 
-
-function getMouseDown(e)
+function getMouseDown(e) 
 {
   if (!e) var e = event;
   wv.startX   = e.clientX;
@@ -42,7 +42,7 @@ function getMouseDown(e)
 }
 
 
-function getMouseUp(e)
+function getMouseUp(e) 
 {
   wv.dragging = false;
 }
@@ -71,7 +71,7 @@ function wvInitUI()
 
   // set up extra storage for matrix-matrix multiplies
   wv.uiMatrix = new J3DIMatrix4();
-
+  
                                 // ui cursor variables
   wv.cursorX  = -1;             // current cursor position
   wv.cursorY  = -1;
@@ -83,8 +83,8 @@ function wvInitUI()
   wv.offTop   =  0;             // offset to upper-left corner of the canvas
   wv.offLeft  =  0;
   wv.dragging = false;
-
-  var canvas = document.getElementById("WebViewer");
+  
+  var canvas = document.getElementById(wv.canvasID);
     canvas.addEventListener('mousemove',  getCursorXY,  false);
     canvas.addEventListener('mousedown',  getMouseDown, false);
     canvas.addEventListener('mouseup',    getMouseUp,   false);
@@ -99,15 +99,15 @@ function wvUpdateUI()
 
   //
   // deal with key presses
-  if (wv.keyPress != -1)
+  if (wv.keyPress != -1) 
   {
-
+  
     if (wv.keyPress == 42)       // '*' -- center the view
       wv.centerV = 1;
 
     if (wv.keyPress == 60)       // '<' -- finer tessellation
       wv.socketUt.send("coarser");
-
+      
     if (wv.keyPress == 62)       // '>' -- finer tessellation
       wv.socketUt.send("finer");
 
@@ -118,9 +118,12 @@ function wvUpdateUI()
       } else {
         wv.locate = 1;
       }
-
+    
+    if (wv.keyPress == 78)       // 'N' -- next scalar
+      wv.socketUt.send("next");
+  
     if (wv.keyPress ==  80)      // 'P' -- picking state
-      if (wv.pick == 1)
+      if (wv.pick == 1) 
       {
         wv.pick     = 0;
       } else {
@@ -129,19 +132,19 @@ function wvUpdateUI()
       }
 
     if (wv.keyPress ==  99)      // 'c' -- color state
-      if (wv.active != undefined)
+      if (wv.active != undefined) 
       {
         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.SHADING;
         wv.sceneUpd = 1;
       }
-
+      
     if (wv.keyPress == 104)      // 'h' -- home (reset view transformation)
     {
       wv.mvMatrix.makeIdentity();
       wv.scale    = 1.0;
       wv.sceneUpd = 1;
     }
-
+        
     if (wv.keyPress == 108)      // 'l' -- line state
       if (wv.active != undefined)
       {
@@ -168,7 +171,7 @@ function wvUpdateUI()
         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.ORIENTATION;
         wv.sceneUpd = 1;
       }
-
+        
     if (wv.keyPress == 112)      // 'p' -- point state
       if (wv.active != undefined)
       {
@@ -202,7 +205,7 @@ function wvUpdateUI()
 
   //
   // now mouse movement
-  if (wv.dragging)
+  if (wv.dragging) 
   {
     // cntrl is down
     if (wv.modifier == 4)
@@ -216,18 +219,18 @@ function wvUpdateUI()
         wv.sceneUpd = 1;
       }
     }
-
+    
     // alt is down
     if (wv.modifier == 2)
     {
       var xf = wv.startX - wv.width/2;
       var yf = wv.startY - wv.height/2;
-      if ((xf != 0.0) || (yf != 0.0))
+      if ((xf != 0.0) || (yf != 0.0)) 
       {
         var theta1 = Math.atan2(yf, xf);
         xf = wv.cursorX - wv.width/2;
         yf = wv.cursorY - wv.height/2;
-        if ((xf != 0.0) || (yf != 0.0))
+        if ((xf != 0.0) || (yf != 0.0)) 
         {
           var dtheta = Math.atan2(yf, xf)-theta1;
           if (Math.abs(dtheta) < 1.5708)
@@ -251,7 +254,7 @@ function wvUpdateUI()
         wv.sceneUpd = 1;
       }
     }
-
+    
     // no modifier
     if (wv.modifier == 0)
     {
@@ -271,23 +274,11 @@ function wvUpdateUI()
 }
 
 
-function wvUpdateView()
-{
-  wv.mvMatrix.multiply(wv.uiMatrix);
-}
-
-
-function wvServerMessage(text)
-{
-  wv.logger(" Server Message: " + text);
-}
-
-
 //
 // needed when the canvas size changes or relocates
 function reshape(gl)
 {
-  var canvas = document.getElementById('WebViewer');
+  var canvas = document.getElementById(wv.canvasID);
   if (wv.offTop != canvas.offsetTop || wv.offLeft != canvas.offsetLeft)
   {
     wv.offTop  = canvas.offsetTop;
@@ -307,7 +298,7 @@ function reshape(gl)
   gl.viewport(0, 0, wv.width, wv.height);
   wv.perspectiveMatrix = new J3DIMatrix4();
   wv.sceneUpd = 1;
-
+  
   wv.InitDraw();
 }
 
@@ -335,23 +326,23 @@ function jack(gl, x,y,z, delta)
   vertices[10] += delta;
   vertices[14] -= delta;
   vertices[17] += delta;
-
+  
   var vbo = wv.createVBO(gl, vertices,  undefined,
                              undefined, undefined);
   wv.sceneGraph["jack"] = createGPrim(1, 1, wv.plotAttrs.ON);
   wv.sceneGraph["jack"].lines[0]  = vbo;
   wv.sceneGraph["jack"].lineWidth = 3;
   wv.sceneGraph["jack"].lColor    = [0.0, 0.0, 1.0];
-
+  
 }
 
-
+           
 //
 // Status Line object
 //
-// This object keeps track of framerate plus other wv data and displays it as
-// the innerHTML text of the HTML element with the passed id. Once created you
-// call snapshot at the end of every rendering cycle. Every 500ms the framerate
+// This object keeps track of framerate plus other wv data and displays it as 
+// the innerHTML text of the HTML element with the passed id. Once created you 
+// call snapshot at the end of every rendering cycle. Every 500ms the framerate 
 // is updated in the HTML element.
 //
 
@@ -378,15 +369,15 @@ StatusLine.prototype.updateFramerate = function()
     var framerate = tot / this.framerates.length;
     framerate = Math.round(framerate);
     var string = "Framerate:"+framerate+"fps";
-    if (wv.picked != undefined)
+    if (wv.picked != undefined) 
       string = string+"&nbsp; &nbsp; &nbsp; Picked: "+wv.picked.gprim+
                       "  strip = "+wv.picked.strip+"  type = "+wv.picked.type;
-    if (wv.active != undefined)
+    if (wv.active != undefined) 
       string = string+"&nbsp; &nbsp; &nbsp; Active: "+wv.active;
     if (wv.located != undefined)
       string = string+"&nbsp; &nbsp; &nbsp; ("+wv.located[0]+", &nbsp; "+
                      wv.located[1]+", &nbsp; "+wv.located[2]+")";
-
+              
     document.getElementById(this.id).innerHTML = string
 }
 
