@@ -38,7 +38,7 @@ setup(name='openmdao.util',
           'setuptools',
           'pycrypto',
           'pyparsing',
-          'Traits==3.3.0',
+          'Traits==4.3.0',
           #'PyYAML==3.09',
       ],
       entry_points="""

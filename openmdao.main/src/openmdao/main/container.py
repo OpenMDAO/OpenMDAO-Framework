@@ -25,12 +25,11 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Python, \
-                                 push_exception_handler, TraitType, CTrait
-from enthought.traits.trait_handlers import TraitListObject
-from enthought.traits.has_traits import FunctionType, _clone_trait, \
-                                        MetaHasTraits
-from enthought.traits.trait_base import not_none
+from traits.api import HasTraits, Missing, Python, \
+                       push_exception_handler, TraitType, CTrait
+from traits.trait_handlers import TraitListObject
+from traits.has_traits import FunctionType, _clone_trait, MetaHasTraits
+from traits.trait_base import not_none
 
 from multiprocessing import connection
 
@@ -288,14 +287,16 @@ class Container(SafeHasTraits):
             cname2, _, destvar = vpath.partition('.')
             destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
-                self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
+                self.raise_exception("Cannot connect '%s' to '%s'. Both refer"
+                                     " to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
             self._depgraph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
                 if not self.contains(destpath.split('[', 1)[0]):
-                    self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+                    self.raise_exception("Can't find '%s'" % destpath,
+                                         AttributeError)
                 parts = destpath.split('.')
                 for i in range(len(parts)):
                     dname = '.'.join(parts[:i+1])
@@ -315,7 +316,8 @@ class Container(SafeHasTraits):
             for srcvar in srcexpr.get_referenced_varpaths(copy=False):
                 if not srcvar.startswith('parent.'):
                     if not self.contains(srcvar):
-                        self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
+                        self.raise_exception("Can't find '%s'" % srcvar,
+                                             AttributeError)
 
             srccomps = srcexpr.get_referenced_compnames()
             if srccomps:
@@ -336,8 +338,8 @@ class Container(SafeHasTraits):
             except Exception as err:
                 self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
                                    (childsrc, childdest, srcpath, destpath, err))
-            self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
-                                 RuntimeError)
+            self.raise_exception("Can't connect '%s' to '%s': %s" % 
+                                 (srcpath, destpath, str(err)), RuntimeError)
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -582,9 +584,9 @@ class Container(SafeHasTraits):
         getwrapper = ttype.get_val_wrapper
 
         # if we have an index, try to figure out if we can still use the trait
-        # metadata or not.  For example, if we have an Array that has units, it's
-        # also valid to return the units metadata if we're indexing into the Array,
-        # assuming that all entries in the Array have the same units.
+        # metadata or not.  For example, if we have an Array that has units,
+        # it's also valid to return the units metadata if we're indexing into
+        # the Array, assuming that all entries in the Array have the same units.
 
         val = getattr(self, name)
         if index is None:
@@ -691,7 +693,8 @@ class Container(SafeHasTraits):
 
     def _check_rename(self, oldname, newname):
         if '.' in oldname or '.' in newname:
-            self.raise_exception("can't rename '%s' to '%s': rename only works within a single scope." %
+            self.raise_exception("can't rename '%s' to '%s': rename only works"
+                                 " within a single scope." %
                                  (oldname, newname), RuntimeError)
         if not self.contains(oldname):
             self.raise_exception("can't rename '%s' to '%s': '%s' was not found." %
@@ -798,10 +801,11 @@ class Container(SafeHasTraits):
 
             for name, trait in match_dict.items():
                 obj = getattr(self, name, Missing)
-                # In some components with complex loading behavior (like NPSSComponent),
-                # we can have a temporary situation during loading
-                # where there are traits that don't point to anything,
-                # so check for them here and skip them if they don't point to anything.
+                # In some components with complex loading behavior (like
+                # NPSSComponent), we can have a temporary situation during
+                # loading where there are traits that don't point to anything,
+                # so check for them here and skip them if they don't point to
+                # anything.
                 if obj is not Missing:
                     if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
                         if not recurse:
@@ -973,8 +977,8 @@ class Container(SafeHasTraits):
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
         path, either because the parent object is not a Container or because
-        getattr() fails, raise an exception.  Inherited classes can override this
-        to return the value of the specified variable.
+        getattr() fails, raise an exception.  Inherited classes can override
+        this to return the value of the specified variable.
         """
         obj = self
         try:
@@ -1175,8 +1179,8 @@ class Container(SafeHasTraits):
         else:
             obj[idx] = value
 
-        # setting of individual Array entries or sub attributes don't trigger
-        # _input_trait_modified, so do it manually
+        # setting of individual Array entries or sub attributes doesn't seem to
+        # trigger _input_trait_modified, so do it manually
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
@@ -1659,8 +1663,8 @@ def deep_getattr(obj, pathname):
 def find_trait_and_value(obj, pathname):
     """Return a tuple of the form (trait, value) for the given dotted
     pathname. Raises an exception if the value indicated by the pathname
-    is not found in obj. If the value is found but has no trait, then (None, value)
-    is returned.
+    is not found in obj. If the value is found but has no trait, then
+    (None, value) is returned.
     """
     names = pathname.split('.')
     for name in names[:-1]:

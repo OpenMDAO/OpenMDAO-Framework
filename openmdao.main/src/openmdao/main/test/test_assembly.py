@@ -625,8 +625,8 @@ class AssemblyTestCase(unittest.TestCase):
             '%s.FloatProxy' % __name__,
             'openmdao.main.datatypes.float.Float',
             'openmdao.main.variable.Variable',
-            'enthought.traits.trait_handlers.TraitType',
-            'enthought.traits.trait_handlers.BaseTraitHandler',
+            'traits.trait_handlers.TraitType',
+            'traits.trait_handlers.BaseTraitHandler',
             '__builtin__.object'
         ]
         self.assertEqual(top.get_trait_typenames('x'), expected)

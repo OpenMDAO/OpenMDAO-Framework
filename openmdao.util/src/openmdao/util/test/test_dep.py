@@ -46,7 +46,7 @@ class DepTestCase(unittest.TestCase):
         self.assertTrue('openmdao.main.assembly.Assembly' in icomps)
         
         comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
-        comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
+        comps.extend(psta.find_inheritors('traits.api.Array'))
         comps = [x.rsplit('.',1)[1] for x in comps] 
         cset = set(comps)
         excludes = set([

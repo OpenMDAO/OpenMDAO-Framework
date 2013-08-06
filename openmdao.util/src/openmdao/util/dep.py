@@ -26,7 +26,8 @@ plugin_groups = { 'openmdao.container': ['IContainer'],
                   'openmdao.caseiterator': ['ICaseIterator'],
                   'openmdao.caserecorder': ['ICaseRecorder'],
                   'openmdao.architecture': ['IArchitecture'],
-                  'openmdao.optproblem': ['IOptProblem','IAssembly','IComponent','IContainer'],
+                  'openmdao.optproblem': ['IOptProblem','IAssembly',
+                                          'IComponent','IContainer'],
                   'openmdao.differentiator': ['IDifferentiator'],
                   'openmdao.parametric_geometry': ['IParametricGeometry'],
                   }
@@ -93,15 +94,15 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name) and node.func.id == 'implements':
             for arg in node.args:
                 if isinstance(arg, ast.Name):
-                    self.metadata.setdefault('ifaces',[]).append(arg.id)
+                    self.metadata.setdefault('ifaces', []).append(arg.id)
 
     def visit_Assign(self, node):
         if len(self.metadata)==0 and len(node.targets) == 1:
             lhs = node.targets[0]
-            if isinstance(lhs, ast.Name) and lhs.id=='__openmdao_meta__':
+            if isinstance(lhs, ast.Name) and lhs.id == '__openmdao_meta__':
                 dct = ast.literal_eval(node.value)
                 dct.setdefault('ifaces', [])
-                dct['ifaces'].extend(self.metadata.setdefault('ifaces',[]))
+                dct['ifaces'].extend(self.metadata.setdefault('ifaces', []))
                 self.metadata.update(dct)
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
@@ -146,13 +147,14 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
 
-        bases = [self.localnames.get(b,b) for b in bases]
+        bases = [self.localnames.get(b, b) for b in bases]
 
-        self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata,
+        self.classes[fullname] = ClassInfo(fullname, self.fname, bases,
+                                           bvisitor.metadata,
                                            node.decorator_list)
         self.tree_analyser.class_map[fullname] = self.classes[fullname]
 
-        undef_bases = [b for b in bases if b not in self.classes and not hasattr(__builtin__,b)]
+        undef_bases = [b for b in bases if b not in self.classes and not hasattr(__builtin__, b)]
         while undef_bases:
             base = undef_bases.pop()
             cinfo = self.tree_analyser.find_classinfo(base)
@@ -247,7 +249,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 continue
             for cname, cinfo in self.classes.items():
                 if cname in paths:
-                    cinfo.meta.setdefault('ifaces',[]).append(iface)
+                    cinfo.meta.setdefault('ifaces', []).append(iface)
                     cinfo.meta['ifaces'] = list(set(cinfo.meta['ifaces']))
 
 class PythonSourceTreeAnalyser(object):
@@ -255,8 +257,8 @@ class PythonSourceTreeAnalyser(object):
                  direxclude=None):
         self.files_count = 0 # number of files analyzed
 
-        # inheritance graph. It's a directed graph with base classes
-        # pointing to the classes that inherit from them.  Also includes interfaces
+        # inheritance graph. It's a directed graph with base classes pointing
+        # to the classes that inherit from them.  Also includes interfaces
         # pointing to classes that implement them.
         self.graph = nx.DiGraph()
 
@@ -270,7 +272,7 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
 
         if mod_excludes is None:
-            self.mod_excludes = set(['enthought','zope','ast'])
+            self.mod_excludes = set(['traits', 'zope', 'ast'])
         else:
             self.mod_excludes = mod_excludes
 
@@ -288,7 +290,7 @@ class PythonSourceTreeAnalyser(object):
             out.write("%s\n" % os.path.relpath(f))
             if options.showclasses and tup[0].classes:
                 out.write("   classes:\n")
-                for item,cinfo in tup[0].classes.items():
+                for item, cinfo in tup[0].classes.items():
                     out.write("      %s\n" % item)
                     if options.showbases and cinfo.bases and cinfo.bases != ['object']:
                         out.write("         bases:\n")
@@ -306,17 +308,20 @@ class PythonSourceTreeAnalyser(object):
 
     def find_classinfo(self, cname):
         cinfo = cname
-        while True:
+        prev = None
+        while cinfo != prev:
+            prev = cinfo
             try:
                 cinfo = self.class_map[cinfo]
             except KeyError:
                 return None
             if isinstance(cinfo, ClassInfo):
                 return cinfo
+        return None
 
     def analyze_file(self, pyfile, use_cache=False):
-        # don't analyze the file again if we've already done it and it hasn't changed
-        # If `use_cache` is True then lookup/record in global cache.
+        # don't analyze the file again if we've already done it and it hasn't
+        # changed.  If `use_cache` is True then lookup/record in global cache.
         mtime = os.path.getmtime(pyfile)
         if pyfile in self.fileinfo:
             if mtime <= self.fileinfo[pyfile][1]:
@@ -328,12 +333,12 @@ class PythonSourceTreeAnalyser(object):
                 self.fileinfo[pyfile] = info
                 return info[0]
 
-        logger.info("analyzing %s" % pyfile)
+        logger.info("analyzing %s", pyfile)
 
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor
-        self.fileinfo[myvisitor.fname] = (myvisitor, os.path.getmtime(myvisitor.fname))
-
+        self.fileinfo[myvisitor.fname] = (myvisitor,
+                                          os.path.getmtime(myvisitor.fname))
         self.files_count += 1
 
         if use_cache:
@@ -363,7 +368,8 @@ class PythonSourceTreeAnalyser(object):
             del self.class_map[klass]
 
     def find_inheritors(self, base):
-        """Returns a list of names of classes that inherit from the given base class."""
+        """Returns a list of names of classes that inherit from the given base
+        class."""
         try:
             paths = nx.shortest_path(self.graph, source=base, target=None)
         except KeyError:
@@ -444,9 +450,9 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("-c", "--classes", action='store_true', dest='showclasses',
                         help="show classes found")
-    parser.add_argument("-b","--bases", action="store_true", dest="showbases",
+    parser.add_argument("-b", "--bases", action="store_true", dest="showbases",
                         help="show base classes (only works if --classes is active)")
-    parser.add_argument("-i","--interfaces", action="store_true", dest="showifaces",
+    parser.add_argument("-i", "--interfaces", action="store_true", dest="showifaces",
                         help="show interfaces of classes (only works if --classes is active)")
     parser.add_argument("-u", "--use-cache", action='store_true', dest='use_cache',
                         help="use analysis cache")

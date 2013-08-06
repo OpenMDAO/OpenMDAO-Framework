@@ -2,7 +2,7 @@ import glob
 import os
 import unittest
 
-from enthought.traits.trait_base import not_none
+from traits.trait_base import not_none
 
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, SimulationRoot

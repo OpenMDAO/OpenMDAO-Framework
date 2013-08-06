@@ -17,5 +17,5 @@ from openmdao.main.datatypes.vtree import VarTree
 
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later
-from enthought.traits.api import Python, on_trait_change
+from traits.api import Python, on_trait_change
 

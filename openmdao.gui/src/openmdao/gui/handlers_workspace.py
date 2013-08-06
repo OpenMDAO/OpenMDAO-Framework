@@ -399,10 +399,16 @@ class ProjectHandler(ReqHandler):
         if path:
             self.delete_server()
             cserver = self.get_server()
-            name = Projects().get_by_path(path)['projectname']
-            cserver.set_current_project(name)
-            path = os.path.join(self.get_project_dir(), path)
-            self.redirect(self.application.reverse_url('workspace'))
+            proj = Projects().get_by_path(path)
+            if proj is None:  # Shouldn't happen.
+                print >>sys.stderr, "ProjectHandler: no project for %r" % path
+                args = dict(path=path)
+                self.render('workspace/oops.html', **args)
+            else:
+                name = proj['projectname']
+                cserver.set_current_project(name)
+                path = os.path.join(self.get_project_dir(), path)
+                self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
 

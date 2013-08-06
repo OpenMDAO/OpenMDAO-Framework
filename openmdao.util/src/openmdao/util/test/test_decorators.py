@@ -1,8 +1,8 @@
 
 import unittest
-from inspect import getmembers, ismethod, isfunction
+from inspect import getmembers, ismethod
 
-from enthought.traits.api import HasTraits, Float
+from traits.api import HasTraits, Float
 from zope.interface import Interface, implements, implementedBy
 
 from openmdao.main.interfaces import obj_has_interface
