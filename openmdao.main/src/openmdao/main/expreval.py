@@ -585,7 +585,6 @@ class ExprEvaluator(object):
                 #Take symbolic gradient of all inputs using sympy
                 try:
                     for varname, expression in zip(inputs, SymGrad(self.text, inputs)):
-                        print expression, self.text
                         self.cached_grad_eq[varname] = expression
 
                 except SymbolicDerivativeError, NameError:

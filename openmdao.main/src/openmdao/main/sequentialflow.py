@@ -196,10 +196,15 @@ class SequentialWorkflow(Workflow):
             if src == '@in' or target == '@out' or '_pseudo_' in src:
                 continue
             compname, _, var = src.partition('.')
-            var = var.split('[')[0]
-            comp = self.scope.get(compname)
-            if var in comp.list_inputs():
+            if var:
+                var = var.split('[')[0]
+                comp = self.scope.get(compname)
+                if var in comp.list_inputs():
+                    self._input_outputs.add(src)
+            else:
+                # Free-floating var in assembly.
                 self._input_outputs.add(src)
+                
         self._input_outputs = list(self._input_outputs)
                 
         return sorted(list(edges))
@@ -220,6 +225,7 @@ class SequentialWorkflow(Workflow):
         sub_edge = set()
         outcomps = [item[0].split('.')[0] for item in self._additional_edges]
         incomps = [item[1].split('.')[0] for item in self._additional_edges]
+        loose_vars = self._parent.parent.list_inputs()
         
         for comp in comps:
             
@@ -228,17 +234,16 @@ class SequentialWorkflow(Workflow):
             # Parameter edges. Include non-recursed ones too.
             if comp in incomps and isinstance(pcomp, ParamPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
-                    print 'in', comp, pcomp_edge
-                    target_edge = pcomp_edge[1].split('.')[0]
-                    if target_edge in rcomps:
-                        sub_edge.add(pcomp_edge)
+                    #target_edge = pcomp_edge[1].split('.')[0]
+                    #if target_edge in rcomps:
+                    sub_edge.add(pcomp_edge)
 
             # Output edges
             elif comp in outcomps and isinstance(pcomp, OutputPseudoComponent):
                 for pcomp_edge in pcomp.list_connections():
-                    print 'out', comp, pcomp_edge
                     src_edge = pcomp_edge[0].split('.')[0]
-                    if src_edge	in rcomps:
+                    if src_edge	in rcomps or src_edge in loose_vars \
+                        or src_edge.split('[')[0] in loose_vars:
                         sub_edge.add(pcomp_edge)
 
         self._driver_edges = sub_edge
@@ -379,18 +384,20 @@ class SequentialWorkflow(Workflow):
             
             if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
-                inputs[comp_name][var_name] = arg[i1:i2]
+                if var_name:
+                    if comp_name in pa_ref:
+                        var_name = '%s.%s' % (comp_name, var_name)
+                        comp_name = pa_ref[comp_name]
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
+                    inputs[comp_name][var_name] = arg[i1:i2]
 
             if target != '@out':
                 comp_name, dot, var_name = target.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                inputs[comp_name][var_name] = arg[i1:i2]
+                if var_name:
+                    if comp_name in pa_ref:
+                        var_name = '%s.%s' % (comp_name, var_name)
+                        comp_name = pa_ref[comp_name]
+                    inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():

@@ -683,6 +683,29 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                                    fd=True)
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        
+    def test_free_floating_variables(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        
+        top.add('target', Float(1.0, iotype='in'))
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('target', low=-100., high=100.)
+        top.driver.add_objective('2.0*target + comp.f_xy')
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+        
+        top.driver.update_parameters()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+        
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())
         
