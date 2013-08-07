@@ -16,7 +16,11 @@ openmdao.WVTreeFrame = function(id, wv) {
     // initialize private variables
     var _self = this,
         _elem = jQuery('#'+id),
-        _update = false;
+        _edgesData,
+        _edgesTree,
+        _facesData,
+        _facesTree,
+        _setCheckboxes = false;
 
     /** determine if an attribute is set in a grpim attributes value */
     function isAttributeSet(attrs, attr) {
@@ -27,9 +31,6 @@ openmdao.WVTreeFrame = function(id, wv) {
     function setAttribute(gprim_name, attr, enabled) {
         var gprim = wv.sceneGraph[gprim_name];
 
-        console.log('setAttribute()', gprim_name, attr, enabled);
-        console.log('BEFORE: isAttributeSet?', gprim.attrs, isAttributeSet(gprim.attrs, attr));
-
         if (enabled) {
             gprim.attrs |= attr;
         }
@@ -37,11 +38,124 @@ openmdao.WVTreeFrame = function(id, wv) {
             gprim.attrs &= ~attr;
         }
 
-        console.log('AFTER: isAttributeSet?', gprim.attrs, isAttributeSet(gprim.attrs, attr));
-
         wv.sceneUpd = 1;
     }
 
+    /** set the appropriate attribute(s) when a checkbox is clicked */
+    function clickHandler(e) {
+        if (jQuery(e.target).is('input:checkbox')) {
+            if (e.target.name === 'Faces') {
+                for (var i in _facesData[0].children) {
+                    setAttribute(_facesData[0].children[i].data,
+                        Number(e.target.value), e.target.checked);
+                }
+            }
+            else if (e.target.name === 'Edges') {
+                for (var i in _edgesData[0].children) {
+                    setAttribute(_edgesData[0].children[i].data,
+                        Number(e.target.value), e.target.checked);
+                }
+            }
+
+            else {
+                setAttribute(e.target.name, Number(e.target.value), e.target.checked);
+            }
+            // need to update the state of root/child checkboxes
+            _setCheckboxes = true;
+        }
+        else if (jQuery(e.target).is('ins.jstree-icon')) {
+            // seems to be a bug, expanding tree clears the root node checkboxes
+            // this fix makes collapsing the tree unnecessarily slow, though
+           _setCheckboxes = true;
+        }
+    }
+
+    /** set checkboxes to match current state of gprims
+        set the root node checkboxes to checked if all children are checked
+    */
+    function setCheckboxes() {
+        // clear flag, we've got this...
+        _setCheckboxes = false;
+
+        var edges_cnt = _edgesData[0].children.length,
+            faces_cnt = _facesData[0].children.length,
+            edges_viz_cnt = 0,
+            edges_grd_cnt = 0,
+            edges_ori_cnt = 0,
+            faces_viz_cnt = 0,
+            faces_grd_cnt = 0,
+            faces_trn_cnt = 0,
+            is_viz, is_grd, is_ori, is_trn, checkbox,
+            selector = 'input[type=checkbox][name*="NAME"][value="VALUE"]';
+
+        for (gprim_name in wv.sceneGraph) {
+            gprim = wv.sceneGraph[gprim_name];
+            if (gprim.GPtype === 1) {
+                is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
+                is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.POINTS);
+                is_ori = isAttributeSet(gprim.attrs, wv.plotAttrs.ORIENTATION);
+
+                if (is_viz) edges_viz_cnt += 1;
+                if (is_grd) edges_grd_cnt += 1;
+                if (is_ori) edges_ori_cnt += 1;
+
+                checkbox = _edgesTree.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.ON));
+                checkbox.prop('checked', is_viz);
+
+                checkbox = _edgesTree.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.POINTS));
+                checkbox.prop('checked', is_grd);
+
+                checkbox = _edgesTree.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.ORIENTATION));
+                checkbox.prop('checked', is_ori);
+            }
+            else if (gprim.GPtype === 2) {
+                is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
+                is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.LINES);
+                is_trn = isAttributeSet(gprim.attrs, wv.plotAttrs.TRANSPARENT);
+
+                if (is_viz) faces_viz_cnt += 1;
+                if (is_grd) faces_grd_cnt += 1;
+                if (is_trn) faces_trn_cnt += 1;
+
+                checkbox = _elem.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.ON));
+                checkbox.prop('checked', is_viz);
+
+                checkbox = _elem.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.LINES));
+                checkbox.prop('checked', is_grd);
+
+                checkbox = _elem.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.TRANSPARENT));
+                checkbox.prop('checked', is_trn);
+            }
+        }
+
+        // set checkboxes for edges root node
+        is_viz = (edges_cnt > 0 && edges_viz_cnt === edges_cnt) ? true : false;
+        is_grd = (edges_cnt > 0 && edges_grd_cnt === edges_cnt) ? true : false;
+        is_ori = (edges_cnt > 0 && edges_ori_cnt === edges_cnt) ? true : false;
+
+        checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.ON));
+        checkbox.prop('checked', is_viz);
+
+        checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.POINTS));
+        checkbox.prop('checked', is_grd);
+
+        checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.ORIENTATION));
+        checkbox.prop('checked', is_ori);
+
+        // set checkboxes for faces root node
+        is_viz = (faces_cnt > 0 && faces_viz_cnt === faces_cnt) ? true : false;
+        is_grd = (faces_cnt > 0 && faces_grd_cnt === faces_cnt) ? true : false;
+        is_trn = (faces_cnt > 0 && faces_trn_cnt === faces_cnt) ? true : false;
+
+        checkbox = _elem.find(selector.replace('NAME', 'Faces').replace('VALUE', wv.plotAttrs.ON));
+        checkbox.prop('checked', is_viz);
+
+        checkbox = _elem.find(selector.replace('NAME', 'Faces').replace('VALUE', wv.plotAttrs.LINES));
+        checkbox.prop('checked', is_grd);
+
+        checkbox = _elem.find(selector.replace('NAME', 'Faces').replace('VALUE', wv.plotAttrs.TRANSPARENT));
+        checkbox.prop('checked', is_trn);
+    }
 
     /***********************************************************************
      *  privileged
@@ -58,34 +172,29 @@ openmdao.WVTreeFrame = function(id, wv) {
             return;
         }
 
-        if (!_update && wv.sgUpdate !== 1 && wv.sceneUpd !== 1) {
-            // no updates, tree update not required
+        if (wv.sgUpdate !== 1 && wv.sceneUpd !== 1) {
+            // if checkboxes need to be updated, do it
+            if (_setCheckboxes) {
+                setCheckboxes();
+            }
+            // no updates, nothing else to do
             return;
         }
-        _update = false;
 
-        // TODO: if it's just a tree _update (due to toggled checkbox),
-        //       we should just update the checkboxes and not rebuild the tree.
-        //       should separate the checkbox logic from tree building entirely!
+        // console.log('WVTreeFrame.wvUpdateUI() wv', wv);
 
-        console.log('WVTreeFrame.wvUpdateUI() wv BEFORE:', wv);
+        var gprim, gprim_name,
+            is_viz, is_grd, is_ori, is_trn,
+            template = '<input type="checkbox" name="NAME" value="VALUE">';
 
-        var edgesData,
-            edgesTree,
-            facesData,
-            facesTree,
-            gprim,
-            gprim_name,
-            template = '<input type="checkbox" name="NAME" value="VALUE" CHECKED>';
-
-        // Grab paths of currently open nodes.
+        // save noms of currently open nodes
         var openNodes = [];
         _elem.find('li.jstree-open').each(function () {
             openNodes.push(this.getAttribute('nom'));
         });
 
         // initialize edges data with root node
-        edgesData = [{
+        _edgesData = [{
             data: 'Edges',
             attr: {
                 nom: 'Edges',
@@ -104,7 +213,7 @@ openmdao.WVTreeFrame = function(id, wv) {
         }];
 
         // initialize faces data with root node
-        facesData = [{
+        _facesData = [{
             data: 'Faces',
             attr: {
                 nom: 'Faces',
@@ -122,73 +231,52 @@ openmdao.WVTreeFrame = function(id, wv) {
             children: []
         }]
 
-        var edges_viz_cnt = 0,
-            edges_grd_cnt = 0,
-            edges_ori_cnt = 0;
-            faces_viz_cnt = 0,
-            faces_grd_cnt = 0,
-            faces_trn_cnt = 0;
-
-        var is_viz, is_grd, is_ori, is_trn;
-
         // get data for edge and face gprims in sceneGraph
         for (gprim_name in wv.sceneGraph) {
             gprim = wv.sceneGraph[gprim_name];
             if (gprim.GPtype === 1) {
+
                 is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
                 is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.POINTS);
                 is_ori = isAttributeSet(gprim.attrs, wv.plotAttrs.ORIENTATION);
 
-                if (is_viz) edges_viz_cnt += 1;
-                if (is_grd) edges_grd_cnt += 1;
-                if (is_ori) edges_ori_cnt += 1;
-
-                edgesData[0].children.push({
+                _edgesData[0].children.push({
                     data: gprim_name,
                     attr: {
                         nom: gprim_name,
                         viz: template
                                 .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.ON)
-                                .replace('CHECKED', is_viz ? 'checked="yes"' : ''),
+                                .replace('VALUE',   wv.plotAttrs.ON),
                         grd: template
                                 .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.POINTS)
-                                .replace('CHECKED', is_grd ? 'checked="yes"' : ''),
+                                .replace('VALUE',   wv.plotAttrs.POINTS),
                         ori: template
                                 .replace('NAME',    gprim_name)
                                 .replace('VALUE',   wv.plotAttrs.ORIENTATION)
-                                .replace('CHECKED', is_ori ? 'checked="yes"' : ''),
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
                 })
             }
             else if (gprim.GPtype === 2) {
+
                 is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
                 is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.LINES);
                 is_trn = isAttributeSet(gprim.attrs, wv.plotAttrs.TRANSPARENT);
 
-                if (is_viz) faces_viz_cnt += 1;
-                if (is_grd) faces_grd_cnt += 1;
-                if (is_trn) faces_trn_cnt += 1;
-
-                facesData[0].children.push({
+                _facesData[0].children.push({
                     data: gprim_name,
                     attr: {
                         nom: gprim_name,
                         viz: template
                                 .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.ON)
-                                .replace('CHECKED', is_viz ? 'checked="yes"' : ''),
+                                .replace('VALUE',   wv.plotAttrs.ON),
                         grd: template
                                 .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.LINES)
-                                .replace('CHECKED', is_grd ? 'checked="yes"' : ''),
+                                .replace('VALUE',   wv.plotAttrs.LINES),
                         trn: template
                                 .replace('NAME',    gprim_name)
                                 .replace('VALUE',   wv.plotAttrs.TRANSPARENT)
-                                .replace('CHECKED', is_trn ? 'checked="yes"' : ''),
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
@@ -199,62 +287,30 @@ openmdao.WVTreeFrame = function(id, wv) {
             }
         }
 
-        // set checkboxes for edges root node (FUGLY)
-        if (edges_viz_cnt === facesData[0].children.length) {
-            edgesData[0].attr.viz = edgesData[0].attr.viz.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            edgesData[0].attr.viz = edgesData[0].attr.viz.replace('CHECKED', '');            
-        }
-        if (edges_grd_cnt === facesData[0].children.length) {
-            edgesData[0].attr.grd = edgesData[0].attr.grd.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            edgesData[0].attr.grd = edgesData[0].attr.grd.replace('CHECKED', '');            
-        }
-        if (edges_ori_cnt === facesData[0].children.length) {
-            edgesData[0].attr.ori = edgesData[0].attr.ori.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            edgesData[0].attr.ori = edgesData[0].attr.ori.replace('CHECKED', '');            
-        }
-        console.log('WVTreeFrame.wvUpdateUI() edgesData:', edgesData);
-
-        // set checkboxes for faces root node
-        if (faces_viz_cnt === facesData[0].children.length) {
-            facesData[0].attr.viz = facesData[0].attr.viz.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            facesData[0].attr.viz = facesData[0].attr.viz.replace('CHECKED', '');            
-        }
-        if (faces_grd_cnt === facesData[0].children.length) {
-            facesData[0].attr.grd = facesData[0].attr.grd.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            facesData[0].attr.grd = facesData[0].attr.grd.replace('CHECKED', '');            
-        }
-        if (faces_trn_cnt === facesData[0].children.length) {
-            facesData[0].attr.trn = facesData[0].attr.trn.replace('CHECKED', 'checked="yes"');
-        }
-        else {
-            facesData[0].attr.trn = facesData[0].attr.trn.replace('CHECKED', '');            
-        }
-        console.log('WVTreeFrame.wvUpdateUI() facesData:', facesData);
-
         // remove any existing trees (with their event handlers, etc.)
         _elem.empty();
 
+        // when both trees are ready, set the checkboxes
+        var edges_tree_ready = jQuery.Deferred(),
+            faces_tree_ready = jQuery.Deferred();
+
+        jQuery.when(edges_tree_ready, faces_tree_ready)
+              .done(setCheckboxes);
+
         //create new tree elements
-        edgesTree = jQuery('<div id="'+id+'_edges_tree">')
-            .appendTo(_elem),
-        facesTree = jQuery('<div id="'+id+'_faces_tree">')
-            .appendTo(_elem);
+        _edgesTree = jQuery('<div id="'+id+'_edges_tree">')
+            .appendTo(_elem)
+            .on('click', clickHandler);
+
+        _facesTree = jQuery('<div id="'+id+'_faces_tree">')
+            .appendTo(_elem)
+            .on('click', clickHandler);
 
         // (re)create tree for the edge primitives
-        edgesTree.jstree({
+        _edgesTree.jstree({
             plugins: ["themes", "json_data", "grid"],
             themes : { "theme" : "openmdao" },
-            json_data: {data: edgesData},
+            json_data: {data: _edgesData},
             grid: {
                 columns: [
                     {width: 160, header: "Edges", title:"_DATA_"},
@@ -266,27 +322,14 @@ openmdao.WVTreeFrame = function(id, wv) {
             }
         })
         .bind("loaded.jstree", function(event, data) {
-            edgesTree.click(function(e) {
-                if (jQuery(e.target).is('input:checkbox')) {
-                    if (e.target.name === 'Edges') {
-                        for (var i in edgesData[0].children) {
-                            setAttribute(edgesData[0].children[i].data,
-                                Number(e.target.value), e.target.checked);
-                        }
-                    }
-                    else {
-                        setAttribute(e.target.name, Number(e.target.value), e.target.checked);
-                    }
-                    _update = true;
-                }
-            });
+            edges_tree_ready.resolve();
         });
 
         // (re)create tree for the face primitives
-        facesTree.jstree({
+        _facesTree.jstree({
             plugins: ["themes", "json_data", "grid"],
             themes : { "theme" : "openmdao" },
-            json_data: {data: facesData},
+            json_data: {data: _facesData},
             grid: {
                 columns: [
                     {width: 160, header: "Faces", title:"_DATA_"},
@@ -298,24 +341,8 @@ openmdao.WVTreeFrame = function(id, wv) {
             }
         })
         .bind("loaded.jstree", function(event, data) {
-            facesTree.click(function(e) {
-                if (jQuery(e.target).is('input:checkbox')) {
-                    console.log('check:', e.target.name, e.target.value, e.target.checked);
-                    if (e.target.name === 'Faces') {
-                        for (var i in facesData[0].children) {
-                            setAttribute(facesData[0].children[i].data,
-                                Number(e.target.value), e.target.checked);
-                        }
-                    }
-                    else {
-                        setAttribute(e.target.name, Number(e.target.value), e.target.checked);
-                    }
-                    _update = true;
-                }
-            });
+            faces_tree_ready.resolve();
         });
-
-        console.log('WVTreeFrame.wvUpdateUI() wv AFTER:', wv);
     }
 
 }
