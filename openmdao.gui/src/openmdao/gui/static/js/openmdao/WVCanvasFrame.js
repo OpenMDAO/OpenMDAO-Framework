@@ -44,7 +44,9 @@ openmdao.WVCanvasFrame = function(id, wv) {
             'Pan':               ['Left Click',        'Left Click',        'Left Click'],
             'X/Y Axis Rotation': ['CTRL + Left Click', 'CTRL + Left Click', 'CTRL + Left Click'],
             'Z Axis Rotation':   ['ALT + Left Click',  'ALT + Left Click',  'ALT + Left Click'],
-            'Zoom':              ['Mouse Wheel',       'Two Finger Scroll', 'Mouse Wheel']
+            'Zoom':              ['Mouse Wheel',       'Two Finger Scroll', 'Mouse Wheel'],
+            'Reset View':        ['h',                 'h',                 'h']
+            // TODO: more keys, when we know what they do and that they actually work ;)
         },
         _key_button = jQuery('<a class="btn btn-small"><i class="icon-info-sign"></i></a>')
             .appendTo(_elem)
@@ -184,7 +186,6 @@ openmdao.WVCanvasFrame = function(id, wv) {
     this.wvUpdateUI = function() {
         // deal with key presses
         if (wv.keyPress != -1) {
-            console.log('WVCanvasFrame.wvUpdateUI keyPress:', wv.keyPress);
             switch(wv.keyPress) {
                 case 42:                // '*' -- center the view
                     wv.centerV = 1;
