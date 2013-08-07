@@ -172,7 +172,7 @@ openmdao.WVTreeFrame = function(id, wv) {
             return;
         }
 
-        if (wv.sgUpdate !== 1 && wv.sceneUpd !== 1) {
+        if (wv.sgUpdate !== 1) {
             // if checkboxes need to be updated, do it
             if (_setCheckboxes) {
                 setCheckboxes();
@@ -180,8 +180,6 @@ openmdao.WVTreeFrame = function(id, wv) {
             // no updates, nothing else to do
             return;
         }
-
-        // console.log('WVTreeFrame.wvUpdateUI() wv', wv);
 
         var gprim, gprim_name,
             is_viz, is_grd, is_ori, is_trn,
