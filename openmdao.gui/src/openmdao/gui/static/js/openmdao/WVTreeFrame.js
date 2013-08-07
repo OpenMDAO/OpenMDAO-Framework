@@ -56,11 +56,10 @@ openmdao.WVTreeFrame = function(id, wv) {
                         Number(e.target.value), e.target.checked);
                 }
             }
-
             else {
                 setAttribute(e.target.name, Number(e.target.value), e.target.checked);
             }
-            // need to update the state of root/child checkboxes
+            // need to update the state of parent/child checkboxes
             _setCheckboxes = true;
         }
         else if (jQuery(e.target).is('ins.jstree-icon')) {
@@ -74,9 +73,6 @@ openmdao.WVTreeFrame = function(id, wv) {
         set the root node checkboxes to checked if all children are checked
     */
     function setCheckboxes() {
-        // clear flag, we've got this...
-        _setCheckboxes = false;
-
         var edges_cnt = _edgesData[0].children.length,
             faces_cnt = _facesData[0].children.length,
             edges_viz_cnt = 0,
@@ -175,6 +171,7 @@ openmdao.WVTreeFrame = function(id, wv) {
         if (wv.sgUpdate !== 1) {
             // if checkboxes need to be updated, do it
             if (_setCheckboxes) {
+                _setCheckboxes = false;
                 setCheckboxes();
             }
             // no updates, nothing else to do
@@ -182,11 +179,10 @@ openmdao.WVTreeFrame = function(id, wv) {
         }
 
         var gprim, gprim_name,
-            is_viz, is_grd, is_ori, is_trn,
-            template = '<input type="checkbox" name="NAME" value="VALUE">';
+            template = '<input type="checkbox" name="NAME" value="VALUE">',
+            openNodes = [];
 
         // save noms of currently open nodes
-        var openNodes = [];
         _elem.find('li.jstree-open').each(function () {
             openNodes.push(this.getAttribute('nom'));
         });
@@ -197,14 +193,14 @@ openmdao.WVTreeFrame = function(id, wv) {
             attr: {
                 nom: 'Edges',
                 viz: template
-                        .replace('NAME',    'Edges')
-                        .replace('VALUE',   wv.plotAttrs.ON),
+                        .replace('NAME', 'Edges')
+                        .replace('VALUE', wv.plotAttrs.ON),
                 grd: template
-                        .replace('NAME',    'Edges')
-                        .replace('VALUE',   wv.plotAttrs.POINTS),
+                        .replace('NAME', 'Edges')
+                        .replace('VALUE', wv.plotAttrs.POINTS),
                 ori: template
-                        .replace('NAME',    'Edges')
-                        .replace('VALUE',   wv.plotAttrs.ORIENTATION)
+                        .replace('NAME', 'Edges')
+                        .replace('VALUE', wv.plotAttrs.ORIENTATION)
             },
             state: openNodes.indexOf('Edges') >= 0 ? 'open' : 'closed',
             children: []
@@ -216,14 +212,14 @@ openmdao.WVTreeFrame = function(id, wv) {
             attr: {
                 nom: 'Faces',
                 viz: template
-                        .replace('NAME',    'Faces')
-                        .replace('VALUE',   wv.plotAttrs.ON),
+                        .replace('NAME', 'Faces')
+                        .replace('VALUE', wv.plotAttrs.ON),
                 grd: template
-                        .replace('NAME',    'Faces')
-                        .replace('VALUE',   wv.plotAttrs.LINES),
+                        .replace('NAME', 'Faces')
+                        .replace('VALUE', wv.plotAttrs.LINES),
                 trn: template
-                        .replace('NAME',    'Faces')
-                        .replace('VALUE',   wv.plotAttrs.TRANSPARENT)
+                        .replace('NAME', 'Faces')
+                        .replace('VALUE', wv.plotAttrs.TRANSPARENT)
             },
             state: openNodes.indexOf('Faces') >= 0 ? 'open' : 'closed',
             children: []
@@ -233,48 +229,38 @@ openmdao.WVTreeFrame = function(id, wv) {
         for (gprim_name in wv.sceneGraph) {
             gprim = wv.sceneGraph[gprim_name];
             if (gprim.GPtype === 1) {
-
-                is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
-                is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.POINTS);
-                is_ori = isAttributeSet(gprim.attrs, wv.plotAttrs.ORIENTATION);
-
                 _edgesData[0].children.push({
                     data: gprim_name,
                     attr: {
                         nom: gprim_name,
                         viz: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.ON),
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.ON),
                         grd: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.POINTS),
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.POINTS),
                         ori: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.ORIENTATION)
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.ORIENTATION)
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
                 })
             }
             else if (gprim.GPtype === 2) {
-
-                is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
-                is_grd = isAttributeSet(gprim.attrs, wv.plotAttrs.LINES);
-                is_trn = isAttributeSet(gprim.attrs, wv.plotAttrs.TRANSPARENT);
-
                 _facesData[0].children.push({
                     data: gprim_name,
                     attr: {
                         nom: gprim_name,
                         viz: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.ON),
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.ON),
                         grd: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.LINES),
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.LINES),
                         trn: template
-                                .replace('NAME',    gprim_name)
-                                .replace('VALUE',   wv.plotAttrs.TRANSPARENT)
+                                .replace('NAME',  gprim_name)
+                                .replace('VALUE', wv.plotAttrs.TRANSPARENT)
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
