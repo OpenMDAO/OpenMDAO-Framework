@@ -1731,28 +1731,32 @@ class Component(Container):
             partially_connected_indices = []
             
             for inp in connected_inputs:
-                array_indices = re.findall("\[\d+\]", inp)
-                if array_indices:
-                    cname = inp.split('[')[0]  # Could be 'inp[0]'.
-                    if cname == name:
+                cname = inp.split('[')[0]  # Could be 'inp[0]'.
+
+                if cname == name:
+                    connections = self._depgraph._var_connections(inp)
+                    connections = [src for src, dst in connections]
+
+                    if not '[' in inp:
+                        connected.extend(connections)
+                        
+                    if '[' in inp:
+                        partially_connected.extend(connections)
+
+                        array_indices = re.findall("\[\d+\]", inp)
                         array_indices = [ index.split('[')[1].split(']')[0] for index in array_indices ]
                         array_indices = [ int(index) for index in array_indices ]
-                            
-                        if len(array_indices) == 1:
-                            partially_connected_indices.append( array_indices[0] )
+                       
+                        dimensions = self.get(name).ndim - 1
+                        shape = self.get(name).shape
+                        column_index = 0
 
-                        elif len(array_indices) == 2:
-                            shape = self.get(cname).shape
-                            partially_connected_indices.append( array_indices[0] * shape[1] + array_indices[1] )
-                            
-                        connections = self._depgraph._var_connections(inp)
-                        partially_connected.extend([src for src, dst in connections])
+                        for dimension, array_index in enumerate( array_indices[:-1] ):
+                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
+                        
+                        column_index = column_index + array_indices[-1]
 
-                else:
-                    cname = inp
-                    if cname == name:
-                        connections = self._depgraph._var_connections(inp)
-                        connected.extend([src for src, dst in connections])
+                        partially_connected_indices.append( column_index )
 
             if connected:
                 io_attr['connected'] = str(connected).replace('@xin.', '')
@@ -1776,12 +1780,16 @@ class Component(Container):
                         array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
                         array_indices = [int(index) for index in array_indices]
                             
-                        if len(array_indices) == 1:
-                            implicit_partial_indices.append( array_indices[0] )
+                        dimensions = self.get(name).ndim - 1
+                        shape = self.get(name).shape
+                        column_index = 0
 
-                        elif len(array_indices) == 2:
-                            implicit_partial_indices.append( array_indices[0] * shape[1] + array_indices[1] )
-                    
+                        for dimension, array_index in enumerate( array_indices[:-1] ):
+                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
+                        
+                        column_index = column_index + array_indices[-1]
+                        implicit_partial_indices.append( column_index )
+
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
                 io_attr['implicit_partial'] = ''
                 io_attr['implicit_partial'] = str([driver_name.split('.')[0] for
