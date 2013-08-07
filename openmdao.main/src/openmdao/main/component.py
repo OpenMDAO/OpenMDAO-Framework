@@ -12,6 +12,7 @@ from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 import weakref
+import re
 
 try:
     from numpy import inner
@@ -1644,6 +1645,7 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
+        array_regex = re.compile("(?P<index>\[\d+\])(?P=index)*")
 
         attrs = {}
         attrs['type'] = type(self).__name__
@@ -1729,13 +1731,22 @@ class Component(Container):
             partially_connected_indices = []
             
             for inp in connected_inputs:
-                if "[" in inp:
+                array_indices = re.findall("\[\d+\]", inp)
+                if array_indices:
                     cname = inp.split('[')[0]  # Could be 'inp[0]'.
                     if cname == name:
-                        shape = self.get(cname).shape
+                        array_indices = [ index.split('[')[1].split(']')[0] for index in array_indices ]
+                        array_indices = [ int(index) for index in array_indices ]
+                            
+                        if len(array_indices) == 1:
+                            partially_connected_indices.append( array_indices[0] )
+
+                        elif len(array_indices) == 2:
+                            shape = self.get(cname).shape
+                            partially_connected_indices.append( array_indices[0] * shape[1] + array_indices[1] )
+                            
                         connections = self._depgraph._var_connections(inp)
                         partially_connected.extend([src for src, dst in connections])
-                        partially_connected_indices.append(int(inp.split('[')[1].split(']')[0]))
 
                 else:
                     cname = inp
@@ -1756,7 +1767,21 @@ class Component(Container):
                     str([dst for src, dst in connections]).replace('@xout.', '')
             
             if "%s.%s" % (self.name, name) in partial_parameters:
-                implicit_partial_indices = [int(value.split("[")[1].split("]")[0]) for value in partial_parameters["%s.%s" % (self.name, name)]]
+                implicit_partial_indices = []
+                shape = self.get(name).shape
+                
+                for key, target in partial_parameters.iteritems():
+                    for value in target:
+                        array_indices = re.findall("\[\d+\]", value)
+                        array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
+                        array_indices = [int(index) for index in array_indices]
+                            
+                        if len(array_indices) == 1:
+                            implicit_partial_indices.append( array_indices[0] )
+
+                        elif len(array_indices) == 2:
+                            implicit_partial_indices.append( array_indices[0] * shape[1] + array_indices[1] )
+                    
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
                 io_attr['implicit_partial'] = ''
                 io_attr['implicit_partial'] = str([driver_name.split('.')[0] for
