@@ -1725,6 +1725,7 @@ class Component(Container):
 
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
+            io_attr['connection_types'] = 0
 
             connected = []
             partially_connected = []
@@ -1736,13 +1737,14 @@ class Component(Container):
                 if cname == name:
                     connections = self._depgraph._var_connections(inp)
                     connections = [src for src, dst in connections]
+                    connected.extend(connections)
 
-                    if not '[' in inp:
-                        connected.extend(connections)
-                        
+                    if '[' not in inp:
+                        io_attr['connection_types'] = io_attr['connection_types'] | 1
+
                     if '[' in inp:
-                        partially_connected.extend(connections)
 
+                        io_attr['connection_types'] = io_attr['connection_types'] | 2
                         array_indices = re.findall("\[\d+\]", inp)
                         array_indices = [ index.split('[')[1].split(']')[0] for index in array_indices ]
                         array_indices = [ int(index) for index in array_indices ]
@@ -1761,8 +1763,7 @@ class Component(Container):
             if connected:
                 io_attr['connected'] = str(connected).replace('@xin.', '')
             
-            if len(partially_connected) > 0:
-                io_attr['partially_connected'] = str(partially_connected).replace('@xin.', '')
+            if partially_connected_indices:
                 io_attr['partially_connected_indices'] = str(partially_connected_indices)
 
             if name in connected_outputs:  # No array element indications.
@@ -1770,9 +1771,12 @@ class Component(Container):
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
             
+            io_attr['implicit'] = []
+
             if "%s.%s" % (self.name, name) in partial_parameters:
                 implicit_partial_indices = []
                 shape = self.get(name).shape
+                io_attr['connection_types'] = io_attr['connection_types'] | 8
                 
                 for key, target in partial_parameters.iteritems():
                     for value in target:
@@ -1791,18 +1795,26 @@ class Component(Container):
                         implicit_partial_indices.append( column_index )
 
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
-                io_attr['implicit_partial'] = ''
-                io_attr['implicit_partial'] = str([driver_name.split('.')[0] for
+                
+                io_attr['implicit'].extend([driver_name.split('.')[0] for
                     driver_name in partial_parameters["%s.%s" % (self.name, name)]])
 
-            io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:
-                io_attr['implicit'] = str([driver_name.split('.')[0] for
+                io_attr['connection_types'] = io_attr['connection_types'] | 4
+
+                io_attr['implicit'].extend([driver_name.split('.')[0] for
                     driver_name in parameters["%s.%s" % (self.name, name)]])
 
+                io_attr['implicit'] = str(io_attr['implicit'])
+
             if "%s.%s" % (self.name, name) in implicit:
+                io_attr['connection_types'] = io_attr['connection_types'] | 4
+
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
+
+            if not io_attr['implicit']:
+                io_attr['implicit'] = ''
 
             # indicate that this var is the top element of a variable tree
             if io_attr.get('ttype') == 'vartree':

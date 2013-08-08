@@ -83,7 +83,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     }
 
     function getExcludes(){
-        return ["info", "name", "value", "units", "desc", "indent", "partially_connected", "partially_connected_indices", "id", "vt", "parent", "high", "low"];
+        return ["info", "name", "value", "units", "desc", "indent", "implicit_partial_indices",  "partially_connected_indices", "id", "vt", "parent", "high", "low"];
     }
 
     function excludeField(field, excludes){
@@ -249,10 +249,6 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         newItem = itemFormatter.groupFields(["high", "low"], "high-low", item);
         
-        if( "partially_connected" in newItem ){
-            newItem = itemFormatter.groupFields(["connected", "partially_connected"], "connected", item);
-        }
-
         newItem = itemFormatter.removeFields(newItem, getExcludes());
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
@@ -378,7 +374,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         props.onBeforeEditCell.subscribe(function(row,cell) {
             var item = props.getDataItem(cell.row);
-            if (item.connected.length > 0) {
+            if ((item.connection_types & 1) === 1) {
                 return false;
             }
             else if (item.ttype == 'vartree') {
@@ -593,11 +589,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
-                    if (options.editable && (value.connected.length === 0)
+                    if (options.editable && ((value.connection_types & 1) !== 1)
                         && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
-                    if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
+                    if (value.hasOwnProperty("implicit") && ((( value.connection_types & 4 ) === 4 ) || (( value.connection_types & 8 ) === 8 ))) {
                         //need a css class for highlighting implicitly connected inputs
                         if (name === "Inputs") {
                             nameStyle += " parameter";
