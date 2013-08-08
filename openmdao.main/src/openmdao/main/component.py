@@ -469,6 +469,14 @@ class Component(Container):
         # Calculate first derivatives using the new API.
         # TODO: unify linearize & calculate_first_derivatives'
         if first and hasattr(self, 'linearize'):
+            
+            # Don't fake finite difference assemblies, but do fake finite
+            # difference on their contained components.
+            if savebase and has_interface(self, IAssembly):
+                self.driver.calc_derivatives(first, second, savebase,
+                                             extra_in, extra_out)
+                return
+            
             self.linearize()
             self.derivative_exec_count += 1
         else:

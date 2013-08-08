@@ -800,14 +800,6 @@ class Assembly(Component):
         
         return self.J_input_keys, self.J_output_keys, self.J
     
-    # KTM - This is deprecated in favor of the Component's behavior.
-    #def calc_derivatives(self, first=False, second=False, savebase=False):
-    #    """ Overides the component's version of this function. An assembly
-    #    must initiate the call of calc_derivatives on all components in its
-    #    driver's workflow."""
-    #
-    #    self.driver.calc_derivatives(first, second, savebase)
-
     def list_components(self):
         ''' List the components in the assembly.
         '''
