@@ -16,6 +16,7 @@ from openmdao.gui.test.functional.util import main, \
                 startup, closeout
 
 from openmdao.gui.test.functional.pageobjects.slot import find_slot_figure
+from openmdao.gui.test.functional.pageobjects.geometry import GeometryPage
 
 
 @with_setup(setup_server, teardown_server)
@@ -24,7 +25,7 @@ def test_generator():
         yield _test, browser
 
 
-def _test_view_geom(browser):
+def _test_view_geometry(browser):
     project_dict, workspace_page = startup(browser)
 
     #drop 'GeomComponent' onto the grid
@@ -43,6 +44,7 @@ def _test_view_geom(browser):
 
     # Should be one window before we open the geom window
     eq(len(browser.window_handles), 1)
+    workspace_window = browser.current_window_handle
 
     # Open the geom window
     geom_comp_editor('outputs_tab').click()
@@ -54,9 +56,22 @@ def _test_view_geom(browser):
     # Should be two windows now
     eq(len(browser.window_handles), 2)
 
-    # switch to the geom window so we can take a screenshot of it
+    # switch to the geom window
     geom_window = browser.window_handles[-1]
     browser.switch_to_window(geom_window)
+    geom_page = GeometryPage.verify(browser, workspace_page.port)  # FIXME
+
+    edges = geom_page.get_edges()
+    faces = geom_page.get_faces()
+
+    print 'edges:', edges
+    print 'faces:', faces
+
+    assert len(edges) == 7
+    assert len(faces) == 7
+
+    assert edges[0] == 'Edges'
+    assert faces[0] == 'Faces'
 
     # FIXME: there are still problems with diffing the PNG files.  Not sure
     # if there are differences due to platform or what.  Also on windows
@@ -78,11 +93,13 @@ def _test_view_geom(browser):
     #except IOError:
     #    pass
 
-    # Need to do this otherwise the close out fails
-    workspace_window = browser.window_handles[0]
+    # Back to workspace.
+    browser.close()
     browser.switch_to_window(workspace_window)
 
+    # Clean up.
     closeout(project_dict, workspace_page)
+
 
 if __name__ == '__main__':
     main()
