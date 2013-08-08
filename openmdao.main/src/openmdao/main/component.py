@@ -467,7 +467,6 @@ class Component(Container):
         """
         
         # Calculate first derivatives using the new API.
-        # TODO: unify linearize & calculate_first_derivatives'
         if first and hasattr(self, 'linearize'):
             
             # Don't fake finite difference assemblies, but do fake finite
