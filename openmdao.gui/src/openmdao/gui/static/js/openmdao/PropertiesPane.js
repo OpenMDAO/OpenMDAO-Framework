@@ -83,7 +83,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     }
 
     function getExcludes(){
-        return ["info", "name", "value", "units", "desc", "indent", "id", "vt", "parent", "high", "low"];
+        return ["info", "name", "value", "units", "desc", "indent", "implicit_partial_indices",  "partially_connected_indices", "id", "vt", "parent", "high", "low"];
     }
 
     function excludeField(field, excludes){
@@ -111,10 +111,18 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
            return numberToString(high) + " / " + numberToString(low);
        }
 
+        function connectedToString(connections){
+            var connected = connections.connected !== undefined ? connections.connected : connections;
+            var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
+            
+            return connected + partially_connected;
+        }
+
        var formatters = {
             "high" : numberToString,
             "low" : numberToString,
-            "high-low" : highLowToString
+            "high-low" : highLowToString,
+            "connected" : connectedToString,
        };
 
        function hasFormatter(key){
@@ -161,7 +169,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         var weights = {
             "type"      : 4,
-            "high low"  : 3,
+            "high-low"  : 3,
             "valid"     : 2,
             "connected" : 1,
             "implicit"  : 0
@@ -240,6 +248,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         newItem = itemFormatter.cloneItem(item);
 
         newItem = itemFormatter.groupFields(["high", "low"], "high-low", item);
+        
         newItem = itemFormatter.removeFields(newItem, getExcludes());
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
@@ -354,7 +363,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     hide : false,
                     show : false,
                     position : {
-                        of : "#CE-" + pathname.replace(/\./g,'-') + "_" + name,
+                        of : "#ObjectFrame_" + pathname.replace(/\./g,'-') + "_" + name,
                         my : "right top",
                         at : "left-20 top"
                     }
@@ -365,7 +374,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         props.onBeforeEditCell.subscribe(function(row,cell) {
             var item = props.getDataItem(cell.row);
-            if (item.connected.length > 0) {
+            if ((item.connection_types & 1) === 1) {
                 return false;
             }
             else if (item.ttype == 'vartree') {
@@ -580,11 +589,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
-                    if (options.editable && (value.connected.length === 0)
+                    if (options.editable && ((value.connection_types & 1) !== 1)
                         && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
-                    if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
+                    if (value.hasOwnProperty("implicit") && ((( value.connection_types & 4 ) === 4 ) || (( value.connection_types & 8 ) === 8 ))) {
                         //need a css class for highlighting implicitly connected inputs
                         if (name === "Inputs") {
                             nameStyle += " parameter";
