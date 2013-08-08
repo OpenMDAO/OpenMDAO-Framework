@@ -26,7 +26,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
 
         // create status div and wrap with WVStatusLine object
         _statusID    = id + '_status',
-        _statusElem  = jQuery('<div class="row-fluid"><div id="'+_statusID+'" class="fps"></div></div>')
+        _statusElem  = jQuery('<div id="'+_statusID+'" class="fps"></div>')
             .appendTo(_elem),
         _statusLine  = new openmdao.WVStatusLine(_statusID),
 
@@ -359,16 +359,19 @@ openmdao.WVCanvasFrame = function(id, wv) {
             wv.offLeft = offset.left;
         }
 
-        var windowWidth  = window.innerWidth  - 20;
-        var windowHeight = window.innerHeight - 40;
-        if (windowWidth == wv.width && windowHeight == wv.height) {
+        var canvasWidth  = _elem.innerWidth();
+        var canvasHeight = _elem.innerHeight() - _statusElem.outerHeight() - 4;
+        if (canvasWidth == wv.width && canvasHeight == wv.height) {
             return;
         }
+        wv.width  = canvasWidth;
+        wv.height = canvasHeight;
 
-        wv.width       = windowWidth;
-        wv.height      = windowHeight;
         _canvasElem[0].width = wv.width;
         _canvasElem[0].height = wv.height;
+
+        _canvasBG.width(wv.width);
+        _canvasBG.height(wv.height);
 
         // Set the viewport and perspective matrix for the scene
         gl.viewport(0, 0, wv.width, wv.height);
@@ -377,7 +380,6 @@ openmdao.WVCanvasFrame = function(id, wv) {
 
         wv.InitDraw();
     };
-
 }
 
 /*

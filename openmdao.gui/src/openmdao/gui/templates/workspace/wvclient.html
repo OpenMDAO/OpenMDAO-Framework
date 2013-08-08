@@ -56,6 +56,12 @@
             overflow: auto;
             background-color: black;
         }
+
+        #canvas_frame {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+        }
     </style>
 
     <script>
@@ -100,16 +106,19 @@
         var cf = new openmdao.WVCanvasFrame("canvas_frame", wv);
 
         // set callback functions for canvas and tree views
-        wv.setCallback("InitUI",        cf.wvInitUI);
-        wv.setCallback("UpdateUI",      function() {
+        wv.setCallback("InitUI", function() {
+            tf.wvInitUI();
+            cf.wvInitUI();
+        })
+        wv.setCallback("UpdateUI", function() {
             // wv.sgUpdate will be set to 1 if the sceneGraph has changed
             // should be set back to 0 after UI responds
             tf.wvUpdateUI();
             cf.wvUpdateUI();
             wv.sgUpdate = 0;
         })
-        wv.setCallback("UpdateCanvas",  cf.wvUpdateCanvas);
-        wv.setCallback("Reshape",       cf.reshape);
+        wv.setCallback("UpdateCanvas", cf.wvUpdateCanvas);
+        wv.setCallback("Reshape",      cf.reshape);
 
         wv.Start();
     });
