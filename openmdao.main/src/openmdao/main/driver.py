@@ -104,7 +104,7 @@ class Driver(Component):
         # use parameters, objectives and/or constraint expressions to
         # determine the necessary workflow members
         try:
-            iterset = set(c.name for c in self.iteration_set())
+            iterset = set([c.name for c in self.iteration_set()])
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
             if len(self.workflow) == 0:
@@ -113,9 +113,9 @@ class Driver(Component):
                 reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-            # calling get_components() here just makes sure that all of the
-            # components can be resolved
-            comps = self.workflow.get_components()
+                # calling get_components() here just makes sure that all of the
+                # components can be resolved
+                self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
 
@@ -127,7 +127,7 @@ class Driver(Component):
         if len(self.workflow) == 0:
             for compname in self._get_required_compnames():
                 self.workflow.add(compname)
-        for child in self.workflow.get_components():
+        for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
@@ -147,6 +147,19 @@ class Driver(Component):
             if src not in iternames and dest not in iternames:
                 new_list.append((src, dest))
         return new_list
+
+    @rbac(('owner', 'user'))
+    def list_pseudocomps(self):
+        """Return a list of pseudocomps resulting from our parameters, 
+        objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
 
     def _get_required_compnames(self):
         """Returns a set of names of components that are required by
@@ -249,10 +262,18 @@ class Driver(Component):
         for recorder in self.recorders:
             recorder.startup()
 
+        # force param pseudocomps to get updated values to start
+        self.update_parameters()
+
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
         self._invalidated = False
+
+    def update_parameters(self):
+        if hasattr(self, 'get_parameters'):
+            for param in self.get_parameters().values():
+                param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -325,14 +346,20 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in = None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase)
+        self.workflow.calc_derivatives(first, second, savebase, 
+                                       extra_in, extra_out)
 
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Check derivatives for all components in this workflow."""
-        self.workflow.check_derivatives(order, driver_inputs, driver_outputs)
+    def calc_gradient(self, inputs=None, outputs=None):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs. The basic driver behavior is to call calc_gradient
+        on its workflow. However, some driver (optimizers in particular) may
+        want to define their own behavior.
+        """
+        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -380,17 +407,12 @@ class Driver(Component):
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                if '>' in val[2]:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[0] - val[1]])
-                else:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)

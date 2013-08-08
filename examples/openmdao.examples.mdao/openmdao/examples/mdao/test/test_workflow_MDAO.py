@@ -91,7 +91,7 @@ class SellarCO_Multi(Assembly):
     January 1996.
     """
 
-    z1 = Float()
+    z1 = Float(iotype='in')
     z2 = Float()
     x1 = Float()
     y1 = Float()

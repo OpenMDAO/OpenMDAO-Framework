@@ -163,3 +163,4 @@ def add_delegate(*delegates):
             cls.__init__ = init_wrapper(cls, listofdels)
         return cls
     return _add_delegate
+

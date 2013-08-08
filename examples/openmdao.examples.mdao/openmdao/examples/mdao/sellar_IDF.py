@@ -20,11 +20,12 @@ class SellarIDF(Assembly):
         self.add('driver', SLSQPdriver())
 
         # Disciplines
-        self.add('dis1', sellar.Discipline1())
-        self.add('dis2', sellar.Discipline2())
+        self.add('dis1', sellar.Discipline1_WithDerivatives())
+        self.add('dis2', sellar.Discipline2_WithDerivatives())
         
         # Driver process definition
         self.driver.workflow.add(['dis1', 'dis2'])
+        #self.driver.workflow.add(['dis1'])
         
 
         # Optimization parameters
@@ -62,14 +63,16 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
+    ttot = time.time()-tt
 
+    #prob.driver.workflow.check_gradient()
+    
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis2.z2, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
-    print "Elapsed time: ", time.time()-tt, "seconds"
+    print "Elapsed time: ", ttot, "seconds"
 
-    
 # End sellar_IDF.py

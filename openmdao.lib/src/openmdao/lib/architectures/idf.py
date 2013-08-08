@@ -1,6 +1,5 @@
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 class IDF(Architecture):
     
@@ -22,7 +21,6 @@ class IDF(Architecture):
         """
         #create the top level optimizer
         self.parent.add("driver",SLSQPdriver())
-        self.parent.driver.differentiator = FiniteDifference()
         self.parent.driver.iprint = 0
         self.parent.driver.recorders = self.data_recorders
         params = self.parent.get_parameters()

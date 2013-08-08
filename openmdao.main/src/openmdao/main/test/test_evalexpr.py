@@ -5,7 +5,7 @@ import ast
 from openmdao.main.numpy_fallback import array
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprExaminer
-from openmdao.main.printexpr import ExprPrinter, transform_expression
+from openmdao.main.printexpr import ExprPrinter, transform_expression, print_node
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
@@ -85,7 +85,21 @@ def new_text(expr):
     ep.visit(expr._parse_get()[0])
     return ep.get_text()
         
-
+class ExprPrinterTestCase(unittest.TestCase):
+    def test_print_node(self):
+        checks = [
+            'a',
+            'a+b',
+            'a-b',
+            'a*b',
+            'a/b',
+            'a-(b-c)',
+            'a+b*c',
+            ]
+        for check in checks:
+            node = ast.parse(check, mode='eval')
+            self.assertEqual(check, print_node(node))
+        
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -539,13 +553,6 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
     def test_connected_expr(self):
-        try:
-            ConnectedExprEvaluator("var1+var2", self.top)._parse()
-        except Exception as err:
-            self.assertEqual(str(err), "bad connected expression 'var1+var2' must reference exactly one variable")
-        else:
-            self.fail("Exception expected")
-            
         ConnectedExprEvaluator("var1[x]", self.top)._parse()
         try:
             ConnectedExprEvaluator("var1[x]", self.top, is_dest=True)._parse()

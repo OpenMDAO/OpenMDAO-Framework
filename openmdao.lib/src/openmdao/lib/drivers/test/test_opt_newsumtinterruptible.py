@@ -46,7 +46,6 @@ import numpy
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -388,18 +387,25 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
 
-        self.top.driver.differentiator = FiniteDifference()
+        self.top.driver.newsumt_diff = False
         
-        self.top.run()
+        # OpenMDAO diff not supported until we have 2nd derivatives -- KTM
+        try:
+            self.top.run()
+        except NotImplementedError as err:
+            msg = "Hessians currently not supported by OpenMDAO differentiator"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('expected NotImplementedError')
         
-        assert_rel_error(self,
-                         self.top.comp.opt_objective, 
-                         self.top.driver.eval_objective(),
-                         0.001)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
-                               self.top.comp.x[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=2)
+        #assert_rel_error(self,
+                         #self.top.comp.opt_objective, 
+                         #self.top.driver.eval_objective(),
+                         #0.001)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               #self.top.comp.x[0], places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               #self.top.comp.x[1], places=2)
         
 class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""
@@ -526,50 +532,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
         
-    def test_no_design_vars(self):
-        # test to see if code responds correctly to no
-        #   design vars
-        
-        self.top.driver.add_objective( 'comp.result' )
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 
-                "driver: no parameters specified")
-        else:
-            self.fail('RuntimeError expected')
-    
-    def test_get_objective(self):
-        # test getting the objective function
-        self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual(['comp.result'], self.top.driver.get_objectives().keys())
-    
-    def test_update_objective(self):
-
-        try:
-            self.top.driver.eval_objective()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('Exception expected')
-            
-        self.top.comp.result = 88.
-        self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual(self.top.driver.eval_objective(), 88.)
-        
-    
-    def test_bad_design_vars(self):
-        # test to see if the code handles bad design vars
-        try:
-            map(self.top.driver.add_parameter, 
-                ['comp_bogus.x[0]', 'comp.x[1]'] )
-        except AttributeError, err:
-            self.assertEqual(str(err), 
-                "driver: Can't add parameter 'comp_bogus.x[0]'" + \
-                " because it doesn't exist.")
-        else:
-            self.fail('AttributeError expected')
-    
     def test_bounds_swapped(self):
         # test for when lower and upper bounds are swapped
         self.top.driver.add_objective( 'comp.result' )
@@ -632,7 +594,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
 
         if baseerror > newerror:
-            self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
+            self.fail("Coarsening NEWSUMT gradient step size did not make the objective worse.")
 
             
 class OptRosenSuzukiComponent_Deriv(Component):
@@ -755,19 +717,26 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
             'comp.x1**2-comp.x1+2*comp.x2**2+comp.x3**2+2*comp.x4**2-comp.x4 < 10',
             '2*comp.x1**2+2*comp.x1+comp.x2**2-comp.x2+comp.x3**2-comp.x4 < 5'])
         
-        self.top.driver.differentiator = FiniteDifference()
-        self.top.run()
+        self.top.driver.newsumt_diff = False
+        # OpenMDAO diff not supported until we have 2nd derivatives -- KTM
+        try:
+            self.top.run()
+        except NotImplementedError as err:
+            msg = "Hessians currently not supported by OpenMDAO differentiator"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('expected NotImplementedError')
 
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
-                               self.top.comp.x1, places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x2, places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x3, places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
-                               self.top.comp.x4, places=1)
+        #self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               #self.top.driver.eval_objective(), places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               #self.top.comp.x1, places=1)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               #self.top.comp.x2, places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               #self.top.comp.x3, places=2)
+        #self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               #self.top.comp.x4, places=1)
 
     def test_opt2(self):
         # NEWSUMT Finite Difference
