@@ -539,10 +539,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
-        # (only keeping these lines so I don't lose the answer)
-        #grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
-        #assert_rel_error(self, grad[0], -626.0+10.5, .001)
-        
         
     def test_nondifferentiable_blocks(self):
         

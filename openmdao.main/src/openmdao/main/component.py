@@ -18,7 +18,6 @@ from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.derivatives import Derivatives
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -194,9 +193,6 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
-        
-        # Derivatives helper object. Mostly used for the older differentiators.
-        self.derivatives = Derivatives(self)
 
     @property
     def dir_context(self):
