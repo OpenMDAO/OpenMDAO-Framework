@@ -466,17 +466,16 @@ class Component(Container):
             Not needed by Component
         """
         
-        executed = False
-        
         # Calculate first derivatives using the new API.
         # TODO: unify linearize & calculate_first_derivatives'
         if first and hasattr(self, 'linearize'):
             self.linearize()
             self.derivative_exec_count += 1
-            executed = True
+        else:
+            return
             
         # Save baseline state
-        if savebase and executed:
+        if savebase:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
             ffd_inputs, ffd_outputs, _ = self.provideJ()
@@ -543,8 +542,11 @@ class Component(Container):
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
 
-                if ffd_order == 1 and \
-                   (hasattr(self, 'provideJ') or hasattr(self, 'apply_deriv')):
+                if ffd_order == 1 \
+                   and not has_interface(self, IDriver) \
+                   and not has_interface(self, IAssembly) \
+                   and (hasattr(self, 'provideJ') \
+                        or hasattr(self, 'apply_deriv')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(1)

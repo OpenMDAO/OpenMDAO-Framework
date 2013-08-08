@@ -374,6 +374,7 @@ class CONMINdriver(Driver):
                 self.set_parameters(dvals)
         
                 # Run model under Fake Finite Difference
+                self.calc_derivatives(first=True, savebase=True)
                 self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
                 self.ffd_order = 0
