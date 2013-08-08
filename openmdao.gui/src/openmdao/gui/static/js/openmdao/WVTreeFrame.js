@@ -211,6 +211,8 @@ openmdao.WVTreeFrame = function(id, wv) {
             faces_grd_cnt = 0,
             faces_trn_cnt = 0,
             is_viz, is_grd, is_ori, is_trn, checkbox,
+            points_disabled = 0,
+            orientation_disabled = 0,
             selector = 'input[type=checkbox][name*="NAME"][value="VALUE"]';
 
         for (gprim_name in wv.sceneGraph) {
@@ -228,10 +230,28 @@ openmdao.WVTreeFrame = function(id, wv) {
                 checkbox.prop('checked', is_viz);
 
                 checkbox = _edgesTree.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.POINTS));
-                checkbox.prop('checked', is_grd);
+                // we can't show points if gprim points are not defined (just checking the first point)
+                if (gprim.nStrip > 0 && gprim.points !== undefined && gprim.points[0] !== undefined) {
+                    checkbox.prop('checked', is_grd);
+                    checkbox.prop('disabled', false);
+                }
+                else {
+                    checkbox.prop('checked', false);
+                    checkbox.prop('disabled', true);
+                    points_disabled += 1;
+                }
 
                 checkbox = _edgesTree.find(selector.replace('NAME', gprim_name).replace('VALUE', wv.plotAttrs.ORIENTATION));
-                checkbox.prop('checked', is_ori);
+                // we can't show orientation if gprim has no triangles
+                if (gprim.triangles !== undefined) {
+                    checkbox.prop('checked', is_ori);
+                    checkbox.prop('disabled', false);
+                }
+                else {
+                    checkbox.prop('checked', false);
+                    checkbox.prop('disabled', true);
+                    orientation_disabled += 1;
+                }
             }
             else if (gprim.GPtype === 2) {
                 is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
@@ -263,9 +283,15 @@ openmdao.WVTreeFrame = function(id, wv) {
 
         checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.POINTS));
         checkbox.prop('checked', is_grd);
+        if (points_disabled === edges_cnt) {
+            checkbox.prop('disabled', true)
+        }
 
         checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.ORIENTATION));
         checkbox.prop('checked', is_ori);
+        if (orientation_disabled === edges_cnt) {
+            checkbox.prop('disabled', true)
+        }
 
         // set checkboxes for faces root node
         is_viz = (faces_cnt > 0 && faces_viz_cnt === faces_cnt) ? true : false;
