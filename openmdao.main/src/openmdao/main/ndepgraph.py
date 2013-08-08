@@ -18,68 +18,136 @@ def _is_expr(node):
 
 # NODE selectors
 
-def is_comp_node(graph, node, data):
-    return 'comp' in data
+def is_comp_node(graph, node):
+    return 'comp' in graph.node[node]
 
-def is_driver_node(graph, node, data):
-    return 'driver' in data
+def is_driver_node(graph, node):
+    return 'driver' in graph.node[node]
 
-def is_var_node(graph, node, data):
-    return 'var' in data
+def is_var_node(graph, node):
+    return 'var' in graph.node[node]
 
-def is_subvar_node(graph, node, data):
-    return 'subvar' in data
+def is_subvar_node(graph, node):
+    return 'subvar' in graph.node[node]
 
-def is_pseudo_node(graph, node, data):
-    return 'pseudo' in data
+def is_pseudo_node(graph, node):
+    return 'pseudo' in graph.node[node]
 
-def is_param_pseudo_node(graph, node, data):
-    return data.get('pseudo') == 'param'
+def is_param_pseudo_node(graph, node):
+    return graph.node[node].get('pseudo') == 'param'
 
-def is_dangling(graph, node, data):
-    """Returns True if node should be removed because it has insufficient connections"""
+def is_dangling(graph, node):
+    """Returns True if node should be removed because it has 
+    insufficient connections, i.e., some nodes can only 
+    exist as internal connecting nodes between 'real' variable
+    nodes.
+    """
     # dangling subvar node
-    if 'subvar' in data:
+    if 'subvar' in graph.node[node]:
         return  graph.degree(node) < 2
-
 
 # EDGE selectors
 
-def is_connection(graph, u, v, data):
-    return 'conn' in data
+def is_connection(graph, src, dest):
+    try:
+        return 'conn' in graph.edge[src][dest]
+    except KeyError:
+        return False
+
+
+class DiGraph(nx.DiGraph):
+    """A slightly fancier version of networkx.DiGraph that provides a few
+    extra 'finder' and 'visitor' methods that are based on 
+    node/edge metadata.
+    """
+
+    def find_edges(self, predicate, nodes=None, data=False):
+        """Returns all edges in the graph such that the predicate
+        returns True.  The predicate must take args of the form:
+        def pred(graph, u, v).
+        """
+        if data:
+            return [(u, v, dat) for u, v, dat in self.edges(nodes, data=True)
+                            if predicate(self, u, v)]
+        else:
+            return [(u, v) for u, v in self.edges(nodes)
+                            if predicate(self, u, v)]
+
+    def find_edges_iter(self, predicate, nodes=None, data=False):
+        """Returns an iterator over all edges in the graph such that 
+        the predicate returns True.  The predicate must take args of 
+        the form: pred(graph, u, v).
+        """
+        if data:
+            for u, v, dat in self.edges_iter(nodes, data=True):
+                if predicate(self, u, v):
+                    yield (u, v, dat)
+        else:
+            for u, v in self.edges_iter(nodes):
+                if predicate(self, u, v):
+                    yield (u, v)
+
+
+    def find_nodes(self, predicate, data=False):
+        """Returns all nodes in the graph such that the predicate
+        returns True. The predicate must take args of the form:
+        def pred(graph, node).
+        """
+        if data:
+            return [(n, dat) for n, dat in self.nodes(data=True)
+                            if predicate(self, n)]
+        else:
+            return [n for n in self.nodes() if predicate(self, n)]
+
+    def find_nodes_iter(self, predicate, data=False):
+        """Returns an iterator over all nodes in the graph such that 
+        the predicate returns True. The predicate must take args of the 
+        form: pred(graph, node).
+        """
+        if data:
+            for n, dat in self.nodes(data=True):
+                if predicate(self, n):
+                    yield (n, dat)
+        else:
+            for n in self.nodes():
+                if predicate(self, n):
+                    yield n
 
 
 # Explanation of node/edge metadata dict entries
 #
-#   comp = True means it's a Component node
-#   pseudo = True means it's a PseudoComponent
-#   var = True means it's a simple Variable node (no indexing or attr access)
-#   subvar = True means it's some reference to a part of a Variable (like and array ref or attr access)
-#   
+#   comp    means it's a Component node
+#   pseudo  means it's a PseudoComponent
+#   var     means it's a simple Variable node (no indexing or attr access)
+#   subvar  means it's some reference to a part of a Variable (like and array ref or attr access)
+#   conn    means that the edge is a connection that was specified
+#           by calling connect()
 
-class DependencyGraph(nx.DiGraph):
+class DependencyGraph(DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
-        self.change_count = 0 # increment this whenever graph changes
 
-    def _is_vtree_attr(self, node):
+    def _is_attr_ref(self, node):
+        """Returns True if the given node name references some
+        attribute of a variable node.
+        """
         if node in self:
-            return 'vtree' in self.node[node]
-        return '.' in node[len(self._get_base_var(node)):]
+            return 'attr' in self.node[node]
+        return '.' in node[len(self.base_var(node)):]
 
-    def _get_base_var(self, node):
+    def base_var(self, node):
         """Returns the name of the variable node that is the 'base' for 
         the given node name.  For example, for the node A.b[4], the
         base variable is A.b.  For the node d.x.y, the base variable
         is d if d is a boundary variable node, or d.x otherwise.
         """
         parts = node.split('[', 1)[0].split('.')
-        if len(parts) == 1:
-            return parts[0]
-        base = parts[0]
-        if base in self and 'var' in self.node[base]:
-            return base
-        return '.'.join(parts[:2])
+        for base in [parts[0], '.'.join(parts[:2])]:
+            if base in self and 'var' in self.node[base]:
+                return base
+        else:
+            raise KeyError("Can't find base variable for '%s' in graph" % 
+                           node) 
 
     def add_component(self, cname, inputs, outputs, **kwargs):
         """Create nodes in the graph for the component and all of
@@ -88,7 +156,6 @@ class DependencyGraph(nx.DiGraph):
         are passed will be placed in the metadata for the component
         node.
         """
-        self.change_count += 1
 
         if 'comp' not in kwargs:
             kwargs['comp'] = True
@@ -107,29 +174,26 @@ class DependencyGraph(nx.DiGraph):
     def add_boundary_var(self, name, **kwargs):
         """Add a boundary variable using this."""
 
-        if _is_expr(name): # it's an expression, so we need to create a PseudoComponent
-            raise RuntimeError("can't add expression '%s'. as a Variable node." % name)
-
-        if '.' in name:
-            raise RuntimeError("'%s' is not a valid boundary variable name." % name)
-        else:
-            kwargs['boundary'] = True
-
-        if _is_array_entry(name) or self._is_vtree_attr(name):
-            raise RuntimeError("subvars like '%s' can only be added as part of a connection" % name)
-        else:
-            kwargs['var'] = True
-            
+        if name in self:
+            raise RuntimeError("'%s' is already in the graph." % name)
+        if _is_expr(name):
+            raise RuntimeError("can't add expression '%s'. as a Variable node." 
+                               % name)
+        if '.' in name or '[' in name:
+            raise RuntimeError("'%s' is not a valid boundary variable name."
+                               % name)
         if 'iotype' not in kwargs:
             raise RuntimeError("variable '%s' can't be added because its iotype was not specified." % name)
 
+        kwargs['var'] = True
+            
         self.add_node(name, **kwargs)
 
     def remove(self, name):
         """Remove the named node and all nodes prefixed by the
-        given name.
+        given name plus a dot, e.g., for name C1, remove all
+        nodes prefixed by 'C1.'.
         """
-        self.change_count += 1
 
         name_dot = name + '.'
         neighbors = self.successors(name)
@@ -137,6 +201,9 @@ class DependencyGraph(nx.DiGraph):
         to_remove = [n for n in neighbors if n.startswith(name_dot)]
         to_remove.append(name)
         self.remove_nodes_from(to_remove)
+
+        # clean up any remaining dangling internal variable or
+        # pseudocomp nodes
         self.remove_nodes_from(self.find_nodes(is_dangling))
 
     def _check_connect(self, srcpath, destpath):
@@ -159,8 +226,8 @@ class DependencyGraph(nx.DiGraph):
             self._connect_expr(srcpath, destpath)
             return
 
-        true_src = self._get_base_var(srcpath)
-        true_dest = self._get_base_var(destpath)
+        true_src  = self.base_var(srcpath)
+        true_dest = self.base_var(destpath)
 
         for v in [true_src, true_dest]:
             if v not in self:
@@ -209,31 +276,7 @@ class DependencyGraph(nx.DiGraph):
         else:
             self.remove_edge(srcpath, destpath)
 
-    def find_edges(self, predicate, nodes=None, data=False):
-        """Returns all edges in the graph such that the predicate
-        returns True.  The predicate must take args of the form:
-        def pred(graph, u, v, data) where data is the data dict for that
-        edge.
-        """
-        if data:
-            return [(u,v,dat) for u, v, dat in self.edges(nodes, data=True)
-                            if predicate(self, u, v, dat)]
-        else:
-            return [(u,v) for u, v, dat in self.edges(nodes, data=True)
-                            if predicate(self, u, v, dat)]
 
-    def find_nodes(self, predicate, data=False):
-        """Returns all nodes in the graph such that the predicate
-        returns True. The predicate must take args of the form:
-        def pred(graph, node, data) where data is the data dict for that
-        node.
-        """
-        if data:
-            return [(n,dat) for n, dat in self.nodes(data=True)
-                            if predicate(self, n, dat)]
-        else:
-            return [n for n, dat in self.nodes(data=True)
-                            if predicate(self, n, dat)]
 
     def list_connections(self, show_passthrough=True):
         return self.find_edges(is_connection)

@@ -78,16 +78,17 @@ class DepGraphTestCase(unittest.TestCase):
                                                self.boundary_conns)
 
     def test_find_nodes(self):
-        self.assertEqual(set(self.dep.find_nodes(is_comp_node)),
-                         set(self.comps))
-        varnodes = set()
-        for node in ['A','B','C','D']:
-            for v in ['a','b','c','d']:
-                varnodes.add(node+'.'+v)
-        varnodes.update(['a','b','c','d'])
-
-        self.assertEqual(set(self.dep.find_nodes(is_var_node)),
-                         varnodes)
+        for finder in [self.dep.find_nodes, self.dep.find_nodes_iter]:
+            self.assertEqual(set(finder(is_comp_node)),
+                             set(self.comps))
+            varnodes = set()
+            for node in ['A','B','C','D']:
+                for v in ['a','b','c','d']:
+                    varnodes.add(node+'.'+v)
+            varnodes.update(['a','b','c','d'])
+    
+            self.assertEqual(set(finder(is_var_node)),
+                             varnodes)
 
     def test_add(self):
         for name in self.comps:
@@ -123,19 +124,19 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
         
     def test_get_base_var(self):
-        self.assertEqual(self.dep._get_base_var('B.a'), 'B.a')
-        self.assertEqual(self.dep._get_base_var('a'), 'a')
-        self.assertEqual(self.dep._get_base_var('a.x'), 'a')
-        self.assertEqual(self.dep._get_base_var('a.x.y'), 'a')
-        self.assertEqual(self.dep._get_base_var('a.x[3].y'), 'a')
-        self.assertEqual(self.dep._get_base_var('A.c[2]'), 'A.c')
+        self.assertEqual(self.dep.base_var('B.a'), 'B.a')
+        self.assertEqual(self.dep.base_var('a'), 'a')
+        self.assertEqual(self.dep.base_var('a.x'), 'a')
+        self.assertEqual(self.dep.base_var('a.x.y'), 'a')
+        self.assertEqual(self.dep.base_var('a.x[3].y'), 'a')
+        self.assertEqual(self.dep.base_var('A.c[2]'), 'A.c')
         
-    def test_is_vtree_attr(self):
-        self.assertEqual(self.dep._is_vtree_attr('B.a'), False)
-        self.assertEqual(self.dep._is_vtree_attr('a'), False)
-        self.assertEqual(self.dep._is_vtree_attr('a.x'), True)
-        self.assertEqual(self.dep._is_vtree_attr('a.x.y'), True)
-        self.assertEqual(self.dep._is_vtree_attr('a.x.y[2]'), True)
+    def test_is_attr_ref(self):
+        self.assertEqual(self.dep._is_attr_ref('B.a'), False)
+        self.assertEqual(self.dep._is_attr_ref('a'), False)
+        self.assertEqual(self.dep._is_attr_ref('a.x'), True)
+        self.assertEqual(self.dep._is_attr_ref('a.x.y'), True)
+        self.assertEqual(self.dep._is_attr_ref('a.x.y[2]'), True)
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 
