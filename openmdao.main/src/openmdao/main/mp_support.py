@@ -57,7 +57,7 @@ from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
 if sys.platform == 'win32':  #pragma no cover
     from _multiprocessing import win32
 
-from enthought.traits.trait_handlers import TraitDictObject
+from traits.trait_handlers import TraitDictObject
 
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \

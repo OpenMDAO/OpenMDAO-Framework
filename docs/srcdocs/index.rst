@@ -9,7 +9,7 @@ Source Documentation
     missing labels in Sphinx 1.1.x
 
 
-.. _enthought.traits.has_traits.py:
+.. _traits.has_traits.py:
 
 .. _zope.interface.declarations.py:
 

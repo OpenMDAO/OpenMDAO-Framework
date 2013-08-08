@@ -667,9 +667,9 @@ coercion from Str or to Str is allowed. If you need to apply different
 coercion behavior, just create a new class inherited from Variable and 
 perform the coercion in the validate function.
 
-More details can be found in the `Traits 3 User Manual`__.
+More details can be found in the `Traits 4 User Manual`__.
 
-.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
+.. __: http://docs.enthought.com/traits/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
 Variable Trees
 --------------

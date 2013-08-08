@@ -125,7 +125,7 @@ class ResourceAllocationManager(object):
         config_filename = os.environ.get('OPENMDAO_RAMFILE')
         if config_filename is not None:
             if config_filename and not os.path.exists(config_filename):
-                self.log_error('DA_RAMFILE %r not found', config_filename)
+                self.log_error('OPENMDAO_RAMFILE %r not found', config_filename)
 
         if config_filename is None:
             config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
