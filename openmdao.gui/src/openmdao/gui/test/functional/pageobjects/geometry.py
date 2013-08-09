@@ -1,5 +1,4 @@
 import logging
-import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -62,8 +61,6 @@ class GeometryPage(BasePageObject):
         """ Return names in the edges tree. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'tree_frame_edges_tree'))
-        # FIXME: absolute delay for tree population.
-        time.sleep(2)
 
         edges = self.edges_tree.find_elements_by_css_selector('ul > li > ul > li')
         edge_names = []
@@ -78,11 +75,10 @@ class GeometryPage(BasePageObject):
         return edge_names
 
     def get_face_names(self):
-        """ Return names in the edges tree. """
+        """ Return names in the faces tree. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'tree_frame_faces_tree'))
-        # FIXME: absolute delay for tree population.
-        time.sleep(2)
+
         faces = self.faces_tree.find_elements_by_css_selector('ul > li > ul > li')
         face_names = []
         for i in range(len(faces)):
