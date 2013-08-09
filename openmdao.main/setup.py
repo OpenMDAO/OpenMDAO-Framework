@@ -44,7 +44,7 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
-          'networkx==1.3',
+          'networkx',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
