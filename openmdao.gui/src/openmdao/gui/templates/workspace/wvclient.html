@@ -101,11 +101,10 @@
             window.opener.openmdao.project.removeListener("{{geom_name}}");
         };
 
-        // Note: wv requires the canvas name to be "WebViewer"
+        // create tree and canvas views and set callback functions
         var tf = new openmdao.WVTreeFrame("tree_frame", wv);
         var cf = new openmdao.WVCanvasFrame("canvas_frame", wv);
 
-        // set callback functions for canvas and tree views
         wv.setCallback("InitUI", function() {
             tf.wvInitUI();
             cf.wvInitUI();
@@ -120,6 +119,7 @@
         wv.setCallback("UpdateCanvas", cf.wvUpdateCanvas);
         wv.setCallback("Reshape",      cf.reshape);
 
+        // start it up
         wv.Start();
     });
     </script>
