@@ -88,7 +88,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']  
-        self.top.driver.iprint = 2
+        self.top.driver.iprint = 0
         self.top.run()
         
         # pylint: disable-msg=E1101

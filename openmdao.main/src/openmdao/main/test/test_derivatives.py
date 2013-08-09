@@ -539,10 +539,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
-        # (only keeping these lines so I don't lose the answer)
-        #grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
-        #assert_rel_error(self, grad[0], -626.0+10.5, .001)
-        
         
     def test_nondifferentiable_blocks(self):
         
@@ -667,6 +663,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        self.top.driver.update_parameters()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='adjoint')
@@ -674,13 +672,35 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
         # Put everything in a single pseudo-assy, and run fd with no fake.
-        #self.top.run()
-        #self.top.driver.workflow.check_gradient(inputs=['comp1.x1'],
-        #                                           outputs=['comp5.y1'])
+        self.top.driver.update_parameters()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'], 
                                                    fd=True)
         assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        
+    def test_free_floating_variables(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        
+        top.add('target', Float(1.0, iotype='in'))
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('target', low=-100., high=100.)
+        top.driver.add_objective('2.0*target + comp.f_xy')
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+        
+        top.driver.update_parameters()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 2.0, .001)
         
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())

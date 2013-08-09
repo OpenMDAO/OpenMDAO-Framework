@@ -55,7 +55,8 @@ def SymGrad(ex, vars):
     for i in xrange(len(vars)):
         d = diff(newex, Symbol(vars[i])).evalf()
         diff_str=d.__str__()
-        if isinstance(d, Derivative) or 'Derivative' in diff_str:
+        if isinstance(d, Derivative) or 'Derivative' in diff_str \
+                                     or 'im(' in diff_str:
             raise SymbolicDerivativeError('Could not symbolically differentiate expression')
         grad.append(diff_str)
     return grad

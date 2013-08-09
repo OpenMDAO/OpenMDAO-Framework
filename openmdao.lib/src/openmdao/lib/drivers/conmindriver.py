@@ -368,19 +368,16 @@ class CONMINdriver(Driver):
             # gradient. However, we still take advantage of a component's
             # user-defined gradients via Fake Finite Difference.
             if self.cnmn1.igoto == 3:
-                # Save baseline states and calculate derivatives
-                #if self.baseline_point:
-                #    self.calc_derivatives(first=True, savebase=True)
-                #self.baseline_point = False
                 
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
                 self.set_parameters(dvals)
         
                 # Run model under Fake Finite Difference
-                #self.ffd_order = 1
+                self.calc_derivatives(first=True, savebase=True)
+                self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
-                #self.ffd_order = 0
+                self.ffd_order = 0
             else:
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
@@ -404,22 +401,6 @@ class CONMINdriver(Driver):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            #self.ffd_order = 1
-            #self.differentiator.calc_gradient()
-            #self.ffd_order = 0
-                
-            #self.d_obj[:-2] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
-            
-            #for i in range(len(self.cons_active_or_violated)):
-                #self.cons_active_or_violated[i] = 0
-                
-            #self.cnmn1.nac = 0
-            #for i, name in enumerate(self.get_ineq_constraints().keys()):
-                #if self.constraint_vals[i] >= self.cnmn1.ct:
-                    #self.cons_active_or_violated[self.cnmn1.nac] = i+1
-                    #self.d_const[:-2, self.cnmn1.nac] = \
-                        #self.differentiator.get_gradient(name)
-                    #self.cnmn1.nac += 1
                     
             inputs = ["%s.in0" % item.pcomp_name for item in \
                       self.get_parameters().values()]

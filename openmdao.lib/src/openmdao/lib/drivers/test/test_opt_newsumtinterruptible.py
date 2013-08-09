@@ -638,21 +638,6 @@ class OptRosenSuzukiComponent_Deriv(Component):
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
 
-        self.derivatives.declare_first_derivative('result', 'x1')
-        self.derivatives.declare_first_derivative('result', 'x2')
-        self.derivatives.declare_first_derivative('result', 'x3')
-        self.derivatives.declare_first_derivative('result', 'x4')
-        self.derivatives.declare_second_derivative('result', 'x1', 'x1')
-        self.derivatives.declare_second_derivative('result', 'x1', 'x2')
-        self.derivatives.declare_second_derivative('result', 'x1', 'x3')
-        self.derivatives.declare_second_derivative('result', 'x1', 'x4')
-        self.derivatives.declare_second_derivative('result', 'x2', 'x2')
-        self.derivatives.declare_second_derivative('result', 'x2', 'x3')
-        self.derivatives.declare_second_derivative('result', 'x2', 'x4')
-        self.derivatives.declare_second_derivative('result', 'x3', 'x3')
-        self.derivatives.declare_second_derivative('result', 'x3', 'x4')
-        self.derivatives.declare_second_derivative('result', 'x4', 'x4')
-
     def execute(self):
         """calculate the new objective value"""
         self.result = (self.x1**2 - 5.*self.x1 + 
@@ -668,11 +653,6 @@ class OptRosenSuzukiComponent_Deriv(Component):
         df_dx3 = 4.0*self.x3 - 21.0
         df_dx4 = 2.0*self.x4 + 7.0
     
-        self.derivatives.set_first_derivative('result', 'x1', df_dx1)
-        self.derivatives.set_first_derivative('result', 'x2', df_dx2)
-        self.derivatives.set_first_derivative('result', 'x3', df_dx3)
-        self.derivatives.set_first_derivative('result', 'x4', df_dx4)
-        
     def calculate_second_derivatives(self):
         """Analytical second derivatives"""        
         
@@ -681,10 +661,6 @@ class OptRosenSuzukiComponent_Deriv(Component):
         df_dx3dx3 = 4.0
         df_dx4dx4 = 2.0
         
-        self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
-        self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
-        self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
-        self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
 
 class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""

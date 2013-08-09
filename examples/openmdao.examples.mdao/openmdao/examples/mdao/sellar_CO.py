@@ -12,9 +12,9 @@ class SellarCO(Assembly):
     """Solution of the sellar analytical problem using CO.
     """
     
-    global_des_var_targets = Array([5.0,2.0])
-    local_des_var_targets = Array([1.0])
-    coupling_var_targets = Array([3.16,0])
+    global_des_var_targets = Array([5.0, 2.0], iotype='in')
+    local_des_var_targets = Array([1.0], iotype='in')
+    coupling_var_targets = Array([3.16, 0.0], iotype='in')
 
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -114,6 +114,8 @@ if __name__ == "__main__":
     tt = time.time()
     prob.run()
 
+    prob.driver.workflow.check_gradient()
+    
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis1.z2, \
