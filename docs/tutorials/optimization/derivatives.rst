@@ -5,20 +5,21 @@
 Adding Derivatives to Your Components
 ======================================
 
-Many optimization algorithms make use of gradients. In our simple example problem, the SLSQP driver estimates
-the gradient at various times during the solution procedure by performing a
-local finite-difference step. Calculating the gradient typically involves one or
-more executions of the objective function depending on the finite difference
-method that is used. This, of course, means that your model is executed 
-additional times each iteration.
+Many optimization algorithms make use of gradients. In our simple example
+problem, the SLSQP driver estimates the gradient at various times during the
+solution procedure by performing a local finite-difference step. Calculating
+the gradient typically involves one or more executions of the objective
+function depending on the finite difference method that is used. This, of
+course, means that your model is executed additional times each iteration.
 
-Sometimes, the solution process can be sped up by having a component supply its own
-derivatives. These derivatives may be analytical (as you will see in this example),
-or they might be estimated by some other means. Additionally, these derivatives can
-be more accurate than those estimated by finite differencing the component, and
-they are not dependent on the right choice of a step-size parameter.
+Sometimes, the solution process can be sped up by having a component supply
+its own derivatives. These derivatives may be analytical (as you will see in
+this example), or they might be estimated by some other means. Additionally,
+these derivatives can be more accurate than those estimated by finite
+differencing the component, and they are not dependent on the right choice of
+a step-size parameter.
 
-.. index:: Finite Difference with Analytical Derivatives (FFAD)
+.. index:: Finite Difference
 
 In OpenMDAO, derivatives can be specified in the component API. A component's
 set of specified derivatives is used to replace that component's output
@@ -34,10 +35,8 @@ Four steps are involved in specifying derivatives for a component:
 
 :: 
  
-  1. Inherit from Component (ComponentWithDerivatives is deprecated)
-  2. Declare derivatives in the "__init__" method
-  3. Calculate the first derivatives in the "calculate_first_derivatives" method
-  4. Calculate the second derivatives in the "calculate_second_derivatives" method (if needed)
+  1. Declare a ``linearize`` method that calculates and saves the Jacobian that containts the derivatives between its numerical outputs and inputs.
+  2. Declare a ``provideJ`` method that returns the Jacobian along with a list of inputs and outputs.
 
 You must declare the derivatives that you want to define so that the component can
 be checked for missing derivatives. In declaration, you aren't defining a value

@@ -240,10 +240,10 @@ def applyJ(obj, arg, result):
         nvar += width
 
     for okey in result:
+        o1, o2 = obounds[okey]
         for ikey in arg:
             if ikey not in result:
                 i1, i2 = ibounds[ikey]
-                o1, o2 = obounds[okey]
                 if i2 - i1 == 1:
                     if o2 - o1 == 1:
                         Jsub = float(J[o1, i1])
@@ -262,7 +262,6 @@ def applyJ(obj, arg, result):
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
     
-
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
     Component, this automatically forms the "fake" residual, and calls into
@@ -296,10 +295,10 @@ def applyJT(obj, arg, result):
         nvar += width
 
     for okey in result:
-        for ikey in arg:
-            if okey not in arg:
+        if okey not in arg:
+            o1, o2 = obounds[okey]
+            for ikey in arg:
                 i1, i2 = ibounds[ikey]
-                o1, o2 = obounds[okey]
                 if i2 - i1 == 1:
                     if o2 - o1 == 1:
                         Jsub = float(J[i1, o1])
