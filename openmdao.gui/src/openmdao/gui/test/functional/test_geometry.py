@@ -82,6 +82,9 @@ def _test_view_geometry(browser):
     #except IOError:
     #    pass
 
+    # give it a bit
+    time.sleep(3)
+
     # check initial state of edges tree
     geom_page.expand_edges()
     edges = geom_page.get_edge_names()
