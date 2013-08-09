@@ -1179,13 +1179,8 @@ class Container(SafeHasTraits):
         else:
             obj[idx] = value
 
-<<<<<<< HEAD
         # setting of individual Array entries or sub attributes doesn't seem to
         # trigger _input_trait_modified, so do it manually
-=======
-        # setting of individual Array entries or sub attributes don't trigger
-        # _input_trait_modified, so do it manually
->>>>>>> f79435d055b1b7c2188a50a2a063e376bd99db93
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)

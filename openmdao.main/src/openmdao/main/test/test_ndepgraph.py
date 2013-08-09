@@ -150,31 +150,29 @@ class DepGraphTestCase(unittest.TestCase):
     # def test_get_connected_outputs(self):
     #     self.assertEqual(set(self.dep.get_connected_outputs()), set(['c', 'C.d']))
     
-    # def test_already_connected(self):
-    #     # internal connection
-    #     try:
-    #         self.dep.check_connect('A.d', 'B.a')
-    #     except Exception as err:
-    #         self.assertEqual(str(err), "'B.a' is already connected to source 'a'")
-    #     else:
-    #         self.fail('Exception expected')
-            
-    #     # input boundary connection
-    #     try:
-    #         self.dep.check_connect('parent.foo.bar', 'a')
-    #     except Exception as err:
-    #         self.assertEqual(str(err), "'a' is already connected to source 'parent.X.c'")
-    #     else:
-    #         self.fail('Exception expected')
+    def test_already_connected(self):
+        # internal connection
+        try:
+            self.dep._check_connect('A.d', 'B.a')
+        except Exception as err:
+            self.assertEqual(str(err), "Can't connect 'A.d' to 'B.a'. 'B.a' is already connected to 'B.a.x.y'")
+        else:
+            self.fail('Exception expected')
+           
+        # internal to boundary output connection
+        try:
+            self.dep._check_connect('A.d', 'c')
+        except Exception as err:
+            self.assertEqual(str(err), "Can't connect 'A.d' to 'c'. 'c' is already connected to 'C.c'")
+        else:
+            self.fail('Exception expected')
+    
+        # TODO: input boundary connection
 
-    #     # internal to boundary output connection
-    #     try:
-    #         self.dep.check_connect('B.d', 'c')
-    #     except Exception as err:
-    #         self.assertEqual(str(err), "'c' is already connected to source 'D.c'")
-    #     else:
-    #         self.fail('Exception expected')
-
+    def test_get_interior_edges(self):
+        self.assertEqual(set(self.dep.get_interior_edges(['A', 'B', 'C', 'D'])),
+                         set(self.conns))
+    
     # def test_connections_to(self):
     #     self.assertEqual(set(self.dep.connections_to('c')),
     #                      set([('@bout.c','@xout.parent.Y.a'),
@@ -239,10 +237,6 @@ class DepGraphTestCase(unittest.TestCase):
     #     self.assertEqual(self.dep.var_in_edges('@xin'),[])
     #     self.assertEqual(self.dep.var_in_edges('blah'),[])
 
-    # def test_get_interior_edges(self):
-    #     self.assertEqual(self.dep.get_interior_edges(set(['A', 'B', 'C', 'D'])),
-    #                      set(self.internal_conns))
-    
     # def test_disconnect(self):
     #     self.dep.disconnect('a') # this should disconnect extern to a and 
     #                              # a to B.a, completely removing the

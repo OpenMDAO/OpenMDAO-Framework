@@ -1,5 +1,6 @@
 import sys
 import networkx as nx
+from networkx import all_neighbors
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -67,7 +68,8 @@ class DiGraph(nx.DiGraph):
         def pred(graph, u, v).
         """
         if data:
-            return [(u, v, dat) for u, v, dat in self.edges(nodes, data=True)
+            return [(u, v, dat) for u, v, dat in self.edges(nodes, 
+                                                            data=True)
                             if predicate(self, u, v)]
         else:
             return [(u, v) for u, v in self.edges(nodes)
@@ -196,9 +198,8 @@ class DependencyGraph(DiGraph):
         """
 
         name_dot = name + '.'
-        neighbors = self.successors(name)
-        neighbors.extend(self.predecessors(name))
-        to_remove = [n for n in neighbors if n.startswith(name_dot)]
+        to_remove = [n for n in all_neighbors(self,name) 
+                                 if n.startswith(name_dot)]
         to_remove.append(name)
         self.remove_nodes_from(to_remove)
 
@@ -211,11 +212,20 @@ class DependencyGraph(DiGraph):
             raise RuntimeError("Can't connect '%s' to '%s'. '%s' is not a valid destination." % 
                                    (srcpath, destpath, destpath))
 
-        if destpath in self:
-            inedges = self.in_edges(destpath)
-            if len(inedges) > 0:
-                raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
-                                  (srcpath, destpath, destpath, inedges[0]))
+        inedges = self.in_edges((destpath,))
+        if len(inedges) > 0:
+            raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
+                              (srcpath, destpath, destpath, inedges[0][0]))
+
+        base = self.base_var(destpath)
+        if base != destpath and base != srcpath:
+            usdot = destpath + '.'
+            usbracket = destpath + '['
+            for u,v in self.in_edges((base,)):
+                if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
+                       or u.startswith(usdot) or u.startswith(usbracket):
+                    raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
+                              (srcpath, destpath, base, u))
 
     def _connect_expr(self, srcpath, destpath):
         raise NotImplementedError("_connect_expr")
@@ -231,7 +241,7 @@ class DependencyGraph(DiGraph):
 
         for v in [true_src, true_dest]:
             if v not in self:
-                raise RuntimeError("Can't find '%s' in grpah." % v)
+                raise RuntimeError("Can't find variable '%s' in graph." % v)
 
         path = [true_src]
 
@@ -250,6 +260,8 @@ class DependencyGraph(DiGraph):
             self._check_connect(path[i], path[i+1])
             self.add_edge(path[i], path[i+1])
 
+        # mark the actual connection edge to distinguish it
+        # from other edges (for list_connections, etc.)
         self.edge[srcpath][destpath]['conn'] = True
         
 
@@ -276,13 +288,20 @@ class DependencyGraph(DiGraph):
         else:
             self.remove_edge(srcpath, destpath)
 
+    def get_interior_edges(self, comps):
+        compset = set(comps)
+        def is_interior(graph, u, v):
+            return is_connection(graph, u, v) and \
+                      u.split('.', 1)[0] in compset and \
+                      v.split('.', 1)[0] in compset
 
+        return [(u,v) for u, v in self.find_edges(is_interior)]
 
     def list_connections(self, show_passthrough=True):
         return self.find_edges(is_connection)
 
     def get_sources(self, name):
-        return [u for u,v in self.in_edges(name)]
+        return [u for u,v in self.in_edges((name,))]
 
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         pass
@@ -300,12 +319,6 @@ class DependencyGraph(DiGraph):
         pass
 
     def get_connected_outputs(self):
-        pass
-
-    def check_connect(self, srcpath, destpath):
-        pass
-
-    def get_interior_edges(self, comps):
         pass
 
     def connections_to(self, path):
