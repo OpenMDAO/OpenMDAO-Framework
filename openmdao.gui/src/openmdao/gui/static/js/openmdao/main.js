@@ -18,7 +18,7 @@ jQuery(function() {
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
 
-    // set the layout (note: global scope)
+    // set the layout (note: global scope, referenced in workspace html)
     layout = jQuery('body').layout({
         north__size: 40,
         north__resizable: false,
