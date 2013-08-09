@@ -50,10 +50,16 @@ class GeometryPage(BasePageObject):
         super(GeometryPage, self).__init__(browser, port)
 
     def expand_edges(self):
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'tree_frame_edges_tree'))
+
         expander = self.edges_tree.find_element_by_css_selector('ins')
         expander.click()
 
     def expand_faces(self):
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'tree_frame_faces_tree'))
+
         expander = self.faces_tree.find_element_by_css_selector('ins')
         expander.click()
 
