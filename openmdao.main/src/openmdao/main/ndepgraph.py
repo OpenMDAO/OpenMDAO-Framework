@@ -55,15 +55,6 @@ def is_pseudo_node(graph, node):
 def is_param_pseudo_node(graph, node):
     return graph.node[node].get('pseudo') == 'param'
 
-def is_dangling(graph, node):
-    """Returns True if node should be removed because it has 
-    insufficient connections, i.e., some nodes can only 
-    exist as internal connecting nodes between 'real' variable
-    nodes.
-    """
-    # dangling subvar node
-    if 'subvar' in graph.node[node]:
-        return  graph.degree(node) < 2
 
 # EDGE selectors
 
@@ -144,8 +135,6 @@ class DiGraph(nx.DiGraph):
 #           by calling connect()
 
 class DependencyGraph(DiGraph):
-    def __init__(self):
-        super(DependencyGraph, self).__init__()
 
     def add_component(self, cname, inputs, outputs, **kwargs):
         """Create nodes in the graph for the component and all of

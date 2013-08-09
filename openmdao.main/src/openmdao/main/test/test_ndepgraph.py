@@ -2,8 +2,7 @@ import unittest
 
 from openmdao.main.ndepgraph import DependencyGraph, is_comp_node, is_driver_node,\
                                     is_var_node, is_subvar_node, is_pseudo_node, \
-                                    is_param_pseudo_node, is_dangling, \
-                                    is_attr_node, base_var
+                                    is_param_pseudo_node, is_attr_node, base_var
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
