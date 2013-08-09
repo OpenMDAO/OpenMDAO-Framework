@@ -481,7 +481,7 @@ class Component(Container):
         else:
             return
             
-        # Save baseline state
+        # Save baseline state for fake finite difference.
         if savebase:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
