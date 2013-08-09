@@ -198,9 +198,9 @@ class EditorPage(BasePageObject):
     def get_text_area(self):
         code_input_element = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
+        # FIXME: absolute delay for editor to get ready.
+        #        Problem is Firefox sometimes sends arrow key to scrollbar.
+        #        Sadly this didn't completely fix the issue.
         time.sleep(1)
         return code_input_element
 

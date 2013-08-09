@@ -159,7 +159,7 @@ openmdao.Project=function(listeners_ready) {
         }
     }
 
-    /** handle an output message, which is just passed on to all _subscribers */
+    /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
         var callbacks = _subscribers.outstream;
         if (callbacks) {
@@ -179,7 +179,7 @@ openmdao.Project=function(listeners_ready) {
     }
 
     /** handle a published message, which has a topic
-        the message is passed only to _subscribers of that topic
+        the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
         if (typeof message === 'string' || message instanceof String) {

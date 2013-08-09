@@ -294,8 +294,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs &= ~g.plotAttrs.TRANSPARENT;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs &= ~wv.plotAttrs.TRANSPARENT;
+                wv.sceneUpd = 1;
             }
         } else {
             var foo = doc.getElementById("node" + inode + "e");
@@ -308,8 +308,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs |= g.plotAttrs.TRANSPARENT;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs |= wv.plotAttrs.TRANSPARENT;
+                wv.sceneUpd = 1;
             }
         }
 
@@ -324,8 +324,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs &= ~g.plotAttrs.LINES;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs &= ~wv.plotAttrs.LINES;
+                wv.sceneUpd = 1;
             }
         } else {
             var foo = doc.getElementById("node" + inode + "d");
@@ -338,8 +338,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs |= g.plotAttrs.LINES;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs |= wv.plotAttrs.LINES;
+                wv.sceneUpd = 1;
             }
         }
 
@@ -354,8 +354,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs &= ~g.plotAttrs.ON;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs &= ~wv.plotAttrs.ON;
+                wv.sceneUpd = 1;
             }
         } else {
             var foo  = doc.getElementById("node" + inode + "c");
@@ -369,8 +369,8 @@ function TreeUpdate() {
             };
 
             if (this.gprim[inode] != "*") {
-                g.sceneGraph[this.gprim[inode]].attrs |= g.plotAttrs.ON;
-                g.sceneUpd = 1;
+                wv.sceneGraph[this.gprim[inode]].attrs |= wv.plotAttrs.ON;
+                wv.sceneUpd = 1;
             }
         }
     }
