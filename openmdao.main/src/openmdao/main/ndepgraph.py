@@ -236,22 +236,22 @@ class DependencyGraph(DiGraph):
             self._connect_expr(srcpath, destpath)
             return
 
-        true_src  = self.base_var(srcpath)
-        true_dest = self.base_var(destpath)
+        base_src  = self.base_var(srcpath)
+        base_dest = self.base_var(destpath)
 
-        for v in [true_src, true_dest]:
+        for v in [base_src, base_dest]:
             if v not in self:
                 raise RuntimeError("Can't find variable '%s' in graph." % v)
 
-        path = [true_src]
+        path = [base_src]
 
-        if srcpath != true_src:
+        if srcpath != base_src:
             path.append(srcpath)
 
-        if destpath != true_dest:
+        if destpath != base_dest:
             path.append(destpath)
 
-        path.append(true_dest)
+        path.append(base_dest)
 
         kwargs = { 'subvar': True }
         for i in range(len(path)-1):
@@ -264,7 +264,6 @@ class DependencyGraph(DiGraph):
         # from other edges (for list_connections, etc.)
         self.edge[srcpath][destpath]['conn'] = True
         
-
     def disconnect(self, srcpath, destpath=None):
         if destpath is None:
             if 'comp' in self.node[srcpath]:
@@ -288,20 +287,25 @@ class DependencyGraph(DiGraph):
         else:
             self.remove_edge(srcpath, destpath)
 
-    def get_interior_edges(self, comps):
+    def get_interior_connections(self, comps):
         compset = set(comps)
-        def is_interior(graph, u, v):
-            return is_connection(graph, u, v) and \
-                      u.split('.', 1)[0] in compset and \
-                      v.split('.', 1)[0] in compset
-
-        return [(u,v) for u, v in self.find_edges(is_interior)]
+        return [(u,v) for u, v in self.find_edges(is_connection)
+                   if u.split('.', 1)[0] in compset and 
+                      v.split('.', 1)[0] in compset]
 
     def list_connections(self, show_passthrough=True):
         return self.find_edges(is_connection)
 
     def get_sources(self, name):
         return [u for u,v in self.in_edges((name,))]
+
+    def full_subgraph(self, nodes):
+        """Returns the subgraph specified by the given nodes and
+        any variable or expr nodes corresponding to those nodes.
+        """
+        nodeset = set(nodes)
+        return self.subgraph([n for n in self.nodes_iter() 
+                                 if n.split('.', 1)[0] in nodeset])
 
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         pass

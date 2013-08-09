@@ -143,6 +143,18 @@ class DepGraphTestCase(unittest.TestCase):
                          set([('a','A.a'),('b[3]','A.b'),('A.c[2]','B.a.x.y'),
                               ('A.d.z','B.b[4]'),('B.c','C.a'),('B.d','C.b'),
                               ('C.c','c'),('D.d','d.x')]))
+
+    def test_full_subgraph(self):
+        sub = self.dep.full_subgraph(['A', 'B'])
+        self.assertEqual(set(sub.nodes()), 
+                         set(['A','A.a','A.b','A.c','A.d','A.c[2]','A.d.z',
+                              'B','B.a','B.b','B.c','B.d', 'B.a.x.y', 'B.b[4]']))
+        self.assertEqual(set(sub.edges()),
+                         set([('A.a','A'),('A.b','A'),('A','A.c'),('A','A.d'),
+                              ('B.a','B'),('B.b','B'),('B','B.c'),('B','B.d'),
+                              ('A.c','A.c[2]'),('A.c[2]','B.a.x.y'),
+                              ('B.a.x.y','B.a'),('A.d','A.d.z'),('A.d.z','B.b[4]'),
+                              ('B.b[4]','B.b')]))
     
     # def test_get_connected_inputs(self):
     #     self.assertEqual(set(self.dep.get_connected_inputs()), set(['a','A.b']))
@@ -169,8 +181,8 @@ class DepGraphTestCase(unittest.TestCase):
     
         # TODO: input boundary connection
 
-    def test_get_interior_edges(self):
-        self.assertEqual(set(self.dep.get_interior_edges(['A', 'B', 'C', 'D'])),
+    def test_get_interior_connections(self):
+        self.assertEqual(set(self.dep.get_interior_connections(['A', 'B', 'C', 'D'])),
                          set(self.conns))
     
     # def test_connections_to(self):
