@@ -2,7 +2,8 @@ import unittest
 
 from openmdao.main.ndepgraph import DependencyGraph, is_comp_node, is_driver_node,\
                                     is_var_node, is_subvar_node, is_pseudo_node, \
-                                    is_param_pseudo_node, is_dangling
+                                    is_param_pseudo_node, is_dangling, \
+                                    is_attr_node, base_var
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -22,7 +23,6 @@ class DumbClass(object):
 
     def contains(self, name):
         return hasattr(self, name)
-
 
 #
 # tests TODO:
@@ -123,20 +123,21 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.get_sources('A.c[2]'), ['A.c'])
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
         
-    def test_get_base_var(self):
-        self.assertEqual(self.dep.base_var('B.a'), 'B.a')
-        self.assertEqual(self.dep.base_var('a'), 'a')
-        self.assertEqual(self.dep.base_var('a.x'), 'a')
-        self.assertEqual(self.dep.base_var('a.x.y'), 'a')
-        self.assertEqual(self.dep.base_var('a.x[3].y'), 'a')
-        self.assertEqual(self.dep.base_var('A.c[2]'), 'A.c')
+    def test_base_var(self):
+        self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
+        self.assertEqual(base_var(self.dep, 'a'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x.y'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x[3].y'), 'a')
+        self.assertEqual(base_var(self.dep, 'A.c[2]'), 'A.c')
         
-    def test_is_attr_ref(self):
-        self.assertEqual(self.dep._is_attr_ref('B.a'), False)
-        self.assertEqual(self.dep._is_attr_ref('a'), False)
-        self.assertEqual(self.dep._is_attr_ref('a.x'), True)
-        self.assertEqual(self.dep._is_attr_ref('a.x.y'), True)
-        self.assertEqual(self.dep._is_attr_ref('a.x.y[2]'), True)
+    def test_is_attr_node(self):
+        self.assertEqual(is_attr_node(self.dep, 'B.a'), False)
+        self.assertEqual(is_attr_node(self.dep, 'a'), False)
+        self.assertEqual(is_attr_node(self.dep, 'A.d.z'), True)
+        self.assertEqual(is_attr_node(self.dep, 'A.c[2]'), False)
+        self.dep.add_node('a.x.y[2]', subvar=True)
+        self.assertEqual(is_attr_node(self.dep, 'a.x.y[2]'), True)
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 

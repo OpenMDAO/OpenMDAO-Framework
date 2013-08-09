@@ -14,10 +14,24 @@ def _is_expr(node):
     variable reference, or a reference to a single array entry or
     vartree attribute.
     """
-    #TODO: make this more robust
     return len(_exprchars.intersection(node)) > 0
 
-# NODE selectors
+def base_var(graph, node):
+    """Returns the name of the variable node that is the 'base' for 
+    the given node name.  For example, for the node A.b[4], the
+    base variable is A.b.  For the node d.x.y, the base variable
+    is d if d is a boundary variable node, or d.x otherwise.
+    """
+    parts = node.split('[', 1)[0].split('.')
+    for base in [parts[0], '.'.join(parts[:2])]:
+        if base in graph and 'var' in graph.node[base]:
+            return base
+    else:
+        raise KeyError("Can't find base variable for '%s' in graph" % 
+                       node) 
+
+
+# NODE selectors (pass as arg to the find_nodes function)
 
 def is_comp_node(graph, node):
     return 'comp' in graph.node[node]
@@ -30,6 +44,10 @@ def is_var_node(graph, node):
 
 def is_subvar_node(graph, node):
     return 'subvar' in graph.node[node]
+
+def is_attr_node(graph, node):
+    base = base_var(graph, node)
+    return '.' in node[len(base):]
 
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node[node]
@@ -129,28 +147,6 @@ class DependencyGraph(DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
 
-    def _is_attr_ref(self, node):
-        """Returns True if the given node name references some
-        attribute of a variable node.
-        """
-        if node in self:
-            return 'attr' in self.node[node]
-        return '.' in node[len(self.base_var(node)):]
-
-    def base_var(self, node):
-        """Returns the name of the variable node that is the 'base' for 
-        the given node name.  For example, for the node A.b[4], the
-        base variable is A.b.  For the node d.x.y, the base variable
-        is d if d is a boundary variable node, or d.x otherwise.
-        """
-        parts = node.split('[', 1)[0].split('.')
-        for base in [parts[0], '.'.join(parts[:2])]:
-            if base in self and 'var' in self.node[base]:
-                return base
-        else:
-            raise KeyError("Can't find base variable for '%s' in graph" % 
-                           node) 
-
     def add_component(self, cname, inputs, outputs, **kwargs):
         """Create nodes in the graph for the component and all of
         its input and output variables.  inputs and outputs names
@@ -174,7 +170,9 @@ class DependencyGraph(DiGraph):
         self.add_edges_from([(cname, v) for v in outputs])
 
     def add_boundary_var(self, name, **kwargs):
-        """Add a boundary variable using this."""
+        """Add a boundary variable, i.e., one not associated
+        with any component in the graph.
+        """
 
         if name in self:
             raise RuntimeError("'%s' is already in the graph." % name)
@@ -196,16 +194,7 @@ class DependencyGraph(DiGraph):
         given name plus a dot, e.g., for name C1, remove all
         nodes prefixed by 'C1.'.
         """
-
-        name_dot = name + '.'
-        to_remove = [n for n in all_neighbors(self,name) 
-                                 if n.startswith(name_dot)]
-        to_remove.append(name)
-        self.remove_nodes_from(to_remove)
-
-        # clean up any remaining dangling internal variable or
-        # pseudocomp nodes
-        self.remove_nodes_from(self.find_nodes(is_dangling))
+        self.remove_nodes_from(self.find_prefixed_nodes([name]))
 
     def _check_connect(self, srcpath, destpath):
         if _is_expr(destpath):
@@ -217,7 +206,7 @@ class DependencyGraph(DiGraph):
             raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
                               (srcpath, destpath, destpath, inedges[0][0]))
 
-        base = self.base_var(destpath)
+        base = base_var(self, destpath)
         if base != destpath and base != srcpath:
             usdot = destpath + '.'
             usbracket = destpath + '['
@@ -236,8 +225,8 @@ class DependencyGraph(DiGraph):
             self._connect_expr(srcpath, destpath)
             return
 
-        base_src  = self.base_var(srcpath)
-        base_dest = self.base_var(destpath)
+        base_src  = base_var(self, srcpath)
+        base_dest = base_var(self, destpath)
 
         for v in [base_src, base_dest]:
             if v not in self:
@@ -254,11 +243,11 @@ class DependencyGraph(DiGraph):
         path.append(base_dest)
 
         kwargs = { 'subvar': True }
-        for i in range(len(path)-1):
+        for i in range(1, len(path)):
             if path[i] not in self:
                 self.add_node(path[i], **kwargs)
-            self._check_connect(path[i], path[i+1])
-            self.add_edge(path[i], path[i+1])
+            self._check_connect(path[i-1], path[i])
+            self.add_edge(path[i-1], path[i])
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -299,13 +288,21 @@ class DependencyGraph(DiGraph):
     def get_sources(self, name):
         return [u for u,v in self.in_edges((name,))]
 
+    def find_prefixed_nodes(self, nodes):
+        """Returns a list of nodes including the given nodes and
+        any node that is prefixed with the name of any of those
+        nodes. This is useful for retrieving all variable and
+        subvar nodes associated with a component node.
+        """
+        nodeset = set(nodes)
+        return [n for n in self.nodes_iter() 
+                        if n.split('.', 1)[0] in nodeset]
+
     def full_subgraph(self, nodes):
         """Returns the subgraph specified by the given nodes and
         any variable or expr nodes corresponding to those nodes.
         """
-        nodeset = set(nodes)
-        return self.subgraph([n for n in self.nodes_iter() 
-                                 if n.split('.', 1)[0] in nodeset])
+        return self.subgraph(self.find_prefixed_nodes(nodes))
 
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         pass
