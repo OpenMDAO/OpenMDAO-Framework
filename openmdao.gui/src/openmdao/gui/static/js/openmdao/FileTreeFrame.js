@@ -24,9 +24,7 @@ openmdao.FileTreeFrame = function(id, project) {
             .appendTo(_self.elm),
         _filter_beg = '_.',
         _filter_ext = [ 'pyc', 'pyd' ],
-        _filter_active = true,
-        _contextMenu = jQuery("<ul id="+id+"-context-menu class='context-menu'>")
-            .appendTo(_self.elm);
+        _filter_active = true;
 
     // Enable dropping of files onto file tree frame to add them to project
     _self.elm.bind({
@@ -375,21 +373,6 @@ openmdao.FileTreeFrame = function(id, project) {
             }
         });
     }
-
-    // add background pane context menu items
-    _contextMenu.append(jQuery('<li title="Create new file">New File</li>').click(function(e) {
-        openmdao.FileTreeFrame.prototype.newFile();
-    }));
-    _contextMenu.append(jQuery('<li title="Create new folder">New Folder</li>').click(function(e) {
-        openmdao.FileTreeFrame.prototype.newFolder();
-    }));
-    _contextMenu.append(jQuery('<li title="Add existing files to project">Add Files</li>').click(function(e) {
-        openmdao.FileTreeFrame.prototype.addFile();
-    }));
-    _contextMenu.append(jQuery('<li title="Toggle visibility of hidden files">Toggle Hidden Files</li>').click(function(e) {
-        toggleFilter();
-    }));
-    ContextMenu.set(_contextMenu.attr('id'), _self.elm.attr('id'));
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== 'files') {
