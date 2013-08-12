@@ -3,7 +3,7 @@
  *
  *              Graphics Primitives
  *
- *      Copyright 2011-2012, Massachusetts Institute of Technology
+ *      Copyright 2011-2013, Massachusetts Institute of Technology
  *      Licensed under The GNU Lesser General Public License, version 2.1
  *      See http://www.opensource.org/licenses/lgpl-2.1.php
  *
@@ -13,7 +13,7 @@
 //
 // returns the type of an object
 //
-function toType(obj) 
+wv["toType"] = function(obj)
 { 
   return ({}).toString.call(obj).match(/\s([a-zA-Z0-9]+)/)[1];
 }
@@ -22,13 +22,13 @@ function toType(obj)
 //
 // creates an Index-only VBO
 //
-function createIndexVBO(ctx, indices)
+wv["createIndexVBO"] = function(ctx, indices)
 {
   var returned = { };
 
-  if (toType(indices) != "Uint16Array") {
-    logger(" Indices Type = " + toType(indices) + 
-           " should be Uint16Array (createIndexVBO)!");
+  if (wv.toType(indices) != "Uint16Array") {
+    wv.logger(" Indices Type = " + wv.toType(indices) +
+              " should be Uint16Array (createIndexVBO)!");
     return undefined;
   }
   returned.nIndices = indices.length;
@@ -43,13 +43,13 @@ function createIndexVBO(ctx, indices)
 //
 // creates the full VBO 
 //
-function createVBO(ctx, vertices, colors, indices, normals)
+wv["createVBO"] = function(ctx, vertices, colors, indices, normals)
 {
   var returned = { };
 
-  if (toType(vertices) != "Float32Array") {
-    logger(" Vertices Type = " + toType(vertices) +
-           " should be Float32Array (createVBO)!");
+  if (wv.toType(vertices) != "Float32Array") {
+    wv.logger(" Vertices Type = " + wv.toType(vertices) +
+              " should be Float32Array (createVBO)!");
     return undefined;
   }
 
@@ -61,13 +61,13 @@ function createVBO(ctx, vertices, colors, indices, normals)
 
   if (colors != undefined) {
     if (returned.nVerts != colors.length/3) {
-      logger(" Mismatch with Colors: nVerts = " + returned.nVerts +
-             " nColors = " + colors.length/3 + " (createVBO)!");
+      wv.logger(" Mismatch with Colors: nVerts = " + returned.nVerts +
+                " nColors = " + colors.length/3 + " (createVBO)!");
       return undefined;
     }
-    if (toType(colors) != "Uint8Array") {
-      logger(" Colors Type = " + toType(colors) + 
-             " should be Uint8Array (createVBO)!");
+    if (wv.toType(colors) != "Uint8Array") {
+      wv.logger(" Colors Type = " + wv.toType(colors) +
+                " should be Uint8Array (createVBO)!");
       return undefined;
     }
     returned.color  = ctx.createBuffer();
@@ -77,13 +77,13 @@ function createVBO(ctx, vertices, colors, indices, normals)
 
   if (normals != undefined) {
     if (returned.nVerts != normals.length/3) {
-      logger(" Mismatch with Normals: nVerts = " + returned.nVerts +
-             " nNormals = " + normals.length/3 + " (createVBO)!");
+      wv.logger(" Mismatch with Normals: nVerts = " + returned.nVerts +
+                " nNormals = " + normals.length/3 + " (createVBO)!");
       return undefined;
     }
-    if (toType(normals) != "Float32Array") {
-      logger(" Normals Type = " + toType(normals) + 
-            " should be Float32Array (createVBO)!");
+    if (wv.toType(normals) != "Float32Array") {
+      wv.logger(" Normals Type = " + wv.toType(normals) +
+                " should be Float32Array (createVBO)!");
       return undefined;
     }
     returned.normal = ctx.createBuffer();
@@ -92,9 +92,9 @@ function createVBO(ctx, vertices, colors, indices, normals)
   }
 
   if (indices != undefined) {
-    if (toType(indices) != "Uint16Array") {
-      logger(" Indices Type = " + toType(indices) + 
-             " should be Uint16Array (createVBO)!");
+    if (wv.toType(indices) != "Uint16Array") {
+      wv.logger(" Indices Type = " + wv.toType(indices) +
+                " should be Uint16Array (createVBO)!");
       return undefined;
     }
     returned.nIndices = indices.length;
@@ -110,7 +110,7 @@ function createVBO(ctx, vertices, colors, indices, normals)
 //
 // release an Indexed VBO
 //
-function releaseIndexVBO(ctx, vbo)
+wv["releaseIndexVBO"] = function(ctx, vbo)
 {
   ctx.deleteBuffer(vbo.index);
   delete vbo.index;
@@ -120,7 +120,7 @@ function releaseIndexVBO(ctx, vbo)
 //
 // release the VBO object
 //
-function releaseVBO(ctx, vbo)
+wv["releaseVBO"] = function(ctx, vbo)
 {
   ctx.deleteBuffer(vbo.vertex);
   delete vbo.nVerts;
@@ -147,7 +147,7 @@ function releaseVBO(ctx, vbo)
 //
 // creates a Graphic Primitive object
 //
-function createGPrim(type, nStripe, attrs)
+wv["createGPrim"] = function(type, nStripe, attrs)
 {
   var returned = { };
   
@@ -192,7 +192,7 @@ function createGPrim(type, nStripe, attrs)
       }
       break;
     default:
-      logger(" createGPrim invoked with type = " + type + "!");
+      wv.logger(" createGPrim invoked with type = " + type + "!");
       return undefined;
   }
 
