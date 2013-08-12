@@ -111,25 +111,25 @@ class CyclicWorkflow(SequentialWorkflow):
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it. This graph can be cyclic."""
+        return self._parent.get_depgraph()
         
-        # Cached
-        if self._collapsed_graph:
-            return self._collapsed_graph
+        # # Cached
+        # if self._collapsed_graph:
+        #     return self._collapsed_graph
         
-        # Parent assembly's graph
-        scope = self.scope
-        graph = scope._depgraph.copy_graph()
+        # # Parent assembly's graph
+        # scope = self.scope
+        # graph = scope._depgraph.copy_graph()
         
-        contents = self.get_components()
+        # contents = self.get_components()
         
-        # add any dependencies due to ExprEvaluators
-        for comp in contents:
-            graph.add_edges_from([tup for tup in comp.get_expr_depends()])
+        # # add any dependencies due to ExprEvaluators
+        # for comp in contents:
+        #     graph.add_edges_from([tup for tup in comp.get_expr_depends()])
         
-        # this way avoids a deep copy of edge/node data    
-        collapsed_graph = nx.DiGraph(graph)  
+        # collapsed_graph = nx.DiGraph(graph)  
 
-        cnames = set(self._names)
-        self._collapsed_graph = collapsed_graph.subgraph(cnames)
-        return self._collapsed_graph
+        # cnames = set(self._names)
+        # self._collapsed_graph = collapsed_graph.subgraph(cnames)
+        # return self._collapsed_graph
     

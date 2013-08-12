@@ -51,6 +51,9 @@ class Driver(Component):
         self.workflow = Dataflow(self)
         self.force_execute = True
 
+        # a subgraph of the Assembly's dependency graph
+        self._graph = None
+
         # This flag is triggered by adding or removing any parameters,
         # constraints, or objectives.
         self._invalidated = False
@@ -371,8 +374,29 @@ class Driver(Component):
         changed.
         """
         super(Driver, self).config_changed(update_parent)
+        self._graph = None  # force later rebuild of dependency graph
         if self.workflow is not None:
             self.workflow.config_changed()
+
+    def _create_depgraph(self):
+        """Create the dependency graph for this workflow based on
+        the scoping Assembly's graph and the parent Driver's
+        objectives, constraints, and parameters.
+        """
+        parent_graph = self.get_expr_scope()._depgraph
+        g = parent_graph.full_subgraph(self.workflow.get_names())
+        for pname in self.list_pseudocomps():
+            pcomp = getattr(self.parent, pname)
+            g.add_component(pname, pcomp.list_inputs(), 
+                            pcomp.list_outputs())
+            pcomp.make_connections(g)
+
+        return g
+
+    def get_depgraph(self):
+        if self._graph is None:
+            self._graph = self._create_depgraph()
+        return self._graph
 
     def record_case(self):
         """ A driver can call this function to record the current state of the
@@ -450,7 +474,8 @@ class Driver(Component):
         ''' Return a list of all varpaths in the driver's workflow that
         match the specified pattern.
 
-        Used by record_case.'''
+        Used by record_case.
+        '''
 
         # assume we don't want this in driver's imports
         from openmdao.main.assembly import Assembly

@@ -70,7 +70,7 @@ class PseudoCompTestCase(unittest.TestCase):
 
     def test_basic_nounits(self):
         top = _simple_model(units=False)
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', 'driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('comp1.c', 'comp2.a')]))
@@ -81,7 +81,7 @@ class PseudoCompTestCase(unittest.TestCase):
 
     def test_basic_units(self):
         top = _simple_model()
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2','_pseudo_0', 'driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), 
@@ -116,7 +116,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('comp1.time', 'comp2.speed'),
                               ('comp1.dist', 'comp2.speed'),
                               ('comp1.c', 'comp2.a')]))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', 'driver',
                               '_pseudo_0', '_pseudo_1']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
@@ -138,7 +138,7 @@ class PseudoCompTestCase(unittest.TestCase):
                               ('_pseudo_0.out0', 'comp2.a')]))
         self.assertEqual(set(top._exprmapper._exprgraph.nodes()),
                          set(['comp1.c', 'comp2.a', '_pseudo_0.out0', '_pseudo_0.in0']))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', '_pseudo_0','driver']+self.fakes))
         self.assertFalse(hasattr(top, '_pseudo_1'))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
@@ -149,7 +149,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top.run()
         top.connect('comp1.dist/comp1.time', 'comp2.speed')
         self.assertTrue(hasattr(top, '_pseudo_2'))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', '_pseudo_0', '_pseudo_2','driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
@@ -170,7 +170,7 @@ class PseudoCompTestCase(unittest.TestCase):
         # disconnect a single variable
         top.disconnect('comp1.dist')
         self.assertFalse(hasattr(top, '_pseudo_2'))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', '_pseudo_0','driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0')]))
@@ -184,7 +184,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top.run()
         top.connect('comp1.dist/comp1.time', 'comp2.speed')
         self.assertTrue(hasattr(top, '_pseudo_3'))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', '_pseudo_0', '_pseudo_3','driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
@@ -205,7 +205,7 @@ class PseudoCompTestCase(unittest.TestCase):
         # disconnect a whole component
         top.disconnect('comp2')
         self.assertFalse(hasattr(top, '_pseudo_3'))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['driver', 'comp2', 'comp1']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([]))
@@ -233,7 +233,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('comp1.time', 'comp2.speed'),
                               ('comp1.arr[1]', 'comp2.speed'),
                               ('comp1.c', 'comp2.a')]))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2', 'driver',
                               '_pseudo_0', '_pseudo_1']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
@@ -249,7 +249,7 @@ class PseudoCompTestCase(unittest.TestCase):
         # disconnect a single variable
         top.disconnect('comp1.arr[1]')
         self.assertFalse(hasattr(top, '_pseudo_2'))
-        self.assertEqual(set(top._depgraph._graph.nodes()),
+        self.assertEqual(set(top._depgraph.nodes()),
                          set(['comp1','comp2',  '_pseudo_0', 'driver']+self.fakes))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0')]))

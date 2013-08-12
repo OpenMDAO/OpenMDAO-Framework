@@ -63,7 +63,7 @@ class Constraint(object):
 
         self.pcomp_name = None
            
-    def activate(self):
+    def activate(self, graph):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -72,7 +72,7 @@ class Constraint(object):
                                            self._combined_expr())
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections()
+        getattr(self.lhs.scope, pseudo.name).make_connections(graph)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and

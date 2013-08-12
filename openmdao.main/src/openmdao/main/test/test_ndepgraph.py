@@ -165,7 +165,7 @@ class DepGraphTestCase(unittest.TestCase):
     def test_already_connected(self):
         # internal connection
         try:
-            self.dep._check_connect('A.d', 'B.a')
+            self.dep.check_connect('A.d', 'B.a')
         except Exception as err:
             self.assertEqual(str(err), "Can't connect 'A.d' to 'B.a'. 'B.a' is already connected to 'B.a.x.y'")
         else:
@@ -173,7 +173,7 @@ class DepGraphTestCase(unittest.TestCase):
            
         # internal to boundary output connection
         try:
-            self.dep._check_connect('A.d', 'c')
+            self.dep.check_connect('A.d', 'c')
         except Exception as err:
             self.assertEqual(str(err), "Can't connect 'A.d' to 'c'. 'c' is already connected to 'C.c'")
         else:
@@ -185,6 +185,49 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.get_interior_connections(['A', 'B', 'C', 'D'])),
                          set(self.conns))
     
+    def test_disconnect_comp(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('B')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('A.c[2]','B.a.x.y'),('A.d.z','B.b[4]'),('B.c','C.a'),
+                                    ('B.d','C.b')]))
+        
+    def test_disconnect_base_var(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('B.a')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('A.c[2]','B.a.x.y')]))
+        
+    def test_disconnect_base_var2(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('A.c')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('A.c[2]','B.a.x.y')]))
+        
+    def test_disconnect_base_var3(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('b')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('b[3]','A.b')]))
+        
+    def test_disconnect_base_va4(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('d')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('D.d','d.x')]))
+        
+    def test_disconnect_base_va5(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('D.d')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('D.d','d.x')]))
+        
+    def test_disconnect_base_va6(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('B.d')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('B.d','C.b')]))
+        
     # def test_connections_to(self):
     #     self.assertEqual(set(self.dep.connections_to('c')),
     #                      set([('@bout.c','@xout.parent.Y.a'),
@@ -249,34 +292,6 @@ class DepGraphTestCase(unittest.TestCase):
     #     self.assertEqual(self.dep.var_in_edges('@xin'),[])
     #     self.assertEqual(self.dep.var_in_edges('blah'),[])
 
-    # def test_disconnect(self):
-    #     self.dep.disconnect('a') # this should disconnect extern to a and 
-    #                              # a to B.a, completely removing the
-    #                              # link between @bin and B.
-    #     link = self.dep.get_link('@xin', '@bin')
-    #     self.assertTrue('a' not in link._dests)
-    #     link = self.dep.get_link('@bin', 'B')
-    #     self.assertEqual(link, None)
-        
-    #     # now if we delete the auto passthrough from parent.X.d to A.b,
-    #     # there should be no link at all between @xin and @bin, or between
-    #     # @bin and A.
-    #     self.dep.disconnect('parent.X.d', 'A.b')
-    #     link = self.dep.get_link('@xin', '@bin')
-    #     self.assertEqual(link, None)
-    #     link = self.dep.get_link('@bin', 'A')
-    #     self.assertEqual(link, None)
-        
-    #     # now test a similar situation on the output side
-    #     self.dep.disconnect('c')
-    #     link = self.dep.get_link('@bout', '@xout')
-    #     self.assertTrue('c' not in link._srcs)
-        
-    #     self.dep.disconnect('C.d', 'parent.Y.b')
-    #     link = self.dep.get_link('@bout', '@xout')
-    #     self.assertEqual(link, None)
-    #     link = self.dep.get_link('C', '@bout')
-    #     self.assertEqual(link, None)
         
     # def test_link(self):
     #     self.dep.connect('B.d', 'C.b')

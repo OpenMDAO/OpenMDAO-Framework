@@ -14,7 +14,7 @@ from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.depgraph import find_unit_pseudos
+from openmdao.main.ndepgraph import is_comp_or_pseudo_node
 
 try:
     from numpy import ndarray, zeros
@@ -88,9 +88,10 @@ class SequentialWorkflow(Workflow):
         If full is True, include hidden pseudo-components in the list.
         """
         if full:
-            return self._names + self._parent.list_pseudocomps() + \
-                    find_unit_pseudos(self._scope._depgraph._graph,
-                                      self._names)
+            return self._parent.get_depgraph().find_nodes(is_comp_or_pseudo_node)
+            # return self._names + self._parent.list_pseudocomps() + \
+            #         find_unit_pseudos(self._scope._depgraph._graph,
+            #                           self._names)
         else:
             return self._names[:]
 
@@ -181,8 +182,8 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
-        graph = self.scope._depgraph
-        edges = graph.get_interior_edges(self.get_names(full=True))
+        graph = self._parent.get_depgraph()
+        edges = graph.get_interior_connections()
         edges = edges.union(self.get_driver_edges())
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
@@ -613,7 +614,7 @@ class SequentialWorkflow(Workflow):
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     var_edge = dgraph.get_interior_edges(edge)
-                    self._hidden_edges = self._hidden_edges.union(var_edge)
+                    self._hidden_edges.update(var_edge)
                     
                 elif edge[0] in group:
                     graph.remove_edge(edge[0], edge[1])
@@ -768,8 +769,8 @@ class SequentialWorkflow(Workflow):
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
                                     self, recursed_components=rcomps)
             pseudo.ffd_order = 0
-            graph = self.scope._depgraph
-            self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
+            graph = self._parent.get_depgraph()
+            self._hidden_edges = graph.get_interior_edges()#self.get_names(full=True))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.

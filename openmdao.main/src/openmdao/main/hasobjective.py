@@ -32,8 +32,6 @@ class HasObjectives(object):
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr, scope=scope)
-            
-        self._parent._invalidate()
 
     def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver. 
@@ -73,7 +71,7 @@ class HasObjectives(object):
 
         pseudo = OutputPseudoComponent(scope, expreval)
         scope.add(pseudo.name, pseudo)
-        pseudo.make_connections()
+        pseudo.make_connections(self._parent.get_depgraph())
       
         self._objectives[name] = expreval
 
@@ -89,9 +87,10 @@ class HasObjectives(object):
         expr = _remove_spaces(expr)
         obj = self._objectives.get(expr)
         if obj:
+            self.get_depgraph().disconnect(obj.pcomp_name)
             scope = self._get_scope()
             if hasattr(scope, obj.pcomp_name):
-                scope.disconnect(obj.pcomp_name)
+                scope.remove(obj.pcomp_name)
             del self._objectives[expr]
         else:
             self._parent.raise_exception("Trying to remove objective '%s' "

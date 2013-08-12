@@ -281,6 +281,11 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
+        if '.' not in destpath and hasattr(self, destpath) and destpath not in self._depgraph:
+            self._depgraph.add_boundary_var(destpath, iotype=self.get_metadata(destpath, 'iotype'))
+        if '.' not in srcpath and hasattr(self, srcpath) and srcpath not in self._depgraph:
+            self._depgraph.add_boundary_var(srcpath, iotype=self.get_metadata(srcpath, 'iotype'))
+    
         # check for self connections
         if not destpath.startswith('parent.'):
             vpath = destpath.split('[', 1)[0]
@@ -294,17 +299,17 @@ class Container(SafeHasTraits):
             self._depgraph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[', 1)[0]):
-                    self.raise_exception("Can't find '%s'" % destpath,
-                                         AttributeError)
-                parts = destpath.split('.')
-                for i in range(len(parts)):
-                    dname = '.'.join(parts[:i+1])
-                    sname = self._depgraph.get_source(dname)
-                    if sname is not None:
-                        self.raise_exception(
-                            "'%s' is already connected to source '%s'" %
-                            (dname, sname), RuntimeError)
+                #if not self.contains(destpath.split('[', 1)[0]):
+                    #self.raise_exception("Can't find '%s'" % destpath,
+                                         #AttributeError)
+                #parts = destpath.split('.')
+                #for i in range(len(parts)):
+                    #dname = '.'.join(parts[:i+1])
+                    #sname = self._depgraph.get_source(dname)
+                    #if sname is not None:
+                        #self.raise_exception(
+                            #"'%s' is already connected to source '%s'" %
+                            #(dname, sname), RuntimeError)
 
                 if destvar:
                     child = getattr(self, cname2)

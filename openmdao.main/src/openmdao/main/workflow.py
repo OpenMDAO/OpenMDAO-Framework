@@ -49,7 +49,7 @@ class Workflow(object):
         this Workflow.
         """
         if self._scope is None and self._parent is not None:
-            self._scope = self._parent.parent
+            self._scope = self._parent.get_expr_scope()
         if self._scope is None:
             raise RuntimeError("workflow has no scope!")
         return self._scope
@@ -143,8 +143,8 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
-        has changed.
+        """Notifies the Workflow that workflow configuration 
+        (dependencies, etc.) has changed.
         """
         pass
 

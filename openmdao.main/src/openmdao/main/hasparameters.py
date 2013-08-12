@@ -148,12 +148,12 @@ class Parameter(object):
         else:
             pseudo = getattr(scope, self.pcomp_name)
 
-        pseudo.make_connections(workflow)
+        pseudo.make_connections(self._parent.get_depgraph())
 
         self.initialize(scope)
 
 
-    def deactivate(self, scope, workflow=None):
+    def deactivate(self, scope, graph):
         """Make this parameter inactive by disconnecting it in the
         dependency graph and removing its callback from the target
         component.
@@ -162,7 +162,7 @@ class Parameter(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(workflow)
+            pseudo.remove_connections(graph)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
 
@@ -429,11 +429,11 @@ class ParameterGroup(object):
                 pseudo.add_target(param._expreval.text)
                 param.pcomp_name = pseudo.name
 
-        getattr(scope, self.pcomp_name).make_connections(workflow)
+        getattr(scope, self.pcomp_name).make_connections(self._parent.get_depgraph())
 
         self.initialize(scope)
 
-    def deactivate(self, scope, workflow=None):
+    def deactivate(self, scope, graph):
         """Make this parameter inactive by disconnecting it in the
         dependency graph and removing its callback from the target
         component.
@@ -442,7 +442,7 @@ class ParameterGroup(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(workflow)
+            pseudo.remove_connections(graph)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
             for param in self._params:
@@ -534,7 +534,7 @@ class HasParameters(object):
         if isinstance(target, (Parameter, ParameterGroup)): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-            target.deactivate(self._get_scope(scope))
+            target.deactivate(self._parent.get_depgraph())
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -593,7 +593,7 @@ class HasParameters(object):
         """Removes the parameter with the given name."""
         param = self._parameters.get(name)
         if param:
-            param.deactivate(self._get_scope())
+            param.deactivate(self._parent.get_depgraph())
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "

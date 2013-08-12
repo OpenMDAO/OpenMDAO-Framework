@@ -201,19 +201,19 @@ class PseudoComponent(object):
                                     for dest in self._outdests])
         return conns
 
-    def make_connections(self):
+    def make_connections(self, graph):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            self._parent._connect(src, dest)
+            graph.connect(src, dest)
 
-    def remove_connections(self):
+    def remove_connections(self, graph):
         """Disconnect all of the inputs and outputs of this comp
         from other nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            self._parent.disconnect(src, dest)
+            graph.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
         if varnames is None:
@@ -360,13 +360,13 @@ class ParamPseudoComponent(PseudoComponent):
             return [('.'.join([self.name, 'out0']), dest) 
                                    for dest in self._outdests]      
 
-    def make_connections(self, workflow=None):
+    def make_connections(self, graph):
         """Set up the target_changed callback.
         """
         #self._update_callbacks(remove=False)
         pass
 
-    def remove_connections(self, workflow=None):
+    def remove_connections(self, graph):
         """Remove the target_changed callback.
         """
         #self._update_callbacks(remove=True)

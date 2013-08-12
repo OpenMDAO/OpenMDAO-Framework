@@ -145,7 +145,7 @@ class Assembly(Component):
         """
         obj = super(Assembly, self).add(name, obj)
         if is_instance(obj, Component):
-            self._depgraph.add(obj.name)
+            self._depgraph.add_component(obj.name, obj.list_inputs(), obj.list_outputs())
         return obj
 
     def find_referring_connections(self, name):
@@ -473,7 +473,7 @@ class Assembly(Component):
         if needpseudocomp:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr)
             self.add(pseudocomp.name, pseudocomp)
-            pseudocomp.make_connections()
+            pseudocomp.make_connections(self._depgraph)
         else:
             pseudocomp = None
             super(Assembly, self).connect(src, dest)
@@ -524,7 +524,7 @@ class Assembly(Component):
             except AttributeError:
                 pass
             try:
-                self._depgraph._graph.remove_node(name)
+                self._depgraph.remove(name)
             except nx.exception.NetworkXError:
                 pass
 
@@ -534,18 +534,20 @@ class Assembly(Component):
         or removed, etc.
         """
         super(Assembly, self).config_changed(update_parent)
-        # driver must tell workflow that config has changed because
+
+        # drivers must tell workflows that config has changed because
         # dependencies may have changed
-        if self.driver is not None:
-            self.driver.config_changed(update_parent=False)
+        for name in self.list_containers():
+            cont = getattr(self, name)
+            if isinstance(cont, Driver):
+                cont.config_changed(update_parent=False)
             
         # Detect and save any loops in the graph.
-        if hasattr(self, '_depgraph'):
-            self._graph_loops = None
+        self._graph_loops = None
             
     def _get_graph_loops(self):
         if self._graph_loops is None and hasattr(self, '_depgraph'):
-            self._graph_loops = [s for s in nx.strongly_connected_components(self._depgraph._graph) if len(s)>1]
+            self._graph_loops = [s for s in nx.strongly_connected_components(self._depgraph) if len(s)>1]
         return self._graph_loops
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
@@ -710,7 +712,7 @@ class Assembly(Component):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, [childname], [outs], force)
+        bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
@@ -759,8 +761,9 @@ class Assembly(Component):
                # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
-        outs = self._depgraph.invalidate_deps(self, ['@bin'], 
-                                              [invalidated_ins], force)
+        if invalidated_ins:
+            outs = self._depgraph.invalidate_deps(self, '', 
+                                                  invalidated_ins, force)
 
         if outs:
             self.set_valid(outs, False)
@@ -819,7 +822,7 @@ class Assembly(Component):
         objectives = []
 
         # list of components (name & type) in the assembly
-        g = self._depgraph._graph
+        g = self._depgraph
         names = [name for name in nx.algorithms.dag.topological_sort(g)
                                if not name.startswith('@')]
 
