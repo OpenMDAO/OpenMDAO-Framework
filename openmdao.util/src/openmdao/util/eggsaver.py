@@ -712,6 +712,10 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
             local_modules.add(orig_path)
             continue
 
+        # Ignore modules never imported.
+        if name not in sys.modules:
+            continue
+
         # Skip modules in distributions we already know about.
         found = False
         for prefix in prefixes:
@@ -740,17 +744,9 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
                 if not dirpath.endswith('site-packages'):
                     not_found.add(dirpath)
                     path = dirpath
-                # Verify name is valid. ModuleFinder can report a module
-                # that was never successfully imported.
-                try:
-                    __import__(name)
-                # Difficult to cause this.
-                except ImportError:  #pragma no cover
-                    logger.debug('Skipping %s, not importable.' % name)
-                else:
-                    if (name, path) not in orphans:
-                        logger.warning('No distribution found for %s.', name)
-                        orphans.add((name, path))
+                if (name, path) not in orphans:
+                    logger.warning('No distribution found for %s.', name)
+                    orphans.add((name, path))
 
 
 def _write_state_file(dst_dir, root, name, logger, observer):
