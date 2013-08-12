@@ -20,6 +20,96 @@ def test_generator():
         yield _test, browser
 
 
+def _test_partial_array_connections(browser):
+    # Creates a file in the GUI.
+    project_dict, workspace_page = startup(browser)
+
+    # Import partial_connections.py
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/partial_connections.py')
+    workspace_page.add_file(file_path)
+
+    workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly', 'top')
+   
+    workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly2', 'top_2')
+
+    paraboloid = workspace_page.get_dataflow_figure("paraboloid_1", "top")
+    var_fields_path = '//*[@id="inArray-editor"]/input'
+
+    props = paraboloid.properties_page()
+
+    #array 1d editor - check that implicitly connected elements are disabled
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+    array_inputs_path = '//*[@id="inArray-editor"]/input'
+    cancel_path = '//*[@id="array-edit-inArray-cancel"]'
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for array_input in array_inputs:
+        eq(array_input.is_enabled(), False)
+    
+    browser.find_element_by_xpath(cancel_path).click()
+
+    props.close()
+
+    paraboloid = workspace_page.get_dataflow_figure("paraboloid_2", "top")
+    props = paraboloid.properties_page()
+
+    #array 1d editor - check that explicitly connected elements are disabled
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for array_input in array_inputs:
+        eq(array_input.is_enabled(), False)
+
+    browser.find_element_by_xpath(cancel_path).click()
+    props.close()
+
+    #array 2d editor - check that implicitly connected elements are disabled
+    paraboloid = workspace_page.get_dataflow_figure("array_comp_1", "top_2")
+    props = paraboloid.properties_page()
+
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+    array_inputs_path = '//*[@id="inArray-editor"]/input'
+    cancel_path = '//*[@id="array-edit-inArray-cancel"]'
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for index, array_input in enumerate(array_inputs):
+        if( index % 3 == 2):
+            eq(array_input.is_enabled(), True)
+        else:
+            eq(array_input.is_enabled(), False)
+    
+    browser.find_element_by_xpath(cancel_path).click()
+
+    props.close()
+
+    #array 2d editor - check that explicitly connected elements are disabled
+    paraboloid = workspace_page.get_dataflow_figure("array_comp_2", "top_2")
+    props = paraboloid.properties_page()
+
+    inputs = props.inputs
+    inputs.rows[0].cells[1].click()
+
+    array_inputs = browser.find_elements_by_xpath(array_inputs_path)
+
+    for index, array_input in enumerate(array_inputs):
+        if( index % 3 == 1 ):
+            eq(array_input.is_enabled(), True)
+        else:
+            eq(array_input.is_enabled(), False)
+
+    browser.find_element_by_xpath(cancel_path).click()
+    props.close()
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+    
 def _test_value_editors(browser):
     # Creates a file in the GUI.
     project_dict, workspace_page = startup(browser)

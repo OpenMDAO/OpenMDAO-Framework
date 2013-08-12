@@ -1041,7 +1041,7 @@ def _test_remove_files(browser):
     workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'])
 
     # Check to make sure the files were deleted
-    time.sleep(0.5)
+    time.sleep(1.5)
     file_names = workspace_page.get_files()
     expected_file_names = ['basic_model.py']
     if sorted(file_names) != sorted(expected_file_names):

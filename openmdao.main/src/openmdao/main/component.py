@@ -12,6 +12,7 @@ from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 import weakref
+import re
 
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
@@ -1641,13 +1642,14 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
+        array_regex = re.compile("(?P<index>\[\d+\])(?P=index)*")
 
         attrs = {}
         attrs['type'] = type(self).__name__
 
         parameters = {}
         implicit = {}
-
+        partial_parameters = {} 
         # We need connection information before we process the variables.
         if self.parent is None:
             connected_inputs = []
@@ -1663,9 +1665,15 @@ class Component(Container):
         if self.parent and has_interface(self.parent, IAssembly):
             dataflow = self.parent.get_dataflow()
             for parameter, target in dataflow['parameters']:
-                if not target in parameters:
-                    parameters[target] = []
-                parameters[target].append(parameter)
+                if "[" in target:
+                    target_name = target.split('[')[0]
+                    if not target_name in partial_parameters:
+                        partial_parameters[target_name] = []
+                    partial_parameters[target_name].append(parameter)
+                else:
+                    if not target in parameters:
+                        parameters[target] = []
+                    parameters[target].append(parameter)
 
             for target, objective in dataflow['objectives']:
                 if target not in implicit:
@@ -1714,29 +1722,96 @@ class Component(Container):
 
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
+            io_attr['connection_types'] = 0
 
             connected = []
+            partially_connected = []
+            partially_connected_indices = []
+            
             for inp in connected_inputs:
                 cname = inp.split('[')[0]  # Could be 'inp[0]'.
+
                 if cname == name:
                     connections = self._depgraph._var_connections(inp)
-                    connected.extend([src for src, dst in connections])
+                    connections = [src for src, dst in connections]
+                    connected.extend(connections)
+
+                    if '[' not in inp:
+                        io_attr['connection_types'] = io_attr['connection_types'] | 1
+
+                    if '[' in inp:
+
+                        io_attr['connection_types'] = io_attr['connection_types'] | 2
+                        array_indices = re.findall("\[\d+\]", inp)
+                        array_indices = [ index.split('[')[1].split(']')[0] for index in array_indices ]
+                        array_indices = [ int(index) for index in array_indices ]
+                       
+                        dimensions = self.get(name).ndim - 1
+                        shape = self.get(name).shape
+                        column_index = 0
+
+                        for dimension, array_index in enumerate( array_indices[:-1] ):
+                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
+                        
+                        column_index = column_index + array_indices[-1]
+
+                        partially_connected_indices.append( column_index )
+
             if connected:
                 io_attr['connected'] = str(connected).replace('@xin.', '')
+            
+            if partially_connected_indices:
+                io_attr['partially_connected_indices'] = str(partially_connected_indices)
 
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections]).replace('@xout.', '')
+            
+            io_attr['implicit'] = []
 
-            io_attr['implicit'] = ''
+            if "%s.%s" % (self.name, name) in partial_parameters:
+                implicit_partial_indices = []
+                shape = self.get(name).shape
+                io_attr['connection_types'] = io_attr['connection_types'] | 8
+                
+                for key, target in partial_parameters.iteritems():
+                    for value in target:
+                        array_indices = re.findall("\[\d+\]", value)
+                        array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
+                        array_indices = [int(index) for index in array_indices]
+                            
+                        dimensions = self.get(name).ndim - 1
+                        shape = self.get(name).shape
+                        column_index = 0
+
+                        for dimension, array_index in enumerate( array_indices[:-1] ):
+                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
+                        
+                        column_index = column_index + array_indices[-1]
+                        implicit_partial_indices.append( column_index )
+
+                io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
+                
+                io_attr['implicit'].extend([driver_name.split('.')[0] for
+                    driver_name in partial_parameters["%s.%s" % (self.name, name)]])
+
             if "%s.%s" % (self.name, name) in parameters:
-                io_attr['implicit'] = str([driver_name.split('.')[0] for
+                io_attr['connection_types'] = io_attr['connection_types'] | 4
+
+                io_attr['implicit'].extend([driver_name.split('.')[0] for
                     driver_name in parameters["%s.%s" % (self.name, name)]])
 
+                io_attr['implicit'] = str(io_attr['implicit'])
+
             if "%s.%s" % (self.name, name) in implicit:
+                io_attr['connection_types'] = io_attr['connection_types'] | 4
+
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
+
+            if not io_attr['implicit']:
+                io_attr['implicit'] = ''
 
             # indicate that this var is the top element of a variable tree
             if io_attr.get('ttype') == 'vartree':
