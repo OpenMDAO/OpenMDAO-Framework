@@ -192,41 +192,61 @@ class DepGraphTestCase(unittest.TestCase):
                          allcons-set([('A.c[2]','B.a.x.y'),('A.d.z','B.b[4]'),('B.c','C.a'),
                                     ('B.d','C.b')]))
         
-    def test_disconnect_base_var(self):
+    def test_disconnect_basevar(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('B.a')
         self.assertEqual(set(self.dep.list_connections()), 
                          allcons-set([('A.c[2]','B.a.x.y')]))
         
-    def test_disconnect_base_var2(self):
-        allcons = set(self.dep.list_connections())
-        self.dep.disconnect('A.c')
-        self.assertEqual(set(self.dep.list_connections()), 
-                         allcons-set([('A.c[2]','B.a.x.y')]))
-        
-    def test_disconnect_base_var3(self):
+    def test_disconnect_boundary_in_var(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('b')
         self.assertEqual(set(self.dep.list_connections()), 
                          allcons-set([('b[3]','A.b')]))
         
-    def test_disconnect_base_va4(self):
+    def test_disconnect_boundary_out_var(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('d')
         self.assertEqual(set(self.dep.list_connections()), 
                          allcons-set([('D.d','d.x')]))
         
-    def test_disconnect_base_va5(self):
+    def test_disconnect_basevar2(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('D.d')
         self.assertEqual(set(self.dep.list_connections()), 
                          allcons-set([('D.d','d.x')]))
         
-    def test_disconnect_base_va6(self):
+    def test_disconnect_basevar3(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('B.d')
         self.assertEqual(set(self.dep.list_connections()), 
                          allcons-set([('B.d','C.b')]))
+        
+    def test_disconnect_basevar_with_subvar(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('A.c')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('A.c[2]','B.a.x.y')]))
+        
+    def test_disconnect_basevar_to_basevar(self):
+        allcons = set(self.dep.list_connections())
+        self.dep.disconnect('B.d', 'C.b')
+        self.assertEqual(set(self.dep.list_connections()), 
+                         allcons-set([('B.d','C.b')]))
+        
+    def test_component_graph(self):
+        g = self.dep.component_graph()
+        self.assertEqual(set(g.nodes()), set(self.comps))
+        self.assertEqual(set(g.edges()), set([('A','B'),('B','C')]))
+        self.dep.connect('C.d', 'D.b')
+        g = self.dep.component_graph()
+        self.assertEqual(set(g.nodes()), set(self.comps))
+        self.assertEqual(set(g.edges()), set([('A','B'),('B','C'),('C','D')]))
+        self.dep.disconnect('A')
+        g = self.dep.component_graph()
+        self.assertEqual(set(g.nodes()), set(self.comps))
+        self.assertEqual(set(g.edges()), set([('B','C'),('C','D')]))
+        
         
     # def test_connections_to(self):
     #     self.assertEqual(set(self.dep.connections_to('c')),
