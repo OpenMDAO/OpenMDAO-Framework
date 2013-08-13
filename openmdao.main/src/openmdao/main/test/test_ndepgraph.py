@@ -2,7 +2,7 @@ import unittest
 
 from openmdao.main.ndepgraph import DependencyGraph, is_comp_node, is_driver_node,\
                                     is_var_node, is_subvar_node, is_pseudo_node, \
-                                    is_param_pseudo_node, is_attr_node, base_var
+                                    is_param_pseudo_node, is_attr_node, base_var, TransClosure
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -247,6 +247,10 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(g.nodes()), set(self.comps))
         self.assertEqual(set(g.edges()), set([('B','C'),('C','D')]))
         
+    def test_trans_closure(self):
+        tc = TransClosure(self.dep)
+        self.assertEqual(set(tc['C']), set(['C.d','C.c','c']))
+        self.assertEqual(set(tc['D.a']), set(['D','D.c','D.d','d.x','d']))
         
     # def test_connections_to(self):
     #     self.assertEqual(set(self.dep.connections_to('c')),

@@ -1,6 +1,7 @@
 import sys
-import itertools
+from array import array
 import networkx as nx
+from networkx import dfs_edges
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -100,6 +101,79 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
+class TransClosure(object):
+    def __init__(self, graph):
+        # self._idxmap = {}
+        # self._tcmap = {}
+        # for src, dest in graph.edges():
+        #     self.add_edge(src, dest)
+
+        nodes = graph.nodes()
+        initer = [0]*len(nodes)
+        self._idxmap = dict([(n, i) for i, n in enumerate(nodes)])
+        self._tcmap = dict([(n, array('b', initer)) for n in nodes])
+        self._calc_closure(graph)
+
+    def _calc_closure(self, graph):
+        # this is O(n*(n+m)), but our graphs should be
+        # relatively sparse, so typically it should be closer
+        # to n^2 than n^3
+
+        # this assumes NO partial invalidation of component outputs,
+        # i.e., if ANY inputs are invalidated, then ALL outputs
+        # are invalidated
+        tcmap = self._tcmap
+        idxmap = self._idxmap
+        for src in graph.nodes():
+            for nsrc, ndest in dfs_edges(graph, src):
+                tcmap[src][idxmap[ndest]] = 1
+    
+    def __getitem__(self, src):
+        """Return all nodes that depend on src."""
+
+        arr = self._tcmap[src]
+        idxmap = self._idxmap
+        return [n for n, i in idxmap.items() if arr[i]] 
+
+    def is_connected(self, src, dest):
+        """Returns True if dest is downstream of src."""
+        return self._tcmap[src][self._idxmap[dest]] == 1
+
+    # def add_node(self, node):
+    #     if node not in self._tcmap:
+    #         for name, arr in self._tcmap.items():
+    #             arr.append(0)
+    #         self._idxmap[node] = len(self._idxmap)
+    #         self._tcmap[node] = array('b', [0]*len(self._idxmap))
+
+    # def add_edge(self, src, dest):
+    #     if src not in self._tcmap:
+    #         self.add_node(src)
+    #     if dest not in self._tcmap:
+    #         self.add_node(dest)
+
+    #     # we need to ad dest's dependents to src, as well as to
+    #     # any node that has src as a dependent
+    #     sarr = self._tcmap[src]
+    #     darr = self._tcmap[dest]
+
+    #     idxmap = self._idxmap
+    #     sarr[idxmap[dest]] = 1
+
+    #     for i in range(len(sarr)):
+    #         if darr[i]:
+    #             sarr[i] == 1
+
+    #     # since we're pretty sparse, create an index set
+    #     # containing only the filled entries
+    #     idxset = set([i for i in darr if darr[i]])
+    #     idxset.add(idxmap[dest])
+    #     sidx = idxmap[src]
+    #     for name, arr in self._tcmap.items():
+    #         if arr[sidx]:
+    #             for i in idxset:
+    #                 arr[i] = 1
+
 
 class DiGraph(nx.DiGraph):
     """A version of networkx.DiGraph that provides a few
@@ -167,6 +241,7 @@ class DependencyGraph(DiGraph):
 
     def config_changed(self):
         self._component_graph = None
+        self._trans_closure = None
 
     def add_component(self, cname, inputs, outputs, **kwargs):
         """Create nodes in the graph for the component and all of
@@ -382,7 +457,7 @@ class DependencyGraph(DiGraph):
         """Return a subgraph containing only Components
         and PseudoComponents and edges between them. 
         """
-        if self._component_graph:
+        if self._component_graph is not None:
             return self._component_graph
 
         compset = set(self.find_nodes_iter(is_comp_or_pseudo_node))
@@ -391,10 +466,16 @@ class DependencyGraph(DiGraph):
             destcomp = dest.split('.', 1)[0]
             srccomp  =  src.split('.', 1)[0]
             if srccomp in compset and destcomp in compset:
+
                 g.add_edge(srccomp, destcomp)
 
         self._component_graph = g
         return g
+
+    def trans_closure(self):
+        if self._trans_closure is None:
+            self._trans_closure = TransClosure(self)
+        return self._trans_closure
 
     def get_connected_inputs(self):
         ins = []
@@ -420,7 +501,6 @@ class DependencyGraph(DiGraph):
         
         if start == end:
             return set()
-        graph = self._graph
         fwdset = set()
         backset = set()
         tmpset = set([end])
@@ -429,7 +509,7 @@ class DependencyGraph(DiGraph):
             if node in backset:
                 continue
             backset.add(node)
-            tmpset.update(graph.pred[node].keys())
+            tmpset.update(self.pred[node].keys())
         
         tmpset = set([start])
         while tmpset:
@@ -437,7 +517,7 @@ class DependencyGraph(DiGraph):
             if node in fwdset:
                 continue
             fwdset.add(node)
-            tmpset.update(graph.succ[node].keys())
+            tmpset.update(self.succ[node].keys())
         
         return fwdset.intersection(backset)
 
@@ -457,52 +537,88 @@ class DependencyGraph(DiGraph):
 
         return conns
 
-    def invalidate_deps(self, scope, cname, varset, force=False):
+    def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
         
         scope: Component
             Scoping object containing this dependency graph.
             
-        cname: str
-            Name of starting node.
+        cnames: list of str
+            Names of starting nodes.
             
-        varset: iter of str
-            Iter of names of outputs from starting node.
+        varsets: list of sets of str
+            Sets of names of outputs from each starting node.
             
         force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
 
-        if cname:
-            stack = ['.'.join([cname, v]) for v in varset]
-        else:
-            stack = list(varset)
-
+        stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
         
         # Keep track of the comp/var we already invalidated, so we
         # don't keep doing them. This allows us to invalidate loops.
         invalidated = set()
+
+        compgraph = self.component_graph()
+        tc = self.trans_closure()
         
         while(stack):
-            src, varset = stack.pop()
-            invalidated.append(src)
-            for dest, link in self.out_links(src):
+            srccomp, varset = stack.pop()
+            invalidated.append(srccomp)
+            if srccomp:
+                varset = ['.'.join([srccomp,v]) for v in varset]
+                for dcomp in compgraph.successors(srccomp):
+                    inputs = self.list_inputs(dcomp, connected=True)
+                    dests = []
+                    for v in varset:
+                        dests.extend([i for i in inputs 
+                                          if tc.is_connected(v, i)])
+                    if dests:
+                        idx = len(dcomp)
+                        dests = [s[idx:] for s in dests]
+                        comp = getattr(scope, dcomp)
+                        outs = comp.invalidate_deps(varnames=dests, 
+                                                    force=force)
+                        if (outs is None) or outs:
+                            if dcomp not in invalidated:
+                                stack.append((dcomp, outs))
+
+            for dest, link in self.out_links(srccomp):
                 if dest == '@bout':
                     bouts = link.get_dests(varset)
                     outset.update(bouts)
                     scope.set_valid(bouts, False)
-                else:
-                    dests = link.get_dests(varset)
-                    if dests:
-                        comp = getattr(scope, dest)
-                        outs = comp.invalidate_deps(varnames=dests, force=force)
-                        if (outs is None) or outs:
-                            if dest not in invalidated:
-                                stack.append((dest, outs))
+                # else:
+                #     dests = link.get_dests(varset)
+                #     if dests:
+                #         comp = getattr(scope, dest)
+                #         outs = comp.invalidate_deps(varnames=dests, 
+                #                                     force=force)
+                #         if (outs is None) or outs:
+                #             if dest not in invalidated:
+                #                 stack.append((dest, outs))
         return outset
+
+    def list_inputs(self, cname, connected=False):
+        if not is_comp_node(self, cname):
+            raise RuntimeError("'%s' is not a component node" % cname)
+        if connected:
+            return [n for n in self.pred[cname].keys() 
+                                            if self.in_degree(n)>0]
+        else:
+            return self.pred[cname].keys()
+
+    def list_outputs(self, cname, connected=False):
+        if not is_comp_node(self, cname):
+            raise RuntimeError("'%s' is not a component node" % cname)
+        if connected:
+            return [n for n in self.succ[cname].keys() 
+                                            if self.out_degree(n)>0]
+        else:
+            return self.succ[cname].keys()
 
     def list_autopassthroughs(self):
         return []
