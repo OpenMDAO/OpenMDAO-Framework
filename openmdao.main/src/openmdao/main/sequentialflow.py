@@ -566,6 +566,7 @@ class SequentialWorkflow(Workflow):
         nondiff = []
         for comp in self.get_components():
             if not hasattr(comp, 'apply_deriv') and \
+               not hasattr(comp, 'apply_derivT') and \
                not hasattr(comp, 'provideJ'):
                 nondiff.append(comp.name)
                 
@@ -766,7 +767,8 @@ class SequentialWorkflow(Workflow):
             comp_names = self.get_names(full=True)
             rcomps = recursive_components(self.scope, comp_names)            
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
-                                    self, recursed_components=rcomps)
+                                    self, recursed_components=rcomps,
+                                    no_fake_fd=True)
             pseudo.ffd_order = 0
             graph = self.scope._depgraph
             self._hidden_edges = graph.get_interior_edges(self.get_names(full=True))
