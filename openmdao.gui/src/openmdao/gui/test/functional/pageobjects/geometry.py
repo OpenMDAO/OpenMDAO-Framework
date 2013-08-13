@@ -36,7 +36,7 @@ class FaceNode(BasePageObject):
 class GeometryPage(BasePageObject):
     """ Geometry Viewer window. """
 
-    title_prefix = 'OpenMDAO:'
+    title_prefix = 'OpenMDAO Geometry Viewer:'
 
     # Left side.
     edges_tree = GenericElement((By.ID, 'tree_frame_edges_tree'))
@@ -48,6 +48,13 @@ class GeometryPage(BasePageObject):
 
     def __init__(self, browser, port):
         super(GeometryPage, self).__init__(browser, port)
+
+    def has_canvas(self):
+        canvas = self.browser.find_elements_by_css_selector('canvas')
+        if len(canvas) > 0:
+            return True
+        else:
+            return False
 
     def expand_edges(self):
         WebDriverWait(self.browser, TMO).until(

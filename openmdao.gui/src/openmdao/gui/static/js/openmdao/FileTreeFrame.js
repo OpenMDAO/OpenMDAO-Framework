@@ -203,10 +203,10 @@ openmdao.FileTreeFrame = function(id, project) {
         // if it's not a folder
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
-            //menu.viewFile = {
+            // menu.viewFile = {
             //    "label"  : 'View File (raw)',
             //    "action" : function(node) { viewFile(path); }
-            //};
+            // };
 
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
@@ -222,11 +222,15 @@ openmdao.FileTreeFrame = function(id, project) {
                 };
             }
 
+            if (openmdao.Util.hasImageExtension(path)) {
+                menu.viewImage = {
+                    "label"  : 'View Image',
+                    "action" : function(node) { openmdao.project.viewImages(path); }
+                };
+            }
+
             // if it's a geometry file, let them load it into viewer
-            // FIXME: ultimately the test of whether a file is a geometry file
-            //     should use information from geometry viewer plugins that have
-            //     been loaded in the server...
-            if (/.stl$/.test(path) || /.csm$/.test(path)) {
+            if (openmdao.Util.hasGeometryExtension(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
                     "action" : function(node) { openmdao.project.viewGeometry(path.replace(/\\/g,'/')); }
@@ -327,22 +331,23 @@ openmdao.FileTreeFrame = function(id, project) {
             "contextmenu" : { "items":  nodeMenu }
         })
         .bind("loaded.jstree", function (e) {
-            jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' });
+            _self.elm.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
 
             // id is  "file_pane"
-            jQuery('#'+id+' .jstree li').each(function () {
+            _self.elm.find('.jstree li').each(function () {
                 // children[1] is the a tag inside the li
                 // children[1].children[0] is the ins tag inside the a tag and that is the
                 //    icon that needs to be set, which we do by adding a class and
                 //    adding some CSS into mdao-styles.css
                 if (this.children[1].getAttribute("class") === "folder") {
-                    this.children[1].children[0].addClass( "jstree-folder" ) ;
+                    this.children[1].children[0].addClass("jstree-folder");
                 }
                 else {
                     if (this.children[1].text.match("\.py$")) {
-                        this.children[1].children[0].addClass( "jstree-python-file" ) ;
-                    } else {
-                        this.children[1].children[0].addClass( "jstree-file" ) ;
+                        this.children[1].children[0].addClass("jstree-python-file");
+                    }
+                    else {
+                        this.children[1].children[0].addClass("jstree-file");
                     }
                 }
             });
@@ -352,7 +357,15 @@ openmdao.FileTreeFrame = function(id, project) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                openmdao.project.editFile(path);
+                if (openmdao.Util.hasImageExtension(path)) {
+                    openmdao.project.viewImages(path);
+                }
+                else if (openmdao.Util.hasGeometryExtension(path)) {
+                    openmdao.project.viewGeometry(path);
+                }
+                else {
+                    openmdao.project.editFile(path);
+                }
             }
             else if (node.hasClass('folder')) {
                 // what do, what do

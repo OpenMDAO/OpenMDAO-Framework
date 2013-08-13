@@ -165,8 +165,8 @@ def _test_value_editors(browser):
 
     # float editor - set to 2.71
     inputs = props.inputs
-    inputs.rows[3].cells[1].click()
-    inputs[3][1] = '2.71'
+    inputs.rows[2].cells[1].click()
+    inputs[2][1] = '2.71'
     time.sleep(0.5)
 
     #bool editor - set to true
@@ -178,7 +178,7 @@ def _test_value_editors(browser):
 
     #array 1d editor - add element, set to 4
     inputs = props.inputs
-    inputs.rows[2].cells[1].click()
+    inputs.rows[3].cells[1].click()
     add_path = '//*[@id="array-edit-add-X"]'
     browser.find_element_by_xpath(add_path).click()
     new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'

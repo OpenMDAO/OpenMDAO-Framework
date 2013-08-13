@@ -89,9 +89,13 @@ class _BaseElement(object):
         """ Convenience routine. """
         return self.element.find_elements_by_xpath(xpath)
 
-    def find_elements_by_css_selector(self, xpath):
+    def find_elements_by_css_selector(self, css):
         """ Convenience routine. """
-        return self.element.find_elements_by_css_selector(xpath)
+        return self.element.find_elements_by_css_selector(css)
+
+    def find_elements_by_tag_name(self, tag):
+        """ Convenience routine. """
+        return self.element.find_elements_by_tag_name(tag)
 
     def get_attribute(self, name):
         """ Return value for the attribute `name`. """
@@ -206,6 +210,27 @@ class _InputElement(_BaseElement):
         element.send_keys(*values)
 
 
+class _SelectElement(_BaseElement):
+    """ The `value` of this is the selection state. """
+
+    def __init__(self, page, locator):
+        super(_SelectElement, self).__init__(page, locator)
+
+    @property
+    def value(self):
+        """ The element's selected value. """
+        return self.element.get_attribute('value')
+
+    @value.setter
+    def value(self, new_value):
+        element = self.element
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_displayed())
+        for option in element.find_elements_by_tag_name('option'):
+            if option.text == new_value:
+                option.click()
+
+
 class _TextElement(_BaseElement):
     """ Just some text on the page. """
 
@@ -288,6 +313,12 @@ class InputElement(BaseElement):
     """ A text input field. """
     def __init__(self, locator):
         super(InputElement, self).__init__(_InputElement, locator)
+
+
+class SelectElement(BaseElement):
+    """ A drop-down selector. """
+    def __init__(self, locator):
+        super(SelectElement, self).__init__(_SelectElement, locator)
 
 
 class TextElement(BaseElement):

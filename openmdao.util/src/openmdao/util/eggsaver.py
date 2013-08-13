@@ -702,14 +702,10 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
         if not path:  #pragma no cover
             continue
 
-        orig_path = path
-        if sys.platform == 'win32':  # pragma no cover
-            path = path.lower()
-
         dirpath = os.path.realpath(os.path.dirname(path))
         if dirpath.startswith(py_dir):
             # May need to be copied later.
-            local_modules.add(orig_path)
+            local_modules.add(path)
             continue
 
         # Ignore modules never imported.
@@ -719,29 +715,28 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
         # Skip modules in distributions we already know about.
         found = False
         for prefix in prefixes:
-            if path.startswith(prefix):
+            if dirpath.startswith(prefix):
                 found = True
                 break
         if found:
             continue
 
-        if sys.platform == 'win32':  # pragma no cover
-            path = orig_path
-
         # Record distribution.
         for dist in working_set:
             loc = dist.location
             # Protect against a 'bare' location.
-            if loc.endswith('site-packages') or loc.endswith(py_version):
+            if loc.endswith('dist-packages') or \
+               loc.endswith('site-packages') or loc.endswith(py_version):
                 loc = os.path.join(loc, dist.project_name)
-            if path.startswith(loc):
+            if dirpath.startswith(loc):
                 distributions.add(dist)
                 if loc.endswith('.egg'):
                     prefixes.add(loc)
                 break
         else:
             if dirpath not in not_found:
-                if not dirpath.endswith('site-packages'):
+                if not dirpath.endswith('dist-packages') and \
+                   not dirpath.endswith('site-packages'):
                     not_found.add(dirpath)
                     path = dirpath
                 if (name, path) not in orphans:

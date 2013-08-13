@@ -10,13 +10,17 @@ openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 // initialize preferences (TODO: persistent prefs, per user and per project)
 openmdao.preferences = {
     FileTreeFrame: {
-        highlightOnUpdate: false   // highlight the file tree when it is updated
+        highlightOnUpdate: false    // highlight the file tree when it is updated
     },
 
-    PropertiesPane: {              // multiple entries, per object name
+    ObjectTreeFrame: {
+        select: 'Workflow'          // which tree to select (Workflow or Components)
+    },
+
+    PropertiesPane: {               // multiple entries, per object name
     },
 
     SlotFigure: {
-        resize: true               // resize figure width to accommodate long name
+        resize: true                // resize figure width to accommodate long name
     }
 };

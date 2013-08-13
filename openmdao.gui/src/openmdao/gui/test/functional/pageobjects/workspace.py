@@ -18,8 +18,13 @@ from component import NameInstanceDialog
 from connections import ConnectionsPage
 from dataflow import find_dataflow_figure, find_dataflow_figures, \
                      find_dataflow_component_names
+
 from editor import EditorPage
-from elements import ButtonElement, GridElement, InputElement, TextElement
+from geometry import GeometryPage
+from images import ImagesPage
+
+from elements import ButtonElement, GridElement, InputElement, \
+                     SelectElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures, \
@@ -62,9 +67,9 @@ class WorkspacePage(BasePageObject):
     about_button      = ButtonElement((By.ID, 'about-item'))
 
     # Left side.
-    #objects_tab = ButtonElement((By.ID, 'otree_tab'))
-    workflowtree_tab = ButtonElement((By.ID, 'wtree_tab'))
-    files_tab   = ButtonElement((By.ID, 'ftree_tab'))
+    objects_tab       = ButtonElement((By.ID, 'otree_tab'))
+    objects_selector  = SelectElement((By.ID, 'otree_pane_select'))
+    files_tab         = ButtonElement((By.ID, 'ftree_tab'))
 
     # Object context menu.
     obj_properties = ButtonElement((By.XPATH, "//a[(@rel='properties')]"))
@@ -87,16 +92,17 @@ class WorkspacePage(BasePageObject):
                            '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
 
     # File context menu.
-    file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
-    file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
-    file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    #file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
-    file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
-    file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
-    file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
-    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
-    file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
-    file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+    file_create   = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
+    file_add      = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
+    file_folder   = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
+    #file_view    = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_edit     = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
+    file_exec     = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
+    file_image    = ButtonElement((By.XPATH, "//a[(@rel='viewImage')]"))
+    file_geometry = ButtonElement((By.XPATH, "//a[(@rel='viewGeometry')]"))
+    file_rename   = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+    file_delete   = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
+    file_toggle   = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     file_chooser = InputElement((By.ID, 'filechooser'))
 
@@ -105,16 +111,16 @@ class WorkspacePage(BasePageObject):
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
 
     # Right side.
-    properties_tab = ButtonElement((By.ID, 'properties_tab'))
+    properties_tab = ButtonElement((By.ID,  'properties_tab'))
     props_header   = TextElement((By.XPATH, "//div[@id='properties_pane']/h3"))
     props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
     props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
     library_tab    = ButtonElement((By.ID, 'library_tab'))
-    library_search = InputElement((By.ID, 'objtt-select'))
+    library_search = InputElement((By.ID,  'objtt-filter'))
     library_clear  = ButtonElement((By.ID, 'objtt-clear'))
 
-    library_item_docs = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[1]"))
+    library_item_docs     = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[1]"))
     library_item_metadata = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[2]"))
 
     # Bottom.
@@ -126,10 +132,8 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        #self.locators["objects"] = \
-        #    (By.XPATH, "//div[@id='otree_pane']//li[@path]")
         self.locators["objects"] = \
-            (By.XPATH, "//div[@id='wtree_pane']//li[@path]")
+            (By.XPATH, "//div[@id='otree_pane']//li[@path]")
         self.locators["files"] = \
             (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
@@ -176,7 +180,7 @@ class WorkspacePage(BasePageObject):
 
     def find_object_button(self, name, delay=0):
         #path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
-        path = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % name
+        path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
                 element = WebDriverWait(self.browser, TMO).until(
@@ -337,6 +341,48 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
+    def view_image(self, filename, dclick=True):
+        """ View image `filename` via double-click or context menu. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = self.find_file(filename, 1)
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_image').click()
+        self.browser.switch_to_window(self.browser.window_handles[-1])
+        return ImagesPage.verify(self.browser, self.port)
+
+    def view_geometry(self, filename, dclick=True):
+        """ View geometry `filename` via double-click or context menu. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = self.find_file(filename, 1)
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_geometry').click()
+        self.browser.switch_to_window(self.browser.window_handles[-1])
+        return GeometryPage.verify(self.browser, self.port)
+
     def delete_file(self, filename):
         """ Delete `filename`. """
         self('files_tab').click()
@@ -355,6 +401,7 @@ class WorkspacePage(BasePageObject):
         for filename in file_paths:
             element = self.find_file(filename)
             chain = ActionChains(self.browser)
+            #FIXME: Mac OSX does not use CONTROL key
             chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         self('files_tab').click()
@@ -407,10 +454,8 @@ class WorkspacePage(BasePageObject):
 
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
-        #WebDriverWait(self.browser, TMO).until(
-            #lambda browser: browser.find_element(By.ID, 'otree_pane'))
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'wtree_pane'))
+            lambda browser: browser.find_element(By.ID, 'otree_pane'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
@@ -418,20 +463,22 @@ class WorkspacePage(BasePageObject):
                 values.append(element.get_attribute(attribute))
         return values
 
+    def select_objects_view(self, tree_name):
+        """ Select the object tree view ('Components' or 'Workflow)'. """
+        self('objects_selector').value = tree_name
+
     def select_object(self, component_name):
         """ Select `component_name`. """
-        self('workflowtree_tab').click()
-        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
-        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
 
     def expand_object(self, component_name):
         """ Expands `component_name`. """
-        self('workflowtree_tab').click()
-        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
-        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//ins" % component_name
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -439,9 +486,8 @@ class WorkspacePage(BasePageObject):
 
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
-        self('workflowtree_tab').click()
-        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
-        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -459,9 +505,8 @@ class WorkspacePage(BasePageObject):
 
     def show_workflow(self, component_name):
         """ Show workflow of `component_name`. """
-        self('workflowtree_tab').click()
-        #xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
-        xpath = "//div[@id='wtree_pane']//li[(@path='%s')]//a" % component_name
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -536,10 +581,15 @@ class WorkspacePage(BasePageObject):
 
     def get_library_searches(self):
         """ Return stored library search terms. """
+        searches = []
+
         self.library_search = 'searches'
-        menu = self.browser.find_element(By.CLASS_NAME, 'ui-autocomplete')
-        items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
-        searches = [item.text for item in items]
+        for menu in self.browser.find_elements(By.CLASS_NAME, 'ui-autocomplete'):
+            items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
+            searches = [item.text for item in items]
+            if len(searches) > 0 and searches[0] == 'In Project':
+                break
+
         self.clear_library_filter()
         return searches
 
