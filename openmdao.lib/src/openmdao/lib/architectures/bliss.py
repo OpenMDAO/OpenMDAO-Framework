@@ -3,7 +3,6 @@ from string import Template
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
 from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator#, COBYLAdriver as SLSQPdriver
 
@@ -58,7 +57,6 @@ class BLISS(Architecture):
         #Global Sensitivity Analysis
         ssa = self.parent.add("ssa",SensitivityDriver())
         ssa.workflow.add("mda")
-        ssa.differentiator = FiniteDifference()
         ssa.default_stepsize = 1.0e-6
         ssa.add_objective(objective[1].text,name=objective[0])
         for comps,param in global_dvs: 
@@ -78,7 +76,6 @@ class BLISS(Architecture):
             for constraint in constraints:
                 sa.add_constraint(constraint)
             sa.add_objective(objective[1].text,name=objective[0])
-            sa.differentiator = FiniteDifference()
         
         #Linear System Optimizations
         
@@ -89,7 +86,6 @@ class BLISS(Architecture):
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
             bbopt = self.parent.add('bbopt_%s'%comp,SLSQPdriver())
-            bbopt.differentiator = FiniteDifference()
             bbopt.iprint = 0
 
             bbopts.append('bbopt_%s'%comp)
@@ -134,7 +130,6 @@ class BLISS(Architecture):
         dg = []
         
         sysopt = self.parent.add('sysopt', SLSQPdriver())
-        sysopt.differentiator = FiniteDifference()
         sysopt.recorders = self.data_recorders
         sysopt.iprint = 0
 

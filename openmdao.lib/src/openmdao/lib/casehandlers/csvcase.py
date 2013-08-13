@@ -140,8 +140,8 @@ class CSVCaseIterator(object):
             for i, field in output_fields.iteritems():
                 outputs.append( (field, row[i]) )
                 
-            yield Case(inputs=inputs, outputs=outputs, label=label, \
-                       retries=retries, max_retries=max_retries, \
+            yield Case(inputs=inputs, outputs=outputs, label=label,
+                       retries=retries, max_retries=max_retries,
                        parent_uuid=parent_uuid, msg=msg)
 
         self.need_fieldnames = True

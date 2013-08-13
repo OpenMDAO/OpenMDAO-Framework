@@ -335,10 +335,11 @@ class Container(SafeHasTraits):
             try:
                 for child, childsrc, childdest in child_connections:
                     child.disconnect(childsrc, childdest)
-            except:
-                pass
-            self.raise_exception("Can't connect '%s' to '%s': %s"
-                                 % (srcpath, destpath, str(err)), RuntimeError)
+            except Exception as err:
+                self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
+                                   (childsrc, childdest, srcpath, destpath, err))
+            self.raise_exception("Can't connect '%s' to '%s': %s" % 
+                                 (srcpath, destpath, str(err)), RuntimeError)
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -717,9 +718,16 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, NameError)
-        trait = self.get_trait(name)
-        if trait is not None:
+        try:
             obj = getattr(self, name)
+        except:
+            self.raise_exception("cannot remove '%s': not found" %
+                                 name, AttributeError)
+            
+        trait = self.get_trait(name)
+        if trait is None:
+            delattr(self, name)
+        else:
             # for Slot traits, set their value to None but don't remove
             # the trait
             if trait.is_trait_type(Slot):
@@ -729,10 +737,8 @@ class Container(SafeHasTraits):
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
-            return obj
-        else:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
+                
+        return obj
 
     @rbac(('owner', 'user'))
     def configure(self):
@@ -938,7 +944,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            elif is_instance(obj, Container):
+            elif hasattr(obj, 'get_metadata'):
                 return obj.get_metadata(restofpath, metaname)
             else:
                 # if the thing being accessed is an attribute of a Variable's
@@ -1178,8 +1184,10 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-        if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
-            eq = False
+        try:
+            eq = all(eq)
+        except TypeError:
+            pass
         if not eq:
             self._call_execute = True
             if name in self._valid_dict:

@@ -30,7 +30,7 @@ class LazyComponent(Component):
         valids = self._valid_dict
         for name in self.list_outputs(): 
             if name in self._connected_outputs:
-                valids[name] = True
+                valids[name.split('[',1)[0]] = True
             else:
-                valids[name] = False    
+                valids[name.split('[',1)[0]] = False    
 

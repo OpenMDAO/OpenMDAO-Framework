@@ -14,21 +14,11 @@ import sys
 import weakref
 import re
 
-try:
-    from numpy import inner
-    from numpy import ndarray
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import inner
-
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.derivatives import Derivatives, \
-                                      flattened_size, flattened_value
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
@@ -204,9 +194,6 @@ class Component(Container):
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
-        
-        # Derivatives helper object. Mostly used for the older differentiators.
-        self.derivatives = Derivatives(self)
 
     @property
     def dir_context(self):
@@ -250,7 +237,7 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self._valid_dict[name]:  # if var is not already invalid
+        if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
@@ -410,16 +397,16 @@ class Component(Container):
             self._call_execute = True
             valids = self._valid_dict
             for name in self.list_inputs():
-                valids[name] = True
+                valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
             invalid_ins = [inp for inp in self.list_inputs(connected=True)
-                                    if valids.get(inp) is False]
+                                    if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
-                    valids[name] = True
+                    valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
@@ -444,15 +431,22 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        for name in self.derivatives.out_names:
-            setattr(self, name,
-                    self.derivatives.calculate_output(name, ffd_order))
+        input_keys, output_keys, J = self.provideJ()
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+        if ffd_order == 1:
+            for j, out_name in enumerate(output_keys):
+                y = self._ffd_outputs[out_name]
+                for i, in_name in enumerate(input_keys):
+                    y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
+                    
+                self.set(out_name, y, force=True)
+                    
+
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         extra_in=None, extra_out=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
-        requested. The user must supply *calculate_first_derivatives()*
-        and/or *calculate_second_derivatives()* in the component.
+        requested. The user must supply *linearize* in the component.
         
         This function should not be overriden.
         
@@ -465,40 +459,40 @@ class Component(Container):
         savebase: Bool
             If set to true, then we save our baseline state for fake finite
             difference.
-        """
+            
+        extra_in:
+            Not needed by Component
         
-        executed = False
+        extra_out
+            Not needed by Component
+        """
         
         # Calculate first derivatives using the new API.
-        # TODO: unify linearize & calculate_first_derivatives'
         if first and hasattr(self, 'linearize'):
+            
+            # Don't fake finite difference assemblies, but do fake finite
+            # difference on their contained components.
+            if savebase and has_interface(self, IAssembly):
+                self.driver.calc_derivatives(first, second, savebase,
+                                             extra_in, extra_out)
+                return
+            
             self.linearize()
             self.derivative_exec_count += 1
+        else:
+            return
             
-        # Calculate first derivatives in user-defined function
-        if first and hasattr(self, 'calculate_first_derivatives'):
-            self.calculate_first_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
+        # Save baseline state for fake finite difference.
+        if savebase:
+            self._ffd_inputs = {}
+            self._ffd_outputs = {}
+            ffd_inputs, ffd_outputs, _ = self.provideJ()
             
-        # Calculate second derivatives in user-defined function
-        if second and hasattr(self, 'calculate_second_derivatives'):
-            self.calculate_second_derivatives()
-            self.derivative_exec_count += 1
-            executed = True
-            
-        # Save baseline state
-        if savebase and executed:
-            self.derivatives.save_baseline(self)
-
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ComponentsWithDerivatives overloads this function to check for
-        missing derivatives.
-
-        This function is overridden by ComponentWithDerivatives.
-        """
-
-        pass
+            for name in ffd_inputs:
+                self._ffd_inputs[name] = self.get(name)
+    
+            for name in ffd_outputs:
+                self._ffd_outputs[name] = self.get(name)
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -508,10 +502,10 @@ class Component(Container):
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
-            valids[name] = True
+            valids[name.split('[',1)[0]] = True
         ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
-            valids[name] = True
+            valids[name.split('[',1)[0]] = True
         self._call_execute = False
         self._set_exec_state('VALID')
         self.publish_vars()
@@ -556,8 +550,11 @@ class Component(Container):
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
 
-                if ffd_order == 1 and \
-                   hasattr(self, 'calculate_first_derivatives'):
+                if ffd_order == 1 \
+                   and not has_interface(self, IDriver) \
+                   and not has_interface(self, IAssembly) \
+                   and (hasattr(self, 'provideJ') \
+                        or hasattr(self, 'apply_deriv')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(1)
@@ -566,7 +563,7 @@ class Component(Container):
                    hasattr(self, 'calculate_second_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
-                    self._execute_ffd(2)
+                    pass
 
                 else:
                     # Component executes as normal
@@ -719,19 +716,19 @@ class Component(Container):
         if False in self._valid_dict.values():
             self._call_execute = True
             return False
-        if self.parent is not None:
-            srccomps = [n for n, v in self.get_expr_sources()]
-            if srccomps:
-                counts = self.parent.exec_counts(srccomps)
-                for count, tup in zip(counts, self._expr_sources):
-                    if count != tup[1]:
-                        self._call_execute = True  # to avoid making this same
-                        # check unnecessarily later, update the count
-                        # information since we've got it, to avoid making
-                        # another call
-                        for i, tup in enumerate(self._expr_sources):
-                            self._expr_sources[i] = (tup[0], count)
-                        return False
+        #if self.parent is not None:
+            #srccomps = [n for n, v in self.get_expr_sources()]
+            #if srccomps:
+                #counts = self.parent.exec_counts(srccomps)
+                #for count, tup in zip(counts, self._expr_sources):
+                    #if count != tup[1]:
+                        #self._call_execute = True  # to avoid making this same
+                        ## check unnecessarily later, update the count
+                        ## information since we've got it, to avoid making
+                        ## another call
+                        #for i, tup in enumerate(self._expr_sources):
+                            #self._expr_sources[i] = (tup[0], count)
+                        #return False
         return True
 
     @rbac(('owner', 'user'))
@@ -780,7 +777,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._input_names
-        ret = [n for n in ret if valids[n] == valid]
+        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_inputs]
@@ -819,7 +816,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._output_names
-        ret = [n for n in ret if valids[n] == valid]
+        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_outputs]
@@ -861,7 +858,7 @@ class Component(Container):
 
         valid_updates = []
         if not srcexpr.refs_parent():
-            if srcexpr.text not in self._valid_dict:
+            if srcexpr.text.split('[',1)[0] not in self._valid_dict:
                 valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
@@ -873,7 +870,7 @@ class Component(Container):
         # this is after the super connect call so if there's a
         # problem we don't have to undo it
         for valids_update in valid_updates:
-            self._valid_dict[valids_update[0]] = valids_update[1]
+            self._valid_dict[valids_update[0].split('[',1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -881,11 +878,11 @@ class Component(Container):
         destination variable.
         """
         super(Component, self).disconnect(srcpath, destpath)
-        if destpath in self._valid_dict:
-            if '.' in destpath or '[' in destpath or ']' in destpath:
-                del self._valid_dict[destpath]
+        if destpath.split('[',1)[0] in self._valid_dict:
+            if '.' in destpath:
+                del self._valid_dict[destpath.split('[',1)[0]]
             else:
-                self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
+                self._valid_dict[destpath.split('[',1)[0]] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -1524,13 +1521,13 @@ class Component(Container):
             Names of variables whose validity is requested.
         """
         valids = self._valid_dict
-        return [valids[n] for n in names]
+        return [valids[n.split('[',1)[0]] for n in names]
 
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
         valids = self._valid_dict
         for name in names:
-            valids[name] = valid
+            valids[name.split('[',1)[0]] = valid
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, force=False):
@@ -1554,21 +1551,21 @@ class Component(Container):
         # should never be invalidated
         if varnames is None:
             for var in self.list_inputs(connected=True):
-                valids[var] = False
+                valids[var.split('[',1)[0]] = False
         else:
             conn = self.list_inputs(connected=True)
             if conn:
                 for var in varnames:
                     if var in conn:
-                        valids[var] = False
+                        valids[var.split('[',1)[0]] = False
 
         # this assumes that all outputs are either valid or invalid
-        if not force and outs and (valids[outs[0]] is False):
+        if not force and outs and (valids[outs[0].split('[',1)[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
 
         for out in outs:
-            valids[out] = False
+            valids[out.split('[',1)[0]] = False
 
         return None  # None indicates that all of our outputs are invalid.
 
@@ -1970,60 +1967,6 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
-
-    def applyJ(self, arg, result):
-        """Multiply an input vector by the Jacobian. For an Explicit Component,
-        this automatically forms the "fake" residual, and calls into the
-        function hook "apply_deriv.
-        """
-        for key in result:
-            result[key] = -arg[key]
-
-        if hasattr(self, 'apply_deriv'):
-            self.apply_deriv(arg, result)
-            return
-
-        # Optional specification of the Jacobian
-        input_keys, output_keys, J = self.provideJ()
-
-        ibounds = {}
-        nvar = 0
-        for key in input_keys:
-            val = self.get(key)
-            width = flattened_size('.'.join((self.name, key)), val)
-            ibounds[key] = (nvar, nvar+width)
-            nvar += width
-
-        obounds = {}
-        nvar = 0
-        for key in output_keys:
-            val = self.get(key)
-            width = flattened_size('.'.join((self.name, key)), val)
-            obounds[key] = (nvar, nvar+width)
-            nvar += width
-
-        for okey in result:
-            for ikey in arg:
-                if ikey not in result:
-                    i1, i2 = ibounds[ikey]
-                    o1, o2 = obounds[okey]
-                    if i2 - i1 == 1:
-                        if o2 - o1 == 1:
-                            Jsub = float(J[o1, i1])
-                            result[okey] += Jsub*arg[ikey]
-                        else:
-                            Jsub = J[o1:o2, i1:i2]
-                            tmp = Jsub*arg[ikey]
-                            result[okey] += tmp.reshape(result[okey].shape)
-                    else:
-                        tmp = flattened_value('.'.join((self.name, ikey)),
-                                              arg[ikey]).reshape(1, -1)
-                        Jsub = J[o1:o2, i1:i2]
-                        tmp = inner(Jsub, tmp)
-                        if o2 - o1 == 1:
-                            result[okey] += float(tmp)
-                        else:
-                            result[okey] += tmp.reshape(result[okey].shape)
 
 
 def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover

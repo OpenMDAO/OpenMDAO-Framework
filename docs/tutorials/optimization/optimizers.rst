@@ -60,7 +60,6 @@ Let's start by creating the following model and calling it ``demo_opt.py``.
         ''' Demonstration of swapping optimizers on a problem '''
         
         from openmdao.examples.simple.paraboloid_derivative import ParaboloidDerivative
-        from openmdao.lib.differentiators.api import FiniteDifference
         from openmdao.lib.drivers.api import COBYLAdriver, CONMINdriver, \
                 NEWSUMTdriver, SLSQPdriver, Genetic
         from openmdao.main.api import Assembly
@@ -94,9 +93,6 @@ Let's start by creating the following model and calling it ``demo_opt.py``.
                 # Equality Constraints
                 #self.driver.add_constraint('comp.x-comp.y=15.0')
                 
-                # Differentiator
-                #self.driver.differentiator = FiniteDifference()
-                
                 # General flag - suppress output
                 self.driver.iprint = 0
                 
@@ -106,6 +102,7 @@ Let's start by creating the following model and calling it ``demo_opt.py``.
                 self.driver.fdchm = 0.000001
                 self.driver.ctlmin = 0.01
                 self.driver.delfun = 0.001
+                self.driver.conmin_diff = True
                 
                 # NEWSUMT-specific Settings
                 #self.driver.itmax = 10
@@ -144,18 +141,24 @@ Let's start by creating the following model and calling it ``demo_opt.py``.
                                                  opt_problem.comp.y)
             print "Elapsed time: ", t2-t1, "seconds"
 
-We've gone ahead and imported every optimizer to make swapping them fairly easy. Several
-blocks of lines are commented out in this code. Most of these contain settings for the optimizers.
-Settings are usually very specific to an optimizer, so we'll want to take care that only the lines for
-the optimizer we are using are active. The parameters, objective(s), and constraints(s) can all stay the
-same when you swap in a new optimizer, provided they are supported (e.g., equality constraints are only
-supported by SLSQPdriver.) Also, we will sometimes slot a FiniteDifference differentiator, though that
-line of code is currently commented out. Some optimizers, like CONMINdriver, have their own finite 
-difference capability. Others, like ``SLSQ_driver``, do not and use the one from OpenMDAO. Regardless, 
-since we're using the ParaboloidDerivative component, which contains the analytical derivatives, 
-all of the finite difference calculations will use the FDAD (Finite Difference with Analytical 
-Derivatives) approach. So even if the optimizer is trying to do finite differences, OpenMDAO will 
-use the analytic derivatives that are provided to speed up the optimization.
+We've gone ahead and imported every optimizer to make swapping them fairly
+easy. Several blocks of lines are commented out in this code. Most of these
+contain settings for the optimizers. Settings are usually very specific to an
+optimizer, so we'll want to take care that only the lines for the optimizer
+we are using are active. The parameters, objective(s), and constraints(s) can
+all stay the same when you swap in a new optimizer, provided they are
+supported (e.g., equality constraints are only supported by SLSQPdriver.)
+
+Some optimizers, like CONMINdriver, have their own finite difference
+capability for calculating the gradient. Others, like ``SLSQ_driver``, do not
+have any gradient calculation ability, and need to use the one from OpenMDAO.
+We can tell the CONMIN driver to calculate its own gradient by setting the
+``conmin_diff`` flag to True, and it will perform a backward difference with
+automatic step-size reduction. For this example, we are using the
+ParaboloidDerivative component, which contains the analytical derivatives
+between all of its inputs and outputs. Even though CONMIN is controlling the
+finite-difference, OpenMDAO will use the analytic derivatives that are
+provided to speed up the calculation.
 
 So first, let's run :download:`demo_opt.py
 <../../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`.  This first case is the
@@ -180,13 +183,12 @@ relative and minimum absolute stepsize changes in the finite difference calculat
 other optimizers to lie at ``(7.166667, -7.833333)``. Exploring CONMIN's settings could
 possibly yield a better answer, but that's not a reasonable thing to do for a real problem. 
 
-Next we'll let OpenMDAO perform the finite difference instead of CONMIN. To do this, uncomment the
-line that sockets the differentiator.
+Next we'll let OpenMDAO perform the finite difference instead of CONMIN. To
+do this, set this ``conmin_diff`` flag to False, which is its default value.
 
 ::
 
-                # Differentiator
-                self.driver.differentiator = FiniteDifference()
+                self.driver.conmin_diff = False
 
 Then run ``demo_opt.py``.
 
@@ -203,8 +205,8 @@ this. OpenMDAO's finite difference is fairly simple, with a single non-adapting 
 stepsize could be specified for each parameter, though the scaling for `x` and `y` here is
 roughly the same, so it wouldn't be needed. On the other hand, CONMIN uses an adaptive stepsize
 which presumably takes smaller steps as it approaches the optimum, so this should do a better
-job. Moreover, some time was spent picking a reasonable stepsize for CONMIN, but for the
-OpenMDAO differentiator, we just kept the default value.
+job. Moreover, some time was spent picking a reasonable stepsize for CONMIN, but for
+OpenMDAO, we just kept the default value.
 
 Now, let's try the NEWSUMT driver. First, replace ``CONMINdriver`` with ``NEWSUMTdriver``
 where it is added to the assembly.
@@ -219,17 +221,13 @@ Let's also unsocket OpenMDAO's finite difference.
                 
 ::
 
-                # Differentiator
-                #self.driver.differentiator = FiniteDifference()
-                
-::
-
                 # CONMIN-specific Settings
                 #self.driver.itmax = 30
                 #self.driver.fdch = 0.00001
                 #self.driver.fdchm = 0.000001
                 #self.driver.ctlmin = 0.01
                 #self.driver.delfun = 0.001
+                self.driver.conmin_diff = False
                 
                 # NEWSUMT-specific Settings
                 self.driver.itmax = 10
@@ -270,29 +268,10 @@ Our answer has improved and is slightly better than what CONMIN reported. Notice
 number of functional executions is an order of magnitude more than CONMIN. For a problem
 with a long runtime, this optimizer may be significantly slower.
 
-Next, let's slot OpenMDAO's finite difference differentiator. 
-
-::
-
-                # Differentiator
-                self.driver.differentiator = FiniteDifference()
-
-Then run ``demo_opt.py``.
-
-::
-
-    Optimizer: <class 'openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver'>
-    Function executions:  255
-    Gradient executions:  50
-    Minimum: -27.079630
-    Minimum found at (7.170357, -7.837023)
-    Elapsed time:  0.133186101913 seconds
-
-The answer is about the same. One notable difference is a doubling of the number of gradient executions.
-This is because NEWSUMT is the only optimizer which asks for an explicit Hessian (i.e., 2nd derivative)
-of the objective and constraints. Hessian calculation is expensive and scales n-squared with the number
-of parameters. When NEWSUMT calculates the Hessian internally, it's using some approximations to speed
-the calculation. Thus, it might be advisable to use NEWSUMT's gradient calculation.
+NEWSUMT need the Hessian or second-derivatives of the objective and
+constraints with respect to the design variables. Presently, OpenMDAO cannot
+provide these, so NEWSUMT uses its own internal gradient and Hessian
+calculation.
 
 Now let's try the COBYLAdriver.
 

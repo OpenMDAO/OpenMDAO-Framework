@@ -9,7 +9,6 @@ import numpy
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 
 
@@ -71,7 +70,6 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
         self.top.driver.iprint = 0
-        self.top.driver.differentiator = FiniteDifference()
         
     def tearDown(self):
         self.top = None
@@ -85,10 +83,11 @@ class SLSPQdriverTestCase(unittest.TestCase):
         map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.driver.recorders = [ListCaseRecorder()]
-        self.top.driver.printvars = ['comp.opt_objective']        
+        self.top.driver.printvars = ['comp.opt_objective']
         self.top.run()
+        
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)

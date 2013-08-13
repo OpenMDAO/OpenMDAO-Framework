@@ -91,11 +91,11 @@ class SellarCO_Multi(Assembly):
     January 1996.
     """
 
-    z1 = Float()
-    z2 = Float()
-    x1 = Float()
-    y1 = Float()
-    y2 = Float()
+    z1 = Float(iotype='in')
+    z2 = Float(iotype='in')
+    x1 = Float(iotype='in')
+    y1 = Float(iotype='in')
+    y2 = Float(iotype='in')
     
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -125,10 +125,7 @@ class SellarCO_Multi(Assembly):
         #Parameters - Global Optimization
         # using group parameters to 'broadcast' same data 
         self.driver.add_objective('x1**2 + z2 + y1 + math.exp(-y2)')
-        for param,low,high in zip([('z1','dis1.z1','dis2b.z1'), 
-                                   ('z2','dis1.z2','dis2c.z2'), 
-                                   ('x1','dis1.x1'), ('y1','dis2a.y1'), 
-                                   ('y2','dis1.y2')],
+        for param,low,high in zip(['z1', 'z2', 'x1', 'y1', 'y2'],
                                   [-10.0, 0.0, 0.0, 3.16, -10.0],
                                   [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)

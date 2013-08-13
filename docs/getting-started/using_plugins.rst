@@ -72,7 +72,6 @@ You should get a response that looks something like this:
     openmdao.lib.components.mux.DeMux 0.2.1
     openmdao.lib.components.mux.Mux 0.2.1
     openmdao.lib.components.pareto_filter.ParetoFilter 0.2.1
-    openmdao.lib.differentiators.finite_difference.FiniteDifference 0.2.1
     openmdao.lib.drivers.broydensolver.BroydenSolver 0.2.1
     openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver 0.2.1
     openmdao.lib.drivers.conmindriver.CONMINdriver 0.2.1
@@ -120,7 +119,7 @@ that are drivers, do the following:
     plugin list -g driver
 
 The possible group names are: ``caserecorder, caseiterator, optproblem, driver, surrogatemodel,
-doegenerator, component, architecture, container, differentiator, variable``.
+doegenerator, component, architecture, container, variable``.
 
 
 Installing Plugins

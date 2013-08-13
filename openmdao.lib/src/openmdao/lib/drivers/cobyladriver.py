@@ -146,13 +146,8 @@ class COBYLAdriver(Driver):
             self.raise_exception(msg, RuntimeError)
             
         # Constraints (COBYLA defines positive as satisfied)
-        con_list = []
-        for v in self.get_ineq_constraints().values():
-            val = v.evaluate(self.parent)
-            if '>' in val[2]:
-                con_list.append(val[0]-val[1])
-            else:
-                con_list.append(val[1]-val[0])
+        con_list = [-v.evaluate(self.parent) \
+                    for v in self.get_ineq_constraints().values()]
                 
         # Side Constraints
         for param in self.get_parameters().values():

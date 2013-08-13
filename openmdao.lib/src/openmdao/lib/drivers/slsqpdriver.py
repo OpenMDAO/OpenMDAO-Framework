@@ -20,9 +20,8 @@ except ImportError as err:
     
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
-from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
+from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -33,7 +32,7 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
     
 @stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasConstraints, HasObjective)
-class SLSQPdriver(DriverUsesDerivatives):
+class SLSQPdriver(Driver):
     """Minimize a function using the Sequential Least SQuares Programming
     (SLSQP) method.
 
@@ -87,17 +86,9 @@ class SLSQPdriver(DriverUsesDerivatives):
         self.x_lower_bounds = zeros(0,'d')
         self.x_upper_bounds = zeros(0,'d')
         
-        # We auto-fill the slot because the gradient is required
-        # in this implementation
-        self.differentiator = FiniteDifference()
-        
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
         
-        if not self.differentiator:
-            msg = 'A differentiator must be socketed for this driver.'
-            self.raise_exception(msg, RuntimeError)
-
         self.nparam = len(self.get_parameters().values())
         self.ncon = len(self.get_constraints())
         self.neqcon = len(self.get_eq_constraints())
@@ -183,25 +174,18 @@ class SLSQPdriver(DriverUsesDerivatives):
             msg = "Numerical overflow in the objective."
             self.raise_exception(msg, RuntimeError)
             
-        # Constraints
+        # Constraints. Note that SLSQP defines positive as satisfied.
         if self.ncon > 0 :
-            con_list = []
-            for v in self.get_constraints().values():
-                val = v.evaluate(self.parent)
-                if '>' in val[2]:
-                    con_list.append(val[0]-val[1])
-                else:
-                    con_list.append(val[1]-val[0])
-                
+            con_list = [-v.evaluate(self.parent) for \
+                        v in self.get_constraints().values()]
             g = array(con_list)
-            
             
         if self.iprint > 0:
             pyflush(self.iout)
             
         # Write out some relevant information to the recorder
         self.record_case()
-
+        
         return f, g
     
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -210,17 +194,23 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, g, df, and dg are unused inputs."""
         
-        self.ffd_order = 1
-        self.differentiator.calc_gradient()
-        self.ffd_order = 0
-            
-        df[0:self.nparam] = \
-            self.differentiator.get_gradient(self.get_objectives().keys()[0])
+        inputs = ["%s.in0" % item.pcomp_name for item in \
+                  self.get_parameters().values()]
+        obj = ["%s.out0" % item.pcomp_name for item in \
+               self.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name for item in \
+               self.get_constraints().values()]
 
-        if self.ncon > 0 :
-            for i, con in enumerate(self.get_constraints().keys()):
-                dg[i][0:self.nparam] = \
-                    -self.differentiator.get_gradient(con)
+        J = self.workflow.calc_gradient(inputs, obj + con)
+        
+        nobj = len(obj)
+        df[0:self.nparam] = J[0:nobj, :].flatten()
+        
+        ncon = self.ncon + self.neqcon
+        n1 = nobj
+        n2 = nobj + ncon
+        if ncon > 0:
+            dg[0:ncon, 0:self.nparam] = -J[n1:n2, :]
         
         return df, dg
     
