@@ -63,8 +63,12 @@ class PseudoAssembly(object):
         if not self.fd:
             self.fd = FiniteDifference(self)
             
+        # The only reason not to turn on fake is if we are in a global
+        # finite-difference.
         if self.no_fake_fd:
             savebase = False
+        else:
+            savebase = True
             
         # First, linearize about operating point.
         # Note: Only needed for differentiable islands, which are handled
