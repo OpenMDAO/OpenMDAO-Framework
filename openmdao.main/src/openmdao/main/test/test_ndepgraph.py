@@ -281,36 +281,25 @@ class DepGraphTestCase(unittest.TestCase):
                               ('D.d', 'parent.C3.a'),
                               ('D.d', 'd.x')]))
         
-    # def test_find_all_connecting(self):
-    #     dep = DependencyGraph()
-    #     for node in ['A','B','C','D','E','F']:
-    #         dep.add(node)
-    #     self.assertEqual(dep.find_all_connecting('A','F'), set())
-    #     dep.connect('A.c', 'B.a')
-    #     dep.connect('B.c', 'C.a')
-    #     dep.connect('C.d', 'D.a')
-    #     dep.connect('A.d', 'D.b')
-    #     dep.connect('A.d', 'F.b')
-    #     self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
-    #     self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
-    #     dep.connect('C.d', 'F.a')
-    #     self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
+    def test_find_all_connecting(self):
+        self.assertEqual(self.dep.find_all_connecting('A','D'), set())
+        self.assertEqual(self.dep.find_all_connecting('A','C'), set(['A','B','C']))
         
-    # def test_expr(self):
-    #     dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
-    #     self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
-    #     dep.disconnect('3.4*B.d+2.3', 'C.b')
-    #     self.assertEqual(dep.list_connections(), [])
-    #     dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
-    #                                                                ('3.4*B.d+2.3', 'C.a')])
-    #     self.assertEqual(set(dep.list_connections()), set([('3.4*B.d+2.3','C.b'),('3.4*B.d+2.3','C.a')]))
-    #     dep.disconnect('3.4*B.d+2.3', 'C.b')
-    #     self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.a')])
-        
-    #     dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
-    #                                                                ('3.4*B.d+2.3', 'C.a')])
-    #     dep.disconnect('3.4*B.d+2.3')
-    #     self.assertEqual(dep.list_connections(), [])
+    def test_expr(self):
+        dep, scope = self.make_graph(comps=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [])
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        self.assertEqual(set(dep.list_connections()), set([('3.4*B.d+2.3','C.b'),('3.4*B.d+2.3','C.a')]))
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.a')])
+       
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        dep.disconnect('3.4*B.d+2.3')
+        self.assertEqual(dep.list_connections(), [])
           
 
 if __name__ == "__main__":

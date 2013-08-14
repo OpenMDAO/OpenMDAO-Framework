@@ -504,11 +504,12 @@ class DependencyGraph(DiGraph):
         return outs
 
     def find_all_connecting(self, start, end):
-        """Return the set of all nodes along all paths between 
-        start and end.  The start and end nodes are included
+        """Return the set of all component nodes along all paths 
+        between start and end. The start and end nodes are included 
         in the set if they're connected.
         """
-        
+        graph = self.component_graph()
+
         if start == end:
             return set()
         fwdset = set()
@@ -519,7 +520,7 @@ class DependencyGraph(DiGraph):
             if node in backset:
                 continue
             backset.add(node)
-            tmpset.update(self.pred[node].keys())
+            tmpset.update(graph.pred[node].keys())
         
         tmpset = set([start])
         while tmpset:
@@ -527,7 +528,7 @@ class DependencyGraph(DiGraph):
             if node in fwdset:
                 continue
             fwdset.add(node)
-            tmpset.update(self.succ[node].keys())
+            tmpset.update(graph.succ[node].keys())
         
         return fwdset.intersection(backset)
 

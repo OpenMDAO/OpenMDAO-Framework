@@ -186,7 +186,7 @@ class Driver(Component):
         full = set(setcomps)
 
         if self.parent:
-            graph = self.parent._depgraph
+            graph = self.parent._depgraph.component_graph()
             for end in getcomps:
                 for start in setcomps:
                     full.update(graph.find_all_connecting(start, end))
