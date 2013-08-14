@@ -553,8 +553,7 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ') \
-                        or hasattr(self, 'apply_deriv')):
+                   and (hasattr(self, 'provideJ')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(1)
