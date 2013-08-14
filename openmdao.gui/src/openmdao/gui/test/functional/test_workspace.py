@@ -418,43 +418,41 @@ def _test_properties(browser):
     closeout(project_dict, workspace_page)
 
 
-# This test no longer needed because there is no longer a component panel that
-# tracks the minimize/maximize behavior of the dataflow. The collapse/expand
-# behavior is alrady tested in test_dataflow. -- KTM
-# Correction: has nothing to do with dataflow.. just tests the object tree.
-#def _test_objtree(browser):
-    ## Toggles maxmimize/minimize button on assemblies.
-    #project_dict, workspace_page = startup(browser)
+def _test_component_tree(browser):
+    project_dict, workspace_page = startup(browser)
 
-    ## Add maxmin.py to project
-    #file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                #'files/maxmin.py')
-    #workspace_page.add_file(file_path)
+    workspace_page.select_objects_view('Components')
 
-    ## Add MaxMin to 'top'.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+    # Add maxmin.py to project
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/maxmin.py')
+    workspace_page.add_file(file_path)
 
-    ## Maximize 'top' and 'top.maxmin'
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top'])
-    #workspace_page.expand_object('top')
-    #time.sleep(0.5)
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin'])
-    #workspace_page.expand_object('top.maxmin')
-    #time.sleep(0.5)
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 #'top.maxmin.driver', 'top.maxmin.sub'])
+    # Add MaxMin to 'top'.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
-    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 #'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+    # Maximize 'top' and 'top.maxmin'
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top'])
+    workspace_page.expand_object('top')
+    time.sleep(0.5)
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    workspace_page.expand_object('top.maxmin')
+    time.sleep(0.5)
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub'])
 
-    ## Clean up.
-    #closeout(project_dict, workspace_page)
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_editable_inputs(browser):
@@ -555,6 +553,7 @@ def _test_console_errors(browser):
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
     inputs.rows[0].cells[2].click()
     inputs[0][2] = '42'  # printvars

@@ -167,6 +167,14 @@ class SafeElementBase(SafeBase):
         return self._wrap(
             self._invoke('find_elements', args, kwargs))
 
+    def find_element_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_element_by_tag_name', args, kwargs))
+
+    def find_elements_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_elements_by_tag_name', args, kwargs))
+
     def find_element_by_class_name(self, *args, **kwargs):
         return self._wrap(
             self._invoke('find_element_by_class_name', args, kwargs))
