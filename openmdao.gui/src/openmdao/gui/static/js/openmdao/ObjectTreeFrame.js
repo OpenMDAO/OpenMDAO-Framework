@@ -23,7 +23,8 @@ openmdao.ObjectTreeFrame = function(id, project, select_fn, dblclick_fn, workflo
 
     // initialize private variables
     var self = this,
-        selectorHTML = '<select id="'+id+'_select" style="display:block;background:gray;width:100%">'
+        selectorCSS = 'color:white;background:#6a6a6a;width:100%;height:25px;border:none',
+        selectorHTML = '<select id="'+id+'_select" style="'+selectorCSS+'">'
             + '<option value="Components">Components</option>'
             + '<option value="Workflow">Workflow</option>'
             + '</select>',
@@ -37,15 +38,14 @@ openmdao.ObjectTreeFrame = function(id, project, select_fn, dblclick_fn, workflo
 
     // set tree view based on selected value
     selector.change(function(e) {
-        debug.info('ObjectTreeFrame change:', selector.val(), this.val, this);
-        if (tree) {
+        if (tree !== undefined) {
             tree.destructor();
         }
         if (selector.val() === 'Components') {
-            tree = openmdao.ComponentTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
+            tree = new openmdao.ComponentTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
         }
         else if (selector.val() === 'Workflow') {
-            tree = openmdao.WorkflowTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
+            tree = new openmdao.WorkflowTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
         }
         else {
             debug.error('ObjectTreeFrame: Invalid object tree type selected');
@@ -54,9 +54,9 @@ openmdao.ObjectTreeFrame = function(id, project, select_fn, dblclick_fn, workflo
 
     // load initial object tree
     project.project_ready.always(function() {
-        selector.css({'display': 'block'}); // not sure why it's hidden to start
-        selector.val('Workflow');
-        tree = openmdao.WorkflowTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
+        selector.css({'display': 'block'});
+        selector.val(openmdao.preferences.ObjectTreeFrame.select);
+        selector.change();
     });
 
     /***********************************************************************
@@ -64,7 +64,9 @@ openmdao.ObjectTreeFrame = function(id, project, select_fn, dblclick_fn, workflo
      ***********************************************************************/
 
     this.destructor = function() {
-        tree.destructor();
+        if (tree !== undefined) {
+            tree.destructor();
+        }
     };
 
 };
