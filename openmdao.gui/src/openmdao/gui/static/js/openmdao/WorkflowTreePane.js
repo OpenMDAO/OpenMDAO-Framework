@@ -1,18 +1,12 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
-    openmdao.WorkflowTreeFrame.prototype.init.call(this, id, 'Workflow');
-
+openmdao.WorkflowTreePane = function(elm, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-
     // initialize private variables
-    var self = this,
-        tree = jQuery('<div>')
-            .appendTo('<div style="height:100%">')
-            .appendTo("#"+id);
+    var self = this;
 
     self.pathname = false;
 
@@ -82,7 +76,7 @@ openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workf
 
         // Grab paths of currently open nodes.
         var openNodes = [];
-        self.elm.find("li.jstree-open").each(function () {
+        elm.find("li.jstree-open").each(function () {
             openNodes.push(this.getAttribute("path"));
         });
 
@@ -92,8 +86,8 @@ openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workf
             json = [json];
         }
 
-        tree.empty();
-        tree.jstree({
+        elm.empty();
+        elm.jstree({
             plugins     : [ "json_data", "themes", "types", "cookies", "contextmenu", "ui", "crrm" ],
             json_data   : { "data": convertJSON(json, '', openNodes) },
             themes      : { "theme":  "openmdao" },
@@ -126,7 +120,20 @@ openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workf
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' li').each(function() {
+            elm.find('li').each(function() {
+                // add classes so that the items in the tree are specific
+                // to what they are: assembly, driver or component
+                if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
+                    this.children[1].children[0].addClass("jstree-assembly");
+                }
+                else if (this.getAttribute("interfaces").indexOf("IDriver") >= 0) {
+                    this.children[1].children[0].addClass("jstree-driver");
+                }
+                else if (this.getAttribute("interfaces").indexOf("IComponent") >= 0) {
+                    this.children[1].children[0].addClass("jstree-component");
+                }
+
+                // make drop targets
                 jQuery(this.children[1]).droppable({
                     accept: '.DataflowFigure',
                     greedy: true,
@@ -174,21 +181,6 @@ openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workf
                         }
                     }
                 });
-            });
-
-            /* add classes so that the items in the component tree are specific
-               to what they are: assembly, driver or component */
-            jQuery('#'+id+' li').each(function () {
-
-                if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
-                    this.children[1].children[0].addClass("jstree-assembly");
-                }
-                else if (this.getAttribute("interfaces").indexOf("IDriver") >= 0) {
-                    this.children[1].children[0].addClass("jstree-driver");
-                }
-                else if (this.getAttribute("interfaces").indexOf("IComponent") >= 0) {
-                    this.children[1].children[0].addClass("jstree-component");
-                }
             });
         });
     }
@@ -292,12 +284,5 @@ openmdao.WorkflowTreeFrame = function(id, project, select_fn, dblclick_fn, workf
             });
     };
 
-    // load initial component data
-    project.project_ready.always(function() {
-       self.update();
-    });
+    this.update();
 };
-
-/** set prototype */
-openmdao.WorkflowTreeFrame.prototype = new openmdao.BaseFrame();
-openmdao.WorkflowTreeFrame.prototype.constructor = openmdao.WorkflowTreeFrame;
