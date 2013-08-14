@@ -112,7 +112,7 @@ class WorkspacePage(BasePageObject):
     props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
     library_tab    = ButtonElement((By.ID, 'library_tab'))
-    library_search = InputElement((By.ID,  'objtt-select'))
+    library_search = InputElement((By.ID,  'objtt-filter'))
     library_clear  = ButtonElement((By.ID, 'objtt-clear'))
 
     library_item_docs     = ButtonElement((By.XPATH, "//ul[@id='lib-cmenu']/li[1]"))
@@ -534,10 +534,15 @@ class WorkspacePage(BasePageObject):
 
     def get_library_searches(self):
         """ Return stored library search terms. """
+        searches = []
+
         self.library_search = 'searches'
-        menu = self.browser.find_element(By.CLASS_NAME, 'ui-autocomplete')
-        items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
-        searches = [item.text for item in items]
+        for menu in self.browser.find_elements(By.CLASS_NAME, 'ui-autocomplete'):
+            items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
+            searches = [item.text for item in items]
+            if len(searches) > 0 and searches[0] == 'In Project':
+                break
+
         self.clear_library_filter()
         return searches
 
