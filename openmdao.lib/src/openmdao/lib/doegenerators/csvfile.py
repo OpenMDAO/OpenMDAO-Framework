@@ -33,6 +33,6 @@ class CSVFile(Container):
         for i, row in enumerate(csv.reader(inp)):
             if len(row) != num_params:
                 raise RuntimeError('%s line %d: expected %d parameters, got %d'
-                                   % (self.doe_filename. i + 1,
+                                   % (self.doe_filename, i + 1,
                                       num_params, len(row)))
             yield [float(val) for val in row]
