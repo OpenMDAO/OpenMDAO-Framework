@@ -84,17 +84,16 @@ class DepGraphTestCase(unittest.TestCase):
                                                self.ext_conns)
 
     def test_find_nodes(self):
-        for finder in [self.dep.find_nodes, self.dep.find_nodes_iter]:
-            self.assertEqual(set(finder(is_comp_node)),
-                             set(self.comps))
-            varnodes = set()
-            for node in ['A','B','C','D']:
-                for v in ['a','b','c','d']:
-                    varnodes.add(node+'.'+v)
-            varnodes.update(['a','b','c','d'])
-    
-            self.assertEqual(set(finder(is_var_node)),
-                             varnodes)
+        self.assertEqual(set(self.dep.find_nodes(is_comp_node)),
+                         set(self.comps))
+        varnodes = set()
+        for node in ['A','B','C','D']:
+            for v in ['a','b','c','d']:
+                varnodes.add(node+'.'+v)
+        varnodes.update(['a','b','c','d'])
+
+        self.assertEqual(set(self.dep.find_nodes(is_var_node)),
+                         varnodes)
 
     def test_add(self):
         for name in self.comps:
@@ -259,33 +258,28 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(tc['C']), set(['C.d','C.c','c','parent.C2.a']))
         self.assertEqual(set(tc['D.a']), set(['D','D.c','D.d','d.x','d','parent.C3.a']))
         
-    # def test_connections_to(self):
-    #     self.assertEqual(set(self.dep.connections_to('c')),
-    #                      set([('@bout.c','@xout.parent.Y.a'),
-    #                           ('D.c', '@bout.c')]))
-    #     self.assertEqual(set(self.dep.connections_to('a')),
-    #                      set([('@xin.parent.X.c','@bin.a'),
-    #                           ('@bin.a','B.a')]))
+    def test_connections_to(self):
+        self.assertEqual(set(self.dep.connections_to('c')),
+                         set([('c', 'parent.C2.a'),
+                              ('C.c', 'c')]))
+        self.assertEqual(set(self.dep.connections_to('a')),
+                         set([('parent.C1.d', 'a'),
+                              ('a', 'A.a')]))
         
-    #     self.dep.connect('A.c', 'C.b')
-    #     self.dep.connect('A.c', 'C.a')
-    #     self.assertEqual(set(self.dep.connections_to('A.c')),
-    #                      set([('A.c','C.b'),('A.c','C.a'),('A.c','B.b')]))
-        
-    #     # unconnected var should return an empty list
-    #     self.assertEqual(self.dep.connections_to('A.a'),[])
+        # unconnected var should return an empty list
+        self.assertEqual(self.dep.connections_to('D.a'),[])
 
-    #     # now test component connections
-    #     self.assertEqual(set(self.dep.connections_to('A')),
-    #                      set([('@bin.A.b','A.b'),
-    #                           ('A.c','B.b'),
-    #                           ('A.c','C.a'),
-    #                           ('A.c','C.b')]))
+        # now test component connections
+        self.assertEqual(set(self.dep.connections_to('A')),
+                         set([('a', 'A.a'),
+                              ('b[3]', 'A.b'),
+                              ('A.c[2]','B.a.x.y'),
+                              ('A.d.z','B.b[4]')]))
 
-    #     self.assertEqual(set(self.dep.connections_to('D')),
-    #                      set([('B.c','D.a'),
-    #                           ('C.c','D.b'),
-    #                           ('D.c','@bout.c')]))
+        self.assertEqual(set(self.dep.connections_to('D')),
+                         set([('parent.C0.c', 'D.b'),
+                              ('D.d', 'parent.C3.a'),
+                              ('D.d', 'd.x')]))
         
     # def test_find_all_connecting(self):
     #     dep = DependencyGraph()

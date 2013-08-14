@@ -1,5 +1,6 @@
 import sys
 from array import array
+import itertools
 import networkx as nx
 from networkx import dfs_edges
 
@@ -182,19 +183,6 @@ class DiGraph(nx.DiGraph):
     """
 
     def find_edges(self, predicate, nodes=None, data=False):
-        """Returns all edges in the graph such that the predicate
-        returns True.  The predicate must take args of the form:
-        def pred(graph, u, v).
-        """
-        if data:
-            return [(u, v, dat) 
-                       for u, v, dat in self.edges(nodes, data=True)
-                            if predicate(self, u, v)]
-        else:
-            return [(u, v) for u, v in self.edges(nodes)
-                            if predicate(self, u, v)]
-
-    def find_edges_iter(self, predicate, nodes=None, data=False):
         """Returns an iterator over all edges in the graph such that 
         the predicate returns True.  The predicate must take args of 
         the form: pred(graph, u, v).
@@ -209,27 +197,16 @@ class DiGraph(nx.DiGraph):
                     yield (u, v)
 
     def find_nodes(self, predicate, data=False):
-        """Returns all nodes in the graph such that the predicate
-        returns True. The predicate must take args of the form:
-        def pred(graph, node).
-        """
-        if data:
-            return [(n, dat) for n, dat in self.nodes(data=True)
-                            if predicate(self, n)]
-        else:
-            return [n for n in self.nodes() if predicate(self, n)]
-
-    def find_nodes_iter(self, predicate, data=False):
         """Returns an iterator over all nodes in the graph such that 
         the predicate returns True. The predicate must take args of the 
         form: pred(graph, node).
         """
         if data:
-            for n, dat in self.nodes(data=True):
+            for n, dat in self.nodes_iter(data=True):
                 if predicate(self, n):
                     yield (n, dat)
         else:
-            for n in self.nodes():
+            for n in self.nodes_iter():
                 if predicate(self, n):
                     yield n
 
@@ -311,7 +288,7 @@ class DependencyGraph(DiGraph):
             if base != destpath and base != srcpath:
                 usdot = destpath + '.'
                 usbracket = destpath + '['
-                for u,v in self.in_edges((base,)):
+                for u,v in self.in_edges_iter((base,)):
                     if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
                            or u.startswith(usdot) or u.startswith(usbracket):
                         raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
@@ -371,7 +348,7 @@ class DependencyGraph(DiGraph):
         if destpath is None:
             if is_comp_node(self, srcpath):
                 edges = self.edges(self.successors(srcpath))
-                edges.extend(self.in_edges(self.predecessors(srcpath)))
+                edges.extend(self.in_edges_iter(self.predecessors(srcpath)))
 
             elif is_subvar_node(self, srcpath):
                 self.remove_node(srcpath)
@@ -408,6 +385,16 @@ class DependencyGraph(DiGraph):
                    if u.split('.', 1)[0] in compset and 
                       v.split('.', 1)[0] in compset]
 
+    def connections_to(self, path, direction=None):
+        if is_comp_or_pseudo_node(self, path):
+            conns = []
+            for vname in itertools.chain(self.list_inputs(path, connected=True),
+                                         self.list_outputs(path, connected=True)):
+                conns.extend(self.connections_to(vname, direction))
+            return conns
+        else:
+            return self._var_connections(path, direction)
+
     def list_connections(self, show_passthrough=True, show_external=False):
         conns = []
         for src, dest in self.find_edges(is_connection):
@@ -421,8 +408,7 @@ class DependencyGraph(DiGraph):
                 conns.append((src, dest))
         return conns
 
-    def get_sources(self, name):
-        return [u for u,v in self.in_edges((name,))]
+    get_sources = DiGraph.predecessors
 
     def get_source(self, name):
         preds = self.pred.get(name)
@@ -433,19 +419,43 @@ class DependencyGraph(DiGraph):
                 raise RuntimeError("'%s' has multiple sources" % name)
         return None
 
+    def _all_vars(self, node, direction=None):
+        """Return a list of nodes containing all nodes that are one
+        or two connections out from the starting node that are prefixed
+        by the starting node.  This captures all basevar and subvar 
+        nodes associated with the starting node.
+        """
+        bunch = []
+        if direction != 'in':
+            succ = self.successors(node)
+            bunch.extend(succ)
+            for s in succ:
+                bunch.extend(self.successors(s))
+        if direction != 'out':
+            pred = self.predecessors(node)
+            bunch.extend(pred)
+            for p in pred:
+                bunch.extend(self.predecessors(p))
+        ndot = node+'.'
+        return [n for n in bunch if n.startswith(ndot)]
+
     def find_prefixed_nodes(self, nodes, data=False):
         """Returns a list of nodes including the given nodes and
         any node that is prefixed with the name of any of those
         nodes. This is useful for retrieving all variable and
         subvar nodes associated with a component node.
         """
-        nodeset = set(nodes)
+
+        full = []
+        for node in nodes:
+            full.extend(self._all_vars(node))
+            full.append(node)
+
         if data:
-            return [(n,dat) for n, dat in self.nodes_iter(data=True) 
-                        if n.split('.', 1)[0] in nodeset]
+            sn = self.node
+            return [(n, sn[n]) for n in full]
         else:
-            return [n for n in self.nodes_iter() 
-                        if n.split('.', 1)[0] in nodeset]
+            return full
 
     def full_subgraph(self, nodes):
         """Returns the subgraph specified by the given nodes and
@@ -460,7 +470,7 @@ class DependencyGraph(DiGraph):
         if self._component_graph is not None:
             return self._component_graph
 
-        compset = set(self.find_nodes_iter(is_comp_or_pseudo_node))
+        compset = set(self.find_nodes(is_comp_or_pseudo_node))
         g = super(DependencyGraph, self).subgraph(compset)
         for src, dest in self.list_connections():
             destcomp = dest.split('.', 1)[0]
@@ -479,7 +489,7 @@ class DependencyGraph(DiGraph):
 
     def get_connected_inputs(self):
         ins = []
-        for node in self.find_nodes_iter(is_external_node):
+        for node in self.find_nodes(is_external_node):
             succs = self.succ.get(node)
             if succs:
                 ins.extend(succs.keys())
@@ -487,7 +497,7 @@ class DependencyGraph(DiGraph):
 
     def get_connected_outputs(self):
         outs = []
-        for node in self.find_nodes_iter(is_external_node):
+        for node in self.find_nodes(is_external_node):
             preds = self.pred.get(node)
             if preds:
                 outs.extend(preds.keys())
@@ -521,19 +531,30 @@ class DependencyGraph(DiGraph):
         
         return fwdset.intersection(backset)
 
+
     def _var_connections(self, path, direction=None):
         """Returns a list of tuples of the form (srcpath, destpath) for all
-        connections to the specified variable.  If direction is None, both
+        variable connections to the specified variable.  If direction is None, both
         ins and outs are included. Other allowed values for direction are
         'in' and 'out'.
         """
         conns = []
-            
+
         if direction != 'in':  # get 'out' connections
-            conns.extend(self.edges(path))
+            for u,v in self.edges_iter(path):
+                if v.startswith(u):  # a subvar of u
+                    conns.extend([(uu,vv) for uu,vv in self.edges_iter(v) 
+                        if not is_comp_node(self, vv)])
+                elif not is_comp_node(self, v):
+                    conns.append((u, v))
 
         if direction != 'out':  # get 'in' connections
-            conns.extend(self.in_edges(path))
+            for u,v in self.in_edges_iter(path):
+                if u.startswith(v):  # a subvar of v
+                    conns.extend([(uu,vv) for uu,vv in self.in_edges_iter(u) 
+                        if not is_comp_node(self, uu)])
+                elif not is_comp_node(self, u):
+                    conns.append((u, v))
 
         return conns
 
@@ -603,6 +624,9 @@ class DependencyGraph(DiGraph):
         return outset
 
     def list_inputs(self, cname, connected=False):
+        """Return a list of names of input nodes to a component.
+        If connected is True, return only connected inputs.
+        """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
         if connected:
@@ -612,6 +636,9 @@ class DependencyGraph(DiGraph):
             return self.pred[cname].keys()
 
     def list_outputs(self, cname, connected=False):
+        """Return a list of names of output nodes for a component.
+        If connected is True, return only connected outputs.
+        """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
         if connected:
@@ -621,19 +648,20 @@ class DependencyGraph(DiGraph):
             return self.succ[cname].keys()
 
     def list_autopassthroughs(self):
-        return []
+        """Returns a list of autopassthrough connections as (src, dest)
+        tuples.
+        """
+        conns = []
+        for n in self.find_nodes(is_external_node):
+            for p in self.predecessors_iter(n):
+                if self.has_edge(p, n) and '.' in p:
+                    conns.append((p, n))
+            for s in self.successors_iter(n):
+                if self.has_edge(n, s) and '.' in s:
+                    conns.append((n, s))
 
-    def var_edges(self, name=None):
-        pass
+        return conns
 
-    def var_in_edges(self, name=None):
-        pass
-
-    def connections_to(self, path):
-        pass
-
-    def dump(self, stream=sys.stdout):
-        pass
 
 
 if __name__ == '__main__':
