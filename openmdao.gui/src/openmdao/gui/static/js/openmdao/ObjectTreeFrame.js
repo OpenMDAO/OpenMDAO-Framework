@@ -42,10 +42,12 @@ openmdao.ObjectTreeFrame = function(id, project, select_fn, dblclick_fn, workflo
             tree.destructor();
         }
         if (selector.val() === 'Components') {
-            tree = new openmdao.ComponentTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
+            tree = new openmdao.ComponentTreePane(treeElem,
+                project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
         }
         else if (selector.val() === 'Workflow') {
-            tree = new openmdao.WorkflowTreePane(treeElem, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
+            tree = new openmdao.WorkflowTreePane(treeElem,
+                project, select_fn, dblclick_fn, workflow_fn, dataflow_fn);
         }
         else {
             debug.error('ObjectTreeFrame: Invalid object tree type selected');
