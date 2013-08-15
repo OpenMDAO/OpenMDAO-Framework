@@ -123,7 +123,7 @@ class FileHandler(ReqHandler):
             self.set_header('Content-Disposition',
                             'attachment; filename="' + filename + '"')
             self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
-        self.write(str(cserver.get_file(filename)))
+        self.write(cserver.get_file(filename))
 
     @web.authenticated
     def put(self, filename):
@@ -216,6 +216,17 @@ class GeometryHandler(ReqHandler):
         if path.startswith('file/'):
             path = path[4:]  # leave the '/' at the beginning of filename
         self.render('workspace/wvclient.html', geom_name=path)
+
+
+class ImagesHandler(ReqHandler):
+    ''' image viewer utility
+
+        GET:    render the image viewer
+    '''
+
+    @web.authenticated
+    def get(self):
+        self.render('workspace/imageviewer.html')
 
 
 class ObjectHandler(ReqHandler):
@@ -628,5 +639,6 @@ handlers = [
     web.url(r'/workspace/tools/addons/?',       AddOnsHandler),
     web.url(r'/workspace/tools/editor/?',       EditorHandler),
     web.url(r'/workspace/tools/geometry',       GeometryHandler),
+    web.url(r'/workspace/tools/images',         ImagesHandler),
     web.url(r'/workspace/tools/upload/?',       UploadHandler),
 ]

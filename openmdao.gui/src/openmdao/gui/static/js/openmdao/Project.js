@@ -725,6 +725,12 @@ openmdao.Project=function(listeners_ready) {
         }
     };
 
+    /** view images associated with this project */
+    this.viewImages = function(pathname) {
+        w = openmdao.Util.popupWindow('tools/images', 'Images');
+        _self.addWindow(w);
+    };
+
     /** For functional testing: Notify when `nSockets` are open. */
     this.webSocketsReady = function(nSockets) {
         function doPoll() {
