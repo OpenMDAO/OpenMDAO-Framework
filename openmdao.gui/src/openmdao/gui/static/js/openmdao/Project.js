@@ -727,7 +727,7 @@ openmdao.Project=function(listeners_ready) {
 
     /** view images associated with this project */
     this.viewImages = function(pathname) {
-        w = openmdao.Util.popupWindow('tools/images', 'Images');
+        w = openmdao.Util.popupWindow('tools/images?path='+pathname, 'Images');
         _self.addWindow(w);
     };
 

@@ -46,19 +46,27 @@
 
             openmdao.project.getFiles()
                 .done(function(files) {
-                    var data = [];
+                    var data = [],
+                        index = 0,
+                        show_index = 0;
                     for (var file in files) {
                         if (/.png$/.test(file) || /.jpg$/.test(file) || /.gif$/.test(file)) {
                             data.push({
                                 title: file,
                                 image: '/workspace/file'+file
                             });
+                            if (file === "{{ filename }}") {
+                                show_index = index;
+                            }
+                            index++;
                         }
                     }
                     jQuery('#images').galleria({
                         dataSource: data,
                         width: jQuery(window).width(),
-                        height: jQuery(window).height()
+                        height: jQuery(window).height(),
+                        responsive: true,   // TODO: need dynamic CSS
+                        show: show_index
                     });
                 })
                 .fail(function(jqXHR, textStatus, errorThrown) {

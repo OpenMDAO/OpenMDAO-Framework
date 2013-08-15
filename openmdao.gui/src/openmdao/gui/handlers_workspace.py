@@ -226,7 +226,8 @@ class ImagesHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        self.render('workspace/imageviewer.html')
+        path = self.get_argument('path')
+        self.render('workspace/imageviewer.html', filename=path)
 
 
 class ObjectHandler(ReqHandler):
