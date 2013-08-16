@@ -216,7 +216,31 @@ def applyJ(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_deriv'):
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                result[key] = value.reshape(shape)
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                arg[key] = value.reshape(shape)
+                
+        print arg, result
         obj.apply_deriv(arg, result)
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                result[key] = value.flatten()
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                arg[key] = value.flatten()
+        
+        print 'end', arg, result
         return
 
     # Optional specification of the Jacobian
