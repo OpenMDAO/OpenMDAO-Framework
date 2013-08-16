@@ -96,7 +96,7 @@ openmdao.Util = {
      * options: window options
      */
     htmlWindow: function(html, title, options) {
-        var win =  openmdao.Util.popupWindow('',title,options);
+        var win = openmdao.Util.popupWindow('', title, options);
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -111,7 +111,7 @@ openmdao.Util = {
      */
     scriptWindow: function (title, script, options) {
         var url = "/workspace/base?head_script='"+script+"'",
-            win = openmdao.Util.popupWindow(url,title,options);
+            win = openmdao.Util.popupWindow(url, title, options);
     },
 
     /**
@@ -120,16 +120,16 @@ openmdao.Util = {
     escapeHTML: function(text) {
         var i = 0,
             result = "";
-        for(i = 0; i < text.length; i++){
-            if(text.charAt(i) === "&"
+        for (i = 0; i < text.length; i++) {
+            if (text.charAt(i) === "&"
                   && text.length-i-1 >= 4
-                  && text.substr(i, 4) !== "&amp;"){
+                  && text.substr(i, 4) !== "&amp;") {
                 result = result + "&amp;";
-            } else if(text.charAt(i) === "<"){
+            } else if(text.charAt(i) === "<") {
                 result = result + "&lt;";
-            } else if(text.charAt(i) === ">"){
+            } else if(text.charAt(i) === ">") {
                 result = result + "&gt;";
-            } else if(text.charAt(i) === " "){
+            } else if(text.charAt(i) === " ") {
                 result = result + "&nbsp;";
             } else {
                 result = result + text.charAt(i);
@@ -485,7 +485,7 @@ openmdao.Util = {
 
     /** get the path from the pathname */
     getPath: function(pathname) {
-        path = '';
+        var path = '';
         if (pathname) {
             var lastdot = pathname.lastIndexOf('.');
             if (lastdot > 0) {
@@ -511,7 +511,7 @@ openmdao.Util = {
             highest_elm = null,
             highest_idx = 0,
             i = 0;
-        for (i = 0; i < elems.length; i++)  {
+        for (i = 0; i < elems.length; i++) {
             var elem = elems[i][0];
             var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
             if ((zindex > highest_idx) && (zindex !== 'auto')) {
@@ -531,7 +531,13 @@ openmdao.Util = {
                       + ' -ms-transform: rotate('+x+'deg); -ms-transform-origin: 50% 50%;'
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
-    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);} return;},
+    },
+
+    $doabarrelroll: function() {
+        for (i=0; i<=360; i++) {
+            setTimeout("openmdao.Util.rotatePage("+i+")", i*40);
+        }
+    },
 
     /*
      * Allow a child object to inherit from a parent object.
@@ -539,9 +545,89 @@ openmdao.Util = {
      * the child's constructor and before extending it's
      * prototype.
      */
-    inherit : function(childObject, parentObject){
+    inherit: function(childObject, parentObject) {
         childObject.prototype = new parentObject();
         childObject.prototype.constructor = childObject;
         childObject.prototype.superClass = parentObject.prototype;
-    }
+    },
+
+    /*
+     * Compare alphanumeric strings 's1' and 's2', case insensitive,
+     * uppercase after lowercase for same letter.
+     * Numeric portion of compare is limited to integers.
+     * If either 's1' or 's2' are undefined, returns zero.
+     * (this is needed for correct vartree sorting)
+     */
+    alphanumeric_compare: function(s1, s2) {
+        if ((s1 === undefined) || (s2 === undefined)) {
+            return 0;
+        }
+        
+        var l1 = s1.length,
+            l2 = s2.length,
+            i = 0;
+
+        while (i < l2) {
+            if (i >= l1) {
+                return -1;
+            }
+
+            var c1 = s1.charAt(i),
+                c2 = s2.charAt(i);
+
+            if (c1 === c2) {
+                ++i;
+            }
+
+            // Compare integer fields.
+            else if (('0' <= c1 && c1 <= '9') &&
+                     ('0' <= c2 && c2 <= '9')) {
+
+                // Accumulate value.
+                var j = i + 1;
+                while (j < l1) {
+                    c1 = s1.charAt(j)
+                    if ('0' <= c1 && c1 <= '9') {
+                        ++j;
+                    } else {
+                        break;
+                    }
+                }
+                var v1 = parseInt(s1.substring(i, j));
+
+                // Accumulate value.
+                j = i + 1;
+                while (j < l2) {
+                    c2 = s2.charAt(j)
+                    if ('0' <= c2 && c2 <= '9') {
+                        ++j;
+                    } else {
+                        break;
+                    }
+                }
+                var v2 = parseInt(s2.substring(i, j));
+
+                // Compare values.
+                if (v1 != v2) {
+                    return v1 - v2;
+                }
+                i = j;
+            }
+
+            else {
+                var lc1 = c1.toLowerCase(),
+                    lc2 = c2.toLowerCase();
+                if (lc1 === lc2) {
+                    // Uppercase is numerically smaller.
+                    return c1 < c2 ? 1 : -1;
+                }
+                else {
+                    return lc1 < lc2 ? -1 : 1;
+                }
+            }
+        }
+
+        return l1 - l2;
+    },
+
 };
