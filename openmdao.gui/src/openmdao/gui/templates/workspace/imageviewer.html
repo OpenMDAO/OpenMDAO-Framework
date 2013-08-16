@@ -63,9 +63,9 @@
                     }
                     jQuery('#images').galleria({
                         dataSource: data,
-                        width: jQuery(window).width(),
-                        height: jQuery(window).height(),
-                        responsive: true,   // TODO: need dynamic CSS
+                        width: '100%',
+                        height: '100%',
+                        responsive: true,
                         show: show_index
                     });
                 })
@@ -76,7 +76,7 @@
         });
     </script>
 
-    <div id="images">
+    <div id="images" style="width:100%;height:100%">
     </div>
 
 </body>
