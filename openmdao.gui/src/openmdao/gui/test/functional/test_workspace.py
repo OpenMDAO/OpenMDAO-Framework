@@ -1071,5 +1071,56 @@ def _test_remove_files(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_sorting(browser):
+    # Check that inputs and outputs are sorted alphanumerically.
+    project_dict, workspace_page = startup(browser)
+
+    path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                           'files/sorting_test.py')
+    workspace_page.add_file(path)
+
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'sorting_test.SortingComp', 'comp')
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    editor = comp.editor_page()
+
+    # Check order of inputs.
+    inputs = editor.get_inputs()
+    expected = [
+        ['', 'stress_i1', '0', '', ''],
+        ['', 'stress_i2', '0', '', ''],
+        ['', 'stress_i10', '0', '', ''],
+        ['', 'directory',  '',  '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
+    ]
+
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    # Check order of outputs.
+    inputs = editor.get_outputs()
+    expected = [
+        ['', 'stress_o1', '0', '', ''],
+        ['', 'stress_o2', '0', '', ''],
+        ['', 'stress_o10', '0', '', ''],
+        ['', 'derivative_exec_count', '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count', '0', '',
+         'Number of times this Component has been executed.'],
+        ['', 'itername', '', '', 'Iteration coordinates.'],
+    ]
+
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
