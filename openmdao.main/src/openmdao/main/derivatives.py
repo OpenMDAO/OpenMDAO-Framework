@@ -229,7 +229,6 @@ def applyJ(obj, arg, result):
                 shape = var.shape
                 arg[key] = value.reshape(shape)
                 
-        print arg, result
         obj.apply_deriv(arg, result)
         
         for key, value in result.iteritems():
@@ -240,7 +239,6 @@ def applyJ(obj, arg, result):
             if len(value) > 1:
                 arg[key] = value.flatten()
         
-        print 'end', arg, result
         return
 
     # Optional specification of the Jacobian
