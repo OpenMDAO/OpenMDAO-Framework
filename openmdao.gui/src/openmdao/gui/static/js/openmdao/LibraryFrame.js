@@ -39,9 +39,9 @@ openmdao.LibraryFrame = function(id, project) {
     function updateLibrary(packages) {
         // build the new html
         var html = '<div class="ui-widget" style="clear:both">'
-                 +   '<label for="objtt-select" id="objtt-search">Search: </label>'
+                 +   '<label for="objtt-filter" id="objtt-search">Search: </label>'
                  +   '<table id="objtt-group"><tr>'
-                 +     '<td><input id="objtt-select"></td>'
+                 +     '<td><input id="objtt-filter"></td>'
                  +     '<td><button id="objtt-clear">X</button></td>'
                  +   '</tr></table>'
                  + '</div>';
@@ -84,7 +84,7 @@ openmdao.LibraryFrame = function(id, project) {
                     "Solver",
                     "Surrogate",
                 ];
-        var input_obj = self.elm.find('#objtt-select');
+        var input_obj = self.elm.find('#objtt-filter');
 
         input_obj.autocomplete({
            source: function(term, response_cb) {
@@ -124,7 +124,7 @@ openmdao.LibraryFrame = function(id, project) {
 
         var clrButton = self.elm.find('#objtt-clear');
         clrButton.click(function() {
-            inputObj = self.elm.find('#objtt-select');
+            inputObj = self.elm.find('#objtt-filter');
             inputObj.val('');
             if (!self.searchListOpen) {
                 dtable.fnFilter('');

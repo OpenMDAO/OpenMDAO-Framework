@@ -78,8 +78,7 @@ jQuery(function() {
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
         function comp_fn(path) { new openmdao.ObjectFrame(project,path); }
 
-        //new openmdao.ComponentTreeFrame("otree_pane", project, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.WorkflowTreeFrame("wtree_pane", project, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.ObjectTreeFrame("otree_pane", project, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", project);
         new openmdao.LibraryFrame("library_pane",  project);
 
