@@ -71,7 +71,7 @@ class HasObjectives(object):
 
         pseudo = OutputPseudoComponent(scope, expreval)
         scope.add(pseudo.name, pseudo)
-        pseudo.make_connections(self._parent.get_depgraph())
+        #pseudo.make_connections(self._parent.workflow_subgraph())
       
         self._objectives[name] = expreval
 
@@ -87,7 +87,7 @@ class HasObjectives(object):
         expr = _remove_spaces(expr)
         obj = self._objectives.get(expr)
         if obj:
-            self.get_depgraph().disconnect(obj.pcomp_name)
+            self._parent.workflow_subgraph().disconnect(obj.pcomp_name)
             scope = self._get_scope()
             if hasattr(scope, obj.pcomp_name):
                 scope.remove(obj.pcomp_name)
@@ -158,7 +158,8 @@ class HasObjectives(object):
         """Returns a list of pseudocompont names associcated with our
         parameters.
         """
-        return [obj.pcomp_name for obj in self._objectives.values()]
+        return [obj.pcomp_name for obj in self._objectives.values() 
+                      if obj.pcomp_name]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)

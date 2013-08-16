@@ -78,14 +78,14 @@ class Dataflow(SequentialWorkflow):
         
         to_add = []
         #scope = self.scope
-        graph = self._parent.get_depgraph() #scope._depgraph.copy_graph()
+        graph = self._parent.workflow_subgraph() #scope._depgraph.copy_graph()
         
         # # add edges for parameters, constraints, and objectives
         # for pcomp_name in self._parent.list_pseudocomps():
         #     pcomp = getattr(scope, pcomp_name)
         #     graph.add_edges_from(pcomp.list_comp_connections())
 
-        collapsed_graph = nx.DiGraph(graph)
+        #collapsed_graph = nx.DiGraph(graph)
 
         # find all of the incoming and outgoing edges to/from all of the
         # components in each driver's iteration set so we can add edges to/from
@@ -94,6 +94,8 @@ class Dataflow(SequentialWorkflow):
         cnames = set([c.name for c in comps])
         removes = set()
         itersets = {}
+        collapsed_graph = graph.component_graph()
+
         for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):

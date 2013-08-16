@@ -63,7 +63,7 @@ class Constraint(object):
 
         self.pcomp_name = None
            
-    def activate(self, graph):
+    def activate(self, graph=None):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -72,7 +72,8 @@ class Constraint(object):
                                            self._combined_expr())
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections(graph)
+        if graph is not None:
+            getattr(self.lhs.scope, pseudo.name).make_connections(graph)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -245,7 +246,8 @@ class _HasConstraintsBase(object):
         """Returns a list of pseudocompont names associcated with our
         parameters.
         """
-        return [c.pcomp_name for c in self._constraints.values()]
+        return [c.pcomp_name for c in self._constraints.values() 
+                    if c.pcomp_name]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)

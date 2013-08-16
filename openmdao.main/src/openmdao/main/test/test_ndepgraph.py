@@ -83,18 +83,6 @@ class DepGraphTestCase(unittest.TestCase):
                                                self.boundary_conns +
                                                self.ext_conns)
 
-    def test_find_nodes(self):
-        self.assertEqual(set(self.dep.find_nodes(is_comp_node)),
-                         set(self.comps))
-        varnodes = set()
-        for node in ['A','B','C','D']:
-            for v in ['a','b','c','d']:
-                varnodes.add(node+'.'+v)
-        varnodes.update(['a','b','c','d'])
-
-        self.assertEqual(set(self.dep.find_nodes(is_var_node)),
-                         varnodes)
-
     def test_add(self):
         for name in self.comps:
             self.assertTrue(name in self.dep)
@@ -119,14 +107,15 @@ class DepGraphTestCase(unittest.TestCase):
                           if out in self.dep])
         self.assertEqual(found, [])
         
-    def test_get_sources(self):
-        self.assertEqual(self.dep.get_sources('B.a'), ['B.a.x.y'])
-        self.assertEqual(self.dep.get_sources('A.a'), ['a'])
-        self.assertEqual(self.dep.get_sources('a'), ['parent.C1.d'])
-        self.assertEqual(self.dep.get_sources('c'), ['C.c'])
-        self.assertEqual(self.dep.get_sources('A.c'), ['A'])
-        self.assertEqual(self.dep.get_sources('A.c[2]'), ['A.c'])
-        self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
+    def test_get_source(self):
+        self.assertEqual(self.dep.get_source('B.a'), 'B.a.x.y')
+        self.assertEqual(self.dep.get_source('A.a'), 'a')
+        self.assertEqual(self.dep.get_source('a'), 'parent.C1.d')
+        self.assertEqual(self.dep.get_source('c'), 'C.c')
+        self.assertEqual(self.dep.get_source('A.c'), None)
+        self.assertEqual(self.dep.get_source('A.c[2]'), 'A.c')
+        self.assertEqual(self.dep.get_source('B.b[4]'), 'A.d.z')
+        self.assertEqual(self.dep.get_source('B.d'), None) 
         
     def test_base_var(self):
         self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
@@ -161,12 +150,17 @@ class DepGraphTestCase(unittest.TestCase):
                               ('A.c','A.c[2]'),('A.c[2]','B.a.x.y'),
                               ('B.a.x.y','B.a'),('A.d','A.d.z'),('A.d.z','B.b[4]'),
                               ('B.b[4]','B.b')]))
+        
+    def test_multi_subvar_inputs(self):
+        self.dep.connect('D.c', 'B.b[5]')
     
     def test_get_connected_inputs(self):
-        self.assertEqual(set(self.dep.get_connected_inputs()), set(['a','D.b']))
+        self.assertEqual(set(self.dep.get_connected_inputs()), 
+                         set(['a','D.b']))
     
     def test_get_connected_outputs(self):
-        self.assertEqual(set(self.dep.get_connected_outputs()), set(['c', 'D.d']))
+        self.assertEqual(set(self.dep.get_connected_outputs()), 
+                         set(['c', 'D.d']))
     
     def test_already_connected(self):
         # internal connection

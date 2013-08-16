@@ -243,10 +243,10 @@ class VariableTree(Container):
                 if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
-                                            connections]).replace('@xin.', '')
+                                            connections])#.replace('@xin.', '')
                 else:
                     attr['connected'] = str([dst for src, dst in
-                                            connections]).replace('@xout.', '')
+                                            connections])#.replace('@xout.', '')
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs

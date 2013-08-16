@@ -24,6 +24,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.ndepgraph import find_related_pseudos
 
 
 @add_delegate(HasEvents)
@@ -53,6 +54,7 @@ class Driver(Component):
 
         # a subgraph of the Assembly's dependency graph
         self._graph = None
+        self._required_compnames = None
 
         # This flag is triggered by adding or removing any parameters,
         # constraints, or objectives.
@@ -97,39 +99,39 @@ class Driver(Component):
 
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
-        self._update_workflow()
+        #self._update_workflow()
 
         self.workflow.check_config()
 
-    def _update_workflow(self):
-        """Updates workflow contents based on driver dependencies."""
-        # if workflow is not defined, or if it contains only Drivers, try to
-        # use parameters, objectives and/or constraint expressions to
-        # determine the necessary workflow members
-        try:
-            iterset = set([c.name for c in self.iteration_set()])
-            alldrivers = all([isinstance(c, Driver)
-                                for c in self.workflow.get_components()])
-            if len(self.workflow) == 0:
-                pass
-            elif alldrivers is True:
-                reqcomps = self._get_required_compnames()
-                self.workflow.add([name for name in reqcomps
-                                        if name not in iterset])
-                # calling get_components() here just makes sure that all of the
-                # components can be resolved
-                self.workflow.get_components()
-        except Exception as err:
-            self.raise_exception(str(err), type(err))
+    # def _update_workflow(self):
+    #     """Updates workflow contents based on driver dependencies."""
+    #     # if workflow contains only Drivers, try to
+    #     # use parameters, objectives and/or constraint expressions to
+    #     # determine the necessary workflow members
+    #     try:
+    #         iterset = set([c.name for c in self.iteration_set()])
+    #         alldrivers = all([isinstance(c, Driver)
+    #                             for c in self.workflow.get_components()])
+    #         if len(self.workflow) == 0: # otherwise, all([]) returns True
+    #             pass
+    #         elif alldrivers is True:
+    #             reqcomps = self._get_required_compnames()
+    #             self.workflow.add([name for name in reqcomps
+    #                                     if name not in iterset])
+    #             # calling get_components() here just makes sure that all of the
+    #             # components can be resolved
+    #             self.workflow.get_components()
+    #     except Exception as err:
+    #         self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow(s) and
-        recursively in any workflow in any Driver in our workflow(s).
+        """Return a set of all Components in our workflow and
+        recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
-        if len(self.workflow) == 0:
-            for compname in self._get_required_compnames():
-                self.workflow.add(compname)
+        # if len(self.workflow) == 0:
+        #     for compname in self._get_required_compnames():
+        #         self.workflow.add(compname)
         for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
@@ -151,10 +153,33 @@ class Driver(Component):
                 new_list.append((src, dest))
         return new_list
 
+    def _get_required_compnames(self):
+        """Returns a set of names of components that are required by
+        this Driver in order to evaluate parameters, objectives
+        and constraints.  This list will include any intermediate
+        components in the data flow between components referenced by
+        parameters and those referenced by objectives and/or constraints.
+        """
+        if self._required_compnames is None:
+            conns = super(Driver, self).get_expr_depends()
+            getcomps = set([u for u,v in conns if u != self.name])
+            setcomps = set([v for u,v in conns if v != self.name])
+
+            full = set(setcomps)
+            
+            compgraph = self.parent._depgraph.component_graph()
+
+            for end in getcomps:
+                for start in setcomps:
+                    full.update(compgraph.find_all_connecting(start, end))
+            self._required_compnames = full
+
+        return self._required_compnames
+
     @rbac(('owner', 'user'))
     def list_pseudocomps(self):
-        """Return a list of pseudocomps resulting from our parameters, 
-        objectives, and constraints.
+        """Return a list of names of pseudocomps resulting from 
+        our parameters, objectives, and constraints.
         """
         pcomps = []
         if hasattr(self, '_delegates_'):
@@ -163,34 +188,6 @@ class Driver(Component):
                 if hasattr(delegate, 'list_pseudocomps'):
                     pcomps.extend(delegate.list_pseudocomps())
         return pcomps
-
-    def _get_required_compnames(self):
-        """Returns a set of names of components that are required by
-        this Driver in order to evaluate parameters, objectives
-        and constraints.  This list will include any intermediate
-        components in the data flow between components referenced by
-        parameters and those referenced by objectives and/or constraints.
-        """
-        setcomps = set()
-        getcomps = set()
-
-        if hasattr(self, '_delegates_'):
-            for name, dclass in self._delegates_.items():
-                inst = getattr(self, name)
-                if isinstance(inst, HasParameters):
-                    setcomps = inst.get_referenced_compnames()
-                elif isinstance(inst, (HasConstraints, HasEqConstraints,
-                                       HasIneqConstraints, HasObjective, HasObjectives)):
-                    getcomps.update(inst.get_referenced_compnames())
-
-        full = set(setcomps)
-
-        if self.parent:
-            graph = self.parent._depgraph.component_graph()
-            for end in getcomps:
-                for start in setcomps:
-                    full.update(graph.find_all_connecting(start, end))
-        return full
 
     def get_references(self, name):
         """Return parameter, constraint, and objective references to component
@@ -375,27 +372,31 @@ class Driver(Component):
         """
         super(Driver, self).config_changed(update_parent)
         self._graph = None  # force later rebuild of dependency graph
+        self._required_compnames = None
         if self.workflow is not None:
             self.workflow.config_changed()
 
-    def _create_depgraph(self):
-        """Create the dependency graph for this workflow based on
-        the scoping Assembly's graph and the parent Driver's
-        objectives, constraints, and parameters.
+    def workflow_subgraph(self):
+        """Return the workflow dependency subgraph for this Driver. 
+        This graph is a combination of the parent Assembly's graph and this
+        Driver's dependencies due to its objectives, constraints, 
+        and parameters.
         """
-        parent_graph = self.get_expr_scope()._depgraph
-        g = parent_graph.full_subgraph(self.workflow.get_names())
-        for pname in self.list_pseudocomps():
-            pcomp = getattr(self.parent, pname)
-            g.add_component(pname, pcomp.list_inputs(), 
-                            pcomp.list_outputs())
-            pcomp.make_connections(g)
-
-        return g
-
-    def get_depgraph(self):
         if self._graph is None:
-            self._graph = self._create_depgraph()
+            parent_graph = self.get_expr_scope()._depgraph
+            compgraph = parent_graph.component_graph()
+            compnames = set(self.workflow._explicit_names)
+            compnames.update(self._get_required_compnames())
+            compnames.update(find_related_pseudos(compgraph, compnames))
+            g = parent_graph.full_subgraph(compnames)
+            self._graph = g
+            
+            for pname in self.list_pseudocomps():
+                pcomp = getattr(self.parent, pname)
+                g.add_component(pname, pcomp.list_inputs(), 
+                                pcomp.list_outputs(), pseudo=True)
+                pcomp.make_connections(g)
+                
         return self._graph
 
     def record_case(self):

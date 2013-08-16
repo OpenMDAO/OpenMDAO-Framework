@@ -29,7 +29,6 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
-from openmdao.main.depgraph import cvt_fake
 from openmdao.util.nameutil import partition_names_by_comp
 
 _iodict = {'out': 'output', 'in': 'input'}
@@ -144,8 +143,16 @@ class Assembly(Component):
         Returns the added object.
         """
         obj = super(Assembly, self).add(name, obj)
-        if is_instance(obj, Component):
-            self._depgraph.add_component(obj.name, obj.list_inputs(), obj.list_outputs())
+        if has_interface(obj, IComponent):
+            kwargs = {}
+            if has_interface(obj, IDriver):
+                kwargs['driver'] = True
+            if isinstance(obj, PseudoComponent):
+                kwargs['pseudo'] = True
+            self._depgraph.add_component(obj.name, 
+                                         obj.list_inputs(), 
+                                         obj.list_outputs(),
+                                         **kwargs)
         return obj
 
     def find_referring_connections(self, name):
@@ -463,12 +470,12 @@ class Assembly(Component):
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and \
-               hasattr(comp, 'list_param_targets'):
-                if dest in comp.list_param_targets():
-                    msg = "Can't connect '%s' to '%s' " % (src, dest)
-                    msg += "because the target is a Parameter in " + \
-                           "driver '%s'." % comp.name
-                    self.raise_exception(msg, RuntimeError)
+                hasattr(comp, 'list_param_targets'):
+                    if dest in comp.list_param_targets():
+                        msg = "Can't connect '%s' to '%s' " % (src, dest)
+                        msg += "because the target is a Parameter in " + \
+                               "driver '%s'." % comp.name
+                        self.raise_exception(msg, RuntimeError)
 
         if needpseudocomp:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr)
@@ -495,7 +502,7 @@ class Assembly(Component):
 
                 outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
                 if (outs is None) or outs:
-                    bouts = self.child_invalidated(destcompname, outs, force=True)
+                    self.child_invalidated(destcompname, outs, force=True)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -544,7 +551,7 @@ class Assembly(Component):
             
         # Detect and save any loops in the graph.
         self._graph_loops = None
-            
+
     def _get_graph_loops(self):
         if self._graph_loops is None and hasattr(self, '_depgraph'):
             self._graph_loops = [s for s in nx.strongly_connected_components(self._depgraph) if len(s)>1]
@@ -597,9 +604,9 @@ class Assembly(Component):
                                                      visible_only=visible_only)
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, exprs):
+    def update_inputs(self, compname, inputs):
         """Transfer input data to input expressions on the specified component.
-        The exprs iterator is assumed to contain expression strings that reference
+        The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
@@ -607,23 +614,23 @@ class Assembly(Component):
         conns = []
 
         if compname is None:
-            for e in exprs:
-                conns.extend(self._depgraph._var_connections(e, 'in'))
+            for inp in inputs:
+                conns.extend(self._depgraph._var_connections(inp, 'in'))
         else:
-            if exprs:
-                for e in exprs:
-                    conns.extend(self._depgraph._var_connections('.'.join([compname, e]), 'in'))
-            else:
+            if inputs is None:
                 conns = self._depgraph._comp_connections(compname, 'in')
+            else:
+                for inp in inputs:
+                    conns.extend(self._depgraph._var_connections('.'.join([compname, inp]), 'in'))
 
-        conns = [(cvt_fake(u), cvt_fake(v)) for u,v in conns]
-        for i,tup in enumerate(conns):
-            # auto-passthrough shows up as ('<varname>', '<varname>')
-            if tup[0] == tup[1]:
-                # find the external var that the dest is connected to (it's at @xin.parent.<extvarname>)
-                xsrc = self._depgraph._var_connections('.'.join(['@bin', tup[1]]), 'in')[0][0]
-                xsrc = xsrc[5:]
-                conns[i] = (xsrc, tup[1])
+        ##conns = [(cvt_fake(u), cvt_fake(v)) for u,v in conns]
+        # for i,tup in enumerate(conns):
+        #     # auto-passthrough shows up as ('<varname>', '<varname>')
+        #     if tup[0] == tup[1]:
+        #         # find the external var that the dest is connected to (it's at @xin.parent.<extvarname>)
+        #         xsrc = self._depgraph._var_connections('.'.join(['@bin', tup[1]]), 'in')[0][0]
+        #         xsrc = xsrc[5:]
+        #         conns[i] = (xsrc, tup[1])
 
         srcs = [u for u,v in conns]
         srcvars = [s.split('[',1)[0] for s in srcs]

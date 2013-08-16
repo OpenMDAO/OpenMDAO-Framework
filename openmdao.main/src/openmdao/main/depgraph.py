@@ -79,12 +79,6 @@ def find_unit_pseudos(graph, nodes):
         
     return list(pseudos)
             
-def cvt_fake(name):
-    """removes 'fake' name from a path"""
-    if name[0] == '@':
-        return name[6:] if name[2]=='o' else name[5:]
-    return name
-
 
 #fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']

@@ -136,7 +136,7 @@ class Parameter(object):
         else:
             self.set(self.start, scope)
 
-    def activate(self, scope, workflow=None):
+    def activate(self, scope, graph=None):
         """Make this parameter active by creating the appropriate
         connections in the dependency graph.  This should NOT be called
         on parameters that are part of a ParameterGroup.
@@ -148,7 +148,7 @@ class Parameter(object):
         else:
             pseudo = getattr(scope, self.pcomp_name)
 
-        pseudo.make_connections(self._parent.get_depgraph())
+        pseudo.make_connections(graph)
 
         self.initialize(scope)
 
@@ -414,7 +414,7 @@ class ParameterGroup(object):
                 param.override(low, high, scaler, adder, start,
                                fd_step, name)
 
-    def activate(self, scope, workflow=None):
+    def activate(self, scope, graph=None):
         """Make this parameter active by creating the appropriate pseudocomp
         connections in the dependency graph.  The pseudocomponent is created
         if it doesn't already exist.
@@ -429,7 +429,7 @@ class ParameterGroup(object):
                 pseudo.add_target(param._expreval.text)
                 param.pcomp_name = pseudo.name
 
-        getattr(scope, self.pcomp_name).make_connections(self._parent.get_depgraph())
+        getattr(scope, self.pcomp_name).make_connections(graph)
 
         self.initialize(scope)
 
@@ -534,7 +534,8 @@ class HasParameters(object):
         if isinstance(target, (Parameter, ParameterGroup)): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-            target.deactivate(self._parent.get_depgraph())
+            target.deactivate(self._parent.get_expr_scope(),
+                              self._parent.workflow_subgraph())
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -581,11 +582,11 @@ class HasParameters(object):
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
-        if hasattr(self._parent, 'workflow'):
-            workflow = self._parent.workflow
-        else:
-            workflow = None
-        target.activate(self._get_scope(scope), workflow)
+        #if hasattr(self._parent, 'workflow_subgraph'):
+            #graph = self._parent.workflow_subgraph()
+        #else:
+            #graph = None
+        target.activate(self._get_scope(scope))
 
         self._parent._invalidate()
 
@@ -593,7 +594,8 @@ class HasParameters(object):
         """Removes the parameter with the given name."""
         param = self._parameters.get(name)
         if param:
-            param.deactivate(self._parent.get_depgraph())
+            param.deactivate(self._parent.get_expr_scope(),
+                             self._parent.workflow_subgraph())
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
@@ -735,7 +737,8 @@ class HasParameters(object):
         """Returns a list of pseudocompont names associcated with our
         parameters.
         """
-        return [p.pcomp_name for p in self._parameters.values()]
+        return [p.pcomp_name for p in self._parameters.values()
+                    if p.pcomp_name]
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 

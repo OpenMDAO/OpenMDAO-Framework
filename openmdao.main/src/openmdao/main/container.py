@@ -132,6 +132,13 @@ class _ContainerDepends(object):
         """
         return self._srcs.get(destname)
 
+    def _check_source(self, path, src):
+        source = self.get_source(path)
+        if source is not None and src != source:
+            raise RuntimeError("'%s' is connected to source '%s' and cannot be "
+                "set by source '%s'" %
+                (path, source, src))
+
 
 class _MetaSafe(MetaHasTraits):
     """ Tries to keep users from shooting themselves in the foot. """
@@ -281,10 +288,10 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
-        if '.' not in destpath and hasattr(self, destpath) and destpath not in self._depgraph:
-            self._depgraph.add_boundary_var(destpath, iotype=self.get_metadata(destpath, 'iotype'))
-        if '.' not in srcpath and hasattr(self, srcpath) and srcpath not in self._depgraph:
-            self._depgraph.add_boundary_var(srcpath, iotype=self.get_metadata(srcpath, 'iotype'))
+        # if '.' not in destpath and hasattr(self, destpath) and destpath not in self._depgraph:
+        #     self._depgraph.add_boundary_var(destpath, iotype=self.get_metadata(destpath, 'iotype'))
+        # if '.' not in srcpath and hasattr(self, srcpath) and srcpath not in self._depgraph:
+        #     self._depgraph.add_boundary_var(srcpath, iotype=self.get_metadata(srcpath, 'iotype'))
     
         # check for self connections
         if not destpath.startswith('parent.'):
@@ -1064,12 +1071,10 @@ class Container(SafeHasTraits):
         """Raise an exception if the given source variable is not the one
         that is connected to the destination variable specified by 'path'.
         """
-        source = self._depgraph.get_source(path)
-        if source is not None and src != source:
-            self.raise_exception(
-                "'%s' is connected to source '%s' and cannot be "
-                "set by source '%s'" %
-                (path, source, src), RuntimeError)
+        try:
+            self._depgraph._check_source(path, src)
+        except Exception as err:
+            self.raise_exception(str(err), RuntimeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype

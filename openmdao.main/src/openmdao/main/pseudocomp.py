@@ -7,6 +7,7 @@ from openmdao.main.numpy_fallback import array
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.attrwrapper import UnitsAttrWrapper
+from openmdao.main.interfaces import implements, IComponent
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
@@ -77,7 +78,8 @@ class PseudoComponent(object):
     This fake component can be added to a dependency graph and executed
     along with 'real' components.
     """
-
+    implements(IComponent)
+    
     def __init__(self, parent, srcexpr, destexpr=None, translate=True):
         if destexpr is None:
             destexpr = DummyExpr()
@@ -165,6 +167,9 @@ class PseudoComponent(object):
 
         self._eqn = "%s = %s" % (out, src)
 
+    def check_configuration(self):
+        pass
+
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -189,6 +194,12 @@ class PseudoComponent(object):
                 conns.extend([('.'.join([self.name, 'out0']), dest) 
                                            for dest in self._outdests])
         return conns
+    
+    def list_inputs(self):
+        return self._inputs[:]
+    
+    def list_outputs(self):
+        return ['out0']
 
     def list_comp_connections(self):
         """Return a list of connections between our pseudocomp and
@@ -201,12 +212,13 @@ class PseudoComponent(object):
                                     for dest in self._outdests])
         return conns
 
-    def make_connections(self, graph):
+    def make_connections(self, graph=None):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
-        for src, dest in self.list_connections():
-            graph.connect(src, dest)
+        if graph is not None:
+            for src, dest in self.list_connections():
+                graph.connect(src, dest)
 
     def remove_connections(self, graph):
         """Disconnect all of the inputs and outputs of this comp

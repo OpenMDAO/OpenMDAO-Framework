@@ -96,8 +96,8 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Keep a list of the edges we break, so that a solver
                     # can use them as its independents/dependents.
                     depgraph = self.scope._depgraph
-                    edge_set = depgraph.get_interior_edges([strong[-1], 
-                                                            strong[0]])
+                    edge_set = depgraph.get_interior_connections([strong[-1], 
+                                                                  strong[0]])
                     
                     out_set = set(depgraph.var_edges(strong[-1]))
                     
@@ -111,7 +111,7 @@ class CyclicWorkflow(SequentialWorkflow):
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it. This graph can be cyclic."""
-        return self._parent.get_depgraph()
+        return self._parent.workflow_subgraph()
         
         # # Cached
         # if self._collapsed_graph:

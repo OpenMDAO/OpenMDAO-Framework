@@ -151,20 +151,23 @@ class Component(Container):
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
+        # dependency graph between us and our boundaries (bookkeeps connections
+        # between our variables and external ones).
+        # This replaces self._depgraph from Container.
+        self._depgraph = DependencyGraph()
+
         # register callbacks for all of our 'in' traits
         for name, trait in self.class_traits().items():
             if trait.iotype == 'in':
                 self._set_input_callback(name)
+            if trait.iotype:  # input or output
+                self._depgraph.add_boundary_var(name, 
+                                                iotype=trait.iotype)
 
         # contains validity flag for each io Trait (inputs are valid since
         # they're not connected yet, and outputs are invalid)
         self._valid_dict = dict([(name, t.iotype == 'in')
             for name, t in self.class_traits().items() if t.iotype])
-
-        # dependency graph between us and our boundaries (bookkeeps connections
-        # between our variables and external ones).
-        # This replaces self._depgraph from Container.
-        self._depgraph = DependencyGraph()
 
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -623,7 +626,7 @@ class Component(Container):
         self.config_changed()
         super(Component, self).add(name, obj)
         if is_instance(obj, Container) and not is_instance(obj, Component):
-            self._depgraph.add(name)
+            self._depgraph.add_component(name, inputs=(), outputs=())
         return obj
 
     def remove(self, name):
@@ -669,6 +672,11 @@ class Component(Container):
                 self._valid_dict[name] = trait.iotype == 'in'
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
+        if trait.iotype:
+            if name not in self._depgraph:
+                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                if self.parent and self.name in self.parent._depgraph:
+                    self.parent._depgraph.child_config_changed(self)
 
     def _set_input_callback(self, name, remove=False):
 
@@ -1720,12 +1728,12 @@ class Component(Container):
                     connections = self._depgraph._var_connections(inp)
                     connected.extend([src for src, dst in connections])
             if connected:
-                io_attr['connected'] = str(connected).replace('@xin.', '')
+                io_attr['connected'] = str(connected)#.replace('@xin.', '')
 
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
-                    str([dst for src, dst in connections]).replace('@xout.', '')
+                    str([dst for src, dst in connections])#.replace('@xout.', '')
 
             io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:

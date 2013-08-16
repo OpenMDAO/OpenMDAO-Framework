@@ -14,7 +14,6 @@ from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import is_comp_or_pseudo_node
 
 try:
     from numpy import ndarray, zeros
@@ -31,7 +30,9 @@ class SequentialWorkflow(Workflow):
 
     def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        self._names = []
+        self._explicit_names = [] # names the user adds
+        self._names = None  # names the user adds plus names required 
+                            # for params, objectives, and constraints
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
         # Bookkeeping for calculating the residual.
@@ -53,14 +54,14 @@ class SequentialWorkflow(Workflow):
         return iter(self.get_components(full=True))
 
     def __len__(self):
-        return len(self._names)
+        return 0 if self._names is None else len(self._names)
 
     def __contains__(self, comp):
-        return comp in self._names
+        return False if self._names is None else comp in self._names
 
     def index(self, comp):
         """Return index number for a component in this workflow."""
-        return self._names.index(comp)
+        return -1 if self._names is None else self._names.index(comp)
 
     def __eq__(self, other):
         return type(self) is type(other) and self._names == other._names
@@ -82,13 +83,18 @@ class SequentialWorkflow(Workflow):
         self._collapsed_graph = None
         self._topsort = None
         self._input_outputs = []
+        self._names = None
 
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
         If full is True, include hidden pseudo-components in the list.
         """
+        if self._names is None:
+            self._names = self._explicit_names + \
+                          list(self._parent._get_required_compnames())
+
         if full:
-            return self._parent.get_depgraph().find_nodes(is_comp_or_pseudo_node)
+            return self._parent.workflow_subgraph().all_comps()
             # return self._names + self._parent.list_pseudocomps() + \
             #         find_unit_pseudos(self._scope._depgraph._graph,
             #                           self._names)
@@ -147,9 +153,9 @@ class SequentialWorkflow(Workflow):
                             raise AttributeError(msg)
 
                 if index is None:
-                    self._names.append(node)
+                    self._explicit_names.append(node)
                 else:
-                    self._names.insert(index, node)
+                    self._explicit_names.insert(index, node)
                     index += 1
             else:
                 msg = "Components must be added by name to a workflow."
@@ -164,14 +170,14 @@ class SequentialWorkflow(Workflow):
             msg = "Components must be removed by name from a workflow."
             raise TypeError(msg)
         try:
-            self._names.remove(compname)
-            self.config_changed()
+            self._explicit_names.remove(compname)
         except ValueError:
             pass
+        self.config_changed()
 
     def clear(self):
         """Remove all components from this workflow."""
-        self._names = []
+        self._explicit_names = []
         self.config_changed()
 
     def get_interior_edges(self):
@@ -182,8 +188,8 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
-        graph = self._parent.get_depgraph()
-        edges = graph.get_interior_connections()
+        graph = self._parent.workflow_subgraph()
+        edges = set(graph.get_interior_connections())
         edges = edges.union(self.get_driver_edges())
         edges = edges.union(self._additional_edges)
         edges = edges - self._hidden_edges
@@ -769,8 +775,8 @@ class SequentialWorkflow(Workflow):
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
                                     self, recursed_components=rcomps)
             pseudo.ffd_order = 0
-            graph = self._parent.get_depgraph()
-            self._hidden_edges = graph.get_interior_edges()#self.get_names(full=True))
+            graph = self._parent.workflow_subgraph()
+            self._hidden_edges = graph.get_interior_connections()#self.get_names(full=True))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.
