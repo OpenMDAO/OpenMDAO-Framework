@@ -46,15 +46,15 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         var compName = pathname.replace(".", "-", "g");
 
-        if(!(compName in openmdao.preferences.PropertiesPane)){
+        if (!(compName in openmdao.preferences.PropertiesPane)) {
             openmdao.preferences.PropertiesPane[compName] = {};
         }
 
-        if(!(name.toLowerCase() in openmdao.preferences.PropertiesPane[compName])){
+        if (!(name.toLowerCase() in openmdao.preferences.PropertiesPane[compName])) {
             openmdao.preferences.PropertiesPane[compName][name.toLowerCase()] = {};
         }
 
-        if(!("columns" in openmdao.preferences.PropertiesPane[compName][name.toLowerCase()])){
+        if (!("columns" in openmdao.preferences.PropertiesPane[compName][name.toLowerCase()])) {
             openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns = {
                 info : true,
                 name : true,
@@ -72,51 +72,50 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     SetupTable();
 
     //function to convert array to object
-    function oc(a)
-    {
+    function oc(a) {
         var o = {};
-        for(var i=0;i<a.length;i++)
-        {
-            o[a[i]]='';
+        for (var i=0; i<a.length; i++) {
+            o[a[i]] = '';
         }
         return o;
     }
 
-    function getExcludes(){
-        return ["info", "name", "value", "units", "desc", "indent", "implicit_partial_indices",  "partially_connected_indices", "id", "vt", "parent", "high", "low"];
+    function getExcludes() {
+        return [
+            "info", "name", "value", "units", "desc",
+            "indent", "implicit_partial_indices", "partially_connected_indices",
+            "id", "vt", "parent", "high", "low"
+        ];
     }
 
-    function excludeField(field, excludes){
+    function excludeField(field, excludes) {
         return (field in oc(excludes));
     }
 
-    var valueToString = function(key, value){
+    var valueToString = function(key, value) {
 
-       function numberToString(number){
-           if(typeof(number) === "number"){
-               if(number > 1.0e+21){
+       function numberToString(number) {
+           if (typeof(number) === "number") {
+               if (number > 1.0e+21){
                     return number.toExponential(5);
                }
-
                return number.toFixed(5);
            }
-
            return number;
        }
 
-       function highLowToString(highLow){
-           var high = highLow.high;
-           var low = highLow.low;
-
+       function highLowToString(highLow) {
+           var high = highLow.high,
+               low = highLow.low;
            return numberToString(high) + " / " + numberToString(low);
        }
 
-        function connectedToString(connections){
-            var connected = connections.connected !== undefined ? connections.connected : connections;
-            var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
+       function connectedToString(connections){
+           var connected = connections.connected !== undefined ? connections.connected : connections;
+           var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
             
-            return connected + partially_connected;
-        }
+           return connected + partially_connected;
+       }
 
        var formatters = {
             "high" : numberToString,
@@ -125,11 +124,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             "connected" : connectedToString,
        };
 
-       function hasFormatter(key){
-         return key in formatters;
+       function hasFormatter(key) {
+           return key in formatters;
        }
 
-       function format(key, value){
+       function format(key, value) {
            var formatter = hasFormatter(key) ? formatters[key] : function(value){
                 return value;
            };
@@ -140,9 +139,9 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
        return format(key, value);
     };
 
-    var fieldNameToString = function(fieldName){
+    var fieldNameToString = function(fieldName) {
 
-       function highLowToString(){
+       function highLowToString() {
            return "High/Low";
        }
 
@@ -150,11 +149,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
            "high-low" : highLowToString
        };
 
-       function hasFormatter(key){
+       function hasFormatter(key) {
            return key in formatters;
        }
 
-       function format(key){
+       function format(key) {
            var formatter = hasFormatter(key) ? formatters[key] : function(){
                 return key;
            };
@@ -165,7 +164,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
        return format(fieldName);
     };
 
-    var weightedSort = function(a, b){
+    var weightedSort = function(a, b) {
 
         var weights = {
             "type"      : 4,
@@ -175,32 +174,32 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             "implicit"  : 0
         };
 
-        var getWeight = function(str){
+        var getWeight = function(str) {
             return (str in weights) ? weights[str] : -1;
         };
 
         return getWeight(b) - getWeight(a);
     };
 
-    var ItemFormatter = function(){
+    var ItemFormatter = function() {
 
-        this.cloneItem = function(item){
+        this.cloneItem = function(item) {
             var newItem = {};
-            for(var field in item){
+            for(var field in item) {
                 newItem[field] = item[field];
             }
 
             return newItem;
         };
 
-        this.groupFields = function(fields, groupName, item){
-            var field;
-            var newItem = this.cloneItem(item);
-            var group = {};
+        this.groupFields = function(fields, groupName, item) {
+            var field,
+                newItem = this.cloneItem(item),
+                group = {};
 
-            for(i=0;i<fields.length;i++){
+            for (i=0; i<fields.length; i++) {
                 field = fields[i];
-                if(! (field in item)){
+                if (!(field in item)) {
                     return newItem;
                 }
 
@@ -212,19 +211,19 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             return newItem;
         };
 
-        this.orderFields = function(item, comparator){
+        this.orderFields = function(item, comparator) {
             var orderedFields = [];
-            for(var field in item){
+            for (var field in item) {
                 orderedFields.push(field);
             }
             orderedFields.sort(comparator);
             return orderedFields;
         };
 
-        this.removeFields = function(item, excludes){
+        this.removeFields = function(item, excludes) {
            var newItem = this.cloneItem(item);
-           for (var field in newItem){
-                if( excludeField(field, excludes)){
+           for (var field in newItem) {
+                if( excludeField(field, excludes)) {
                     delete newItem[field];
                 }
            }
@@ -233,16 +232,16 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         };
     };
 
-    function getToolTip(item){
-        var str = "";
-        var fields;
-        var field;
+    function getToolTip(item) {
+        var str = "",
+            fields,
+            field;
 
-        var formattedField = "";
-        var formattedValue = "";
+        var formattedField = "",
+            formattedValue = "";
 
-        var itemFormatter;
-        var newItem;
+        var itemFormatter,
+            newItem;
 
         itemFormatter = new ItemFormatter();
         newItem = itemFormatter.cloneItem(item);
@@ -253,7 +252,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
 
-        for(var i=0; i<fields.length; i++){
+        for (var i=0; i<fields.length; i++) {
             field = fields[i];
 
             formattedField = fieldNameToString(field);
@@ -262,7 +261,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             str = str + "<p>" + formattedField + " : " + formattedValue + "</p>";
         }
 
-        if(str !== ""){
+        if (str !== "") {
             return "<div id='tooltip'>" + str + "</div>";
         }
 
@@ -272,14 +271,14 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     function SetupTable() {
         dataView = new Slick.Data.DataView({ inlineFilters: false });
         props = new Slick.Grid(propsDiv, dataView, columns, options);
-        if(meta){
+        if (meta) {
             var columnpicker = new Slick.Controls.ColumnPicker(columns, props, options);
 
             var visibility = openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns;
             var visibleColumns = [];
 
-            for(var i=0; i<columns.length; i++){
-                if(visibility[columns[i].id]){
+            for (var i=0; i<columns.length; i++) {
+                if (visibility[columns[i].id]) {
                    visibleColumns.push(columns[i]);
                 }
             }
@@ -288,48 +287,30 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
             // Sorting for the first column
             props.onSort.subscribe(function (e, args) {
-
-                var asc = args.sortAsc ? 1 : -1;
-                dataView.sort(function(rowa, rowb) {
-                    var a = rowa.id;
-                    var b = rowb.id;
-
-                    var na = a.split('.');
-                    var nb = b.split('.');
-                    var min_dots = Math.min(a.length, b.length);
-
-                    for (var idx=0; idx<min_dots; idx++) {
-                        if (na[idx] > nb[idx]) {
-                            return asc;
-                        }
-                        if (na[idx] < nb[idx]) {
-                            return -asc;
-                        }
-
-                    }
-                    return a.length - b.length;
-                }, true);
-
+                if (args.sortAsc) {
+                    dataView.sort(sortAscending, true);
+                } else {
+                    dataView.sort(sortDescending, true);
+                }
                 highlightCells();
                 props.invalidate();
                 props.render();
             });
 
-            props.onBeforeDestroy.subscribe(function(e, args){
+            props.onBeforeDestroy.subscribe(function(e, args) {
                 var visibility = openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns;
                 var visibleColumns = args.grid.getColumns();
                 var visibleColumnIds = {};
 
-                for(var i=0; i<visibleColumns.length; i++){
+                for (var i=0; i<visibleColumns.length; i++) {
                     visibleColumnIds[visibleColumns[i].id] = undefined;
                 }
 
-                for(var columnId in visibility){
+                for (var columnId in visibility) {
                     if(columnId in visibleColumnIds){
                         visibility[columnId] = true;
                     }
-
-                    else{
+                    else {
                         visibility[columnId] = false;
                     }
                 }
@@ -351,11 +332,11 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             //TODO: On hover of variable icon should bring up tool tip with information for that row
         }
 
-        props.onMouseEnter.subscribe(function(e,args){
+        props.onMouseEnter.subscribe(function(e, args) {
             var cell = args.grid.getCellFromEvent(e);
-            if(cell.cell === 0){
+            if (cell.cell === 0) {
                 jQuery(".variableInfo").tooltip({
-                    content : function(){
+                    content : function() {
                         var item = dataView.getItem(cell.row);
                         return getToolTip(item);
                     },
@@ -372,7 +353,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         });
 
-        props.onBeforeEditCell.subscribe(function(row,cell) {
+        props.onBeforeEditCell.subscribe(function(row, cell) {
             var item = props.getDataItem(cell.row);
             if ((item.connection_types & 1) === 1) {
                 return false;
@@ -425,7 +406,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         });
 
         if (editable) {
-            props.onCellChange.subscribe(function(e,args) {
+            props.onCellChange.subscribe(function(e, args) {
                 // Need to clear mouse selection so that slickgrid doesn't launch
                 // the editor for the next variable down (a la Excel)
                 e.stopImmediatePropagation();
@@ -437,16 +418,16 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     subpath = subpath.substr(1);
                 }
                 project.setVariableValue(self.pathname + '.' + subpath,
-                                       args.item.value, args.item.type);
+                                         args.item.value, args.item.type);
             });
         }
     }
 
-    function InfoFormatter(row, cell, value, columnDef, dataContext){
+    function InfoFormatter(row, cell, value, columnDef, dataContext) {
         return "<span class='ui-icon ui-icon-info variableInfo' title='' style='display:inline-block;'></span>";
     }
 
-    function VarTableFormatter(row,cell,value,columnDef,dataContext) {
+    function VarTableFormatter(row, cell, value, columnDef, dataContext) {
         var spacer ="<span style='display:inline-block;height:1px;width:" + (15 * dataContext.indent) + "px;'></span>";
         var idx = dataView.getIdxById(dataContext.id);
         var nextline = dataView.getItemByIdx(idx+1);
@@ -461,15 +442,15 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         }
     }
 
-    function VarValueFormatter( row, cell, value, columnDef, dataContext ) {
-        if ( dataContext.value === "Geometry"){
+    function VarValueFormatter(row, cell, value, columnDef, dataContext) {
+        if (dataContext.value === "Geometry") {
             return '<button class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" ' +
                    'role="button" aria-disabled="false">View Geom</button>' ;
         }
         return value ;
-    };
+    }
 
-    function expansionFilter(item, args){
+    function expansionFilter(item, args) {
         var idx, parent;
         if (item.parent !== null) {
             idx = dataView.getIdxById(item.parent);
@@ -486,7 +467,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         return true;
     }
 
-    function textboxFilter(item, args){
+    function textboxFilter(item, args) {
         return _filter[item.id];
     }
 
@@ -513,6 +494,30 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         props.setCellCssStyles("highlight", editableCells);
     }
 
+    function sortAscending(rowa, rowb) {
+        return sortView(rowa, rowb, 1);
+    }
+    function sortDescending(rowa, rowb) {
+        return sortView(rowa, rowb, -1);
+    }
+    function sortView(rowa, rowb, asc) {
+        var a = rowa.id,
+            b = rowb.id,
+            na = a.split('.'),
+            nb = b.split('.'),
+            min_dots = Math.min(a.length, b.length);
+
+        for (var idx=0; idx<min_dots; idx++) {
+            var cmp = openmdao.Util.alphanumeric_compare(na[idx], nb[idx]);
+            if (cmp > 0) {
+                return asc;
+            } else if (cmp < 0) {
+                return -asc;
+            }
+        }
+        return a.length - b.length;
+    }
+
     propsDiv.bind('resizeCanvas', function() {
         props.resizeCanvas();
     });
@@ -521,28 +526,28 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         searchString = searchString.toLowerCase();
         var items = dataView.getItems();
         _filter = {};
-        for (var i=items.length - 1; i>=0; i--){
+        for (var i=items.length - 1; i>=0; i--) {
             var name = (items[i].name) ? items[i].name.toLowerCase() : "";
             var units = (items[i].units) ? items[i].units.toLowerCase() : "";
             var description = (items[i].desc) ? items[i].desc.toLowerCase() : "";
 
-            if( searchString === ""){
+            if (searchString === "") {
                 _filter[items[i].id] = true;
             }
 
-            else if( _filter[items[i].id] === true){
-                if( items[i].parent !== null ){
+            else if (_filter[items[i].id] === true) {
+                if (items[i].parent !== null) {
                     _filter[items[i].parent] = true;
                     _collapsed[items[i].parent] = false;
                 }
             }
 
-            else if(name.indexOf(searchString) !== -1 ||
-                    units.indexOf(searchString) !== -1 ||
-                    description.indexOf(searchString) !== -1) {
+            else if (name.indexOf(searchString) !== -1 ||
+                     units.indexOf(searchString) !== -1 ||
+                     description.indexOf(searchString) !== -1) {
                 _filter[items[i].id] = true;
                 _collapsed[items[i].id] = false;
-                if(items[i].parent !== null){
+                if (items[i].parent !== null) {
                     _filter[items[i].parent] = true;
                     _collapsed[items[i].parent] = false;
                 }
@@ -562,25 +567,12 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
     /** load the table with the given properties */
     this.loadData = function(properties) {
         if (properties) {
-            // Sort by name
-            properties.sort(function(a, b) {
-                var nameA=a.id.toLowerCase(),
-                    nameB=b.id.toLowerCase();
-                if (nameA < nameB) { //sort string ascending
-                    return -1;
-                }
-                if (nameA > nameB) {
-                    return 1;
-                }
-                return 0; //default return value (no sorting)
-            });
-
             jQuery.each(properties, function(index, value) {
 
                 editableInTable[value.id] = {};
                 _filter[value.id] = true;
                 if (value.hasOwnProperty("parent")) {
-                    if ( !_collapsed.hasOwnProperty(value.id) ) {
+                    if (!_collapsed.hasOwnProperty(value.id)) {
                         _collapsed[value.id] = true;
                         _collapsed[value.parent] = true;
                     }
@@ -593,7 +585,9 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                         && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
-                    if (value.hasOwnProperty("implicit") && ((( value.connection_types & 4 ) === 4 ) || (( value.connection_types & 8 ) === 8 ))) {
+                    if (value.hasOwnProperty("implicit") &&
+                        ((( value.connection_types & 4 ) === 4 ) ||
+                         (( value.connection_types & 8 ) === 8 ))) {
                         //need a css class for highlighting implicitly connected inputs
                         if (name === "Inputs") {
                             nameStyle += " parameter";
@@ -605,7 +599,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                         }
                     }
                     if (value.hasOwnProperty("framework_var")) {
-                            nameStyle += " framework_var";
+                        nameStyle += " framework_var";
                     }
                     var css = {};
                     if (nameStyle !== '') {
@@ -625,6 +619,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             dataView.setItems(properties);
             dataView.setFilter(this.filter);
             dataView.endUpdate();
+            dataView.sort(sortAscending, true);
             props.invalidate();
 
             var searchString = jQuery('#'+name+'_variableFilter').val();
@@ -641,7 +636,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         props.resizeCanvas();
     };
 
-    this.destructor = function(){
+    this.destructor = function() {
         props.destroy();
     };
 };
