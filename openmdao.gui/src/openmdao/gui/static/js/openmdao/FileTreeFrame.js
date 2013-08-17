@@ -203,10 +203,10 @@ openmdao.FileTreeFrame = function(id, project) {
         // if it's not a folder
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
-            //menu.viewFile = {
+            // menu.viewFile = {
             //    "label"  : 'View File (raw)',
             //    "action" : function(node) { viewFile(path); }
-            //};
+            // };
 
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
@@ -219,6 +219,13 @@ openmdao.FileTreeFrame = function(id, project) {
                 menu.execFile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { project.execFile(path); }
+                };
+            }
+
+            if (/.png$/.test(path) || /.jpg$/.test(path) || /.gif$/.test(path)) {
+                menu.viewImage = {
+                    "label"  : 'View Image',
+                    "action" : function(node) { openmdao.project.viewImages(path); }
                 };
             }
 
@@ -327,10 +334,10 @@ openmdao.FileTreeFrame = function(id, project) {
             "contextmenu" : { "items":  nodeMenu }
         })
         .bind("loaded.jstree", function (e) {
-            jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' });
+            _self.elm.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
 
             // id is  "file_pane"
-            jQuery('#'+id+' .jstree li').each(function () {
+            _self.elm.find('.jstree li').each(function () {
                 // children[1] is the a tag inside the li
                 // children[1].children[0] is the ins tag inside the a tag and that is the
                 //    icon that needs to be set, which we do by adding a class and
