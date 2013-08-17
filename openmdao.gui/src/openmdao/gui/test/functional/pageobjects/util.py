@@ -2,7 +2,6 @@ import Queue
 import threading
 import time
 import logging
-import traceback
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
