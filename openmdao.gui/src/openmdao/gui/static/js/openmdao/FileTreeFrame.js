@@ -222,7 +222,7 @@ openmdao.FileTreeFrame = function(id, project) {
                 };
             }
 
-            if (/.png$/.test(path) || /.jpg$/.test(path) || /.gif$/.test(path)) {
+            if (openmdao.Util.hasImageExtension(path)) {
                 menu.viewImage = {
                     "label"  : 'View Image',
                     "action" : function(node) { openmdao.project.viewImages(path); }
@@ -230,10 +230,7 @@ openmdao.FileTreeFrame = function(id, project) {
             }
 
             // if it's a geometry file, let them load it into viewer
-            // FIXME: ultimately the test of whether a file is a geometry file
-            //     should use information from geometry viewer plugins that have
-            //     been loaded in the server...
-            if (/.stl$/.test(path) || /.csm$/.test(path)) {
+            if (openmdao.Util.hasGeometryExtension(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
                     "action" : function(node) { openmdao.project.viewGeometry(path.replace(/\\/g,'/')); }
@@ -360,10 +357,10 @@ openmdao.FileTreeFrame = function(id, project) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                if (/.png$/.test(path) || /.jpg$/.test(path) || /.gif$/.test(path)) {
+                if (openmdao.Util.hasImageExtension(path)) {
                     openmdao.project.viewImages(path);
                 }
-                else if (/.stl$/.test(path) || /.csm$/.test(path)) {
+                else if (openmdao.Util.hasGeometryExtension(path)) {
                     openmdao.project.viewGeometry(path);
                 }
                 else {
