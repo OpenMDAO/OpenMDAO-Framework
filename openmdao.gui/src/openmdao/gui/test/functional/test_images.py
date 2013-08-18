@@ -27,9 +27,6 @@ def test_generator():
 
 def _test_view_image(browser):
     project_dict, workspace_page = startup(browser)
-
-    # Should be one window before we open the images window
-    eq(len(browser.window_handles), 1)
     workspace_window = browser.current_window_handle
 
     # add an image file
@@ -42,8 +39,7 @@ def _test_view_image(browser):
     # view the image file
     images_page = workspace_page.view_image(file_name)
 
-    # give it a bit
-    time.sleep(3)
+    time.sleep(2)
 
     # the image will appear twice.. in the main view and as a thumbnail
     image_names = images_page.get_image_names()

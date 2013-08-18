@@ -29,6 +29,7 @@ def test_generator():
 
 def _test_view_geometry(browser):
     project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
 
     #drop 'GeomComponent' onto the grid
     geom_comp_name = workspace_page.put_element_on_grid('GeomComponent')
@@ -43,10 +44,6 @@ def _test_view_geometry(browser):
     # Plug BoxParametricGeometry into parametric_geometry
     slot = find_slot_figure(workspace_page, 'parametric_geometry', prefix=geom_comp_name)
     workspace_page.fill_slot_from_library(slot, 'BoxParametricGeometry')
-
-    # Should be one window before we open the geom window
-    eq(len(browser.window_handles), 1)
-    workspace_window = browser.current_window_handle
 
     # Open the geom window
     geom_comp_editor('outputs_tab').click()
@@ -90,7 +87,7 @@ def _test_view_geometry(browser):
     # if we have a canvas... (some test platforms don't support canvas)
     if geom_page.has_canvas():
         # give it a bit more
-        time.sleep(3)
+        time.sleep(5)
 
         geom_page.expand_edges()
         edges = geom_page.get_edge_names()
@@ -156,11 +153,9 @@ def _test_view_geometry(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 def _test_view_csm(browser):
     project_dict, workspace_page = startup(browser)
-
-    # Should be one window before we open the geom window
-    eq(len(browser.window_handles), 1)
     workspace_window = browser.current_window_handle
 
     # add a CSM geometry file
@@ -171,13 +166,12 @@ def _test_view_csm(browser):
 
     time.sleep(2)
 
-    # view the image file
+    # view the CSM file
     geom_page = workspace_page.view_geometry(file_name)
 
     # if we have a canvas... (some test platforms don't support canvas)
     if geom_page.has_canvas():
-        # give it a bit more
-        time.sleep(3)
+        time.sleep(5)
 
         geom_page.expand_edges()
         edges = geom_page.get_edge_names()
