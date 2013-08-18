@@ -343,13 +343,14 @@ openmdao.FileTreeFrame = function(id, project) {
                 //    icon that needs to be set, which we do by adding a class and
                 //    adding some CSS into mdao-styles.css
                 if (this.children[1].getAttribute("class") === "folder") {
-                    this.children[1].children[0].addClass( "jstree-folder" ) ;
+                    this.children[1].children[0].addClass("jstree-folder");
                 }
                 else {
                     if (this.children[1].text.match("\.py$")) {
-                        this.children[1].children[0].addClass( "jstree-python-file" ) ;
-                    } else {
-                        this.children[1].children[0].addClass( "jstree-file" ) ;
+                        this.children[1].children[0].addClass("jstree-python-file");
+                    }
+                    else {
+                        this.children[1].children[0].addClass("jstree-file");
                     }
                 }
             });
@@ -359,7 +360,15 @@ openmdao.FileTreeFrame = function(id, project) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                openmdao.project.editFile(path);
+                if (/.png$/.test(path) || /.jpg$/.test(path) || /.gif$/.test(path)) {
+                    openmdao.project.viewImages(path);
+                }
+                else if (/.stl$/.test(path) || /.csm$/.test(path)) {
+                    openmdao.project.viewGeometry(path);
+                }
+                else {
+                    openmdao.project.editFile(path);
+                }
             }
             else if (node.hasClass('folder')) {
                 // what do, what do

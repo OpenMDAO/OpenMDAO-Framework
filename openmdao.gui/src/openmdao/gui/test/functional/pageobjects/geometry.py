@@ -36,7 +36,7 @@ class FaceNode(BasePageObject):
 class GeometryPage(BasePageObject):
     """ Geometry Viewer window. """
 
-    title_prefix = 'OpenMDAO:'
+    title_prefix = 'OpenMDAO Geometry Viewer:'
 
     # Left side.
     edges_tree = GenericElement((By.ID, 'tree_frame_edges_tree'))

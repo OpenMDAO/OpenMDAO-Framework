@@ -18,7 +18,11 @@ from component import NameInstanceDialog
 from connections import ConnectionsPage
 from dataflow import find_dataflow_figure, find_dataflow_figures, \
                      find_dataflow_component_names
+
 from editor import EditorPage
+from geometry import GeometryPage
+from images import ImagesPage
+
 from elements import ButtonElement, GridElement, InputElement, \
                      SelectElement, TextElement
 from logviewer import LogViewer
@@ -88,16 +92,17 @@ class WorkspacePage(BasePageObject):
                            '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
 
     # File context menu.
-    file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
-    file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
-    file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    #file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
-    file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
-    file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
-    file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
-    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
-    file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
-    file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+    file_create   = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
+    file_add      = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
+    file_folder   = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
+    #file_view    = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_edit     = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
+    file_exec     = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
+    file_image    = ButtonElement((By.XPATH, "//a[(@rel='viewImage')]"))
+    file_geometry = ButtonElement((By.XPATH, "//a[(@rel='viewGeometry')]"))
+    file_rename   = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+    file_delete   = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
+    file_toggle   = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     file_chooser = InputElement((By.ID, 'filechooser'))
 
@@ -335,6 +340,48 @@ class WorkspacePage(BasePageObject):
             self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+    def view_image(self, filename, dclick=True):
+        """ View image `filename` via double-click or context menu. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = self.find_file(filename, 1)
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_image').click()
+        self.browser.switch_to_window(self.browser.window_handles[-1])
+        return ImagesPage.verify(self.browser, self.port)
+
+    def view_geometry(self, filename, dclick=True):
+        """ View geometry `filename` via double-click or context menu. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = self.find_file(filename, 1)
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_geometry').click()
+        self.browser.switch_to_window(self.browser.window_handles[-1])
+        return GeometryPage.verify(self.browser, self.port)
 
     def delete_file(self, filename):
         """ Delete `filename`. """

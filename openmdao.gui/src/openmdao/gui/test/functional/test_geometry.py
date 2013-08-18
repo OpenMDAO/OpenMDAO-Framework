@@ -4,10 +4,11 @@ Tests of overall workspace functions.
 
 import time
 
+import pkg_resources
+
 # these imports are for comparing screen capture to existing file
 # import os
 # import filecmp
-# import pkg_resources
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
@@ -88,6 +89,8 @@ def _test_view_geometry(browser):
 
     # if we have a canvas... (some test platforms don't support canvas)
     if geom_page.has_canvas():
+        # give it a bit more
+        time.sleep(3)
 
         geom_page.expand_edges()
         edges = geom_page.get_edge_names()
@@ -145,6 +148,48 @@ def _test_view_geometry(browser):
         eq([faces.viz, faces.grd, faces.trn], [True, True, False])
         eq([face3.viz, face3.grd, face3.trn], [True, True, True])
         eq([face5.viz, face5.grd, face5.trn], [True, True, False])
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+def _test_view_csm(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # Should be one window before we open the geom window
+    eq(len(browser.window_handles), 1)
+    workspace_window = browser.current_window_handle
+
+    # add a CSM geometry file
+    file_name = 'box.csm'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'files/box.csm')
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the image file
+    geom_page = workspace_page.view_geometry(file_name)
+
+    # if we have a canvas... (some test platforms don't support canvas)
+    if geom_page.has_canvas():
+        # give it a bit more
+        time.sleep(3)
+
+        geom_page.expand_edges()
+        edges = geom_page.get_edge_names()
+        eq(edges, ['Body 1 Edge 1',  'Body 1 Edge 2',  'Body 1 Edge 3',
+                   'Body 1 Edge 4',  'Body 1 Edge 5',  'Body 1 Edge 6',
+                   'Body 1 Edge 7',  'Body 1 Edge 8',  'Body 1 Edge 9',
+                   'Body 1 Edge 10', 'Body 1 Edge 11', 'Body 1 Edge 12'])
+
+        geom_page.expand_faces()
+        faces = geom_page.get_face_names()
+        eq(faces, ['Body 1 Face 1',  'Body 1 Face 2',  'Body 1 Face 3',
+                   'Body 1 Face 4',  'Body 1 Face 5',  'Body 1 Face 6'])
 
     # Back to workspace.
     browser.close()
