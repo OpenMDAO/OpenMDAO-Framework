@@ -4,10 +4,11 @@ Tests of overall workspace functions.
 
 import time
 
+import pkg_resources
+
 # these imports are for comparing screen capture to existing file
 # import os
 # import filecmp
-# import pkg_resources
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
@@ -28,6 +29,7 @@ def test_generator():
 
 def _test_view_geometry(browser):
     project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
 
     #drop 'GeomComponent' onto the grid
     geom_comp_name = workspace_page.put_element_on_grid('GeomComponent')
@@ -42,10 +44,6 @@ def _test_view_geometry(browser):
     # Plug BoxParametricGeometry into parametric_geometry
     slot = find_slot_figure(workspace_page, 'parametric_geometry', prefix=geom_comp_name)
     workspace_page.fill_slot_from_library(slot, 'BoxParametricGeometry')
-
-    # Should be one window before we open the geom window
-    eq(len(browser.window_handles), 1)
-    workspace_window = browser.current_window_handle
 
     # Open the geom window
     geom_comp_editor('outputs_tab').click()
@@ -84,67 +82,108 @@ def _test_view_geometry(browser):
     # give it a bit
     time.sleep(3)
 
-    # FIXME: these test won't work on most VMs, can be uncommented to run manually
-    # geom_page = GeometryPage.verify(browser, workspace_page.port)
+    geom_page = GeometryPage.verify(browser, workspace_page.port)
 
-    # # check initial state of edges tree
+    # if we have a canvas... (some test platforms don't support canvas)
+    if geom_page.has_canvas():
+        # give it a bit more
+        time.sleep(5)
 
-    # geom_page.expand_edges()
-    # edges = geom_page.get_edge_names()
-    # eq(edges, ['Edge 1', 'Edge 2', 'Edge 3', 'Edge 4', 'Edge 5', 'Edge 6'])
+        geom_page.expand_edges()
+        edges = geom_page.get_edge_names()
+        eq(edges, ['Edge 1', 'Edge 2', 'Edge 3', 'Edge 4', 'Edge 5', 'Edge 6'])
 
-    # edges = geom_page.get_edge('Edges')
-    # edge1 = geom_page.get_edge('Edge 1')
-    # edge2 = geom_page.get_edge('Edge 2')
+        edges = geom_page.get_edge('Edges')
+        edge1 = geom_page.get_edge('Edge 1')
+        edge2 = geom_page.get_edge('Edge 2')
 
-    # eq([edges.viz, edges.grd, edges.ori], [True, False, False])
-    # eq([edge1.viz, edge1.grd, edge1.ori], [True, False, False])
-    # eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
+        eq([edges.viz, edges.grd, edges.ori], [True, False, False])
+        eq([edge1.viz, edge1.grd, edge1.ori], [True, False, False])
+        eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
 
-    # # toggle visibility for an edge
-    # edge1.viz = False
+        # toggle visibility for an edge
+        edge1.viz = False
 
-    # # check for expected new edges state
-    # eq([edges.viz, edges.grd, edges.ori], [False, False, False])
-    # eq([edge1.viz, edge1.grd, edge1.ori], [False, False, False])
-    # eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
+        # check for expected new edges state
+        eq([edges.viz, edges.grd, edges.ori], [False, False, False])
+        eq([edge1.viz, edge1.grd, edge1.ori], [False, False, False])
+        eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
 
-    # # toggle visibility for all edges
-    # edges.viz = True
+        # toggle visibility for all edges
+        edges.viz = True
 
-    # # check for expected new edges state
-    # eq([edges.viz, edges.grd, edges.ori], [True, False, False])
-    # eq([edge1.viz, edge1.grd, edge1.ori], [True, False, False])
-    # eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
+        # check for expected new edges state
+        eq([edges.viz, edges.grd, edges.ori], [True, False, False])
+        eq([edge1.viz, edge1.grd, edge1.ori], [True, False, False])
+        eq([edge2.viz, edge2.grd, edge2.ori], [True, False, False])
 
-    # # check initial state of faces tree
-    # geom_page.expand_faces()
-    # faces = geom_page.get_face_names()
-    # eq(faces, ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6'])
+        # check initial state of faces tree
+        geom_page.expand_faces()
+        faces = geom_page.get_face_names()
+        eq(faces, ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6'])
 
-    # faces = geom_page.get_face('Faces')
-    # face3 = geom_page.get_face('Face 3')
-    # face5 = geom_page.get_face('Face 5')
+        faces = geom_page.get_face('Faces')
+        face3 = geom_page.get_face('Face 3')
+        face5 = geom_page.get_face('Face 5')
 
-    # eq([faces.viz, faces.grd, faces.trn], [True, False, False])
-    # eq([face3.viz, face3.grd, face3.trn], [True, False, False])
-    # eq([face5.viz, face5.grd, face5.trn], [True, False, False])
+        eq([faces.viz, faces.grd, faces.trn], [True, False, False])
+        eq([face3.viz, face3.grd, face3.trn], [True, False, False])
+        eq([face5.viz, face5.grd, face5.trn], [True, False, False])
 
-    # # toggle transparency for a face
-    # face3.trn = True
+        # toggle transparency for a face
+        face3.trn = True
 
-    # # check for expected new faces state
-    # eq([faces.viz, faces.grd, faces.trn], [True, False, False])
-    # eq([face3.viz, face3.grd, face3.trn], [True, False, True])
-    # eq([face5.viz, face5.grd, face5.trn], [True, False, False])
+        # check for expected new faces state
+        eq([faces.viz, faces.grd, faces.trn], [True, False, False])
+        eq([face3.viz, face3.grd, face3.trn], [True, False, True])
+        eq([face5.viz, face5.grd, face5.trn], [True, False, False])
 
-    # # toggle grid for all faces
-    # faces.grd = True
+        # toggle grid for all faces
+        faces.grd = True
 
-    # # check for expected new faces state
-    # eq([faces.viz, faces.grd, faces.trn], [True, True, False])
-    # eq([face3.viz, face3.grd, face3.trn], [True, True, True])
-    # eq([face5.viz, face5.grd, face5.trn], [True, True, False])
+        # check for expected new faces state
+        eq([faces.viz, faces.grd, faces.trn], [True, True, False])
+        eq([face3.viz, face3.grd, face3.trn], [True, True, True])
+        eq([face5.viz, face5.grd, face5.trn], [True, True, False])
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
+def _test_view_csm(browser):
+    project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
+
+    # add a CSM geometry file
+    file_name = 'box.csm'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'files/box.csm')
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the CSM file
+    geom_page = workspace_page.view_geometry(file_name)
+
+    # if we have a canvas... (some test platforms don't support canvas)
+    if geom_page.has_canvas():
+        time.sleep(5)
+
+        geom_page.expand_edges()
+        edges = geom_page.get_edge_names()
+        eq(edges, ['Body 1 Edge 1',  'Body 1 Edge 2',  'Body 1 Edge 3',
+                   'Body 1 Edge 4',  'Body 1 Edge 5',  'Body 1 Edge 6',
+                   'Body 1 Edge 7',  'Body 1 Edge 8',  'Body 1 Edge 9',
+                   'Body 1 Edge 10', 'Body 1 Edge 11', 'Body 1 Edge 12'])
+
+        geom_page.expand_faces()
+        faces = geom_page.get_face_names()
+        eq(faces, ['Body 1 Face 1',  'Body 1 Face 2',  'Body 1 Face 3',
+                   'Body 1 Face 4',  'Body 1 Face 5',  'Body 1 Face 6'])
 
     # Back to workspace.
     browser.close()

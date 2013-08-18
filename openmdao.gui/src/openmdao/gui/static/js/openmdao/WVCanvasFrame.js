@@ -95,7 +95,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
     // Event Handlers
 
     function getCursorXY(e) {
-        if (!e) var e = event;
+        if (!e) e = event;
         wv.cursorX  = e.clientX;
         wv.cursorY  = e.clientY;
         wv.cursorX -= wv.offLeft+1;
@@ -109,7 +109,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
     }
 
     function getMouseDown(e) {
-        if (!e) var e = event;
+        if (!e) e = event;
         wv.startX   = e.clientX;
         wv.startY   = e.clientY;
         wv.startX  -= wv.offLeft+1;
@@ -129,7 +129,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
     }
 
     function getKeyPress(e) {
-        if (!e) var e = event;
+        if (!e) e = event;
         wv.keyPress = e.charCode;
     }
 
@@ -220,7 +220,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
                     }
                     break;
                 case 99:                // 'c' -- color state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.SHADING;
                         wv.sceneUpd = 1;
                     }
@@ -231,14 +231,14 @@ openmdao.WVCanvasFrame = function(id, wv) {
                     wv.sceneUpd = 1;
                     break;
                 case 108:                // 'l' -- line state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.LINES;
                         wv.sceneUpd = 1;
                     }
                     break;
                 case 110:                // 'n' -- next active
                     for (var gprim in wv.sceneGraph) {
-                        if (wv.active == undefined) {
+                        if (wv.active === undefined) {
                             wv.active = gprim;
                             break;
                         }
@@ -248,30 +248,30 @@ openmdao.WVCanvasFrame = function(id, wv) {
                     }
                     break;
                 case 111:                // 'o' -- orientation state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.ORIENTATION;
                         wv.sceneUpd = 1;
                     }
                     break;
                 case 112:                // 'p' -- point state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.POINTS;
                         wv.sceneUpd = 1;
                     }
                     break;
                 case 114:                // 'r' -- render state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.ON;
                         wv.sceneUpd = 1;
                     }
                     break;
                 case 115:                // 's' -- set active to picked
-                    if (wv.picked != undefined) {
+                    if (wv.picked !== undefined) {
                         wv.active = wv.picked.gprim;
                     }
                     break;
                 case 116:                // 't' -- transparent state
-                    if (wv.active != undefined) {
+                    if (wv.active !== undefined) {
                         wv.sceneGraph[wv.active].attrs ^= wv.plotAttrs.TRANSPARENT;
                         wv.sceneUpd = 1;
                     }
@@ -299,7 +299,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
             if (wv.modifier == _CTRL_KEY) {
                 var angleX =  (wv.startY-wv.cursorY)/4.0;
                 var angleY = -(wv.startX-wv.cursorX)/4.0;
-                if ((angleX != 0.0) || (angleY != 0.0)) {
+                if ((angleX !== 0.0) || (angleY !== 0.0)) {
                     wv.mvMatrix.rotate(angleX, 1,0,0);
                     wv.mvMatrix.rotate(angleY, 0,1,0);
                     wv.sceneUpd = 1;
@@ -310,11 +310,11 @@ openmdao.WVCanvasFrame = function(id, wv) {
             if (wv.modifier == _ALT_KEY) {
                 var xf = wv.startX - wv.width/2;
                 var yf = wv.startY - wv.height/2;
-                if ((xf != 0.0) || (yf != 0.0)) {
+                if ((xf !== 0.0) || (yf !== 0.0)) {
                     var theta1 = Math.atan2(yf, xf);
                     xf = wv.cursorX - wv.width/2;
                     yf = wv.cursorY - wv.height/2;
-                    if ((xf != 0.0) || (yf != 0.0)) {
+                    if ((xf !== 0.0) || (yf !== 0.0)) {
                         var dtheta = Math.atan2(yf, xf)-theta1;
                         if (Math.abs(dtheta) < 1.5708) {
                             var angleZ = 128*(dtheta)/3.1415926;
@@ -339,7 +339,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
             if (wv.modifier == _NO_MODIFIER) {
                 var transX = (wv.cursorX-wv.startX)/256.0;
                 var transY = (wv.cursorY-wv.startY)/256.0;
-                if ((transX != 0.0) || (transY != 0.0)) {
+                if ((transX !== 0.0) || (transY !== 0.0)) {
                     wv.mvMatrix.translate(transX, transY, 0.0);
                     wv.sceneUpd = 1;
                 }
@@ -380,7 +380,7 @@ openmdao.WVCanvasFrame = function(id, wv) {
 
         wv.InitDraw();
     };
-}
+};
 
 /*
  * Status Line
@@ -410,19 +410,19 @@ openmdao.WVStatusLine = function(id) {
 
         var framerate = Math.round(tot / _framerates.length);
         var string = "Framerate:"+framerate+"fps";
-        if (wv.picked != undefined) {
+        if (wv.picked !== undefined) {
             string = string+"&nbsp; &nbsp; &nbsp; Picked: "+wv.picked.gprim+
                      "  strip = "+wv.picked.strip+"  type = "+wv.picked.type;
         }
-        if (wv.active != undefined) {
+        if (wv.active !== undefined) {
             string = string+"&nbsp; &nbsp; &nbsp; Active: "+wv.active;
         }
-        if (wv.located != undefined) {
+        if (wv.located !== undefined) {
             string = string+"&nbsp; &nbsp; &nbsp; ("+wv.located[0]+", &nbsp; "+
                      wv.located[1]+", &nbsp; "+wv.located[2]+")";
         }
 
-        _elem.innerHTML = string
+        _elem.innerHTML = string;
     }
 
     setInterval(updateFramerate, _framerateUpdateInterval);
@@ -438,7 +438,7 @@ openmdao.WVStatusLine = function(id) {
         else {
             var newTime = new Date().getTime();
             var t = newTime - _renderTime;
-            if (t == 0) {
+            if (t === 0) {
                 return;
             }
             var framerate = 1000/t;
@@ -448,9 +448,5 @@ openmdao.WVStatusLine = function(id) {
             }
             _renderTime = newTime;
         }
-    }
-}
-
-
-
-
+    };
+};
