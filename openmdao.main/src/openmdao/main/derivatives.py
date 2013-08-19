@@ -8,7 +8,7 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones
+    from numpy import array, ndarray, zeros, inner, ones, unravel_index
     
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -131,7 +131,7 @@ def calc_gradient(wflow, inputs, outputs):
             for item in outputs:
                 k1, k2 = obounds[item]
                 if k2-k1 > 1:
-                    J[i:i+(k2-k1+1), j] = dx[k1:k2]
+                    J[i:i+(k2-k1), j] = dx[k1:k2]
                 else:
                     J[i, j] = dx[k1:k2]
                 i += k2-k1
@@ -197,7 +197,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             for param in inputs:
                 k1, k2 = wflow.bounds[('@in', param)]
                 if k2-k1 > 1:
-                    J[j, i:i+(k2-k1+1)] = dx[k1:k2]
+                    J[j, i:i+(k2-k1)] = dx[k1:k2]
                 else:
                     J[j, i] = dx[k1:k2]
                 i += k2-k1
@@ -293,7 +293,28 @@ def applyJT(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_derivT'):
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                result[key] = value.reshape(shape)
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                arg[key] = value.reshape(shape)
+                
         obj.apply_derivT(arg, result)
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                result[key] = value.flatten()
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                arg[key] = value.flatten()
+        
         return
 
     # Optional specification of the Jacobian
@@ -542,7 +563,8 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val+val, force=True)
                 
         else:
-            old_val[index] += val
+            unravelled = unravel_index(index, old_val.shape)
+            old_val[unravelled] += val
             
             # In-place array editing doesn't activate callback, so we must
             # do it manually.
