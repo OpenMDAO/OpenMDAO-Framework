@@ -54,14 +54,14 @@ class SequentialWorkflow(Workflow):
         return iter(self.get_components(full=True))
 
     def __len__(self):
-        return 0 if self._names is None else len(self._names)
+        return len(self.get_names(full=True))
 
     def __contains__(self, comp):
-        return False if self._names is None else comp in self._names
+        return comp in self.get_names(full=True)
 
     def index(self, comp):
         """Return index number for a component in this workflow."""
-        return -1 if self._names is None else self._names.index(comp)
+        return self.get_names().index(comp)
 
     def __eq__(self, other):
         return type(self) is type(other) and self._names == other._names

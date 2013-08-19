@@ -10,9 +10,6 @@ from openmdao.util.nameutil import partition_names_by_comp
 # # ExprEvaluator
 _exprchars = set('+-/*()&| %<>!')
 
-def _is_array_entry(node):
-    return '[' in node
-
 def _is_expr(node):
     """Returns True if node is an expression that is not a simple
     variable reference, or a reference to a single array entry or
@@ -26,6 +23,11 @@ def base_var(graph, node):
     base variable is A.b.  For the node d.x.y, the base variable
     is d if d is a boundary variable node, or d.x otherwise.
     """
+    if node in graph:
+        base = graph.node[node].get('basevar')
+        if base:
+            return base
+
     parts = node.split('[', 1)[0].split('.')
     # for external connections, we don't do the error checking at
     # this level so ambiguity in actual base varname doesn't
@@ -38,11 +40,6 @@ def base_var(graph, node):
         return base
 
     return '.'.join(parts[:2])
-    #if base in graph and 'var' in graph.node[base]:
-        #return base
-    #else:
-        #raise KeyError("Can't find base variable for '%s' in graph" % 
-                       #node) 
 
 
 # Explanation of node/edge metadata dict entries
@@ -82,10 +79,6 @@ def is_var_node(graph, node):
 def is_subvar_node(graph, node):
     return 'basevar' in graph.node.get(node, '')
 
-def is_attr_node(graph, node):
-    base = base_var(graph, node)
-    return '.' in node[len(base):]
-
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node.get(node, '')
 
@@ -100,6 +93,18 @@ def is_comp_or_pseudo_node(graph, node):
 
 def is_external_node(graph, node):
     return node.startswith('parent.')
+
+def is_nested_node(graph, node):
+    """Returns True if the given node refers to an attribute that
+    is nested within the child of a Component in our scope, or
+    within a boundary variable in our scope.  For
+    example, if a Component 'comp1' is within our scope,
+    a variable node referring to 'comp1.child.x' would be a 
+    nested node while a 'comp1.y' node would not.  If we had a boundary
+    var called 'b', then 'b.x' would be a nested node.
+    """
+    base = base_var(graph, node)
+    return '.' in node[len(base):]
 
 # EDGE selectors
 
@@ -282,26 +287,32 @@ class DependencyGraph(nx.DiGraph):
             self.config_changed()
 
     def check_connect(self, srcpath, destpath):
+        if destpath not in self or is_external_node(self, destpath):
+            return
+        
         if _is_expr(destpath):
             raise RuntimeError("Can't connect '%s' to '%s'. '%s' is not a valid destination." % 
                                    (srcpath, destpath, destpath))
 
         inedges = self.in_edges((destpath,))
+        dest_iotype = self.node[destpath].get('iotype')
+        if dest_iotype == 'out' and not is_boundary_node(self, destpath):
+            raise RuntimeError("'%s' must be an input variable" % destpath)
+
         if len(inedges) > 0:
             if not is_subvar_node(self, srcpath):
                 raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
                                     (srcpath, destpath, destpath, inedges[0][0]))
 
-        if not destpath.startswith('parent.'):
-            base = base_var(self, destpath)
-            if base != destpath and base != srcpath:
-                usdot = destpath + '.'
-                usbracket = destpath + '['
-                for u,v in self.in_edges_iter((base,)):
-                    if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
-                           or u.startswith(usdot) or u.startswith(usbracket):
-                        raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
-                                  (srcpath, destpath, base, u))
+        base = base_var(self, destpath)
+        if base != destpath and base != srcpath:
+            usdot = destpath + '.'
+            usbracket = destpath + '['
+            for u,v in self.in_edges_iter((base,)):
+                if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
+                       or u.startswith(usdot) or u.startswith(usbracket):
+                    raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
+                              (srcpath, destpath, base, u))
 
     def _connect_expr(self, srcpath, destpath):
         self.config_changed()
@@ -704,7 +715,7 @@ class DependencyGraph(nx.DiGraph):
 
     def list_autopassthroughs(self):
         """Returns a list of autopassthrough connections as (src, dest)
-        tuples.  Autopassthroughs are connections directly from an
+        tuples.  Autopassthroughs are connections directly from a
         variable external to this graph to an internal (non-boundary) 
         variable. 
         """
@@ -757,7 +768,7 @@ def find_related_pseudos(compgraph, nodes):
             if is_pseudo_node(compgraph, upcomp):
                 pseudos.add(upcomp)
         for dwncomp in compgraph.successors_iter(node):
-            if is_pseudo_node(compgraph, upcomp):
+            if is_pseudo_node(compgraph, dwncomp):
                 pseudos.add(dwncomp)
 
     return list(pseudos)

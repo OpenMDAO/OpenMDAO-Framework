@@ -169,8 +169,9 @@ class Assembly(Component):
         component name.
         """
         wflows = []
-        for obj in self.__dict__.values():
-            if is_instance(obj, Driver) and name in obj.workflow:
+        for item in self.list_containers():
+            obj = self.get(item)
+            if isinstance(obj, Driver) and name in obj.workflow:
                 wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
 

@@ -306,18 +306,6 @@ class Container(SafeHasTraits):
             self._depgraph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
-                #if not self.contains(destpath.split('[', 1)[0]):
-                    #self.raise_exception("Can't find '%s'" % destpath,
-                                         #AttributeError)
-                #parts = destpath.split('.')
-                #for i in range(len(parts)):
-                    #dname = '.'.join(parts[:i+1])
-                    #sname = self._depgraph.get_source(dname)
-                    #if sname is not None:
-                        #self.raise_exception(
-                            #"'%s' is already connected to source '%s'" %
-                            #(dname, sname), RuntimeError)
-
                 if destvar:
                     child = getattr(self, cname2)
                     if is_instance(child, Container):
