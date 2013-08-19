@@ -7,31 +7,32 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>{% block title %} OpenMDAO Image Viewer: {{ current_user }} {% end %}</title>
-</head>
+    <title>{% block title %} OpenMDAO Image Viewer {% end %}</title>
 
-<body bgcolor="Grey">
-    <link rel="stylesheet" href="/static/css/mdao-layout.css">
-    <link rel="stylesheet" href="/static/css/mdao-styles.css">
+    <style type="text/css">
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
 
-    <!-- modernizr -->
-    <script src="/static/js/modernizr.js"></script>
+        #images {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
 
     <!-- jQuery -->
-    <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
     <script src="/static/js/jquery-1.8.2.min.js"></script>
-    <script src="/static/js/jquery-ui-1.9.1.min.js"></script>
-
-    <!--  ben alman's debug script (for development only, remove for flight)  -->
-    <script src="/static/js/ba-debug.min.js"></script>
 
     <!-- galleria -->
-    <link type="text/css" rel="stylesheet" href="/static/js/galleria/themes/classic/galleria.classic.css">
+    <link   type="text/css" rel="stylesheet" href="/static/js/galleria/themes/classic/galleria.classic.css">
     <script type="text/javascript" src="/static/js/galleria/galleria-1.2.9.min.js"></script>
     <script type="text/javascript" src="/static/js/galleria/themes/classic/galleria.classic.min.js"></script>
 
-    <!-- openmdao specific imports -->
-    <script src="/static/js/openmdao/BaseFrame.js"></script>
+    <!-- openmdao -->
+    <script src="/static/js/openmdao/Project.js"></script>
+    <script src="/static/js/openmdao/Util.js"></script>
 
     <script>
         jQuery(function() {
@@ -50,7 +51,7 @@
                         index = 0,
                         show_index = 0;
                     for (var file in files) {
-                        if (/.png$/.test(file) || /.jpg$/.test(file) || /.gif$/.test(file)) {
+                        if (openmdao.Util.hasImageExtension(file)) {
                             data.push({
                                 title: file,
                                 image: '/workspace/file'+file
@@ -63,9 +64,9 @@
                     }
                     jQuery('#images').galleria({
                         dataSource: data,
-                        width: jQuery(window).width(),
-                        height: jQuery(window).height(),
-                        responsive: true,   // TODO: need dynamic CSS
+                        width: '100%',
+                        height: '100%',
+                        responsive: true,
                         show: show_index
                     });
                 })
@@ -75,10 +76,10 @@
                 });
         });
     </script>
+</head>
 
-    <div id="images">
-    </div>
-
+<body>
+    <div id="images"></div>
 </body>
 
 </html>

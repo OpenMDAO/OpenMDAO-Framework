@@ -562,7 +562,7 @@ openmdao.Util = {
         if ((s1 === undefined) || (s2 === undefined)) {
             return 0;
         }
-        
+
         var l1 = s1.length,
             l2 = s2.length,
             i = 0;
@@ -586,26 +586,26 @@ openmdao.Util = {
                 // Accumulate value.
                 var j = i + 1;
                 while (j < l1) {
-                    c1 = s1.charAt(j)
+                    c1 = s1.charAt(j);
                     if ('0' <= c1 && c1 <= '9') {
                         ++j;
                     } else {
                         break;
                     }
                 }
-                var v1 = parseInt(s1.substring(i, j));
+                var v1 = parseInt(s1.substring(i, j), 10);
 
                 // Accumulate value.
                 j = i + 1;
                 while (j < l2) {
-                    c2 = s2.charAt(j)
+                    c2 = s2.charAt(j);
                     if ('0' <= c2 && c2 <= '9') {
                         ++j;
                     } else {
                         break;
                     }
                 }
-                var v2 = parseInt(s2.substring(i, j));
+                var v2 = parseInt(s2.substring(i, j), 10);
 
                 // Compare values.
                 if (v1 != v2) {
@@ -629,5 +629,29 @@ openmdao.Util = {
 
         return l1 - l2;
     },
+
+    hasImageExtension: function (filename) {
+        filename = filename.toLowerCase();
+        if (/\.png$/.test(filename) || /\.jpg$/.test(filename) ||
+            /\.gif$/.test(filename) || /\.bmp$/.test(filename)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    },
+
+    hasGeometryExtension: function (filename) {
+        // FIXME: ultimately the test of whether a file is a geometry file
+        //     should use information from geometry viewer plugins that have
+        //     been loaded in the server...
+        filename = filename.toLowerCase();
+        if (/\.stl$/.test(filename) || /\.csm$/.test(filename)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 
 };
