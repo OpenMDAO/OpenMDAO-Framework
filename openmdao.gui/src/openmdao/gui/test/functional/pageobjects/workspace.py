@@ -95,7 +95,7 @@ class WorkspacePage(BasePageObject):
     file_create   = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
     file_add      = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder   = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    #file_view    = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_view     = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
     file_edit     = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
     file_exec     = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
     file_image    = ButtonElement((By.XPATH, "//a[(@rel='viewImage')]"))
@@ -340,6 +340,16 @@ class WorkspacePage(BasePageObject):
             self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+    def view_file(self, filename):
+        """ View image `filename` in another window via context menu. """
+        self('files_tab').click()
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        self('file_view').click()
+        self.browser.switch_to_window(self.browser.window_handles[-1])
+        return BasePageObject.verify(self.browser, self.port)
 
     def view_image(self, filename, dclick=True):
         """ View image `filename` via double-click or context menu. """
