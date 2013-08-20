@@ -1121,5 +1121,58 @@ def _test_sorting(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_view_file(browser):
+    project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
+
+    # add an image file
+    file_name = 'Engine_Example_Process_Diagram.png'
+    file_path = pkg_resources.resource_filename('openmdao.examples.enginedesign', file_name)
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the image file
+    new_page = workspace_page.view_file(file_name)
+
+    time.sleep(2)
+
+    # the new page should have an img tag with the selected file name
+    images = new_page.browser.find_elements_by_css_selector('img')
+    eq(len(images), 1)
+    eq(images[0].get_attribute('src').strip().endswith(file_name), True)
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+
+    # add a pdf file
+    file_name = 'sample.pdf'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/' + file_name)
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the pdf file
+    new_page = workspace_page.view_file(file_name)
+
+    time.sleep(2)
+
+    # the new page should have an embed tag with the selected file name
+    embeds = new_page.browser.find_elements_by_css_selector('embed')
+    eq(len(embeds), 1)
+    eq(embeds[0].get_attribute('src').strip().endswith(file_name), True)
+    eq(embeds[0].get_attribute('type'), 'application/pdf')
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
