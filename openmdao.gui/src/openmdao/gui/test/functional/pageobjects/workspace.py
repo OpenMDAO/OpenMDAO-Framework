@@ -342,7 +342,7 @@ class WorkspacePage(BasePageObject):
         return EditorPage.verify(self.browser, self.port)
 
     def view_file(self, filename):
-        """ View image `filename` via double-click or context menu. """
+        """ View image `filename` in another window via context menu. """
         self('files_tab').click()
         element = self.find_file(filename)
         chain = ActionChains(self.browser)
