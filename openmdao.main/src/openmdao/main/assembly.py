@@ -161,7 +161,7 @@ class Assembly(Component):
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
         return [(u, v) for u, v in self.list_connections(show_passthrough=True)
-                                                if u in exprset or v in exprset]
+                                        if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
         """Returns a list of tuples of the form (workflow, index) for all
@@ -433,7 +433,7 @@ class Assembly(Component):
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))
-    def connect(self, src, dest):
+    def connect(self, src, dest, graph=None):
         """Connect one src expression to one destination expression. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -445,16 +445,22 @@ class Assembly(Component):
 
         dest: str or list(str)
             Destination expression string(s).
+
+        graph: DependencyGraph (optional)
+            If not None, make updates to this DependencyGraph
+
         """
         src = eliminate_expr_ws(src)
+        if graph is None:
+            graph = self._depgraph
 
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
             dst = eliminate_expr_ws(dst)
-            self._connect(src, dst)
+            self._connect(src, dst, graph)
 
-    def _connect(self, src, dest, recurse=True):
+    def _connect(self, src, dest, graph):
         """Handle one connection destination. This should only be called via the connect()
         function, never directly.
         """
@@ -481,15 +487,15 @@ class Assembly(Component):
         if needpseudocomp:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr)
             self.add(pseudocomp.name, pseudocomp)
-            pseudocomp.make_connections(self._depgraph)
+            pseudocomp.make_connections(self, graph)
         else:
             pseudocomp = None
-            super(Assembly, self).connect(src, dest)
+            super(Assembly, self).connect(src, dest, graph)
 
         try:
             self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
         except Exception as err:
-            super(Assembly, self).disconnect(src, dest)
+            super(Assembly, self).disconnect(src, dest, graph)
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
 
@@ -497,7 +503,8 @@ class Assembly(Component):
             if not destexpr.refs_parent():
                 # if it's an internal connection, could change dependencies, so we have
                 # to call config_changed to notify our driver
-                self.config_changed(update_parent=False)
+                if graph is self._depgraph:
+                    self.config_changed(update_parent=False)
 
                 destcompname, destcomp, destvarname = self._split_varpath(dest)
 
@@ -506,7 +513,7 @@ class Assembly(Component):
                     self.child_invalidated(destcompname, outs, force=True)
 
     @rbac(('owner', 'user'))
-    def disconnect(self, varpath, varpath2=None):
+    def disconnect(self, varpath, varpath2=None, graph=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, if varpath is the name of a trait, remove all
         connections to/from varpath in the current scope. If varpath is the
@@ -518,13 +525,16 @@ class Assembly(Component):
 
         to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
-        for u, v in self._depgraph.list_connections(show_external=True):
+        if graph is None:
+            graph = self._depgraph
+
+        for u, v in graph.list_connections(show_external=True):
             if (u,v) in to_remove:
-                super(Assembly, self).disconnect(u, v)
+                super(Assembly, self).disconnect(u, v, graph=graph)
                 
-        for u, v in self._depgraph.list_autopassthroughs():
+        for u, v in graph.list_autopassthroughs():
             if (u,v) in to_remove:
-                super(Assembly, self).disconnect(u, v)
+                super(Assembly, self).disconnect(u, v, graph=graph)
                 
         for name in pcomps:
             try:
@@ -532,7 +542,7 @@ class Assembly(Component):
             except AttributeError:
                 pass
             try:
-                self._depgraph.remove(name)
+                graph.remove(name)
             except nx.exception.NetworkXError:
                 pass
 
@@ -552,11 +562,6 @@ class Assembly(Component):
             
         # Detect and save any loops in the graph.
         self._graph_loops = None
-
-    def _get_graph_loops(self):
-        if self._graph_loops is None and hasattr(self, '_depgraph'):
-            self._graph_loops = [s for s in nx.strongly_connected_components(self._depgraph) if len(s)>1]
-        return self._graph_loops
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         parts = path.split('.', 1)
@@ -598,14 +603,33 @@ class Assembly(Component):
         """Stop the calculation."""
         self.driver.stop()
 
-    def list_connections(self, show_passthrough=True, visible_only=False):
+    def list_connections(self, show_passthrough=True, 
+                               visible_only=False,
+                               show_expressions=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._exprmapper.list_connections(show_passthrough=show_passthrough,
-                                                     visible_only=visible_only)
+        #return self._exprmapper.list_connections(show_passthrough=show_passthrough,
+        #                                             visible_only=visible_only)
+        conns = self._depgraph.list_connections(show_passthrough=show_passthrough)
+        if visible_only:
+            newconns = []
+            for u,v in conns:
+                if u.startswith('_pseudo_'):
+                    pcomp = getattr(self, u.split('.', 1)[0])
+                    newconns.extend(pcomp.list_connections(is_hidden=True,
+                                     show_expressions=show_expressions))
+                elif v.startswith('_pseudo_'):
+                    pcomp = getattr(self, v.split('.', 1)[0])
+                    newconns.extend(pcomp.list_connections(is_hidden=True,
+                                     show_expressions=show_expressions))
+                else:
+                    newconns.append((u,v))
+            return newconns
+        return conns
+
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, inputs):
+    def update_inputs(self, compname, inputs, graph):
         """Transfer input data to input expressions on the specified component.
         The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
@@ -616,22 +640,13 @@ class Assembly(Component):
 
         if compname is None:
             for inp in inputs:
-                conns.extend(self._depgraph._var_connections(inp, 'in'))
+                conns.extend(graph._var_connections(inp, 'in'))
         else:
             if inputs is None:
-                conns = self._depgraph._comp_connections(compname, 'in')
+                conns = graph._comp_connections(compname, 'in')
             else:
                 for inp in inputs:
-                    conns.extend(self._depgraph._var_connections('.'.join([compname, inp]), 'in'))
-
-        ##conns = [(cvt_fake(u), cvt_fake(v)) for u,v in conns]
-        # for i,tup in enumerate(conns):
-        #     # auto-passthrough shows up as ('<varname>', '<varname>')
-        #     if tup[0] == tup[1]:
-        #         # find the external var that the dest is connected to (it's at @xin.parent.<extvarname>)
-        #         xsrc = self._depgraph._var_connections('.'.join(['@bin', tup[1]]), 'in')[0][0]
-        #         xsrc = xsrc[5:]
-        #         conns[i] = (xsrc, tup[1])
+                    conns.extend(graph._var_connections('.'.join([compname, inp]), 'in'))
 
         srcs = [u for u,v in conns]
         srcvars = [s.split('[',1)[0] for s in srcs]
@@ -639,12 +654,14 @@ class Assembly(Component):
 
         # if source vars are invalid, request an update
         if invalids:
-            loops = self._get_graph_loops()
+            loops = graph.get_loops()
             
             for cname, vnames in partition_names_by_comp(invalids).items():
                 if cname is None:
                     if self.parent:
-                        self.parent.update_inputs(self.name, vnames)
+                        self.parent.update_inputs(self.name, 
+                                                  vnames,
+                                                  self.parent._depgraph)
                         
                 # If our source component is in a loop with us, don't
                 # run it. Otherwise you have infinite recursion. It is
@@ -655,10 +672,10 @@ class Assembly(Component):
                         if compname in loop and cname in loop:
                             break
                     else:
-                        getattr(self, cname).update_outputs(vnames)
+                        getattr(self, cname).update_outputs(vnames, graph)
                         
                 else:
-                    getattr(self, cname).update_outputs(vnames)
+                    getattr(self, cname).update_outputs(vnames, graph)
 
         # these connections all come from the depgraph, so they will only
         # contain simple expressions, i.e. only one variable ref (may be
@@ -672,15 +689,15 @@ class Assembly(Component):
                 self.raise_exception("cannot set '%s' from '%s': %s" %
                                      (destexpr.text, srcexpr.text, str(err)), type(err))
 
-    def update_outputs(self, outnames):
+    def update_outputs(self, outnames, graph):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
         for cname, vnames in partition_names_by_comp(outnames).items():
             if cname is None:  # boundary outputs
-                self.update_inputs(None, vnames)
+                self.update_inputs(None, vnames, self._depgraph)
             else:
-                getattr(self, cname).update_outputs(vnames)
+                getattr(self, cname).update_outputs(vnames, graph)
                 self.set_valid(vnames, True)
 
     def get_valid(self, names):
@@ -897,7 +914,8 @@ class Assembly(Component):
                                                        comp.name + '.' + name])
 
         # list of connections (convert tuples to lists)
-        conntuples = self.list_connections(show_passthrough=True, visible_only=True)
+        conntuples = self.list_connections(show_passthrough=True, 
+                                           visible_only=True)
         for connection in conntuples:
             connections.append(list(connection))
 
@@ -1111,7 +1129,8 @@ class Assembly(Component):
 
         # connections
         connections = []
-        conntuples = self.list_connections(show_passthrough=True, visible_only=True)
+        conntuples = self.list_connections(show_passthrough=True, 
+                                           visible_only=True)
         comp_names = self.list_components()
         for src_var, dst_var in conntuples:
             src_root = src_var.split('.')[0]

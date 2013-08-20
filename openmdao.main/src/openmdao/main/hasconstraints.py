@@ -73,7 +73,8 @@ class Constraint(object):
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         if graph is not None:
-            getattr(self.lhs.scope, pseudo.name).make_connections(graph)
+            getattr(self.lhs.scope, 
+                    pseudo.name).make_connections(self._parent, graph)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -125,11 +126,13 @@ class Constraint(object):
                           scope=self.lhs.scope)
         return cnst
         
-    def evaluate(self, scope):
+    def evaluate(self, scope, graph=None):
         """Returns the value of the constraint."""
+        if graph is None:
+            graph = scope._depgraph
         pcomp = getattr(scope, self.pcomp_name)
         if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
+            pcomp.update_outputs(['out0'], graph)
         return pcomp.out0
         
     def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
@@ -187,7 +190,7 @@ class _HasConstraintsBase(object):
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -229,7 +232,6 @@ class _HasConstraintsBase(object):
         """Removes all constraints."""
         for name, cnst in self._constraints.items():
             self.remove_constraint(name)
-        self._parent._invalidate()
         
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
@@ -360,7 +362,7 @@ class HasEqConstraints(_HasConstraintsBase):
         name = ident if name is None else name        
         self._constraints[name] = constraint
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
             
     def add_existing_constraint(self, scope, constraint, name=None):
@@ -383,7 +385,7 @@ class HasEqConstraints(_HasConstraintsBase):
             self._parent.raise_exception("Inequality constraint '%s' is not supported on this driver" %
                                          str(constraint), ValueError)
             
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -451,7 +453,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         else:
             self._constraints[name] = constraint
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
         
     def add_existing_constraint(self, scope, constraint, name=None):
@@ -474,7 +476,7 @@ class HasIneqConstraints(_HasConstraintsBase):
             self._parent.raise_exception("Equality constraint '%s' is not supported on this driver" % 
                                          str(constraint), ValueError)
 
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -482,7 +484,8 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def eval_ineq_constraints(self, scope=None): 
         """Returns a list of constraint values"""
-        return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
+        graph = self._parent.workflow_subgraph()
+        return [c.evaluate(_get_scope(self, scope, graph)) for c in self._constraints.values()]
     
 
 class HasConstraints(object):

@@ -172,6 +172,7 @@ class Driver(Component):
             for end in getcomps:
                 for start in setcomps:
                     full.update(compgraph.find_all_connecting(start, end))
+                    
             self._required_compnames = full
 
         return self._required_compnames
@@ -373,6 +374,7 @@ class Driver(Component):
         super(Driver, self).config_changed(update_parent)
         self._graph = None  # force later rebuild of dependency graph
         self._required_compnames = None
+        self._invalidate()
         if self.workflow is not None:
             self.workflow.config_changed()
 
@@ -395,7 +397,7 @@ class Driver(Component):
                 pcomp = getattr(self.parent, pname)
                 g.add_component(pname, pcomp.list_inputs(), 
                                 pcomp.list_outputs(), pseudo=True)
-                pcomp.make_connections(g)
+                pcomp.make_connections(self.get_expr_scope(), g)
                 
         return self._graph
 

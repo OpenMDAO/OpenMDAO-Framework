@@ -148,7 +148,7 @@ class Parameter(object):
         else:
             pseudo = getattr(scope, self.pcomp_name)
 
-        pseudo.make_connections(graph)
+        pseudo.make_connections(scope, graph)
 
         self.initialize(scope)
 
@@ -162,7 +162,7 @@ class Parameter(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(graph)
+            pseudo.remove_connections(scope, graph)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
 
@@ -429,7 +429,7 @@ class ParameterGroup(object):
                 pseudo.add_target(param._expreval.text)
                 param.pcomp_name = pseudo.name
 
-        getattr(scope, self.pcomp_name).make_connections(graph)
+        getattr(scope, self.pcomp_name).make_connections(scope, graph)
 
         self.initialize(scope)
 
@@ -442,7 +442,7 @@ class ParameterGroup(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(graph)
+            pseudo.remove_connections(scope, graph)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
             for param in self._params:
@@ -588,7 +588,7 @@ class HasParameters(object):
             #graph = None
         target.activate(self._get_scope(scope))
 
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
@@ -601,7 +601,7 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -654,7 +654,6 @@ class HasParameters(object):
         for name in self._parameters.keys():
             self.remove_parameter(name)
         self._parameters = ordereddict.OrderedDict()
-        self._parent._invalidate()
 
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""

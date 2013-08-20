@@ -92,11 +92,15 @@ class Workflow(object):
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
         
+        graph = self._parent.workflow_subgraph()
         for comp in self._iterator:
-            if not isinstance(comp, PseudoComponent):
+            if isinstance(comp, PseudoComponent):
+                comp.run(ffd_order=ffd_order, case_id=case_id, 
+                         graph=graph)
+            else:
                 self._comp_count += 1
                 comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None

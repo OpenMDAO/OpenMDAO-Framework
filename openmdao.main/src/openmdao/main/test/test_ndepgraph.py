@@ -294,6 +294,12 @@ class DepGraphTestCase(unittest.TestCase):
                                                                    ('3.4*B.d+2.3', 'C.a')])
         dep.disconnect('3.4*B.d+2.3')
         self.assertEqual(dep.list_connections(), [])
+        
+    def test_basevar_iter(self):
+        self.assertEqual(set(self.dep.basevar_iter(['a'])), set(['A.a']))
+        self.assertEqual(set(self.dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
+        self.assertEqual(set(self.dep.basevar_iter(['B.d'])), set(['C.b']))
+        self.assertEqual(set(self.dep.basevar_iter(['C.c'])), set(['c']))
           
 
 if __name__ == "__main__":

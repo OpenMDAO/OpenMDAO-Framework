@@ -82,13 +82,13 @@ class TestCase(unittest.TestCase):
         self.assertEqual(comp._depgraph.get_source('xout'), None)
         self.assertEqual(vset, set(comp._valid_dict.keys()))
 
-        comp.connect('parent.blah', 'cont.dyntrait')
-        # _valid_dict should have a new entry
-        self.assertEqual(set(comp._valid_dict.keys())-vset, set(['cont.dyntrait']))
+        #comp.connect('parent.blah', 'cont.dyntrait')
+        ## _valid_dict should have a new entry
+        #self.assertEqual(set(comp._valid_dict.keys())-vset, set(['cont.dyntrait']))
 
-        # _valid_dict entry should go away
-        comp.disconnect('parent.blah', 'cont.dyntrait')
-        self.assertEqual(vset, set(comp._valid_dict.keys()))
+        ## _valid_dict entry should go away
+        #comp.disconnect('parent.blah', 'cont.dyntrait')
+        #self.assertEqual(vset, set(comp._valid_dict.keys()))
 
     def test_illegal_directory(self):
         logging.debug('')

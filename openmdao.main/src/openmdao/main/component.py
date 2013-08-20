@@ -406,7 +406,9 @@ class Component(Container):
                                     if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
-                self.parent.update_inputs(self.name, invalid_ins)
+                self.parent.update_inputs(self.name, 
+                                          invalid_ins,
+                                          self.parent._depgraph)
                 for name in invalid_ins:
                     valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
@@ -741,7 +743,7 @@ class Component(Container):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        if update_parent and hasattr(self, 'parent') and self.parent:
+        if update_parent and hasattr(self, '_parent') and self._parent:
             self.parent.config_changed(update_parent)
         self._input_names = None
         self._output_names = None
@@ -833,7 +835,9 @@ class Component(Container):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            visited = set([id(self), id(self.parent)])
+            visited = set([id(self)])
+            if hasattr(self, '_parent'):  # fix for weird unpickling bug
+                visited.add(id(self.parent))
             names = []
             for n, v in self.__dict__.items():
                 if is_instance(v, Container) and id(v) not in visited:
@@ -843,7 +847,7 @@ class Component(Container):
         return self._container_names
 
     @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr):
+    def connect(self, srcexpr, destexpr, graph=None):
         """Connects one source expression to one destination expression.
         When a name begins with 'parent.', that indicates
         it is referring to a variable outside of this object's scope.
@@ -853,6 +857,10 @@ class Component(Container):
 
         destexpr: str or ExprEvaluator
             Destination expression object or expression string.
+
+        graph: DependencyGraph
+            DependencyGraph to update with connection info
+
         """
         if isinstance(srcexpr, basestring):
             srcexpr = ConnectedExprEvaluator(srcexpr, self)
@@ -861,6 +869,9 @@ class Component(Container):
 
         destpath = destexpr.text
 
+        if graph is None:
+            graph = self._depgraph
+
         valid_updates = []
         if not srcexpr.refs_parent():
             if srcexpr.text.split('[',1)[0] not in self._valid_dict:
@@ -868,9 +879,10 @@ class Component(Container):
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
             valid_updates.append((destpath, False))
-            self.config_changed(update_parent=False)
+            if graph is self._depgraph:
+                self.config_changed(update_parent=False)
 
-        super(Component, self).connect(srcexpr, destexpr)
+        super(Component, self).connect(srcexpr, destexpr, graph)
 
         # this is after the super connect call so if there's a
         # problem we don't have to undo it
@@ -878,11 +890,14 @@ class Component(Container):
             self._valid_dict[valids_update[0].split('[',1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath):
+    def disconnect(self, srcpath, destpath, graph=None):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        super(Component, self).disconnect(srcpath, destpath)
+        if graph is None:
+            graph = self._depgraph
+
+        super(Component, self).disconnect(srcpath, destpath, graph)
         if destpath.split('[',1)[0] in self._valid_dict:
             if '.' in destpath:
                 del self._valid_dict[destpath.split('[',1)[0]]
@@ -1560,6 +1575,7 @@ class Component(Container):
         else:
             conn = self.list_inputs(connected=True)
             if conn:
+                conn = [c.split('[',1)[0] for c in conn]
                 for var in varnames:
                     if var in conn:
                         valids[var.split('[',1)[0]] = False
@@ -1574,7 +1590,7 @@ class Component(Container):
 
         return None  # None indicates that all of our outputs are invalid.
 
-    def update_outputs(self, outnames):
+    def update_outputs(self, outnames, graph=None):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
         """

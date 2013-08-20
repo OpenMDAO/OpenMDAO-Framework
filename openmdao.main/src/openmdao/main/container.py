@@ -268,7 +268,7 @@ class Container(SafeHasTraits):
         return '.'.join(path[::-1])
 
     @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr):
+    def connect(self, srcexpr, destexpr, graph=None):
         """Connects one source expression to one destination expression.
         When a name begins with "parent.", that indicates
         it is referring to a variable outside of this object's scope.
@@ -288,11 +288,9 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
-        # if '.' not in destpath and hasattr(self, destpath) and destpath not in self._depgraph:
-        #     self._depgraph.add_boundary_var(destpath, iotype=self.get_metadata(destpath, 'iotype'))
-        # if '.' not in srcpath and hasattr(self, srcpath) and srcpath not in self._depgraph:
-        #     self._depgraph.add_boundary_var(srcpath, iotype=self.get_metadata(srcpath, 'iotype'))
-    
+        if graph is None:
+            graph = self._depgraph
+
         # check for self connections
         if not destpath.startswith('parent.'):
             vpath = destpath.split('[', 1)[0]
@@ -303,7 +301,7 @@ class Container(SafeHasTraits):
                                      " to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
-            self._depgraph.check_connect(srcpath, destpath)
+            graph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
                 if destvar:
@@ -330,7 +328,7 @@ class Container(SafeHasTraits):
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest))
 
-            self._depgraph.connect(srcpath, destpath)
+            graph.connect(srcpath, destpath)
         except Exception as err:
             try:
                 for child, childsrc, childdest in child_connections:
@@ -342,10 +340,13 @@ class Container(SafeHasTraits):
                                  (srcpath, destpath, str(err)), RuntimeError)
 
     @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath):
+    def disconnect(self, srcpath, destpath, graph=None):
         """Removes the connection between one source variable and one
         destination variable.
         """
+        if graph is None:
+            graph = self._depgraph
+
         cname = cname2 = None
         destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
@@ -377,7 +378,7 @@ class Container(SafeHasTraits):
                                  "Both variables are on the same component" %
                                  (srcpath, destpath), RuntimeError)
 
-        self._depgraph.disconnect(srcpath, destpath)
+        graph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
     # no execute, they can have no inputs/outputs, which means that validity should have

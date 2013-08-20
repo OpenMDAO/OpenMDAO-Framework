@@ -71,14 +71,13 @@ class HasObjectives(object):
 
         pseudo = OutputPseudoComponent(scope, expreval)
         scope.add(pseudo.name, pseudo)
-        #pseudo.make_connections(self._parent.workflow_subgraph())
       
         self._objectives[name] = expreval
 
         # just attach the pseudocomp name to the objective object
         expreval.pcomp_name = pseudo.name
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -150,7 +149,8 @@ class HasObjectives(object):
         for obj in self._objectives.values():
             pcomp = getattr(scope, obj.pcomp_name)
             if not pcomp.is_valid():
-                pcomp.update_outputs(['out0'])
+                pcomp.update_outputs(['out0'], 
+                                     self._parent.workflow_subgraph())
             objs.append(pcomp.out0)
         return objs
 

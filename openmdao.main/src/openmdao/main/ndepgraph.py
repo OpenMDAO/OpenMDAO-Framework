@@ -114,81 +114,81 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-class TransClosure(object):
-    def __init__(self, graph):
-        # self._idxmap = {}
-        # self._tcmap = {}
-        # for src, dest in graph.edges():
-        #     self.add_edge(src, dest)
+# class TransClosure(object):
+#     def __init__(self, graph):
+#         # self._idxmap = {}
+#         # self._tcmap = {}
+#         # for src, dest in graph.edges():
+#         #     self.add_edge(src, dest)
 
-        nodes = graph.nodes()
-        initer = [0]*len(nodes)
-        self._idxmap = dict([(n, i) for i, n in enumerate(nodes)])
-        self._tcmap = dict([(n, array('b', initer)) for n in nodes])
-        self._calc_closure(graph)
+#         nodes = graph.nodes()
+#         initer = [0]*len(nodes)
+#         self._idxmap = dict([(n, i) for i, n in enumerate(nodes)])
+#         self._tcmap = dict([(n, array('b', initer)) for n in nodes])
+#         self._calc_closure(graph)
 
-    def _calc_closure(self, graph):
-        # this is O(n*(n+m)), but our graphs should be
-        # relatively sparse, so typically it should be closer
-        # to n^2 than n^3
+#     def _calc_closure(self, graph):
+#         # this is O(n*(n+m)), but our graphs should be
+#         # relatively sparse, so typically it should be closer
+#         # to n^2 than n^3
 
-        # this assumes NO partial invalidation of component outputs,
-        # i.e., if ANY inputs are invalidated, then ALL outputs
-        # are invalidated
-        # TODO: add a function to component API to query for
-        #       the component's I/O mapping (or just their subgraph)
-        #       so that we can support partial invalidation
-        tcmap = self._tcmap
-        idxmap = self._idxmap
-        for src in graph.nodes():
-            for nsrc, ndest in dfs_edges(graph, src):
-                tcmap[src][idxmap[ndest]] = 1
+#         # this assumes NO partial invalidation of component outputs,
+#         # i.e., if ANY inputs are invalidated, then ALL outputs
+#         # are invalidated
+#         # TODO: add a function to component API to query for
+#         #       the component's I/O mapping (or just their subgraph)
+#         #       so that we can support partial invalidation
+#         tcmap = self._tcmap
+#         idxmap = self._idxmap
+#         for src in graph.nodes():
+#             for nsrc, ndest in dfs_edges(graph, src):
+#                 tcmap[src][idxmap[ndest]] = 1
     
-    def __getitem__(self, src):
-        """Return all nodes that depend on src."""
+#     def __getitem__(self, src):
+#         """Return all nodes that depend on src."""
 
-        arr = self._tcmap[src]
-        idxmap = self._idxmap
-        return [n for n, i in idxmap.items() if arr[i]] 
+#         arr = self._tcmap[src]
+#         idxmap = self._idxmap
+#         return [n for n, i in idxmap.items() if arr[i]] 
 
-    def is_connected(self, src, dest):
-        """Returns True if dest is downstream of src."""
-        return self._tcmap[src][self._idxmap[dest]] == 1
+#     # def is_connected(self, src, dest):
+#     #     """Returns True if dest is downstream of src."""
+#     #     return self._tcmap[src][self._idxmap[dest]] == 1
 
-    # def add_node(self, node):
-    #     if node not in self._tcmap:
-    #         for name, arr in self._tcmap.items():
-    #             arr.append(0)
-    #         self._idxmap[node] = len(self._idxmap)
-    #         self._tcmap[node] = array('b', [0]*len(self._idxmap))
+#     # def add_node(self, node):
+#     #     if node not in self._tcmap:
+#     #         for name, arr in self._tcmap.items():
+#     #             arr.append(0)
+#     #         self._idxmap[node] = len(self._idxmap)
+#     #         self._tcmap[node] = array('b', [0]*len(self._idxmap))
 
-    # def add_edge(self, src, dest):
-    #     if src not in self._tcmap:
-    #         self.add_node(src)
-    #     if dest not in self._tcmap:
-    #         self.add_node(dest)
+#     # def add_edge(self, src, dest):
+#     #     if src not in self._tcmap:
+#     #         self.add_node(src)
+#     #     if dest not in self._tcmap:
+#     #         self.add_node(dest)
 
-    #     # we need to ad dest's dependents to src, as well as to
-    #     # any node that has src as a dependent
-    #     sarr = self._tcmap[src]
-    #     darr = self._tcmap[dest]
+#     #     # we need to ad dest's dependents to src, as well as to
+#     #     # any node that has src as a dependent
+#     #     sarr = self._tcmap[src]
+#     #     darr = self._tcmap[dest]
 
-    #     idxmap = self._idxmap
-    #     sarr[idxmap[dest]] = 1
+#     #     idxmap = self._idxmap
+#     #     sarr[idxmap[dest]] = 1
 
-    #     for i in range(len(sarr)):
-    #         if darr[i]:
-    #             sarr[i] == 1
+#     #     for i in range(len(sarr)):
+#     #         if darr[i]:
+#     #             sarr[i] == 1
 
-    #     # since we're pretty sparse, create an index set
-    #     # containing only the filled entries
-    #     idxset = set([i for i in darr if darr[i]])
-    #     idxset.add(idxmap[dest])
-    #     sidx = idxmap[src]
-    #     for name, arr in self._tcmap.items():
-    #         if arr[sidx]:
-    #             for i in idxset:
-    #                 arr[i] = 1
+#     #     # since we're pretty sparse, create an index set
+#     #     # containing only the filled entries
+#     #     idxset = set([i for i in darr if darr[i]])
+#     #     idxset.add(idxmap[dest])
+#     #     sidx = idxmap[src]
+#     #     for name, arr in self._tcmap.items():
+#     #         if arr[sidx]:
+#     #             for i in idxset:
+#     #                 arr[i] = 1
 
 
 class DependencyGraph(nx.DiGraph):
@@ -198,7 +198,8 @@ class DependencyGraph(nx.DiGraph):
 
     def config_changed(self):
         self._component_graph = None
-        self._trans_closure = None
+        self._loops = None
+        #self._trans_closure = None
 
     def child_config_changed(self, child):
         """A child has changed its input or output lists, so 
@@ -290,9 +291,9 @@ class DependencyGraph(nx.DiGraph):
         if destpath not in self or is_external_node(self, destpath):
             return
         
-        if _is_expr(destpath):
-            raise RuntimeError("Can't connect '%s' to '%s'. '%s' is not a valid destination." % 
-                                   (srcpath, destpath, destpath))
+        #if _is_expr(destpath):
+            #raise RuntimeError("Can't connect '%s' to '%s'. '%s' is not a valid destination." % 
+                                   #(srcpath, destpath, destpath))
 
         inedges = self.in_edges((destpath,))
         dest_iotype = self.node[destpath].get('iotype')
@@ -314,9 +315,9 @@ class DependencyGraph(nx.DiGraph):
                     raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
                               (srcpath, destpath, base, u))
 
-    def _connect_expr(self, srcpath, destpath):
-        self.config_changed()
-        raise NotImplementedError("_connect_expr")
+    #def _connect_expr(self, srcpath, destpath):
+        #self.config_changed()
+        #raise NotImplementedError("_connect_expr")
 
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
@@ -327,20 +328,16 @@ class DependencyGraph(nx.DiGraph):
         and another edge from B.c.x to base variable B.c.
         """
 
-        if _is_expr(srcpath):
-            self._connect_expr(srcpath, destpath)
-            return
+        #if _is_expr(srcpath):
+            #self._connect_expr(srcpath, destpath)
+            #return
 
         base_src  = base_var(self, srcpath)
         base_dest = base_var(self, destpath)
 
         for v in [base_src, base_dest]:
             if not v.startswith('parent.') and v not in self:
-                vparts = v.split('.', 1)
-                if vparts[0] in self:  # autopassthrough to internal comp
-                    self.add_node(v, var=True, auto=True)
-                else:
-                    raise RuntimeError("Can't find variable '%s' in graph." % v)
+                raise RuntimeError("Can't find variable '%s' in graph." % v)
 
         path = [base_src]
         bases = [base_src]
@@ -404,8 +401,8 @@ class DependencyGraph(nx.DiGraph):
 
         self.config_changed()
 
-    def is_connected(self, src, dest):
-        return self.trans_closure().is_connected(src, dest)
+    # def is_connected(self, src, dest):
+    #     return self.trans_closure().is_connected(src, dest)
 
     def get_interior_connections(self, comps=None):
         if comps is None:
@@ -421,16 +418,20 @@ class DependencyGraph(nx.DiGraph):
     def connections_to(self, path, direction=None):
         if is_comp_or_pseudo_node(self, path):
             conns = []
-            for vname in itertools.chain(self.list_inputs(path, connected=True),
-                                         self.list_outputs(path, connected=True)):
+            for vname in itertools.chain(self.list_inputs(path, 
+                                                    connected=True),
+                                         self.list_outputs(path, 
+                                                    connected=True)):
                 conns.extend(self.connections_to(vname, direction))
             return conns
         else:
             return self._var_connections(path, direction)
 
-    def list_connections(self, show_passthrough=True, show_external=False):
+    def list_connections(self, show_passthrough=True, 
+                               show_external=False):
         conns = [(u,v) for u,v in self.edges_iter() 
                           if is_connection(self, u, v)]
+
         if show_passthrough is False:
             conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
 
@@ -560,12 +561,11 @@ class DependencyGraph(nx.DiGraph):
                 conns.extend(self._var_connections(inp, 'in'))
         return conns
 
-    def _var_connections(self, path, direction=None, bases_only=False):
+    def _var_connections(self, path, direction=None):
         """Returns a list of tuples of the form (srcpath, destpath) for all
         variable connections to the specified variable.  If direction is None, both
         ins and outs are included. Other allowed values for direction are
-        'in' and 'out'. If bases_only is True, then return the base variable
-        sources and destinations.
+        'in' and 'out'. 
         """
         conns = []
 
@@ -598,7 +598,7 @@ class DependencyGraph(nx.DiGraph):
             Name of starting node.
             
         outvars: list of set of str or None
-            Names of outputs from each starting node. If None,
+            Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
             
@@ -619,26 +619,18 @@ class DependencyGraph(nx.DiGraph):
         # don't keep doing them. This allows us to invalidate loops.
         invalidated = set()
 
-        cgraph = self.component_graph()
-        
         while(stack):
             srccomp, outvars = stack.pop()
             invalidated.add(srccomp)
             if outvars is None:
                 outvars = self.list_outputs(srccomp, connected=True)
 
-            if srccomp:
-                for dcomp in cgraph.successors_iter(srccomp):
-                    if dcomp in invalidated:
-                        continue
-                    inputs = self.list_inputs(dcomp, connected=True)
-                    dests = []
-                    for v in outvars:
-                        dests.extend([inp for inp in inputs 
-                                          if self.is_connected(v, inp)])
-                    if dests:
-                        idx = len(dcomp)+1
-                        dests = [s[idx:] for s in dests]
+            cmap = partition_names_by_comp(self.basevar_iter(outvars))
+            for dcomp, dests in cmap.items():
+                if dcomp in invalidated:
+                    continue
+                if dests:
+                    if dcomp:
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests, 
                                                        force=force)
@@ -647,25 +639,8 @@ class DependencyGraph(nx.DiGraph):
                         elif newouts:
                             newouts = ['.'.join([dcomp,v]) for v in newouts]
                             stack.append((dcomp, newouts))
-            else: # srccomp is our parent object
-                valids = scope._valid_dict
-                cmap = {}
-                for v in outvars:
-                    partition_names_by_comp([v for u,v in self.connections_to(v, 'out')], cmap)
-                for dcomp, dests in cmap.items():
-                    if not dcomp:
+                    else: # boundary outputs
                         outset.update(dests)
-                        for d in dests:
-                            valids[d] = False
-                    else:
-                        comp = getattr(scope, dcomp)
-                        newouts = comp.invalidate_deps(varnames=dests, 
-                                                       force=force)
-                        if newouts is None:
-                            stack.append((dcomp, None))
-                        elif newouts:
-                            newouts = ['.'.join([dcomp, v]) for v in newouts]
-                            stack.append((dcomp, newouts))
 
         return outset
 
@@ -754,6 +729,38 @@ class DependencyGraph(nx.DiGraph):
         if self._trans_closure is None:
             self._trans_closure = TransClosure(self)
         return self._trans_closure
+
+    def basevar_iter(self, nodes):
+        """Given a group of nodes, return an iterator
+        over all base variable nodes until the next 
+        component node.
+        """
+        visited=set()
+        for start in nodes:
+            if start in visited:
+                continue
+            visited.add(start)
+            stack = [(start, iter(self[start]))]
+            while stack:
+                parent, children = stack[-1]
+                try:
+                    child = next(children)
+                    if child not in visited:
+                        if is_var_node(self, child):
+                            yield child
+                        elif is_comp_or_pseudo_node(self, child):
+                            raise StopIteration()
+                        visited.add(child)
+                        stack.append((child, iter(self[child])))
+                except StopIteration:
+                    stack.pop()
+
+    def get_loops(self):
+        if self._loops is None:
+            self._loops = [s for s in 
+                nx.strongly_connected_components(self.component_graph()) 
+                if len(s)>1]
+        return self._loops
 
 
 def find_related_pseudos(compgraph, nodes):

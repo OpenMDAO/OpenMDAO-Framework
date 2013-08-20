@@ -619,7 +619,7 @@ class SequentialWorkflow(Workflow):
                 
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
-                    var_edge = dgraph.get_interior_edges(edge)
+                    var_edge = dgraph.get_interior_connections(edge)
                     self._hidden_edges.update(var_edge)
                     
                 elif edge[0] in group:
