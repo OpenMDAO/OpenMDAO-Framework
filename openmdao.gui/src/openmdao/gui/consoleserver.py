@@ -36,7 +36,7 @@ from openmdao.gui.projdirfactory import ProjDirFactory
 
 
 def modifies_model(target):
-    ''' Decorator for methods that may have modified the model
+    ''' Decorator for methods that may have modified the model;
         performs maintenance on root level containers/assemblies and
         publishes the potentially updated components.
     '''
@@ -140,7 +140,7 @@ class ConsoleServer(cmd.Cmd):
         publish(topic, msg)
 
     def _error(self, err, exc_info):
-        ''' Publish error message and save stack trace in case it's requested.
+        ''' Publish error message and save stack trace if case it's requested.
         '''
         self._partial_cmd = None
         self.exc_info = exc_info
@@ -208,7 +208,7 @@ class ConsoleServer(cmd.Cmd):
 
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
-            In that case we execute the line as Python code.
+            In this case we execute the line as Python code.
         '''
         line = line.rstrip()
         if self._partial_cmd is None:
@@ -337,7 +337,7 @@ class ConsoleServer(cmd.Cmd):
     def get_connections(self, pathname, src_name, dst_name):
         ''' For the assembly with the given pathname, get a list of the outputs
             from the component *src_name* (sources), the inputs to the component
-            *dst_name* (destinations) and the connections between them.
+            *dst_name* (destinations), and the connections between them.
         '''
         conns = {}
         asm, root = self.get_object(pathname)

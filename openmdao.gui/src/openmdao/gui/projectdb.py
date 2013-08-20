@@ -282,7 +282,7 @@ class Projects(object):
         self.set(project_id, 'modified', modified)
 
     def remove(self, project_id):
-        ''' Remove a project from the database
+        ''' Remove a project from the database.
 
         project_id: int
             Unique id for requested project.
