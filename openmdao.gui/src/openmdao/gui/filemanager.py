@@ -3,6 +3,7 @@ import shutil
 import traceback
 import zipfile
 import re
+import mimetypes
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -116,10 +117,15 @@ class FileManager(object):
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
+            (mimetype, encoding) = mimetypes.guess_type(filepath)
+            if mimetype.lower() == 'image/x-png':
+                # image/x-png is a legacy MIME type from the days before
+                # it got its official name, image/png, in 1996.
+                mimetype = 'image/png'
             contents = open(filepath, 'rb').read()
-            return contents
+            return (contents, mimetype, encoding)
         else:
-            return None
+            return (None, None, None)
 
     def ensure_dir(self, dirname):
         ''' Create directory in working directory.

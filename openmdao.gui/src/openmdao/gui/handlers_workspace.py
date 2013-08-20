@@ -117,13 +117,32 @@ class FileHandler(ReqHandler):
     @web.authenticated
     def get(self, filename):
         cserver = self.get_server()
-        self.content_type = 'application/octet-stream'
         download = self.get_argument('download', default=False)
+        (contents, mimetype, encoding) = cserver.get_file(filename)
+
         if download:
+            if download in ['True', 'true']:
+                download = True
+            else:
+                download = False
+
+        if download:
+            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
+            self.set_header('Content-Type', 'application/octet-stream')
             self.set_header('Content-Disposition',
                             'attachment; filename="' + filename + '"')
-            self.set_cookie('fileDownload', 'true')  # for jQuery.fileDownload
-        self.write(cserver.get_file(filename))
+        else:
+            self.set_cookie('fileDownload', 'false')
+            self.set_header('Content-Disposition',
+                            'inline; filename="' + filename + '"')
+            if mimetype:
+                self.set_header('Content-Type', mimetype)
+            else:
+                self.set_header('Content-Type', 'application/octet-stream')
+            if encoding:
+                self.set_header('Content-Encoding', encoding)
+
+        self.write(contents)
 
     @web.authenticated
     def put(self, filename):

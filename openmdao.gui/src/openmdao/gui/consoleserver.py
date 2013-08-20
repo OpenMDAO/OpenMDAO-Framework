@@ -596,7 +596,8 @@ class ConsoleServer(cmd.Cmd):
 
     def get_file(self, filename):
         ''' Get contents of a file.
-            Returns None if file was not found.
+            Returns a tuple of (file contents, mimetype, encoding).
+            Tuple values will be None if file was not found.
         '''
         return self.files.get_file(filename)
 
