@@ -118,7 +118,7 @@ class FileManager(object):
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
             (mimetype, encoding) = mimetypes.guess_type(filepath)
-            if mimetype.lower() == 'image/x-png':
+            if mimetype and mimetype.lower() == 'image/x-png':
                 # image/x-png is a legacy MIME type from the days before
                 # it got its official name, image/png, in 1996.
                 mimetype = 'image/png'
