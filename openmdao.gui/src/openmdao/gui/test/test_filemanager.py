@@ -41,8 +41,10 @@ class FileManagerTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, sname)))
 
         # get_file
-        contents = filemanager.get_file(sname)
+        (contents, mimetype, encoding) = filemanager.get_file(sname)
         self.assertEqual(contents, hello)
+        self.assertEqual(mimetype, 'text/x-python')
+        self.assertEqual(encoding, None)
 
         # get_files
         # note that os.sep will be prepended to all file names
