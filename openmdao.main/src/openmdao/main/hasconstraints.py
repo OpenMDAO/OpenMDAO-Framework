@@ -63,7 +63,7 @@ class Constraint(object):
 
         self.pcomp_name = None
            
-    def activate(self, graph=None):
+    def activate(self):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -72,9 +72,8 @@ class Constraint(object):
                                            self._combined_expr())
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        if graph is not None:
             getattr(self.lhs.scope, 
-                    pseudo.name).make_connections(self._parent, graph)
+                    pseudo.name).make_connections(self.lhs.scope)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -126,13 +125,11 @@ class Constraint(object):
                           scope=self.lhs.scope)
         return cnst
         
-    def evaluate(self, scope, graph=None):
+    def evaluate(self, scope,):
         """Returns the value of the constraint."""
-        if graph is None:
-            graph = scope._depgraph
         pcomp = getattr(scope, self.pcomp_name)
         if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'], graph)
+            pcomp.update_outputs(['out0'])
         return pcomp.out0
         
     def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
@@ -484,8 +481,7 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def eval_ineq_constraints(self, scope=None): 
         """Returns a list of constraint values"""
-        graph = self._parent.workflow_subgraph()
-        return [c.evaluate(_get_scope(self, scope, graph)) for c in self._constraints.values()]
+        return [c.evaluate(_get_scope(self, scope)) for c in self._constraints.values()]
     
 
 class HasConstraints(object):

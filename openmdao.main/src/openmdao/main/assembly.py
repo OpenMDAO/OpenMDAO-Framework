@@ -433,7 +433,7 @@ class Assembly(Component):
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))
-    def connect(self, src, dest, graph=None):
+    def connect(self, src, dest):
         """Connect one src expression to one destination expression. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -445,22 +445,16 @@ class Assembly(Component):
 
         dest: str or list(str)
             Destination expression string(s).
-
-        graph: DependencyGraph (optional)
-            If not None, make updates to this DependencyGraph
-
         """
         src = eliminate_expr_ws(src)
-        if graph is None:
-            graph = self._depgraph
 
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
             dst = eliminate_expr_ws(dst)
-            self._connect(src, dst, graph)
+            self._connect(src, dst)
 
-    def _connect(self, src, dest, graph):
+    def _connect(self, src, dest):
         """Handle one connection destination. This should only be called via the connect()
         function, never directly.
         """
@@ -487,15 +481,15 @@ class Assembly(Component):
         if needpseudocomp:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr)
             self.add(pseudocomp.name, pseudocomp)
-            pseudocomp.make_connections(self, graph)
+            pseudocomp.make_connections(self)
         else:
             pseudocomp = None
-            super(Assembly, self).connect(src, dest, graph)
+            super(Assembly, self).connect(src, dest)
 
         try:
             self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
         except Exception as err:
-            super(Assembly, self).disconnect(src, dest, graph)
+            super(Assembly, self).disconnect(src, dest)
             self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
                                  RuntimeError)
 
@@ -503,8 +497,7 @@ class Assembly(Component):
             if not destexpr.refs_parent():
                 # if it's an internal connection, could change dependencies, so we have
                 # to call config_changed to notify our driver
-                if graph is self._depgraph:
-                    self.config_changed(update_parent=False)
+                self.config_changed(update_parent=False)
 
                 destcompname, destcomp, destvarname = self._split_varpath(dest)
 
@@ -513,7 +506,7 @@ class Assembly(Component):
                     self.child_invalidated(destcompname, outs, force=True)
 
     @rbac(('owner', 'user'))
-    def disconnect(self, varpath, varpath2=None, graph=None):
+    def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, if varpath is the name of a trait, remove all
         connections to/from varpath in the current scope. If varpath is the
@@ -525,16 +518,15 @@ class Assembly(Component):
 
         to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
-        if graph is None:
-            graph = self._depgraph
+        graph = self._depgraph
 
         for u, v in graph.list_connections(show_external=True):
             if (u,v) in to_remove:
-                super(Assembly, self).disconnect(u, v, graph=graph)
+                super(Assembly, self).disconnect(u, v)
                 
         for u, v in graph.list_autopassthroughs():
             if (u,v) in to_remove:
-                super(Assembly, self).disconnect(u, v, graph=graph)
+                super(Assembly, self).disconnect(u, v)
                 
         for name in pcomps:
             try:
@@ -629,7 +621,7 @@ class Assembly(Component):
 
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, inputs, graph):
+    def update_inputs(self, compname, inputs):
         """Transfer input data to input expressions on the specified component.
         The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
@@ -637,6 +629,7 @@ class Assembly(Component):
         """
         invalids = []
         conns = []
+        graph = self._depgraph
 
         if compname is None:
             for inp in inputs:
@@ -660,8 +653,7 @@ class Assembly(Component):
                 if cname is None:
                     if self.parent:
                         self.parent.update_inputs(self.name, 
-                                                  vnames,
-                                                  self.parent._depgraph)
+                                                  vnames)
                         
                 # If our source component is in a loop with us, don't
                 # run it. Otherwise you have infinite recursion. It is
@@ -672,10 +664,10 @@ class Assembly(Component):
                         if compname in loop and cname in loop:
                             break
                     else:
-                        getattr(self, cname).update_outputs(vnames, graph)
+                        getattr(self, cname).update_outputs(vnames)
                         
                 else:
-                    getattr(self, cname).update_outputs(vnames, graph)
+                    getattr(self, cname).update_outputs(vnames)
 
         # these connections all come from the depgraph, so they will only
         # contain simple expressions, i.e. only one variable ref (may be
@@ -689,15 +681,15 @@ class Assembly(Component):
                 self.raise_exception("cannot set '%s' from '%s': %s" %
                                      (destexpr.text, srcexpr.text, str(err)), type(err))
 
-    def update_outputs(self, outnames, graph):
+    def update_outputs(self, outnames):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
         for cname, vnames in partition_names_by_comp(outnames).items():
             if cname is None:  # boundary outputs
-                self.update_inputs(None, vnames, self._depgraph)
+                self.update_inputs(None, vnames)
             else:
-                getattr(self, cname).update_outputs(vnames, graph)
+                getattr(self, cname).update_outputs(vnames)
                 self.set_valid(vnames, True)
 
     def get_valid(self, names):

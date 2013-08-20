@@ -1,8 +1,5 @@
-import sys
-from array import array
 import itertools
 import networkx as nx
-from networkx import dfs_edges
 
 from openmdao.util.nameutil import partition_names_by_comp
 

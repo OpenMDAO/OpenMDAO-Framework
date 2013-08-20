@@ -136,7 +136,7 @@ class Parameter(object):
         else:
             self.set(self.start, scope)
 
-    def activate(self, scope, graph=None):
+    def activate(self, scope):
         """Make this parameter active by creating the appropriate
         connections in the dependency graph.  This should NOT be called
         on parameters that are part of a ParameterGroup.
@@ -148,12 +148,12 @@ class Parameter(object):
         else:
             pseudo = getattr(scope, self.pcomp_name)
 
-        pseudo.make_connections(scope, graph)
+        pseudo.make_connections(scope)
 
         self.initialize(scope)
 
 
-    def deactivate(self, scope, graph):
+    def deactivate(self, scope):
         """Make this parameter inactive by disconnecting it in the
         dependency graph and removing its callback from the target
         component.
@@ -162,7 +162,7 @@ class Parameter(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(scope, graph)
+            pseudo.remove_connections(scope)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
 
@@ -414,7 +414,7 @@ class ParameterGroup(object):
                 param.override(low, high, scaler, adder, start,
                                fd_step, name)
 
-    def activate(self, scope, graph=None):
+    def activate(self, scope):
         """Make this parameter active by creating the appropriate pseudocomp
         connections in the dependency graph.  The pseudocomponent is created
         if it doesn't already exist.
@@ -429,11 +429,11 @@ class ParameterGroup(object):
                 pseudo.add_target(param._expreval.text)
                 param.pcomp_name = pseudo.name
 
-        getattr(scope, self.pcomp_name).make_connections(scope, graph)
+        getattr(scope, self.pcomp_name).make_connections(scope)
 
         self.initialize(scope)
 
-    def deactivate(self, scope, graph):
+    def deactivate(self, scope):
         """Make this parameter inactive by disconnecting it in the
         dependency graph and removing its callback from the target
         component.
@@ -442,7 +442,7 @@ class ParameterGroup(object):
             return
         else:
             pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(scope, graph)
+            pseudo.remove_connections(scope)
             scope.remove(self.pcomp_name)
             self.pcomp_name = None
             for param in self._params:
@@ -534,8 +534,7 @@ class HasParameters(object):
         if isinstance(target, (Parameter, ParameterGroup)): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-            target.deactivate(self._parent.get_expr_scope(),
-                              self._parent.workflow_subgraph())
+            target.deactivate(self._parent.get_expr_scope())
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -582,10 +581,6 @@ class HasParameters(object):
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
-        #if hasattr(self._parent, 'workflow_subgraph'):
-            #graph = self._parent.workflow_subgraph()
-        #else:
-            #graph = None
         target.activate(self._get_scope(scope))
 
         self._parent.config_changed()
@@ -594,8 +589,7 @@ class HasParameters(object):
         """Removes the parameter with the given name."""
         param = self._parameters.get(name)
         if param:
-            param.deactivate(self._parent.get_expr_scope(),
-                             self._parent.workflow_subgraph())
+            param.deactivate(self._parent.get_expr_scope())
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "

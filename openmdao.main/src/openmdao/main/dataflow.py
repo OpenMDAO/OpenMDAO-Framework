@@ -77,8 +77,8 @@ class Dataflow(SequentialWorkflow):
             return self._collapsed_graph
         
         to_add = []
-        #scope = self.scope
-        graph = self._parent.workflow_subgraph() #scope._depgraph.copy_graph()
+        scope = self.scope
+        graph = scope._depgraph
         
         # # add edges for parameters, constraints, and objectives
         # for pcomp_name in self._parent.list_pseudocomps():

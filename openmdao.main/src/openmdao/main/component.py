@@ -407,8 +407,7 @@ class Component(Container):
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, 
-                                          invalid_ins,
-                                          self.parent._depgraph)
+                                          invalid_ins)
                 for name in invalid_ins:
                     valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
@@ -847,7 +846,7 @@ class Component(Container):
         return self._container_names
 
     @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr, graph=None):
+    def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression.
         When a name begins with 'parent.', that indicates
         it is referring to a variable outside of this object's scope.
@@ -858,9 +857,6 @@ class Component(Container):
         destexpr: str or ExprEvaluator
             Destination expression object or expression string.
 
-        graph: DependencyGraph
-            DependencyGraph to update with connection info
-
         """
         if isinstance(srcexpr, basestring):
             srcexpr = ConnectedExprEvaluator(srcexpr, self)
@@ -869,9 +865,6 @@ class Component(Container):
 
         destpath = destexpr.text
 
-        if graph is None:
-            graph = self._depgraph
-
         valid_updates = []
         if not srcexpr.refs_parent():
             if srcexpr.text.split('[',1)[0] not in self._valid_dict:
@@ -879,10 +872,9 @@ class Component(Container):
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
             valid_updates.append((destpath, False))
-            if graph is self._depgraph:
-                self.config_changed(update_parent=False)
+            self.config_changed(update_parent=False)
 
-        super(Component, self).connect(srcexpr, destexpr, graph)
+        super(Component, self).connect(srcexpr, destexpr)
 
         # this is after the super connect call so if there's a
         # problem we don't have to undo it
@@ -890,14 +882,12 @@ class Component(Container):
             self._valid_dict[valids_update[0].split('[',1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath, graph=None):
+    def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        if graph is None:
-            graph = self._depgraph
 
-        super(Component, self).disconnect(srcpath, destpath, graph)
+        super(Component, self).disconnect(srcpath, destpath)
         if destpath.split('[',1)[0] in self._valid_dict:
             if '.' in destpath:
                 del self._valid_dict[destpath.split('[',1)[0]]
@@ -1590,7 +1580,7 @@ class Component(Container):
 
         return None  # None indicates that all of our outputs are invalid.
 
-    def update_outputs(self, outnames, graph=None):
+    def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
         """

@@ -426,7 +426,7 @@ class MetaModel(Component):
 
         self.config_changed()
 
-    def update_inputs(self, compname, varnames, graph):
+    def update_inputs(self, compname, varnames):
         if compname != 'model':
             self.raise_exception("cannot update inputs for child named '%s'"
                                  % compname)

@@ -384,22 +384,23 @@ class Driver(Component):
         Driver's dependencies due to its objectives, constraints, 
         and parameters.
         """
-        if self._graph is None:
-            parent_graph = self.get_expr_scope()._depgraph
-            compgraph = parent_graph.component_graph()
-            compnames = set(self.workflow._explicit_names)
-            compnames.update(self._get_required_compnames())
-            compnames.update(find_related_pseudos(compgraph, compnames))
-            g = parent_graph.full_subgraph(compnames)
-            self._graph = g
+        #if self._graph is None:
+            #parent_graph = self.get_expr_scope()._depgraph
+            #compgraph = parent_graph.component_graph()
+            #compnames = set(self.workflow._explicit_names)
+            #compnames.update(self._get_required_compnames())
+            #compnames.update(find_related_pseudos(compgraph, compnames))
+            #g = parent_graph.full_subgraph(compnames)
+            #self._graph = g
             
-            for pname in self.list_pseudocomps():
-                pcomp = getattr(self.parent, pname)
-                g.add_component(pname, pcomp.list_inputs(), 
-                                pcomp.list_outputs(), pseudo=True)
-                pcomp.make_connections(self.get_expr_scope(), g)
+            #for pname in self.list_pseudocomps():
+                #pcomp = getattr(self.parent, pname)
+                #g.add_component(pname, pcomp.list_inputs(), 
+                                #pcomp.list_outputs(), pseudo=True)
+                #pcomp.make_connections(self.get_expr_scope())
                 
-        return self._graph
+        #return self._graph
+        return self.parent._depgraph
 
     def record_case(self):
         """ A driver can call this function to record the current state of the

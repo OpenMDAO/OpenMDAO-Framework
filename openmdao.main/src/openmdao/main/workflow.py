@@ -95,8 +95,7 @@ class Workflow(object):
         graph = self._parent.workflow_subgraph()
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order, case_id=case_id, 
-                         graph=graph)
+                comp.run(ffd_order=ffd_order, case_id=case_id)
             else:
                 self._comp_count += 1
                 comp.set_itername('%s-%d' % (iterbase, self._comp_count))

@@ -14,6 +14,7 @@ from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
+from openmdao.main.ndepgraph import find_related_pseudos
 
 try:
     from numpy import ndarray, zeros
@@ -94,10 +95,9 @@ class SequentialWorkflow(Workflow):
                           list(self._parent._get_required_compnames())
 
         if full:
-            return self._parent.workflow_subgraph().all_comps()
-            # return self._names + self._parent.list_pseudocomps() + \
-            #         find_unit_pseudos(self._scope._depgraph._graph,
-            #                           self._names)
+            return self._names + self._parent.list_pseudocomps() + \
+                     find_related_pseudos(self.scope._depgraph.component_graph(),
+                                          self._names)
         else:
             return self._names[:]
 

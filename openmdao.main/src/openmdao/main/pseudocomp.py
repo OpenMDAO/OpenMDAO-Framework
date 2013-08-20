@@ -217,20 +217,20 @@ class PseudoComponent(object):
                                     for dest in self._outdests])
         return conns
 
-    def make_connections(self, scope, graph):
+    def make_connections(self, scope):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            scope.connect(src, dest, graph=graph)
+            scope.connect(src, dest)
         self.invalidate_deps()
 
-    def remove_connections(self, scope, graph):
+    def remove_connections(self, scope):
         """Disconnect all of the inputs and outputs of this comp
         from other nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            scope.disconnect(src, dest, graph=graph)
+            scope.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
         if varnames is None:
@@ -244,10 +244,10 @@ class PseudoComponent(object):
             self._valid[name] = False
         self._valid = False
 
-    def run(self, ffd_order=0, case_id='', graph=None):
+    def run(self, ffd_order=0, case_id=''):
         invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
         if invalid_ins:
-            self.update_inputs(invalid_ins, graph)
+            self.update_inputs(invalid_ins)
 
         if not invalid_ins and self._valid_dict['out0'] is True:
             return
@@ -263,8 +263,8 @@ class PseudoComponent(object):
         for name in self._valid_dict:
             self._valid_dict[name] = True
 
-    def update_inputs(self, inputs, graph):
-        self._parent.update_inputs(self.name, inputs, graph)
+    def update_inputs(self, inputs):
+        self._parent.update_inputs(self.name, inputs)
         
     def update_outputs(self, names):
         self.run()
@@ -377,13 +377,13 @@ class ParamPseudoComponent(PseudoComponent):
             return [('.'.join([self.name, 'out0']), dest) 
                                    for dest in self._outdests]      
 
-    def make_connections(self, scope, graph):
+    def make_connections(self, scope):
         """Set up the target_changed callback.
         """
         #self._update_callbacks(remove=False)
         pass
 
-    def remove_connections(self, scope, graph):
+    def remove_connections(self, scope):
         """Remove the target_changed callback.
         """
         #self._update_callbacks(remove=True)
@@ -392,8 +392,8 @@ class ParamPseudoComponent(PseudoComponent):
     def update_inputs(self, dummy):
         pass # param pseudocomp will never have inputs that are connected to anything
         
-    def run(self, ffd_order=0, case_id='', graph=None):
-        super(ParamPseudoComponent, self).run(ffd_order, case_id, graph)
+    def run(self, ffd_order=0, case_id=''):
+        super(ParamPseudoComponent, self).run(ffd_order, case_id)
         # now push out out0 value out to the target(s)
         for expr in self._outexprs:
             expr.set(self.out0)
