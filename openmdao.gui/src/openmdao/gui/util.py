@@ -42,7 +42,7 @@ def print_json(data):
 
 def makenode(doc, path):
     ''' Return a document node containing a directory tree for the path.
-        modified version of:
+        Modified version of:
         http://code.activestate.com/recipes/305313-xml-directory-tree/
     '''
     node = doc.createElement('dir')
@@ -129,7 +129,7 @@ def get_executable_path(executable_names):
 
 
 def find_chrome():
-    """ Find the chrome executable. """
+    """ Find the Chrome executable. """
     path = '/Applications/Google Chrome.app/Contents/MacOS' \
          + os.pathsep \
          + "C:\Program Files\Google\Chrome\Application" \
