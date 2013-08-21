@@ -854,7 +854,7 @@ class SequentialWorkflow(Workflow):
         else:
             return calc_gradient(self, inputs, outputs)
     
-    def check_gradient(self, inputs=None, outputs=None, stream=None):
+    def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (ApplyDer and ProvideJ.)
@@ -874,7 +874,10 @@ class SequentialWorkflow(Workflow):
     
         self._parent.update_parameters()
         self.config_changed()
-        J = self.calc_gradient(inputs, outputs)
+        if adjoint:
+            J = self.calc_gradient(inputs, outputs, mode='adjoint')
+        else:
+            J = self.calc_gradient(inputs, outputs)
         
         self._parent.update_parameters()
         self.config_changed()
