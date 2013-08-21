@@ -31,7 +31,8 @@ def _test_view_image(browser):
 
     # add an image file
     file_name = 'Engine_Example_Process_Diagram.png'
-    file_path = pkg_resources.resource_filename('openmdao.examples.enginedesign', file_name)
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/' + file_name)
     workspace_page.add_file(file_path)
 
     time.sleep(2)
