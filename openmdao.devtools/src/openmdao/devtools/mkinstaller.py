@@ -76,17 +76,46 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
         args.append('openmdao-%%s' %% '%s')
 """ % version
 
-    return """
+    adjuster = """
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
     if major_version < (2,6) or major_version > (3,0):
-        print 'ERROR: python major version must be 2.6 or 2.7. yours is %%s' %% str(major_version)
+        print 'ERROR: python major version must be 2.6 or 2.7, yours is %%s' %% str(major_version)
         sys.exit(-1)
 %s
-
     # Check if we're running in an activated environment.
     virtual_env = os.environ.get('VIRTUAL_ENV')
+
+    if options.relocatable:
+        if not virtual_env:
+            print 'ERROR: --relocatable requires an activated environment'
+            sys.exit(-1)
+
+        # Make current environment relocatable.
+        make_environment_relocatable(virtual_env)
+
+        # Copy files to archive.
+        base = os.path.basename(virtual_env)
+        zipname = '%%s.zip' %% base
+        print 'Packing the relocatable environment into', zipname
+        count = 0
+        import zipfile
+        with zipfile.ZipFile(zipname, 'w', zipfile.ZIP_DEFLATED) as zipped:
+            for dirpath, dirname, filenames in os.walk(virtual_env):
+                arcpath = os.path.join(base, dirpath[len(virtual_env)+1:])
+                for filename in filenames:
+                    count += 1
+                    if (count %% 100) == 0:
+                        print '.',
+                    zipped.write(os.path.join(dirpath, filename),
+                                 os.path.join(arcpath, filename))
+            zipped.writestr(os.path.join(base, 'script-fixer.py'),
+                            _SCRIPT_FIXER)
+        print "\\nRemember to run 'python script-fixer.py' after unpacking."
+        sys.exit(0)
+
     if virtual_env:
+        # Install in current environment.
         after_install(options, virtual_env, activated=True)
 
     try:
@@ -99,6 +128,68 @@ def adjust_options(options, args):
         logger.warn(str(err))
 
 """ % (code, setuptools_url, setuptools_version)
+
+    fixer = '''
+_SCRIPT_FIXER = """\\
+import glob
+import os.path
+import sys
+
+
+def main():
+    # Move to script directory of the unzipped environment.
+    root = os.path.dirname(os.path.abspath(__file__))
+    scripts = 'Scripts' if sys.platform == 'win32' else 'bin'
+    scripts = os.path.join(root, scripts)
+    os.chdir(scripts)
+    tmpname = 'script-to-fix'
+
+    # Fix activate scripts.
+    for filename in sorted(glob.glob('activate*')):
+        if filename == 'activate':         # Bourne/bash.
+            pattern = 'VIRTUAL_ENV="'
+        elif filename == 'activate.csh':   # C shell.
+            pattern = 'setenv VIRTUAL_ENV "'
+        elif filename == 'activate.fish':  # ?
+            pattern = 'set -gx VIRTUAL_ENV "'
+        elif filename == 'activate.bat':   # Windows.
+            pattern = 'set "VIRTUAL_ENV='
+        else:
+            continue
+
+        print 'Fixing', filename
+        if os.path.exists(tmpname):
+            os.remove(tmpname)
+        os.rename(filename, tmpname)
+        with open(tmpname, 'rU') as inp:
+            with open(filename, 'w') as out:
+                for line in inp:
+                    if line.startswith(pattern):
+                        line = '%s%s"\\\\n' % (pattern, root)
+                    out.write(line)
+        os.remove(tmpname)
+
+    # Fix Windows 'shadow' scripts.
+    if sys.platform == 'win32':
+        replacement = '#!%s\\\\\\\\python.exe\\\\n' % scripts
+        for filename in sorted(glob.glob('*-script.py')):
+            print 'Fixing', filename
+            if os.path.exists(tmpname):
+                os.remove(tmpname)
+            os.rename(filename, tmpname)
+            with open(tmpname, 'rU') as inp:
+                with open(filename, 'w') as out:
+                   for line in inp:
+                       if line.startswith('#!'):
+                           line = replacement
+                       out.write(line)
+            os.remove(tmpname)
+
+
+if __name__ == '__main__':
+    main()
+"""'''
+    return adjuster + fixer
 
 
 def main(args=None):
@@ -563,9 +654,9 @@ def after_install(options, home_dir, activated=False):
         _reqs = [str(setupdoc_dist.as_requirement())]
     else:
         _reqs = ['setupdocs>=1.0']
-    reqs = _reqs + list(reqs)
-    guireqs = list(guireqs)
-    guitestreqs = list(guitestreqs)
+    reqs = sorted(_reqs + list(reqs))
+    guireqs = sorted(guireqs)
+    guitestreqs = sorted(guitestreqs)
 
     # pin setuptools to this version
     setuptools_version = "0.9.5"
