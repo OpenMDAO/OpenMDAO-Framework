@@ -52,13 +52,14 @@
                         show_index = 0;
                     for (var file in files) {
                         if (openmdao.Util.hasImageExtension(file)) {
-                            data.push({
-                                title: file,
-                                image: '/workspace/file'+file
-                            });
                             if (file === "{{ filename }}") {
                                 show_index = index;
                             }
+                            data.push({
+                                title: file,
+                                image: '/workspace/file'+file.replace(/\\/g,'/')
+
+                            });
                             index++;
                         }
                     }
