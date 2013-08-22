@@ -463,12 +463,8 @@ class Assembly(Component):
         """
 
         # Among other things, check if already connected.
-        try:
-            srcexpr, destexpr, needpseudocomp = \
-                       self._exprmapper.check_connect(src, dest, self)
-        except Exception as err:
-            self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
-                                 RuntimeError)
+        srcexpr, destexpr, needpseudocomp = \
+                   self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
@@ -476,9 +472,8 @@ class Assembly(Component):
             if isinstance(comp, Driver) and \
                 hasattr(comp, 'list_param_targets'):
                     if dest in comp.list_param_targets():
-                        msg = "Can't connect '%s' to '%s' " % (src, dest)
-                        msg += "because the target is a Parameter in " + \
-                               "driver '%s'." % comp.name
+                        msg = "destination '%s' is a Parameter in " % dest
+                        msg += "driver '%s'." % comp.name
                         self.raise_exception(msg, RuntimeError)
 
         if needpseudocomp:
@@ -491,10 +486,9 @@ class Assembly(Component):
 
         try:
             self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
-        except Exception as err:
+        except Exception:
             super(Assembly, self).disconnect(src, dest)
-            self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dest, str(err)),
-                                 RuntimeError)
+            raise
 
         if not srcexpr.refs_parent():
             if not destexpr.refs_parent():

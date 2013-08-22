@@ -575,25 +575,37 @@ class DependencyGraph(nx.DiGraph):
 
         return outset
 
-    def get_connected_inputs(self):
-        """Returns inputs that are connected externally."""
-        ins = []
-        for node in self.nodes_iter():
-            if is_external_node(self, node):
-                succs = self.succ.get(node)
-                if succs:
-                    ins.extend(succs.keys())
-        return ins
+    def get_connected_inputs(self, nodes=None):
+        """Returns inputs that are connected externally.
+        If nodes is not None, return a list of those nodes
+        that are connected.
+        """
+        if nodes is None:
+            ins = []
+            for node in self.nodes_iter():
+                if is_external_node(self, node):
+                    succs = self.succ.get(node)
+                    if succs:
+                        ins.extend(succs.keys())
+            return ins
+        else:
+            return [n for n in nodes if self.in_degree(n) > 0]
 
-    def get_connected_outputs(self):
-        """Returns outputs that are connected externally."""
-        outs = []
-        for node in self.nodes_iter():
-            if is_external_node(self, node):
-                preds = self.pred.get(node)
-                if preds:
-                    outs.extend(preds.keys())
-        return outs
+    def get_connected_outputs(self, nodes=None):
+        """Returns outputs that are connected externally.
+        If nodes is not None, return a list of those nodes
+        that are connected.
+        """
+        if nodes is None:
+            outs = []
+            for node in self.nodes_iter():
+                if is_external_node(self, node):
+                    preds = self.pred.get(node)
+                    if preds:
+                        outs.extend(preds.keys())
+            return outs
+        else:
+            return [n for n in nodes if self.out_degree(n) > 0]
 
     def list_inputs(self, cname, connected=False):
         """Return a list of names of input nodes to a component.
@@ -721,14 +733,16 @@ class DependencyGraph(nx.DiGraph):
     def basevar_iter(self, nodes, reverse=False):
         """Given a group of nodes, return an iterator
         over all base variable nodes that are nearest in one
-        direction.
+        direction. The traversal of a branch is stopped once a
+        base variable is found.
         """
         return self.find_nodes(nodes, is_var_node, reverse=reverse)
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator
         over all component nodes that are nearest in one
-        direction.
+        direction. The traversal of a branch is stopped once a 
+        component is found.
         """
         if include_pseudo:
             return self.find_nodes(nodes, any_preds(is_comp_node, is_pseudo_node),
