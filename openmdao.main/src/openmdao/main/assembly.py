@@ -455,7 +455,7 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception as err:
-                self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dst, err))
+                self.raise_exception("Can't connect '%s' to '%s': %s" % (src, dst, err), RuntimeError)
 
     def _connect(self, src, dest):
         """Handle one connection destination. This should only be called via the connect()

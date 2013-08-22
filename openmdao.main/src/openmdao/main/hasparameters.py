@@ -448,7 +448,7 @@ class HasParameters(object):
         if isinstance(target, (Parameter, ParameterGroup)): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-            target.deactivate(self._parent.get_expr_scope())
+            #target.deactivate(self._parent.get_expr_scope())
         else:     
             if isinstance(target, basestring): 
                 names = [target]

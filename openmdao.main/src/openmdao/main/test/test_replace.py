@@ -80,10 +80,6 @@ def _nested_model():
     
     top.connect('sub.c4', 'comp8.a')
     
-    # 'auto' passthroughs
-    top.connect('comp7.c', 'sub.comp3.a')
-    top.connect('sub.comp3.d', 'comp8.b')
-    
     return top
 
 class ReplaceTestCase(unittest.TestCase):

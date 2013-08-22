@@ -753,6 +753,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
 
+    @rbac(('owner', 'user'))
     def list_inputs(self, valid=None, connected=None):
         """Return a list of names of input values.
 
@@ -792,6 +793,7 @@ class Component(Container):
 
         return ret  # connected is None, valid is not None
 
+    @rbac(('owner', 'user'))
     def list_outputs(self, valid=None, connected=None):
         """Return a list of names of output values.
 

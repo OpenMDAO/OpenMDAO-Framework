@@ -401,8 +401,7 @@ class CONMINdriver(Driver):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            inputs = ["%s" % item.target for item in \
-                      self.get_parameters().values()]
+            inputs = self.list_param_targets()
             obj = ["%s.out0" % item.pcomp_name for item in
                    self.get_objectives().values()]
             con = ["%s.out0" % item.pcomp_name for item in

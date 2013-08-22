@@ -85,9 +85,6 @@ def is_param_pseudo_node(graph, node):
 def is_pseudo_unit_node(graph, node):
     return graph.node[node].get('pseudo') == 'unit'
 
-def is_comp_or_pseudo_node(graph, node):
-    return is_comp_node(graph, node) or is_pseudo_node(graph, node)
-
 def is_external_node(graph, node):
     return node.startswith('parent.')
 
@@ -110,6 +107,31 @@ def is_connection(graph, src, dest):
         return 'conn' in graph.edge[src][dest]
     except KeyError:
         return False
+
+# predicate factories
+
+def all_preds(*args):
+    """Returns a function that returns True if all preds passed to it
+    return True.  If called with no predicates, always returns False.
+    """
+    def _all_preds(graph, node):
+        for pred in args:
+            if not pred(graph, node):
+                return False
+        return False
+    return _all_preds
+
+def any_preds(*args):
+    """Returns a function that returns True if any preds passed to it
+    return True.  If called with no predicates, always returns False.
+    """
+    def _any_preds(graph, node):
+        for pred in args:
+            if pred(graph, node):
+                return True
+        return False
+    return _any_preds
+
 
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
@@ -307,13 +329,10 @@ class DependencyGraph(nx.DiGraph):
 
         self.config_changed()
 
-    # def is_connected(self, src, dest):
-    #     return self.trans_closure().is_connected(src, dest)
-
     def get_interior_connections(self, comps=None):
+        pred = any_preds(is_comp_node, is_pseudo_node)
         if comps is None:
-            compset = set([n for n in self.nodes_iter() if
-                            is_comp_or_pseudo_node(self, n)])
+            compset = set([n for n in self.nodes_iter() if pred(self, n)])
         else:
             compset = set(comps)
         return [(u,v) for u, v in self.edges_iter()
@@ -322,7 +341,7 @@ class DependencyGraph(nx.DiGraph):
                       v.split('.', 1)[0] in compset]
 
     def connections_to(self, path, direction=None):
-        if is_comp_or_pseudo_node(self, path):
+        if any_preds(is_comp_node, is_pseudo_node)(self, path):
             conns = []
             for vname in itertools.chain(self.list_inputs(path, 
                                                     connected=True),
@@ -353,7 +372,7 @@ class DependencyGraph(nx.DiGraph):
         if preds:
             if len(preds) == 1:
                 src = preds.keys()[0]
-                if is_comp_or_pseudo_node(self, src):
+                if any_preds(is_comp_node, is_pseudo_node)(self, src):
                     return None # src is a comp so this node is really an output
                 return src
             else:
@@ -401,8 +420,8 @@ class DependencyGraph(nx.DiGraph):
         """Returns a list of all component and PseudoComponent
         nodes.
         """
-        return [n for n in self.nodes_iter() 
-                    if is_comp_or_pseudo_node(self, n)]
+        pred = any_preds(is_comp_node, is_pseudo_node)
+        return [n for n in self.nodes_iter() if pred(self, n)]
 
     def find_prefixed_nodes(self, nodes, data=False):
         """Returns a list of nodes including the given nodes and
@@ -517,10 +536,13 @@ class DependencyGraph(nx.DiGraph):
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
             srcvars = ['.'.join([cname,n]) for n in srcvars]
-
+            
         stack = [(cname, srcvars)]
         outset = set()  # set of changed boundary outputs
         
+        if not srcvars:
+            return outset
+
         # Keep track of the comp/var we already invalidated, so we
         # don't keep doing them. This allows us to invalidate loops.
         invalidated = set()
@@ -530,6 +552,9 @@ class DependencyGraph(nx.DiGraph):
             invalidated.add(srccomp)
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
+                
+            if not srcvars:
+                continue
 
             cmap = partition_names_by_comp(self.basevar_iter(srcvars))
             for dcomp, dests in cmap.items():
@@ -631,42 +656,85 @@ class DependencyGraph(nx.DiGraph):
         self._component_graph = g
         return g
 
-    def trans_closure(self):
-        if self._trans_closure is None:
-            self._trans_closure = TransClosure(self)
-        return self._trans_closure
-
-    def basevar_iter(self, nodes):
-        """Given a group of nodes, return an iterator
-        over all base variable nodes until the next 
-        component node.
-        """
-        visited=set()
-        for start in nodes:
-            if start in visited:
-                continue
-            visited.add(start)
-            stack = [(start, iter(self[start]))]
-            while stack:
-                parent, children = stack[-1]
-                try:
-                    child = next(children)
-                    if child not in visited:
-                        if is_var_node(self, child):
-                            yield child
-                        elif is_comp_or_pseudo_node(self, child):
-                            raise StopIteration()
-                        visited.add(child)
-                        stack.append((child, iter(self[child])))
-                except StopIteration:
-                    stack.pop()
-
     def get_loops(self):
         if self._loops is None:
             self._loops = [s for s in 
                 nx.strongly_connected_components(self.component_graph()) 
                 if len(s)>1]
         return self._loops
+    
+    def find_nodes(self, nodes, predicate, stop_predicate=None, reverse=False):
+        """Returns an iterator over the nearest successor nodes that satisfy the predicate.
+        For example, if node is a base variable node and predicate is True for base variable
+        nodes, then the nearest base variable successors would be returned in the iterator.
+        Note that depending on iotype, the behavior may be surprising.  For example, if node is
+        an input base variable of a component, then the iterator will return all of the output
+        base variable nodes of the component because they are the next base variable successors,
+        but if node is an output variable, then any input base variables connected to that node
+        will be returned.
+
+        nodes: str or iter of str
+            The group of starting nodes, or just a single node
+
+        predicate: boolean function of the form  f(graph, node)
+            Should return True for nodes that should be included
+            in the iterator
+
+        stop_predicate: boolean function of the form f(graph, node) (optional)
+            Should return True for nodes that should stop the traversal
+            of that branch.  Traversal on a branch will stop when the first 
+            node satisfying 'predicate' is found OR if stop_predicate is True.
+
+        reverse: bool (optional)
+            if True, find previous nodes instead.
+
+        If predicate is True AND stop_predicate is True, the node will still
+        be added to the iterator, but traversal on the branch will stop.
+        """
+        if isinstance(nodes, basestring):
+            nodes = [nodes]
+
+        if reverse:
+            neighbors = self.predecessors_iter
+        else:
+            neighbors = self.successors_iter
+
+        visited=set()
+        for start in nodes:
+            if start in visited:
+                continue
+            visited.add(start)
+            stack = [(start, neighbors(start))]
+            while stack:
+                parent, children = stack[-1]
+                try:
+                    child = next(children)
+                    if child not in visited:
+                        visited.add(child)
+                        if predicate(self, child):
+                            yield child
+                        elif not (stop_predicate is not None and stop_predicate(self, child)):
+                            stack.append((child, neighbors(child)))
+                except StopIteration:
+                    stack.pop()
+
+    def basevar_iter(self, nodes, reverse=False):
+        """Given a group of nodes, return an iterator
+        over all base variable nodes that are nearest in one
+        direction.
+        """
+        return self.find_nodes(nodes, is_var_node, reverse=reverse)
+
+    def comp_iter(self, nodes, reverse=False, include_pseudo=True):
+        """Given a group of nodes, return an iterator
+        over all component nodes that are nearest in one
+        direction.
+        """
+        if include_pseudo:
+            return self.find_nodes(nodes, any_preds(is_comp_node, is_pseudo_node),
+                                   reverse=reverse)
+        else:
+            return self.find_nodes(nodes, is_comp_node, reverse=reverse)
 
 
 def find_related_pseudos(compgraph, nodes):

@@ -1,8 +1,7 @@
 import unittest
 
-from openmdao.main.ndepgraph import DependencyGraph, is_comp_node, is_driver_node,\
-                                    is_var_node, is_subvar_node, is_pseudo_node, \
-                                    is_param_pseudo_node, is_nested_node, base_var
+from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var
+from openmdao.main.pseudocomp import PseudoComponent
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -34,6 +33,26 @@ class DumbClass(object):
 
 
 class DepGraphTestCase(unittest.TestCase):
+
+    def make_xgraph(self):
+        """Make an X shaped make_graph
+        A   D
+         \ /
+          C
+         / \
+        B   E
+        """
+        conns = [
+            ('A.c[2]', 'D.a[4]'),
+            ('A.d.z', 'C.a.x.y'),
+            ('B.c', 'C.b[1]'),
+            ('B.d.x', 'E.b'),
+            ('C.c', 'D.b'),
+            ('C.d[2]', 'E.a')
+        ]
+        comps = ['A','B','C','D','E']
+        bvariables = []
+        return self.make_graph(comps, bvariables, conns)
 
     def make_graph(self, comps=(), variables=(), connections=()):
         scope = DumbClass('')
@@ -167,7 +186,7 @@ class DepGraphTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('A.d', 'B.a')
         except Exception as err:
-            self.assertEqual(str(err), "Can't connect 'A.d' to 'B.a'. 'B.a' is already connected to 'B.a.x.y'")
+            self.assertEqual(str(err), "'B.a' is already connected to 'B.a.x.y'")
         else:
             self.fail('Exception expected')
            
@@ -175,7 +194,7 @@ class DepGraphTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('A.d', 'c')
         except Exception as err:
-            self.assertEqual(str(err), "Can't connect 'A.d' to 'c'. 'c' is already connected to 'C.c'")
+            self.assertEqual(str(err), "'c' is already connected to 'C.c'")
         else:
             self.fail('Exception expected')
     
@@ -274,6 +293,9 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.find_all_connecting('A','D'), set())
         self.assertEqual(self.dep.find_all_connecting('A','C'), set(['A','B','C']))
         
+    # Expression connections are now handled at the parent level (Assembly/Component)
+    # so the DependencyGraph will never see anything other than connections
+    # between base variables or subvars (or some permutation)
     #def test_expr(self):
         #dep, scope = self.make_graph(comps=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
         #self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
@@ -291,12 +313,48 @@ class DepGraphTestCase(unittest.TestCase):
         #self.assertEqual(dep.list_connections(), [])
         
     def test_basevar_iter(self):
-        self.assertEqual(set(self.dep.basevar_iter(['a'])), set(['A.a']))
-        self.assertEqual(set(self.dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
-        self.assertEqual(set(self.dep.basevar_iter(['B.d'])), set(['C.b']))
-        self.assertEqual(set(self.dep.basevar_iter(['C.c'])), set(['c']))
-          
+        dep = self.dep
+        self.assertEqual(set(dep.basevar_iter('a')), set(['A.a']))
+        self.assertEqual(set(dep.basevar_iter(['a'])), set(['A.a']))
+        self.assertEqual(set(dep.basevar_iter(['parent.C1.d'])), set(['a']))
+        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
+        self.assertEqual(set(dep.basevar_iter(['B.d'])), set(['C.b']))
+        self.assertEqual(set(dep.basevar_iter(['C.c'])), set(['c']))
+        self.assertEqual(list(dep.basevar_iter(['parent.C2.a'])), [])
+        self.assertEqual(set(dep.basevar_iter(['D.b'])), set(['D.c','D.d']))
+        self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set(['D.c','D.d']))
+        self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 2)
 
+        dep, scope = self.make_xgraph()
+        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['C.a','D.a']))
+        self.assertEqual(set(dep.basevar_iter(['C.a','C.b'], reverse=True)), 
+                         set(['A.d','B.c']))
+
+
+    def test_comp_iter(self):
+        dep = self.dep
+        self.assertEqual(list(dep.comp_iter('B')), ['C'])
+        self.assertEqual(list(dep.comp_iter('B', include_pseudo=True)), ['C'])
+        self.assertEqual(list(dep.comp_iter('B', reverse=True)), ['A'])
+        dep.add_node('_pseudo_0', pseudo=True)
+        dep.add_nodes_from(['_pseudo_0.in0','_pseudo_0.out0'], var=True)
+        dep.add_edges_from([('_pseudo_0.in0','_pseudo_0'),
+                            ('_pseudo_0','_pseudo_0.out0')])
+        dep.connect('C.d', '_pseudo_0.in0')
+        dep.connect('_pseudo_0.out0', 'D.a')
+        self.assertEqual(list(dep.comp_iter('C', include_pseudo=False)), ['D'])
+        self.assertEqual(list(dep.comp_iter('D', include_pseudo=False, reverse=True)),
+                                            ['C'])
+        self.assertEqual(list(dep.comp_iter('C')), ['_pseudo_0'])
+        self.assertEqual(list(dep.comp_iter('D', reverse=True)), ['_pseudo_0'])
+
+        dep, scope = self.make_xgraph()
+
+        self.assertEqual(set(dep.comp_iter('C')), set(['D','E']))
+        self.assertEqual(set(dep.comp_iter('C', reverse=True)), set(['A','B']))
+        self.assertEqual(set(dep.comp_iter('A')), set(['D','C']))
+
+          
 if __name__ == "__main__":
     unittest.main()
 
