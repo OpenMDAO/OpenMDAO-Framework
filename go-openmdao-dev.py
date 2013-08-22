@@ -1971,7 +1971,8 @@ def adjust_options(options, args):
                 for filename in filenames:
                     count += 1
                     if (count % 100) == 0:
-                        print '.',
+                        sys.stdout.write('.')
+                        sys.stdout.flush()
                     zipped.write(os.path.join(dirpath, filename),
                                  os.path.join(arcpath, filename))
             zipped.writestr(os.path.join(base, 'script-fixer.py'),

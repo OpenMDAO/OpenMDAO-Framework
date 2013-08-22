@@ -64,8 +64,11 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install chromedriver in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-        browser_version = subprocess.check_output([find_chrome(), '--version'])
-        browser_version = int(browser_version.split()[2].split('.')[0])
+        if sys.platform == 'win32':  # No command-line version capability.
+            browser_version = 29
+        else:
+            browser_version = subprocess.check_output([find_chrome(), '--version'])
+            browser_version = int(browser_version.strip().split()[-1].split('.')[0])
         version = '2.2' if browser_version > 28 else '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac32' if browser_version > 28 else 'mac'
