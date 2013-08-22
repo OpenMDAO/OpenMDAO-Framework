@@ -402,12 +402,11 @@ class Component(Container):
                 valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
-            invalid_ins = [inp for inp in self.list_inputs(connected=True)
+            invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
                                     if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
-                self.parent.update_inputs(self.name, 
-                                          invalid_ins)
+                self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
                     valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
@@ -624,10 +623,15 @@ class Component(Container):
         if has_interface(obj, IDriver) and not has_interface(self, IAssembly):
             raise Exception("A Driver may only be added to an Assembly")
 
-        self.config_changed()
-        super(Component, self).add(name, obj)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
-            self._depgraph.add_component(name, inputs=(), outputs=())
+        try:
+            super(Component, self).add(name, obj)
+        finally:
+            self.config_changed()
+            
+        trait = self.trait(name)
+        if trait.iotype:
+            self._valid_dict[name] = False
+
         return obj
 
     def remove(self, name):

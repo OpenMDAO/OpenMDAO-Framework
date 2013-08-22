@@ -639,6 +639,13 @@ class Container(SafeHasTraits):
                 self.get_trait(name)
             else:
                 self._cached_traits_[name] = self.trait(name)
+            io = self._cached_traits_[name].iotype
+            if io and not isinstance(self._depgraph, _ContainerDepends):
+                # since we just removed this container and it was
+                # being used as an io variable, we need to put
+                # it back in the dep graph and valids dict
+                self._depgraph.add_boundary_var(name, iotype=io)
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.

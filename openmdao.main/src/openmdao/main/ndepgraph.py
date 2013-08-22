@@ -368,16 +368,28 @@ class DependencyGraph(nx.DiGraph):
         return conns
 
     def get_source(self, name):
-        preds = self.pred.get(name)
-        if preds:
-            if len(preds) == 1:
-                src = preds.keys()[0]
-                if any_preds(is_comp_node, is_pseudo_node)(self, src):
-                    return None # src is a comp so this node is really an output
-                return src
-            else:
-                raise RuntimeError("'%s' has multiple sources" % name)
+        nodes = self.find_nodes(name, any_preds(is_var_node,
+                                                is_external_node),
+                                stop_predicate=any_preds(is_comp_node,
+                                                         is_pseudo_node),
+                                reverse=True)
+        srcs = list(nodes)
+        if len(srcs) == 1:
+            return srcs[0]
+        elif len(srcs) > 1:
+            raise RuntimeError("'%s' has multiple sources" % name)
         return None
+
+        # preds = self.pred.get(name)
+        # if preds:
+        #     if len(preds) == 1:
+        #         src = preds.keys()[0]
+        #         if any_preds(is_comp_node, is_pseudo_node)(self, src):
+        #             return None # src is a comp so this node is really an output
+        #         return src
+        #     else:
+        #         raise RuntimeError("'%s' has multiple sources" % name)
+        # return None
 
     def _check_source(self, path, src):
         preds = self.predecessors(path)
