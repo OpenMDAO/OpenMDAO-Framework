@@ -64,11 +64,14 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-        version = '23.0.1240.0'
+#        version = '23.0.1240.0'
+        version = '2.2'
         if sys.platform == 'darwin':
-            flavor = 'mac'
+#            flavor = 'mac'
+            flavor = 'mac32'
         elif sys.platform == 'win32':
-            flavor = 'win'
+#            flavor = 'win'
+            flavor = 'win32'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:

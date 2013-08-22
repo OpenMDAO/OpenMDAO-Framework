@@ -79,14 +79,17 @@ def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     adjuster = """
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version < (2,6) or major_version > (3,0):
-        print 'ERROR: python major version must be 2.6 or 2.7, yours is %%s' %% str(major_version)
+    if major_version != (2,7):
+        print 'ERROR: python major version must be 2.7, yours is %%s' %% str(major_version)
         sys.exit(-1)
 %s
     # Check if we're running in an activated environment.
     virtual_env = os.environ.get('VIRTUAL_ENV')
 
     if options.relocatable:
+        import distutils.util
+        import zipfile
+
         if not virtual_env:
             print 'ERROR: --relocatable requires an activated environment'
             sys.exit(-1)
@@ -96,10 +99,9 @@ def adjust_options(options, args):
 
         # Copy files to archive.
         base = os.path.basename(virtual_env)
-        zipname = '%%s.zip' %% base
+        zipname = '%%s-%%s.zip' %% (base, distutils.util.get_platform())
         print 'Packing the relocatable environment into', zipname
         count = 0
-        import zipfile
         with zipfile.ZipFile(zipname, 'w', zipfile.ZIP_DEFLATED) as zipped:
             for dirpath, dirname, filenames in os.walk(virtual_env):
                 arcpath = os.path.join(base, dirpath[len(virtual_env)+1:])
