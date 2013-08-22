@@ -4,6 +4,33 @@ import ordereddict
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
 
+class Objective(ConnectedExprEvaluator):
+    def __init__(self, *args, **kwargs):
+        super(Objective, self).__init__(*args, **kwargs)
+        self.pcomp_name = None
+
+    def activate(self):
+        """Make this constraint active by creating the appropriate
+        connections in the dependency graph.
+        """
+        if self.pcomp_name is None:
+            pseudo = OutputPseudoComponent(self.scope, self)
+            self.pcomp_name = pseudo.name
+            self.scope.add(pseudo.name, pseudo)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+
+    def deactivate(self):
+        """Remove this objective from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.scope
+            pcomp = getattr(scope, self.pcomp_name)
+            pcomp.remove_connections(scope)
+            if hasattr(scope, pcomp.name):
+                scope.remove(pcomp.name)
+            self.pcomp_name = None
+
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
@@ -61,21 +88,16 @@ class HasObjectives(object):
                                          AttributeError)
             
         scope = self._get_scope(scope)
-        expreval = ConnectedExprEvaluator(expr, scope, 
-                                          getter='get_wrapped_attr')
+        expreval = Objective(expr, scope, getter='get_wrapped_attr')
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
 
         name = expr if name is None else name
 
-        pseudo = OutputPseudoComponent(scope, expreval)
-        scope.add(pseudo.name, pseudo)
+        expreval.activate()
       
         self._objectives[name] = expreval
-
-        # just attach the pseudocomp name to the objective object
-        expreval.pcomp_name = pseudo.name
             
         self._parent.config_changed()
             
@@ -86,10 +108,7 @@ class HasObjectives(object):
         expr = _remove_spaces(expr)
         obj = self._objectives.get(expr)
         if obj:
-            self._parent.workflow_subgraph().disconnect(obj.pcomp_name)
-            scope = self._get_scope()
-            if hasattr(scope, obj.pcomp_name):
-                scope.remove(obj.pcomp_name)
+            obj.deactivate()
             del self._objectives[expr]
         else:
             self._parent.raise_exception("Trying to remove objective '%s' "

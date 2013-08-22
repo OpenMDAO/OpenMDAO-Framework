@@ -297,7 +297,7 @@ class Container(SafeHasTraits):
             cname2, _, destvar = vpath.partition('.')
             destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
-                self.raise_exception("Cannot connect '%s' to '%s'. Both refer"
+                self.raise_exception("Can't connect '%s' to '%s'. Both refer"
                                      " to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
@@ -336,8 +336,7 @@ class Container(SafeHasTraits):
             except Exception as err:
                 self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
                                    (childsrc, childdest, srcpath, destpath, err))
-            self.raise_exception("Can't connect '%s' to '%s': %s" % 
-                                 (srcpath, destpath, str(err)), RuntimeError)
+            raise
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath, graph=None):

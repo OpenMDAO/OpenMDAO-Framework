@@ -111,83 +111,6 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-# class TransClosure(object):
-#     def __init__(self, graph):
-#         # self._idxmap = {}
-#         # self._tcmap = {}
-#         # for src, dest in graph.edges():
-#         #     self.add_edge(src, dest)
-
-#         nodes = graph.nodes()
-#         initer = [0]*len(nodes)
-#         self._idxmap = dict([(n, i) for i, n in enumerate(nodes)])
-#         self._tcmap = dict([(n, array('b', initer)) for n in nodes])
-#         self._calc_closure(graph)
-
-#     def _calc_closure(self, graph):
-#         # this is O(n*(n+m)), but our graphs should be
-#         # relatively sparse, so typically it should be closer
-#         # to n^2 than n^3
-
-#         # this assumes NO partial invalidation of component outputs,
-#         # i.e., if ANY inputs are invalidated, then ALL outputs
-#         # are invalidated
-#         # TODO: add a function to component API to query for
-#         #       the component's I/O mapping (or just their subgraph)
-#         #       so that we can support partial invalidation
-#         tcmap = self._tcmap
-#         idxmap = self._idxmap
-#         for src in graph.nodes():
-#             for nsrc, ndest in dfs_edges(graph, src):
-#                 tcmap[src][idxmap[ndest]] = 1
-    
-#     def __getitem__(self, src):
-#         """Return all nodes that depend on src."""
-
-#         arr = self._tcmap[src]
-#         idxmap = self._idxmap
-#         return [n for n, i in idxmap.items() if arr[i]] 
-
-#     # def is_connected(self, src, dest):
-#     #     """Returns True if dest is downstream of src."""
-#     #     return self._tcmap[src][self._idxmap[dest]] == 1
-
-#     # def add_node(self, node):
-#     #     if node not in self._tcmap:
-#     #         for name, arr in self._tcmap.items():
-#     #             arr.append(0)
-#     #         self._idxmap[node] = len(self._idxmap)
-#     #         self._tcmap[node] = array('b', [0]*len(self._idxmap))
-
-#     # def add_edge(self, src, dest):
-#     #     if src not in self._tcmap:
-#     #         self.add_node(src)
-#     #     if dest not in self._tcmap:
-#     #         self.add_node(dest)
-
-#     #     # we need to ad dest's dependents to src, as well as to
-#     #     # any node that has src as a dependent
-#     #     sarr = self._tcmap[src]
-#     #     darr = self._tcmap[dest]
-
-#     #     idxmap = self._idxmap
-#     #     sarr[idxmap[dest]] = 1
-
-#     #     for i in range(len(sarr)):
-#     #         if darr[i]:
-#     #             sarr[i] == 1
-
-#     #     # since we're pretty sparse, create an index set
-#     #     # containing only the filled entries
-#     #     idxset = set([i for i in darr if darr[i]])
-#     #     idxset.add(idxmap[dest])
-#     #     sidx = idxmap[src]
-#     #     for name, arr in self._tcmap.items():
-#     #         if arr[sidx]:
-#     #             for i in idxset:
-#     #                 arr[i] = 1
-
-
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
@@ -196,7 +119,6 @@ class DependencyGraph(nx.DiGraph):
     def config_changed(self):
         self._component_graph = None
         self._loops = None
-        #self._trans_closure = None
 
     def child_config_changed(self, child):
         """A child has changed its input or output lists, so 
@@ -288,10 +210,6 @@ class DependencyGraph(nx.DiGraph):
         if destpath not in self or is_external_node(self, destpath):
             return
         
-        #if _is_expr(destpath):
-            #raise RuntimeError("Can't connect '%s' to '%s'. '%s' is not a valid destination." % 
-                                   #(srcpath, destpath, destpath))
-
         inedges = self.in_edges((destpath,))
         dest_iotype = self.node[destpath].get('iotype')
         if dest_iotype == 'out' and not is_boundary_node(self, destpath):
@@ -299,8 +217,8 @@ class DependencyGraph(nx.DiGraph):
 
         if len(inedges) > 0:
             if not is_subvar_node(self, srcpath):
-                raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
-                                    (srcpath, destpath, destpath, inedges[0][0]))
+                raise RuntimeError("'%s' is already connected to '%s'" % 
+                                    (destpath, inedges[0][0]))
 
         base = base_var(self, destpath)
         if base != destpath and base != srcpath:
@@ -309,12 +227,7 @@ class DependencyGraph(nx.DiGraph):
             for u,v in self.in_edges_iter((base,)):
                 if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
                        or u.startswith(usdot) or u.startswith(usbracket):
-                    raise RuntimeError("Can't connect '%s' to '%s'. '%s' is already connected to '%s'" % 
-                              (srcpath, destpath, base, u))
-
-    #def _connect_expr(self, srcpath, destpath):
-        #self.config_changed()
-        #raise NotImplementedError("_connect_expr")
+                    raise RuntimeError("'%s' is already connected to '%s'" % (base, u))
 
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
@@ -324,10 +237,6 @@ class DependencyGraph(nx.DiGraph):
         will also add an edge from base variable A.b to A.b[3],
         and another edge from B.c.x to base variable B.c.
         """
-
-        #if _is_expr(srcpath):
-            #self._connect_expr(srcpath, destpath)
-            #return
 
         base_src  = base_var(self, srcpath)
         base_dest = base_var(self, destpath)
@@ -584,7 +493,7 @@ class DependencyGraph(nx.DiGraph):
 
         return conns
 
-    def invalidate_deps(self, scope, cname, outvars, force=False):
+    def invalidate_deps(self, scope, cname, srcvars, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
         
@@ -594,7 +503,7 @@ class DependencyGraph(nx.DiGraph):
         cname: str
             Name of starting node.
             
-        outvars: list of set of str or None
+        srcvars: list of set of str or None
             Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
@@ -604,12 +513,12 @@ class DependencyGraph(nx.DiGraph):
             the dependency chain was already invalid.
         """
 
-        if outvars is None:
-            outvars = self.list_outputs(cname, connected=True)
+        if srcvars is None:
+            srcvars = self.list_outputs(cname, connected=True)
         elif cname:
-            outvars = ['.'.join([cname,n]) for n in outvars]
+            srcvars = ['.'.join([cname,n]) for n in srcvars]
 
-        stack = [(cname, outvars)]
+        stack = [(cname, srcvars)]
         outset = set()  # set of changed boundary outputs
         
         # Keep track of the comp/var we already invalidated, so we
@@ -617,12 +526,12 @@ class DependencyGraph(nx.DiGraph):
         invalidated = set()
 
         while(stack):
-            srccomp, outvars = stack.pop()
+            srccomp, srcvars = stack.pop()
             invalidated.add(srccomp)
-            if outvars is None:
-                outvars = self.list_outputs(srccomp, connected=True)
+            if srcvars is None:
+                srcvars = self.list_outputs(srccomp, connected=True)
 
-            cmap = partition_names_by_comp(self.basevar_iter(outvars))
+            cmap = partition_names_by_comp(self.basevar_iter(srcvars))
             for dcomp, dests in cmap.items():
                 if dcomp in invalidated:
                     continue

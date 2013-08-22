@@ -72,8 +72,19 @@ class Constraint(object):
                                            self._combined_expr())
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-            getattr(self.lhs.scope, 
-                    pseudo.name).make_connections(self.lhs.scope)
+        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope)
+
+    def deactivate(self):
+        """Remove this constraint from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.lhs.scope
+            pcomp = getattr(scope, self.pcomp_name)
+            pcomp.remove_connections(scope)
+            if hasattr(scope, pcomp.name):
+                scope.remove(pcomp.name)
+            self.pcomp_name = None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -125,7 +136,7 @@ class Constraint(object):
                           scope=self.lhs.scope)
         return cnst
         
-    def evaluate(self, scope,):
+    def evaluate(self, scope):
         """Returns the value of the constraint."""
         pcomp = getattr(scope, self.pcomp_name)
         if not pcomp.is_valid():

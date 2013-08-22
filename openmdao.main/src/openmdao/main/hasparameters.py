@@ -1,9 +1,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import ParamPseudoComponent
 from openmdao.util.typegroups import real_types, int_types
-from openmdao.util.log import logger
 
 __missing = object()
 
@@ -41,7 +39,6 @@ class Parameter(object):
                     raise ValueError("Bad value given for parameter's 'adder' attribute.")
 
         self._metadata = None
-        self.pcomp_name = None
 
         self.low = low
         self.high = high
@@ -136,36 +133,6 @@ class Parameter(object):
         else:
             self.set(self.start, scope)
 
-    def activate(self, scope):
-        """Make this parameter active by creating the appropriate
-        connections in the dependency graph.  This should NOT be called
-        on parameters that are part of a ParameterGroup.
-        """
-        if self.pcomp_name is None:
-            pseudo = ParamPseudoComponent(self)
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-
-        pseudo.make_connections(scope)
-
-        self.initialize(scope)
-
-
-    def deactivate(self, scope):
-        """Make this parameter inactive by disconnecting it in the
-        dependency graph and removing its callback from the target
-        component.
-        """
-        if self.pcomp_name is None:
-            return
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(scope)
-            scope.remove(self.pcomp_name)
-            self.pcomp_name = None
-
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -206,24 +173,11 @@ class Parameter(object):
 
     def evaluate(self, scope=None):
         """Returns the value of this parameter."""
-        #return self._untransform(self._expreval.evaluate(scope))
-        if scope is None:
-            scope = self._get_scope()
-        pcomp = getattr(scope, self.pcomp_name)
-        return pcomp.in0
+        return self._untransform(self._expreval.evaluate(scope))
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
-        #self._expreval.set(self._transform(val), scope)
-        if scope is None:
-            scope = self._get_scope()
-        if val < self.low or val > self.high:
-            logger.warning("Setting '%s' with a value of (%s) which is outside of the range [%s, %s]" %
-                             (self.target, val, self.low, self.high))
-        pcomp = getattr(scope, self.pcomp_name)
-        pcomp.set('in0', val)
-        pcomp.run() # updates value of out0
-        self._expreval.set(pcomp.out0, src='.'.join([self.pcomp_name, 'out0'])) # set value into target
+        self._expreval.set(self._transform(val), scope)
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
@@ -300,7 +254,6 @@ class ParameterGroup(object):
         self.adder = param0.adder
         self.fd_step = param0.fd_step
         self.name = param0.name
-        self.pcomp_name = None
         self.typename = param0.valtypename
 
     def __eq__(self, other):
@@ -408,45 +361,6 @@ class ParameterGroup(object):
             self.fd_step = fd_step
         if name is not None:
             self.name = name
-
-        if self.pcomp_name:
-            for param in self._params: 
-                param.override(low, high, scaler, adder, start,
-                               fd_step, name)
-
-    def activate(self, scope):
-        """Make this parameter active by creating the appropriate pseudocomp
-        connections in the dependency graph.  The pseudocomponent is created
-        if it doesn't already exist.
-        """
-        if self.pcomp_name is None:
-            param0 = self._params[0]
-            pseudo = ParamPseudoComponent(param0)
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-            param0.pcomp_name = pseudo.name
-            for param in self._params[1:]:
-                pseudo.add_target(param._expreval.text)
-                param.pcomp_name = pseudo.name
-
-        getattr(scope, self.pcomp_name).make_connections(scope)
-
-        self.initialize(scope)
-
-    def deactivate(self, scope):
-        """Make this parameter inactive by disconnecting it in the
-        dependency graph and removing its callback from the target
-        component.
-        """
-        if self.pcomp_name is None:
-            return
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(scope)
-            scope.remove(self.pcomp_name)
-            self.pcomp_name = None
-            for param in self._params:
-                param.pcomp_name = None
 
     def initialize(self, scope):
         self._params[0].initialize(scope)
@@ -581,15 +495,14 @@ class HasParameters(object):
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
-        target.activate(self._get_scope(scope))
-
+        #target.activate(self._get_scope(scope))
         self._parent.config_changed()
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         param = self._parameters.get(name)
         if param:
-            param.deactivate(self._parent.get_expr_scope())
+            #param.deactivate(self._parent.get_expr_scope())
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
@@ -725,13 +638,6 @@ class HasParameters(object):
             for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
-
-    def list_pseudocomps(self):
-        """Returns a list of pseudocompont names associcated with our
-        parameters.
-        """
-        return [p.pcomp_name for p in self._parameters.values()
-                    if p.pcomp_name]
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 

@@ -701,37 +701,37 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         self.assertEqual(list(self.top.c2.a), [1,2,3,12,5])
         
-    #def test_src_exprs(self):
-        #global exec_order
-        #vnames = ['a','b','c','d']
-        #top = _nested_model()
-        #top.run()
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+    def test_src_exprs(self):
+        global exec_order
+        vnames = ['a','b','c','d']
+        top = _nested_model()
+        top.run()
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         
-        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        #top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        #exec_order = []
-        #top.run()
-        #self.assertEqual(exec_order, ['comp4'])
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
-        #self.assertEqual(total, top.sub.comp4.a)
+        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        exec_order = []
+        top.run()
+        self.assertEqual(exec_order, ['comp4'])
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(total, top.sub.comp4.a)
         
-        #top.sub.comp2.a = 99
-        #self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        #exec_order = []
-        #top.sub.run()
-        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        #self.assertEqual(total, top.sub.comp4.a)
-        #self.assertEqual(exec_order, ['comp2','comp4'])
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
-        #top.sub.comp2.a = 88
-        #top.sub.comp3.a = 33
-        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        #top.sub.run()
-        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        #self.assertEqual(total, top.sub.comp4.a)
+        top.sub.comp2.a = 99
+        self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        exec_order = []
+        top.sub.run()
+        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        self.assertEqual(total, top.sub.comp4.a)
+        self.assertEqual(exec_order, ['comp2','comp4'])
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        top.sub.comp2.a = 88
+        top.comp7.a = 11
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        top.sub.run()
+        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        self.assertEqual(total, top.sub.comp4.a)
 
     def test_float_exprs(self):
         global exec_order

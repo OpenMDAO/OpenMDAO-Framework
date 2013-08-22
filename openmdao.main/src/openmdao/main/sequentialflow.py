@@ -742,8 +742,9 @@ class SequentialWorkflow(Workflow):
         
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = ['%s.in0' % param.pcomp_name for param in \
-                          self._parent.get_parameters().values()]
+                inputs = []
+                for param in self._parent.get_parameters().values():
+                    inputs.extend(param.targets)
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
@@ -896,9 +897,11 @@ class SequentialWorkflow(Workflow):
 
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = ['%s.in0' % param.pcomp_name for param in \
-                          self._parent.get_parameters().values()]
-                input_refs = self._parent.get_parameters().keys()
+                inputs = []
+                input_refs = []
+                for key, param in self._parent.get_parameters().items():
+                    inputs.extend(param.targets)
+                    input_refs.extend([key for t in param.targets])
             # Should be caught in calc_gradient()
             else:  # pragma no cover
                 msg = "No inputs given for derivatives."
