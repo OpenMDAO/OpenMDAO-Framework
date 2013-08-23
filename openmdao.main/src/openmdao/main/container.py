@@ -268,7 +268,7 @@ class Container(SafeHasTraits):
         return '.'.join(path[::-1])
 
     @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr, graph=None):
+    def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression.
         When a name begins with "parent.", that indicates
         it is referring to a variable outside of this object's scope.
@@ -288,8 +288,7 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
-        if graph is None:
-            graph = self._depgraph
+        graph = self._depgraph
 
         # check for self connections
         if not destpath.startswith('parent.'):
@@ -339,12 +338,11 @@ class Container(SafeHasTraits):
             raise
 
     @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath, graph=None):
+    def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        if graph is None:
-            graph = self._depgraph
+        graph = self._depgraph
 
         cname = cname2 = None
         destvar = destpath.split('[', 1)[0]

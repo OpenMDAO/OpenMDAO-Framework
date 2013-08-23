@@ -117,10 +117,10 @@ class CyclicWorkflow(SequentialWorkflow):
        
             contents = self.get_components()
            
-            # Parent assembly's graph
+            # get the parent assembly's component graph
             scope = self.scope
             compgraph = scope._depgraph.component_graph()
-            graph = compgraph.subgraph(contents)
+            graph = compgraph.subgraph([c.name for c in contents])
            
             # add any dependencies due to ExprEvaluators
             for comp in contents:
