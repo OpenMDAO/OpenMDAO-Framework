@@ -3,7 +3,7 @@
  *
  *              Render functions
  *
- *      Copyright 2011-2012, Massachusetts Institute of Technology
+ *      Copyright 2011-2013, Massachusetts Institute of Technology
  *      Licensed under The GNU Lesser General Public License, version 2.1
  *      See http://www.opensource.org/licenses/lgpl-2.1.php
  *
@@ -11,32 +11,32 @@
 
 
 //
-// A console function is added to the context: logger(msg).
+// A console function is added to the context: wv.logger(msg).
 // By default, it maps to the window.console() function on WebKit and to an 
 // empty function on other browsers.
-function logger(msg) 
+wv["logger"] = function(msg)
 {
-    if (window.console && window.console.log) window.console.log(msg);
+    if (window.console && window.console.log) window.console.log("wv: "+msg);
 }
 
 
 //
-// A debug-based console function is added to the context: log(msg).
-function log(msg) 
+// A debug-based console function is added to the context: wv.log(msg).
+wv["log"] = function(msg)
 {
-    if (g.debug != 0) logger(msg);
+    if (wv.debug != 0) wv.logger(msg);
 }
 
 
 //
 // checks for OpenGL errors
-function checkGLError(gl, source) {
-    if (g.debug <= 0) return;
+wv["checkGLError"] = function(gl, source) {
+    if (wv.debug <= 0) return;
     var error  = gl.getError();
     if (error != gl.NO_ERROR) {
         var str = "GL Error @ " + source + ": " + error;
-        if (g.debug == 1) logger(str);
-        if (g.debug >  1) throw str;
+        if (wv.debug == 1) wv.logger(str);
+        if (wv.debug >  1) throw str;
     }
 }
 
@@ -165,7 +165,7 @@ var BrowserDetect = {
 // Initialize the Canvas element with the passed name as a WebGL object and 
 // return the WebGLRenderingContext.
 // Turn off anti-aliasing so that picking works at the fringe
-function initWebGL(canvasName)
+wv["initWebGL"] = function(canvasName)
 {
     var canvas = document.getElementById(canvasName);
     return  gl = WebGLUtils.setupWebGL(canvas, { antialias: false });
@@ -175,7 +175,7 @@ function initWebGL(canvasName)
 //
 // Load this shader and return the WebGLShader object.
 //
-function loadShader(ctx, shaderID, shaderType, shaderSrc)
+wv["loadShader"] = function(ctx, shaderID, shaderType, shaderSrc)
 {
 
   // Create the shader object
@@ -192,7 +192,7 @@ function loadShader(ctx, shaderID, shaderType, shaderSrc)
   if (!compiled && !ctx.isContextLost()) {
     // Something went wrong during compilation; get the error
     var error = ctx.getShaderInfoLog(shader);
-    log("*** Error compiling shader "+shaderID+":"+error);
+    wv.log("*** Error compiling shader "+shaderID+":"+error);
     ctx.deleteShader(shader);
     return null;
   }
@@ -212,11 +212,13 @@ function loadShader(ctx, shaderID, shaderType, shaderSrc)
 // to the passed value.
 // Enable depth testing
 //
-function wvSetup(gl, vshader, fshader, attribs, clearColor, clearDepth)
+wv["Setup"] = function(gl, vshader, fshader, attribs, clearColor, clearDepth)
 {
     // create our shaders
-    var vertexShader   = loadShader(gl, "Vertex",    gl.VERTEX_SHADER,   vshader);
-    var fragmentShader = loadShader(gl, "Fragement", gl.FRAGMENT_SHADER, fshader);
+    var vertexShader   = wv.loadShader(gl, "Vertex",    gl.VERTEX_SHADER,
+                                       vshader);
+    var fragmentShader = wv.loadShader(gl, "Fragement", gl.FRAGMENT_SHADER,
+                                       fshader);
 
     // Create the program object
     var program = gl.createProgram();
@@ -237,7 +239,7 @@ function wvSetup(gl, vshader, fshader, attribs, clearColor, clearDepth)
     if (!linked && !gl.isContextLost()) {
         // something went wrong with the link
         var error = gl.getProgramInfoLog (program);
-        logger("Error in program linking:" + error);
+        wv.logger("Error in program linking:" + error);
 
         gl.deleteProgram(program);
         gl.deleteProgram(fragmentShader);
@@ -260,37 +262,37 @@ function wvSetup(gl, vshader, fshader, attribs, clearColor, clearDepth)
 //
 // initialize the Web Viewer
 //
-function wvInit()
+wv["Initialize"] = function()
 {
   var requestId;
   
   // "globals" used:
 
-  g.width    = -1;                                      // "canvas" size
-  g.height   = -1;
-  g.vbonum   =  0;                                      // vbo counter
-  g.scale    =  1.0;                                    // global view scale
-  g.picked   = undefined;                               // picked object
-  g.located  = undefined;                               // located coordinates
-  g.sgUpdate =  0;                                      // sceneGraph update
-  g.sceneUpd =  1;                                      // scene updated -- rerender
-  g.centerV  =  0;                                      // centering flag
-  if (g.debug     == undefined) g.debug     = 0;        // debug flag
-  if (g.pick      == undefined) g.pick      = 0;        // picking flag (0-off, 1-on)
-  if (g.locate    == undefined) g.locate    = 0;        // locating flag
-  if (g.eye       == undefined) g.eye       = [0.0, 0.0, 0.0];
-  if (g.center    == undefined) g.center    = [0.0, 0.0, 0.0];
-  if (g.up        == undefined) g.up        = [0,0, 1.0, 0.0];
+  wv.width    = -1;                                     // "canvas" size
+  wv.height   = -1;
+  wv.vbonum   =  0;                                     // vbo counter
+  wv.scale    =  1.0;                                   // global view scale
+  wv.picked   = undefined;                              // picked object
+  wv.located  = undefined;                              // located coordinates
+  wv.sgUpdate =  0;                                     // sceneGraph update
+  wv.sceneUpd =  1;                                     // scene updated -- rerender
+  wv.centerV  =  0;                                     // centering flag
+  if (wv.debug     == undefined) wv.debug     = 0;      // debug flag
+  if (wv.pick      == undefined) wv.pick      = 0;      // picking flag (0-off, 1-on)
+  if (wv.locate    == undefined) wv.locate    = 0;      // locating flag
+  if (wv.eye       == undefined) wv.eye       = [0.0, 0.0, 0.0];
+  if (wv.center    == undefined) wv.center    = [0.0, 0.0, 0.0];
+  if (wv.up        == undefined) wv.up        = [0,0, 1.0, 0.0];
 
   // define our plotting attributes
-  g.plotAttrs  = { ON:1,          TRANSPARENT:2, SHADING:4,
-                   ORIENTATION:8, POINTS:16,     LINES:32   };
+  wv.plotAttrs  = { ON:1,          TRANSPARENT:2, SHADING:4,
+                    ORIENTATION:8, POINTS:16,     LINES:32   };
 
   // initialize our scene graph
-  g.sceneGraph = {};
+  wv.sceneGraph = {};
 
   // initialize WebGL with the id of the Canvas Element
-  var gl = initWebGL("WebViewer");
+  var gl = wv.initWebGL(wv.canvasID);
   if (!gl) return;
 
   //
@@ -313,9 +315,9 @@ function wvInit()
 "    uniform float  pointSize;                   // point size in pixels",
 "    uniform int    picking;                     // picking flag",
 "",
-"    attribute vec3 vNormal;",
-"    attribute vec4 vColor;",
 "    attribute vec4 vPosition;",
+"    attribute vec4 vColor;",
+"    attribute vec3 vNormal;",
 "",
 "    varying float  z_Screen;",
 "    varying vec4   v_Color;",
@@ -427,56 +429,56 @@ function wvInit()
 
   //
   // setup the shaders and other stuff for rendering
-  g.program = wvSetup(gl,
-                      // The sources of the vertex and fragment shaders.
-                      vShaderSrc, fShaderSrc,
-                      // The vertex attribute names used by the shaders.
-                      // The order they appear here corresponds to their indices.
-                      [ "vNormal", "vColor", "vPosition" ],
-                      // The clear color and depth values.
-                      [ 0.0, 0.0, 0.0, 0.0 ], 1.0);
+  wv.program = wv.Setup(gl,
+                        // The sources of the vertex and fragment shaders.
+                        vShaderSrc, fShaderSrc,
+                        // The vertex attribute names used by the shaders.
+                        // The order they appear here corresponds to their indices.
+                        [ "vPosition", "vColor", "vNormal" ],
+                        // The clear color and depth values.
+                        [ 0.0, 0.0, 0.0, 0.0 ], 1.0);
 
   //
   // Set up the uniform variables for the shaders
-  gl.uniform3f(gl.getUniformLocation(g.program,  "lightDir"), 0.0, 0.3, 1.0);
-  gl.uniform1f(gl.getUniformLocation(g.program,  "wAmbient"), 0.25);
+  gl.uniform3f(gl.getUniformLocation(wv.program,  "lightDir"), 0.0, 0.3, 1.0);
+  gl.uniform1f(gl.getUniformLocation(wv.program,  "wAmbient"), 0.25);
 
-  g.u_xparLoc = gl.getUniformLocation(g.program,      "xpar");
-  gl.uniform1f(g.u_xparLoc, 1.0);
-  g.u_linAdjLoc = gl.getUniformLocation(g.program,    "linAdj");
-  gl.uniform1f(g.u_linAdjLoc, 0.0);
-  g.u_conNormalLoc = gl.getUniformLocation(g.program, "conNormal");
-  gl.uniform3f(g.u_conNormalLoc, 0.0, 0.0, 1.0);
-  g.u_conColorLoc = gl.getUniformLocation(g.program,  "conColor");
-  gl.uniform3f(g.u_conColorLoc, 0.0, 1.0, 0.0);
-  g.u_bacColorLoc = gl.getUniformLocation(g.program,  "bacColor");
-  gl.uniform3f(g.u_bacColorLoc, 0.5, 0.5, 0.5);
-  g.u_wColorLoc = gl.getUniformLocation(g.program,    "wColor");
-  gl.uniform1f(g.u_wColorLoc, 1.0);
-  g.u_bColorLoc = gl.getUniformLocation(g.program,    "bColor");
-  gl.uniform1f(g.u_bColorLoc, 0.0);
-  g.u_wNormalLoc = gl.getUniformLocation(g.program,   "wNormal");
-  gl.uniform1f(g.u_wNormalLoc, 1.0);
-  g.u_wLightLoc = gl.getUniformLocation(g.program,    "wLight");
-  gl.uniform1f(g.u_wLightLoc, 1.0);
-  g.u_pointSizeLoc = gl.getUniformLocation(g.program, "pointSize");
-  gl.uniform1f(g.u_pointSizeLoc, 2.0);
-  g.u_pickingLoc = gl.getUniformLocation(g.program,   "picking");
-  gl.uniform1i(g.u_pickingLoc, 0);
-  g.u_vbonumLoc = gl.getUniformLocation(g.program,    "vbonum");
-  gl.uniform1i(g.u_vbonumLoc, 0);
+  wv.u_xparLoc = gl.getUniformLocation(wv.program,      "xpar");
+  gl.uniform1f(wv.u_xparLoc, 1.0);
+  wv.u_linAdjLoc = gl.getUniformLocation(wv.program,    "linAdj");
+  gl.uniform1f(wv.u_linAdjLoc, 0.0);
+  wv.u_conNormalLoc = gl.getUniformLocation(wv.program, "conNormal");
+  gl.uniform3f(wv.u_conNormalLoc, 0.0, 0.0, 1.0);
+  wv.u_conColorLoc = gl.getUniformLocation(wv.program,  "conColor");
+  gl.uniform3f(wv.u_conColorLoc, 0.0, 1.0, 0.0);
+  wv.u_bacColorLoc = gl.getUniformLocation(wv.program,  "bacColor");
+  gl.uniform3f(wv.u_bacColorLoc, 0.5, 0.5, 0.5);
+  wv.u_wColorLoc = gl.getUniformLocation(wv.program,    "wColor");
+  gl.uniform1f(wv.u_wColorLoc, 1.0);
+  wv.u_bColorLoc = gl.getUniformLocation(wv.program,    "bColor");
+  gl.uniform1f(wv.u_bColorLoc, 0.0);
+  wv.u_wNormalLoc = gl.getUniformLocation(wv.program,   "wNormal");
+  gl.uniform1f(wv.u_wNormalLoc, 1.0);
+  wv.u_wLightLoc = gl.getUniformLocation(wv.program,    "wLight");
+  gl.uniform1f(wv.u_wLightLoc, 1.0);
+  wv.u_pointSizeLoc = gl.getUniformLocation(wv.program, "pointSize");
+  gl.uniform1f(wv.u_pointSizeLoc, 2.0);
+  wv.u_pickingLoc = gl.getUniformLocation(wv.program,   "picking");
+  gl.uniform1i(wv.u_pickingLoc, 0);
+  wv.u_vbonumLoc = gl.getUniformLocation(wv.program,    "vbonum");
+  gl.uniform1i(wv.u_vbonumLoc, 0);
 
   //
   // Create some matrices to use later and save their locations
-  g.u_modelViewMatrixLoc =
-                     gl.getUniformLocation(g.program, "u_modelViewMatrix");
-  g.mvMatrix          = new J3DIMatrix4();
-  g.mvMatrix.makeIdentity();
-  g.u_normalMatrixLoc = gl.getUniformLocation(g.program, "u_normalMatrix");
-  g.normalMatrix      = new J3DIMatrix4();
-  g.u_modelViewProjMatrixLoc =
-                 gl.getUniformLocation(g.program, "u_modelViewProjMatrix");
-  g.mvpMatrix         = new J3DIMatrix4();
+  wv.u_modelViewMatrixLoc =
+                      gl.getUniformLocation(wv.program, "u_modelViewMatrix");
+  wv.mvMatrix          = new J3DIMatrix4();
+  wv.mvMatrix.makeIdentity();
+  wv.u_normalMatrixLoc = gl.getUniformLocation(wv.program, "u_normalMatrix");
+  wv.normalMatrix      = new J3DIMatrix4();
+  wv.u_modelViewProjMatrixLoc =
+                  gl.getUniformLocation(wv.program, "u_modelViewProjMatrix");
+  wv.mvpMatrix         = new J3DIMatrix4();
         
   return gl;
 }
@@ -485,51 +487,52 @@ function wvInit()
 //
 // startup function
 //
-function wvStart()
+wv["Start"] = function()
 {
-  var c = document.getElementById("WebViewer");
-  c.addEventListener('webglcontextlost',     handleContextLost,     false);
-  c.addEventListener('webglcontextrestored', handleContextRestored, false);
+  var c = document.getElementById(wv.canvasID);
+  c.addEventListener('webglcontextlost',     wv.handleContextLost,     false);
+  c.addEventListener('webglcontextrestored', wv.handleContextRestored, false);
   
   BrowserDetect.init();
-  logger(" Running: " + BrowserDetect.browser + " " + BrowserDetect.version +
-               " on " + BrowserDetect.OS);
+  wv.logger(" Running: " + BrowserDetect.browser + " " + BrowserDetect.version +
+                  " on " + BrowserDetect.OS);
 
   //
   // init the web viewer
-  var gl = wvInit();
+  var gl = wv.Initialize();
   if (!gl) return;
   var nRbits = gl.getParameter(gl.RED_BITS);
   var nGbits = gl.getParameter(gl.GREEN_BITS);
   var nBbits = gl.getParameter(gl.BLUE_BITS);
   var nZbits = gl.getParameter(gl.DEPTH_BITS);
-  logger(" WebGL Number of Bits: Red " +nRbits+"  Green "  +nGbits+
-                              "  Blue "+nBbits+"  Zbuffer "+nZbits);
-  g.lineBump = -0.0002;
-  if (nZbits < 24) g.lineBump *= 2.0;
+  wv.logger(" WebGL Number of Bits: Red " +nRbits+"  Green "  +nGbits+
+                                 "  Blue "+nBbits+"  Zbuffer "+nZbits);
+  wv.lineBump = -0.0002;
+  if (nZbits < 24) wv.lineBump *= 2.0;
   
   //
   // initialize the UI
-  wvInitUI();
+  wv.InitUI();
 
   //
   // setup our render loop
   var f = function() {
   
-    if (g.fov != undefined) drawPicture(gl);
+    if (wv.fov != undefined) wv.drawPicture(gl);
 
     // update the UI and matrices
-    wvUpdateUI();
+    wv.UpdateUI();
     
     //update scene graph
-    wvUpdateScene(gl);
+    wv.UpdateScene(gl);
 
     requestId = window.requestAnimFrame(f, c);
   };
   f();
 
 
-  function handleContextLost(e) {
+  wv["handleContextLost"] = function(e)
+  {
     e.preventDefault();
     if (requestId !== undefined) {
       window.cancelRequestAnimFrame(requestId);
@@ -537,8 +540,9 @@ function wvStart()
     }
   }
 
-  function handleContextRestored() {
-    wvInit();
+  wv["handleContextRestored"] = function()
+  {
+    wv.Initialize();
     f();
   }
 }

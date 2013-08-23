@@ -219,7 +219,7 @@ class CompInch(Component):
         return input_keys, output_keys, self.J
 
 class ArrayComp1(Component):
-    '''Comp with preconditioner'''
+    '''Array component'''
     
     x = Array(zeros([2]), iotype='in')
     y = Array(zeros([2]), iotype='out')
@@ -238,6 +238,42 @@ class ArrayComp1(Component):
         dy2_dx1 = 5.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x', )
+        output_keys = ('y', )
+        return input_keys, output_keys, self.J
+
+
+class ArrayComp2D(Component):
+    '''2D Array component'''
+    
+    x = Array(zeros((2, 2)), iotype='in')
+    y = Array(zeros((2, 2)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0][0] = 2.0*self.x[0][0] + 1.0*self.x[0][1] + \
+                       3.0*self.x[1][0] + 7.0*self.x[1][1]
+        
+        self.y[0][1] = 4.0*self.x[0][0] + 2.0*self.x[0][1] + \
+                       6.0*self.x[1][0] + 5.0*self.x[1][1]
+        
+        self.y[1][0] = 3.0*self.x[0][0] + 6.0*self.x[0][1] + \
+                       9.0*self.x[1][0] + 8.0*self.x[1][1]
+        
+        self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
+                       2.0*self.x[1][0] + 4.0*self.x[1][1]
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[2.0, 1.0, 3.0, 7.0],
+                        [4.0, 2.0, 6.0, 5.0],
+                        [3.0, 6.0, 9.0, 8.0],
+                        [1.0, 3.0, 2.0, 4.0]])
 
     def provideJ(self):
         
@@ -479,6 +515,27 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
+        
+    def test_array2D(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', ArrayComp2D())
+        top.driver.workflow.add(['comp1'])
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y'])
+
+        diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y'],
+                                              mode='adjoint')
+        diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
         
     def test_large_dataflow(self):
         

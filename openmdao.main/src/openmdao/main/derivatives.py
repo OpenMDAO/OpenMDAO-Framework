@@ -8,7 +8,7 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones
+    from numpy import array, ndarray, zeros, inner, ones, unravel_index
     
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -131,7 +131,7 @@ def calc_gradient(wflow, inputs, outputs):
             for item in outputs:
                 k1, k2 = obounds[item]
                 if k2-k1 > 1:
-                    J[i:i+(k2-k1+1), j] = dx[k1:k2]
+                    J[i:i+(k2-k1), j] = dx[k1:k2]
                 else:
                     J[i, j] = dx[k1:k2]
                 i += k2-k1
@@ -197,7 +197,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             for param in inputs:
                 k1, k2 = wflow.bounds[('@in', param)]
                 if k2-k1 > 1:
-                    J[j, i:i+(k2-k1+1)] = dx[k1:k2]
+                    J[j, i:i+(k2-k1)] = dx[k1:k2]
                 else:
                     J[j, i] = dx[k1:k2]
                 i += k2-k1
@@ -216,7 +216,29 @@ def applyJ(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_deriv'):
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                result[key] = value.reshape(shape)
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                arg[key] = value.reshape(shape)
+                
         obj.apply_deriv(arg, result)
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                result[key] = value.flatten()
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                arg[key] = value.flatten()
+        
         return
 
     # Optional specification of the Jacobian
@@ -240,10 +262,10 @@ def applyJ(obj, arg, result):
         nvar += width
 
     for okey in result:
+        o1, o2 = obounds[okey]
         for ikey in arg:
             if ikey not in result:
                 i1, i2 = ibounds[ikey]
-                o1, o2 = obounds[okey]
                 if i2 - i1 == 1:
                     if o2 - o1 == 1:
                         Jsub = float(J[o1, i1])
@@ -262,7 +284,6 @@ def applyJ(obj, arg, result):
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
     
-
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
     Component, this automatically forms the "fake" residual, and calls into
@@ -272,7 +293,28 @@ def applyJT(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_derivT'):
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                result[key] = value.reshape(shape)
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                var = obj.get(key)
+                shape = var.shape
+                arg[key] = value.reshape(shape)
+                
         obj.apply_derivT(arg, result)
+        
+        for key, value in result.iteritems():
+            if len(value) > 1:
+                result[key] = value.flatten()
+                
+        for key, value in arg.iteritems():
+            if len(value) > 1:
+                arg[key] = value.flatten()
+        
         return
 
     # Optional specification of the Jacobian
@@ -296,10 +338,10 @@ def applyJT(obj, arg, result):
         nvar += width
 
     for okey in result:
-        for ikey in arg:
-            if okey not in arg:
+        if okey not in arg:
+            o1, o2 = obounds[okey]
+            for ikey in arg:
                 i1, i2 = ibounds[ikey]
-                o1, o2 = obounds[okey]
                 if i2 - i1 == 1:
                     if o2 - o1 == 1:
                         Jsub = float(J[i1, o1])
@@ -521,7 +563,8 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val+val, force=True)
                 
         else:
-            old_val[index] += val
+            unravelled = unravel_index(index, old_val.shape)
+            old_val[unravelled] += val
             
             # In-place array editing doesn't activate callback, so we must
             # do it manually.

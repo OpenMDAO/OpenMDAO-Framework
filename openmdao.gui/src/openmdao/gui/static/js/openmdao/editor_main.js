@@ -22,8 +22,8 @@ jQuery(function() {
         ftree.close();
     });
 
-    // set the layout (note: global scope)
-    layout = jQuery('body').layout({
+    // set the layout
+    jQuery('body').layout({
         onresize: function(e) {
             // resize content pane of all tabbed panes to fill the layout pane
             var layout_pane = jQuery('.ui-layout-'+e),
