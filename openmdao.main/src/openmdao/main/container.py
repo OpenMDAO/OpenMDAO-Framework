@@ -1200,7 +1200,7 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.get_source(name):
+        if self._depgraph.pred[name]:
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:
@@ -1210,7 +1210,7 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set" %
-                (name, self._depgraph.get_source(name)), RuntimeError)
+                (name, self._depgraph.get_sources(name)[0]), RuntimeError)
 
     def _input_nocheck(self, name, old):
         """This method is substituted for `_input_check` to avoid source

@@ -237,7 +237,7 @@ class NamespaceTestCase(unittest.TestCase):
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         except Exception as err:
-            self.assertEqual(str(err), ": Can't connect 'scomp1.cont_out.v1' to 'scomp2.cont_in.v2': 'scomp2.cont_in' is already connected to source 'scomp1.cont_out'")
+            self.assertEqual(str(err), ": Can't connect 'scomp1.cont_out.v1' to 'scomp2.cont_in.v2': 'scomp2.cont_in' is already connected to 'scomp1.cont_out'")
         else:
             self.fail("exception expected")
 
@@ -282,7 +282,7 @@ class NamespaceTestCase(unittest.TestCase):
             self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         except Exception as err:
             self.assertEqual(str(err),
-                ": Can't connect 'scomp1.cont_out' to 'scomp2.cont_in': 'scomp2.cont_in.vt2.vt3.b' is already connected to source '_pseudo_0.out0'")
+                ": Can't connect 'scomp1.cont_out' to 'scomp2.cont_in': 'scomp2.cont_in.vt2.vt3.b' is already connected to '_pseudo_0.out0'")
         else:
             self.fail("exception expected")
 

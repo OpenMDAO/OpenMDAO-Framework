@@ -71,9 +71,23 @@ def is_driver_node(graph, node):
     return 'driver' in graph.node.get(node, '')
 
 def is_var_node(graph, node):
+    """Return True for all basevar and subvar
+    nodes.
+    """
+    data = graph.node.get(node, '')
+    return 'var' in data or 'basevar' in data
+
+def is_basevar_node(graph, node):
+    """Returns True if this node represents an
+    actual input or output variable.
+    """
     return 'var' in graph.node.get(node, '')
 
 def is_subvar_node(graph, node):
+    """Returns True if this node represents some
+    subdivision of an input or output variable, 
+    e.g., an array index -   comp_1.x[2]
+    """
     return 'basevar' in graph.node.get(node, '')
 
 def is_pseudo_node(graph, node):
@@ -228,28 +242,68 @@ class DependencyGraph(nx.DiGraph):
             self.remove_nodes_from(nodes)
             self.config_changed()
 
+    def _check_subvar_conflict(self, srcpath, destpath):
+        for subvar, basevar in self.in_edges_iter(destpath):
+            if not (subvar.startswith(destpath+'.') or subvar.startswith(destpath+'[')):
+                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
+            if subvar.startswith(srcpath+'.') or subvar.startswith(srcpath+'['):
+                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
+            if srcpath.startswith(subvar+'.') or srcpath.startswith(subvar+'['):
+                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
+
+
     def check_connect(self, srcpath, destpath):
-        if destpath not in self or is_external_node(self, destpath):
+        if is_external_node(self, destpath): # error will be caught at parent level
             return
         
-        inedges = self.in_edges((destpath,))
-        dest_iotype = self.node[destpath].get('iotype')
-        if dest_iotype == 'out' and not is_boundary_node(self, destpath):
+        dpbase = base_var(self, destpath)
+
+        dest_iotype = self.node[dpbase].get('iotype')
+        if dest_iotype == 'out' and not is_boundary_node(self, dpbase) and not dpbase == srcpath:
             raise RuntimeError("'%s' must be an input variable" % destpath)
 
-        if len(inedges) > 0:
-            if not is_subvar_node(self, srcpath):
+        if destpath in self:
+            if base_var(self, srcpath) == destpath:
+                self._check_subvar_conflict(srcpath, destpath)
+            elif self.in_degree(destpath) > 0:
                 raise RuntimeError("'%s' is already connected to '%s'" % 
-                                    (destpath, inedges[0][0]))
+                                      (destpath, self.pred[destpath].keys()[0]))
+        else:
+            if dpbase not in self:
+                raise RuntimeError("'%s' not found in graph" % destpath)
+            if dpbase == srcpath:
+                return
 
-        base = base_var(self, destpath)
-        if base != destpath and base != srcpath:
-            usdot = destpath + '.'
-            usbracket = destpath + '['
-            for u,v in self.in_edges_iter((base,)):
-                if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
-                       or u.startswith(usdot) or u.startswith(usbracket):
-                    raise RuntimeError("'%s' is already connected to '%s'" % (base, u))
+            # now we're left with a dest subvar being added to a dest basevar.
+            # we need to check if the dest basevar has any other sources that
+            # conflict with the new subvar
+            self._check_subvar_conflict(destpath, dpbase)
+        
+        # if destpath in self:
+        #     if is_subvar_node(self, destpath) and self.in_degree(destpath) > 0:
+        #         raise RuntimeError("'%s' is already connected to '%s'" % (destpath, self.pred[destpath].keys()[0]))
+            
+        #     if self.pred[destpath]:
+        #         if not (srcpath.startswith(destpath+'.') or srcpath.startswith(destpath+'[')):
+        #             raise RuntimeError("'%s' is already connected to '%s'" % (destpath, self.pred[destpath].keys()[0]))
+                    
+        #     #if not is_subvar_node(self, srcpath):
+        #         #for u,v in self.in_edges(destpath):
+        #             #if is_connection(self, u, v):
+        #                 #raise RuntimeError("'%s' is already connected to '%s'" % (v, u))
+        #             #else:
+        #                 #for uu,vv in self.in_edges(u):
+        #                     #if is_connection(self, uu, vv):
+        #                         #raise RuntimeError("'%s' is already connected to '%s'" % (vv, uu))
+
+        # base = base_var(self, destpath)
+        # if dpbase != destpath and dpbase != srcpath:
+        #     usdot = destpath + '.'
+        #     usbracket = destpath + '['
+        #     for u,v in self.in_edges_iter((base,)):
+        #         if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
+        #                or u.startswith(usdot) or u.startswith(usbracket):
+        #             raise RuntimeError("'%s' is already connected to '%s'" % (base, u))
 
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
@@ -281,11 +335,16 @@ class DependencyGraph(nx.DiGraph):
         path.append(base_dest)
         bases.append(base_dest)
 
+        # check the whole path first before we add any nodes or edges
+        # so we don't have anything to clean up if there's a problem
+        for i in range(len(path)):
+            if i > 0:
+                self.check_connect(path[i-1], path[i])
+
         for i in range(len(path)):
             if path[i] not in self:
                 self.add_node(path[i], basevar=bases[i])
             if i > 0:
-                self.check_connect(path[i-1], path[i])
                 self.add_edge(path[i-1], path[i])
 
         # mark the actual connection edge to distinguish it
@@ -367,18 +426,21 @@ class DependencyGraph(nx.DiGraph):
 
         return conns
 
-    def get_source(self, name):
-        nodes = self.find_nodes(name, any_preds(is_var_node,
-                                                is_external_node),
-                                stop_predicate=any_preds(is_comp_node,
-                                                         is_pseudo_node),
-                                reverse=True)
-        srcs = list(nodes)
-        if len(srcs) == 1:
-            return srcs[0]
-        elif len(srcs) > 1:
-            raise RuntimeError("'%s' has multiple sources" % name)
-        return None
+    def get_sources(self, name):
+        """Return the node that's actually a source for the
+        named node (as opposed to just a connected subvar).
+        This should only be called for destination nodes (inputs
+        or output boundary vars).
+        """
+        srcs = []
+        for u,v in self.in_edges_iter(name):
+            if is_connection(self, u, v):
+                srcs.append(u)
+            else:
+                for uu,vv in self.in_edges_iter(u):
+                    if is_connection(self, uu, vv):
+                        srcs.append(uu) 
+        return srcs
 
         # preds = self.pred.get(name)
         # if preds:
@@ -458,35 +520,6 @@ class DependencyGraph(nx.DiGraph):
         any variable or expr nodes corresponding to those nodes.
         """
         return self.subgraph(self.find_prefixed_nodes(nodes))
-
-    def find_all_connecting(self, start, end):
-        """Return the set of all component nodes along all paths 
-        between start and end. The start and end nodes are included 
-        in the set if they're connected.
-        """
-        graph = self.component_graph()
-
-        if start == end:
-            return set()
-        fwdset = set()
-        backset = set()
-        tmpset = set([end])
-        while tmpset:
-            node = tmpset.pop()
-            if node in backset:
-                continue
-            backset.add(node)
-            tmpset.update(graph.pred[node].keys())
-        
-        tmpset = set([start])
-        while tmpset:
-            node = tmpset.pop()
-            if node in fwdset:
-                continue
-            fwdset.add(node)
-            tmpset.update(graph.succ[node].keys())
-        
-        return fwdset.intersection(backset)
 
     def _comp_connections(self, cname, direction=None):
         conns = []
@@ -670,7 +703,10 @@ class DependencyGraph(nx.DiGraph):
 
         compset = set(self.all_comps())
 
-        g = super(DependencyGraph, self).subgraph(compset)
+        g = nx.DiGraph()
+        for comp in compset:
+            g.add_node(comp, self.node[comp].copy())
+
         for src, dest in self.list_connections():
             destcomp = dest.split('.', 1)[0]
             srccomp  =  src.split('.', 1)[0]
@@ -748,7 +784,7 @@ class DependencyGraph(nx.DiGraph):
         direction. The traversal of a branch is stopped once a
         base variable is found.
         """
-        return self.find_nodes(nodes, is_var_node, reverse=reverse)
+        return self.find_nodes(nodes, is_basevar_node, reverse=reverse)
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator
@@ -779,4 +815,31 @@ def find_related_pseudos(compgraph, nodes):
                 pseudos.add(dwncomp)
 
     return list(pseudos)
+
+def find_all_connecting(graph, start, end):
+    """Return the set of all component nodes along all paths 
+    between start and end. The start and end nodes are included 
+    in the set if they're connected.
+    """
+    if start == end:
+        return set()
+    fwdset = set()
+    backset = set()
+    tmpset = set([end])
+    while tmpset:
+        node = tmpset.pop()
+        if node in backset:
+            continue
+        backset.add(node)
+        tmpset.update(graph.pred[node].keys())
+    
+    tmpset = set([start])
+    while tmpset:
+        node = tmpset.pop()
+        if node in fwdset:
+            continue
+        fwdset.add(node)
+        tmpset.update(graph.succ[node].keys())
+    
+    return fwdset.intersection(backset)
 

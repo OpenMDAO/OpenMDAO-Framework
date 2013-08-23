@@ -568,7 +568,7 @@ class Assembly(Component):
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
             if valids[expr.text.split('[',1)[0]] is False:
-                srctxt = self._depgraph.get_source(expr.text)
+                srctxt = self._depgraph.get_sources(expr.text)[0]
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
                 # setattr(self, dest, srccomp.get_wrapped_attr(src))

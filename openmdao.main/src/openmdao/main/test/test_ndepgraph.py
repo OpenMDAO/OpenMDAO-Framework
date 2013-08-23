@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var
+from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, find_all_connecting
 from openmdao.main.pseudocomp import PseudoComponent
 
 def fullpaths(cname, names):
@@ -127,14 +127,12 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(found, [])
         
     def test_get_source(self):
-        self.assertEqual(self.dep.get_source('B.a'), 'B.a.x.y')
-        self.assertEqual(self.dep.get_source('A.a'), 'a')
-        self.assertEqual(self.dep.get_source('a'), 'parent.C1.d')
-        self.assertEqual(self.dep.get_source('c'), 'C.c')
-        self.assertEqual(self.dep.get_source('A.c'), None)
-        self.assertEqual(self.dep.get_source('A.c[2]'), 'A.c')
-        self.assertEqual(self.dep.get_source('B.b[4]'), 'A.d.z')
-        self.assertEqual(self.dep.get_source('B.d'), None) 
+        self.assertEqual(self.dep.get_sources('B.a'), ['A.c[2]'])
+        self.assertEqual(self.dep.get_sources('A.a'), ['a'])
+        self.assertEqual(self.dep.get_sources('a'), ['parent.C1.d'])
+        self.assertEqual(self.dep.get_sources('c'), ['C.c'])
+        self.assertEqual(self.dep.get_sources('A.c'), [])
+        self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
         
     def test_base_var(self):
         self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
@@ -290,8 +288,8 @@ class DepGraphTestCase(unittest.TestCase):
                               ('D.d', 'd.x')]))
         
     def test_find_all_connecting(self):
-        self.assertEqual(self.dep.find_all_connecting('A','D'), set())
-        self.assertEqual(self.dep.find_all_connecting('A','C'), set(['A','B','C']))
+        self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())
+        self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','C'), set(['A','B','C']))
         
     # Expression connections are now handled at the parent level (Assembly/Component)
     # so the DependencyGraph will never see anything other than connections

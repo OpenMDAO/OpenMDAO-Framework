@@ -572,7 +572,8 @@ class DependsTestCase2(unittest.TestCase):
         try:
             top.connect('c1.c', 'c2.velocity')
         except Exception as err:
-            self.assertEqual(str(err), "Can't connect 'c1.c' to 'c2.velocity': units 'ft' are incompatible with assigning units of 'inch/s'")
+            self.assertEqual(str(err), 
+                             ": Can't connect 'c1.c' to 'c2.velocity': Incompatible units for 'c1.c' and 'c2.velocity': units 'ft' are incompatible with assigning units of 'inch/s'")
         else:
             self.fail("Exception expected")
         

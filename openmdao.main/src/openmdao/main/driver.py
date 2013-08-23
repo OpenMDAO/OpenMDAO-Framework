@@ -24,7 +24,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.datatypes.api import List, Slot, Str
-from openmdao.main.ndepgraph import find_related_pseudos
+from openmdao.main.ndepgraph import find_all_connecting
 
 
 @add_delegate(HasEvents)
@@ -171,7 +171,7 @@ class Driver(Component):
 
             for end in getcomps:
                 for start in setcomps:
-                    full.update(compgraph.find_all_connecting(start, end))
+                    full.update(find_all_connecting(compgraph, start, end))
                     
             self._required_compnames = full
 

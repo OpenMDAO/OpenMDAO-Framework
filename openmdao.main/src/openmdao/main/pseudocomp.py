@@ -145,7 +145,7 @@ class PseudoComponent(object):
             try:
                 unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
-                raise TypeError("Can't connect '%s' to '%s': %s" % (srcexpr.text, 
+                raise TypeError("Incompatible units for '%s' and '%s': %s" % (srcexpr.text, 
                                                                     destexpr.text, err))
             unit_src = print_node(unitxform)
             xformed_src = unit_src
