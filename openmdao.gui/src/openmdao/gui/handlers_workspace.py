@@ -43,11 +43,11 @@ class ReqHandler(BaseHandler):
 
 class AddOnsHandler(BaseHandler):
     ''' Add-on installation utility.
-        (TODO: wrap the OpenMDAO plugin functions to work through here...)
+        (TODO: Wrap the OpenMDAO plugin functions to work through here....)
 
-        GET:    render the addon installation utility template
+        GET:    Render the addon installation utility template.
 
-        POST:   install the POSTed addon
+        POST:   Install the POSTed addon.
     '''
     addons_url = 'http://openmdao.org/dists'
 
@@ -61,10 +61,10 @@ class AddOnsHandler(BaseHandler):
 
 
 class CommandHandler(ReqHandler):
-    ''' POST: execute a command and return the console-like response.
+    ''' POST: Execute a command and return the console-like response;
               required arguments are:
 
-              command:  command to execute
+              command:  Command to execute
     '''
 
     @web.authenticated
@@ -90,9 +90,9 @@ class CommandHandler(ReqHandler):
 class EditorHandler(ReqHandler):
     ''' code editor utility
 
-        GET:    render the code editor, arguments are:
+        GET:    Render the code editor; arguments are:
 
-                filename:   full pathname of file to edit (optional)
+                filename:   Full pathname of file to edit (optional).
     '''
 
     @web.authenticated
@@ -102,16 +102,16 @@ class EditorHandler(ReqHandler):
 
 
 class FileHandler(ReqHandler):
-    ''' GET:    get the contents of file `filename`
+    ''' GET:    Get the contents of file `filename`.
 
-        PUT:    write contents to file `filename`
+        PUT:    Write contents to file `filename`.
 
-        DELETE: delete file `filename`
+        DELETE: Delete file `filename`.
 
-        POST:   rename file `filename` if rename argument is provided,
-                otherwise execute file `filename`. arguments are:
+        POST:   Rename file `filename` if rename argument is provided;
+                otherwise execute file `filename`. Arguments are:
 
-                rename: new name for file `filename` (optional)
+                rename: New name for file `filename` (optional).
     '''
 
     @web.authenticated
@@ -184,9 +184,9 @@ class FileHandler(ReqHandler):
 
 
 class FilesHandler(ReqHandler):
-    ''' GET:    get heirarchical list of files in the current project
+    ''' GET:    Get heirarchical list of files in the current project.
 
-        DELETE: delete files, arguments are:
+        DELETE: Delete files; arguments are:
 
                 filepaths - full pathnames of files to delete (required)
 
@@ -223,9 +223,9 @@ class FilesHandler(ReqHandler):
 class GeometryHandler(ReqHandler):
     ''' geometry viewer utility
 
-        GET:    render the geometry viewer, arguments are:
+        GET:    Render the geometry viewer; arguments are:
 
-                path:   full path name of geometry object or file
+                path:   Full path name of geometry object or file.
     '''
 
     @web.authenticated
@@ -240,7 +240,7 @@ class GeometryHandler(ReqHandler):
 class ImagesHandler(ReqHandler):
     ''' image viewer utility
 
-        GET:    render the image viewer
+        GET:    Render the image viewer.
     '''
 
     @web.authenticated
@@ -250,23 +250,27 @@ class ImagesHandler(ReqHandler):
 
 
 class ObjectHandler(ReqHandler):
-    ''' GET:    get the attributes of object `pathname`
+    ''' GET:    Get the attributes of object `pathname`;
                 `attr` is optional and can specify one of the following:
                     dataflow
+		    
                     workflow
+		    
                     events
+		    
                     passthroughs
+		    
                     connections
 
-        PUT:    create or replace object `pathname`, arguments are:
+        PUT:    Create or replace object `pathname`; arguments are:
 
-                type: the type of the new object (required)
+                type: The type of the new object (required)
 
-                args: arguments required to create the new object (optional)
+                args: Arguments required to create the new object (optional).
 
-        POST:   execute object `pathname`
+        POST:   Execute object `pathname`
 
-        DELETE: delete object `pathname`
+        DELETE: Delete object `pathname`
     '''
 
     @web.authenticated
@@ -370,7 +374,7 @@ class ObjectHandler(ReqHandler):
 
 
 class ObjectsHandler(ReqHandler):
-    ''' GET:    get heirarchical list of objects in the current project
+    ''' GET:    Get heirarchical list of objects in the current project.
                 (NOTE: currently only lists 'Component' objects...)
     '''
 
@@ -393,31 +397,31 @@ class ObjectsHandler(ReqHandler):
 
 
 class ProjectHandler(ReqHandler):
-    ''' GET:    start up an empty workspace and prepare to load a project.
-                (loading a project is a two step process, this is the first step
-                in which the server is initialized and the workspace is loaded...
-                when workspace is loaded and websockets are connected, this
-                should be followed up with a POST to project/load that will
-                actually load the project in to the server)
+    ''' GET:    Start up an empty workspace and prepare to load a project.
+                (Loading a project is a two-step process. The first step is when
+                the server is initialized and the workspace is loaded.
+                After the workspace is loaded and websockets are connected, the next step  
+                should be a POST to project/load that will actually load the project 
+		into the server.)
 
-        POST:   perform the specified action on the current project, arguments are:
+        POST:   Perform the specified action on the current project; arguments are:
 
-                action: one of the following (required)
+                action: One of the following (required)
 
-                    load:   load project into the current server
-                            if no project path is given, get from session cookie.
+                	load:   Load project into the current server;
+                                if no project path is given, get from session cookie.
 
-                            additional args: projpath (optional)
+                                additional args: projpath (optional)
 
-                    commit: commit the current project.
+                    	commit: Commit the current project.
 
-                            additional args: comment (optional)
+                                additional args: comment (optional)
 
-                    revert: revert back to the most recent commit of the project.
+                    	revert: Revert back to the most recent commit of the project.
 
-                            additional args: commit_id (optional)
+                                additional args: commit_id (optional)
 
-                    close:  close the current project
+                    	close:  Close the current project
     '''
 
     @web.authenticated
@@ -485,7 +489,7 @@ class ProjectHandler(ReqHandler):
 
 
 class StreamHandler(ReqHandler):
-    ''' GET:    get the url of the websocket server for stream `stream_name`.
+    ''' GET:    Get the url of the websocket server for stream `stream_name`.
     '''
 
     @web.authenticated
@@ -497,10 +501,10 @@ class StreamHandler(ReqHandler):
 
 
 class SubscriptionHandler(ReqHandler):
-    ''' GET:    get a subscription to `topic`
-                (messages will be published via the pub websocket)
+    ''' GET:    Get a subscription to `topic`.
+                (Messages will be published via the pub websocket.)
 
-        DELETE: remove a subscription to `topic`
+        DELETE: Remove a subscription to `topic`.
     '''
 
     @web.authenticated
@@ -515,10 +519,10 @@ class SubscriptionHandler(ReqHandler):
 
 
 class TypeHandler(ReqHandler):
-    ''' GET:    get attributes of type `typename`
+    ''' GET:    Get attributes of type `typename`;
                 `attr` is required and must be one of:
 
-                signature:  arguments required to create an instance of `typename`
+                signature:  Arguments required to create an instance of `typename`
     '''
 
     @web.authenticated
@@ -539,7 +543,7 @@ class TypeHandler(ReqHandler):
 
 
 class TypesHandler(ReqHandler):
-    ''' GET:    get the list of available types
+    ''' GET:    Get the list of available types.
     '''
 
     @web.authenticated
@@ -553,9 +557,9 @@ class TypesHandler(ReqHandler):
 class UploadHandler(ReqHandler):
     ''' file upload utility
 
-        GET:    render the upload form
+        GET:    Render the upload form.
 
-        POST:   add the POSTed files to the current project
+        POST:   Add the POSTed files to the current project.
     '''
 
     @web.authenticated
@@ -581,9 +585,9 @@ class UploadHandler(ReqHandler):
 
 
 class VariableHandler(ReqHandler):
-    ''' GET:    get the value of variable `pathname`.
+    ''' GET:    Get the value of variable `pathname`.
 
-        PUT:    set the value of variable `pathname`.
+        PUT:    Set the value of variable `pathname`.
     '''
 
     @web.authenticated

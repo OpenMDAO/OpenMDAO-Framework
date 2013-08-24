@@ -114,9 +114,11 @@ class ZMQServerManager(object):
         ''' Get the url of the websocket for the specified stream of the
             specified server; if websocket server does not exist, start it.
 
-                server_id:      the id of the server
-                stream_name:    the name of the stream ('out' or 'pub')
-                target_url:     the relative url at which to serve the websocket
+                server_id:      The id of the server.
+
+                stream_name:    The name of the stream ('out' or 'pub').
+
+                target_url:     The relative url at which to serve the websocket.
         '''
         if stream_name not in ['out', 'pub']:
             print >>sys.stderr, \

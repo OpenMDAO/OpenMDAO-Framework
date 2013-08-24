@@ -218,47 +218,47 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         Resource Key              Translation
         ========================= ===========================
-        submit_as_hold            -h
+        ``submit_as_hold``        -h
         ------------------------- ---------------------------
         rerunnable                -r y|n
         ------------------------- ---------------------------
-        working_directory         Handled in generated script
+        ``working_directory``     Handled in generated script
         ------------------------- ---------------------------
-        job_category              Ignored
+        ``job_category``          Ignored
         ------------------------- ---------------------------
-        min_cpus                  -l select= `value` :ncpus=1
+        ``min_cpus``              -l select= `value` :ncpus=1
         ------------------------- ---------------------------
-        max_cpus                  Ignored
+        ``max_cpus``              Ignored
         ------------------------- ---------------------------
-        min_phys_memory           Ignored
+        ``min_phys_memory``       Ignored
         ------------------------- ---------------------------
         email                     -M `value`
         ------------------------- ---------------------------
-        email_on_started          -m b
+        ``email_on_started``      -m b
         ------------------------- ---------------------------
-        email_on_terminated       -m e
+        ``email_on_terminated``   -m e
         ------------------------- ---------------------------
-        job_name                  -N `value`
+        ``job_name``              -N `value`
         ------------------------- ---------------------------
-        input_path                Handled in generated script
+        ``input_path``            Handled in generated script
         ------------------------- ---------------------------
-        output_path               Handled in generated script
+        ``output_path``           Handled in generated script
         ------------------------- ---------------------------
-        error_path                Handled in generated script
+        ``error_path``            Handled in generated script
         ------------------------- ---------------------------
-        join_files                Handled in generated script
+        ``join_files``            Handled in generated script
         ------------------------- ---------------------------
-        reservation_id            Ignored
+        ``reservation_id``        Ignored
         ------------------------- ---------------------------
-        queue_name                -q `value`
+        ``queue_name``            -q `value`
         ------------------------- ---------------------------
         priority                  -p `value`
         ------------------------- ---------------------------
-        start_time                -a `value`
+        ``start_time``            -a `value`
         ------------------------- ---------------------------
-        deadline_time             Ignored
+        ``deadline_time``         Ignored
         ------------------------- ---------------------------
-        accounting_id             -W group_list= `value`
+        ``accounting_id``         -W group_list= `value`
         ========================= ===========================
 
         Where `value` is the corresponding resource value.
@@ -283,21 +283,21 @@ class PBS_Server(ObjServer):
         ==================== =========================
         Resource Key         Translation
         ==================== =========================
-        core_file_size       Ignored
+        ``core_file_size``   Ignored
         -------------------- -------------------------
-        data_seg_size        Ignored
+        ``data_seg_size``    Ignored
         -------------------- -------------------------
-        file_size            Ignored
+        ``file_size``        Ignored
         -------------------- -------------------------
-        open_files           Ignored
+        ``open_files``       Ignored
         -------------------- -------------------------
-        stack_size           Ignored
+        ``stack_size``       Ignored
         -------------------- -------------------------
-        virtual_memory       Ignored
+        ``virtual_memory``   Ignored
         -------------------- -------------------------
-        cpu_time             Ignored
+        ``cpu_time``         Ignored
         -------------------- -------------------------
-        wallclock_time       -l walltime= `value`
+        ``wallclock_time``   -l walltime= `value`
         ==================== =========================
 
         Output from `qsub` itself is routed to ``qsub.out``.
