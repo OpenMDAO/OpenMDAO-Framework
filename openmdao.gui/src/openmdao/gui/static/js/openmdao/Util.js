@@ -575,13 +575,9 @@ openmdao.Util = {
             var c1 = s1.charAt(i),
                 c2 = s2.charAt(i);
 
-            if (c1 === c2) {
-                ++i;
-            }
-
             // Compare integer fields.
-            else if (('0' <= c1 && c1 <= '9') &&
-                     ('0' <= c2 && c2 <= '9')) {
+            if (('0' <= c1 && c1 <= '9') &&
+                ('0' <= c2 && c2 <= '9')) {
 
                 // Accumulate value.
                 var j = i + 1;
@@ -612,6 +608,10 @@ openmdao.Util = {
                     return v1 - v2;
                 }
                 i = j;
+            }
+
+            elif (c1 === c2) {
+                ++i;
             }
 
             else {
