@@ -8,3 +8,4 @@ Working with Geometry
    :maxdepth: 1
    
    overview
+   doe_geometry

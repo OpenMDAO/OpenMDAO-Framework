@@ -20,6 +20,8 @@ class STLGroup(object):
 
     def __init__(self): 
 
+        print "init in stlg"
+
         self._comps = []
         self._i_comps = {}
         self._n_comps = 0 
@@ -35,6 +37,9 @@ class STLGroup(object):
     #begin methods for IParametricGeometry
     def list_parameters(self): 
         """ returns a dictionary of parameters sets key'd to component names"""
+
+        print "in STLGroup.list_parameters"
+
         self.param_name_map = {}
         params = []
         for comp in self._comps: 
@@ -87,10 +92,18 @@ class STLGroup(object):
         return [self.param_name_map[n] for n in names]
 
     def regen_model(self): 
+        print "regen_model in stlg"
         for comp in self._comps: 
+            print "in regen_model, comp = ", comp
+
+            #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
+            
+            print dir( self )
+
             comp.deform()
 
     def get_static_geometry(self): 
+        print "get_static_geometry in stlg"
         return self
 
     def register_param_list_changedCB(self, callback):
@@ -103,6 +116,7 @@ class STLGroup(object):
 
     #methods for IStaticGeometry
     def get_visualization_data(self, wv):
+        print "get_vis_data in stlg"
         self.linearize()
 
         xyzs = np.array(self.points).flatten().astype(np.float32)
@@ -137,6 +151,9 @@ class STLGroup(object):
 
     def deform(self,**kwargs): 
         """ deforms the geometry applying the new locations for the control points, given by body name"""
+
+        print "deform in stlg"
+
         for name,delta_C in kwargs.iteritems(): 
             i = self._i_comps[name]
             comp = self._comps[i]
@@ -165,6 +182,7 @@ class STLGroup(object):
         return lines      
 
     def linearize(self): 
+        print "linearize in stlg"
         points = []
         triangles = []
         i_offset = 0

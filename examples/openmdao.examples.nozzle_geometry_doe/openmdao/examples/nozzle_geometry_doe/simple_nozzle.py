@@ -12,10 +12,12 @@ class PlugNozzleGeometry(STLGroup):
     def __init__(self): 
         super(PlugNozzleGeometry,self).__init__()
 
+        print "png init" #qqq
+
         this_dir, this_filename = os.path.split(os.path.abspath(__file__))
-        plug_file = os.path.join(this_dir, 'test', 'plug.stl')
+        plug_file = os.path.join(this_dir, 'plug.stl')
         plug = stl.STL(plug_file)
-        cowl_file = os.path.join(this_dir, 'test', 'cowl.stl')
+        cowl_file = os.path.join(this_dir, 'cowl.stl')
         cowl = stl.STL(cowl_file)
         
         n_c = 10
@@ -26,6 +28,7 @@ class PlugNozzleGeometry(STLGroup):
         self.add(shell,name="cowl")
 
     def get_visualization_data(self, wv):
+        print "get_visualization_data" # qqq
         super(PlugNozzleGeometry, self).get_visualization_data(wv)
 
 if __name__=="__main__": 
