@@ -147,7 +147,7 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
                 # Set permissions, extract() doesn't.
                 rwx = (info.external_attr >> 16) & 0777
                 if rwx:
-                    os.chmod(fname, rwx)  # Only if something valid.
+                    os.chmod(filename, rwx)  # Only if something valid.
 
             # Requires mismatched systems.
             if info.create_system != local_system:  # pragma no cover
