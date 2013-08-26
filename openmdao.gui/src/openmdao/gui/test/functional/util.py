@@ -2,6 +2,7 @@
 Utilities for GUI functional testing.
 """
 
+import glob
 import inspect
 import logging
 import os.path
@@ -51,10 +52,7 @@ _display = None
 
 
 def check_for_chrome():
-    if find_chrome() is not None:
-        return True
-    else:
-        return False
+    return bool(find_chrome())
 
 
 def setup_chrome():
@@ -65,10 +63,13 @@ def setup_chrome():
         # Download, unpack, and install chromedriver in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
         if sys.platform == 'win32':  # No command-line version capability.
-            browser_version = 29
+            pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
+            browser_version = os.path.basename(sorted(glob.glob(pattern),
+                                                      reverse=True)[0])
         else:
             browser_version = subprocess.check_output([find_chrome(), '--version'])
-            browser_version = int(browser_version.strip().split()[-1].split('.')[0])
+            browser_version = browser_version.strip().split()[-1]
+        browser_version = int(browser_version.split('.')[0])
         version = '2.2' if browser_version > 28 else '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac32' if browser_version > 28 else 'mac'

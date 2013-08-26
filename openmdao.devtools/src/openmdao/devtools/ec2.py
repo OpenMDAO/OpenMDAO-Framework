@@ -42,7 +42,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     img_id = config.get(name, 'image_id')
     # Sometimes requires retry due to:
     # SSLError: [Errno 8] _ssl.c:504: EOF occurred in violation of protocol
-    for retry in range(2):
+    for retry in range(3):
         try:
             img = conn.get_image(img_id)
         except Exception as exc:

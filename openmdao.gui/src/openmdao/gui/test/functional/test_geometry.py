@@ -174,6 +174,7 @@ def _test_view_csm(browser):
         time.sleep(5)
 
         geom_page.expand_edges()
+        time.sleep(1) # Wait for silly animation.
         edges = geom_page.get_edge_names()
         eq(edges, ['Body 1 Edge 1',  'Body 1 Edge 2',  'Body 1 Edge 3',
                    'Body 1 Edge 4',  'Body 1 Edge 5',  'Body 1 Edge 6',
@@ -181,6 +182,7 @@ def _test_view_csm(browser):
                    'Body 1 Edge 10', 'Body 1 Edge 11', 'Body 1 Edge 12'])
 
         geom_page.expand_faces()
+        time.sleep(1) # Wait for silly animation.
         faces = geom_page.get_face_names()
         eq(faces, ['Body 1 Face 1',  'Body 1 Face 2',  'Body 1 Face 3',
                    'Body 1 Face 4',  'Body 1 Face 5',  'Body 1 Face 6'])
