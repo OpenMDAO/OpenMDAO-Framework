@@ -185,7 +185,7 @@ class DownloadHandler(ReqHandler):
 
 class NewHandler(ReqHandler):
     ''' Add a project to the project database. This extracts the project file
-    into a directory under the projects directory of user.
+    into a directory under the project's directory of users.
     '''
 
     @web.authenticated

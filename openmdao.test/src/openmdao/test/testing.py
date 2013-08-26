@@ -117,8 +117,8 @@ def _get_openmdao_packages():
 def read_config(options):
     """Reads the config file specified in options.cfg.
     
-    Returns a tuple of the form (hosts, config), where hosts is the list of
-    host names and config is the ConfigParser object for the config file.
+    Returns a tuple of the form (hosts, config), where `hosts` is the list of
+    host names and `config` is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
     

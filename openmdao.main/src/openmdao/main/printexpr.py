@@ -312,7 +312,7 @@ class ExprNameTransformer(ast.NodeTransformer):
     
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on
-    the value of the mapping dict.  Note that this transforms only 'complete'
+    the value of the mapping dict.  Note that this transforms only "complete"
     names (dotted or not), not sub-names within a larger dotted name.
     """
     if expr in mapping:
