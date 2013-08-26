@@ -143,7 +143,7 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
             logger.debug('unpacking %r (%d)...', filename, size)
             zipped.extract(info)
 
-            if sys.platform != 'win32':  #pragma no cover
+            if sys.platform != 'win32':
                 # Set permissions, extract() doesn't.
                 rwx = (info.external_attr >> 16) & 0777
                 if rwx:

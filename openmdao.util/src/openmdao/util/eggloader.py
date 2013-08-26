@@ -187,7 +187,7 @@ def _dist_from_eggfile(filename, logger, observer):
                 archive.extract(fname, name)
             else:
                 archive.extract(fname)
-                if sys.platform != 'win32':  #pragma no cover
+                if sys.platform != 'win32':
                     # Set permissions, extract() doesn't.
                     rwx = (info.external_attr >> 16) & 0777
                     if rwx:
