@@ -90,6 +90,24 @@ def is_subvar_node(graph, node):
     """
     return 'basevar' in graph.node.get(node, '')
 
+def is_connected_src_node(graph, node):
+    """Return True if this node is part of a connection,
+    i.e., there is at least one successor edge that
+    satisfies 'is_connection'.
+    """
+    for u,v in graph.edges_iter(node):
+        if is_connection(graph, u, v):
+            return True
+
+def is_connected_dest_node(graph, node):
+    """Return True if this node is part of a connection,
+    i.e., there is at least one predecessor edge that
+    satisfies 'is_connection'.
+    """
+    for u,v in graph.in_edges_iter(node):
+        if is_connection(graph, u, v):
+            return True
+
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node.get(node, '')
 
@@ -279,32 +297,6 @@ class DependencyGraph(nx.DiGraph):
             # conflict with the new subvar
             self._check_subvar_conflict(destpath, dpbase)
         
-        # if destpath in self:
-        #     if is_subvar_node(self, destpath) and self.in_degree(destpath) > 0:
-        #         raise RuntimeError("'%s' is already connected to '%s'" % (destpath, self.pred[destpath].keys()[0]))
-            
-        #     if self.pred[destpath]:
-        #         if not (srcpath.startswith(destpath+'.') or srcpath.startswith(destpath+'[')):
-        #             raise RuntimeError("'%s' is already connected to '%s'" % (destpath, self.pred[destpath].keys()[0]))
-                    
-        #     #if not is_subvar_node(self, srcpath):
-        #         #for u,v in self.in_edges(destpath):
-        #             #if is_connection(self, u, v):
-        #                 #raise RuntimeError("'%s' is already connected to '%s'" % (v, u))
-        #             #else:
-        #                 #for uu,vv in self.in_edges(u):
-        #                     #if is_connection(self, uu, vv):
-        #                         #raise RuntimeError("'%s' is already connected to '%s'" % (vv, uu))
-
-        # base = base_var(self, destpath)
-        # if dpbase != destpath and dpbase != srcpath:
-        #     usdot = destpath + '.'
-        #     usbracket = destpath + '['
-        #     for u,v in self.in_edges_iter((base,)):
-        #         if destpath.startswith(u+'.') or destpath.startswith(u+'[') \
-        #                or u.startswith(usdot) or u.startswith(usbracket):
-        #             raise RuntimeError("'%s' is already connected to '%s'" % (base, u))
-
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
         and create any necessary additional connections to base 
@@ -400,14 +392,8 @@ class DependencyGraph(nx.DiGraph):
                       v.split('.', 1)[0] in compset]
 
     def connections_to(self, path, direction=None):
-        if any_preds(is_comp_node, is_pseudo_node)(self, path):
-            conns = []
-            for vname in itertools.chain(self.list_inputs(path, 
-                                                    connected=True),
-                                         self.list_outputs(path, 
-                                                    connected=True)):
-                conns.extend(self.connections_to(vname, direction))
-            return conns
+        if is_comp_node(self, path) or is_pseudo_node(self, path):
+            return self._comp_connections(path, direction)
         else:
             return self._var_connections(path, direction)
 
@@ -441,17 +427,6 @@ class DependencyGraph(nx.DiGraph):
                     if is_connection(self, uu, vv):
                         srcs.append(uu) 
         return srcs
-
-        # preds = self.pred.get(name)
-        # if preds:
-        #     if len(preds) == 1:
-        #         src = preds.keys()[0]
-        #         if any_preds(is_comp_node, is_pseudo_node)(self, src):
-        #             return None # src is a comp so this node is really an output
-        #         return src
-        #     else:
-        #         raise RuntimeError("'%s' has multiple sources" % name)
-        # return None
 
     def _check_source(self, path, src):
         preds = self.predecessors(path)
@@ -529,32 +504,6 @@ class DependencyGraph(nx.DiGraph):
         if direction != 'out':
             for inp in self.list_inputs(cname):
                 conns.extend(self._var_connections(inp, 'in'))
-        return conns
-
-    def _var_connections(self, path, direction=None):
-        """Returns a list of tuples of the form (srcpath, destpath) for all
-        variable connections to the specified variable.  If direction is None, both
-        ins and outs are included. Other allowed values for direction are
-        'in' and 'out'. 
-        """
-        conns = []
-
-        if direction != 'in':  # get 'out' connections
-            for u,v in self.edges_iter(path):
-                if v.startswith(u):  # a subvar of u
-                    conns.extend([(uu,vv) for uu,vv in self.edges_iter(v) 
-                        if not is_comp_node(self, vv)])
-                elif not is_comp_node(self, v):
-                    conns.append((u, v))
-
-        if direction != 'out':  # get 'in' connections
-            for u,v in self.in_edges_iter(path):
-                if u.startswith(v):  # a subvar of v
-                    conns.extend([(uu,vv) for uu,vv in self.in_edges_iter(u) 
-                        if not is_comp_node(self, uu)])
-                elif not is_comp_node(self, u):
-                    conns.append((u, v))
-
         return conns
 
     def invalidate_deps(self, scope, cname, srcvars, force=False):
@@ -746,10 +695,10 @@ class DependencyGraph(nx.DiGraph):
             node satisfying 'predicate' is found OR if stop_predicate is True.
 
         reverse: bool (optional)
-            if True, find previous nodes instead.
+            if True, find previous nodes instead of successor nodes.
 
         If predicate is True AND stop_predicate is True, the node will still
-        be added to the iterator, but traversal on the branch will stop.
+        be added to the iterator and traversal on the branch will stop.
         """
         if isinstance(nodes, basestring):
             nodes = [nodes]
@@ -777,6 +726,34 @@ class DependencyGraph(nx.DiGraph):
                             stack.append((child, neighbors(child)))
                 except StopIteration:
                     stack.pop()
+
+    def _var_connections(self, path, direction=None):
+        """Returns a list of tuples of the form (srcpath, destpath) for all
+        variable connections to the specified variable.  If direction is None, both
+        ins and outs are included. Other allowed values for direction are
+        'in' and 'out'. 
+        """
+        conns = []
+
+        if direction != 'in':  # get 'out' connections
+            for u,v in self.edges_iter(path):
+                if is_connection(self, u, v):
+                    conns.append((u,v))
+                else:
+                    for uu,vv in self.edges_iter(v):
+                        if is_connection(self, uu, vv):
+                            conns.append((uu,vv)) 
+
+        if direction != 'out':  # get 'in' connections
+            for u,v in self.in_edges_iter(path):
+                if is_connection(self, u, v):
+                    conns.append((u,v))
+                else:
+                    for uu,vv in self.in_edges_iter(u):
+                        if is_connection(self, uu, vv):
+                            conns.append((uu,vv)) 
+
+        return conns
 
     def basevar_iter(self, nodes, reverse=False):
         """Given a group of nodes, return an iterator

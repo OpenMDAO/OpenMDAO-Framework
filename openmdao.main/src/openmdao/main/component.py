@@ -629,7 +629,7 @@ class Component(Container):
             self.config_changed()
             
         trait = self.trait(name)
-        if trait.iotype:
+        if trait.iotype == 'out':
             self._valid_dict[name] = False
 
         return obj
@@ -673,11 +673,10 @@ class Component(Container):
 
         self.config_changed()
         if name not in self._valid_dict:
-            if trait.iotype:
-                self._valid_dict[name] = trait.iotype == 'in'
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
         if trait.iotype:
+            self._valid_dict[name] = trait.iotype == 'in'
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
