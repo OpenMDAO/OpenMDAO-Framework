@@ -144,6 +144,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
       openmdao.lib.geometry.box.BoxSender = openmdao.lib.geometry.box:BoxSender
+      openmdao.lib.geometry.stl_group.STLGroupSender = openmdao.lib.geometry.stl_group:STLGroupSender
 
       """,
       )
