@@ -38,6 +38,18 @@ def base_var(graph, node):
 
     return '.'.join(parts[:2])
 
+def _sub_or_super(s1, s2):
+    """Returns True if s1 is a subvar or supervar of s2."""
+    if s2.startswith(s1 + '.'):
+        return True
+    if s2.startswith(s1 + '['):
+        return True
+    if s1.startswith(s2 + '.'):
+        return True
+    if s1.startswith(s2 + '['):
+        return True
+    return False
+
 
 # Explanation of node/edge metadata dict entries
 #
@@ -260,16 +272,6 @@ class DependencyGraph(nx.DiGraph):
             self.remove_nodes_from(nodes)
             self.config_changed()
 
-    def _check_subvar_conflict(self, srcpath, destpath):
-        for subvar, basevar in self.in_edges_iter(destpath):
-            if not (subvar.startswith(destpath+'.') or subvar.startswith(destpath+'[')):
-                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
-            if subvar.startswith(srcpath+'.') or subvar.startswith(srcpath+'['):
-                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
-            if srcpath.startswith(subvar+'.') or srcpath.startswith(subvar+'['):
-                raise RuntimeError("'%s' is already connected to '%s'" % (destpath, subvar))
-
-
     def check_connect(self, srcpath, destpath):
         if is_external_node(self, destpath): # error will be caught at parent level
             return
@@ -280,23 +282,26 @@ class DependencyGraph(nx.DiGraph):
         if dest_iotype == 'out' and not is_boundary_node(self, dpbase) and not dpbase == srcpath:
             raise RuntimeError("'%s' must be an input variable" % destpath)
 
-        if destpath in self:
-            if base_var(self, srcpath) == destpath:
-                self._check_subvar_conflict(srcpath, destpath)
-            elif self.in_degree(destpath) > 0:
-                raise RuntimeError("'%s' is already connected to '%s'" % 
-                                      (destpath, self.pred[destpath].keys()[0]))
-        else:
-            if dpbase not in self:
-                raise RuntimeError("'%s' not found in graph" % destpath)
-            if dpbase == srcpath:
-                return
+        connected = False
+        conns = self._var_connections(dpbase, 'in')
+        if conns:
+            if destpath == dpbase:
+                connected = True
+            elif destpath in [v for u,v in conns]:
+                connected = True
+            else:
+                for u, v in conns:
+                    if is_basevar_node(self, v):
+                        connected = True
+                        break
+                    if destpath != dpbase and _sub_or_super(v, destpath):
+                        connected = True
+                        break
 
-            # now we're left with a dest subvar being added to a dest basevar.
-            # we need to check if the dest basevar has any other sources that
-            # conflict with the new subvar
-            self._check_subvar_conflict(destpath, dpbase)
-        
+        if connected:
+            raise RuntimeError("'%s' is already connected to '%s'" % 
+                                  (conns[0][1], conns[0][0]))
+    
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
         and create any necessary additional connections to base 
@@ -327,11 +332,9 @@ class DependencyGraph(nx.DiGraph):
         path.append(base_dest)
         bases.append(base_dest)
 
-        # check the whole path first before we add any nodes or edges
+        # check the connection first before we add any nodes or edges
         # so we don't have anything to clean up if there's a problem
-        for i in range(len(path)):
-            if i > 0:
-                self.check_connect(path[i-1], path[i])
+        self.check_connect(srcpath, destpath)
 
         for i in range(len(path)):
             if path[i] not in self:

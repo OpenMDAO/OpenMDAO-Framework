@@ -184,7 +184,7 @@ class DepGraphTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('A.d', 'B.a')
         except Exception as err:
-            self.assertEqual(str(err), "'B.a' is already connected to 'B.a.x.y'")
+            self.assertEqual(str(err), "'B.a.x.y' is already connected to 'A.c[2]'")
         else:
             self.fail('Exception expected')
            
