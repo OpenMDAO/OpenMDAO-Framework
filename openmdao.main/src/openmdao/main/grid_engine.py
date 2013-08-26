@@ -279,47 +279,47 @@ class GridEngineServer(ObjServer):
         ========================= =========================
         Resource Key              Translation
         ========================= =========================
-        submit_as_hold            -h
+        ``submit_as_hold``        -h
         ------------------------- -------------------------
         rerunnable                -r yes|no
         ------------------------- -------------------------
-        working_directory         -wd `value`
+        ``working_directory``     -wd `value`
         ------------------------- -------------------------
-        job_category              Sets parallel environment
+        ``job_category``          Sets parallel environment
         ------------------------- -------------------------
-        min_cpus                  Sets parallel environment
+        ``min_cpus``              Sets parallel environment
         ------------------------- -------------------------
-        max_cpus                  Sets parallel environment
+        ``max_cpus``              Sets parallel environment
         ------------------------- -------------------------
-        min_phys_memory           Ignored
+        ``min_phys_memory``       Ignored
         ------------------------- -------------------------
         email                     -M `value`
         ------------------------- -------------------------
-        email_on_started          -m b
+        ``email_on_started``      -m b
         ------------------------- -------------------------
-        email_on_terminated       -m e
+        ``email_on_terminated``   -m e
         ------------------------- -------------------------
-        job_name                  -N `value`
+        ``job_name``              -N `value`
         ------------------------- -------------------------
-        input_path                -i `value`
+        ``input_path``            -i `value`
         ------------------------- -------------------------
-        output_path               -o `value`
+        ``output_path``           -o `value`
         ------------------------- -------------------------
-        error_path                -e `value`
+        ``error_path``            -e `value`
         ------------------------- -------------------------
-        join_files                -j yes|no
+        ``join_files``            -j yes|no
         ------------------------- -------------------------
-        reservation_id            -ar `value`
+        ``reservation_id``        -ar `value`
         ------------------------- -------------------------
-        queue_name                -q `value`
+        ``queue_name``            -q `value`
         ------------------------- -------------------------
         priority                  -p `value`
         ------------------------- -------------------------
-        start_time                -a `value`
+        ``start_time``            -a `value`
         ------------------------- -------------------------
-        deadline_time             Ignored
+        ``deadline_time``         Ignored
         ------------------------- -------------------------
-        accounting_id             -A `value`
+        ``accounting_id``         -A `value`
         ========================= =========================
 
         Where `value` is the corresponding resource value.
@@ -342,21 +342,21 @@ class GridEngineServer(ObjServer):
         ==================== =========================
         Resource Key         Translation
         ==================== =========================
-        core_file_size       Ignored
+        ``core_file_size``   Ignored
         -------------------- -------------------------
-        data_seg_size        Ignored
+        ``data_seg_size``    Ignored
         -------------------- -------------------------
-        file_size            Ignored
+        ``file_size``        Ignored
         -------------------- -------------------------
-        open_files           Ignored
+        ``open_files``       Ignored
         -------------------- -------------------------
-        stack_size           Ignored
+        ``stack_size``       Ignored
         -------------------- -------------------------
-        virtual_memory       Ignored
+        ``virtual_memory``   Ignored
         -------------------- -------------------------
-        cpu_time             -l h_cpu= `value`
+        ``cpu_time``         -l h_cpu= `value`
         -------------------- -------------------------
-        wallclock_time       -l h_rt= `value`
+        ``wallclock_time``   -l h_rt= `value`
         ==================== =========================
 
         Output from `qsub` itself is routed to ``qsub.out``.
