@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
             self.model.run()
         except Exception as err:
             self.assertEqual(str(err), 
-                "The node foobar is not in the digraph.")
+                "'Model' object has no attribute 'foobar'")
 
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)

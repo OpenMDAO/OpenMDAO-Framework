@@ -74,7 +74,7 @@ def is_output_node(graph, node):
     return graph.node[node].get('iotype') == 'out'
 
 def is_boundary_node(graph, node):
-    return '.' not in node
+    return '.' not in node and is_var_node(graph, node)
 
 def is_comp_node(graph, node):
     return 'comp' in graph.node.get(node, '')
@@ -393,6 +393,20 @@ class DependencyGraph(nx.DiGraph):
                    if is_connection(self, u, v) and
                       u.split('.', 1)[0] in compset and 
                       v.split('.', 1)[0] in compset]
+
+    def get_directional_interior_edges(self, comp1, comp2):
+        """ Behaves like get_ineterior_edges, except that it only
+        returns interior edges that originate in comp1 and and end in comp2.
+        
+        comp1: str
+            Source component name
+
+        comp2: str
+            Dest component name
+        """
+        in_set = set(self._var_connections(self.list_inputs(comp2), 'in'))
+        return in_set.intersection(
+                    self._var_connections(self.list_outputs(comp1), 'out'))
 
     def connections_to(self, path, direction=None):
         if is_comp_node(self, path) or is_pseudo_node(self, path):

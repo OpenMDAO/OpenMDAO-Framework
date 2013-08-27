@@ -15,6 +15,8 @@ from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos
+from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import ndarray, zeros
@@ -55,7 +57,10 @@ class SequentialWorkflow(Workflow):
         return iter(self.get_components(full=True))
 
     def __len__(self):
-        return len(self.get_names(full=True))
+        if self._names:
+            return len(self._names)
+        else:
+            return len(self._explicit_names)
 
     def __contains__(self, comp):
         return comp in self.get_names(full=True)
@@ -91,13 +96,27 @@ class SequentialWorkflow(Workflow):
         If full is True, include hidden pseudo-components in the list.
         """
         if self._names is None:
-            self._names = self._explicit_names + \
-                          list(self._parent._get_required_compnames())
+            comps = [getattr(self.scope, n) 
+                               for n in self._explicit_names]
+            drivers = [c for c in comps if has_interface(c, IDriver)]
+            self._names = self._explicit_names[:]
 
+            if len(drivers) == len(comps): # all comps are drivers
+                iterset = set()
+                for driver in drivers:
+                    iterset.update(driver.iteration_set())
+                added = set([n for n in 
+                           self._parent._get_required_compnames() 
+                              if n not in iterset]) - set(self._names)
+                self._names.extend(added)
+                          
         if full:
-            return self._names + self._parent.list_pseudocomps() + \
-                     find_related_pseudos(self.scope._depgraph.component_graph(),
-                                          self._names)
+            allnames = self._names[:]
+            fullset = set(self._parent.list_pseudocomps())
+            fullset.update(find_related_pseudos(self.scope._depgraph.component_graph(),
+                                                self._names))
+            allnames.extend(fullset - set(self._names))
+            return allnames
         else:
             return self._names[:]
 
@@ -189,9 +208,9 @@ class SequentialWorkflow(Workflow):
         """
         
         graph = self._parent.workflow_subgraph()
-        edges = set(graph.get_interior_connections())
-        edges = edges.union(self.get_driver_edges())
-        edges = edges.union(self._additional_edges)
+        edges = set(graph.get_interior_connections(self.get_names(full=True)))
+        edges.update(self.get_driver_edges())
+        edges.update(self._additional_edges)
         edges = edges - self._hidden_edges
                 
         # Somtimes we connect an input to an input (particularly with
@@ -779,7 +798,7 @@ class SequentialWorkflow(Workflow):
                                     no_fake_fd=True)
             pseudo.ffd_order = 0
             graph = self._parent.workflow_subgraph()
-            self._hidden_edges = graph.get_interior_connections()#self.get_names(full=True))
+            self._hidden_edges = set(graph.get_interior_connections(self.get_names(full=True)))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.

@@ -199,9 +199,17 @@ class DepGraphTestCase(unittest.TestCase):
         # TODO: input boundary connection
 
     def test_get_interior_connections(self):
-        self.assertEqual(set(self.dep.get_interior_connections(['A', 'B', 'C', 'D'])),
+        self.assertEqual(set(self.dep.get_interior_connections(
+                                            ['A', 'B', 'C', 'D'])),
                          set(self.conns))
-    
+        self.assertEqual(set(self.dep.get_interior_connections()),
+                         set(self.conns))
+
+        self.assertEqual(set(self.dep.get_interior_connections(
+                                            ['A', 'B', 'D'])),
+                         set([('A.c[2]','B.a.x.y'),('A.d.z','B.b[4]')]))
+
+
     def test_disconnect_comp(self):
         allcons = set(self.dep.list_connections())
         self.dep.disconnect('B')
