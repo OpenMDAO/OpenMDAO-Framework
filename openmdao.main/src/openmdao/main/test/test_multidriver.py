@@ -288,7 +288,7 @@ class MultiDriverTestCase(unittest.TestCase):
         
         self.top.run()
 
-        # Notes: CONMIN does not quite reach the anlytical minimum
+        # Notes: CONMIN does not quite reach the analytical minimum
         # In fact, it only gets to about 2 places of accuracy.
         # This is also the case for a single 2-var problem.
         self.assertAlmostEqual(nested.x, 6.66667, places=4)

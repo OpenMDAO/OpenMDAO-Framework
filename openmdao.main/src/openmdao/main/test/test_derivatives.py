@@ -367,10 +367,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top = Assembly()
         top.add('nest', Assembly())
         top.nest.add('comp', Paraboloid())
+        
+        # We shouldn't calculate a derivative of this
+        top.nest.comp.add('unwanted', Float(12.34, iotype='in'))
+        
         top.driver.workflow.add(['nest'])
         top.nest.driver.workflow.add(['comp'])
         top.nest.create_passthrough('comp.x')
         top.nest.create_passthrough('comp.y')
+        top.nest.create_passthrough('comp.unwanted')
         top.nest.create_passthrough('comp.f_xy')
         top.nest.x = 3
         top.nest.y = 5

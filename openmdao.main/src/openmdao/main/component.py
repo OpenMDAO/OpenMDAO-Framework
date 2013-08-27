@@ -477,7 +477,11 @@ class Component(Container):
                                              extra_in, extra_out)
                 return
             
-            self.linearize()
+            if has_interface(self, IAssembly):
+                self.linearize(extra_in=extra_in)
+            else:
+                self.linearize()
+                
             self.derivative_exec_count += 1
         else:
             return
