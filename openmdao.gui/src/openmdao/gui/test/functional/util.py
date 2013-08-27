@@ -62,21 +62,21 @@ def broken_chrome():
 
 def setup_chrome():
     """ Initialize the Chrome browser. """
+    global _chrome_version
+    if sys.platform == 'win32':  # No command-line version capability.
+        pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
+        _chrome_version = os.path.basename(sorted(glob.glob(pattern),
+                                                  reverse=True)[0])
+    else:
+        _chrome_version = subprocess.check_output([find_chrome(), '--version'])
+        _chrome_version = _chrome_version.strip().split()[-1]
+    _chrome_version = int(_chrome_version.split('.')[0])
+
     exe = 'chromedriver'
     path = find_executable(exe)
     if not path:
         # Download, unpack, and install chromedriver in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-        global _chrome_version
-        if sys.platform == 'win32':  # No command-line version capability.
-            pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
- 
-            _chrome_version = os.path.basename(sorted(glob.glob(pattern),
-                                                      reverse=True)[0])
-        else:
-            _chrome_version = subprocess.check_output([find_chrome(), '--version'])
-            _chrome_version = _chrome_version.strip().split()[-1]
-        _chrome_version = int(_chrome_version.split('.')[0])
         version = '2.2' if _chrome_version > 28 else '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac32' if _chrome_version > 28 else 'mac'
