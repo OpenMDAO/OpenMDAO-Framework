@@ -313,7 +313,7 @@ b = Float(0.0, iotype='out')
     workspace_page.commit_project('added some Foos')
 
     if broken_chrome():
-        raise nose.SkipTest('Test broken for chrome/selenium combination')
+        raise SkipTest('Test broken for chrome/selenium combination')
     editor_page = workspace_page.open_editor()
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
@@ -597,7 +597,7 @@ def execute(self)
     # Load file with instantiation error.
     workspace_window = browser.current_window_handle
     if broken_chrome():
-        raise nose.SkipTest('Test broken for chrome/selenium combination')
+        raise SkipTest('Test broken for chrome/selenium combination')
     editor_page = workspace_page.open_editor()
     editor_page.new_file('bug2.py', """
 from openmdao.main.api import Component
