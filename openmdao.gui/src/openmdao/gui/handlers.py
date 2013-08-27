@@ -11,7 +11,7 @@ from openmdao.util.fileutil import get_ancestor_dir
 
 
 class ReqHandler(RequestHandler):
-    ''' override the get_current_user() method in request handlers to
+    ''' Override the get_current_user() method in request handlers to
         determine the current user based on the value of a cookie.
     '''
 
@@ -85,7 +85,7 @@ class ExitHandler(ReqHandler):
 
 
 class PluginDocsHandler(StaticFileHandler):
-    ''' retrieve docs for a plugin '''
+    ''' Retrieve docs for a plugin. '''
     _plugin_map = {}
     _plugin_lock = threading.Lock()
     regex = re.compile("site-packages/openmdao.main.+\.egg")

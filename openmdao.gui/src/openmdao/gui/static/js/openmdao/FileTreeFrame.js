@@ -100,7 +100,7 @@ openmdao.FileTreeFrame = function(id, project) {
 
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname);
+        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'), pathname);
     }
 
     /** save a copy of the file to the local file system (download) */
@@ -202,12 +202,6 @@ openmdao.FileTreeFrame = function(id, project) {
 
         // if it's not a folder
         if (!isFolder) {
-            // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
-            // menu.viewFile = {
-            //    "label"  : 'View File (raw)',
-            //    "action" : function(node) { viewFile(path); }
-            // };
-
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
@@ -222,6 +216,7 @@ openmdao.FileTreeFrame = function(id, project) {
                 };
             }
 
+            // if it's an image file, let them load it into image viewer
             if (openmdao.Util.hasImageExtension(path)) {
                 menu.viewImage = {
                     "label"  : 'View Image',
@@ -229,7 +224,7 @@ openmdao.FileTreeFrame = function(id, project) {
                 };
             }
 
-            // if it's a geometry file, let them load it into viewer
+            // if it's a geometry file, let them load it into geometry viewer
             if (openmdao.Util.hasGeometryExtension(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
@@ -237,6 +232,23 @@ openmdao.FileTreeFrame = function(id, project) {
                 };
             }
 
+            // view file in another window
+            menu.viewFile = {
+               "label"  : 'Open in Browser',
+               "action" : function(node) { viewFile(path); }
+            };
+
+            // save a copy (i.e. download)
+            menu.saveCopy = {
+                "label"  : 'Save a Copy',
+                "action" : function(node) {
+                                var name = path.split('/');
+                                name = name[name.length-1];
+                                saveCopy(path);
+                           }
+            };
+
+            // rename file
             menu.renameFile = {
                 "label"  : 'Rename',
                 "action" : function(node) {
@@ -250,15 +262,6 @@ openmdao.FileTreeFrame = function(id, project) {
                                                         jqXHR, textStatus, errorThrown);
                                         });
                                 });
-                           }
-            };
-
-            menu.saveCopy = {
-                "label"  : 'Save a Copy',
-                "action" : function(node) {
-                                var name = path.split('/');
-                                name = name[name.length-1];
-                                saveCopy(path);
                            }
             };
         }
