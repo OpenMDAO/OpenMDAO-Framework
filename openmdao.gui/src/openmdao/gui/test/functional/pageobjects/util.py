@@ -299,7 +299,7 @@ class SafeDriver(SafeElementBase):
     def current_window_handle(self):
         try:
             return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
-        except NoSchWindowException:
+        except NoSuchWindowException:
             return None
 
     @property
