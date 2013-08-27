@@ -1,4 +1,3 @@
-import itertools
 import networkx as nx
 
 from openmdao.util.nameutil import partition_names_by_comp
@@ -384,8 +383,8 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
     def get_interior_connections(self, comps=None):
-        pred = any_preds(is_comp_node, is_pseudo_node)
         if comps is None:
+            pred = any_preds(is_comp_node, is_pseudo_node)
             compset = set([n for n in self.nodes_iter() if pred(self, n)])
         else:
             compset = set(comps)
@@ -775,16 +774,14 @@ class DependencyGraph(nx.DiGraph):
     def basevar_iter(self, nodes, reverse=False):
         """Given a group of nodes, return an iterator
         over all base variable nodes that are nearest in one
-        direction. The traversal of a branch is stopped once a
-        base variable is found.
+        direction. 
         """
         return self.find_nodes(nodes, is_basevar_node, reverse=reverse)
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator
         over all component nodes that are nearest in one
-        direction. The traversal of a branch is stopped once a 
-        component is found.
+        direction. 
         """
         if include_pseudo:
             return self.find_nodes(nodes, any_preds(is_comp_node, is_pseudo_node),
@@ -803,10 +800,16 @@ def find_related_pseudos(compgraph, nodes):
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
             if is_pseudo_node(compgraph, upcomp):
-                pseudos.add(upcomp)
+                for cpred in compgraph.predecessors_iter(upcomp):
+                    if is_boundary_node(compgraph, cpred) or cpred in nodes:
+                        pseudos.add(upcomp)
+                        break
         for dwncomp in compgraph.successors_iter(node):
             if is_pseudo_node(compgraph, dwncomp):
-                pseudos.add(dwncomp)
+                for csucc in compgraph.successors_iter(dwncomp):
+                    if is_boundary_node(compgraph, csucc) or csucc in nodes:
+                        pseudos.add(dwncomp)
+                        break
 
     return list(pseudos)
 
