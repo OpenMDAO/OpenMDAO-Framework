@@ -11,6 +11,14 @@ from ffd_axisymetric import Body, Shell
 from pyV3D.sender import WV_Sender
 from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
 
+import inspect
+# functions
+def whoami():
+    return inspect.stack()[1][3]
+def whosdaddy():
+    return inspect.stack()[2][3]
+def whosdaddy_full():
+    return inspect.stack()[2]
 
 
 class STLGroup(object): 
@@ -39,6 +47,9 @@ class STLGroup(object):
         """ returns a dictionary of parameters sets key'd to component names"""
 
         print "in STLGroup.list_parameters"
+        print whoami(), whosdaddy_full()
+
+
 
         self.param_name_map = {}
         params = []
@@ -86,6 +97,7 @@ class STLGroup(object):
         return params
 
     def set_parameter(self, name, val): 
+        print "in stlgroup.set_parameter, param_name_map = ", self.param_name_map
         self.param_name_map[name] = val
 
     def get_parameters(self, names): 
@@ -100,7 +112,38 @@ class STLGroup(object):
             
             print dir( self )
 
-            comp.deform()
+            # Need to pass the deformation params here !!!!!!!!!!!!!!!!!!!!!!!!!!
+            # self.param_name_map[ 'plug.X' ] for example
+
+            import numpy as np
+            #del_C = np.ones((10,2)) * 123.0
+            if isinstance(comp, Body): 
+                print "regen model for body"
+                delta_C_shape = comp.delta_C.shape
+                print "delta_C_shape = ", delta_C_shape
+                del_C = np.zeros( delta_C_shape )
+                print "empty del_C = ", del_C
+                del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_C[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+                print "del_C = ", del_C
+                comp.deform(delta_C=del_C)
+            else:
+                print "regen model for shell"
+                delta_Cc_shape = comp.delta_Cc.shape
+                print "delta_Cc_shape =", delta_Cc_shape
+                del_Cc = np.zeros( delta_Cc_shape )
+                del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Cc[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+
+                delta_Ct_shape = comp.delta_Ct.shape
+                print "delta_Ct_shape =", delta_Ct_shape
+                del_Ct = np.zeros( delta_Ct_shape )
+                del_Ct[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Ct[:-1,1] = self.param_name_map[ '%s.thickness' % comp.name ]
+                print "del_Ct = ", del_Ct
+                # need both delta_Cc and delta_Ct for shells
+                comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
+
 
     def get_static_geometry(self): 
         print "get_static_geometry in stlg"
