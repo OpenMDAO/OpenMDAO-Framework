@@ -26,7 +26,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
-        self._collapsed_graph = None
+        self._workflow_graph = None
         self._topsort = None
         self._severed_edges = []
         self._hidden_edges = set()
@@ -70,7 +70,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """
         
         if self._topsort is None:
-            graph = nx.DiGraph(self._get_collapsed_graph())
+            graph = nx.DiGraph(self._get_workflow_graph())
             
             cyclic = True
             self._severed_edges = []
@@ -96,10 +96,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Keep a list of the edges we break, so that a solver
                     # can use them as its independents/dependents.
                     depgraph = self.scope._depgraph
-                    edge_set = depgraph.get_interior_edges([strong[-1], 
-                                                            strong[0]])
+                    edge_set = set(depgraph.get_interior_connections([strong[-1], 
+                                                                  strong[0]]))
                     
-                    out_set = set(depgraph.var_edges(strong[-1]))
+                    out_set = depgraph._var_connections(strong[-1])
                     
                     # Our cut is directional, so only include that direction.
                     edges = edge_set.intersection(out_set)      
@@ -108,28 +108,25 @@ class CyclicWorkflow(SequentialWorkflow):
                 
         return self._topsort
     
-    def _get_collapsed_graph(self):
+    def _get_workflow_graph(self):
         """Get a dependency graph with only our workflow components
         in it. This graph can be cyclic."""
         
         # Cached
-        if self._collapsed_graph:
-            return self._collapsed_graph
-        
-        # Parent assembly's graph
-        scope = self.scope
-        graph = scope._depgraph.copy_graph()
-        
-        contents = self.get_components()
-        
-        # add any dependencies due to ExprEvaluators
-        for comp in contents:
-            graph.add_edges_from([tup for tup in comp.get_expr_depends()])
-        
-        # this way avoids a deep copy of edge/node data    
-        collapsed_graph = nx.DiGraph(graph)  
-
-        cnames = set(self._names)
-        self._collapsed_graph = collapsed_graph.subgraph(cnames)
-        return self._collapsed_graph
+        if self._workflow_graph is None:
+       
+            contents = self.get_components()
+           
+            # get the parent assembly's component graph
+            scope = self.scope
+            compgraph = scope._depgraph.component_graph()
+            graph = compgraph.subgraph([c.name for c in contents])
+           
+            # add any dependencies due to ExprEvaluators
+            for comp in contents:
+                graph.add_edges_from([tup for tup in comp.get_expr_depends()])
+                
+            self._workflow_graph = graph
+       
+        return self._workflow_graph
     

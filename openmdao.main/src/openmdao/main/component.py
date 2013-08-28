@@ -31,7 +31,7 @@ from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
-from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.ndepgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
@@ -152,20 +152,23 @@ class Component(Container):
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
+        # dependency graph between us and our boundaries (bookkeeps connections
+        # between our variables and external ones).
+        # This replaces self._depgraph from Container.
+        self._depgraph = DependencyGraph()
+
         # register callbacks for all of our 'in' traits
         for name, trait in self.class_traits().items():
             if trait.iotype == 'in':
                 self._set_input_callback(name)
+            if trait.iotype:  # input or output
+                self._depgraph.add_boundary_var(name, 
+                                                iotype=trait.iotype)
 
         # contains validity flag for each io Trait (inputs are valid since
         # they're not connected yet, and outputs are invalid)
         self._valid_dict = dict([(name, t.iotype == 'in')
             for name, t in self.class_traits().items() if t.iotype])
-
-        # dependency graph between us and our boundaries (bookkeeps connections
-        # between our variables and external ones).
-        # This replaces self._depgraph from Container.
-        self._depgraph = DependencyGraph()
 
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -400,7 +403,7 @@ class Component(Container):
                 valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
-            invalid_ins = [inp for inp in self.list_inputs(connected=True)
+            invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
                                     if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
@@ -624,10 +627,15 @@ class Component(Container):
         if has_interface(obj, IDriver) and not has_interface(self, IAssembly):
             raise Exception("A Driver may only be added to an Assembly")
 
-        self.config_changed()
-        super(Component, self).add(name, obj)
-        if is_instance(obj, Container) and not is_instance(obj, Component):
-            self._depgraph.add(name)
+        try:
+            super(Component, self).add(name, obj)
+        finally:
+            self.config_changed()
+            
+        trait = self.trait(name)
+        if trait.iotype == 'out':
+            self._valid_dict[name] = False
+
         return obj
 
     def remove(self, name):
@@ -669,10 +677,14 @@ class Component(Container):
 
         self.config_changed()
         if name not in self._valid_dict:
-            if trait.iotype:
-                self._valid_dict[name] = trait.iotype == 'in'
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
+        if trait.iotype:
+            self._valid_dict[name] = trait.iotype == 'in'
+            if name not in self._depgraph:
+                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                if self.parent and self.name in self.parent._depgraph:
+                    self.parent._depgraph.child_config_changed(self)
 
     def _set_input_callback(self, name, remove=False):
 
@@ -719,19 +731,17 @@ class Component(Container):
         if False in self._valid_dict.values():
             self._call_execute = True
             return False
-        #if self.parent is not None:
-            #srccomps = [n for n, v in self.get_expr_sources()]
-            #if srccomps:
-                #counts = self.parent.exec_counts(srccomps)
-                #for count, tup in zip(counts, self._expr_sources):
-                    #if count != tup[1]:
-                        #self._call_execute = True  # to avoid making this same
-                        ## check unnecessarily later, update the count
-                        ## information since we've got it, to avoid making
-                        ## another call
-                        #for i, tup in enumerate(self._expr_sources):
-                            #self._expr_sources[i] = (tup[0], count)
-                        #return False
+        # if self.parent is not None:
+        #     srccomps = [n for n, v in self.get_expr_sources()]
+        #     if srccomps:
+        #         counts = self.parent.exec_counts(srccomps)
+        #         for count, tup in zip(counts, self._expr_sources):
+        #             if count != tup[1]:
+        #                 self._call_execute = True  # to avoid making this same check unnecessarily later
+        #                 # update the count information since we've got it, to avoid making another call
+        #                 for i, tup in enumerate(self._expr_sources):
+        #                     self._expr_sources[i] = (tup[0], count)
+        #                 return False
         return True
 
     @rbac(('owner', 'user'))
@@ -739,7 +749,7 @@ class Component(Container):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        if update_parent and hasattr(self, 'parent') and self.parent:
+        if update_parent and hasattr(self, '_parent') and self._parent:
             self.parent.config_changed(update_parent)
         self._input_names = None
         self._output_names = None
@@ -750,6 +760,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
 
+    @rbac(('owner', 'user'))
     def list_inputs(self, valid=None, connected=None):
         """Return a list of names of input values.
 
@@ -763,11 +774,8 @@ class Component(Container):
         """
         if self._connected_inputs is None:
             nset = set([k for k, v in self.items(iotype='in')])
-            self._connected_inputs = self._depgraph.get_connected_inputs()
-            nset.update(self._connected_inputs)
+            self._connected_inputs = self._depgraph.get_connected_inputs(nset)
             self._input_names = list(nset)
-        self._input_names = [name_ for name_ in self._input_names
-                                             if "[" not in name_]
 
         if valid is None:
             if connected is None:
@@ -789,6 +797,7 @@ class Component(Container):
 
         return ret  # connected is None, valid is not None
 
+    @rbac(('owner', 'user'))
     def list_outputs(self, valid=None, connected=None):
         """Return a list of names of output values.
 
@@ -831,7 +840,9 @@ class Component(Container):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            visited = set([id(self), id(self.parent)])
+            visited = set([id(self)])
+            if hasattr(self, '_parent'):  # fix for weird unpickling bug
+                visited.add(id(self.parent))
             names = []
             for n, v in self.__dict__.items():
                 if is_instance(v, Container) and id(v) not in visited:
@@ -851,6 +862,7 @@ class Component(Container):
 
         destexpr: str or ExprEvaluator
             Destination expression object or expression string.
+
         """
         if isinstance(srcexpr, basestring):
             srcexpr = ConnectedExprEvaluator(srcexpr, self)
@@ -880,6 +892,7 @@ class Component(Container):
         """Removes the connection between one source variable and one
         destination variable.
         """
+
         super(Component, self).disconnect(srcpath, destpath)
         if destpath.split('[',1)[0] in self._valid_dict:
             if '.' in destpath:
@@ -1558,6 +1571,7 @@ class Component(Container):
         else:
             conn = self.list_inputs(connected=True)
             if conn:
+                conn = [c.split('[',1)[0] for c in conn]
                 for var in varnames:
                     if var in conn:
                         valids[var.split('[',1)[0]] = False
@@ -1761,7 +1775,7 @@ class Component(Container):
                         partially_connected_indices.append( column_index )
 
             if connected:
-                io_attr['connected'] = str(connected).replace('@xin.', '')
+                io_attr['connected'] = str(connected)#.replace('@xin.', '')
             
             if partially_connected_indices:
                 io_attr['partially_connected_indices'] = str(partially_connected_indices)
@@ -1769,7 +1783,7 @@ class Component(Container):
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
-                    str([dst for src, dst in connections]).replace('@xout.', '')
+                    str([dst for src, dst in connections])#.replace('@xout.', '')
             
             io_attr['implicit'] = []
 

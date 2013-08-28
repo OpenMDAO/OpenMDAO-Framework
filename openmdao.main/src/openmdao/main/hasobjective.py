@@ -2,7 +2,34 @@
 import ordereddict
 
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+
+class Objective(ConnectedExprEvaluator):
+    def __init__(self, *args, **kwargs):
+        super(Objective, self).__init__(*args, **kwargs)
+        self.pcomp_name = None
+
+    def activate(self):
+        """Make this constraint active by creating the appropriate
+        connections in the dependency graph.
+        """
+        if self.pcomp_name is None:
+            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+            self.pcomp_name = pseudo.name
+            self.scope.add(pseudo.name, pseudo)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+
+    def deactivate(self):
+        """Remove this objective from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.scope
+            pcomp = getattr(scope, self.pcomp_name)
+            pcomp.remove_connections(scope)
+            if hasattr(scope, pcomp.name):
+                scope.remove(pcomp.name)
+            self.pcomp_name = None
 
 
 class HasObjectives(object): 
@@ -32,8 +59,6 @@ class HasObjectives(object):
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr, scope=scope)
-            
-        self._parent._invalidate()
 
     def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver. 
@@ -63,24 +88,18 @@ class HasObjectives(object):
                                          AttributeError)
             
         scope = self._get_scope(scope)
-        expreval = ConnectedExprEvaluator(expr, scope, 
-                                          getter='get_wrapped_attr')
+        expreval = Objective(expr, scope, getter='get_wrapped_attr')
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
 
         name = expr if name is None else name
 
-        pseudo = OutputPseudoComponent(scope, expreval)
-        scope.add(pseudo.name, pseudo)
-        pseudo.make_connections()
+        expreval.activate()
       
         self._objectives[name] = expreval
-
-        # just attach the pseudocomp name to the objective object
-        expreval.pcomp_name = pseudo.name
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -89,9 +108,7 @@ class HasObjectives(object):
         expr = _remove_spaces(expr)
         obj = self._objectives.get(expr)
         if obj:
-            scope = self._get_scope()
-            if hasattr(scope, obj.pcomp_name):
-                scope.disconnect(obj.pcomp_name)
+            obj.deactivate()
             del self._objectives[expr]
         else:
             self._parent.raise_exception("Trying to remove objective '%s' "
@@ -159,7 +176,8 @@ class HasObjectives(object):
         """Returns a list of pseudocompont names associcated with our
         parameters.
         """
-        return [obj.pcomp_name for obj in self._objectives.values()]
+        return [obj.pcomp_name for obj in self._objectives.values() 
+                      if obj.pcomp_name]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)

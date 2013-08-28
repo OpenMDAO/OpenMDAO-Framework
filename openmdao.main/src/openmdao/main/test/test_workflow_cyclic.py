@@ -263,9 +263,9 @@ class TestCase_Residuals(unittest.TestCase):
             self.assertEqual(res[j], expected[j])
 
     def test_vtree(self):
-        self.model.c1.add('vt_out', Tree1(iotype='out'))
+        self.model.c1.add('vt_out', VarTree(Tree1(), iotype='out'))
 
-        self.model.c2.add('vt_in', Tree1(iotype='in'))
+        self.model.c2.add('vt_in', VarTree(Tree1(), iotype='in'))
         self.model.c2.vt_in.a1 = 4.
         self.model.c2.vt_in.b1 = array([7.0, 12.0])
         self.model.c2.vt_in.vt1.c1 = 13.
@@ -298,9 +298,9 @@ class TestCase_Residuals(unittest.TestCase):
             self.assertEqual(res[j], expected[j])
 
     def test_vtree_leaf(self):
-        self.model.c1.add('vt_out', Tree1(iotype='out'))
+        self.model.c1.add('vt_out', VarTree(Tree1(), iotype='out'))
 
-        self.model.c2.add('vt_in', Tree1(iotype='in'))
+        self.model.c2.add('vt_in', VarTree(Tree1(), iotype='in'))
         self.model.c2.vt_in.b1 = array([7.0, 12.0])
 
         self.model.connect('c1.vt_out.b1', 'c2.vt_in.b1')

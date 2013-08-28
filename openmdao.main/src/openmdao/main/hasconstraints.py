@@ -8,7 +8,7 @@ import operator
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -68,11 +68,23 @@ class Constraint(object):
         connections in the dependency graph.
         """
         if self.pcomp_name is None:
-            pseudo = OutputPseudoComponent(self.lhs.scope, 
-                                           self._combined_expr())
+            pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
+                                     pseudo_type='constraint')
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections()
+        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope)
+
+    def deactivate(self):
+        """Remove this constraint from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.lhs.scope
+            pcomp = getattr(scope, self.pcomp_name)
+            pcomp.remove_connections(scope)
+            if hasattr(scope, pcomp.name):
+                scope.remove(pcomp.name)
+            self.pcomp_name = None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -186,7 +198,7 @@ class _HasConstraintsBase(object):
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -228,7 +240,6 @@ class _HasConstraintsBase(object):
         """Removes all constraints."""
         for name, cnst in self._constraints.items():
             self.remove_constraint(name)
-        self._parent._invalidate()
         
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
@@ -245,7 +256,8 @@ class _HasConstraintsBase(object):
         """Returns a list of pseudocompont names associcated with our
         parameters.
         """
-        return [c.pcomp_name for c in self._constraints.values()]
+        return [c.pcomp_name for c in self._constraints.values() 
+                    if c.pcomp_name]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)
@@ -358,7 +370,7 @@ class HasEqConstraints(_HasConstraintsBase):
         name = ident if name is None else name        
         self._constraints[name] = constraint
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
             
     def add_existing_constraint(self, scope, constraint, name=None):
@@ -381,7 +393,7 @@ class HasEqConstraints(_HasConstraintsBase):
             self._parent.raise_exception("Inequality constraint '%s' is not supported on this driver" %
                                          str(constraint), ValueError)
             
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -449,7 +461,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         else:
             self._constraints[name] = constraint
             
-        self._parent._invalidate()
+        self._parent.config_changed()
             
         
     def add_existing_constraint(self, scope, constraint, name=None):
@@ -472,7 +484,7 @@ class HasIneqConstraints(_HasConstraintsBase):
             self._parent.raise_exception("Equality constraint '%s' is not supported on this driver" % 
                                          str(constraint), ValueError)
 
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -480,7 +492,7 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def eval_ineq_constraints(self, scope=None): 
         """Returns a list of constraint values"""
-        return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
+        return [c.evaluate(_get_scope(self, scope)) for c in self._constraints.values()]
     
 
 class HasConstraints(object):

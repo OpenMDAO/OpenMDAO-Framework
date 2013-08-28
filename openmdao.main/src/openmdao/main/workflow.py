@@ -3,6 +3,8 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver
 
 __all__ = ['Workflow']
 
@@ -49,7 +51,7 @@ class Workflow(object):
         this Workflow.
         """
         if self._scope is None and self._parent is not None:
-            self._scope = self._parent.parent
+            self._scope = self._parent.get_expr_scope()
         if self._scope is None:
             raise RuntimeError("workflow has no scope!")
         return self._scope
@@ -90,11 +92,14 @@ class Workflow(object):
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
         
+        graph = self._parent.workflow_subgraph()
         for comp in self._iterator:
-            if not isinstance(comp, PseudoComponent):
+            if isinstance(comp, PseudoComponent):
+                comp.run(ffd_order=ffd_order, case_id=case_id)
+            else:
                 self._comp_count += 1
                 comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
@@ -143,8 +148,8 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
-        has changed.
+        """Notifies the Workflow that workflow configuration 
+        (dependencies, etc.) has changed.
         """
         pass
 
@@ -171,3 +176,4 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
+

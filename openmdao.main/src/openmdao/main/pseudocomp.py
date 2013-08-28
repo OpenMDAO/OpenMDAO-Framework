@@ -7,6 +7,7 @@ from openmdao.main.numpy_fallback import array
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.attrwrapper import UnitsAttrWrapper
+from openmdao.main.interfaces import implements, IComponent
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
@@ -77,8 +78,9 @@ class PseudoComponent(object):
     This fake component can be added to a dependency graph and executed
     along with 'real' components.
     """
-
-    def __init__(self, parent, srcexpr, destexpr=None, translate=True):
+    implements(IComponent)
+    
+    def __init__(self, parent, srcexpr, destexpr=None, translate=True, pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
@@ -87,6 +89,9 @@ class PseudoComponent(object):
         self._valid_dict = {}
         self._parent = parent
         self._inputs = []
+        self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
+                                        # this is, e.g., 'units', 'constraint', 'objective',
+                                        # or 'multi_var_expr'
         if destexpr.text:
             self._outdests = [destexpr.text]
         else:
@@ -143,7 +148,7 @@ class PseudoComponent(object):
             try:
                 unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
-                raise TypeError("Can't connect '%s' to '%s': %s" % (srcexpr.text, 
+                raise TypeError("Incompatible units for '%s' and '%s': %s" % (srcexpr.text, 
                                                                     destexpr.text, err))
             unit_src = print_node(unitxform)
             xformed_src = unit_src
@@ -163,7 +168,10 @@ class PseudoComponent(object):
         else:
             src = self._srcexpr.text
 
-        self._eqn = "%s = %s" % (out, src)
+        self._expr_conn = (src, out)  # the actual expression connection
+
+    def check_configuration(self):
+        pass
 
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
@@ -171,15 +179,20 @@ class PseudoComponent(object):
         """
         return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
 
-    def list_connections(self, is_hidden=False):
+    def list_connections(self, is_hidden=False, show_expressions=False):
         """list all of the inputs and output connections of this PseudoComponent. 
         If is_hidden is True, list the connections that a user would see 
-        if this PseudoComponent is hidden.
+        if this PseudoComponent is hidden. If show_expressions is True (and
+        only if is_hidden is also True) then list the connection expression
+        that resulted in the creation of this PseudoComponent.
         """
         if is_hidden:
             if self._outdests:
-                return [(src, self._outdests[0]) 
-                           for src in self._inmap.keys() if src]
+                if show_expressions:
+                    return [self._expr_conn]
+                else:
+                    return [(src, self._outdests[0]) 
+                               for src in self._inmap.keys() if src]
             else:
                 return []
         else:
@@ -189,6 +202,12 @@ class PseudoComponent(object):
                 conns.extend([('.'.join([self.name, 'out0']), dest) 
                                            for dest in self._outdests])
         return conns
+    
+    def list_inputs(self):
+        return self._inputs[:]
+    
+    def list_outputs(self):
+        return ['out0']
 
     def list_comp_connections(self):
         """Return a list of connections between our pseudocomp and
@@ -201,19 +220,20 @@ class PseudoComponent(object):
                                     for dest in self._outdests])
         return conns
 
-    def make_connections(self):
+    def make_connections(self, scope):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            self._parent._connect(src, dest)
+            scope.connect(src, dest)
+        self.invalidate_deps()
 
-    def remove_connections(self):
+    def remove_connections(self, scope):
         """Disconnect all of the inputs and outputs of this comp
         from other nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
-            self._parent.disconnect(src, dest)
+            scope.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
         if varnames is None:
@@ -307,92 +327,3 @@ class PseudoComponent(object):
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J
-
-
-class OutputPseudoComponent(PseudoComponent):
-    """PseudoComponent used for Objectives and Constraints. This is a 
-    separate class to make bookkeeping a little easier.
-    """
-
-
-class ParamPseudoComponent(PseudoComponent):
-    """PseudoComponent used to apply scalers/adders to a parameter.
-    This type of PseudoComponent has no input connections and one or
-    more output connections.
-    """
-
-    def __init__(self, param):
-        parent = param._expreval.scope
-        target = param._expreval.text
-        scaler = param.scaler
-        adder  = param.adder
-        self.param = param
-        self._outexprs = []
-
-        if scaler == 1.0 and adder == 0.0:
-            src = 'in0'
-        elif scaler == 1.0:
-            src = 'in0+%.15g' % adder
-        elif adder == 0.0:
-            src = 'in0*%.15g' % scaler
-        else:
-            src = '(in0+%.15g)*%.15g' % (adder, scaler)
-
-        srcexpr = ConnectedExprEvaluator(src, scope=self)
-        destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
-        super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
-                                                   destexpr, translate=False)
-
-        # use these to push values to targets when we run
-        self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
-
-
-    def add_target(self, target):
-        self._outdests.append(target)
-        self._outexprs.append(ConnectedExprEvaluator(target, self._parent))
-
-    def list_connections(self, is_hidden=False):
-        """The only connections for a ParamPseudoComponent are output connections."""
-
-        if is_hidden:
-            return []
-        else:
-            return [('.'.join([self.name, 'out0']), dest) 
-                                   for dest in self._outdests]      
-
-    def make_connections(self, workflow=None):
-        """Set up the target_changed callback.
-        """
-        #self._update_callbacks(remove=False)
-        pass
-
-    def remove_connections(self, workflow=None):
-        """Remove the target_changed callback.
-        """
-        #self._update_callbacks(remove=True)
-        pass
-
-    def update_inputs(self, dummy):
-        pass # param pseudocomp will never have inputs that are connected to anything
-        
-    def run(self, ffd_order=0, case_id=''):
-        super(ParamPseudoComponent, self).run(ffd_order, case_id)
-        # now push out out0 value out to the target(s)
-        for expr in self._outexprs:
-            expr.set(self.out0)
-        #print self.name, "ran", self.in0, self.out0
-
-    def set(self, path, value, index=None, src=None, force=False):
-        self._valid_dict['out0'] = False
-        if index is not None:
-            raise ValueError("index not supported in PseudoComponent.set")
-        if isinstance(value, UnitsAttrWrapper):
-            val = value.pq.value
-        elif isinstance(value, PhysicalQuantity):
-            val = value.value
-        else:
-            val = value
-        setattr(self, path, val)
-
-    def provideJ(self):
-        return ('in0',), ('out0',), self.J

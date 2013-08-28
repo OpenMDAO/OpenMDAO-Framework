@@ -132,6 +132,13 @@ class _ContainerDepends(object):
         """
         return self._srcs.get(destname)
 
+    def _check_source(self, path, src):
+        source = self.get_source(path)
+        if source is not None and src != source:
+            raise RuntimeError("'%s' is connected to source '%s' and cannot be "
+                "set by source '%s'" %
+                (path, source, src))
+
 
 class _MetaSafe(MetaHasTraits):
     """ Tries to keep users from shooting themselves in the foot. """
@@ -281,31 +288,21 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
+        graph = self._depgraph
+
         # check for self connections
         if not destpath.startswith('parent.'):
             vpath = destpath.split('[', 1)[0]
             cname2, _, destvar = vpath.partition('.')
             destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
-                self.raise_exception("Cannot connect '%s' to '%s'. Both refer"
+                self.raise_exception("Can't connect '%s' to '%s'. Both refer"
                                      " to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
-            self._depgraph.check_connect(srcpath, destpath)
+            graph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[', 1)[0]):
-                    self.raise_exception("Can't find '%s'" % destpath,
-                                         AttributeError)
-                parts = destpath.split('.')
-                for i in range(len(parts)):
-                    dname = '.'.join(parts[:i+1])
-                    sname = self._depgraph.get_source(dname)
-                    if sname is not None:
-                        self.raise_exception(
-                            "'%s' is already connected to source '%s'" %
-                            (dname, sname), RuntimeError)
-
                 if destvar:
                     child = getattr(self, cname2)
                     if is_instance(child, Container):
@@ -330,7 +327,7 @@ class Container(SafeHasTraits):
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest))
 
-            self._depgraph.connect(srcpath, destpath)
+            graph.connect(srcpath, destpath)
         except Exception as err:
             try:
                 for child, childsrc, childdest in child_connections:
@@ -338,14 +335,15 @@ class Container(SafeHasTraits):
             except Exception as err:
                 self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
                                    (childsrc, childdest, srcpath, destpath, err))
-            self.raise_exception("Can't connect '%s' to '%s': %s" % 
-                                 (srcpath, destpath, str(err)), RuntimeError)
+            raise
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
         """
+        graph = self._depgraph
+
         cname = cname2 = None
         destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
@@ -377,7 +375,7 @@ class Container(SafeHasTraits):
                                  "Both variables are on the same component" %
                                  (srcpath, destpath), RuntimeError)
 
-        self._depgraph.disconnect(srcpath, destpath)
+        graph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
     # no execute, they can have no inputs/outputs, which means that validity should have
@@ -639,6 +637,13 @@ class Container(SafeHasTraits):
                 self.get_trait(name)
             else:
                 self._cached_traits_[name] = self.trait(name)
+            io = self._cached_traits_[name].iotype
+            if io and not isinstance(self._depgraph, _ContainerDepends):
+                # since we just removed this container and it was
+                # being used as an io variable, we need to put
+                # it back in the dep graph and valids dict
+                self._depgraph.add_boundary_var(name, iotype=io)
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
@@ -1059,12 +1064,10 @@ class Container(SafeHasTraits):
         """Raise an exception if the given source variable is not the one
         that is connected to the destination variable specified by 'path'.
         """
-        source = self._depgraph.get_source(path)
-        if source is not None and src != source:
-            self.raise_exception(
-                "'%s' is connected to source '%s' and cannot be "
-                "set by source '%s'" %
-                (path, source, src), RuntimeError)
+        try:
+            self._depgraph._check_source(path, src)
+        except Exception as err:
+            self.raise_exception(str(err), RuntimeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype
@@ -1197,7 +1200,7 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.get_source(name):
+        if self._depgraph.pred[name]:
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:
@@ -1207,7 +1210,7 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set" %
-                (name, self._depgraph.get_source(name)), RuntimeError)
+                (name, self._depgraph.get_sources(name)[0]), RuntimeError)
 
     def _input_nocheck(self, name, old):
         """This method is substituted for `_input_check` to avoid source

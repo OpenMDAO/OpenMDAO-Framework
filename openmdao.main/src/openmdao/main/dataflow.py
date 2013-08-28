@@ -78,21 +78,8 @@ class Dataflow(SequentialWorkflow):
         
         to_add = []
         scope = self.scope
-        graph = scope._depgraph.copy_graph()
+        graph = scope._depgraph
         
-        #contents = self.get_components() # get non-pseudo comps
-        
-        ## add any dependencies due to ExprEvaluators
-        #for comp in contents:
-            #graph.add_edges_from([tup for tup in comp.get_expr_depends()])
-            
-        # add edges for parameters, constraints, and objectives
-        for pcomp_name in self._parent.list_pseudocomps():
-            pcomp = getattr(scope, pcomp_name)
-            graph.add_edges_from(pcomp.list_comp_connections())
-
-        collapsed_graph = nx.DiGraph(graph)  # this way avoids a deep copy of edge/node data
-
         # find all of the incoming and outgoing edges to/from all of the
         # components in each driver's iteration set so we can add edges to/from
         # the driver in our collapsed graph
@@ -100,6 +87,8 @@ class Dataflow(SequentialWorkflow):
         cnames = set([c.name for c in comps])
         removes = set()
         itersets = {}
+        collapsed_graph = graph.component_graph().subgraph(cnames)
+
         for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):

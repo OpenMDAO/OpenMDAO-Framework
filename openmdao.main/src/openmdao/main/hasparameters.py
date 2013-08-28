@@ -1,9 +1,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import ParamPseudoComponent
 from openmdao.util.typegroups import real_types, int_types
-from openmdao.util.log import logger
 
 __missing = object()
 
@@ -41,7 +39,6 @@ class Parameter(object):
                     raise ValueError("Bad value given for parameter's 'adder' attribute.")
 
         self._metadata = None
-        self.pcomp_name = None
 
         self.low = low
         self.high = high
@@ -136,36 +133,6 @@ class Parameter(object):
         else:
             self.set(self.start, scope)
 
-    def activate(self, scope, workflow=None):
-        """Make this parameter active by creating the appropriate
-        connections in the dependency graph.  This should NOT be called
-        on parameters that are part of a ParameterGroup.
-        """
-        if self.pcomp_name is None:
-            pseudo = ParamPseudoComponent(self)
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-
-        pseudo.make_connections(workflow)
-
-        self.initialize(scope)
-
-
-    def deactivate(self, scope, workflow=None):
-        """Make this parameter inactive by disconnecting it in the
-        dependency graph and removing its callback from the target
-        component.
-        """
-        if self.pcomp_name is None:
-            return
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(workflow)
-            scope.remove(self.pcomp_name)
-            self.pcomp_name = None
-
 
     def __eq__(self, other):
         if not isinstance(other, Parameter):
@@ -206,24 +173,11 @@ class Parameter(object):
 
     def evaluate(self, scope=None):
         """Returns the value of this parameter."""
-        #return self._untransform(self._expreval.evaluate(scope))
-        if scope is None:
-            scope = self._get_scope()
-        pcomp = getattr(scope, self.pcomp_name)
-        return pcomp.in0
+        return self._untransform(self._expreval.evaluate(scope))
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
-        #self._expreval.set(self._transform(val), scope)
-        if scope is None:
-            scope = self._get_scope()
-        if val < self.low or val > self.high:
-            logger.warning("Setting '%s' with a value of (%s) which is outside of the range [%s, %s]" %
-                             (self.target, val, self.low, self.high))
-        pcomp = getattr(scope, self.pcomp_name)
-        pcomp.set('in0', val)
-        pcomp.run() # updates value of out0
-        self._expreval.set(pcomp.out0, src='.'.join([self.pcomp_name, 'out0'])) # set value into target
+        self._expreval.set(self._transform(val), scope)
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
@@ -300,7 +254,6 @@ class ParameterGroup(object):
         self.adder = param0.adder
         self.fd_step = param0.fd_step
         self.name = param0.name
-        self.pcomp_name = None
         self.typename = param0.valtypename
 
     def __eq__(self, other):
@@ -409,45 +362,6 @@ class ParameterGroup(object):
         if name is not None:
             self.name = name
 
-        if self.pcomp_name:
-            for param in self._params: 
-                param.override(low, high, scaler, adder, start,
-                               fd_step, name)
-
-    def activate(self, scope, workflow=None):
-        """Make this parameter active by creating the appropriate pseudocomp
-        connections in the dependency graph.  The pseudocomponent is created
-        if it doesn't already exist.
-        """
-        if self.pcomp_name is None:
-            param0 = self._params[0]
-            pseudo = ParamPseudoComponent(param0)
-            self.pcomp_name = pseudo.name
-            scope.add(pseudo.name, pseudo)
-            param0.pcomp_name = pseudo.name
-            for param in self._params[1:]:
-                pseudo.add_target(param._expreval.text)
-                param.pcomp_name = pseudo.name
-
-        getattr(scope, self.pcomp_name).make_connections(workflow)
-
-        self.initialize(scope)
-
-    def deactivate(self, scope, workflow=None):
-        """Make this parameter inactive by disconnecting it in the
-        dependency graph and removing its callback from the target
-        component.
-        """
-        if self.pcomp_name is None:
-            return
-        else:
-            pseudo = getattr(scope, self.pcomp_name)
-            pseudo.remove_connections(workflow)
-            scope.remove(self.pcomp_name)
-            self.pcomp_name = None
-            for param in self._params:
-                param.pcomp_name = None
-
     def initialize(self, scope):
         self._params[0].initialize(scope)
 
@@ -534,7 +448,7 @@ class HasParameters(object):
         if isinstance(target, (Parameter, ParameterGroup)): 
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-            target.deactivate(self._get_scope(scope))
+            #target.deactivate(self._parent.get_expr_scope())
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -581,25 +495,20 @@ class HasParameters(object):
             except Exception as err:
                 self._parent.raise_exception(str(err), type(err))
 
-        if hasattr(self._parent, 'workflow'):
-            workflow = self._parent.workflow
-        else:
-            workflow = None
-        target.activate(self._get_scope(scope), workflow)
-
-        self._parent._invalidate()
+        #target.activate(self._get_scope(scope))
+        self._parent.config_changed()
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         param = self._parameters.get(name)
         if param:
-            param.deactivate(self._get_scope())
+            #param.deactivate(self._parent.get_expr_scope())
             del self._parameters[name]
         else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -652,7 +561,6 @@ class HasParameters(object):
         for name in self._parameters.keys():
             self.remove_parameter(name)
         self._parameters = ordereddict.OrderedDict()
-        self._parent._invalidate()
 
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
@@ -730,12 +638,6 @@ class HasParameters(object):
             for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
-
-    def list_pseudocomps(self):
-        """Returns a list of pseudocompont names associcated with our
-        parameters.
-        """
-        return [p.pcomp_name for p in self._parameters.values()]
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
