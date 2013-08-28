@@ -2,7 +2,6 @@ import Queue
 import threading
 import time
 import logging
-import traceback
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -166,6 +165,14 @@ class SafeElementBase(SafeBase):
     def find_elements(self, *args, **kwargs):
         return self._wrap(
             self._invoke('find_elements', args, kwargs))
+
+    def find_element_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_element_by_tag_name', args, kwargs))
+
+    def find_elements_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_elements_by_tag_name', args, kwargs))
 
     def find_element_by_class_name(self, *args, **kwargs):
         return self._wrap(

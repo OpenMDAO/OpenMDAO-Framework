@@ -16,8 +16,8 @@ class ParametricGeometry(object):
         raise NotImplementedError("regen_model")
 
     def list_parameters(self):
-        """Return a list of (name, meta) where name is the name of the parameter
-        and meta is a metadata dict.
+        """Return a list of (name, meta) where `name` is the name of the parameter
+        and `meta` is a metadata dict.
         """
         raise NotImplementedError('list_parameters')
 
@@ -48,7 +48,7 @@ class ParametricGeometry(object):
 
     def get_attributes(self, io_only=True):
         """Return an attribute dict for use by the openmdao GUI. You only need to
-        override this if you have inputs that user must set directly into your
+        override this if you have inputs that the user must set directly into your
         ParametricGeometry object.  For example, GEMParametricGeometry has a model_file
         input that the user can set in the GUI to change the .csm file that supplies
         the geometry.

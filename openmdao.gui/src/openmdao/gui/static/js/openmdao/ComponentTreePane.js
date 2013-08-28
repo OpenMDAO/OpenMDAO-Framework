@@ -1,19 +1,14 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
-    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Components');
-
+openmdao.ComponentTreePane = function(elm, project, select_fn, dblclick_fn, workflow_fn, dataflow_fn) {
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     // initialize private variables
     var self = this,
-        filter_beg = '_',
-        tree = jQuery('<div>')
-            .appendTo('<div style="height:100%">')
-            .appendTo("#"+id);
+        filter_beg = '_';
 
     /** convert json to structure required for jstree */
     function convertJSON(json, path, openNodes) {
@@ -51,12 +46,12 @@ openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, work
     function updateTree(json) {
         // Grab paths of currently open nodes.
         var openNodes = [];
-        self.elm.find("li.jstree-open").each(function () {
+        elm.find("li.jstree-open").each(function () {
             openNodes.push(this.getAttribute("path"));
         });
 
-        tree.empty();
-        tree.jstree({
+        elm.empty();
+        elm.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm" ],
             json_data   : { "data": convertJSON(json, '', openNodes) },
             themes      : { "theme":  "openmdao" },
@@ -84,7 +79,7 @@ openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, work
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' a').draggable({
+            elm.find('a').draggable({
                 //helper: 'clone',
                 appendTo: 'body',
                 helper: function(event) {
@@ -95,7 +90,7 @@ openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, work
 
             /* add classes so that the items in the component tree are specific
                to what they are: assembly, driver or component */
-            jQuery('#'+id+' li').each(function () {
+            elm.find('li').each(function () {
                 if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
                     this.children[1].children[0].addClass("jstree-assembly");
                 }
@@ -204,12 +199,5 @@ openmdao.ComponentTreeFrame = function(id, project, select_fn, dblclick_fn, work
             });
     };
 
-    // load initial component data
-    project.project_ready.always(function() {
-       self.update();
-    });
+    this.update();
 };
-
-/** set prototype */
-openmdao.ComponentTreeFrame.prototype = new openmdao.BaseFrame();
-openmdao.ComponentTreeFrame.prototype.constructor = openmdao.ComponentTreeFrame;

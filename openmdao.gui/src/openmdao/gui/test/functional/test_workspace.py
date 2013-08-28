@@ -418,43 +418,41 @@ def _test_properties(browser):
     closeout(project_dict, workspace_page)
 
 
-# This test no longer needed because there is no longer a component panel that
-# tracks the minimize/maximize behavior of the dataflow. The collapse/expand
-# behavior is alrady tested in test_dataflow. -- KTM
-# Correction: has nothing to do with dataflow.. just tests the object tree.
-#def _test_objtree(browser):
-    ## Toggles maxmimize/minimize button on assemblies.
-    #project_dict, workspace_page = startup(browser)
+def _test_component_tree(browser):
+    project_dict, workspace_page = startup(browser)
 
-    ## Add maxmin.py to project
-    #file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                #'files/maxmin.py')
-    #workspace_page.add_file(file_path)
+    workspace_page.select_objects_view('Components')
 
-    ## Add MaxMin to 'top'.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+    # Add maxmin.py to project
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/maxmin.py')
+    workspace_page.add_file(file_path)
 
-    ## Maximize 'top' and 'top.maxmin'
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top'])
-    #workspace_page.expand_object('top')
-    #time.sleep(0.5)
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin'])
-    #workspace_page.expand_object('top.maxmin')
-    #time.sleep(0.5)
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 #'top.maxmin.driver', 'top.maxmin.sub'])
+    # Add MaxMin to 'top'.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
-    #workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
-    #visible = workspace_page.get_objects_attribute('path', True)
-    #eq(visible, ['top', 'top.driver', 'top.maxmin',
-                 #'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+    # Maximize 'top' and 'top.maxmin'
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top'])
+    workspace_page.expand_object('top')
+    time.sleep(0.5)
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    workspace_page.expand_object('top.maxmin')
+    time.sleep(0.5)
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub'])
 
-    ## Clean up.
-    #closeout(project_dict, workspace_page)
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_editable_inputs(browser):
@@ -555,6 +553,7 @@ def _test_console_errors(browser):
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False, base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
     inputs.rows[0].cells[2].click()
     inputs[0][2] = '42'  # printvars
@@ -1066,6 +1065,111 @@ def _test_remove_files(browser):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
+def _test_sorting(browser):
+    # Check that inputs and outputs are sorted alphanumerically.
+    project_dict, workspace_page = startup(browser)
+
+    path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                           'files/sorting_test.py')
+    workspace_page.add_file(path)
+
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    workspace_page.add_library_item_to_dataflow(
+        'sorting_test.SortingComp', 'comp')
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    editor = comp.editor_page()
+
+    # Check order of inputs.
+    inputs = editor.get_inputs()
+    expected = [
+        ['', 'stress_i1', '0', '', ''],
+        ['', 'stress_i2', '0', '', ''],
+        ['', 'stress_i10', '0', '', ''],
+        ['', 'directory',  '',  '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute', 'False', '',
+         'If True, always execute even if all IO traits are valid.'],
+    ]
+
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    # Check order of outputs.
+    inputs = editor.get_outputs()
+    expected = [
+        ['', 'stress_o1', '0', '', ''],
+        ['', 'stress_o2', '0', '', ''],
+        ['', 'stress_o10', '0', '', ''],
+        ['', 'derivative_exec_count', '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count', '0', '',
+         'Number of times this Component has been executed.'],
+        ['', 'itername', '', '', 'Iteration coordinates.'],
+    ]
+
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+
+
+def _test_view_file(browser):
+    project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
+
+    # add an image file
+    file_name = 'Engine_Example_Process_Diagram.png'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/' + file_name)
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the image file
+    new_page = workspace_page.view_file(file_name)
+
+    time.sleep(2)
+
+    # the new page should have an img tag with the selected file name
+    images = new_page.browser.find_elements_by_css_selector('img')
+    eq(len(images), 1)
+    eq(images[0].get_attribute('src').strip().endswith(file_name), True)
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+
+    # add a pdf file
+    file_name = 'sample.pdf'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/' + file_name)
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the pdf file
+    new_page = workspace_page.view_file(file_name)
+
+    time.sleep(2)
+
+    # the new page should have an embed tag with the selected file name
+    embeds = new_page.browser.find_elements_by_css_selector('embed')
+    eq(len(embeds), 1)
+    eq(embeds[0].get_attribute('src').strip().endswith(file_name), True)
+    eq(embeds[0].get_attribute('type'), 'application/pdf')
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
 
     # Clean up.
     closeout(project_dict, workspace_page)

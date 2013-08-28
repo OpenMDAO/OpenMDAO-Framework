@@ -91,7 +91,7 @@ def _configure_root():
 
     handler = logging.handlers.RotatingFileHandler(filename)
     handler.setFormatter(formatter)
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(0)  # Handle anything sent to us.
 
     logging.getLogger().addHandler(handler)
 

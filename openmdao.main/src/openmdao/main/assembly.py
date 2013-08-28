@@ -788,23 +788,47 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def linearize(self):
+    def linearize(self, extra_in=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
         
+        required_inputs = []
+        if extra_in:
+            for varpath in extra_in:
+                compname, _, var = varpath.partition('.')
+                if compname == self.name:
+                    required_inputs.append(var)
+        
+        for src, target in self.parent.list_connections(): 
+            compname, _, var = target.partition('.')
+            if compname == self.name:
+                required_inputs.append(var)
+                
+        # Sub-assembly sourced    
         input_keys = []
         output_keys = []
+        
+        # Parent-assembly sourced
         self.J_input_keys = []
         self.J_output_keys = []
+        
         for src, target in self.list_connections():
+            
+            # Outputs
             if '.' in src and '.' not in target:
                 val = self.get(src)
                 if isinstance(val, float) or \
                    hasattr(val, '__iter__') and isinstance(val[0], float):
                     output_keys.append(src)
                     self.J_output_keys.append(target)
+                    
+            # Inputs
             elif '.' in target and '.' not in src:
+                
+                if src not in required_inputs:
+                    continue
+                
                 val = self.get(target)
                 if isinstance(val, float) or \
                    hasattr(val, '__iter__') and isinstance(val[0], float):

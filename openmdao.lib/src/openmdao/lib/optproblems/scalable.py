@@ -68,7 +68,7 @@ class Discipline(Component):
         
         
     def apply_deriv(self, arg, result):
-        """Multiply an input vector by the Jacobian"""
+        """Multiply an input vector by the Jacobian."""
         
         for key in result:
 

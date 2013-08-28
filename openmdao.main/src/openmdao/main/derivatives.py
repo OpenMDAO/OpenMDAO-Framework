@@ -9,7 +9,7 @@ from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones, unravel_index
-    
+
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
 
@@ -75,58 +75,58 @@ def flattened_names(name, val, names=None):
 def calc_gradient(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
-    """    
-            
+    """
+
     # Size the problem
     nEdge = wflow.initialize_residual()
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
-    
+
     num_in = 0
     for item in inputs:
         val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_in += width
-        
+
     num_out = 0
     for item in outputs:
-        val = wflow.scope.get(item)    
+        val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_out += width
-       
+
     J = zeros((num_out, num_in))
-    
+
     # Locate the output keys:
     obounds = {}
     interior = wflow.get_interior_edges()
-    
+
     # Not necessarily efficient, but outputs can be anywhere
     for output in outputs:
         for edge in interior:
             if output == edge[0]:
                 obounds[output] = wflow.bounds[edge]
                 break
-            
+
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
-    
+    wflow.calc_derivatives(first=True, extra_in=inputs)
+
     # Forward mode, solve linear system for each parameter
     j = 0
     for param in inputs:
-        
+
         i1, i2 = wflow.bounds[('@in', param)]
         for irhs in range(i1, i2):
-            
+
             RHS = zeros((nEdge, 1))
             RHS[irhs, 0] = 1.0
-    
+
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
                              tol=1.0e-6,
                              maxiter=100)
-            
+
             i = 0
             for item in outputs:
                 k1, k2 = obounds[item]
@@ -135,16 +135,16 @@ def calc_gradient(wflow, inputs, outputs):
                 else:
                     J[i, j] = dx[k1:k2]
                 i += k2-k1
-                
+
             j += 1
-      
+
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs. Calculation is done in adjoint mode.
-    """    
-            
+    """
+
     # Size the problem
     nEdge = wflow.initialize_residual()
     A = LinearOperator((nEdge, nEdge),
@@ -152,18 +152,18 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                        dtype=float)
     num_in = 0
     for item in inputs:
-        val = wflow.scope.get(item)    
+        val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_in += width
-        
+
     num_out = 0
     for item in outputs:
-        val = wflow.scope.get(item)    
+        val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_out += width
-       
+
     J = zeros((num_out, num_in))
-    
+
     # Locate the output keys:
     obounds = {}
     interior = wflow.get_interior_edges()
@@ -173,26 +173,26 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             if item == edge[0]:
                 obounds[item] = wflow.bounds[edge]
                 break
-            
+
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
-    
+    wflow.calc_derivatives(first=True, extra_in=inputs)
+
     # Adjoint mode, solve linear system for each output
     j = 0
     for output in outputs:
-        
+
         i1, i2 = obounds[output]
         for irhs in range(i1, i2):
-            
+
             RHS = zeros((nEdge, 1))
             RHS[irhs, 0] = 1.0
-    
+
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
                              tol=1.0e-6,
                              maxiter=100)
-    
+
             i = 0
             for param in inputs:
                 k1, k2 = wflow.bounds[('@in', param)]
@@ -201,9 +201,9 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                 else:
                     J[j, i] = dx[k1:k2]
                 i += k2-k1
-                
+
             j += 1
-        
+
     return J
 
 
@@ -216,35 +216,35 @@ def applyJ(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_deriv'):
-        
+
         for key, value in result.iteritems():
             if len(value) > 1:
                 var = obj.get(key)
                 shape = var.shape
                 result[key] = value.reshape(shape)
-                
+
         for key, value in arg.iteritems():
             if len(value) > 1:
                 var = obj.get(key)
                 shape = var.shape
                 arg[key] = value.reshape(shape)
-                
+
         obj.apply_deriv(arg, result)
-        
+
         for key, value in result.iteritems():
             if len(value) > 1:
                 result[key] = value.flatten()
-                
+
         for key, value in arg.iteritems():
             if len(value) > 1:
                 arg[key] = value.flatten()
-        
+
         return
 
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-    
+
     ibounds = {}
     nvar = 0
     for key in input_keys:
@@ -283,7 +283,7 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    
+
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
     Component, this automatically forms the "fake" residual, and calls into
@@ -298,23 +298,23 @@ def applyJT(obj, arg, result):
                 var = obj.get(key)
                 shape = var.shape
                 result[key] = value.reshape(shape)
-                
+
         for key, value in arg.iteritems():
             if len(value) > 1:
                 var = obj.get(key)
                 shape = var.shape
                 arg[key] = value.reshape(shape)
-                
+
         obj.apply_derivT(arg, result)
-        
+
         for key, value in result.iteritems():
             if len(value) > 1:
                 result[key] = value.flatten()
-                
+
         for key, value in arg.iteritems():
             if len(value) > 1:
                 arg[key] = value.flatten()
-        
+
         return
 
     # Optional specification of the Jacobian
@@ -359,73 +359,73 @@ def applyJT(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-    
+
 
 class FiniteDifference(object):
     """ Helper object for performing finite difference on a portion of a model.
     """
-    
+
     def __init__(self, pa):
-        """ Performs finite difference on the components in a given 
+        """ Performs finite difference on the components in a given
         pseudo_assembly. """
-                          
+
         self.inputs = pa.inputs
         self.outputs = pa.outputs
         self.in_bounds = {}
         self.out_bounds = {}
         self.pa = pa
         self.scope = pa.wflow.scope
-        
+
         self.fd_step = 1.0e-6*ones((len(self.inputs)))
         self.form = 'forward'
-        
+
         in_size = 0
         for src in self.inputs:
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
-            
+
         out_size = 0
         for src in self.outputs:
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.out_bounds[src] = (out_size, out_size+width)
             out_size += width
-                
+
         self.J = zeros((out_size, in_size))
         self.y_base = zeros((out_size,))
         self.x = zeros((in_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
-        
+
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
         self.get_inputs(self.x)
         self.get_outputs(self.y_base)
-        
+
         for src, fd_step in zip(self.inputs, self.fd_step):
             i1, i2 = self.in_bounds[src]
 
             for i in range(i1, i2):
-                
+
                 #--------------------
                 # Forward difference
                 #--------------------
                 if self.form == 'forward':
-                    
+
                     # Step
                     if i2-i1 == 1:
                         self.set_value(src, fd_step)
                     else:
                         self.set_value(src, fd_step, i-i1)
-                        
+
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
-                    
+
                     # Forward difference
                     self.J[:, i] = (self.y - self.y_base)/fd_step
-                    
+
                     # Undo step
                     if i2-i1 == 1:
                         self.set_value(src, -fd_step)
@@ -436,19 +436,19 @@ class FiniteDifference(object):
                 # Backward difference
                 #--------------------
                 elif self.form == 'backward':
-                    
+
                     # Step
                     if i2-i1 == 1:
                         self.set_value(src, -fd_step)
                     else:
                         self.set_value(src, -fd_step, i-i1)
-                        
+
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
-                    
+
                     # Backward difference
                     self.J[:, i] = (self.y_base - self.y)/fd_step
-                    
+
                     # Undo step
                     if i2-i1 == 1:
                         self.set_value(src, fd_step)
@@ -459,28 +459,28 @@ class FiniteDifference(object):
                 # Central difference
                 #--------------------
                 elif self.form == 'central':
-                    
+
                     # Forward Step
                     if i2-i1 == 1:
                         self.set_value(src, fd_step)
                     else:
                         self.set_value(src, fd_step, i-i1)
-                        
+
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
-                    
+
                     # Backward Step
                     if i2-i1 == 1:
                         self.set_value(src, -2.0*fd_step)
                     else:
                         self.set_value(src, -2.0*fd_step, i-i1)
-                        
+
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y2)
-                    
+
                     # Central difference
                     self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
-                    
+
                     # Undo step
                     if i2-i1 == 1:
                         self.set_value(src, fd_step)
@@ -492,7 +492,7 @@ class FiniteDifference(object):
                 #var_name = var_name.split('[')[0]
                 comp = self.scope.get(comp_name)
                 comp._valid_dict[var_name.split('[',1)[0]] = False
-                    
+
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
@@ -519,12 +519,12 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
-        
+
         return self.J
-    
+
     def get_inputs(self, x):
         """Return matrix of flattened values from input edges."""
-       
+
         for src in self.inputs:
             src_val = self.scope.get(src)
             src_val = flattened_value(src, src_val)
@@ -533,69 +533,69 @@ class FiniteDifference(object):
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
-       
+
         for src in self.outputs:
             src_val = self.scope.get(src)
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
             x[i1:i2] = src_val
-            
+
     def set_value(self, src, val, index=None):
         """Set a value in the model"""
-        
+
         i1, i2 = self.in_bounds[src]
         comp_name, dot, var_name = src.partition('.')
         comp = self.scope.get(comp_name)
         old_val = self.scope.get(src)
-        
+
         if index is None:
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = int(idx[:-1])
                 old_val = self.scope.get(src)
                 old_val[idx] += val
-                
+
                 # In-place array editing doesn't activate callback, so we
                 # must do it manually.
                 comp._input_updated(var_name.split('[')[0])
-                
+
             else:
                 self.scope.set(src, old_val+val, force=True)
-                
+
         else:
             unravelled = unravel_index(index, old_val.shape)
             old_val[unravelled] += val
-            
+
             # In-place array editing doesn't activate callback, so we must
             # do it manually.
             comp._input_updated(var_name)
-            
+
         # Prevent OpenMDAO from stomping on our poked input.
         comp._valid_dict[var_name.split('[',1)[0]] = True
-        
+
         # Make sure we execute!
         comp._call_execute = True
-        
+
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output
     name using the stored baseline and derivatives along with the
     new inputs in the component.
     """
-    
+
     input_keys, output_keys, J = comp.provideJ()
-    
+
     # First order derivatives
     if order == 1:
-        
+
         for j, out_name in enumerate(output_keys):
             y = comp.get(out_name)
             for i, in_name in enumerate(input_keys):
                 y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
-                setattr(comp, name, y) 
-               
+                setattr(comp, name, y)
+
     # Second order derivatives
     #elif order == 2:
-    #    
+    #
     #    for in_name1, item in self.second_derivatives[out_name].iteritems():
     #        for in_name2, dx in item.iteritems():
     #            y += 0.5*dx* \
@@ -606,13 +606,13 @@ def apply_linear_model(self, comp, ffd_order):
         msg = 'Fake Finite Difference does not currently support an ' + \
               'order of %s.' % order
         raise NotImplementedError(msg)
-    
+
     return y
 
 
 def recursive_components(scope, comps):
     # Recursively find all components contained in subdrivers.
-    
+
     recursed_comps = []
     for name in comps:
         recursed_comps.append(name)

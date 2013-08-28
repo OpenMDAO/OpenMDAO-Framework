@@ -59,7 +59,7 @@ class Session(dict):
 
 
 class SessionManager(object):
-    """ SessionManager handles the cookie and file read/writes for a Session,
+    """ SessionManager handles the cookie and file read/writes for a Session.
     """
 
     def __init__(self, secret, session_dir = ''):
