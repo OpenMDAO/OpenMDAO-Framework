@@ -2,6 +2,7 @@
 Utilities for GUI functional testing.
 """
 
+import glob
 import inspect
 import logging
 import os.path
@@ -50,25 +51,37 @@ _display_set = False
 _display = None
 
 
-def check_for_chrome():
-    if find_chrome() is not None:
-        return True
-    else:
-        return False
+_chrome_version = None
 
+def check_for_chrome():
+    return bool(find_chrome())
+
+def broken_chrome():
+    """ Some tests are broken with chrome 29. """
+    return _chrome_version > 28
 
 def setup_chrome():
     """ Initialize the Chrome browser. """
+    global _chrome_version
+    if sys.platform == 'win32':  # No command-line version capability.
+        pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
+        _chrome_version = os.path.basename(sorted(glob.glob(pattern),
+                                                  reverse=True)[0])
+    else:
+        _chrome_version = subprocess.check_output([find_chrome(), '--version'])
+        _chrome_version = _chrome_version.strip().split()[-1]
+    _chrome_version = int(_chrome_version.split('.')[0])
+
     exe = 'chromedriver'
     path = find_executable(exe)
     if not path:
-        # Download, unpack, and install in OpenMDAO 'bin'.
+        # Download, unpack, and install chromedriver in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
-        version = '23.0.1240.0'
+        version = '2.2' if _chrome_version > 28 else '23.0.1240.0'
         if sys.platform == 'darwin':
-            flavor = 'mac'
+            flavor = 'mac32' if _chrome_version > 28 else 'mac'
         elif sys.platform == 'win32':
-            flavor = 'win'
+            flavor = 'win32' if _chrome_version > 28 else 'win'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
