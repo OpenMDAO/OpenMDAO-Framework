@@ -25,9 +25,12 @@ class Objective(ConnectedExprEvaluator):
         """
         if self.pcomp_name:
             scope = self.scope
-            pcomp = getattr(scope, self.pcomp_name)
-            pcomp.remove_connections(scope)
-            if hasattr(scope, pcomp.name):
+            try:
+                pcomp = getattr(scope, self.pcomp_name)
+            except AttributeError:
+                pass
+            else:
+                pcomp.remove_connections(scope)
                 scope.remove(pcomp.name)
             self.pcomp_name = None
 
