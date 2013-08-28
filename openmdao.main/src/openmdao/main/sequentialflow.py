@@ -208,7 +208,8 @@ class SequentialWorkflow(Workflow):
         """
         
         graph = self._parent.workflow_subgraph()
-        edges = set(graph.get_interior_connections(self.get_names(full=True)))
+        comps = [comp.name for comp in self.__iter__()]
+        edges = set(graph.get_interior_connections(comps))
         edges.update(self.get_driver_edges())
         edges.update(self._additional_edges)
         edges = edges - self._hidden_edges

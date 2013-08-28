@@ -14,7 +14,7 @@ def _is_expr(node):
     return len(_exprchars.intersection(node)) > 0
 
 def base_var(graph, node):
-    """Returns the name of the variable node that is the 'base' for 
+    """Returns the name of the variable node that is the 'base' for
     the given node name.  For example, for the node A.b[4], the
     base variable is A.b.  For the node d.x.y, the base variable
     is d if d is a boundary variable node, or d.x otherwise.
@@ -97,7 +97,7 @@ def is_basevar_node(graph, node):
 
 def is_subvar_node(graph, node):
     """Returns True if this node represents some
-    subdivision of an input or output variable, 
+    subdivision of an input or output variable,
     e.g., an array index -   comp_1.x[2]
     """
     return 'basevar' in graph.node.get(node, '')
@@ -144,7 +144,7 @@ def is_nested_node(graph, node):
     is nested within the child of a Component in our scope, or
     within a boundary variable in our scope.  For
     example, if a Component 'comp1' is within our scope,
-    a variable node referring to 'comp1.child.x' would be a 
+    a variable node referring to 'comp1.child.x' would be a
     nested node while a 'comp1.y' node would not.  If we had a boundary
     var called 'b', then 'b.x' would be a nested node.
     """
@@ -194,13 +194,13 @@ class DependencyGraph(nx.DiGraph):
         self._loops = None
 
     def child_config_changed(self, child):
-        """A child has changed its input or output lists, so 
+        """A child has changed its input or output lists, so
         we need to update the graph.
         """
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
         old_outs = set(self.list_outputs(cname))
-        
+
         new_ins  = set(['.'.join([cname,n]) for n in child.list_inputs()])
         new_outs = set(['.'.join([cname,n]) for n in child.list_outputs()])
 
@@ -257,7 +257,7 @@ class DependencyGraph(nx.DiGraph):
         if name in self:
             raise RuntimeError("'%s' is already in the graph." % name)
         if _is_expr(name):
-            raise RuntimeError("can't add expression '%s'. as a Variable node." 
+            raise RuntimeError("can't add expression '%s'. as a Variable node."
                                % name)
         if '.' in name or '[' in name:
             raise RuntimeError("'%s' is not a valid boundary variable name."
@@ -265,7 +265,7 @@ class DependencyGraph(nx.DiGraph):
         if 'iotype' not in kwargs:
             raise RuntimeError("variable '%s' can't be added because its iotype was not specified." % name)
 
-        kwargs['var'] = True            
+        kwargs['var'] = True
         self.add_node(name, **kwargs)
         self.config_changed()
 
@@ -282,7 +282,7 @@ class DependencyGraph(nx.DiGraph):
     def check_connect(self, srcpath, destpath):
         if is_external_node(self, destpath): # error will be caught at parent level
             return
-        
+
         dpbase = base_var(self, destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
@@ -306,12 +306,12 @@ class DependencyGraph(nx.DiGraph):
                         break
 
         if connected:
-            raise RuntimeError("'%s' is already connected to '%s'" % 
+            raise RuntimeError("'%s' is already connected to '%s'" %
                                   (conns[0][1], conns[0][0]))
-    
+
     def connect(self, srcpath, destpath):
         """Create a connection between srcpath and destpath,
-        and create any necessary additional connections to base 
+        and create any necessary additional connections to base
         variable nodes.  For example, connecting A.b[3] to
         B.c.x will create an edge between A.b[3] and B.c.x, and
         will also add an edge from base variable A.b to A.b[3],
@@ -354,9 +354,9 @@ class DependencyGraph(nx.DiGraph):
         self.edge[srcpath][destpath]['conn'] = True
 
         self.config_changed()
-        
+
     def disconnect(self, srcpath, destpath=None):
-        
+
         if destpath is None:
             if is_comp_node(self, srcpath):
                 edges = self.edges(self.successors(srcpath))
@@ -391,6 +391,8 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
     def get_interior_connections(self, comps=None):
+        """ Returns all interior connections between the given comps.
+        """
         if comps is None:
             pred = any_preds(is_comp_node, is_pseudo_node)
             compset = set([n for n in self.nodes_iter() if pred(self, n)])
@@ -398,13 +400,13 @@ class DependencyGraph(nx.DiGraph):
             compset = set(comps)
         return [(u,v) for u, v in self.edges_iter()
                    if is_connection(self, u, v) and
-                      u.split('.', 1)[0] in compset and 
+                      u.split('.', 1)[0] in compset and
                       v.split('.', 1)[0] in compset]
 
     def get_directional_interior_edges(self, comp1, comp2):
         """ Behaves like get_ineterior_edges, except that it only
         returns interior edges that originate in comp1 and and end in comp2.
-        
+
         comp1: str
             Source component name
 
@@ -421,17 +423,17 @@ class DependencyGraph(nx.DiGraph):
         else:
             return self._var_connections(path, direction)
 
-    def list_connections(self, show_passthrough=True, 
+    def list_connections(self, show_passthrough=True,
                                show_external=False):
-        conns = [(u,v) for u,v in self.edges_iter() 
+        conns = [(u,v) for u,v in self.edges_iter()
                           if is_connection(self, u, v)]
 
         if show_passthrough is False:
             conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
 
         if show_external is False:
-            conns = [(u,v) for u,v in conns 
-                          if not (u.startswith('parent.') 
+            conns = [(u,v) for u,v in conns
+                          if not (u.startswith('parent.')
                                or v.startswith('parent.'))]
 
         return conns
@@ -449,7 +451,7 @@ class DependencyGraph(nx.DiGraph):
             else:
                 for uu,vv in self.in_edges_iter(u):
                     if is_connection(self, uu, vv):
-                        srcs.append(uu) 
+                        srcs.append(uu)
         return srcs
 
     def _check_source(self, path, src):
@@ -470,7 +472,7 @@ class DependencyGraph(nx.DiGraph):
     def _all_vars(self, node, direction=None):
         """Return a list of nodes containing all nodes that are one
         or two connections out from the starting node that are prefixed
-        by the starting node.  This captures all var and subvar 
+        by the starting node.  This captures all var and subvar
         nodes associated with the starting node.
         """
         bunch = []
@@ -486,7 +488,7 @@ class DependencyGraph(nx.DiGraph):
                 bunch.extend(self.predecessors(p))
         ndot = node+'.'
         nbrack = node+'['
-        return [n for n in bunch if n.startswith(ndot) 
+        return [n for n in bunch if n.startswith(ndot)
                                  or n.startswith(nbrack)]
 
     def all_comps(self):
@@ -533,18 +535,18 @@ class DependencyGraph(nx.DiGraph):
     def invalidate_deps(self, scope, cname, srcvars, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
-        
+
         scope: Component
             Scoping object containing this dependency graph.
-            
+
         cname: str
             Name of starting node.
-            
+
         srcvars: list of set of str or None
             Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
-            
+
         force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
@@ -554,10 +556,10 @@ class DependencyGraph(nx.DiGraph):
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
             srcvars = ['.'.join([cname,n]) for n in srcvars]
-            
+
         stack = [(cname, srcvars)]
         outset = set()  # set of changed boundary outputs
-        
+
         if not srcvars:
             return outset
 
@@ -570,7 +572,7 @@ class DependencyGraph(nx.DiGraph):
             invalidated.add(srccomp)
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
-                
+
             if not srcvars:
                 continue
 
@@ -581,7 +583,7 @@ class DependencyGraph(nx.DiGraph):
                 if dests:
                     if dcomp:
                         comp = getattr(scope, dcomp)
-                        newouts = comp.invalidate_deps(varnames=dests, 
+                        newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
                         if newouts is None:
                             stack.append((dcomp, None))
@@ -644,7 +646,7 @@ class DependencyGraph(nx.DiGraph):
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
         if connected:
-            return [n for n in self.succ[cname] 
+            return [n for n in self.succ[cname]
                                             if self.out_degree(n)>0]
         else:
             return self.succ[cname].keys()
@@ -652,8 +654,8 @@ class DependencyGraph(nx.DiGraph):
     def list_autopassthroughs(self):
         """Returns a list of autopassthrough connections as (src, dest)
         tuples.  Autopassthroughs are connections directly from a
-        variable external to this graph to an internal (non-boundary) 
-        variable. 
+        variable external to this graph to an internal (non-boundary)
+        variable.
         """
         conns = []
         for n in self.nodes_iter():
@@ -669,7 +671,7 @@ class DependencyGraph(nx.DiGraph):
 
     def component_graph(self):
         """Return a subgraph containing only Components
-        and PseudoComponents and edges between them. 
+        and PseudoComponents and edges between them.
         """
         if self._component_graph is not None:
             return self._component_graph
@@ -691,11 +693,11 @@ class DependencyGraph(nx.DiGraph):
 
     def get_loops(self):
         if self._loops is None:
-            self._loops = [s for s in 
-                nx.strongly_connected_components(self.component_graph()) 
+            self._loops = [s for s in
+                nx.strongly_connected_components(self.component_graph())
                 if len(s)>1]
         return self._loops
-    
+
     def find_nodes(self, nodes, predicate, stop_predicate=None, reverse=False):
         """Returns an iterator over the nearest successor nodes that satisfy the predicate.
         For example, if node is a base variable node and predicate is True for base variable
@@ -715,7 +717,7 @@ class DependencyGraph(nx.DiGraph):
 
         stop_predicate: boolean function of the form f(graph, node) (optional)
             Should return True for nodes that should stop the traversal
-            of that branch.  Traversal on a branch will stop when the first 
+            of that branch.  Traversal on a branch will stop when the first
             node satisfying 'predicate' is found OR if stop_predicate is True.
 
         reverse: bool (optional)
@@ -755,7 +757,7 @@ class DependencyGraph(nx.DiGraph):
         """Returns a list of tuples of the form (srcpath, destpath) for all
         variable connections to the specified variable.  If direction is None, both
         ins and outs are included. Other allowed values for direction are
-        'in' and 'out'. 
+        'in' and 'out'.
         """
         conns = []
 
@@ -766,7 +768,7 @@ class DependencyGraph(nx.DiGraph):
                 else:
                     for uu,vv in self.edges_iter(v):
                         if is_connection(self, uu, vv):
-                            conns.append((uu,vv)) 
+                            conns.append((uu,vv))
 
         if direction != 'out':  # get 'in' connections
             for u,v in self.in_edges_iter(path):
@@ -775,21 +777,21 @@ class DependencyGraph(nx.DiGraph):
                 else:
                     for uu,vv in self.in_edges_iter(u):
                         if is_connection(self, uu, vv):
-                            conns.append((uu,vv)) 
+                            conns.append((uu,vv))
 
         return conns
 
     def basevar_iter(self, nodes, reverse=False):
         """Given a group of nodes, return an iterator
         over all base variable nodes that are nearest in one
-        direction. 
+        direction.
         """
         return self.find_nodes(nodes, is_basevar_node, reverse=reverse)
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator
         over all component nodes that are nearest in one
-        direction. 
+        direction.
         """
         if include_pseudo:
             return self.find_nodes(nodes, any_preds(is_comp_node, is_pseudo_node),
@@ -802,9 +804,9 @@ def find_related_pseudos(compgraph, nodes):
     """Return a set of pseudocomponent nodes that are between the
     nodes in the given list or between them and a boundary.
     """
-    
+
     pseudos = set()
-    
+
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
             if is_pseudo_node(compgraph, upcomp):
@@ -822,8 +824,8 @@ def find_related_pseudos(compgraph, nodes):
     return list(pseudos)
 
 def find_all_connecting(graph, start, end):
-    """Return the set of all component nodes along all paths 
-    between start and end. The start and end nodes are included 
+    """Return the set of all component nodes along all paths
+    between start and end. The start and end nodes are included
     in the set if they're connected.
     """
     if start == end:
@@ -837,7 +839,7 @@ def find_all_connecting(graph, start, end):
             continue
         backset.add(node)
         tmpset.update(graph.pred[node].keys())
-    
+
     tmpset = set([start])
     while tmpset:
         node = tmpset.pop()
@@ -845,6 +847,6 @@ def find_all_connecting(graph, start, end):
             continue
         fwdset.add(node)
         tmpset.update(graph.succ[node].keys())
-    
+
     return fwdset.intersection(backset)
 
