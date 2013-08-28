@@ -131,10 +131,14 @@ def is_pseudo_output_node(graph, node):
     return pseudo == 'objective' or pseudo == 'constraint'
 
 def is_unit_node(graph, node):
-    return graph.node[node].get('pseudo') == 'unit'
+    return graph.node[node].get('pseudo') == 'units'
 
 def is_multivar_expr_node(graph, node):
     return graph.node[node].get('pseudo') == 'multi_var_expr'
+
+def is_non_driver_pseudo_node(graph, node):
+    pseudo = graph.node[node].get('pseudo')
+    return pseudo == 'units' or pseudo == 'multi_var_expr'
 
 def is_external_node(graph, node):
     return node.startswith('parent.')
@@ -799,25 +803,19 @@ class DependencyGraph(nx.DiGraph):
 
 
 def find_related_pseudos(compgraph, nodes):
-    """Return a set of pseudocomponent nodes that are between the
-    nodes in the given list or between them and a boundary.
+    """Return a set of pseudocomponent nodes not driver related and are
+    attached to the given set of component nodes.
     """
     
     pseudos = set()
     
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
-            if is_pseudo_node(compgraph, upcomp):
-                for cpred in compgraph.predecessors_iter(upcomp):
-                    if is_boundary_node(compgraph, cpred) or cpred in nodes:
-                        pseudos.add(upcomp)
-                        break
+            if is_non_driver_pseudo_node(compgraph, upcomp):
+                pseudos.add(upcomp)
         for dwncomp in compgraph.successors_iter(node):
-            if is_pseudo_node(compgraph, dwncomp):
-                for csucc in compgraph.successors_iter(dwncomp):
-                    if is_boundary_node(compgraph, csucc) or csucc in nodes:
-                        pseudos.add(dwncomp)
-                        break
+            if is_non_driver_pseudo_node(compgraph, dwncomp):
+                pseudos.add(dwncomp)
 
     return list(pseudos)
 
