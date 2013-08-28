@@ -70,7 +70,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """
         
         if self._topsort is None:
-            graph = nx.DiGraph(self._get_workflow_graph())
+            graph = nx.DiGraph(self._get_collapsed_graph())
             
             cyclic = True
             self._severed_edges = []
@@ -108,7 +108,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 
         return self._topsort
     
-    def _get_workflow_graph(self):
+    def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it. This graph can be cyclic."""
         
