@@ -210,13 +210,14 @@ class ExprMapper(object):
         return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
 
     def _needs_pseudo(self, parent, srcexpr, destexpr):
-        """Return True if srcexpr and destexpr require a pseudocomp to be
-        created.
+        """Return a non-None pseudo_type if srcexpr and destexpr require a 
+        pseudocomp to be created.
         """
         srcrefs = list(srcexpr.refs())
         if srcrefs and srcrefs[0] != srcexpr.text:
-            # expression is more than just a simple variable reference, so we need a pseudocomp
-            return True
+            # expression is more than just a simple variable reference, 
+            # so we need a pseudocomp
+            return 'multi_var_expr'
 
         destmeta = destexpr.get_metadata('units')
         srcmeta = srcexpr.get_metadata('units')
@@ -225,9 +226,9 @@ class ExprMapper(object):
         destunit = destmeta[0][1] if destmeta else None
 
         if destunit and srcunit and destunit != srcunit:
-            return True
+            return 'units'
 
-        return False
+        return None
 
     def list_pseudocomps(self):
         return [data['pcomp'].name for u, v, data in 

@@ -2,7 +2,7 @@
 import ordereddict
 
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.pseudocomp import OutputPseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
@@ -14,7 +14,7 @@ class Objective(ConnectedExprEvaluator):
         connections in the dependency graph.
         """
         if self.pcomp_name is None:
-            pseudo = OutputPseudoComponent(self.scope, self)
+            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
         getattr(self.scope, self.pcomp_name).make_connections(self.scope)

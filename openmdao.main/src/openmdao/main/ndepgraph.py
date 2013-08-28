@@ -54,7 +54,8 @@ def _sub_or_super(s1, s2):
 #
 # NODES:
 #   comp    means it's a Component node
-#   pseudo  means it's a PseudoComponent
+#   pseudo  means it's a PseudoComponent, and the value of the 'pseudo' entry can be
+#             'units', 'multi_var_expr', 'constraint', or 'objective'
 #   var     means it's a simple Variable node (no indexing or attr access)
 #   basevar means it's some reference to a part of a Variable (like an array ref or attr access)
 #              and the value of basevar is the name of the Variable it refers to
@@ -122,11 +123,18 @@ def is_connected_dest_node(graph, node):
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node.get(node, '')
 
-def is_param_pseudo_node(graph, node):
-    return graph.node[node].get('pseudo') == 'param'
+def is_objective_node(graph, node):
+    return graph.node[node].get('pseudo') == 'objective'
 
-def is_pseudo_unit_node(graph, node):
+def is_pseudo_output_node(graph, node):
+    pseudo = graph.node[node].get('pseudo')
+    return pseudo == 'objective' or pseudo == 'constraint'
+
+def is_unit_node(graph, node):
     return graph.node[node].get('pseudo') == 'unit'
+
+def is_multivar_expr_node(graph, node):
+    return graph.node[node].get('pseudo') == 'multi_var_expr'
 
 def is_external_node(graph, node):
     return node.startswith('parent.')

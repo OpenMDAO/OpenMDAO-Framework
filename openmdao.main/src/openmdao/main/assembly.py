@@ -148,7 +148,7 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 kwargs['driver'] = True
             if isinstance(obj, PseudoComponent):
-                kwargs['pseudo'] = True
+                kwargs['pseudo'] = obj._pseudo_type
             self._depgraph.add_component(obj.name, 
                                          obj.list_inputs(), 
                                          obj.list_outputs(),
@@ -463,7 +463,7 @@ class Assembly(Component):
         """
 
         # Among other things, check if already connected.
-        srcexpr, destexpr, needpseudocomp = \
+        srcexpr, destexpr, pcomp_type = \
                    self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
@@ -476,8 +476,9 @@ class Assembly(Component):
                         msg += "driver '%s'." % comp.name
                         self.raise_exception(msg, RuntimeError)
 
-        if needpseudocomp:
-            pseudocomp = PseudoComponent(self, srcexpr, destexpr)
+        if pcomp_type is not None:
+            pseudocomp = PseudoComponent(self, srcexpr, destexpr, 
+                                         pseudo_type=pcomp_type)
             self.add(pseudocomp.name, pseudocomp)
             pseudocomp.make_connections(self)
         else:

@@ -11,7 +11,7 @@ from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       applyJ, applyJT, recursive_components
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
-from openmdao.main.pseudocomp import ParamPseudoComponent, OutputPseudoComponent
+from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos
@@ -250,22 +250,15 @@ class SequentialWorkflow(Workflow):
         
         sub_edge = set()
         outcomps = [item[0].split('.')[0] for item in self._additional_edges]
-        incomps = [item[1].split('.')[0] for item in self._additional_edges]
         loose_vars = self._parent.parent.list_inputs()
         
         for comp in comps:
             
             pcomp = self.scope.get(comp)
             
-            # Parameter edges. Include non-recursed ones too.
-            if comp in incomps and isinstance(pcomp, ParamPseudoComponent):
-                for pcomp_edge in pcomp.list_connections():
-                    #target_edge = pcomp_edge[1].split('.')[0]
-                    #if target_edge in rcomps:
-                    sub_edge.add(pcomp_edge)
-
             # Output edges
-            elif comp in outcomps and isinstance(pcomp, OutputPseudoComponent):
+            if comp in outcomps and isinstance(pcomp, PseudoComponent) and \
+                   pcomp._pseudo_type in ['objective','constraint']:
                 for pcomp_edge in pcomp.list_connections():
                     src_edge = pcomp_edge[0].split('.')[0]
                     if src_edge	in rcomps or src_edge in loose_vars \
@@ -649,7 +642,7 @@ class SequentialWorkflow(Workflow):
                     # Hack: deal with driver connections that connect to
                     # a component in a subdriver's workflow.
                     pcomp = getattr(self.scope, edge[1])
-                    if isinstance(pcomp, OutputPseudoComponent):
+                    if isinstance(pcomp, PseudoComponent) and pcomp._pseudo_type in ['objective','constraint']:
                         var_edge = set()
                         for pcomp_edge in pcomp.list_connections():
                             src_edge = pcomp_edge[0].split('.')[0]
@@ -664,15 +657,15 @@ class SequentialWorkflow(Workflow):
                     graph.add_edge(edge[0], pa_name)
                     
                     # Hack: parameters not in directional graph
-                    pcomp = getattr(self.scope, edge[0])
-                    if isinstance(pcomp, ParamPseudoComponent):
-                        var_edge = set()
-                        for pcomp_edge in pcomp.list_connections():
-                            target_edge = pcomp_edge[1].split('.')[0]
-                            if target_edge in recursed_components:
-                                var_edge.add(pcomp_edge)
-                    else:
-                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
+                    # pcomp = getattr(self.scope, edge[0])
+                    # if isinstance(pcomp, ParamPseudoComponent):
+                    #     var_edge = set()
+                    #     for pcomp_edge in pcomp.list_connections():
+                    #         target_edge = pcomp_edge[1].split('.')[0]
+                    #         if target_edge in recursed_components:
+                    #             var_edge.add(pcomp_edge)
+                    # else:
+                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     inputs = inputs.union(var_edge)
                     
             # Input and outputs that crossed the cut line should be included

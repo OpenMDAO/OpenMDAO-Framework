@@ -80,7 +80,7 @@ class PseudoComponent(object):
     """
     implements(IComponent)
     
-    def __init__(self, parent, srcexpr, destexpr=None, translate=True):
+    def __init__(self, parent, srcexpr, destexpr=None, translate=True, pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
@@ -89,6 +89,9 @@ class PseudoComponent(object):
         self._valid_dict = {}
         self._parent = parent
         self._inputs = []
+        self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
+                                        # this is, e.g., 'units', 'constraint', 'objective',
+                                        # or 'multi_var_expr'
         if destexpr.text:
             self._outdests = [destexpr.text]
         else:
@@ -324,92 +327,3 @@ class PseudoComponent(object):
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J
-
-
-class OutputPseudoComponent(PseudoComponent):
-    """PseudoComponent used for Objectives and Constraints. This is a 
-    separate class to make bookkeeping a little easier.
-    """
-
-
-class ParamPseudoComponent(PseudoComponent):
-    """PseudoComponent used to apply scalers/adders to a parameter.
-    This type of PseudoComponent has no input connections and one or
-    more output connections.
-    """
-
-    def __init__(self, param):
-        parent = param._expreval.scope
-        target = param._expreval.text
-        scaler = param.scaler
-        adder  = param.adder
-        self.param = param
-        self._outexprs = []
-
-        if scaler == 1.0 and adder == 0.0:
-            src = 'in0'
-        elif scaler == 1.0:
-            src = 'in0+%.15g' % adder
-        elif adder == 0.0:
-            src = 'in0*%.15g' % scaler
-        else:
-            src = '(in0+%.15g)*%.15g' % (adder, scaler)
-
-        srcexpr = ConnectedExprEvaluator(src, scope=self)
-        destexpr = ConnectedExprEvaluator(target, scope=self, is_dest=True)
-        super(ParamPseudoComponent, self).__init__(parent, srcexpr, 
-                                                   destexpr, translate=False)
-
-        # use these to push values to targets when we run
-        self._outexprs = [ConnectedExprEvaluator(self._outdests[0], parent)]
-
-
-    def add_target(self, target):
-        self._outdests.append(target)
-        self._outexprs.append(ConnectedExprEvaluator(target, self._parent))
-
-    def list_connections(self, is_hidden=False):
-        """The only connections for a ParamPseudoComponent are output connections."""
-
-        if is_hidden:
-            return []
-        else:
-            return [('.'.join([self.name, 'out0']), dest) 
-                                   for dest in self._outdests]      
-
-    def make_connections(self, scope):
-        """Set up the target_changed callback.
-        """
-        #self._update_callbacks(remove=False)
-        pass
-
-    def remove_connections(self, scope):
-        """Remove the target_changed callback.
-        """
-        #self._update_callbacks(remove=True)
-        pass
-
-    def update_inputs(self, dummy):
-        pass # param pseudocomp will never have inputs that are connected to anything
-        
-    def run(self, ffd_order=0, case_id=''):
-        super(ParamPseudoComponent, self).run(ffd_order, case_id)
-        # now push out out0 value out to the target(s)
-        for expr in self._outexprs:
-            expr.set(self.out0)
-        #print self.name, "ran", self.in0, self.out0
-
-    def set(self, path, value, index=None, src=None, force=False):
-        self._valid_dict['out0'] = False
-        if index is not None:
-            raise ValueError("index not supported in PseudoComponent.set")
-        if isinstance(value, UnitsAttrWrapper):
-            val = value.pq.value
-        elif isinstance(value, PhysicalQuantity):
-            val = value.value
-        else:
-            val = value
-        setattr(self, path, val)
-
-    def provideJ(self):
-        return ('in0',), ('out0',), self.J
