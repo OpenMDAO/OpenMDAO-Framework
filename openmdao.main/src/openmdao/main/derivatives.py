@@ -137,7 +137,7 @@ def calc_gradient(wflow, inputs, outputs):
                 i += k2-k1
 
             j += 1
-
+    
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):

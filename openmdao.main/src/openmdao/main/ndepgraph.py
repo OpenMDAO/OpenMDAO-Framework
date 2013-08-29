@@ -583,9 +583,6 @@ class DependencyGraph(nx.DiGraph):
             
             invalidated.setdefault(srccomp, set()).update(srcvars) 
             
-            if not srcvars:
-                continue
-
             # KTM1 - input-input connections were excluded. Added source
             # variable into our stack so we can invalidate the inputs that
             # are connected to that input without invalidating other
@@ -597,12 +594,12 @@ class DependencyGraph(nx.DiGraph):
             else:
                 allvars = srcvars
                 
+            if not allvars:
+                continue
+
             cmap = partition_names_by_comp(self.find_nodes(allvars, 
                                                            is_basevar_node, 
                                                            is_comp_node))
-            
-            #print partition_names_by_comp(self.basevar_iter(srcvars))
-            #print cmap
             
             for dcomp, dests in cmap.items():
                 
