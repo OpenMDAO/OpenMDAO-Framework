@@ -264,6 +264,7 @@ class Driver(Component):
             recorder.startup()
 
         # force param pseudocomps to get updated values to start
+        # KEN - probably don't need this anymore
         self.update_parameters()
 
         # Override just to reset the workflow :-(

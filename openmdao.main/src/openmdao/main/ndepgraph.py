@@ -536,7 +536,7 @@ class DependencyGraph(nx.DiGraph):
                 conns.extend(self._var_connections(inp, 'in'))
         return conns
 
-    def invalidate_deps(self, scope, cname, srcvars, force=False):
+    def invalidate_deps(self, scope, cname, srcvars, force=False, inputvar=None):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
 
@@ -550,6 +550,10 @@ class DependencyGraph(nx.DiGraph):
             Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
+            
+        inputvar: str
+            Name of input variable. This is needed so that input-input
+            connections are updated properly.
 
         force: bool (optional)
             If True, force invalidation to continue even if a component in
@@ -561,7 +565,8 @@ class DependencyGraph(nx.DiGraph):
         elif cname:
             srcvars = ['.'.join([cname,n]) for n in srcvars]
 
-        stack = [(cname, srcvars)]
+        inputvar = [inputvar] if inputvar else None
+        stack = [(cname, srcvars, inputvar)]
         outset = set()  # set of changed boundary outputs
 
         if not srcvars:
@@ -572,28 +577,51 @@ class DependencyGraph(nx.DiGraph):
         invalidated = set()
 
         while(stack):
-            srccomp, srcvars = stack.pop()
+            srccomp, srcvars, in_in_srcs = stack.pop()
             invalidated.add(srccomp)
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
-
+                
             if not srcvars:
                 continue
 
-            cmap = partition_names_by_comp(self.basevar_iter(srcvars))
+            # KTM1 - input-input connections were excluded. Added source
+            # variable into our stack so we can invalidate the inputs that
+            # are connected to that input without invalidating other
+            # input-input connections.
+            #cmap = partition_names_by_comp(self.basevar_iter(srcvars))
+            
+            if srccomp and in_in_srcs:
+                allvars = [srccomp + '.' + name for name in in_in_srcs] + srcvars
+            else:
+                allvars = srcvars
+                
+            cmap = partition_names_by_comp(self.find_nodes(allvars, 
+                                                           is_basevar_node, 
+                                                           is_comp_node))
+            
+            #print partition_names_by_comp(self.basevar_iter(srcvars))
+            #print cmap
+            
             for dcomp, dests in cmap.items():
-                if dcomp in invalidated:
-                    continue
+                
+                # KTM1 - This wasn't in our old depgraph. It was swallowing
+                # bifurcations that come back together
+                #if dcomp in invalidated:
+                #    continue
+                
                 if dests:
                     if dcomp:
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
                         if newouts is None:
-                            stack.append((dcomp, None))
+                            if dcomp not in invalidated:
+                                stack.append((dcomp, None, dests))
                         elif newouts:
                             newouts = ['.'.join([dcomp,v]) for v in newouts]
-                            stack.append((dcomp, newouts))
+                            if dcomp not in invalidated:
+                                stack.append((dcomp, newouts, dests))
                     else: # boundary outputs
                         outset.update(dests)
 

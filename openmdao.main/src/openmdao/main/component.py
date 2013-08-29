@@ -244,7 +244,7 @@ class Component(Container):
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
-                    self.parent.child_invalidated(self.name, outs)
+                    self.parent.child_invalidated(self.name, outs, inputvar=name)
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback

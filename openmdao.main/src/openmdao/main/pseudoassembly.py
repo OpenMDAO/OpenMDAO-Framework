@@ -79,7 +79,7 @@ class PseudoAssembly(object):
                 comp.calc_derivatives(first, second, savebase)
 
         self.J = self.fd.calculate()
-        print self.J
+        
     def provideJ(self):
         """Jacobian for this block"""
         return self.inputs, self.outputs, self.J

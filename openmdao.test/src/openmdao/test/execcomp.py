@@ -75,8 +75,6 @@ class ExecComp(Component):
             
         if self.sleep:
             time.sleep(self.sleep)
-        print self.name, [(z, getattr(self, z)) for z in self.list_inputs()+self.list_outputs() \
-               if z not in ['force_execute', 'directory', 'itername', 'exec_count', 'derivative_exec_count']]
 
 
 class ExecCompWithDerivatives(Component):

@@ -635,8 +635,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.add('comp1', ExecComp(exp1))
         self.top.add('comp2', ExecComp(exp2))
         self.top.add('comp3', ExecComp(exp3))
-        #self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
-        self.top.add('comp4', ExecComp(exp4))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
         self.top.add('comp5', ExecComp(exp5))
     
         self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
@@ -651,14 +650,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
     
         # Case 1 - differentiable (comp4)
         
-        #iterlist = self.top.driver.workflow.group_nondifferentiables()
-        #self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        iterlist = self.top.driver.workflow.group_nondifferentiables()
+        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
         
         self.top.comp1.x1 = 2.0
         self.top.run()
-        self.top.comp1.x1 = 2.00001
-        self.top.run()
-        asldfj
+        
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'])
         

@@ -721,13 +721,14 @@ class Assembly(Component):
         if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=set([name]))
             if ((outs is None) or outs) and self.parent:
-                self.parent.child_invalidated(self.name, outs)
+                self.parent.child_invalidated(self.name, outs, inputvar=name)
 
-    def child_invalidated(self, childname, outs=None, force=False):
+    def child_invalidated(self, childname, outs=None, force=False, inputvar=None):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
+        bouts = self._depgraph.invalidate_deps(self, childname, outs, 
+                                               force, inputvar=inputvar)
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts

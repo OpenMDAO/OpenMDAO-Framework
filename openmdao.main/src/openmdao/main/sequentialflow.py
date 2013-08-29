@@ -427,7 +427,6 @@ class SequentialWorkflow(Workflow):
                 comp.applyMinv(pre_inputs, inputs[name])
             
         # Call ApplyJ on each component
-        
         for comp in self.derivative_iter():
             name = comp.name
             applyJ(comp, inputs[name], outputs[name])
