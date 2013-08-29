@@ -536,7 +536,7 @@ class DependencyGraph(nx.DiGraph):
                 conns.extend(self._var_connections(inp, 'in'))
         return conns
 
-    def invalidate_deps(self, scope, cname, srcvars, force=False, inputvar=None):
+    def invalidate_deps(self, scope, cname, srcvars, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
 
@@ -551,10 +551,6 @@ class DependencyGraph(nx.DiGraph):
             all outputs from specified component are assumed
             to be invalidated.
             
-        inputvar: str
-            Name of input variable. This is needed so that input-input
-            connections are updated properly.
-
         force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
@@ -565,8 +561,7 @@ class DependencyGraph(nx.DiGraph):
         elif cname:
             srcvars = ['.'.join([cname,n]) for n in srcvars]
 
-        inputvar = [inputvar] if inputvar else None
-        stack = [(cname, srcvars, inputvar)]
+        stack = [(cname, srcvars)]
         outset = set()  # set of changed boundary outputs
 
         if not srcvars:
@@ -577,27 +572,24 @@ class DependencyGraph(nx.DiGraph):
         invalidated = {}
 
         while(stack):
-            srccomp, srcvars, in_in_srcs = stack.pop()
+            srccomp, srcvars = stack.pop()
+            
+            # KTM1 - input-input connections were excluded. Add them in by
+            # adding the inputs to our check. The extra unconnected ones
+            # shouldn't hurt the call into find_nodes.
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
+           
+            if srccomp: 
+                srcvars += self.list_inputs(srccomp)
             
-            invalidated.setdefault(srccomp, set()).update(srcvars) 
-            
-            # KTM1 - input-input connections were excluded. Added source
-            # variable into our stack so we can invalidate the inputs that
-            # are connected to that input without invalidating other
-            # input-input connections.
-            #cmap = partition_names_by_comp(self.basevar_iter(srcvars))
-            
-            if srccomp and in_in_srcs:
-                allvars = [srccomp + '.' + name for name in in_in_srcs] + srcvars
-            else:
-                allvars = srcvars
-                
-            if not allvars:
+            if not srcvars:
                 continue
 
-            cmap = partition_names_by_comp(self.find_nodes(allvars, 
+            invalidated.setdefault(srccomp, set()).update(srcvars) 
+            
+            #cmap = partition_names_by_comp(self.basevar_iter(srcvars))
+            cmap = partition_names_by_comp(self.find_nodes(srcvars, 
                                                            is_basevar_node, 
                                                            is_comp_node))
             
@@ -615,10 +607,10 @@ class DependencyGraph(nx.DiGraph):
                         newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
                         if newouts is None:
-                            stack.append((dcomp, None, dests))
+                            stack.append((dcomp, None))
                         elif newouts:
                             newouts = ['.'.join([dcomp,v]) for v in newouts]
-                            stack.append((dcomp, newouts, dests))
+                            stack.append((dcomp, newouts))
                     else: # boundary outputs
                         outset.update(dests)
 

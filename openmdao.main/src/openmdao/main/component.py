@@ -244,12 +244,7 @@ class Component(Container):
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
-                    self.parent.child_invalidated(self.name, outs, inputvar=name)
-        else:
-            # KTM1 - Even if our comp is invalid, Input-Input connections
-            # must be invalidated. We can do this by passing no outputs.
-            if self.parent:
-                self.parent.child_invalidated(self.name, None, inputvar=name)
+                    self.parent.child_invalidated(self.name, outs)
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
