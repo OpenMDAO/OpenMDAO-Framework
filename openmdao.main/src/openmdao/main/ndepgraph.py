@@ -567,22 +567,27 @@ class DependencyGraph(nx.DiGraph):
 
         # Keep track of the comp/var we already invalidated, so we
         # don't keep doing them. This allows us to invalidate loops.
-        invalidated = set()
+        invalidated = {}
 
         while(stack):
             srccomp, srcvars = stack.pop()
-            invalidated.add(srccomp)
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
+
+            invalidated.setdefault(srccomp, set()).update(srcvars)
                 
             if not srcvars:
                 continue
 
             cmap = partition_names_by_comp(self.basevar_iter(srcvars))
             for dcomp, dests in cmap.items():
-                if dcomp in invalidated:
-                    continue
                 if dests:
+                    if dcomp in invalidated:
+                        diff = set(dests) - invalidated[dcomp]
+                        if diff:
+                            invalidated[dcomp].update(diff)
+                        else:
+                            continue
                     if dcomp:
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests, 

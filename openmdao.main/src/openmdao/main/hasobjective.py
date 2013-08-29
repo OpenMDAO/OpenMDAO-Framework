@@ -31,7 +31,6 @@ class Objective(ConnectedExprEvaluator):
                 pass
             else:
                 pcomp.remove_connections(scope)
-                scope.remove(pcomp.name)
             self.pcomp_name = None
 
 
