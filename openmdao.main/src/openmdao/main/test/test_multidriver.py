@@ -266,7 +266,7 @@ class MultiDriverTestCase(unittest.TestCase):
         ## create one driver for testing
         #inner_driver = self.top.add('driver1', CONMINdriver())
         #inner_driver.itmax = 30
-        #inner_driver.iprint = 1001
+        #inner_driver.iprint = 101
         #inner_driver.fdch = .000001
         #inner_driver.fdchm = .000001
         #inner_driver.add_objective('comp4.f_xy')
