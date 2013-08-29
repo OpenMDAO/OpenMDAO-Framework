@@ -574,14 +574,15 @@ class DependencyGraph(nx.DiGraph):
 
         # Keep track of the comp/var we already invalidated, so we
         # don't keep doing them. This allows us to invalidate loops.
-        invalidated = set()
+        invalidated = {}
 
         while(stack):
             srccomp, srcvars, in_in_srcs = stack.pop()
-            invalidated.add(srccomp)
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
-                
+            
+            invalidated.setdefault(srccomp, set()).update(srcvars) 
+            
             if not srcvars:
                 continue
 
@@ -605,23 +606,22 @@ class DependencyGraph(nx.DiGraph):
             
             for dcomp, dests in cmap.items():
                 
-                # KTM1 - This wasn't in our old depgraph. It was swallowing
-                # bifurcations that come back together
-                #if dcomp in invalidated:
-                #    continue
-                
                 if dests:
+                    if dcomp in invalidated:
+                        diff = set(dests) - invalidated[dcomp]
+                        if diff:
+                            invalidated[dcomp].update(diff)
+                        else:
+                            continue
                     if dcomp:
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
                         if newouts is None:
-                            if dcomp not in invalidated:
-                                stack.append((dcomp, None, dests))
+                            stack.append((dcomp, None, dests))
                         elif newouts:
                             newouts = ['.'.join([dcomp,v]) for v in newouts]
-                            if dcomp not in invalidated:
-                                stack.append((dcomp, newouts, dests))
+                            stack.append((dcomp, newouts, dests))
                     else: # boundary outputs
                         outset.update(dests)
 
