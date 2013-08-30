@@ -606,7 +606,6 @@ class DependencyGraph(nx.DiGraph):
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
-                        print 'z', comp.name, dests, newouts
                         if newouts is None:
                             stack.append((dcomp, None))
                         elif newouts:

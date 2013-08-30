@@ -253,11 +253,11 @@ class TestCase_Residuals(unittest.TestCase):
         for j in range(len(expected)):
             self.assertEqual(res[j], expected[j])
 
-        dv = array([0.0, 3.0])
+        dv = array([3.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
         
-        expected = array([[0.0], [-3.0]])
+        expected = array([[-3.0], [0.0]])
 
         for j in range(len(expected)):
             self.assertEqual(res[j], expected[j])
@@ -316,19 +316,15 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.run()
         for j in range(len(expected)):
             self.assertEqual(res[j], expected[j])
-
-        # TODO - Right now, NetworkX seems to be choosing which one to cut differently
-        # than before. Once we have our own algorithm, we can uncomment this and test
-        # setting a new state for a vartree. - KTM
         
-        #dv = array([3.0, 5.0, 0.0])
-        #self.model.driver.workflow.set_new_state(dv)
-        #res = self.model.driver.workflow.calculate_residuals()
+        dv = array([3.0, 5.0, 0.0])
+        self.model.driver.workflow.set_new_state(dv)
+        res = self.model.driver.workflow.calculate_residuals()
         
-        #expected = array([[-3.0], [-5.0], [0.0]])
+        expected = array([[-3.0], [-5.0], [0.0]])
 
-        #for j in range(len(expected)):
-            #self.assertEqual(res[j], expected[j])
+        for j in range(len(expected)):
+            self.assertEqual(res[j], expected[j])
 
 
 if __name__ == '__main__':

@@ -556,6 +556,13 @@ class HasParameters(object):
             targets.extend(param.targets)
         return targets
 
+    def list_param_group_targets(self):
+        """Returns a list of tuples that contain the targets for each
+        parameter group.
+        """
+        return [tuple(param.targets) for param in \
+                self.get_parameters().values()]
+
     def clear_parameters(self):
         """Removes all parameters."""
         for name in self._parameters.keys():

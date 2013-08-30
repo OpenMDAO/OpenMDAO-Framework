@@ -85,9 +85,15 @@ def calc_gradient(wflow, inputs, outputs):
 
     num_in = 0
     for item in inputs:
+        
+        # For parameter groups, only size the first
+        if isinstance(item, tuple):
+            item = item[0]
+            
         val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_in += width
+
 
     num_out = 0
     for item in outputs:
@@ -138,6 +144,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             j += 1
     
+    
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -152,6 +159,11 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                        dtype=float)
     num_in = 0
     for item in inputs:
+        
+        # For parameter groups, only size the first
+        if isinstance(item, tuple):
+            item = item[0]
+            
         val = wflow.scope.get(item)
         width = flattened_size(item, val)
         num_in += width
@@ -203,7 +215,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
                 i += k2-k1
 
             j += 1
-
+    
     return J
 
 
@@ -244,13 +256,19 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-
+    
     ibounds = {}
     nvar = 0
     for key in input_keys:
-        val = obj.get(key)
-        width = flattened_size('.'.join((obj.name, key)), val)
-        ibounds[key] = (nvar, nvar+width)
+        
+        # For parameter group, all should be equal so just get first.
+        if not isinstance(key, tuple):
+            key = [key]
+            
+        val = obj.get(key[0])
+        width = flattened_size('.'.join((obj.name, key[0])), val)
+        for item in key:
+            ibounds[item] = (nvar, nvar+width)
         nvar += width
 
     obounds = {}
@@ -289,6 +307,7 @@ def applyJT(obj, arg, result):
     Component, this automatically forms the "fake" residual, and calls into
     the function hook "apply_derivT".
     """
+    
     for key in arg:
         result[key] = -arg[key]
 
@@ -332,9 +351,15 @@ def applyJT(obj, arg, result):
     obounds = {}
     nvar = 0
     for key in input_keys:
-        val = obj.get(key)
-        width = flattened_size('.'.join((obj.name, key)), val)
-        obounds[key] = (nvar, nvar+width)
+        
+        # For parameter group, all should be equal so just get first.
+        if not isinstance(key, tuple):
+            key = [key]
+            
+        val = obj.get(key[0])
+        width = flattened_size('.'.join((obj.name, key[0])), val)
+        for item in key:
+            obounds[item] = (nvar, nvar+width)
         nvar += width
 
     for okey in result:
@@ -359,6 +384,7 @@ def applyJT(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
+   
 
 
 class FiniteDifference(object):
@@ -380,11 +406,17 @@ class FiniteDifference(object):
         self.form = 'forward'
 
         in_size = 0
-        for src in self.inputs:
-            val = self.scope.get(src)
-            width = flattened_size(src, val)
-            self.in_bounds[src] = (in_size, in_size+width)
-            in_size += width
+        for srcs in self.inputs:
+            
+            # Support for paramters groups
+            if not isinstance(srcs, tuple):
+                srcs = [srcs]
+                
+            for src in srcs:
+                val = self.scope.get(src)
+                width = flattened_size(src, val)
+                self.in_bounds[src] = (in_size, in_size+width)
+                in_size += width
 
         out_size = 0
         for src in self.outputs:
@@ -405,7 +437,18 @@ class FiniteDifference(object):
         self.get_outputs(self.y_base)
 
         for src, fd_step in zip(self.inputs, self.fd_step):
-            i1, i2 = self.in_bounds[src]
+            
+            if isinstance(src, tuple):
+                i1, i2 = self.in_bounds[src[0]]
+            else:
+                i1, i2 = self.in_bounds[src]
+            
+            # Cached OpenMDAO's valid state
+            #comp_name, dot, var_name = src.partition('.')
+            #var_name = var_name.split('[')[0]
+            #comp = self.scope.get(comp_name)
+            #saved_state = comp._valid_dict
+            
 
             for i in range(i1, i2):
 
@@ -487,11 +530,8 @@ class FiniteDifference(object):
                     else:
                         self.set_value(src, fd_step, i-i1)
 
-                # Reset OpenMDAO's valid state.
-                comp_name, dot, var_name = src.partition('.')
-                #var_name = var_name.split('[')[0]
-                comp = self.scope.get(comp_name)
-                comp._valid_dict[var_name.split('[',1)[0]] = False
+            # Reset OpenMDAO's valid state.
+            #comp._valid_dict = saved_state
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -519,16 +559,23 @@ class FiniteDifference(object):
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
+                
         return self.J
 
     def get_inputs(self, x):
         """Return matrix of flattened values from input edges."""
 
-        for src in self.inputs:
-            src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val)
-            i1, i2 = self.in_bounds[src]
-            x[i1:i2] = src_val
+        for srcs in self.inputs:
+            
+            # Support for paramters groups
+            if not isinstance(srcs, tuple):
+                srcs = [srcs]
+                
+            for src in srcs:
+                src_val = self.scope.get(src)
+                src_val = flattened_value(src, src_val)
+                i1, i2 = self.in_bounds[src]
+                x[i1:i2] = src_val
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
@@ -539,41 +586,46 @@ class FiniteDifference(object):
             i1, i2 = self.out_bounds[src]
             x[i1:i2] = src_val
 
-    def set_value(self, src, val, index=None):
+    def set_value(self, srcs, val, index=None):
         """Set a value in the model"""
 
-        i1, i2 = self.in_bounds[src]
-        comp_name, dot, var_name = src.partition('.')
-        comp = self.scope.get(comp_name)
-        old_val = self.scope.get(src)
-
-        if index is None:
-            if '[' in src:
-                src, _, idx = src.partition('[')
-                idx = int(idx[:-1])
-                old_val = self.scope.get(src)
-                old_val[idx] += val
-
-                # In-place array editing doesn't activate callback, so we
-                # must do it manually.
-                comp._input_updated(var_name.split('[')[0])
-
+        # Support for Parameter Groups:
+        if not isinstance(srcs, tuple):
+            srcs = [srcs]
+            
+        for src in srcs:    
+            i1, i2 = self.in_bounds[src]
+            comp_name, dot, var_name = src.partition('.')
+            comp = self.scope.get(comp_name)
+            old_val = self.scope.get(src)
+    
+            if index is None:
+                if '[' in src:
+                    src, _, idx = src.partition('[')
+                    idx = int(idx[:-1])
+                    old_val = self.scope.get(src)
+                    old_val[idx] += val
+    
+                    # In-place array editing doesn't activate callback, so we
+                    # must do it manually.
+                    comp._input_updated(var_name.split('[')[0])
+    
+                else:
+                    self.scope.set(src, old_val+val, force=True)
+    
             else:
-                self.scope.set(src, old_val+val, force=True)
-
-        else:
-            unravelled = unravel_index(index, old_val.shape)
-            old_val[unravelled] += val
-
-            # In-place array editing doesn't activate callback, so we must
-            # do it manually.
-            comp._input_updated(var_name)
-
-        # Prevent OpenMDAO from stomping on our poked input.
-        comp._valid_dict[var_name.split('[',1)[0]] = True
-
-        # Make sure we execute!
-        comp._call_execute = True
+                unravelled = unravel_index(index, old_val.shape)
+                old_val[unravelled] += val
+    
+                # In-place array editing doesn't activate callback, so we must
+                # do it manually.
+                comp._input_updated(var_name)
+    
+            # Prevent OpenMDAO from stomping on our poked input.
+            comp._valid_dict[var_name.split('[',1)[0]] = True
+    
+            # Make sure we execute!
+            comp._call_execute = True
 
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output

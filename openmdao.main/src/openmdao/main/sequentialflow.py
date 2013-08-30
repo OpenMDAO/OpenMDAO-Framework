@@ -278,11 +278,22 @@ class SequentialWorkflow(Workflow):
         for edge in self.get_interior_edges():
             if edge[0] == '@in':
                 src = edge[1]
+                
+                # Only size the first entry of a parameter group
+                if isinstance(src, tuple):
+                    src = src[0]
             else:
                 src = edge[0]
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.bounds[edge] = (nEdge, nEdge+width)
+            
+            # Do we also need these? KTM
+            if isinstance(edge[1], tuple):
+                for src in edge[1]:
+                    src_name = (edge[0], src)
+                    self.bounds[src_name] = (nEdge, nEdge+width)
+                    
             nEdge += width
 
         # Initialize the residual vector on the first time through, and also
@@ -339,7 +350,7 @@ class SequentialWorkflow(Workflow):
             self.scope.set(target, new_val, force=True)
 
             # Prevent OpenMDAO from stomping on our poked input.
-            comp_name, dot, var_name = target.partition('.')
+            comp_name, _, var_name = target.partition('.')
             comp = self.scope.get(comp_name)
             comp._valid_dict[var_name.split('[',1)[0]] = True
 
@@ -399,7 +410,7 @@ class SequentialWorkflow(Workflow):
         # Fill input dictionaries with values from input arg.
         edges = self.get_interior_edges()
         for edge in edges:
-            src, target = edge
+            src, targets = edge
             i1, i2 = self.bounds[edge]
             
             if src != '@in' and src not in self._input_outputs:
@@ -411,13 +422,19 @@ class SequentialWorkflow(Workflow):
                     outputs[comp_name][var_name] = arg[i1:i2].copy()
                     inputs[comp_name][var_name] = arg[i1:i2]
 
-            if target != '@out':
-                comp_name, dot, var_name = target.partition('.')
-                if var_name:
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    inputs[comp_name][var_name] = arg[i1:i2]
+            if targets != '@out':
+                
+                # Parameter group support
+                if not isinstance(targets, tuple):
+                    targets = [targets]
+                    
+                for target in targets:
+                    comp_name, dot, var_name = target.partition('.')
+                    if var_name:
+                        if comp_name in pa_ref:
+                            var_name = '%s.%s' % (comp_name, var_name)
+                            comp_name = pa_ref[comp_name]
+                        inputs[comp_name][var_name] = arg[i1:i2]
 
         # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():
@@ -434,14 +451,20 @@ class SequentialWorkflow(Workflow):
         # Each parameter adds an equation
         for edge in self._additional_edges:
             if edge[0] == '@in':
-                i1, i2 = self.bounds[edge]
-                comp_name, dot, var_name = edge[1].partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                outputs[comp_name][var_name] = arg[i1:i2]
+                
+                # Parameter group support
+                p_edges = edge[1]
+                if not isinstance(p_edges, tuple):
+                    p_edges = [p_edges]
+                    
+                for p_edge in p_edges:
+                    i1, i2 = self.bounds[edge]
+                    comp_name, dot, var_name = p_edge.partition('.')
+                    if comp_name in pa_ref:
+                        var_name = '%s.%s' % (comp_name, var_name)
+                        comp_name = pa_ref[comp_name]
+                    outputs[comp_name][var_name] = arg[i1:i2]
 
-        # Poke results into the return vector
         result = zeros(len(arg))
         
         # Reference back to the source for input-input connections.
@@ -451,6 +474,8 @@ class SequentialWorkflow(Workflow):
             if edge[1] in self._input_outputs:
                 input_input_xref[edge[1]] = edge
             
+        
+        # Poke results into the return vector
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
@@ -459,7 +484,7 @@ class SequentialWorkflow(Workflow):
                 src = target
                 
             # Input-input connections are not in the jacobians. We need
-            # to add the derivative using out cross reference.
+            # to add the derivative using our cross reference.
             elif src in self._input_outputs:
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
@@ -467,12 +492,18 @@ class SequentialWorkflow(Workflow):
                     result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 continue
                 
-            comp_name, dot, var_name = src.partition('.')
-            if comp_name in pa_ref:
-                var_name = '%s.%s' % (comp_name, var_name)
-                comp_name = pa_ref[comp_name]
-            result[i1:i2] = outputs[comp_name][var_name]
+            # Parameter group support
+            if not isinstance(src, tuple):
+                src = [src]
             
+            for item in src:
+                comp_name, dot, var_name = item.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name]
+            
+        print arg, result
         return result
     
     def matvecREV(self, arg):
@@ -507,7 +538,7 @@ class SequentialWorkflow(Workflow):
 
         # Fill input dictionaries with values from input arg.
         for edge in edges:
-            src, target = edge
+            src, targets = edge
             i1, i2 = self.bounds[edge]
             
             if src != '@in' and src not in self._input_outputs:
@@ -518,17 +549,22 @@ class SequentialWorkflow(Workflow):
                 inputs[comp_name][var_name] = arg[i1:i2]
                 outputs[comp_name][var_name] = arg[i1:i2].copy()
 
-            if target != '@out':
-                comp_name, dot, var_name = target.partition('.')
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                if edge[0] == '@in':
-                    # Extra eqs for parameters contribute a 1.0 on diag
-                    outputs[comp_name][var_name] = arg[i1:i2].copy()
-                else:
-                    # Interior comp edges contribute a -1.0 on diag
-                    outputs[comp_name][var_name] = -arg[i1:i2].copy()
+            # Parameter group support
+            if not isinstance(targets, tuple):
+                targets = [targets]
+                   
+            for target in targets:
+                if target != '@out':
+                    comp_name, dot, var_name = target.partition('.')
+                    if comp_name in pa_ref:
+                        var_name = '%s.%s' % (comp_name, var_name)
+                        comp_name = pa_ref[comp_name]
+                    if edge[0] == '@in':
+                        # Extra eqs for parameters contribute a 1.0 on diag
+                        outputs[comp_name][var_name] = arg[i1:i2].copy()/len(targets)
+                    else:
+                        # Interior comp edges contribute a -1.0 on diag
+                        outputs[comp_name][var_name] = -arg[i1:i2].copy()
 
         # Call ApplyMinvT on each component (preconditioner)
         for comp in self.derivative_iter():
@@ -568,12 +604,17 @@ class SequentialWorkflow(Workflow):
                 #result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
                 #continue
                 
-            comp_name, dot, var_name = target.partition('.')
-            if comp_name in pa_ref:
-                var_name = '%s.%s' % (comp_name, var_name)
-                comp_name = pa_ref[comp_name]
-            result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
-        
+            # Parameter group support
+            if not isinstance(target, tuple):
+                target = [target]
+            
+            for item in target:
+                comp_name, dot, var_name = item.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] += outputs[comp_name][var_name]
+        print arg, result
         return result
     
     def group_nondifferentiables(self):
@@ -692,15 +733,20 @@ class SequentialWorkflow(Workflow):
                 
             # Boundary edges must be added to inputs and outputs
             for edge in list(self._additional_edges):
-                src, target = edge
+                src, targets = edge
                 
                 comp_name, dot, var_name = src.partition('.')
                 if comp_name in group or comp_name in recursed_components:
                     outputs.append(src)
+                 
+                # Parameter-groups are tuples
+                if not isinstance(targets, tuple):
+                    targets = [targets]
                     
-                comp_name, dot, var_name = target.partition('.')
-                if comp_name in group or comp_name in recursed_components:
-                    inputs.append(target)
+                for target in targets:
+                    comp_name, dot, var_name = target.partition('.')
+                    if comp_name in group or comp_name in recursed_components:
+                        inputs.append(target)
                 
             # Input to input connections lead to extra outputs.
             for item in self._input_outputs:
@@ -755,9 +801,7 @@ class SequentialWorkflow(Workflow):
         
         if inputs is None:
             if hasattr(self._parent, 'get_parameters'):
-                inputs = []
-                for param in self._parent.get_parameters().values():
-                    inputs.extend(param.targets)
+                inputs = self._parent.list_param_group_targets()
             else:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)

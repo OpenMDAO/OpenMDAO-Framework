@@ -368,7 +368,6 @@ class CONMINdriver(Driver):
                 
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
-                print "parm", dvals
                 self.set_parameters(dvals)
         
                 # Run model under Fake Finite Difference
@@ -379,7 +378,6 @@ class CONMINdriver(Driver):
             else:
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
-                print "parm", dvals
                 self.set_parameters(dvals)
         
                 # Run the model for this step

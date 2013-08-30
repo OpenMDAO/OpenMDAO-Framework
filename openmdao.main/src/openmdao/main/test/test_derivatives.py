@@ -282,6 +282,18 @@ class ArrayComp2D(Component):
         return input_keys, output_keys, self.J
     
 
+class GComp_noD(Component):
+    
+    x1 = Float(1.0, iotype='in')
+    x2 = Float(1.0, iotype='in')
+    x3 = Float(1.0, iotype='in')
+    
+    y1 = Float(1.0, iotype='in')
+    
+    def execute(self):
+        
+        self.y1 = 5.0*self.x1 + 7.0*self.x2 - 3.0*self.x3
+
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
 
@@ -789,6 +801,47 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0,0], 48.0, .001)
         
+    def test_paramgroup(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', GComp_noD())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+                                              outputs=['comp1.y1'])
+        assert_rel_error(self, J[0, 0], 12.0, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+                                              outputs=['comp1.y1'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 12.0, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
+                                              outputs=['comp1.y1'],
+                                              fd=True)
+        assert_rel_error(self, J[0, 0], 12.0, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', ('comp1.x2')],
+                                              outputs=['comp1.y1'])
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], 7.0, .001)
+                        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
+                                              outputs=['comp1.y1'])
+        assert_rel_error(self, J[0, 0], 9.0, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
+                                              outputs=['comp1.y1'],
+                                              mode = 'adjoint')
+        assert_rel_error(self, J[0, 0], 9.0, .001)
         
 class Comp2(Component):
     """ two-input, two-output"""
