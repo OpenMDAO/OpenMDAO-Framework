@@ -343,10 +343,18 @@ class Driver(Component):
 
     def run_iteration(self):
         """Runs workflow."""
+        if self.parent.name != '':
+            pass
+        else:
+            print "before", self.parent.name, self.parent.nested._valid_dict['f_xy']        
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
+        if self.parent.name != '':
+            pass
+        else:
+            print "after", self.parent.name, self.parent.nested._valid_dict['f_xy']        
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          extra_in = None, extra_out=None):

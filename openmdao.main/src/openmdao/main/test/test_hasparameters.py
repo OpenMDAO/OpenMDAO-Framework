@@ -378,7 +378,7 @@ class ParametersTestCase(unittest.TestCase):
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
 
-    def test_scaled_var_with_initial_violation(self):
+    #def test_scaled_var_with_initial_violation(self):
         # KTM1 - This tested pulling values into the param pseudocomps. We don't
         # have those anymore, so don't need the test.
         

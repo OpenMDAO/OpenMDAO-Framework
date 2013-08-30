@@ -555,7 +555,7 @@ class DependencyGraph(nx.DiGraph):
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
-
+        
         if srcvars is None:
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
@@ -606,6 +606,7 @@ class DependencyGraph(nx.DiGraph):
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests,
                                                        force=force)
+                        print 'z', comp.name, dests, newouts
                         if newouts is None:
                             stack.append((dcomp, None))
                         elif newouts:

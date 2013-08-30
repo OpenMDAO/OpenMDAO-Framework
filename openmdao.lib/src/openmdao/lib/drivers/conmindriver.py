@@ -284,9 +284,6 @@ class CONMINdriver(Driver):
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
         
-        # Flag used to figure out if we are starting a new finite difference
-        self.baseline_point = True
-        
         self._config_conmin()
         self.cnmn1.igoto = 0
         self.iter_count = 0
@@ -371,6 +368,7 @@ class CONMINdriver(Driver):
                 
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
+                print "parm", dvals
                 self.set_parameters(dvals)
         
                 # Run model under Fake Finite Difference
@@ -381,11 +379,11 @@ class CONMINdriver(Driver):
             else:
                 # update the parameters in the model
                 dvals = [float(val) for val in self.design_vals[:-2]]
+                print "parm", dvals
                 self.set_parameters(dvals)
         
                 # Run the model for this step
                 super(CONMINdriver, self).run_iteration()
-                self.baseline_point = True
         
             # calculate objective
             self.cnmn1.obj = self.eval_objective()
