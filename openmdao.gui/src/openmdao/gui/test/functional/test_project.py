@@ -3,6 +3,8 @@ import os
 import time
 import datetime
 import re
+import pkg_resources 
+
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -10,8 +12,9 @@ from openmdao.main.releaseinfo import __version__
 
 from util import main, setup_server, teardown_server, generate, \
                  begin, new_project, edit_project, import_project, \
-                 get_browser_download_location_path
+                 get_browser_download_location_path, broken_chrome
 
+from pageobjects.workspace import WorkspacePage
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -21,12 +24,10 @@ def test_generator():
 
 #Test metadata of a project:
 def _test_last_saved_metadata(browser):
-  
+ 
     def date_to_datetime( date ):
         date_regex = re.compile( "(\d+)-(\d+)-(\d+)")
-        time_regex = re.compile( "(\d+):(\d+)" )
-
-        metadata = projects_page.get_project_metadata( project_dict['name']  )
+        time_regex = re.compile( "(\d+):(\d+):(\d+)" )
 
         match_object = date_regex.search( date )
         year  = int( match_object.group(1) )
@@ -36,21 +37,45 @@ def _test_last_saved_metadata(browser):
         match_object = time_regex.search( date )
         hours   = int( match_object.group(1) )
         minutes = int( match_object.group(2) )
+        seconds = int( match_object.group(3) )
 
-        return datetime.datetime( year, month, day, hours, minutes  )
-   
+        return datetime.datetime( year, month, day, hours, minutes, seconds  )
+  
     def add_file(workspace_page):
-        file_path = pkg_resources.resource_filename('openmdaoo.gui.test.functional', 'files/simple_paraboloid.py')
+        file_path = pkg_resources.resource_filename('openmdao.gui.test.functional', 'files/simple_paraboloid.py')
         workspace_page.add_file( file_path )
 
     def update_model(workspace_page):
         workspace_page.add_library_item_to_dataflow("simple_paraboloid.SimpleParaboloid", 'top')
         
+    def rename_file(workspace_page):
+        file_names = workspace_page.get_files()
+        workspace_page.rename_file('simple_paraboloid.py', 'pimple_paraboloid.py')
 
+    def edit_file(workspace_page):
+        if broken_chrome():
+            raise SkipTest('Test broken for chrome/selenium combination')
+
+        workspace_window = browser.current_window_handle
+
+        editor_page = workspace_page.open_editor()
+        editor_page.edit_file('simple_paraboloid.py')
+
+        editor_page.add_text_to_file('#just a comment\n')
+        editor_page.save_document(overwrite=True, check=False)
+
+        browser.switch_to_window(workspace_window)
+        port = workspace_page.port
+        workspace_page = WorkspacePage.verify(browser, port)
+
+    def delete_file(workspace_page):
+        workspace_page.delete_file('pimple_paraboloid.py')
+        
+     
     projects_page = begin(browser)
-    project_dict, workspace_page = new_project(projects_page.new_project(),
+    workspace_page, project_dict = new_project(projects_page.new_project(),
                                               verify=True, load_workspace=True)
-    
+
     add_file(workspace_page)
     projects_page = workspace_page.close_workspace()
     metadata = projects_page.get_project_metadata( project_dict['name'] )
@@ -60,6 +85,7 @@ def _test_last_saved_metadata(browser):
 
     assert( add_file_time > created_time )
 
+    workspace_page = projects_page.open_project( project_dict['name'] )
     update_model(workspace_page)
     projects_page = workspace_page.close_workspace()
     metadata = projects_page.get_project_metadata( project_dict['name'] )
@@ -67,6 +93,36 @@ def _test_last_saved_metadata(browser):
     update_model_time = date_to_datetime( metadata['last_saved'] )
     
     assert( update_model_time > add_file_time )
+
+    workspace_page = projects_page.open_project( project_dict['name'] )
+    time.sleep(1)
+    edit_file(workspace_page)
+    projects_page = workspace_page.close_workspace()
+    metadata = projects_page.get_project_metadata( project_dict['name'] )
+
+    edit_file_time = date_to_datetime( metadata['last_saved'] )
+    
+    assert( edit_file_time > update_model_time )
+
+    workspace_page = projects_page.open_project( project_dict['name'] )
+    rename_file(workspace_page)
+    projects_page = workspace_page.close_workspace()
+    metadata = projects_page.get_project_metadata( project_dict['name'] )
+
+    rename_file_time = date_to_datetime( metadata['last_saved'] )
+    
+    assert( rename_file_time > edit_file_time )
+
+    workspace_page = projects_page.open_project( project_dict['name'] )
+    delete_file(workspace_page)
+    projects_page = workspace_page.close_workspace()
+
+    metadata = projects_page.get_project_metadata( project_dict['name'] )
+
+    delete_file_time = date_to_datetime( metadata['last_saved'] )
+    
+    assert( delete_file_time > rename_file_time )
+
     projects_page.logout()
 
     

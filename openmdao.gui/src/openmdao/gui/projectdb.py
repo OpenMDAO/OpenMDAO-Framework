@@ -236,6 +236,7 @@ class Projects(object):
                 'projpath':    row['projpath'],
                 'active':      row['active']
             }
+            print project['created']
             # Return last file modification dates too.
             try:
                 all_files = []
