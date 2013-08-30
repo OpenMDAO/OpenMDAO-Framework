@@ -1,7 +1,8 @@
 import glob
 import os
 import time
-
+import datetime
+import re
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -18,6 +19,57 @@ def test_generator():
         yield _test, browser
 
 
+#Test metadata of a project:
+def _test_last_saved_metadata(browser):
+  
+    def date_to_datetime( date ):
+        date_regex = re.compile( "(\d+)-(\d+)-(\d+)")
+        time_regex = re.compile( "(\d+):(\d+)" )
+
+        metadata = projects_page.get_project_metadata( project_dict['name']  )
+
+        match_object = date_regex.search( date )
+        year  = int( match_object.group(1) )
+        month = int( match_object.group(2) )
+        day   = int( match_object.group(3) )
+
+        match_object = time_regex.search( date )
+        hours   = int( match_object.group(1) )
+        minutes = int( match_object.group(2) )
+
+        return datetime.datetime( year, month, day, hours, minutes  )
+   
+    def add_file(workspace_page):
+        file_path = pkg_resources.resource_filename('openmdaoo.gui.test.functional', 'files/simple_paraboloid.py')
+        workspace_page.add_file( file_path )
+
+    def update_model(workspace_page):
+        workspace_page.add_library_item_to_dataflow("simple_paraboloid.SimpleParaboloid", 'top')
+        
+
+    projects_page = begin(browser)
+    project_dict, workspace_page = new_project(projects_page.new_project(),
+                                              verify=True, load_workspace=True)
+    
+    add_file(workspace_page)
+    projects_page = workspace_page.close_workspace()
+    metadata = projects_page.get_project_metadata( project_dict['name'] )
+
+    created_time = date_to_datetime( metadata['created'] )
+    add_file_time = date_to_datetime( metadata['last_saved'] )
+
+    assert( add_file_time > created_time )
+
+    update_model(workspace_page)
+    projects_page = workspace_page.close_workspace()
+    metadata = projects_page.get_project_metadata( project_dict['name'] )
+
+    update_model_time = date_to_datetime( metadata['last_saved'] )
+    
+    assert( update_model_time > add_file_time )
+    projects_page.logout()
+
+    
 #Test creating a project
 def _test_new_project(browser):
 
