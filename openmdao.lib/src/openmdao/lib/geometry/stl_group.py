@@ -8,7 +8,7 @@ from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
 from ffd_axisymetric import Body, Shell
 
-from pyV3D.sender import WV_Sender
+from pyV3D.stl import STLSender
 from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
 
 import inspect
@@ -414,15 +414,15 @@ class STLGroup(object):
         f.write("\n".join(lines))
         f.close()
 
-class STLGroupSender(WV_Sender):
+class STLGroupSender(STLSender):
 
     def initialize(self, **kwargs):
-        eye    = np.array([0.0, 0.0, 7.0], dtype=np.float32)
+        eye    = np.array([0.0, 0.0, 20.0], dtype=np.float32)
         center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
         up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
         fov   = 30.0
         zNear = 1.0
-        zFar  = 10.0
+        zFar  = 100
 
         bias  = 0
         self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)

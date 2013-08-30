@@ -1178,11 +1178,26 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
+
+
+        print "in _index_set of container, old, value and eq =", old, value, eq
+
         if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
             eq = False
         if not eq:
-            self._call_execute = True
-            if name in self._valid_dict:
+            print "not eq in _index_set"
+            # need to find the component this belongs to and set its _call_execute
+            print "I am", self
+            parent = self.parent
+            while parent:
+                print "parent =", parent
+                parent = parent.parent
+                
+            if hasattr( self, '_call_execute' ):
+                print "setting _call_execute to true"
+                self._call_execute = True
+            
+            if hasattr( self, '_valid_dict' ) and name in self._valid_dict:
                 self._input_updated(name)
 
     def _input_check(self, name, old):

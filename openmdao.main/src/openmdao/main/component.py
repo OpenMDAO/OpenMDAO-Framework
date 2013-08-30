@@ -187,6 +187,7 @@ class Component(Container):
 
         self._stop = False
         self._call_check_config = True
+        print "setting call_execute in init"
         self._call_execute = True
 
         # cached configuration information
@@ -239,6 +240,7 @@ class Component(Container):
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
+        print "in _input_trait_modified"
 
         if name.endswith('_items'):
             n = name[:-6]
@@ -249,6 +251,7 @@ class Component(Container):
         self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
+        print "setting call_execute in input_updated"
         self._call_execute = True
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
@@ -395,8 +398,10 @@ class Component(Container):
                     self.parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
+                print "setting call_execute in pre_execute"
                 self._call_execute = True
             elif self._num_input_caseiters > 0:
+                print "setting call_execute in pre_execute #2"
                 self._call_execute = True
                 # we're valid, but we're running anyway because of our input CaseIterators,
                 # so we need to notify downstream comps so they grab our new outputs
@@ -407,6 +412,7 @@ class Component(Container):
 
         if self.parent is None:  # if parent is None, we're not part of an Assembly
                                  # so Variable validity doesn't apply. Just execute.
+            print "setting call_execute in pre_execute #3"
             self._call_execute = True
             valids = self._valid_dict
             for name in self.list_inputs():
@@ -416,11 +422,13 @@ class Component(Container):
             invalid_ins = [inp for inp in self.list_inputs(connected=True)
                                     if valids.get(inp) is False]
             if invalid_ins:
+                print "setting call_execute in pre_execute #4"
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
                     valids[name] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
+                print "setting call_execute in pre_execute #5"
                 self._call_execute = True
 
         self.check_configuration()
@@ -512,6 +520,7 @@ class Component(Container):
         ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
             valids[name] = True
+        print "setting call_execute to false in post_execute"
         self._call_execute = False
         self._set_exec_state('VALID')
         self.publish_vars()
@@ -540,6 +549,9 @@ class Component(Container):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+
+        print "in run of component"
+
         if self.directory:
             self.push_dir()
 
@@ -549,10 +561,18 @@ class Component(Container):
         self._stop = False
         self.ffd_order = ffd_order
         self._case_id = case_id
+
+        print "in run of component before try"
+
         try:
             self._pre_execute(force)
             self._set_exec_state('RUNNING')
 
+            print "in run of component after set exec_state"
+
+            print "self in component.run= ", self
+            print "self._call_execute in component.run= ", self._call_execute 
+            print  "force = ", force 
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
 
@@ -577,7 +597,11 @@ class Component(Container):
 
                         tracing.TRACER.debug(self.get_itername())
 
+                    print "in run of component before execute with self = ", self
+
                     self.execute()
+
+                    print "in run of component after execute"
 
                 self._post_execute()
             #else:
@@ -592,6 +616,8 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+
+        print "end of run in component", self
 
     def _run_terminated(self):
         """ Executed at end of top-level run. """
@@ -717,6 +743,7 @@ class Component(Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
+            print "setting call_execute in is_valid"
             self._call_execute = True
             return False
         if self.parent is not None:
@@ -725,6 +752,7 @@ class Component(Container):
                 counts = self.parent.exec_counts(srccomps)
                 for count, tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
+                        print "setting call_execute in is_valid #2"
                         self._call_execute = True  # to avoid making this same
                         # check unnecessarily later, update the count
                         # information since we've got it, to avoid making
@@ -748,6 +776,7 @@ class Component(Container):
         self._container_names = None
         self._expr_sources = None
         self._call_check_config = True
+        print "setting call_execute in config_changed"
         self._call_execute = True
 
     def list_inputs(self, valid=None, connected=None):
@@ -1547,6 +1576,7 @@ class Component(Container):
         outs = self.list_outputs()
         valids = self._valid_dict
 
+        print "setting call_execute in invalidate_deps"
         self._call_execute = True
         self._set_exec_state('INVALID')
 

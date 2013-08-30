@@ -126,6 +126,8 @@ class GeomComponent(Component):
     def execute(self):
         """Rebuild the geometry using the current set of parameters.
         """
+        print "in execute of geomcomp"
+
         if self.parametric_geometry is not None:
             try:
                 self.parametric_geometry.regen_model()
