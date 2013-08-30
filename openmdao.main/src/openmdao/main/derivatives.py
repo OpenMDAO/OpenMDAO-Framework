@@ -256,6 +256,7 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
+    print input_keys, output_keys, J
     
     ibounds = {}
     nvar = 0
@@ -281,9 +282,17 @@ def applyJ(obj, arg, result):
 
     for okey in result:
         o1, o2 = obounds[okey]
+        used = []
         for ikey in arg:
             if ikey not in result:
                 i1, i2 = ibounds[ikey]
+                
+                # Param groups make it tricky. We only want to add the
+                # piece of J once for the whole group.
+                if i1 in used:
+                    continue
+                used.append(i1)
+                
                 if i2 - i1 == 1:
                     if o2 - o1 == 1:
                         Jsub = float(J[o1, i1])
@@ -301,6 +310,8 @@ def applyJ(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
+                        
+    print arg, result
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -362,9 +373,17 @@ def applyJT(obj, arg, result):
             obounds[item] = (nvar, nvar+width)
         nvar += width
 
+    used = []
     for okey in result:
         if okey not in arg:
             o1, o2 = obounds[okey]
+            
+            # Param groups make it tricky. We only want to add the
+            # piece of J once for the whole group.
+            if o1 in used:
+                continue
+            used.append(o1)
+            
             for ikey in arg:
                 i1, i2 = ibounds[ikey]
                 if i2 - i1 == 1:
@@ -384,7 +403,6 @@ def applyJT(obj, arg, result):
                         result[okey] += float(tmp)
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
-   
 
 
 class FiniteDifference(object):
@@ -412,11 +430,11 @@ class FiniteDifference(object):
             if not isinstance(srcs, tuple):
                 srcs = [srcs]
                 
+            val = self.scope.get(srcs[0])
+            width = flattened_size(srcs[0], val)
             for src in srcs:
-                val = self.scope.get(src)
-                width = flattened_size(src, val)
                 self.in_bounds[src] = (in_size, in_size+width)
-                in_size += width
+            in_size += width
 
         out_size = 0
         for src in self.outputs:

@@ -923,7 +923,7 @@ class Testcase_applyJT(unittest.TestCase):
         assert_rel_error(self, diff.max(), 0.0, 1e-8)
         
         J = zeros([5, 5])
-        arg = zeros([5, 1])
+        arg = zeros((5, ))
         for j in range(5):
             arg[j] = 1.0
             J[:, j] = top.driver.workflow.matvecFWD(arg)

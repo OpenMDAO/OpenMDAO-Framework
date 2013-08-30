@@ -288,7 +288,7 @@ class SequentialWorkflow(Workflow):
             width = flattened_size(src, val)
             self.bounds[edge] = (nEdge, nEdge+width)
             
-            # Do we also need these? KTM
+            # ApplyJ needs the individual cross-references in bounds
             if isinstance(edge[1], tuple):
                 for src in edge[1]:
                     src_name = (edge[0], src)
@@ -742,11 +742,17 @@ class SequentialWorkflow(Workflow):
                 # Parameter-groups are tuples
                 if not isinstance(targets, tuple):
                     targets = [targets]
-                    
+                
+                target_group = []    
                 for target in targets:
                     comp_name, dot, var_name = target.partition('.')
                     if comp_name in group or comp_name in recursed_components:
-                        inputs.append(target)
+                        target_group.append(target)
+                        
+                if len(target_group) > 1:
+                    inputs.append(tuple(target_group))
+                elif len(target_group) > 0:
+                    inputs.append(target_group[0])
                 
             # Input to input connections lead to extra outputs.
             for item in self._input_outputs:
