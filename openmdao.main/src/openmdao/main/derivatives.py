@@ -204,7 +204,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             dx, info = gmres(A, RHS,
                              tol=1.0e-6,
                              maxiter=100)
-            print dx
+            
             i = 0
             for param in inputs:
                 k1, k2 = wflow.bounds[('@in', param)]
@@ -373,16 +373,9 @@ def applyJT(obj, arg, result):
             obounds[item] = (nvar, nvar+width)
         nvar += width
 
-    used = []
     for okey in result:
         if okey not in arg:
             o1, o2 = obounds[okey]
-            
-            # Param groups make it tricky. We only want to add the
-            # piece of J once for the whole group.
-            if o1 in used:
-                continue
-            used.append(o1)
             
             for ikey in arg:
                 i1, i2 = ibounds[ikey]

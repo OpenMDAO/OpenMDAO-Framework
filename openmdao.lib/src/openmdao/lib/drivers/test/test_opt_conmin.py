@@ -49,7 +49,7 @@ class OptRosenSuzukiComponent(Component):
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
         
-        self.opt_objective = 6.
+        self.opt_objective = 6.*10.0
         self.opt_design_vars = [0., 1., 2., -1.]
 
     def execute(self):
@@ -77,7 +77,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top = None
         
     def test_opt1(self):
-        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter, 
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
@@ -92,8 +92,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.run()
         
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
@@ -113,7 +113,7 @@ class CONMINdriverTestCase(unittest.TestCase):
 
     def test_opt1_with_CONMIN_gradient(self):
         # Note: all other tests use OpenMDAO gradient
-        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_objective('10*comp.result')
         self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
         self.top.driver.add_parameter('comp.x[1]', fd_step=.00001)
         self.top.driver.add_parameter('comp.x[2]', fd_step=.00001)
@@ -141,7 +141,7 @@ class CONMINdriverTestCase(unittest.TestCase):
                                self.top.comp.x[3], places=1)
 
     def test_opt1_flippedconstraints(self):
-        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter, 
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
@@ -152,8 +152,8 @@ class CONMINdriverTestCase(unittest.TestCase):
             '5 > 2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]'])
         self.top.run()
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 

@@ -506,7 +506,7 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] = outputs[comp_name][var_name]
             
-        print arg, result
+        #print arg, result
         return result
     
     def matvecREV(self, arg):
@@ -564,7 +564,7 @@ class SequentialWorkflow(Workflow):
                         comp_name = pa_ref[comp_name]
                     if edge[0] == '@in':
                         # Extra eqs for parameters contribute a 1.0 on diag
-                        outputs[comp_name][var_name] = arg[i1:i2].copy()/len(targets)
+                        outputs[comp_name][var_name] = arg[i1:i2].copy()
                     else:
                         # Interior comp edges contribute a -1.0 on diag
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
@@ -618,7 +618,7 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] += outputs[comp_name][var_name]
                 
-        print arg, result
+        #print arg, result
         return result
     
     def group_nondifferentiables(self):
