@@ -204,7 +204,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             dx, info = gmres(A, RHS,
                              tol=1.0e-6,
                              maxiter=100)
-
+            print dx
             i = 0
             for param in inputs:
                 k1, k2 = wflow.bounds[('@in', param)]
@@ -256,7 +256,7 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
-    print input_keys, output_keys, J
+    #print 'J', input_keys, output_keys, J
     
     ibounds = {}
     nvar = 0
@@ -311,7 +311,7 @@ def applyJ(obj, arg, result):
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
                         
-    print arg, result
+    #print 'applyJ', arg, result
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit

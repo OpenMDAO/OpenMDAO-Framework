@@ -71,7 +71,7 @@ class SensitivityDriver(Driver):
         objs = self.get_objectives().keys()
         constraints = list(self.get_eq_constraints().keys() + \
                            self.get_ineq_constraints().keys())
-        inputs = self.list_param_targets()
+        inputs = self.list_param_group_targets()
         obj = ["%s.out0" % item.pcomp_name for item in \
                 self.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \

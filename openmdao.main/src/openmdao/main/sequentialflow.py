@@ -471,9 +471,12 @@ class SequentialWorkflow(Workflow):
         input_input_xref = {}
         edge_outs = [a for a, b in edges]
         for edge in edges:
-            if edge[1] in self._input_outputs:
-                input_input_xref[edge[1]] = edge
-            
+            targ = edge[1]
+            if not isinstance(targ, tuple):
+                targ = [targ]
+            for target in targ:
+                if target in self._input_outputs:
+                    input_input_xref[target] = edge
         
         # Poke results into the return vector
         for edge in edges:
@@ -591,22 +594,22 @@ class SequentialWorkflow(Workflow):
             # Input-input connections are not in the jacobians. We need
             # to add the derivative (which is 1.0).
             if src in self._input_outputs:
-                if src in input_input_xref:
-                    ref_edge = input_input_xref[src]
-                    i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] = arg[i3:i4] - arg[i1:i2]
-                continue
-            
-                #comp_name, dot, var_name = target.partition('.')
-                #if comp_name in pa_ref:
-                    #var_name = '%s.%s' % (comp_name, var_name)
-                    #comp_name = pa_ref[comp_name]
-                #result[i1:i2] = outputs[comp_name][var_name] + arg[i1:i2]
+                #if src in input_input_xref:
+                    #ref_edge = input_input_xref[src]
+                    #i3, i4 = self.bounds[ref_edge]
+                    #result[i1:i2] = arg[i3:i4] - arg[i1:i2]
                 #continue
+            
+                comp_name, dot, var_name = target.partition('.')
+                if comp_name in pa_ref:
+                    var_name = '%s.%s' % (comp_name, var_name)
+                    comp_name = pa_ref[comp_name]
+                result[i1:i2] = outputs[comp_name][var_name] - arg[i1:i2]
+                continue
                 
             # Parameter group support
             if not isinstance(target, tuple):
-                target = [target]
+                target = [target]	
             
             for item in target:
                 comp_name, dot, var_name = item.partition('.')
@@ -614,6 +617,7 @@ class SequentialWorkflow(Workflow):
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] += outputs[comp_name][var_name]
+                
         print arg, result
         return result
     

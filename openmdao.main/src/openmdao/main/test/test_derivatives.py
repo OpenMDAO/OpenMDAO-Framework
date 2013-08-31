@@ -351,8 +351,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.add('comp2', ExecComp(['y=3.0*x']))
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
-        top.driver.workflow.add(['comp1', 'comp2'])
-        top.driver.add_objective('comp1.y + comp2.y')
+        top.driver.workflow.add(['comp1'])
+        #top.driver.workflow.add(['comp1', 'comp2'])
+        #top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
+        top.driver.add_objective('5*comp1.x')
         
         objs = top.driver.get_objectives().values()
         obj = '%s.out0' % objs[0].pcomp_name
@@ -361,18 +363,29 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.run()
         
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj])
-        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        print 'z'
+        #assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
-                                              fd=True)
-        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
+                                              #fd=True)
+        #assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
-        top.comp1.x = 1.0
-        top.run()
+        #top.comp1.x = 1.0
+        #top.run()
+        
+        #J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')], outputs=[obj])
+        #assert_rel_error(self, J[0, 0], 13.0, 0.0001)
+        
+        #top.comp1.x = 1.0
+        #top.run()
         
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], outputs=[obj], 
                                               mode='adjoint')
-        assert_rel_error(self, J[0, 0], 8.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 13.0, 0.0001)
+        
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')], outputs=[obj], 
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
     def test_nested(self):
         

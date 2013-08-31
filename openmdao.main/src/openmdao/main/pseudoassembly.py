@@ -33,7 +33,7 @@ class PseudoAssembly(object):
         # By default, use fake finite-difference on components if they have
         # derivatives.
         self.ffd_order = 1
-        print [comp.name for comp in comps], inputs, outputs
+        #print [comp.name for comp in comps], inputs, outputs
 
 
     def set_itername(self, name):
