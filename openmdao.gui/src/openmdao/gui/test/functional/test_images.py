@@ -40,11 +40,9 @@ def _test_view_image(browser):
     images_page = workspace_page.view_image(file1_name)
     time.sleep(2)
 
-    # the image will appear twice.. in the main view and as a thumbnail
-    image_names = images_page.get_image_names()
-    eq(len(image_names), 2)
-    eq(image_names[0].endswith(file1_name), True)  # main view, "stage"
-    eq(image_names[1].endswith(file1_name), True)  # thumb #1
+    # check that the image is displayed
+    image = images_page.get_image()
+    eq(image.endswith(file1_name), True)
 
     # Back to workspace.
     browser.close()
@@ -65,12 +63,16 @@ def _test_view_image(browser):
     images_page = workspace_page.view_image('folder/'+file2_name)
     time.sleep(2)
 
-    # the image will appear twice.. in the main view and as a thumbnail
-    image_names = images_page.get_image_names()
-    eq(len(image_names), 3)
-    eq(image_names[0].endswith(file2_name), True)  # main view, "stage"
-    eq(image_names[1].endswith(file2_name), True)  # thumb #1
-    eq(image_names[2].endswith(file1_name), True)  # thumb #2
+    # check that the image is displayed
+    image = images_page.get_image()
+    eq(image.endswith(file2_name), True)
+
+    # check that both images appear in the thumbnails
+    thumbnails = images_page.get_thumbnails()
+    thumbnails.sort()
+    eq(len(thumbnails), 2)
+    eq(thumbnails[0].endswith(file1_name), True)
+    eq(thumbnails[1].endswith(file2_name), True)
 
     # Back to workspace.
     browser.close()
