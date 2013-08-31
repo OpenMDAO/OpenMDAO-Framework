@@ -1,9 +1,0 @@
-1. Create a new project, and load it into workspace
-2. Drop an assembly into top
-3. Attempt to close the browser tab, or the browser itself
-4. Verify that a browser dialog appears advising you that you have unsaved changes.
-5. Attempt to return to your workspace by canceling the dialog.
-6. Make sure that the project is still active (i.e. drag another component into the workspace and make sure that it appears)
-7. Attempt to close the browser tab again
-8. This time, allow it to leave the page
-9. Pat self on back for a job well done
