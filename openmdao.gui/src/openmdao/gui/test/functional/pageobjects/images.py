@@ -8,6 +8,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from basepageobject import BasePageObject, TMO
 from elements import GenericElement
 
+
 class ImagesPage(BasePageObject):
     """ Geometry Viewer window. """
 
@@ -25,7 +26,7 @@ class ImagesPage(BasePageObject):
         super(ImagesPage, self).__init__(browser, port)
 
     def get_image_names(self):
-        """ Return names in the images tree. """
+        """ Return names of all images. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'images'))
 
