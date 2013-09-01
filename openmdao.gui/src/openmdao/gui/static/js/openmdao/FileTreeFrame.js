@@ -28,22 +28,22 @@ openmdao.FileTreeFrame = function(id, project) {
 
     // Enable dropping of files onto file tree frame to add them to project
     _self.elm.bind({
-        dragenter: function () {
+        dragenter: function() {
             _self.elm.addClass('hover ui-state-highlight');
             return false;
         },
-        dragover: function () {
+        dragover: function() {
             return false;
         },
-        dragleave: function () {
+        dragleave: function() {
             _self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
-        dragend: function () {
+        dragend: function() {
             _self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
-        drop: function (e) {
+        drop: function(e) {
             _self.elm.removeClass('hover ui-state-highlight');
             e = e || window.event;
             e.preventDefault();
@@ -52,9 +52,9 @@ openmdao.FileTreeFrame = function(id, project) {
             var i = 0,
                 files = (e.files || e.dataTransfer.files);
             for (i = 0; i < files.length; i++) {
-                (function (i) {
+                (function(i) {
                     var reader = new FileReader();
-                    reader.onload = function (e) {
+                    reader.onload = function(e) {
                        project.setFile(files[i].name, e.target.result);
                     };
                     reader.readAsText(files[i]);
@@ -65,7 +65,7 @@ openmdao.FileTreeFrame = function(id, project) {
     });
 
     /** recursively build an HTML representation of a JSON file structure */
-    function getFileHTML(path, val) {
+    function getFileHTML(path, val, openNodes) {
         path = path.replace(/\\/g,'/');
 
         // get the file name and extension
@@ -73,27 +73,29 @@ openmdao.FileTreeFrame = function(id, project) {
             name = name[name.length-1],
             ext = name.split('.'),
             ext = ext[ext.length-1],
-            url = "application/octet-stream:"+name+":file"+path+"'";
+            url = "application/octet-stream:"+name+":file"+path+"'",
+            html = '';
 
-        var html = '';
         if (!_filter_active || ((_filter_beg.indexOf(name[0])<0 && _filter_ext.indexOf(ext)<0))) {
-            html = "<li><a";
             if (typeof val === 'object') {    // a folder
-                html += " class='folder' path='"+path+"'>"+name+"</a>";
-                html += "<ul>";
+                // debug.info('openNodes', openNodes, 'path', path, openNodes.indexOf(path));
+                if (openNodes.indexOf(path) < 0) {
+                    html += "<li>";
+                }
+                else {
+                    html += "<li class='jstree-open'>";
+                }
+                html += "<a class='folder' path='"+path+"'>"+name+"</a><ul>";
+                // debug.info('html:', html);
                 jQuery.each(val,function(path,val) {
-                    html += getFileHTML(path,val);
+                    html += getFileHTML(path, val, openNodes);
                 });
-                html += "</ul>";
+                html += "</ul></li>";
             }
             else {
-                html += " class='file' path='"+path+"' draggable='true'"
-                     +  " data-downloadurl='"+url+"'>"+name+"</a>";
+                html += "<li><a class='file' path='"+path+"' draggable='true'"
+                     +  " data-downloadurl='"+url+"'>"+name+"</a></li>";
             }
-            html += "</li>";
-        }
-        else {
-            html = '';
         }
         return html;
     }
@@ -316,10 +318,17 @@ openmdao.FileTreeFrame = function(id, project) {
                 .effect('highlight', {color:'#ffd'}, 1000);
         }
 
+        // Grab paths of currently open nodes.
+        var openNodes = [];
+        _self.elm.find("li.jstree-open").each(function () {
+            openNodes.push(jQuery(this).find('a:first').attr('path'));
+        });
+        debug.info('openNodes:', openNodes);
+
         // generate HTML for the file tree
         var html = "<ul>";
-        jQuery.each(files, function(path,val) {
-            html += getFileHTML(path,val);
+        jQuery.each(files, function(path, val) {
+            html += getFileHTML(path, val, openNodes);
         });
         html += "</ul>";
 
@@ -328,20 +337,27 @@ openmdao.FileTreeFrame = function(id, project) {
 
         // convert to a jstree
         _tree.jstree({
-            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
+            "plugins" :     [ "html_data", "sort", "themes", "types", "contextmenu", "ui" ],
             "themes" :      { "theme":  "classic" },
-            "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  nodeMenu }
         })
-        .bind("loaded.jstree", function (e) {
+        .bind("loaded.jstree", function(e) {
+            _self.elm.find('.folder').each(function () {
+                debug.info('folder:', this, this.getAttribute('path'), this.parentNode, openNodes.indexOf(this.getAttribute('path')));
+
+                if (openNodes.indexOf(this.getAttribute('path')) >= 0) {
+                    this.parentNode.removeClass('jstree-closed');
+                    this.parentNode.addClass('jstree-open');
+                    debug.info('open:',  this.parentNode);
+                }
+            });
+
             _self.elm.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
 
-            // id is  "file_pane"
-            _self.elm.find('.jstree li').each(function () {
-                // children[1] is the a tag inside the li
-                // children[1].children[0] is the ins tag inside the a tag and that is the
-                //    icon that needs to be set, which we do by adding a class and
-                //    adding some CSS into mdao-styles.css
+            _self.elm.find('.jstree li').each(function() {
+                // children[1] is the A tag inside the LI
+                // children[1].children[0] is the INS tag inside the A tag and
+                // that is the icon, which is set via the appropriate class
                 if (this.children[1].getAttribute("class") === "folder") {
                     this.children[1].children[0].addClass("jstree-folder");
                 }
@@ -356,7 +372,7 @@ openmdao.FileTreeFrame = function(id, project) {
             });
 
         })
-        .bind("dblclick.jstree", function (e) {
+        .bind("dblclick.jstree", function(e) {
             var node = jQuery(e.target),
                 path = node.attr("path");
             if (node.hasClass('file')) {
@@ -477,7 +493,7 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
         }
         // now post a new XHR request
         xhr.open('POST', '/workspace/tools/upload');
-        xhr.onload = function () {
+        xhr.onload = function() {
             if (xhr.status !== 200) {
                 alert('error uploading files ('+xhr.status+', '+xhr.statusText+')');
                 debug.error('error uploading files', xhr, files, path);
