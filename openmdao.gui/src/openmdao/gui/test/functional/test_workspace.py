@@ -1137,7 +1137,7 @@ def _test_view_file(browser):
 
     time.sleep(2)
 
-    # view the image file
+    # view the image file in browser
     new_page = workspace_page.view_file(file_name)
 
     time.sleep(2)
@@ -1151,7 +1151,6 @@ def _test_view_file(browser):
     browser.close()
     browser.switch_to_window(workspace_window)
 
-
     # add a pdf file
     file_name = 'sample.pdf'
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -1160,7 +1159,7 @@ def _test_view_file(browser):
 
     time.sleep(2)
 
-    # view the pdf file
+    # view the pdf file in browser
     new_page = workspace_page.view_file(file_name)
 
     time.sleep(2)
