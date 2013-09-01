@@ -24,7 +24,8 @@ openmdao.FileTreeFrame = function(id, project) {
             .appendTo(_self.elm),
         _filter_beg = '_.',
         _filter_ext = [ 'pyc', 'pyd' ],
-        _filter_active = true;
+        _filter_active = true,
+        _updates = [];  // queue for updates
 
     // Enable dropping of files onto file tree frame to add them to project
     _self.elm.bind({
@@ -65,7 +66,7 @@ openmdao.FileTreeFrame = function(id, project) {
     });
 
     /** recursively build an HTML representation of a JSON file structure */
-    function getFileHTML(path, val, openNodes) {
+    function getFileHTML(path, val) {
         path = path.replace(/\\/g,'/');
 
         // get the file name and extension
@@ -78,17 +79,9 @@ openmdao.FileTreeFrame = function(id, project) {
 
         if (!_filter_active || ((_filter_beg.indexOf(name[0])<0 && _filter_ext.indexOf(ext)<0))) {
             if (typeof val === 'object') {    // a folder
-                // debug.info('openNodes', openNodes, 'path', path, openNodes.indexOf(path));
-                if (openNodes.indexOf(path) < 0) {
-                    html += "<li>";
-                }
-                else {
-                    html += "<li class='jstree-open'>";
-                }
-                html += "<a class='folder' path='"+path+"'>"+name+"</a><ul>";
-                // debug.info('html:', html);
+                html += "<li><a class='folder' path='"+path+"'>"+name+"</a><ul>";
                 jQuery.each(val,function(path,val) {
-                    html += getFileHTML(path, val, openNodes);
+                    html += getFileHTML(path, val);
                 });
                 html += "</ul></li>";
             }
@@ -311,7 +304,7 @@ openmdao.FileTreeFrame = function(id, project) {
     }
 
     /** update the tree from JSON file structure */
-    function updateFiles(files) {
+    function updateFiles(files, deferred) {
         // highlight the tree per user preference
         if (openmdao.preferences.FileTreeFrame.highlightOnUpdate) {
             _tree.html("<div>Updating...</div>")
@@ -323,12 +316,11 @@ openmdao.FileTreeFrame = function(id, project) {
         _self.elm.find("li.jstree-open").each(function () {
             openNodes.push(jQuery(this).find('a:first').attr('path'));
         });
-        debug.info('openNodes:', openNodes);
 
         // generate HTML for the file tree
         var html = "<ul>";
         jQuery.each(files, function(path, val) {
-            html += getFileHTML(path, val, openNodes);
+            html += getFileHTML(path, val);
         });
         html += "</ul>";
 
@@ -340,37 +332,6 @@ openmdao.FileTreeFrame = function(id, project) {
             "plugins" :     [ "html_data", "sort", "themes", "types", "contextmenu", "ui" ],
             "themes" :      { "theme":  "classic" },
             "contextmenu" : { "items":  nodeMenu }
-        })
-        .bind("loaded.jstree", function(e) {
-            _self.elm.find('.folder').each(function () {
-                debug.info('folder:', this, this.getAttribute('path'), this.parentNode, openNodes.indexOf(this.getAttribute('path')));
-
-                if (openNodes.indexOf(this.getAttribute('path')) >= 0) {
-                    this.parentNode.removeClass('jstree-closed');
-                    this.parentNode.addClass('jstree-open');
-                    debug.info('open:',  this.parentNode);
-                }
-            });
-
-            _self.elm.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
-
-            _self.elm.find('.jstree li').each(function() {
-                // children[1] is the A tag inside the LI
-                // children[1].children[0] is the INS tag inside the A tag and
-                // that is the icon, which is set via the appropriate class
-                if (this.children[1].getAttribute("class") === "folder") {
-                    this.children[1].children[0].addClass("jstree-folder");
-                }
-                else {
-                    if (this.children[1].text.match("\.py$")) {
-                        this.children[1].children[0].addClass("jstree-python-file");
-                    }
-                    else {
-                        this.children[1].children[0].addClass("jstree-file");
-                    }
-                }
-            });
-
         })
         .bind("dblclick.jstree", function(e) {
             var node = jQuery(e.target),
@@ -392,18 +353,53 @@ openmdao.FileTreeFrame = function(id, project) {
             else {
                 debug.warn("node in file tree does not seem to be a file or a folder:", node);
             }
-        });
+        })
+        .bind("loaded.jstree", function(e) {
+            _tree.find('.folder').each(function () {
+                if (openNodes.indexOf(this.getAttribute('path')) >= 0) {
+                    this.parentNode.removeClass('jstree-closed');
+                    this.parentNode.addClass('jstree-open');
+                }
+            });
 
-        // enable dragging out to desktop (only supported under chrome)
-        // ref: http://www.thecssninja.com/javascript/gmail-dragout
-        // FIXME: doesn't work, handlers not getting added??
-        _tree.find('.file').bind({
-            'dragstart': function(e) {
-                var url = jQuery(this).attr('data-download-url');
-                e.dataTransfer.setData('DownloadURL',url);
-                return false;
-            }
+            _tree.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
+
+            _tree.find('.jstree li').each(function() {
+                // children[1] is the A tag inside the LI
+                // children[1].children[0] is the INS tag inside the A tag and
+                // that is the icon, which is set via the appropriate class
+                if (this.children[1].getAttribute("class") === "folder") {
+                    this.children[1].children[0].addClass("jstree-folder");
+                }
+                else {
+                    if (this.children[1].text.match("\.py$")) {
+                        this.children[1].children[0].addClass("jstree-python-file");
+                    }
+                    else {
+                        this.children[1].children[0].addClass("jstree-file");
+                    }
+                }
+            });
+
+            deferred.resolve();
         });
+    }
+
+    function queueUpdate(files) {
+        var old_update = _updates.shift(),
+            new_update = jQuery.Deferred();
+
+        _updates.push(new_update);
+
+        if (old_update) {
+            // an update is already in progress, wait until it's done
+            jQuery.when(old_update).done(function() {
+                updateFiles(files, new_update);
+            });
+        }
+        else {
+            updateFiles(files, new_update);
+        }
     }
 
     function handleMessage(message) {
@@ -411,7 +407,7 @@ openmdao.FileTreeFrame = function(id, project) {
             debug.warn('Invalid files data:', message);
         }
         else {
-            updateFiles(message[1]);
+            queueUpdate(message[1]);
         }
     }
 
@@ -429,7 +425,7 @@ openmdao.FileTreeFrame = function(id, project) {
     /** update the display, with data from the project */
     this.update = function() {
         project.getFiles()
-            .done(updateFiles)
+            .done(queueUpdate)
             .fail(function(jqXHR, textStatus, errorThrown) {
                 debug.error('Error getting files',
                             jqXHR, textStatus, errorThrown);
