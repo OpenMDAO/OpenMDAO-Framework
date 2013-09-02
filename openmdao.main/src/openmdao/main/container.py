@@ -1180,7 +1180,9 @@ class Container(SafeHasTraits):
         eq = (old == value)
 
 
-        print "in _index_set of container, old, value and eq =", old, value, eq
+        print "in _index_set of container. self, old, value and eq =", self, old, value, eq
+        print "dir(self) = ", dir(self)
+        print "pathname, name, parent = ", self.get_pathname(), self.name, self.parent
 
         if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
             eq = False
@@ -1191,7 +1193,14 @@ class Container(SafeHasTraits):
             parent = self.parent
             while parent:
                 print "parent =", parent
+                if hasattr( parent, '_call_execute' ):
+                    print "setting _call_execute to true on parent, ", parent
+                    parent._call_execute = True
+                    break # only need to set one? 
                 parent = parent.parent
+
+
+
                 
             if hasattr( self, '_call_execute' ):
                 print "setting _call_execute to true"
