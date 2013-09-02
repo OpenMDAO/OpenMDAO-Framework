@@ -60,12 +60,13 @@
                                 getImages(files[file]);
                             }
                             else if (openmdao.Util.hasImageExtension(file)) {
+                                file = file.replace(/\\/g,'/');
                                 if (file === "{{ filename }}") {
                                     show_index = index;
                                 }
                                 images.push({
                                     title: file,
-                                    image: '/workspace/file'+file.replace(/\\/g,'/')
+                                    image: '/workspace/file'+file
                                 });
                                 index++;
                             }
