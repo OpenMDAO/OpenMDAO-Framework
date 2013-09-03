@@ -23,7 +23,4 @@ class SleepComponent(Component):
         self.force_execute = True  # always want this to run
 
     def execute(self):
-
-        print "in execute of SleepComponent with self.sleep_time = ", self.sleep_time
-
         time.sleep( self.sleep_time )
