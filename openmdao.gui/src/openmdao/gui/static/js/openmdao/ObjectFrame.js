@@ -144,6 +144,9 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
     function loadData(properties) {
         var names, name, val;
 
+        // remove click handlers from existing tabs before updating
+        _tabs.find('.ui-tabs-anchor').off('click');
+
         // FIXME: hack to ignore ArrayBuffer (binary) messages
         if (typeof properties === 'ArrayBuffer' || properties instanceof ArrayBuffer) {
             return;
@@ -195,6 +198,14 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
 
         // refresh
         _self.elm.tabs('refresh');
+
+        // select the appropriate tab
+        _self.selectTab(selectTabName);
+
+        // add handler to update selected tab when clicked
+        _tabs.find('.ui-tabs-anchor').on('click', function(ev, data) {
+            selectTabName = ev.currentTarget.text;
+        });
     }
 
     /** update with data from incoming message */
@@ -225,16 +236,14 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         _self.elm.height(400);
         _self.elm.width(720);
         _self.elm.tabs({
-            beforeActivate: function(event, ui) {
-                if (ui.newTab.text === 'Workflow') {
-                    _self.elm.find('.WorkflowFigure').trigger('setBackground');
+            activate: function(event, ui) {
+                if (ui.newTab.text() === 'Workflow') {
+                    _self.elm.find('.WorkflowFigure').trigger('layoutAll');
                 }
             }
         });
 
         loadData(properties);
-
-        _self.selectTab(selectTabName);
 
         project.addListener(pathname, handleMessage);
 
