@@ -83,6 +83,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.lazy_comp.LazyComponent = openmdao.lib.components.lazy_comp:LazyComponent
+      openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
 
       [openmdao.differentiator]
       openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference

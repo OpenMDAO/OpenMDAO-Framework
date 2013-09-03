@@ -4,7 +4,7 @@
 
 import unittest
 
-from openmdao.examples.nozzle_geometry_doe.nozzle_geometry_doe import NozzleGeometryDOE
+from openmdao.examples.nozzle_geometry_doe.test.nozzle_geometry_doe import NozzleGeometryDOE
 from openmdao.main.api import set_as_top
 
 class NozzleGeometryDOETestCase(unittest.TestCase):

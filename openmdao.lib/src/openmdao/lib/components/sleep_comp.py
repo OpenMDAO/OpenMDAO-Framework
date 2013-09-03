@@ -12,17 +12,17 @@ from openmdao.lib.datatypes.api import Float
 
 import time
 
-class SleepComp(Component):
+class SleepComponent(Component):
     """Sleep for a given number of secons"""
     
     # pylint: disable-msg=E1101
     sleep_time = Float(0.0, iotype='in', desc='The number of seconds to sleep')
 
     def __init__(self):
-        super(SleepComp, self).__init__()
+        super(SleepComponent, self).__init__()
         
     def execute(self):
 
-        print "in execute of SleepComp with self.sleep_time = ", self.sleep_time
+        print "in execute of SleepComponent with self.sleep_time = ", self.sleep_time
 
         time.sleep( self.sleep_time )

@@ -25,7 +25,7 @@ class NozzleGeometryDOE(Assembly):
         self.set(u'gc.auto_run', True)
         self.driver.add_parameter('gc.plug.R[8]',low=0.0,high=5.0);
 
-        self.add("sc", create("openmdao.lib.components.sleep_comp.SleepComp"))
+        self.add("sc", create("openmdao.lib.components.sleep_comp.SleepComponent"))
         self.driver.workflow.add("sc")
         self.set(u'sc.sleep_time', 1.0)
         self.set(u'sc.force_execute', True)
