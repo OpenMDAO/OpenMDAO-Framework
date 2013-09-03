@@ -91,7 +91,7 @@ geometry looks for each of the ten designs. You only see the first and the last.
 
 To slow things down a bit, we will add a component to the workflow that does nothing but create a time
 delay. This process will also demonstrate some more features of the OpenMDAO GUI. 
-From the Library, drag into the Assembly a SleepComp item. Name it "sc". Double click it to open its
+From the Library, drag into the Assembly a SleepComponent item. Name it "sc". Double click it to open its
 editor window. Change the input value "sleep_time" to be 1.0. Close the editor window. 
 
 Click on the Objects tab of the main window. Below that tab there is a 

@@ -20,7 +20,8 @@ class SleepComponent(Component):
 
     def __init__(self):
         super(SleepComponent, self).__init__()
-        
+        self.force_execute = True  # always want this to run
+
     def execute(self):
 
         print "in execute of SleepComponent with self.sleep_time = ", self.sleep_time
