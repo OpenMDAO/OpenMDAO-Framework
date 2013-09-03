@@ -94,6 +94,10 @@ delay. This process will also demonstrate some more features of the OpenMDAO GUI
 From the Library, drag into the Assembly a SleepComponent item. Name it "sc". Double click it to open its
 editor window. Change the input value "sleep_time" to be 1.0. Close the editor window. 
 
+We need to add this component to the driver's workflow. First, make sure that the Objects tab is selected on the left
+and that the menu below it is set to Workflow. Then, drag 'sc' from the Dataflow diagram onto 'top.driver' in the 
+Workflow tree.  
+
 Click on the Objects tab of the main window. Below that tab there is a 
 menu. Make sure it is set to Components. By clicking on the "top" item in the Components, you should be able to 
 see all the elements in top assembly including the "sc" item we just added. 
