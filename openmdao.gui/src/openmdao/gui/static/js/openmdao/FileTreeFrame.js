@@ -364,7 +364,7 @@ openmdao.FileTreeFrame = function(id, project) {
 
             _tree.find('.file').draggable({ helper: 'clone', appendTo: 'body' });
 
-            _tree.find('.jstree li').each(function() {
+            _tree.find('li').each(function() {
                 // children[1] is the A tag inside the LI
                 // children[1].children[0] is the INS tag inside the A tag and
                 // that is the icon, which is set via the appropriate class
