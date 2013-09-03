@@ -144,7 +144,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             j += 1
     
-    
+    print dx, J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -175,7 +175,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
         num_out += width
 
     J = zeros((num_out, num_in))
-
+   
     # Locate the output keys:
     obounds = {}
     interior = wflow.get_interior_edges()
@@ -216,6 +216,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
+    print dx, J
     return J
 
 
@@ -397,6 +398,8 @@ def applyJT(obj, arg, result):
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
 
+    print 'applyJT', arg, result
+    
 
 class FiniteDifference(object):
     """ Helper object for performing finite difference on a portion of a model.
@@ -454,13 +457,6 @@ class FiniteDifference(object):
             else:
                 i1, i2 = self.in_bounds[src]
             
-            # Cached OpenMDAO's valid state
-            #comp_name, dot, var_name = src.partition('.')
-            #var_name = var_name.split('[')[0]
-            #comp = self.scope.get(comp_name)
-            #saved_state = comp._valid_dict
-            
-
             for i in range(i1, i2):
 
                 #--------------------
@@ -541,9 +537,6 @@ class FiniteDifference(object):
                     else:
                         self.set_value(src, fd_step, i-i1)
 
-            # Reset OpenMDAO's valid state.
-            #comp._valid_dict = saved_state
-
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
@@ -571,6 +564,7 @@ class FiniteDifference(object):
             else:
                 self.scope.set(src, new_val, force=True)
                 
+        #print self.J
         return self.J
 
     def get_inputs(self, x):
@@ -630,13 +624,16 @@ class FiniteDifference(object):
     
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
-                comp._input_updated(var_name)
+                if var_name:
+                    comp._input_updated(var_name)
     
             # Prevent OpenMDAO from stomping on our poked input.
-            comp._valid_dict[var_name.split('[',1)[0]] = True
+            
+            if var_name:
+                comp._valid_dict[var_name.split('[',1)[0]] = True
     
-            # Make sure we execute!
-            comp._call_execute = True
+                # Make sure we execute!
+                comp._call_execute = True
 
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output
