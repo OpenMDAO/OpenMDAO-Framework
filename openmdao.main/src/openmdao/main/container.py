@@ -1179,33 +1179,19 @@ class Container(SafeHasTraits):
         #        be called if we do it this way
         eq = (old == value)
 
-
-        print "in _index_set of container. self, old, value and eq =", self, old, value, eq
-        print "dir(self) = ", dir(self)
-        print "pathname, name, parent = ", self.get_pathname(), self.name, self.parent
-
         if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
             eq = False
         if not eq:
-            print "not eq in _index_set"
-            # need to find the component this belongs to and set its _call_execute
-            print "I am", self
-            parent = self.parent
-            while parent:
-                print "parent =", parent
-                if hasattr( parent, '_call_execute' ):
-                    print "setting _call_execute to true on parent, ", parent
-                    parent._call_execute = True
-                    break # only need to set one? 
-                parent = parent.parent
-
-
-
+            # need to find first item going up the parent tree that has a _call_execute
+            #   and set it to true. Otherwise that component does not know
+            #   an array element has been modified
+            item = self
+            while item:
+                if hasattr( item, '_call_execute' ):
+                    item._call_execute = True
+                    break 
+                item = item.parent
                 
-            if hasattr( self, '_call_execute' ):
-                print "setting _call_execute to true"
-                self._call_execute = True
-            
             if hasattr( self, '_valid_dict' ) and name in self._valid_dict:
                 self._input_updated(name)
 

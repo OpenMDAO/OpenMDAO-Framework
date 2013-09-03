@@ -12,8 +12,6 @@ class PlugNozzleGeometry(STLGroup):
     def __init__(self): 
         super(PlugNozzleGeometry,self).__init__()
 
-        print "png init" #qqq
-
         this_dir, this_filename = os.path.split(os.path.abspath(__file__))
         plug_file = os.path.join(this_dir, 'plug.stl')
         plug = stl.STL(plug_file)
@@ -28,7 +26,6 @@ class PlugNozzleGeometry(STLGroup):
         self.add(shell,name="cowl")
 
     def get_visualization_data(self, wv):
-        print "get_visualization_data" # qqq
         super(PlugNozzleGeometry, self).get_visualization_data(wv)
 
 if __name__=="__main__": 

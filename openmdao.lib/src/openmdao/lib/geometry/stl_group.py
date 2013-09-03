@@ -11,24 +11,12 @@ from ffd_axisymetric import Body, Shell
 from pyV3D.stl import STLSender
 from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
 
-import inspect
-# functions
-def whoami():
-    return inspect.stack()[1][3]
-def whosdaddy():
-    return inspect.stack()[2][3]
-def whosdaddy_full():
-    return inspect.stack()[2]
-
-
 class STLGroup(object): 
 
 
     implements(IParametricGeometry, IStaticGeometry)
 
     def __init__(self): 
-
-        print "init in stlg"
 
         self._comps = []
         self._i_comps = {}
@@ -45,11 +33,6 @@ class STLGroup(object):
     #begin methods for IParametricGeometry
     def list_parameters(self): 
         """ returns a dictionary of parameters sets key'd to component names"""
-
-        print "in STLGroup.list_parameters"
-        print whoami(), whosdaddy_full()
-
-
 
         self.param_name_map = {}
         params = []
@@ -97,56 +80,38 @@ class STLGroup(object):
         return params
 
     def set_parameter(self, name, val): 
-        print "in stlgroup.set_parameter, param_name_map = ", self.param_name_map
         self.param_name_map[name] = val
 
     def get_parameters(self, names): 
         return [self.param_name_map[n] for n in names]
 
     def regen_model(self): 
-        print "regen_model in stlg"
         for comp in self._comps: 
-            print "in regen_model, comp = ", comp
 
             #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
             
-            print dir( self )
-
-            # Need to pass the deformation params here !!!!!!!!!!!!!!!!!!!!!!!!!!
-            # self.param_name_map[ 'plug.X' ] for example
-
-            import numpy as np
             #del_C = np.ones((10,2)) * 123.0
             if isinstance(comp, Body): 
-                print "regen model for body"
                 delta_C_shape = comp.delta_C.shape
-                print "delta_C_shape = ", delta_C_shape
                 del_C = np.zeros( delta_C_shape )
-                print "empty del_C = ", del_C
                 del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
                 del_C[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
-                print "del_C = ", del_C
                 comp.deform(delta_C=del_C)
             else:
-                print "regen model for shell"
                 delta_Cc_shape = comp.delta_Cc.shape
-                print "delta_Cc_shape =", delta_Cc_shape
                 del_Cc = np.zeros( delta_Cc_shape )
                 del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
                 del_Cc[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
 
                 delta_Ct_shape = comp.delta_Ct.shape
-                print "delta_Ct_shape =", delta_Ct_shape
                 del_Ct = np.zeros( delta_Ct_shape )
                 del_Ct[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
                 del_Ct[:-1,1] = self.param_name_map[ '%s.thickness' % comp.name ]
-                print "del_Ct = ", del_Ct
                 # need both delta_Cc and delta_Ct for shells
                 comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
 
 
     def get_static_geometry(self): 
-        print "get_static_geometry in stlg"
         return self
 
     def register_param_list_changedCB(self, callback):
@@ -159,7 +124,6 @@ class STLGroup(object):
 
     #methods for IStaticGeometry
     def get_visualization_data(self, wv):
-        print "get_vis_data in stlg"
         self.linearize()
 
         xyzs = np.array(self.points).flatten().astype(np.float32)
@@ -225,7 +189,6 @@ class STLGroup(object):
         return lines      
 
     def linearize(self): 
-        print "linearize in stlg"
         points = []
         triangles = []
         i_offset = 0

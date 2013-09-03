@@ -138,8 +138,6 @@ class STL(object):
     def update_points(self,points): 
         """updates the points in the object with the new set"""   
 
-        print "update_points in stl"
-
         if points.shape != self.points.shape:
             raise IndexError("The provided points set has a different shape than the original. They must be the same")
         #set the deformed points back into the original array 

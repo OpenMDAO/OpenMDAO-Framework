@@ -45,8 +45,6 @@ class DOEdriver(CaseIterDriverBase):
     def execute(self):
         """Generate and evaluate cases."""
 
-        print "in doedriver execute"
-
         self._csv_file = None
         try:
             super(DOEdriver, self).execute()
