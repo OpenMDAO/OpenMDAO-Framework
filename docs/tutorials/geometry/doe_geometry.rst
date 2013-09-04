@@ -66,23 +66,21 @@ calling run each time can get quite tedious. So in a real scenario, just make su
 any serious analysis. 
 
 Now we can edit some of the input values for this geometry and see the geometry updated in the OpenMDAO 
-Geometry Viewer window. This GeomComponent has a series of deformation control point arrays 
-as inputs. For example, the plug.R array, which contains 9 elements, controls the radius
-of the plug along the length of the plug, which is the pointy object. Let's try changing the value of the last element of this 
-array to see how it affects the geometry. Click the cell for the Name column for the ``plug`` input.  
-The subelements of plug, R and X, should be revealed. Click on the Value cell for R. An array editor window should appear. 
-Change the value of the last element to be 5.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
+Geometry Viewer window. Edit the plug.R array, which controls the 9 radius control points.
+Click the cell for the Name column for the ``plug`` input.  
+The subelements of plug, R and X, should be revealed. Change the value of the last element 
+of the R array to be 5.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
 end of the plug tip should become much larger than before.
 
 **Setup the DOE Driver**
 
-From the Library, drag the ``DOEdriver`` item and drop it on the ``driver`` dataflow item in
-the Dataflow. A confirmation dialog will ask if you really want to replace the existing driver
+From the Library, drag the ``DOEdriver`` item and drop it on the ``driver`` item in the top 
+assembly. A confirmation dialog will ask if you really want to replace the existing driver
 with the DOEdriver. Click Ok. 
 
 Open up the editor for the DOEdriver by double clicking it in the Dataflow. Click on the Slots tab.
 From the Library, drag and drop the FullFactorial item on to the DOEgenerator slot. A dialog window
-will appear asking for the number of levels for this DOE. Enter 10 and click Ok.
+will appear asking for the number of levels for this DOE. Enter 3 and click Ok.
 
 Click the Parameters tab. Click the Add Parameter button in the lower left. Enter in these values:
 
