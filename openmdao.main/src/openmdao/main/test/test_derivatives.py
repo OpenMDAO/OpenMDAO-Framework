@@ -425,6 +425,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        
+        # Test that our assembly doesn't calc derivatives for unconnected vars
+        inkeys, outkeys, J = top.nest.provideJ()
+        self.assertTrue('x' in inkeys)
+        self.assertTrue('y' in inkeys)
+        self.assertEqual(len(inkeys), 2)
 
     def test_5in_1out(self):
         

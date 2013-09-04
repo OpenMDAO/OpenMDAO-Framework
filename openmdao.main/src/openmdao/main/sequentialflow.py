@@ -552,7 +552,7 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] = outputs[comp_name][var_name]
             
-        print arg, result
+        #print arg, result
         return result
     
     def matvecREV(self, arg):
@@ -574,8 +574,12 @@ class SequentialWorkflow(Workflow):
         input_input_xref = {}
         edge_outs = [a for a, b in edges]
         for edge in edges:
-            if edge[1] in self._input_outputs:
-                input_input_xref[edge[1]] = edge
+            targ = edge[1]
+            if not isinstance(targ, tuple):
+                targ = [targ]
+            for target in targ:
+                if target in self._input_outputs:
+                    input_input_xref[target] = edge
             
         # Start with zero-valued dictionaries cotaining keys for all inputs
         pa_ref = {}
@@ -696,7 +700,7 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] += outputs[comp_name][var_name]
                 
-        print arg, result
+        #print arg, result
         return result
     
     def group_nondifferentiables(self):

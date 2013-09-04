@@ -144,7 +144,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             j += 1
     
-    print dx, J
+    #print dx, J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -216,7 +216,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    print dx, J
+    #print dx, J
     return J
 
 
@@ -398,7 +398,7 @@ def applyJT(obj, arg, result):
                     else:
                         result[okey] += tmp.reshape(result[okey].shape)
 
-    print 'applyJT', arg, result
+    #print 'applyJT', arg, result
     
 
 class FiniteDifference(object):
@@ -613,7 +613,8 @@ class FiniteDifference(object):
     
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
-                    comp._input_updated(var_name.split('[')[0])
+                    if var_name:
+                        comp._input_updated(var_name.split('[')[0])
     
                 else:
                     self.scope.set(src, old_val+val, force=True)
