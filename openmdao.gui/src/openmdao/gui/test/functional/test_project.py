@@ -5,6 +5,7 @@ import datetime
 import re
 import pkg_resources 
 
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -25,37 +26,22 @@ def test_generator():
 #Test metadata of a project:
 def _test_last_saved_metadata(browser):
     
-    def open_project(target):
-        def wrapper(self, project_name, *args, **kargs):
-            workspace_page, project_dict = projects_page.open_project( project_name )
-            result = target(self, *args, **kargs)
+    def last_saved(target):
+        def wrapper(projects_page, project_name, timestamp, *args, **kargs):
+            workspace_page = projects_page.open_project( project_name )
+            result = target(workspace_page)
 
-            return result
-
-        return wrapper
-
-    def close_project(target):
-        def wrapper(self, *args, **kargs):
-            result = target(self, *args, **kargs)
             projects_page = workspace_page.close_workspace()
 
-            return result
+            if result == False:
+                return projects_page, project_name, timestamp
 
-        return wrapper
-
-    def metadata(target):
-        def wrapper(self, *args, **kargs):
-            result = target(*args, **kargs)
             metadata = projects_page.get_project_metadata( project_name )
+            last_saved = date_to_datetime(metadata['last_saved'])
 
-            return result, metadata
+            assert( last_saved > timestamp )
 
-    def last_saved(target):
-        def wrapper( metadata, *args, **kargs )
-            result = target(*args, **kargs)
-            last_saved = date_to_datetime( metadata['last_saved'] )
-            
-            return result
+            return projects_page, project_name, last_saved
 
         return wrapper
 
@@ -75,23 +61,25 @@ def _test_last_saved_metadata(browser):
 
         return datetime.datetime( year, month, day, hours, minutes, seconds  )
   
+    @last_saved
     def add_file(workspace_page):
         file_path = pkg_resources.resource_filename('openmdao.gui.test.functional', 'files/simple_paraboloid.py')
         workspace_page.add_file( file_path )
 
+    @last_saved
     def new_file(workspace_page):
         workspace_page.new_file( 'test_file.py' )
-
-    def add_object(workspace_page):
-        workspace_page.add_library_item_to_dataflow("simple_paraboloid.SimpleParaboloid", 'top')
-        
+    
+    @last_saved
     def rename_file(workspace_page):
         file_names = workspace_page.get_files()
         workspace_page.rename_file('test_file.py', 'best_file.py')
 
+    @last_saved
     def edit_file(workspace_page):
         if broken_chrome():
-            raise SkipTest('Test broken for chrome/selenium combination')
+            print ("Skipping testing metadata after editing file due to broken chrome driver.")
+            return False
 
         workspace_window = browser.current_window_handle
 
@@ -104,68 +92,50 @@ def _test_last_saved_metadata(browser):
         port = workspace_page.port
         workspace_page = WorkspacePage.verify(browser, port)
 
+    @last_saved
     def delete_file(workspace_page):
         workspace_page.delete_file('best_file.py')
+
+    @last_saved
+    def add_object(workspace_page):
+        workspace_page.add_library_item_to_dataflow("openmdao.main.assembly.Assembly", 'top')
+
+    @last_saved
+    def replace_object(workspace_page):
+        workspace_page.replace_driver("top", 'SLSQPdriver')
+
+    @last_saved
+    def commit_project(workspace_page):
+        top = workspace_page.get_dataflow_figure('top')
+        top.remove()
+        workspace_page.commit_project()
+
+    @last_saved
+    def revert_project(workspace_page):
+        workspace_page.add_library_item_to_dataflow("openmdao.main.assembly.Assembly", 'top')
+        workspace_page = workspace_page.revert_project()
         
      
     projects_page = begin(browser)
-    workspace_page, project_dict = new_project(projects_page.new_project(),
-                                              verify=True, load_workspace=True)
+    projects_page, project_dict = new_project(projects_page.new_project(),
+                                              verify=True, load_workspace=False)
 
-    add_file(workspace_page)
-    projects_page = workspace_page.close_workspace()
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
+    project_name = project_dict['name']
+    metadata = projects_page.get_project_metadata(project_name)
+    created_time = date_to_datetime(metadata['created'])
 
-    created_time = date_to_datetime( metadata['created'] )
-    add_file_time = date_to_datetime( metadata['last_saved'] )
+    #Testing metadata for file operations
+    projects_page, project_name, add_file_time       = add_file(projects_page, project_name, created_time)
+    projects_page, project_name, new_file_time       = new_file(projects_page, project_name, add_file_time)
+    projects_page, project_name, edit_file_time      = edit_file(projects_page, project_name, new_file_time)
+    projects_page, project_name, rename_file_time    = rename_file(projects_page, project_name, edit_file_time)
+    projects_page, project_name, delete_file_time    = delete_file(projects_page, project_name, rename_file_time)
 
-    assert( add_file_time > created_time )
-
-    workspace_page = projects_page.open_project( project_dict['name'] )
-    new_file(workspace_page)
-    projects_page = workspace_page.close_workspace()
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
-
-    new_file_time = date_to_datetime( metadata['last_saved'] )
-
-    assert( new_file_time > add_file_time )
-
-    workspace_page = projects_page.open_project( project_dict['name'] )
-    add_object(workspace_page)
-    projects_page = workspace_page.close_workspace()
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
-
-    add_object_time = date_to_datetime( metadata['last_saved'] )
-    
-    assert( add_object_time > new_file_time )
-
-    workspace_page = projects_page.open_project( project_dict['name'] )
-    edit_file(workspace_page)
-    projects_page = workspace_page.close_workspace()
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
-
-    edit_file_time = date_to_datetime( metadata['last_saved'] )
-
-    assert( edit_file_time > add_object_time )
-
-    workspace_page = projects_page.open_project( project_dict['name'] )
-    rename_file(workspace_page)
-    projects_page = workspace_page.close_workspace()
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
-
-    rename_file_time = date_to_datetime( metadata['last_saved'] )
-    
-    assert( rename_file_time > edit_file_time )
-
-    workspace_page = projects_page.open_project( project_dict['name'] )
-    delete_file(workspace_page)
-    projects_page = workspace_page.close_workspace()
-
-    metadata = projects_page.get_project_metadata( project_dict['name'] )
-
-    delete_file_time = date_to_datetime( metadata['last_saved'] )
-    
-    assert( delete_file_time > rename_file_time )
+    #Testing metadata for project operations
+    projects_page, project_name, add_object_time     = add_object(projects_page, project_name, delete_file_time)
+    projects_page, project_name, replace_object_time = replace_object(projects_page, project_name, add_object_time)
+    projects_page, project_name, commit_project_time = commit_project(projects_page, project_name, replace_object_time)
+    projects_page, project_name, revert_project_time = revert_project(projects_page, project_name, commit_project_time)
 
     projects_page.logout()
 
