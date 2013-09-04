@@ -26,14 +26,6 @@ This will filter down the whole library so you can find things easier. Drag the
 .. figure:: library_assembly.png
    :align: center
 
-**Adding required files to the project**
-
-There are three files we need to add to the project for our specific
-problem. Click the Files tab on the left. From the File menu, select Add Files. 
-Navigate to the 
-``examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe`` directory.
-Add the files: cowl.stl, plug.stl and simple_nozzle.py.
-
 **Setting up the geometry component**
 
 Go back to the Library and drag the ``GeomComponent`` item and drop it into the `top` assembly.
