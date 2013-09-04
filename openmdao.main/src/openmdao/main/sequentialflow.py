@@ -670,8 +670,8 @@ class SequentialWorkflow(Workflow):
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
                     i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] -= arg[i1:i2]
-                    result[i3:i4] += arg[i1:i2]
+                    result[i1:i2] = result[i1:i2] - arg[i1:i2]
+                    result[i3:i4] = result[i3:i4] + arg[i1:i2]
                     
                     # This column shouldn't have anything else in it.
                     if arg[i1:i2] != 0.0:
@@ -698,7 +698,7 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                result[i1:i2] += outputs[comp_name][var_name]
+                result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
                 
         #print arg, result
         return result
