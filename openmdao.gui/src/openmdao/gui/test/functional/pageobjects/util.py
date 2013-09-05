@@ -6,7 +6,8 @@ import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import WebDriverException, TimeoutException, \
+                                       NoSuchWindowException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -296,7 +297,10 @@ class SafeDriver(SafeElementBase):
 
     @property
     def current_window_handle(self):
-        return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
+        try:
+            return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
+        except NoSuchWindowException:
+            return None
 
     @property
     def window_handles(self):
