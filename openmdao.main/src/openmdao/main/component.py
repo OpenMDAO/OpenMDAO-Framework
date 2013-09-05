@@ -481,7 +481,7 @@ class Component(Container):
                 return
             
             if has_interface(self, IAssembly):
-                self.linearize(extra_in=extra_in)
+                self.linearize(extra_in=extra_in, extra_out=extra_out)
             else:
                 self.linearize()
                 

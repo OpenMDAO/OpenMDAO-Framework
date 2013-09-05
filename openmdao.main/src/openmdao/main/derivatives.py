@@ -116,7 +116,7 @@ def calc_gradient(wflow, inputs, outputs):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs)
+    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
 
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -188,7 +188,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs)
+    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
 
     # Adjoint mode, solve linear system for each output
     j = 0

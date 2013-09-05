@@ -403,6 +403,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         # We shouldn't calculate a derivative of this
         top.nest.comp.add('unwanted', Float(12.34, iotype='in'))
+        top.nest.comp.add('junk', Float(9.9, iotype='out'))
         
         top.driver.workflow.add(['nest'])
         top.nest.driver.workflow.add(['comp'])
@@ -420,6 +421,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
                                               outputs=['nest.f_xy'], mode='adjoint')
         
@@ -431,6 +433,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
         self.assertEqual(len(inkeys), 2)
+        self.assertTrue('f_xy' in outkeys)
+        self.assertEqual(len(outkeys), 1)
 
     def test_5in_1out(self):
         
@@ -548,7 +552,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         # TODO: Support for slices here
         #J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
         #                                      outputs=['comp2.y[0]'])
-        #print J
+        print J
 
         # this tests the finite difference code.
         top.run()
@@ -573,13 +577,45 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = J - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
-        top.run()
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp1.y'],
                                               mode='adjoint')
         diff = J - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
+    def test_nested_2Darray(self):
+        
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp', ArrayComp2D())
+        
+        top.driver.workflow.add(['nest'])
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x',],
+                                              outputs=['nest.y'])
+        
+        diff = J - top.nest.comp.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x',],
+                                              outputs=['nest.y'],
+                                              mode='adjoint')
+        diff = J - top.nest.comp.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        # TODO: Support array slices.
+        #top.driver.workflow.config_changed()
+        #J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
+        #                                      outputs=['nest.y[0, 0]'])
+        
+        #diff = J - top.nest.comp.J[0, 0]
+        #assert_rel_error(self, diff.max(), 0.0, .000001)
         
     def test_large_dataflow(self):
         

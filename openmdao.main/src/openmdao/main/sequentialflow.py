@@ -1026,14 +1026,12 @@ class SequentialWorkflow(Workflow):
         else:
             close_stream = False
     
-        self._parent.update_parameters()
         self.config_changed()
         if adjoint:
             J = self.calc_gradient(inputs, outputs, mode='adjoint')
         else:
             J = self.calc_gradient(inputs, outputs)
         
-        self._parent.update_parameters()
         self.config_changed()
         Jbase = self.calc_gradient(inputs, outputs, fd=True)
 
