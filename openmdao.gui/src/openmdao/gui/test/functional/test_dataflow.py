@@ -14,7 +14,6 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from pageobjects.util import NotifierPage
 from pageobjects.component import ComponentPage
-from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -632,9 +631,6 @@ def _test_ordering(browser):
               'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt',
               prefix='top')
 
-    # Check that ExternalCode is before SLSQP.
-    assert ext.coords[0] < opt.coords[0]
-
     # Add parameter to SLSQP.
     editor = opt.editor_page(base_type='Driver')
     editor('parameters_tab').click()
@@ -646,10 +642,11 @@ def _test_ordering(browser):
     dialog.name = 'tmo'
     dialog('ok').click()
 
-    # Check that SLSQP is now ahead of ExternalCode.
+    # Check that SLSQP is above and to the left of ExternalCode
     ext = workspace_page.get_dataflow_figure('ext', 'top')
     opt = workspace_page.get_dataflow_figure('opt', 'top')
     assert ext.coords[0] > opt.coords[0]
+    assert ext.coords[1] > opt.coords[1]
 
     # Clean up.
     editor.close()

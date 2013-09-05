@@ -149,8 +149,8 @@ class Assembly(Component):
                 kwargs['driver'] = True
             if isinstance(obj, PseudoComponent):
                 kwargs['pseudo'] = obj._pseudo_type
-            self._depgraph.add_component(obj.name, 
-                                         obj.list_inputs(), 
+            self._depgraph.add_component(obj.name,
+                                         obj.list_inputs(),
                                          obj.list_outputs(),
                                          **kwargs)
         return obj
@@ -170,9 +170,10 @@ class Assembly(Component):
         """
         wflows = []
         for item in self.list_containers():
-            obj = self.get(item)
-            if isinstance(obj, Driver) and name in obj.workflow:
-                wflows.append((obj.workflow, obj.workflow.index(name)))
+            if item != name:
+                obj = self.get(item)
+                if isinstance(obj, Driver) and name in obj.workflow:
+                    wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
 
     def _cleanup_autopassthroughs(self, name):
@@ -477,7 +478,7 @@ class Assembly(Component):
                         self.raise_exception(msg, RuntimeError)
 
         if pcomp_type is not None:
-            pseudocomp = PseudoComponent(self, srcexpr, destexpr, 
+            pseudocomp = PseudoComponent(self, srcexpr, destexpr,
                                          pseudo_type=pcomp_type)
             self.add(pseudocomp.name, pseudocomp)
             pseudocomp.make_connections(self)
@@ -521,11 +522,11 @@ class Assembly(Component):
         for u, v in graph.list_connections(show_external=True):
             if (u,v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
-                
+
         for u, v in graph.list_autopassthroughs():
             if (u,v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
-                
+
         for name in pcomps:
             try:
                 self.remove_trait(name)
@@ -549,7 +550,7 @@ class Assembly(Component):
             cont = getattr(self, name)
             if isinstance(cont, Driver):
                 cont.config_changed(update_parent=False)
-            
+
         # Detect and save any loops in the graph.
         self._graph_loops = None
 
@@ -593,7 +594,7 @@ class Assembly(Component):
         """Stop the calculation."""
         self.driver.stop()
 
-    def list_connections(self, show_passthrough=True, 
+    def list_connections(self, show_passthrough=True,
                                visible_only=False,
                                show_expressions=False):
         """Return a list of tuples of the form (outvarname, invarname).
@@ -646,13 +647,13 @@ class Assembly(Component):
         # if source vars are invalid, request an update
         if invalids:
             loops = graph.get_loops()
-            
+
             for cname, vnames in partition_names_by_comp(invalids).items():
                 if cname is None:
                     if self.parent:
-                        self.parent.update_inputs(self.name, 
+                        self.parent.update_inputs(self.name,
                                                   vnames)
-                        
+
                 # If our source component is in a loop with us, don't
                 # run it. Otherwise you have infinite recursion. It is
                 # the responsibility of the solver to properly execute
@@ -663,7 +664,7 @@ class Assembly(Component):
                             break
                     else:
                         getattr(self, cname).update_outputs(vnames)
-                        
+
                 else:
                     getattr(self, cname).update_outputs(vnames)
 
@@ -710,7 +711,7 @@ class Assembly(Component):
                 if isinstance(comp, Component) or isinstance(comp, PseudoComponent):
                     vals = comp.get_valid(varnames)
                 else:
-                    vals = [self._valid_dict['.'.join([compname, vname])] 
+                    vals = [self._valid_dict['.'.join([compname, vname])]
                                      for vname in varnames]
                 for i, val in enumerate(vals):
                     full = '.'.join([compname, varnames[i]])
@@ -777,7 +778,7 @@ class Assembly(Component):
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
         if invalidated_ins:
-            outs = self._depgraph.invalidate_deps(self, '', 
+            outs = self._depgraph.invalidate_deps(self, '',
                                                   invalidated_ins, force)
 
         if outs:
@@ -792,29 +793,29 @@ class Assembly(Component):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
-        
+
         required_inputs = []
         if extra_in:
             for varpath in extra_in:
                 compname, _, var = varpath.partition('.')
                 if compname == self.name:
                     required_inputs.append(var)
-        
-        for src, target in self.parent.list_connections(): 
+
+        for src, target in self.parent.list_connections():
             compname, _, var = target.partition('.')
             if compname == self.name:
                 required_inputs.append(var)
-                
-        # Sub-assembly sourced    
+
+        # Sub-assembly sourced
         input_keys = []
         output_keys = []
-        
+
         # Parent-assembly sourced
         self.J_input_keys = []
         self.J_output_keys = []
-        
+
         for src, target in self.list_connections():
-            
+
             # Outputs
             if '.' in src and '.' not in target:
                 val = self.get(src)
@@ -822,26 +823,26 @@ class Assembly(Component):
                    hasattr(val, '__iter__') and isinstance(val[0], float):
                     output_keys.append(src)
                     self.J_output_keys.append(target)
-                    
+
             # Inputs
             elif '.' in target and '.' not in src:
-                
+
                 if src not in required_inputs:
                     continue
-                
+
                 val = self.get(target)
                 if isinstance(val, float) or \
                    hasattr(val, '__iter__') and isinstance(val[0], float):
                     input_keys.append(target)
                     self.J_input_keys.append(src)
-                
+
         self.J = self.driver.calc_gradient(input_keys, output_keys)
-        
+
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''
-        
+
         return self.J_input_keys, self.J_output_keys, self.J
-    
+
     def list_components(self):
         ''' List the components in the assembly.
         '''
@@ -928,7 +929,7 @@ class Assembly(Component):
                                                        comp.name + '.' + name])
 
         # list of connections (convert tuples to lists)
-        conntuples = self.list_connections(show_passthrough=True, 
+        conntuples = self.list_connections(show_passthrough=True,
                                            visible_only=True)
         for connection in conntuples:
             connections.append(list(connection))
@@ -1143,7 +1144,7 @@ class Assembly(Component):
 
         # connections
         connections = []
-        conntuples = self.list_connections(show_passthrough=True, 
+        conntuples = self.list_connections(show_passthrough=True,
                                            visible_only=True)
         comp_names = self.list_components()
         for src_var, dst_var in conntuples:
@@ -1164,7 +1165,7 @@ def dump_iteration_tree(obj, full=False):
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
-    
+
     If full is True, show pseudocomponents as well.
     """
     def _dump_iteration_tree(obj, f, tablevel):
