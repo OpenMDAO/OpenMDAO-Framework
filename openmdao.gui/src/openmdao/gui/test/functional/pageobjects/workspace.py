@@ -456,6 +456,14 @@ class WorkspacePage(BasePageObject):
         page.set_value(comment)
         NotifierPage.wait(self)
 
+    def revert_project(self):
+        """ Revert current project. """
+        self('project_menu').click()
+        self('revert_button').click()
+        page = ConfirmationPage(self)
+        page.click_ok()
+        return WorkspacePage.verify(self.browser, self.port)
+
     def reload_project(self):
         """ Reload current project. """
         self('project_menu').click()
