@@ -238,8 +238,19 @@ class Projects(object):
             }
             # Return last file modification dates too.
             try:
-                stamp = os.path.getmtime(project['projpath'])
-                project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
+                #all_files = []
+                #for root, sub_folders, files in os.walk(project['projpath']):
+                #    all_files.append(root)
+                #    if files:
+                #        for f in files:
+                #            all_files.append( os.path.join( root, f ) )
+                #
+                #timestamps = [os.path.getmtime( file ) for file in all_files ]
+                #last_modified = max(timestamps)
+                #stamp = os.path.getmtime(project['projpath'])
+                project_root_dir = project['projpath']
+                last_modified = os.path.getmtime(os.path.join(project_root_dir, "_settings.cfg"))
+                project['file_modified'] = datetime.fromtimestamp(last_modified).strftime(self.time_format)
             except Exception, err:
                 project['file_modified'] = err
 
