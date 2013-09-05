@@ -804,12 +804,12 @@ class Assembly(Component):
                 for varpath in varpaths:
                     compname, _, var = varpath.partition('.')
                     if compname == self.name:
-                        required_inputs.append(var)
+                        required_inputs.append(var.split('[')[0])
         
         for src, target in self.parent.list_connections(): 
             compname, _, var = target.partition('.')
             if compname == self.name:
-                required_inputs.append(var)
+                required_inputs.append(var.split('[')[0])
                 
         # Only calc derivatives for outputs we need
         required_outputs = []
@@ -822,12 +822,12 @@ class Assembly(Component):
                 for varpath in varpaths:
                     compname, _, var = varpath.partition('.')
                     if compname == self.name:
-                        required_outputs.append(var)
+                        required_outputs.append(var.split('[')[0])
         
         for src, target in self.parent.list_connections(): 
             compname, _, var = src.partition('.')
             if compname == self.name:
-                required_outputs.append(var)
+                required_outputs.append(var.split('[')[0])
                 
         # Sub-assembly sourced    
         input_keys = []
