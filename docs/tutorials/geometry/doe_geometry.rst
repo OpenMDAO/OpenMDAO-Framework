@@ -11,10 +11,26 @@ will demonstrate the use of a geometry object as part of a design
 of experiments (DOE). This tutorial will dynamically show how the
 design of a simple jet engine nozzle can be varied as part of a DOE.
 
+The geometry of the nozzle modeled here is a very simple axisymetric plug nozzle with a very 
+course physical discrtization. It's parametrized using a axisymetric bspline based free-form-deformation method, 
+and keeping the overall number of surface points small helps keep things running more quickly for 
+this tutorial. If you wanted to do real analysis you would certainly use a much finer discritization, 
+but this works fine to demonstrate how to work with geometry in OpenMDAO. 
+
+The nozzle is split into the plug and the cowl, each with it's own control variables. The plug 
+has 10 control points aranged axialy from the back to front that deform the radius and axial location 
+discrete geometry points around that axial location. So for the plug, each control point yeilds two design 
+variables: axial location and radius. Overall that is 20 design variables for the plug. 
+
+The cowl is parameterized by two separate b-splines: one for the 
+thickness of the cowl and one for the radius of the cowl centerline. So the cowl has two sets of 
+10 control points, spaced axialy from back to front, which combine to define it's geometry. The centerline 
+parameterization works just like that of the plug, where you can contrl the axial location and the radius. 
+The thickness control only has a single dimension. Ovearll, that give 30 design variables for the cowl. 
+
 .. note:: This tutorial will be done in the OpenMDAO GUI. In addition, a script
-  version of this tutorial is given in the examples directory of the 
-  OpenMDAO distribution, specifically 
-  ``examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/test/test_nozzle_geometry_doe.py``.
+  version of this tutorial can be downloaded 
+  `here <../../../examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/testtest_nozzle_geometry_doe.py>`_
 
 Start by creating a new project in the GUI. We'll name it `DOE Geometry
 Tutorial`.  As in the overview tutorial, first, you should
@@ -26,47 +42,45 @@ This will filter down the whole library so you can find things easier. Drag the
 .. figure:: library_assembly.png
    :align: center
 
-**Adding required files to the project**
-
-There are three files we need to add to the project for our specific
-problem. Click the Files tab on the left. From the File menu, select Add Files. 
-Navigate to the 
-``examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe`` directory.
-Add the files: cowl.stl, plug.stl and simple_nozzle.py.
-
 **Setting up the geometry component**
 
-Go back to the Library and drag the ``GeomComponent`` item and drop it into the `top` assembly.
-Name it `gc` when prompted.  
+Go back to the Library and filter it by "geom". Drag the ``GeomComponent`` 
+item and drop it into the `top` assembly. You can name it `gc`. Double click on `gc`
+and in the editor window that appears, click the Slots tab. Drag from the Library the item,
+PlugNozzleGeometry and drop it into the parametric_geometry slot. This adds the nozzle model into 
+your generic GeomComponent instance `gc`. If you flip over to the inputs tab you'll see that 
+there are now some inputs you can modify that will change the geometry. Feel free to play around 
+a bit if you like. After you change inputs, right click on `gc` and select run to have the geometry 
+change. 
 
-Double click on the GeomComponent in the Dataflow. In the editor window that 
-appears, click the Slots tab. Drag from the Library the item, PlugNozzleGeometry and
-drop it into the parametric_geometry slot.
 
 Click the Outputs tab. In the Value column for the geom_out output, there should be a button
-labeled View Geom. Click that button and a new window should apprear showing the 
+labeled View Geom. Click that button and a new window should apprear letting you view the 
 nozzle geometry. 
 
 Go back to the GeomComponent editor window. Click the Inputs tab. Change the value of auto_run to be True. This causes the
-GeomComponent to execute whenever any input values change. Now we can edit some of the 
-input values for this geometry and see the geometry updated in the OpenMDAO 
-Geometry Viewer window. This GeomComponent has a series of deformation control point arrays 
-as inputs. For example, the plug.R array, which contains 9 elements, controls the radius
-of the plug along the length of the plug, which is the pointy object. Let's try changing the value of the last element of this 
-array to see how it affects the geometry. Click the cell for the Name column for the ``plug`` input.  
-The subelements of plug, R and X, should be revealed. Click on the Value cell for R. An array editor window should appear. 
-Change the value of the last element to be 5.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
+GeomComponent to execute whenever any input values change. In general you would not want to leave this setting on 
+when you were running an analysis. If you optimizer sets 10 values in your geometry model, the model would execute 10 times. 
+That could get very costly for analysis and optimiation, but when you're just playing with a model and setting inputs by hand 
+calling run each time can get quite tedious. So in a real scenario, just make sure you set auto_run back to falsse before doing 
+any serious analysis. 
+
+Now we can edit some of the input values for this geometry and see the geometry updated in the OpenMDAO 
+Geometry Viewer window. Edit the plug.R array, which controls the 9 radius control points.
+Click the cell for the Name column for the ``plug`` input.  
+The subelements of plug, R and X, should be revealed. Change the value of the last element 
+of the R array to be 5.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
 end of the plug tip should become much larger than before.
 
 **Setup the DOE Driver**
 
-From the Library, drag the ``DOEdriver`` item and drop it on the ``driver`` dataflow item in
-the Dataflow. A confirmation dialog will ask if you really want to replace the existing driver
+From the Library, drag the ``DOEdriver`` item and drop it on the ``driver`` item in the top 
+assembly. A confirmation dialog will ask if you really want to replace the existing driver
 with the DOEdriver. Click Ok. 
 
 Open up the editor for the DOEdriver by double clicking it in the Dataflow. Click on the Slots tab.
 From the Library, drag and drop the FullFactorial item on to the DOEgenerator slot. A dialog window
-will appear asking for the number of levels for this DOE. Enter 10 and click Ok.
+will appear asking for the number of levels for this DOE. Enter 3 and click Ok.
 
 Click the Parameters tab. Click the Add Parameter button in the lower left. Enter in these values:
 

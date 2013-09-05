@@ -42,8 +42,9 @@ setup(name='openmdao.examples.nozzle_geometry_doe',
              'openmdao.lib',
              ],
        entry_points="""
-         # -*- Entry points: -*-
-         """
+          [openmdao.parametric_geometry]
+          openmdao.examples.nozzle_geometry_doe.simple_nozzle.PlugNozzleGeometry = openmdao.examples.nozzle_geometry_doe.simple_nozzle:PlugNozzleGeometry
+          """
       )
 
 
