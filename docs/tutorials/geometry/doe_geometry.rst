@@ -11,26 +11,27 @@ will demonstrate the use of a geometry object as part of a design
 of experiments (DOE). This tutorial will dynamically show how the
 design of a simple jet engine nozzle can be varied as part of a DOE.
 
-The geometry of the nozzle modeled here is a very simple axisymetric plug nozzle with a very 
-course physical discrtization. It's parametrized using a axisymetric bspline based free-form-deformation method, 
+The geometry of the nozzle modeled here is a very simple axisymmetric plug nozzle with a very 
+course physical discretization. It's parameterized using a axisymmetric B-spline based free-form-deformation method, 
 and keeping the overall number of surface points small helps keep things running more quickly for 
-this tutorial. If you wanted to do real analysis you would certainly use a much finer discritization, 
+this tutorial. If you wanted to do real analysis you would certainly use a much finer discretization, 
 but this works fine to demonstrate how to work with geometry in OpenMDAO. 
 
-The nozzle is split into the plug and the cowl, each with it's own control variables. The plug 
-has 10 control points aranged axialy from the back to front that deform the radius and axial location 
-discrete geometry points around that axial location. So for the plug, each control point yeilds two design 
-variables: axial location and radius. Overall that is 20 design variables for the plug. 
+The nozzle is split into the plug and the cowl, each with its own control variables. The plug 
+has 10 control points arranged axially from the back to front that deform the radius and axial location 
+discrete geometry points around that axial location. So for the plug, each control point yields two design 
+variables: axial location and radius. Overall there are 20 design variables for the plug. 
 
-The cowl is parameterized by two separate b-splines: one for the 
+The cowl is parameterized by two separate B-splines: one for the 
 thickness of the cowl and one for the radius of the cowl centerline. So the cowl has two sets of 
-10 control points, spaced axialy from back to front, which combine to define it's geometry. The centerline 
-parameterization works just like that of the plug, where you can contrl the axial location and the radius. 
-The thickness control only has a single dimension. Ovearll, that give 30 design variables for the cowl. 
+10 control points, spaced axially from back to front, which combine to define its geometry. The centerline 
+parameterization works just like that of the plug, where you can control the axial location and the radius. 
+The thickness control only has a single dimension. Overall, there are 30 design variables for the cowl. 
 
-.. note:: This tutorial will be done in the OpenMDAO GUI. In addition, a script
-  version of this tutorial can be downloaded 
-  `here <../../../examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/testtest_nozzle_geometry_doe.py>`_
+.. note:: This tutorial will be done in the OpenMDAO GUI. In addition, a 
+  script version of this tutorial is available in the file
+  ``examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/test/test_nozzle_geometry_doe.py``
+  .
 
 Start by creating a new project in the GUI. We'll name it `DOE Geometry
 Tutorial`.  As in the overview tutorial, first, you should
@@ -46,31 +47,37 @@ This will filter down the whole library so you can find things easier. Drag the
 
 Go back to the Library and filter it by "geom". Drag the ``GeomComponent`` 
 item and drop it into the `top` assembly. You can name it `gc`. Double click on `gc`
-and in the editor window that appears, click the Slots tab. Drag from the Library the item,
+and in the editor window that appears, click the Slots tab. Drag from the Library the item
 PlugNozzleGeometry and drop it into the parametric_geometry slot. This adds the nozzle model into 
-your generic GeomComponent instance `gc`. If you flip over to the inputs tab you'll see that 
+your generic GeomComponent instance `gc`. If you flip over to the Inputs tab you'll see that 
 there are now some inputs you can modify that will change the geometry. Feel free to play around 
-a bit if you like. After you change inputs, right click on `gc` and select run to have the geometry 
-change. 
-
+a bit if you like. After you change inputs, right click on the `gc` element in the Dataflow and select Run from the menu
+to have the geometry 
+change. At this point, you have no way to view that change in geometry. The next part of the tutorial
+will explain how to do that. 
 
 Click the Outputs tab. In the Value column for the geom_out output, there should be a button
-labeled View Geom. Click that button and a new window should apprear letting you view the 
+labeled View Geom. Click that button and the Geometry Viewer window should appear letting you view the 
 nozzle geometry. 
 
 Go back to the GeomComponent editor window. Click the Inputs tab. Change the value of auto_run to be True. This causes the
 GeomComponent to execute whenever any input values change. In general you would not want to leave this setting on 
 when you were running an analysis. If you optimizer sets 10 values in your geometry model, the model would execute 10 times. 
-That could get very costly for analysis and optimiation, but when you're just playing with a model and setting inputs by hand 
-calling run each time can get quite tedious. So in a real scenario, just make sure you set auto_run back to falsse before doing 
+That could get very costly for analysis and optimization, but when you're just playing with a model and setting inputs by hand 
+calling run each time can get quite tedious. So in a real scenario, just make sure you set auto_run back to false before doing 
 any serious analysis. 
 
 Now we can edit some of the input values for this geometry and see the geometry updated in the OpenMDAO 
-Geometry Viewer window. Edit the plug.R array, which controls the 9 radius control points.
-Click the cell for the Name column for the ``plug`` input.  
-The subelements of plug, R and X, should be revealed. Change the value of the last element 
-of the R array to be 5.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
-end of the plug tip should become much larger than before.
+Geometry Viewer window. Edit the plug.R array, which controls the radius control points. To do that, 
+click the cell for the Name column for the ``plug`` input.  
+The sub-elements of plug, R and X, should be revealed. Click in the Value cell for R to bring up the 
+editor for that value. Change the value of the seventh element 
+of the R array to be 2.0 and click the Submit changes button. Look in the Geometry Viewer window. The 
+plug tip should change shape.
+
+.. figure:: nozzle_geom_resized.png
+   :align: center
+
 
 **Setup the DOE Driver**
 
@@ -96,29 +103,29 @@ Variable                Value
 
 and click Ok.
 
-We should now be able to run the analysis! Right click on the Assembly, top, and select Run from the menu. 
+.. figure:: nozzle_geom_doe_resized.png
+   :align: center
+
+We should now be able to run the analysis! Right click on the Assembly, ``top``, and select Run from the menu. 
 You should notice the geometry change shape. But the analysis runs too quickly to see how the 
 geometry looks for each of the ten designs. You only see the first and the last.
 
 **Slow down the analysis**
-   
 
 To slow things down a bit, we will add a component to the workflow that does nothing but create a time
 delay. This process will also demonstrate some more features of the OpenMDAO GUI. 
-From the Library, drag into the Assembly a SleepComponent item. Name it "sc". Double click it to open its
+From the Library, drag the SleepComponent into the Assembly,``top``. Name it "sc". Double click it to open its
 editor window. Change the input value "sleep_time" to be 1.0. Close the editor window. 
 
 We need to add this component to the driver's workflow. First, make sure that the Objects tab is selected on the left
-and that the menu below it is set to Workflow. Then, drag 'sc' from the Dataflow diagram onto 'top.driver' in the 
+and that the menu below it is set to Workflow to reveal the Workflow tree. Then, drag 'sc' from the Dataflow diagram onto 'top.driver' in the 
 Workflow tree.  
 
-Click on the Objects tab of the main window. Below that tab there is a 
-menu. Make sure it is set to Components. By clicking on the "top" item in the Components, you should be able to 
-see all the elements in top assembly including the "sc" item we just added. 
+.. figure:: nozzle_geom_doe_sleep_resized.png
+   :align: center
 
-Click on the tab for the main Workflow. Drag and drop the "sc" item from the Compenents tab to the grey block below and to the right 
-of the top.driver element. That block should highlight to indicate it can accept the item you are dragging. Drop the sc item
-into that workflow block. The block should expand to include both the gc and sc elements.
+Select Components from the menu in the Objects tab. By clicking on the "top" item in the Components, you should be able to 
+see all the elements in top assembly including the "sc" item we just added. 
 
 Now the DOEdriver will run both the GeomComponent and the SleepComponent for each design iteration. 
 Go back to the Dataflow and try running the analysis again. With the one second delay between each analysis, you can now easily see
