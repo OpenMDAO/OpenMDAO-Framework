@@ -380,7 +380,7 @@ class STLGroup(object):
 class STLGroupSender(STLSender):
 
     def initialize(self, **kwargs):
-        eye    = np.array([0.0, 0.0, 20.0], dtype=np.float32)
+        eye    = np.array([5.0, 0.0, 70.0], dtype=np.float32)
         center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
         up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
         fov   = 30.0
