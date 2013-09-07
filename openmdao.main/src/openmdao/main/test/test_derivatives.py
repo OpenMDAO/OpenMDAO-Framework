@@ -563,6 +563,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
         
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
+                                              outputs=['comp2.y[(-1)]'])
+
+        assert_rel_error(self, J[0, 0], 44.0, .001)
+        
         # this tests the finite difference code.
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],

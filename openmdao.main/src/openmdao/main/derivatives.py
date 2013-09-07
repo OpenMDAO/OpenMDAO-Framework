@@ -2,6 +2,7 @@
 This object is used by Component to store derivative information and to
 perform calculations during a Fake Finite Difference.
 """
+import itertools
 
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IDriver
@@ -9,7 +10,7 @@ from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index
+         ravel_multi_index, arange, prod
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -468,39 +469,56 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         
     """
     
-    if idx and odx:
-        if '(' in idx:
+    if idx:
+        idx = idx.strip('(').strip(')')
+        if '-' in idx or ':' in idx:
+            
+            idx_list = idx.split(',')
+            indices = []
+            for index, size in zip(idx_list, ish):
+                indices.append(eval('arange(size)[%s]' % index))
+                
+            if len(indices) > 1:
+                indices = zip(*itertools.product(*indices))
+            rav_ind = ravel_multi_index(indices, dims=prod(osh))
+            istring = 'rav_ind'
+                
+        elif ',' in idx:
             idx = eval(idx)
             ix = ravel_multi_index(idx, ish)
+            istring = 'ix:ix+1'
         else:
             ix = int(idx)
-            
-        if '(' in odx:
-            odx = eval(odx)
-            ox = ravel_multi_index(odx, ish)
-        else:
-            ox = int(odx)
-            
-        Jsub = J[ox:ox+1, ix:ix+1]
-    elif idx:
-        if '(' in idx:
-            idx = eval(idx)
-            ix = ravel_multi_index(idx, ish)
-        else:
-            ix = int(idx)
-            
-        Jsub = J[o1:o2, ix:ix+1]
-    elif odx:
-        if '(' in odx:
-            odx = eval(odx)
-            ox = ravel_multi_index(odx, ish)
-        else:
-            ox = int(odx)
-            
-        Jsub = J[ox:ox+1, i1:i2]
+            istring = 'ix:ix+1'
     else:
-        Jsub = J[o1:o2, i1:i2]
+        istring = 'i1:i2'
+        
+    if odx:
+        odx = odx.strip('(').strip(')')
+        if '-' in odx or ':' in odx:
+            
+            idx_list = odx.split(',')
+            indices = []
+            for index, size in zip(idx_list, osh):
+                indices.append(eval('arange(size)[%s]' % index))
+            
+            if len(indices) > 1:
+                indices = zip(*itertools.product(*indices))
+                
+            rav_ind = ravel_multi_index(indices, dims=prod(osh))
+            ostring = 'rav_ind'
+            
+        elif ',' in odx:
+            odx = eval(odx)
+            ox = ravel_multi_index(odx, ish)
+            ostring = 'ox:ox+1'
+        else:
+            ox = int(odx)
+            ostring = 'ox:ox+1'
+    else:
+        ostring = 'o1:o2'
     
+    Jsub = eval('J[%s, %s]' % (ostring, istring))
     return Jsub
     
     
