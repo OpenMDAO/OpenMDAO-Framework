@@ -476,11 +476,14 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
             idx_list = idx.split(',')
             indices = []
             for index, size in zip(idx_list, ish):
-                indices.append(eval('arange(size)[%s]' % index))
+                temp = eval('arange(size)[%s]' % index)
+                if not isinstance(temp, ndarray):
+                    temp = array([temp]) 
+                indices.append(temp)
                 
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
-            rav_ind = ravel_multi_index(indices, dims=prod(osh))
+            rav_ind = ravel_multi_index(indices, dims=osh)
             istring = 'rav_ind'
                 
         elif ',' in idx:
@@ -500,12 +503,15 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
             idx_list = odx.split(',')
             indices = []
             for index, size in zip(idx_list, osh):
-                indices.append(eval('arange(size)[%s]' % index))
-            
+                temp = eval('arange(size)[%s]' % index)
+                if not isinstance(temp, ndarray):
+                    temp = array([temp]) 
+                indices.append(temp)
+                    
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
                 
-            rav_ind = ravel_multi_index(indices, dims=prod(osh))
+            rav_ind = ravel_multi_index(indices, dims=osh)
             ostring = 'rav_ind'
             
         elif ',' in odx:
