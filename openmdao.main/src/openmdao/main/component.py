@@ -490,7 +490,8 @@ class Component(Container):
             return
             
         # Save baseline state for fake finite difference.
-        if savebase:
+        # TODO: fake finite difference something with apply_der?
+        if savebase and hasattr(self, 'provideJ'):
             self._ffd_inputs = {}
             self._ffd_outputs = {}
             ffd_inputs, ffd_outputs, _ = self.provideJ()
