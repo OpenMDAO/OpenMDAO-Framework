@@ -72,7 +72,7 @@ compilers.
 
       .. figure:: OSX_Lion_Screenshot.png
          :align: center
-         :alt: Screenshot of XCode's Downloads screen showing options
+         :alt: Screenshot of Xcode's Downloads screen showing options
 
          XCode's *Downloads* Screen     
 
@@ -183,6 +183,8 @@ using Git and GitHub.
 
 .. figure:: version_control.png
    :align: center
+   :alt: GitHub version control process with arrows showing relationship among OpenMDAO repository, personal fork of that repo, and personal copy of OpenMDAO repo with its branches
+
 
    Version Control Process
 
@@ -204,7 +206,7 @@ Git repositories, you should follow the instructions `here`__ to set your userna
 and API token. This way, your contact information will be included whenever you
 :term:`commit` to a :term:`repository` on that machine.
 
-.. __: https://help.github.com/articles/setting-your-email-in-git
+.. __: https://help.github.com/articles/set-up-git
 
 
 .. index:: repository

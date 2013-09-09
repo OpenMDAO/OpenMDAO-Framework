@@ -45,7 +45,9 @@ using OpenMDAO for a while now, there won't be any projects in the list yet. You
 existing models.
 
 .. figure:: project_page_v060.png
-
+   :alt: Image of the OpenMDAO project page
+   
+  
 When working with the GUI, anything you do will be contained in a project. You can think of a project as a collection of 
 information describing your model. That includes all of the Python files you use to define your components and the details of 
 the structure of the model itself. 
@@ -56,6 +58,8 @@ in for description and version number, but they are there if you want to keep tr
 button on this form, you'll be taken to an empty workspace in the GUI that looks like this: 
 
 .. figure:: workspace_start_v060.png
+   :alt: Empty GUI workspace containing grid lines is in middle of the page; tabs above it for Workflow, Files, Dataflow, Library & Properties. To the right is a list of library objects.   
+   
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
 through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. Just
