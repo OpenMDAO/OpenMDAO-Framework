@@ -680,6 +680,25 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.m2.rval_out, 4.5)
         self.assertEqual(top.m3.rval_out, 6.)
 
+    def test_remove(self):
+        top = Assembly()
+         
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertTrue(comps, ['driver'])
+         
+        top.add('comp', Component())
+         
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertEqual(set(comps), set(['driver','comp']))
+         
+        top.remove('comp')
+         
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertTrue(comps, ['driver'])
+
     def test_itername(self):
         # top
         #     comp1
