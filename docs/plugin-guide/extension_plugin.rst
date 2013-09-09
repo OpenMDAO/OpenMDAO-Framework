@@ -100,7 +100,7 @@ for a three-bar truss with the following specific geometry:
 
 .. figure:: ThreeBar.jpg
    :align: center
-   :alt: Lines and errors showing the geometry of the 3-bar truss
+   :alt: Lines and arrows showing the geometry of the 3-bar truss
 
    The 3-Bar Truss Geometry
    
