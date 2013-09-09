@@ -144,7 +144,8 @@ class ExprMapper(object):
 
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components.
-        Returns a list of edges to remove and a list of pseudocomponents to remove
+        Returns a list of edges to remove and a list of pseudocomponents 
+        to remove.
         """
         graph = self._exprgraph
 

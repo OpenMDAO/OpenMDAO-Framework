@@ -142,17 +142,24 @@ class Assembly(Component):
         if obj is a Component, add it to the component graph.
         Returns the added object.
         """
-        obj = super(Assembly, self).add(name, obj)
         if has_interface(obj, IComponent):
             kwargs = {}
             if has_interface(obj, IDriver):
                 kwargs['driver'] = True
             if isinstance(obj, PseudoComponent):
                 kwargs['pseudo'] = obj._pseudo_type
-            self._depgraph.add_component(obj.name, 
+            self._depgraph.add_component(name, 
                                          obj.list_inputs(), 
                                          obj.list_outputs(),
                                          **kwargs)
+        try:
+            super(Assembly, self).add(name, obj)
+        except:
+            if has_interface(obj, IComponent):
+                self._depgraph.remove_nodes_from(obj.list_inputs())
+                self._depgraph.remove_nodes_from(obj.list_outputs())
+                self._depgraph.remove_node(name)
+            raise
         return obj
 
     def find_referring_connections(self, name):
@@ -278,8 +285,9 @@ class Assembly(Component):
             newobj.workflow._parent = newobj
 
     def remove(self, name):
-        """Remove the named container object from this assembly and remove
-        it from its workflow(s) if it's a Component."""
+        """Remove the named container object from this assembly 
+        and remove it from its workflow(s) if it's a Component.
+        """
         cont = getattr(self, name)
         self.disconnect(name)
         if has_interface(cont, IComponent):
