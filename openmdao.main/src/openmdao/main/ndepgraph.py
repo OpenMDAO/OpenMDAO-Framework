@@ -284,7 +284,7 @@ class DependencyGraph(nx.DiGraph):
             self.config_changed()
 
     def check_connect(self, srcpath, destpath):
-        if is_external_node(self, destpath): # error will be caught at parent level
+        if is_external_node(self, destpath):  # error will be caught at parent level
             return
 
         dpbase = base_var(self, destpath)
@@ -550,12 +550,12 @@ class DependencyGraph(nx.DiGraph):
             Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
-            
+
         force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
-        
+
         if srcvars is None:
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
@@ -573,28 +573,28 @@ class DependencyGraph(nx.DiGraph):
 
         while(stack):
             srccomp, srcvars = stack.pop()
-            
+
             # KTM1 - input-input connections were excluded. Add them in by
             # adding the inputs to our check. The extra unconnected ones
             # shouldn't hurt the call into find_nodes.
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
-           
-            if srccomp: 
+
+            if srccomp:
                 srcvars += self.list_inputs(srccomp)
-            
+
             if not srcvars:
                 continue
 
-            invalidated.setdefault(srccomp, set()).update(srcvars) 
-            
+            invalidated.setdefault(srccomp, set()).update(srcvars)
+
             #cmap = partition_names_by_comp(self.basevar_iter(srcvars))
-            cmap = partition_names_by_comp(self.find_nodes(srcvars, 
-                                                           is_basevar_node, 
+            cmap = partition_names_by_comp(self.find_nodes(srcvars,
+                                                           is_basevar_node,
                                                            is_comp_node))
-            
+
             for dcomp, dests in cmap.items():
-                
+
                 if dests:
                     if dcomp in invalidated:
                         diff = set(dests) - invalidated[dcomp]
@@ -864,4 +864,3 @@ def find_all_connecting(graph, start, end):
         tmpset.update(graph.succ[node].keys())
 
     return fwdset.intersection(backset)
-

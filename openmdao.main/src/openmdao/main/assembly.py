@@ -470,12 +470,11 @@ class Assembly(Component):
         # Check if dest is declared as a parameter in any driver in the assembly
         for item in self.list_containers():
             comp = self.get(item)
-            if isinstance(comp, Driver) and \
-                hasattr(comp, 'list_param_targets'):
-                    if dest in comp.list_param_targets():
-                        msg = "destination '%s' is a Parameter in " % dest
-                        msg += "driver '%s'." % comp.name
-                        self.raise_exception(msg, RuntimeError)
+            if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
+                if dest in comp.list_param_targets():
+                    msg = "destination '%s' is a Parameter in " % dest
+                    msg += "driver '%s'." % comp.name
+                    self.raise_exception(msg, RuntimeError)
 
         if pcomp_type is not None:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr,
@@ -520,11 +519,11 @@ class Assembly(Component):
         graph = self._depgraph
 
         for u, v in graph.list_connections(show_external=True):
-            if (u,v) in to_remove:
+            if (u, v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
 
         for u, v in graph.list_autopassthroughs():
-            if (u,v) in to_remove:
+            if (u, v) in to_remove:
                 super(Assembly, self).disconnect(u, v)
 
         for name in pcomps:
@@ -569,7 +568,7 @@ class Assembly(Component):
 
         # now update boundary outputs
         for expr in self._exprmapper.get_output_exprs():
-            if valids[expr.text.split('[',1)[0]] is False:
+            if valids[expr.text.split('[', 1)[0]] is False:
                 srctxt = self._depgraph.get_sources(expr.text)[0]
                 srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
@@ -604,7 +603,7 @@ class Assembly(Component):
         conns = self._depgraph.list_connections(show_passthrough=show_passthrough)
         if visible_only:
             newconns = []
-            for u,v in conns:
+            for u, v in conns:
                 if u.startswith('_pseudo_'):
                     pcomp = getattr(self, u.split('.', 1)[0])
                     newconns.extend(pcomp.list_connections(is_hidden=True,
@@ -614,10 +613,9 @@ class Assembly(Component):
                     newconns.extend(pcomp.list_connections(is_hidden=True,
                                      show_expressions=show_expressions))
                 else:
-                    newconns.append((u,v))
+                    newconns.append((u, v))
             return newconns
         return conns
-
 
     @rbac(('owner', 'user'))
     def update_inputs(self, compname, inputs):
@@ -640,9 +638,9 @@ class Assembly(Component):
                 for inp in inputs:
                     conns.extend(graph._var_connections('.'.join([compname, inp]), 'in'))
 
-        srcs = [u for u,v in conns]
-        srcvars = [s.split('[',1)[0] for s in srcs]
-        invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcvars)) if not valid]
+        srcs = [u for u, v in conns]
+        srcvars = [s.split('[', 1)[0] for s in srcs]
+        invalids = [srcs[i] for i, valid in enumerate(self.get_valid(srcvars)) if not valid]
 
         # if source vars are invalid, request an update
         if invalids:
@@ -671,7 +669,7 @@ class Assembly(Component):
         # these connections all come from the depgraph, so they will only
         # contain simple expressions, i.e. only one variable ref (may be
         # an array index).
-        for u,v in conns:
+        for u, v in conns:
             try:
                 srcexpr = self._exprmapper.get_expr(u)
                 destexpr = self._exprmapper.get_expr(v)
@@ -697,7 +695,7 @@ class Assembly(Component):
         specify either direct traits of self or those of children.
         """
 
-        vnames = [n.split('[',1)[0] for n in names]
+        vnames = [n.split('[', 1)[0] for n in names]
         ret = [None] * len(vnames)
         posdict = dict([(name, i) for i, name in enumerate(vnames)])
 
@@ -719,7 +717,7 @@ class Assembly(Component):
         return ret
 
     def _input_updated(self, name, fullpath=None):
-        if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
+        if self._valid_dict[name.split('[', 1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=set([name]))
             if ((outs is None) or outs) and self.parent:
                 self.parent.child_invalidated(self.name, outs)
@@ -763,7 +761,7 @@ class Assembly(Component):
         else:
             invalidated_ins = []
             for name in names:
-                short = name.split('[',1)[0]
+                short = name.split('[', 1)[0]
                 if ('.' not in name and valids[short]) or self.get_valid([short])[0]:
                     invalidated_ins.append(name)
             if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
@@ -855,14 +853,14 @@ class Assembly(Component):
             that make up the data flow for the assembly;
             also includes parameter, constraint, and objective flows.
         '''
-        components = []
+        components  = []
         connections = []
-        parameters = []
+        parameters  = []
         constraints = []
-        objectives = []
+        objectives  = []
 
         # list of components (name & type) in the assembly
-        g = self._depgraph
+        g = self._depgraph.component_graph()
         names = [name for name in nx.algorithms.dag.topological_sort(g)
                                if not name.startswith('@')]
 
@@ -894,12 +892,12 @@ class Assembly(Component):
                     inames = [cls.__name__
                               for cls in list(implementedBy(comp.__class__))]
                     components.append({
-                        'name': comp.name,
-                        'pathname': comp.get_pathname(),
-                        'type': type(comp).__name__,
-                        'valid': comp.is_valid(),
+                        'name':       comp.name,
+                        'pathname':   comp.get_pathname(),
+                        'type':       type(comp).__name__,
+                        'valid':      comp.is_valid(),
                         'interfaces': inames,
-                        'python_id': id(comp)
+                        'python_id':  id(comp)
                     })
 
                 if is_instance(comp, Driver):
