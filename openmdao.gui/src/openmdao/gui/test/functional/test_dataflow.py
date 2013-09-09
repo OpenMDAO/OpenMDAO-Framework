@@ -449,7 +449,7 @@ def _test_driverflows(browser):
     expected = [
         ['',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
-         '-10', '99', '', '', '',
+         '-10', '99', '1', '0', '',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
     for i, row in enumerate(outputs.value):
@@ -745,8 +745,7 @@ def _test_io_filter_with_vartree(browser):
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
     editor = comp.editor_page()
-    inputs = editor.get_inputs()
-    #editor.move(-100, 0)
+    editor.get_inputs()  # select Inputs tab
 
     #filter when tree is expanded, filter on name="b"
     editor.filter_inputs("b")
