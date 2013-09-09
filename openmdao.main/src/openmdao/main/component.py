@@ -1658,8 +1658,6 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
-        array_regex = re.compile("(?P<index>\[\d+\])(?P=index)*")
-
         attrs = {}
         attrs['type'] = type(self).__name__
 
@@ -1741,7 +1739,6 @@ class Component(Container):
             io_attr['connection_types'] = 0
 
             connected = []
-            partially_connected = []
             partially_connected_indices = []
 
             for inp in connected_inputs:
@@ -1954,10 +1951,8 @@ class Component(Container):
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
-                    attr['name']    = str(key)
-                    attr['expr']    = str(con)
-                    attr['scaler']  = con.scaler
-                    attr['adder']   = con.adder
+                    attr['name'] = str(key)
+                    attr['expr'] = str(con)
                     constraints.append(attr)
 
             if has_interface(self, IHasConstraints) or \
@@ -1966,11 +1961,8 @@ class Component(Container):
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
-                    attr['name']    = str(key)
-                    attr['expr']    = str(con)
-                    # FIXME: how do we do scalers/adders now?
-                    # attr['scaler']  = con.scaler
-                    # attr['adder']   = con.adder
+                    attr['name'] = str(key)
+                    attr['expr'] = str(con)
                     constraints.append(attr)
 
             if has_constraints:
