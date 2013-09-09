@@ -142,17 +142,22 @@ class Assembly(Component):
         if obj is a Component, add it to the component graph.
         Returns the added object.
         """
-        obj = super(Assembly, self).add(name, obj)
         if has_interface(obj, IComponent):
             kwargs = {}
             if has_interface(obj, IDriver):
                 kwargs['driver'] = True
             if isinstance(obj, PseudoComponent):
                 kwargs['pseudo'] = obj._pseudo_type
-            self._depgraph.add_component(obj.name, 
+            self._depgraph.add_component(name, 
                                          obj.list_inputs(), 
                                          obj.list_outputs(),
                                          **kwargs)
+        try:
+            super(Assembly, self).add(name, obj)
+        except:
+            if has_interface(obj, IComponent):
+                self._depgraph.remove(name)
+
         return obj
 
     def find_referring_connections(self, name):
