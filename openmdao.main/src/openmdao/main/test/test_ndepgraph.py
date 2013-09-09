@@ -60,7 +60,7 @@ class DepGraphTestCase(unittest.TestCase):
         for comp in comps:
             if isinstance(comp, basestring):
                 comp = DumbClass(comp)
-            dep.add_component(comp.name, comp.list_inputs(), comp.list_outputs())
+            dep.add_component(comp.name, comp)
             setattr(scope, comp.name, comp)
 
         for v, iotype in variables:

@@ -41,7 +41,6 @@ import hashlib
 import inspect
 import logging
 import os
-import signal
 import socket
 import sys
 import threading

@@ -379,28 +379,9 @@ class Driver(Component):
         if self.workflow is not None:
             self.workflow.config_changed()
 
-    def workflow_subgraph(self):
-        """Return the workflow dependency subgraph for this Driver. 
-        This graph is a combination of the parent Assembly's graph and this
-        Driver's dependencies due to its objectives, constraints, 
-        and parameters.
+    def workflow_graph(self):
+        """Return the dependency graph for the scope of this Driver. 
         """
-        #if self._graph is None:
-            #parent_graph = self.get_expr_scope()._depgraph
-            #compgraph = parent_graph.component_graph()
-            #compnames = set(self.workflow._explicit_names)
-            #compnames.update(self._get_required_compnames())
-            #compnames.update(find_related_pseudos(compgraph, compnames))
-            #g = parent_graph.full_subgraph(compnames)
-            #self._graph = g
-            
-            #for pname in self.list_pseudocomps():
-                #pcomp = getattr(self.parent, pname)
-                #g.add_component(pname, pcomp.list_inputs(), 
-                                #pcomp.list_outputs(), pseudo=True)
-                #pcomp.make_connections(self.get_expr_scope())
-                
-        #return self._graph
         return self.parent._depgraph
 
     def record_case(self):

@@ -143,15 +143,7 @@ class Assembly(Component):
         Returns the added object.
         """
         if has_interface(obj, IComponent):
-            kwargs = {}
-            if has_interface(obj, IDriver):
-                kwargs['driver'] = True
-            if isinstance(obj, PseudoComponent):
-                kwargs['pseudo'] = obj._pseudo_type
-            self._depgraph.add_component(name, 
-                                         obj.list_inputs(), 
-                                         obj.list_outputs(),
-                                         **kwargs)
+            self._depgraph.add_component(name, obj)
         try:
             super(Assembly, self).add(name, obj)
         except:

@@ -1,6 +1,8 @@
 import networkx as nx
 
 from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver, IComponent
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -229,22 +231,24 @@ class DependencyGraph(nx.DiGraph):
         for n in rem_outs:
             self.remove(n)
 
-    def add_component(self, cname, inputs, outputs, **kwargs):
+    def add_component(self, cname, obj, **kwargs):
         """Create nodes in the graph for the component and all of
-        its input and output variables.  inputs and outputs names
-        are local to the component.  Any other named args that
+        its input and output variables. Any other named args that
         are passed will be placed in the metadata for the component
         node.
         """
 
+        if has_interface(obj, IDriver):
+            kwargs['driver'] = True
+        if hasattr(obj, '_pseudo_type'):
+            kwargs['pseudo'] = obj._pseudo_type
         if 'comp' not in kwargs:
             kwargs['comp'] = True
 
+        inputs  = ['.'.join([cname, v]) for v in obj.list_inputs()]
+        outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
+
         self.add_node(cname, **kwargs)
-
-        inputs  = ['.'.join([cname, v]) for v in inputs]
-        outputs = ['.'.join([cname, v]) for v in outputs]
-
         self.add_nodes_from(inputs, var=True, iotype='in')
         self.add_nodes_from(outputs, var=True, iotype='out')
 

@@ -207,14 +207,14 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
-        graph = self._parent.workflow_subgraph()
+        graph = self._parent.workflow_graph()
         comps = [comp.name for comp in self.__iter__()]
         edges = set(graph.get_interior_connections(comps))
         edges.update(self.get_driver_edges())
         edges.update(self._additional_edges)
         edges = edges - self._hidden_edges
                 
-        # Somtimes we connect an input to an input (particularly with
+        # Sometimes we connect an input to an input (particularly with
         # constraints). These need to be rehooked to corresponding source
         # edges.
         
@@ -924,7 +924,7 @@ class SequentialWorkflow(Workflow):
                                     self, recursed_components=rcomps,
                                     no_fake_fd=True)
             pseudo.ffd_order = 0
-            graph = self._parent.workflow_subgraph()
+            graph = self._parent.workflow_graph()
             self._hidden_edges = set(graph.get_interior_connections(self.get_names(full=True)))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 

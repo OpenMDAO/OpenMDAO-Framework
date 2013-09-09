@@ -685,7 +685,7 @@ class AssemblyTestCase(unittest.TestCase):
          
         g = top._depgraph.component_graph()
         comps = [name for name in g]
-        self.assertTrue(comps, ['driver'])
+        self.assertEqual(comps, ['driver'])
          
         top.add('comp', Component())
          
@@ -697,7 +697,7 @@ class AssemblyTestCase(unittest.TestCase):
          
         g = top._depgraph.component_graph()
         comps = [name for name in g]
-        self.assertTrue(comps, ['driver'])
+        self.assertEqual(comps, ['driver'])
 
     def test_itername(self):
         # top
