@@ -36,8 +36,6 @@ class Objective(ConnectedExprEvaluator):
                 #can't getattr it anymore. We still have the obj, so let's
                 #manually finish this up.
                 
-                #scope.remove(pcomp.name)
-                
                 name = pcomp.name
                 scope.disconnect(name)
                 for obj in scope.__dict__.values():

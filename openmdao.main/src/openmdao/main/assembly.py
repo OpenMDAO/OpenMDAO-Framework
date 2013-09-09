@@ -156,10 +156,9 @@ class Assembly(Component):
             super(Assembly, self).add(name, obj)
         except:
             if has_interface(obj, IComponent):
-                self._depgraph.remove_nodes_from(obj.list_inputs())
-                self._depgraph.remove_nodes_from(obj.list_outputs())
-                self._depgraph.remove_node(name)
+                self._depgraph.remove(name)
             raise
+
         return obj
 
     def find_referring_connections(self, name):
