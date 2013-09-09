@@ -168,7 +168,7 @@ class TestCase_Residuals(unittest.TestCase):
         dv = array([3.0, 5.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [-5.0], [0.0]])
 
         for j in range(len(expected)):
@@ -197,7 +197,7 @@ class TestCase_Residuals(unittest.TestCase):
         dv = array([3.0, 5.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [-5.0], [0.0]])
 
         for j in range(len(expected)):
@@ -226,7 +226,7 @@ class TestCase_Residuals(unittest.TestCase):
         dv = array([3.0, 5.0, 11.0, 23.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [-5.0], [-11.0], [-23.0], [0.0]])
 
         for j in range(len(expected)):
@@ -245,7 +245,7 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
 
         res = self.model.driver.workflow.calculate_residuals()
-        print 'matrix element res', res
+       
         expected = array([[-6.0], [0]])
 
         # Note, running zeros the residuals on sliced edges
@@ -256,7 +256,7 @@ class TestCase_Residuals(unittest.TestCase):
         dv = array([3.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [0.0]])
 
         for j in range(len(expected)):
@@ -289,7 +289,7 @@ class TestCase_Residuals(unittest.TestCase):
         dv = array([3.0, 5.0, 11.0, 23.0, 12.0, 4.4, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [-5.0], [-11.0],
                           [-23.0], [-12.0], [-4.4],
                           [0.0]])
@@ -309,17 +309,18 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
 
         res = self.model.driver.workflow.calculate_residuals()
+        
         expected = array([[-4.0], [-5.0], [0]])
 
         # Note, running zeros the residuals on sliced edges
         self.model.run()
         for j in range(len(expected)):
             self.assertEqual(res[j], expected[j])
-
+        
         dv = array([3.0, 5.0, 0.0])
         self.model.driver.workflow.set_new_state(dv)
         res = self.model.driver.workflow.calculate_residuals()
-        print res
+        
         expected = array([[-3.0], [-5.0], [0.0]])
 
         for j in range(len(expected)):

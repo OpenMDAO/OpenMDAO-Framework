@@ -378,45 +378,47 @@ class ParametersTestCase(unittest.TestCase):
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
 
-    def test_scaled_var_with_initial_violation(self):
+    #def test_scaled_var_with_initial_violation(self):
+        # KTM1 - This tested pulling values into the param pseudocomps. We don't
+        # have those anymore, so don't need the test.
         
-        self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
+        #self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
         
-        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        self.top.driver.ctlmin = 1.0
-        self.top.comp.svar = 1.5
-        self.top.driver.run()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = 1.5
+        #self.top.driver.run()
 
-        self.top.driver.clear_parameters()
-        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        self.top.driver.ctlmin = 1.0
-        self.top.comp.svar = 2.5
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = 2.5
         
-        sout = StringIO.StringIO()
-        sh = logging.StreamHandler(sout)
-        sh.setLevel(logging.WARNING)
-        logger.addHandler(sh)
+        #sout = StringIO.StringIO()
+        #sh = logging.StreamHandler(sout)
+        #sh.setLevel(logging.WARNING)
+        #logger.addHandler(sh)
         
-        self.top.driver.run()
-        self.assertEqual(sout.getvalue().strip(), 
-                         "Setting 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
-        oldlogval = sout.getvalue()
+        #self.top.driver.run()
+        #self.assertEqual(sout.getvalue().strip(), 
+                         #"Setting 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
+        #oldlogval = sout.getvalue()
 
-        self.top.comp.svar = 0.5 # put svar back in valid range
-        self.top.driver.clear_parameters()
-        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        self.top.driver.ctlmin = 1.0
-        self.top.driver.run()
+        #self.top.comp.svar = 0.5 # put svar back in valid range
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.driver.run()
 
-        self.top.driver.clear_parameters()
-        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        self.top.driver.ctlmin = 1.0
-        self.top.comp.svar = -2.5
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = -2.5
         
-        self.top.driver.run()
+        #self.top.driver.run()
         
-        self.assertEqual(sout.getvalue()[len(oldlogval):].strip(), 
-                         "Setting 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
+        #self.assertEqual(sout.getvalue()[len(oldlogval):].strip(), 
+                         #"Setting 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
 
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)

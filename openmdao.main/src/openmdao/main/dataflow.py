@@ -87,8 +87,10 @@ class Dataflow(SequentialWorkflow):
         cnames = set([c.name for c in comps])
         removes = set()
         itersets = {}
-        collapsed_graph = graph.component_graph().subgraph(cnames)
+        graph_with_subs = graph.component_graph()
+        collapsed_graph = graph_with_subs.subgraph(cnames)
 
+        # TODO - Is this recursive?
         for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):
@@ -103,13 +105,14 @@ class Dataflow(SequentialWorkflow):
                         collapsed_graph.add_edge(u, cname)
 
         # connect all of the edges from each driver's iterset members to itself
+        # For this, we need the graph with the subdriver itersets all still in it.
         to_add = []
         for drv,iterset in itersets.items():
             for cname in iterset:
-                for u,v in collapsed_graph.edges_iter(cname):
+                for u,v in graph_with_subs.edges_iter(cname):
                     if v != drv:
                         to_add.append((drv, v))
-                for u,v in collapsed_graph.in_edges_iter(cname):
+                for u,v in graph_with_subs.in_edges_iter(cname):
                     if u != drv:
                         to_add.append((u, drv))
         collapsed_graph.add_edges_from(to_add)

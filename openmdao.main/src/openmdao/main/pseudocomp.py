@@ -265,6 +265,8 @@ class PseudoComponent(object):
         setattr(self, 'out0', src)
         for name in self._valid_dict:
             self._valid_dict[name] = True
+            
+        #print self.name, [(z, getattr(self, z)) for z in self.list_inputs()], self.out0
 
     def update_inputs(self, inputs):
         self._parent.update_inputs(self.name, inputs)

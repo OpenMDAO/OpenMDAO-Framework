@@ -132,7 +132,6 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             # Optimization step
             driver.set_parameters(x)
             super(NEWSUMTdriver, driver).run_iteration()
-            driver.baseline_point = True
 
         # evaluate objectives
         if info == 1:
@@ -380,9 +379,6 @@ class NEWSUMTdriver(Driver):
     def start_iteration(self):
         """Perform the optimization."""
 
-        # Flag used to figure out if we are starting a new finite difference
-        self.baseline_point = True
-        
         # set newsumt array sizes and more...
         self._config_newsumt()
 

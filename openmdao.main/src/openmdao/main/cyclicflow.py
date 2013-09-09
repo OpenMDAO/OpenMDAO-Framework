@@ -96,15 +96,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Keep a list of the edges we break, so that a solver
                     # can use them as its independents/dependents.
                     depgraph = self.scope._depgraph
-                    edge_set = set(depgraph.get_interior_connections([strong[-1], 
-                                                                  strong[0]]))
+                    edge_set = set(depgraph.get_directional_interior_edges(strong[-1], 
+                                                                            strong[0]))
                     
-                    out_set = depgraph._var_connections(strong[-1])
-                    
-                    # Our cut is directional, so only include that direction.
-                    edges = edge_set.intersection(out_set)      
-                
-                    self._severed_edges += list(edges)
+                    self._severed_edges += list(edge_set)
                 
         return self._topsort
     

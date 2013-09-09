@@ -1936,8 +1936,8 @@ def extend_parser(parser):
 
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version < (2,6) or major_version > (3,0):
-        print 'ERROR: python major version must be 2.6 or 2.7. yours is %s' % str(major_version)
+    if major_version != (2,7):
+        print 'ERROR: python major version must be 2.7, yours is %s' % str(major_version)
         sys.exit(-1)
 
     for arg in args:
@@ -1946,10 +1946,42 @@ def adjust_options(options, args):
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
-
     # Check if we're running in an activated environment.
     virtual_env = os.environ.get('VIRTUAL_ENV')
+
+    if options.relocatable:
+        import distutils.util
+        import zipfile
+
+        if not virtual_env:
+            print 'ERROR: --relocatable requires an activated environment'
+            sys.exit(-1)
+
+        # Make current environment relocatable.
+        make_environment_relocatable(virtual_env)
+
+        # Copy files to archive.
+        base = os.path.basename(virtual_env)
+        zipname = '%s-%s.zip' % (base, distutils.util.get_platform())
+        print 'Packing the relocatable environment into', zipname
+        count = 0
+        with zipfile.ZipFile(zipname, 'w', zipfile.ZIP_DEFLATED) as zipped:
+            for dirpath, dirname, filenames in os.walk(virtual_env):
+                arcpath = os.path.join(base, dirpath[len(virtual_env)+1:])
+                for filename in filenames:
+                    count += 1
+                    if (count % 100) == 0:
+                        sys.stdout.write('.')
+                        sys.stdout.flush()
+                    zipped.write(os.path.join(dirpath, filename),
+                                 os.path.join(arcpath, filename))
+            zipped.writestr(os.path.join(base, 'script-fixer.py'),
+                            _SCRIPT_FIXER)
+        print "\nRemember to run 'python script-fixer.py' after unpacking."
+        sys.exit(0)
+
     if virtual_env:
+        # Install in current environment.
         after_install(options, virtual_env, activated=True)
 
     try:
@@ -1962,6 +1994,65 @@ def adjust_options(options, args):
         logger.warn(str(err))
 
 
+_SCRIPT_FIXER = """\
+import glob
+import os.path
+import sys
+
+
+def main():
+    # Move to script directory of the unzipped environment.
+    root = os.path.dirname(os.path.abspath(__file__))
+    scripts = 'Scripts' if sys.platform == 'win32' else 'bin'
+    scripts = os.path.join(root, scripts)
+    os.chdir(scripts)
+    tmpname = 'script-to-fix'
+
+    # Fix activate scripts.
+    for filename in sorted(glob.glob('activate*')):
+        if filename == 'activate':         # Bourne/bash.
+            pattern = 'VIRTUAL_ENV="'
+        elif filename == 'activate.csh':   # C shell.
+            pattern = 'setenv VIRTUAL_ENV "'
+        elif filename == 'activate.fish':  # ?
+            pattern = 'set -gx VIRTUAL_ENV "'
+        elif filename == 'activate.bat':   # Windows.
+            pattern = 'set "VIRTUAL_ENV='
+        else:
+            continue
+
+        print 'Fixing', filename
+        if os.path.exists(tmpname):
+            os.remove(tmpname)
+        os.rename(filename, tmpname)
+        with open(tmpname, 'rU') as inp:
+            with open(filename, 'w') as out:
+                for line in inp:
+                    if line.startswith(pattern):
+                        line = '%s%s"\\n' % (pattern, root)
+                    out.write(line)
+        os.remove(tmpname)
+
+    # Fix Windows 'shadow' scripts.
+    if sys.platform == 'win32':
+        replacement = '#!%s\\\\python.exe\\n' % scripts
+        for filename in sorted(glob.glob('*-script.py')):
+            print 'Fixing', filename
+            if os.path.exists(tmpname):
+                os.remove(tmpname)
+            os.rename(filename, tmpname)
+            with open(tmpname, 'rU') as inp:
+                with open(filename, 'w') as out:
+                   for line in inp:
+                       if line.startswith('#!'):
+                           line = replacement
+                       out.write(line)
+            os.remove(tmpname)
+
+
+if __name__ == '__main__':
+    main()
+"""
 
 
 def download(url, dest='.'):
@@ -2078,9 +2169,9 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['SetupDocs==1.0.5', 'docutils==0.10', 'Pyevolve==0.6', 'networkx==1.8.1', 'slsqp==1.0.1', 'virtualenv==1.9.1', 'pyparsing==1.5.7', 'Pygments==1.3.1', 'pyV3D==0.4.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==4.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'tornado==2.2.1', 'conmin==1.0.1', 'pycrypto==2.3']
-    guireqs = ['argh==0.15.1', 'pathtools==0.1.2', 'watchdog==0.6.0', 'pyzmq==13.1.0', 'PyYAML==3.10']
-    guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.1.3', 'argparse==1.2.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==0.11.3', 'ordereddict==1.1', 'paramiko==1.7.7.1', 'pyV3D==0.4.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==0.13.3', 'slsqp==1.0.1', 'sympy==0.7.1', 'tornado==2.2.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
+    guireqs = ['PyYAML==3.10', 'argh==0.15.1', 'pathtools==0.1.2', 'pyzmq==13.1.0', 'watchdog==0.6.0']
+    guitestreqs = ['EasyProcess==0.1.4', 'PyVirtualDisplay==0.1.0', 'entrypoint2==0.0.5', 'lazr.testing==0.1.2a', 'mocker==1.1', 'path.py==2.2.2', 'selenium==2.35.0', 'zope.exceptions==3.6.1', 'zope.testing==4.1.1', 'zope.testrunner==4.0.4']
 
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'

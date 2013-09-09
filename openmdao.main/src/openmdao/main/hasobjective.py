@@ -31,6 +31,18 @@ class Objective(ConnectedExprEvaluator):
                 pass
             else:
                 pcomp.remove_connections(scope)
+                
+                #KTM1 - So, pcomp has already been deleted from the scope, so
+                #can't getattr it anymore. We still have the obj, so let's
+                #manually finish this up.
+                
+                name = pcomp.name
+                scope.disconnect(name)
+                for obj in scope.__dict__.values():
+                    if obj is not pcomp and hasattr(obj, 'workflow'):
+                        obj.workflow.remove(name)
+                        obj.remove_references(name)
+                            
             self.pcomp_name = None
 
 

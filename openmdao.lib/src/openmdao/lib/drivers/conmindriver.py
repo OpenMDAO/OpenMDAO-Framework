@@ -284,9 +284,6 @@ class CONMINdriver(Driver):
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
         
-        # Flag used to figure out if we are starting a new finite difference
-        self.baseline_point = True
-        
         self._config_conmin()
         self.cnmn1.igoto = 0
         self.iter_count = 0
@@ -385,7 +382,6 @@ class CONMINdriver(Driver):
         
                 # Run the model for this step
                 super(CONMINdriver, self).run_iteration()
-                self.baseline_point = True
         
             # calculate objective
             self.cnmn1.obj = self.eval_objective()
@@ -401,7 +397,7 @@ class CONMINdriver(Driver):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            inputs = self.list_param_targets()
+            inputs = self.list_param_group_targets()
             obj = ["%s.out0" % item.pcomp_name for item in
                    self.get_objectives().values()]
             con = ["%s.out0" % item.pcomp_name for item in

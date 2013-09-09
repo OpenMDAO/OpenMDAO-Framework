@@ -481,17 +481,21 @@ def _fix_object(obj, container, index, cls, observer,
 
 def _find_in_main(classname):  #pragma no cover
     """ Try to get 'real' module for __main__ class. """
-    filename = sys.modules['__main__'].__file__
-    if filename.endswith('.py'):
-        if not '.' in sys.path:
-            sys.path.append('.')
-        mod = os.path.basename(filename)[:-3]
-        try:
-            module = __import__(mod, fromlist=[classname])
-        except ImportError:
-            pass
-        else:
-            return (mod, module)
+    try:
+        filename = sys.modules['__main__'].__file__
+    except AttributeError:
+        pass
+    else:
+        if filename.endswith('.py'):
+            if not '.' in sys.path:
+                sys.path.append('.')
+            mod = os.path.basename(filename)[:-3]
+            try:
+                module = __import__(mod, fromlist=[classname])
+            except ImportError:
+                pass
+            else:
+                return (mod, module)
     return (None, None)
 
 
@@ -680,7 +684,7 @@ def _process_egg(path, distributions, prefixes, logger):
 
     for req in dist.requires():
         logger.log(LOG_DEBUG2, "    requires '%s'", req)
-        dep = pkg_resources.get_distribution(req, logger)
+        dep = pkg_resources.get_distribution(req)
         distributions.add(dep)
         loc = dep.location
         if loc.endswith('.egg') and loc not in prefixes:

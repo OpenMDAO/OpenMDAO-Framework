@@ -244,6 +244,7 @@ class MultiDriverTestCase(unittest.TestCase):
         nested = self.top.add('nested', Assembly())
         # create the inner driver
         inner_driver = nested.add('driver', CONMINdriver())
+        #inner_driver = nested.driver
         
         nested.add('comp1', ExprComp(expr='x-3'))
         nested.add('comp2', ExprComp(expr='-3'))
@@ -262,27 +263,18 @@ class MultiDriverTestCase(unittest.TestCase):
         
         outer_driver.workflow.add('nested')
         inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
-
-        ## create one driver for testing
-        #inner_driver = self.top.add('driver1', CONMINdriver())
-        #inner_driver.itmax = 30
-        #inner_driver.iprint = 1001
-        #inner_driver.fdch = .000001
-        #inner_driver.fdchm = .000001
-        #inner_driver.add_objective('comp4.f_xy')
-        #inner_driver.add_parameter('comp1.x',-50,50)
-        #inner_driver.add_parameter('comp3.y',-50,50)
-        ##inner_driver.constraints = ['comp1.x**2 + comp3.y**2']
             
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
+        #inner_driver.conmin_diff = True
         inner_driver.add_objective('comp3.f_xy')
         inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
+        outer_driver.conmin_diff = True
         outer_driver.add_objective('nested.f_xy')   # comp4.f_xy passthrough
         outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
         

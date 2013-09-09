@@ -103,26 +103,26 @@ class Driver(Component):
 
         self.workflow.check_config()
 
-    # def _update_workflow(self):
-    #     """Updates workflow contents based on driver dependencies."""
-    #     # if workflow contains only Drivers, try to
-    #     # use parameters, objectives and/or constraint expressions to
-    #     # determine the necessary workflow members
-    #     try:
-    #         iterset = set([c.name for c in self.iteration_set()])
-    #         alldrivers = all([isinstance(c, Driver)
-    #                             for c in self.workflow.get_components()])
-    #         if len(self.workflow) == 0: # otherwise, all([]) returns True
-    #             pass
-    #         elif alldrivers is True:
-    #             reqcomps = self._get_required_compnames()
-    #             self.workflow.add([name for name in reqcomps
-    #                                     if name not in iterset])
-    #             # calling get_components() here just makes sure that all of the
-    #             # components can be resolved
-    #             self.workflow.get_components()
-    #     except Exception as err:
-    #         self.raise_exception(str(err), type(err))
+    #def _update_workflow(self):
+        #"""Updates workflow contents based on driver dependencies."""
+        ## if workflow contains only Drivers, try to
+        ## use parameters, objectives and/or constraint expressions to
+        ## determine the necessary workflow members
+        #try:
+            #iterset = set([c.name for c in self.iteration_set()])
+            #alldrivers = all([isinstance(c, Driver)
+                                #for c in self.workflow.get_components()])
+            #if len(self.workflow) == 0: # otherwise, all([]) returns True
+                #pass
+            #elif alldrivers is True:
+                #reqcomps = self._get_required_compnames()
+                #self.workflow.add([name for name in reqcomps
+                                        #if name not in iterset])
+                ## calling get_components() here just makes sure that all of the
+                ## components can be resolved
+                #self.workflow.get_components()
+        #except Exception as err:
+            #self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
         """Return a set of all Components in our workflow and
@@ -264,6 +264,7 @@ class Driver(Component):
             recorder.startup()
 
         # force param pseudocomps to get updated values to start
+        # KTM1 - probably don't need this anymore
         self.update_parameters()
 
         # Override just to reset the workflow :-(

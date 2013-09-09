@@ -788,22 +788,46 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def linearize(self, extra_in=None):
+    def linearize(self, extra_in=None, extra_out=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
         
+        # Only calc derivatives for inputs we need
         required_inputs = []
         if extra_in:
-            for varpath in extra_in:
-                compname, _, var = varpath.partition('.')
-                if compname == self.name:
-                    required_inputs.append(var)
+            for varpaths in extra_in:
+                
+                if not isinstance(varpaths, tuple):
+                    varpaths = [varpaths]
+                
+                for varpath in varpaths:
+                    compname, _, var = varpath.partition('.')
+                    if compname == self.name:
+                        required_inputs.append(var.split('[')[0])
         
         for src, target in self.parent.list_connections(): 
             compname, _, var = target.partition('.')
             if compname == self.name:
-                required_inputs.append(var)
+                required_inputs.append(var.split('[')[0])
+                
+        # Only calc derivatives for outputs we need
+        required_outputs = []
+        if extra_out:
+            for varpaths in extra_out:
+                
+                if not isinstance(varpaths, tuple):
+                    varpaths = [varpaths]
+                
+                for varpath in varpaths:
+                    compname, _, var = varpath.partition('.')
+                    if compname == self.name:
+                        required_outputs.append(var.split('[')[0])
+        
+        for src, target in self.parent.list_connections(): 
+            compname, _, var = src.partition('.')
+            if compname == self.name:
+                required_outputs.append(var.split('[')[0])
                 
         # Sub-assembly sourced    
         input_keys = []
@@ -817,9 +841,12 @@ class Assembly(Component):
             
             # Outputs
             if '.' in src and '.' not in target:
+                
+                if target not in required_outputs:
+                    continue
+                
                 val = self.get(src)
-                if isinstance(val, float) or \
-                   hasattr(val, '__iter__') and isinstance(val[0], float):
+                if isinstance(val, float) or hasattr(val, 'shape'):
                     output_keys.append(src)
                     self.J_output_keys.append(target)
                     
@@ -830,8 +857,7 @@ class Assembly(Component):
                     continue
                 
                 val = self.get(target)
-                if isinstance(val, float) or \
-                   hasattr(val, '__iter__') and isinstance(val[0], float):
+                if isinstance(val, float) or hasattr(val, 'shape'):
                     input_keys.append(target)
                     self.J_input_keys.append(src)
                 
