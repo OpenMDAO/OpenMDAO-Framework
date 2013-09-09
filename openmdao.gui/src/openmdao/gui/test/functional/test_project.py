@@ -137,8 +137,7 @@ def _test_last_saved_metadata(browser):
     projects_page, project_name, commit_project_time = commit_project(projects_page, project_name, replace_object_time)
     projects_page, project_name, revert_project_time = revert_project(projects_page, project_name, commit_project_time)
 
-    projects_page.logout()
-
+    projects_page.delete_project(project_name)
     
 #Test creating a project
 def _test_new_project(browser):
