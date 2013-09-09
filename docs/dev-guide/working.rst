@@ -452,39 +452,51 @@ Once that's done, ``myfork/<branchname>`` will have your changes, and you can as
 OpenMDAO maintainers to merge, or *pull*, them to dev branch.  To issue a pull request,
 follow these steps:
 
-#. If you are not already logged in, log in to GitHub. You should be on your personal page.
+1. If you are not already logged in, log in to GitHub. You should be on your personal page.
 
-#. On the right side of the page, scroll down until you see the area titled **Your Repositories**
-with a list your personal repositories. 
+2. On the right side of the page, scroll down until you see the area titled **Your Repositories**
+   with a list your personal repositories. 
+   
+   If your page shows tabs for `Contributions, Repositories,` and `Public Activity` across the top, click
+   on the **Repositories** tab.
 
-#. Click on **OpenMDAO-Framework** take you to your personal fork of OpenMDAO-Framework.
+3. Click on **OpenMDAO-Framework** to take you to your personal fork of the OpenMDAO-Framework.
 
-   You will probably be on the `master` branch. The branch name button is circled in red in the
+   You will probably be on the `master` branch. The branch-name button is circled in red in the
    figure that follows. 
 
 .. figure:: OpenMDAO-Framework_repo.png
    :align: center
-   :alt: screen capture of a personal OpenMDAO fork showing where branch button is
+   :alt: screen of personal OpenMDAO fork showing the "branch" button circled in red
 
+   Screen of a personal OpenMDAO-Framework fork showing the branch button
 
-#. If you're on the master branch, you need to switch branches before issuing a
+4. If you're on the master branch, you need to switch branches before issuing a
    pull request. 
    
    -  Click on the down arrow next to the branch name. 
    
       A drop-down list of branches will appear (in alphabetical order). 
 
-   -  Scroll down until you find the branch you want merged. If you mouse over the branch
-      name, it will be highlighted and a check mark will appear in front of it. 
-      
+   -  Use the Search box or the scroll bar to find the branch you want merged. 
+   
+      If you mouse over the branch name, it will be highlighted, and a check mark will appear in front of it. 
+
    -  Click on the branch name to go to that branch. 
 
-#. Once you're on the correct branch, click on the **Pull and Compare** button.
+5. Once you're on the correct branch, click on the **Compare and pull request** button. See the following
+   graphic with the button circled in red.
 
+.. figure:: compare-pull.png
+   :align: center
+   :alt: screen of personal OpenMDAO-Framework fork with "compare and pull request" button circled in red
 
-#. A new window will appear, and you will be prompted to enter a description of
-   your changes. Provide a brief description and then click on the button to
-   issue the pull request.
+   Screen showing the "Compare and pull request" button
 
-One of the maintainers will review the changes on your branch and decide whether to approve
-the requested merge. If the maintainer has a question or problem, you will be contacted.
+6. A new window will appear, and you will be prompted to enter a description of
+   your changes. 
+   
+   Provide a brief description and then click on the **Send pull request** button.
+
+   One of the maintainers will review the changes on your branch and decide whether to approve
+   the requested merge. If the maintainer has a question or problem, you will be contacted.
