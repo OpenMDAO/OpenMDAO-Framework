@@ -2,13 +2,15 @@
 This object is used by Component to store derivative information and to
 perform calculations during a Fake Finite Difference.
 """
+import itertools
 
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones, unravel_index
+    from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
+         ravel_multi_index, arange, prod
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -116,13 +118,19 @@ def calc_gradient(wflow, inputs, outputs):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs)
+    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
 
     # Forward mode, solve linear system for each parameter
     j = 0
     for param in inputs:
 
-        i1, i2 = wflow.bounds[('@in', param)]
+        if ('@in', param) in wflow.bounds:
+            i1, i2 = wflow.bounds[('@in', param)]
+        else:
+            if isinstance(param, tuple):
+                param = param[0]
+            i1, i2 = wflow.bounds[('@in', param.split('[')[0])]
+            
         for irhs in range(i1, i2):
 
             RHS = zeros((nEdge, 1))
@@ -135,11 +143,11 @@ def calc_gradient(wflow, inputs, outputs):
 
             i = 0
             for item in outputs:
-                k1, k2 = obounds[item]
-                if k2-k1 > 1:
-                    J[i:i+(k2-k1), j] = dx[k1:k2]
+                if item in obounds:
+                    k1, k2 = obounds[item]
                 else:
-                    J[i, j] = dx[k1:k2]
+                    k1, k2 = obounds[item.split('[')[0]]
+                J[i:i+(k2-k1), j] = dx[k1:k2]
                 i += k2-k1
 
             j += 1
@@ -188,13 +196,17 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs)
+    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
 
     # Adjoint mode, solve linear system for each output
     j = 0
     for output in outputs:
 
-        i1, i2 = obounds[output]
+        if output in obounds:
+            i1, i2 = obounds[output]
+        else:
+            i1, i2 = obounds[output.split('[')[0]]
+            
         for irhs in range(i1, i2):
 
             RHS = zeros((nEdge, 1))
@@ -207,11 +219,14 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             
             i = 0
             for param in inputs:
-                k1, k2 = wflow.bounds[('@in', param)]
-                if k2-k1 > 1:
-                    J[j, i:i+(k2-k1)] = dx[k1:k2]
+                if ('@in', param) in wflow.bounds:
+                    k1, k2 = wflow.bounds[('@in', param)]
                 else:
-                    J[j, i] = dx[k1:k2]
+                    if isinstance(param, tuple):
+                        param = param[0]
+                    k1, k2 = wflow.bounds[('@in', param.split('[')[0])]
+                    
+                J[j, i:i+(k2-k1)] = dx[k1:k2]
                 i += k2-k1
 
             j += 1
@@ -229,6 +244,9 @@ def applyJ(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_deriv'):
+        
+        # The apply_deriv function expects the argument and result dicts for
+        # each input and output to have the same shape as the input/output.
 
         for key, value in result.iteritems():
             if len(value) > 1:
@@ -257,60 +275,52 @@ def applyJ(obj, arg, result):
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
+    
     #print 'J', input_keys, output_keys, J
     
-    ibounds = {}
-    nvar = 0
-    for key in input_keys:
-        
-        # For parameter group, all should be equal so just get first.
-        if not isinstance(key, tuple):
-            key = [key]
-            
-        val = obj.get(key[0])
-        width = flattened_size('.'.join((obj.name, key[0])), val)
-        for item in key:
-            ibounds[item] = (nvar, nvar+width)
-        nvar += width
-
-    obounds = {}
-    nvar = 0
-    for key in output_keys:
-        val = obj.get(key)
-        width = flattened_size('.'.join((obj.name, key)), val)
-        obounds[key] = (nvar, nvar+width)
-        nvar += width
-
+    # The Jacobian from provideJ is a 2D array containing the derivatives of
+    # the flattened output_keys with respect to the flattened input keys. We
+    # need to find the start and end index of each input and output. 
+    ibounds, obounds = get_bounds(obj, input_keys, output_keys)
+    
     for okey in result:
-        o1, o2 = obounds[okey]
+        
+        odx = None
+        if okey in obounds:
+            o1, o2, osh = obounds[okey]
+        else:
+            o1, o2, osh = obounds[okey.split('[')[0]]
+            odx = okey.strip(']').split('[')[1]            
+            
+        if o2 - o1 == 1:
+            oshape = 1
+        else:
+            oshape = result[okey].shape
+            
         used = []
         for ikey in arg:
-            if ikey not in result:
-                i1, i2 = ibounds[ikey]
+            if ikey in result:
+                continue
+            
+            idx = None
+            if ikey in ibounds:
+                i1, i2, ish = ibounds[ikey]
+            else:
+                i1, i2, ish = ibounds[ikey.split('[')[0]]
+                idx = ikey.strip(']').split('[')[1]
+
+            # Param groups make it tricky. We only want to add the
+            # piece of J once for the whole group.
+            if i1 in used:
+                continue
+            used.append(i1)
+            
+            Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
+                                   o1, o2, odx, osh)
+            
+            tmp = Jsub.dot(arg[ikey])
                 
-                # Param groups make it tricky. We only want to add the
-                # piece of J once for the whole group.
-                if i1 in used:
-                    continue
-                used.append(i1)
-                
-                if i2 - i1 == 1:
-                    if o2 - o1 == 1:
-                        Jsub = float(J[o1, i1])
-                        result[okey] += Jsub*arg[ikey]
-                    else:
-                        Jsub = J[o1:o2, i1:i2]
-                        tmp = Jsub*arg[ikey]
-                        result[okey] += tmp.reshape(result[okey].shape)
-                else:
-                    tmp = flattened_value('.'.join((obj.name, ikey)),
-                                          arg[ikey]).reshape(1, -1)
-                    Jsub = J[o1:o2, i1:i2]
-                    tmp = inner(Jsub, tmp)
-                    if o2 - o1 == 1:
-                        result[okey] += float(tmp)
-                    else:
-                        result[okey] += tmp.reshape(result[okey].shape)
+            result[okey] += tmp.reshape(oshape)
                         
     #print 'applyJ', arg, result
 
@@ -324,6 +334,10 @@ def applyJT(obj, arg, result):
         result[key] = -arg[key]
 
     if hasattr(obj, 'apply_derivT'):
+        
+        # The apply_deriv function expects the argument and result dicts for
+        # each input and output to have the same shape as the input/output.
+
         for key, value in result.iteritems():
             if len(value) > 1:
                 var = obj.get(key)
@@ -352,15 +366,53 @@ def applyJT(obj, arg, result):
     # (Subassemblies do this by default)
     input_keys, output_keys, J = obj.provideJ()
 
-    ibounds = {}
-    nvar = 0
-    for key in output_keys:
-        val = obj.get(key)
-        width = flattened_size('.'.join((obj.name, key)), val)
-        ibounds[key] = (nvar, nvar+width)
-        nvar += width
+    #print 'J', input_keys, output_keys, J
+    
+    # The Jacobian from provideJ is a 2D array containing the derivatives of
+    # the flattened output_keys with respect to the flattened input keys. We
+    # need to find the start and end index of each input and output. 
+    obounds, ibounds = get_bounds(obj, input_keys, output_keys)
+    
+    for okey in result:
+        if okey in arg:
+            continue
+        
+        odx = None
+        if okey in obounds:
+            o1, o2, osh = obounds[okey]
+        else:
+            o1, o2, osh = obounds[okey.split('[')[0]]
+            odx = okey.strip(']').split('[')[1]
+            
+        if o2 - o1 == 1:
+            oshape = 1
+        else:
+            oshape = result[okey].shape
+            
+        for ikey in arg:
+            
+            idx = None
+            if ikey in ibounds:
+                i1, i2, ish = ibounds[ikey]
+            else:
+                i1, i2, ish = ibounds[ikey.split('[')[0]]
+                idx = ikey.strip(']').split('[')[1]
+            
+            Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
+                                   i1, i2, idx, ish).T
+            
+            tmp = Jsub.dot(arg[ikey])
+                
+            result[okey] += tmp.reshape(oshape)
 
-    obounds = {}
+    #print 'applyJT', arg, result
+    
+def get_bounds(obj, input_keys, output_keys):
+    """ Returns a pair of dictionaries that contain the stop and end index
+    for each input and output in a pair of lists.
+    """
+    
+    ibounds = {}
     nvar = 0
     for key in input_keys:
         
@@ -370,37 +422,112 @@ def applyJT(obj, arg, result):
             
         val = obj.get(key[0])
         width = flattened_size('.'.join((obj.name, key[0])), val)
+        shape = val.shape if hasattr(val, 'shape') else None
         for item in key:
-            obounds[item] = (nvar, nvar+width)
+            ibounds[item] = (nvar, nvar+width, shape)
         nvar += width
 
-    for okey in result:
-        if okey not in arg:
-            o1, o2 = obounds[okey]
-            
-            for ikey in arg:
-                i1, i2 = ibounds[ikey]
-                if i2 - i1 == 1:
-                    if o2 - o1 == 1:
-                        Jsub = float(J[i1, o1])
-                        result[okey] += Jsub*arg[ikey]
-                    else:
-                        Jsub = J[i1:i2, o1:o2].T
-                        tmp = Jsub*arg[ikey]
-                        result[okey] += tmp.reshape(result[okey].shape)
-                else:
-                    tmp = flattened_value('.'.join((obj.name, ikey)),
-                                          arg[ikey]).reshape(1, -1)
-                    Jsub = J[i1:i2, o1:o2].T
-                    tmp = inner(Jsub, tmp)
-                    if o2 - o1 == 1:
-                        result[okey] += float(tmp)
-                    else:
-                        result[okey] += tmp.reshape(result[okey].shape)
+    obounds = {}
+    nvar = 0
+    for key in output_keys:
+        val = obj.get(key)
+        width = flattened_size('.'.join((obj.name, key)), val)
+        shape = val.shape if hasattr(val, 'shape') else None
+        obounds[key] = (nvar, nvar+width, shape)
+        nvar += width
 
-    #print 'applyJT', arg, result
+    return ibounds, obounds
+
+def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
+    """ Return the subportion of the Jacobian that is valid for a particular\
+    input and output slice.
     
-
+    J: 2D ndarray
+        Full Jacobian
+        
+    ikey: str
+        Input variable for which we want the reduced Jacobian
+        
+    okey: str
+        Output variable for which we want the reduced Jacobian
+        
+    i1, i2: int, int
+        Start and end index for the input variable
+        
+    o1, o2: int, int
+        Start and end index for the output variable
+        
+    idx, odx: str, str
+        Index strings for the input and output, if they are arrays. These
+        are None if the entries in the Jacobian have already sliced the
+        array for us (this can happen with pseudoAssemblies), in which case
+        we need to do no work.
+        
+    ish, osh: tuples
+        Shapes of the original input and output variables before being 
+        flattened.
+        
+    """
+    
+    if idx:
+        idx = idx.strip('(').strip(')')
+        if '-' in idx or ':' in idx:
+            
+            idx_list = idx.split(',')
+            indices = []
+            for index, size in zip(idx_list, ish):
+                temp = eval('arange(size)[%s]' % index)
+                if not isinstance(temp, ndarray):
+                    temp = array([temp]) 
+                indices.append(temp)
+                
+            if len(indices) > 1:
+                indices = zip(*itertools.product(*indices))
+            rav_ind = ravel_multi_index(indices, dims=osh)
+            istring = 'rav_ind'
+                
+        elif ',' in idx:
+            idx = eval(idx)
+            ix = ravel_multi_index(idx, ish)
+            istring = 'ix:ix+1'
+        else:
+            ix = int(idx)
+            istring = 'ix:ix+1'
+    else:
+        istring = 'i1:i2'
+        
+    if odx:
+        odx = odx.strip('(').strip(')')
+        if '-' in odx or ':' in odx:
+            
+            idx_list = odx.split(',')
+            indices = []
+            for index, size in zip(idx_list, osh):
+                temp = eval('arange(size)[%s]' % index)
+                if not isinstance(temp, ndarray):
+                    temp = array([temp]) 
+                indices.append(temp)
+                    
+            if len(indices) > 1:
+                indices = zip(*itertools.product(*indices))
+                
+            rav_ind = ravel_multi_index(indices, dims=osh)
+            ostring = 'rav_ind'
+            
+        elif ',' in odx:
+            odx = eval(odx)
+            ox = ravel_multi_index(odx, ish)
+            ostring = 'ox:ox+1'
+        else:
+            ox = int(odx)
+            ostring = 'ox:ox+1'
+    else:
+        ostring = 'o1:o2'
+    
+    Jsub = eval('J[%s, %s]' % (ostring, istring))
+    return Jsub
+    
+    
 class FiniteDifference(object):
     """ Helper object for performing finite difference on a portion of a model.
     """
