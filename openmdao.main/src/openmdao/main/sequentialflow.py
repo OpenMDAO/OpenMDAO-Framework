@@ -1000,7 +1000,7 @@ class SequentialWorkflow(Workflow):
         
         # Auto-determine which mode to use.
         if mode == 'auto':
-            # TODO - determine based on size and presence of apply_derT
+            # TODO - determine based on size and presence of apply_derivT
             mode = 'forward'
             
         if mode == 'adjoint':
