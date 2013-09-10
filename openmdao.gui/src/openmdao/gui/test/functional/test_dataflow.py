@@ -655,6 +655,50 @@ def _test_ordering(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+def _test_parameter_autocomplete(browser):
+    project_dict, workspace_page = startup(browser)
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/model_vartree.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.replace_driver('vartree', 'SLSQPdriver')
+
+    driver = workspace_page.get_dataflow_figure('driver', 'vartree')
+    editor = driver.editor_page(base_type='Driver')
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+
+    expected_targets = set([
+        'p1.cont_in.v1',
+        'p1.cont_in.v2',
+        'p1.cont_in.vt2.x',
+        'p1.cont_in.vt2.y',
+        'p1.cont_in.vt2.vt3.a',
+        'p1.cont_in.vt2.vt3.b',
+        'p1.directory',
+        'p1.force_execute',
+        ])
+    
+    autocomplete_targets = [element.text for element in dialog.get_autocomplete_targets('p1')]
+
+    #For p1 (simplecomp) there should only be
+    #8 valid autocomplete targets.
+
+    eq(len(autocomplete_targets), 8)
+
+    for target in autocomplete_targets:
+        eq(target in expected_targets, True)
+
+    #The autocomplete menu blocks the cancel button.
+    #Enter a value in low is to remove the focus from the target cell
+    #to get rid of the autocomplete menu.
+    dialog.low = '0'
+
+    dialog('cancel').click()
+
+    editor.close()
+    closeout(project_dict, workspace_page)
+    
 
 def _test_io_filter_without_vartree(browser):
 
