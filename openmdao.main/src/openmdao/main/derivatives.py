@@ -231,7 +231,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    #print inputs, '\n', outputs, '\n', J
+    print inputs, '\n', outputs, '\n', J
     return J
 
 
@@ -469,8 +469,14 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         
     """
     
+    # J inputs
     if idx:
         idx = idx.strip('(').strip(')')
+        
+        # Handle complicated slices that may have : or -1 in them
+        # We just use numpy index math to convert unravelable indices into
+        # index arrays so that we can ravel them to find the set of indices
+        # that we need to grab from J.
         if '-' in idx or ':' in idx:
             
             idx_list = idx.split(',')
@@ -483,21 +489,32 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
                 
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
-            rav_ind = ravel_multi_index(indices, dims=osh)
+            rav_ind = ravel_multi_index(indices, dims=osh) + i1
             istring = 'rav_ind'
                 
+        # Single index into a multi-D array
         elif ',' in idx:
             idx = eval(idx)
-            ix = ravel_multi_index(idx, ish)
+            ix = ravel_multi_index(idx, ish) + i1
             istring = 'ix:ix+1'
+            
+        # Single index into a 1D array
         else:
-            ix = int(idx)
+            ix = int(idx) + i1
             istring = 'ix:ix+1'
+            
+    # The entire array, already flat
     else:
         istring = 'i1:i2'
         
+    # J Outputs
     if odx:
         odx = odx.strip('(').strip(')')
+        
+        # Handle complicated slices that may have : or -1 in them
+        # We just use numpy index math to convert unravelable indices into
+        # index arrays so that we can ravel them to find the set of indices
+        # that we need to grab from J.
         if '-' in odx or ':' in odx:
             
             idx_list = odx.split(',')
@@ -511,16 +528,21 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
                 
-            rav_ind = ravel_multi_index(indices, dims=osh)
+            rav_ind = ravel_multi_index(indices, dims=osh) + o1
             ostring = 'rav_ind'
             
+        # Single index into a multi-D array
         elif ',' in odx:
             odx = eval(odx)
-            ox = ravel_multi_index(odx, ish)
+            ox = ravel_multi_index(odx, ish) + o1
             ostring = 'ox:ox+1'
+            
+        # Single index into a 1D array
         else:
-            ox = int(odx)
+            ox = int(odx) + o1
             ostring = 'ox:ox+1'
+            
+    # The entire array, already flat
     else:
         ostring = 'o1:o2'
     
