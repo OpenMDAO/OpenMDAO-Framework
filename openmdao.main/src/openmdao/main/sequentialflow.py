@@ -1026,7 +1026,7 @@ class SequentialWorkflow(Workflow):
                 num_out += width
                 
             if num_in > num_out:
-                mode = 'forward'
+                mode = 'adjoint'
             else:
                 mode = 'forward'
             
