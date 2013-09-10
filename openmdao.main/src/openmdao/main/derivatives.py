@@ -152,7 +152,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             j += 1
     
-    #print dx, J
+    print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -231,7 +231,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    #print dx, J
+    #print inputs, '\n', outputs, '\n', J
     return J
 
 
@@ -322,7 +322,7 @@ def applyJ(obj, arg, result):
                 
             result[okey] += tmp.reshape(oshape)
                         
-    #print 'applyJ', arg, result
+    print 'applyJ', arg, result
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -405,7 +405,7 @@ def applyJT(obj, arg, result):
                 
             result[okey] += tmp.reshape(oshape)
 
-    #print 'applyJT', arg, result
+    print 'applyJT', arg, result
     
 def get_bounds(obj, input_keys, output_keys):
     """ Returns a pair of dictionaries that contain the stop and end index
@@ -742,6 +742,8 @@ class FiniteDifference(object):
                     # must do it manually.
                     if var_name:
                         comp._input_updated(var_name.split('[')[0])
+                    else:
+                        self.scope._input_updated(comp_name.split('[')[0])
     
                 else:
                     self.scope.set(src, old_val+val, force=True)
@@ -754,14 +756,20 @@ class FiniteDifference(object):
                 # do it manually.
                 if var_name:
                     comp._input_updated(var_name)
+                else:
+                    self.scope._input_updated(comp_name)
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                comp._valid_dict[var_name.split('[',1)[0]] = True
-    
+                comp._valid_dict[var_name.split('[', 1)[0]] = True
+                
                 # Make sure we execute!
                 comp._call_execute = True
+                
+            else:
+                self.scope._valid_dict[comp_name.split('[', 1)[0]] = True
+    
 
 def apply_linear_model(self, comp, ffd_order):
     """Returns the Fake Finite Difference output for the given output

@@ -1001,7 +1001,7 @@ class SequentialWorkflow(Workflow):
             self._find_nondiff_blocks = False
         
         # Auto-determine which mode to use.
-        if mode == 'auto':
+        if mode == 'auto' and fd is False:
             # TODO - additional determination based on presence of
             # apply_derivT
             
@@ -1026,7 +1026,7 @@ class SequentialWorkflow(Workflow):
                 num_out += width
                 
             if num_in > num_out:
-                mode = 'adjoint'
+                mode = 'forward'
             else:
                 mode = 'forward'
             
