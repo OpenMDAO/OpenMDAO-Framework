@@ -943,9 +943,9 @@ class Component(Container):
                     delegate.mimic(tdel)  # use target delegate as target
 
         # # now update any matching inputs from the target
-        # for inp in target.list_inputs():
-        #     if hasattr(self, inp):
-        #         setattr(self, inp, getattr(target, inp))
+        for inp in target.list_inputs():
+            if hasattr(self, inp):
+                setattr(self, inp, getattr(target, inp))
 
         # Update slots that aren't inputs.
         target_inputs = target.list_inputs()

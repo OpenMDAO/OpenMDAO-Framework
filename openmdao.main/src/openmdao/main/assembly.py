@@ -730,8 +730,10 @@ class Assembly(Component):
         by the child that has been invalidated.
         """
         bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
-        if bouts and self.parent:
-            self.parent.child_invalidated(self.name, bouts, force)
+        if bouts:
+            self.set_valid(bouts, False)
+            if self.parent:
+                self.parent.child_invalidated(self.name, bouts, force)
         return bouts
 
     def invalidate_deps(self, varnames=None, force=False):
@@ -776,7 +778,8 @@ class Assembly(Component):
             self.set_valid(invalidated_ins, False)
         else:  # only invalidate *connected* inputs, because unconnected inputs
                # are always valid
-            self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
+            self.set_valid([n for n in invalidated_ins 
+                                  if n in conn_ins], False)
 
         if invalidated_ins:
             outs = self._depgraph.invalidate_deps(self, '', 
