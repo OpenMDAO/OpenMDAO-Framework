@@ -156,10 +156,6 @@ def _test_view_geometry(browser):
 
 
 def _test_view_csm(browser):
-    # FIXME: test fails consistently on the Pangolin EC2 image
-    if 'Ubuntu-12.04' in platform.platform():
-        raise SkipTest('Test broken for Pangolin EC2 image')
-
     project_dict, workspace_page = startup(browser)
     workspace_window = browser.current_window_handle
 
