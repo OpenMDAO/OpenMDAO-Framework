@@ -201,14 +201,18 @@ class _HasConstraintsBase(object):
         self._parent.config_changed()
 
     def get_references(self, name):
-        """Return references to component `name` in preparation for subsequent
-        :meth:`restore_references` call.
+        """Return references to component `name` in 
+        preparation for subsequent :meth:`restore_references` 
+        call.
 
         name: string
-            Name of component being removed.
+            Name of component being referenced.
         """
-        # Just returning everything for now.
-        return self._constraints.copy()
+        refs = ordereddict.OrderedDict()
+        for cname, constraint in self._constraints.items():
+            if name in constraint.get_referenced_compnames():
+                refs[cname] = constraint
+        return refs
 
     def remove_references(self, name):
         """Remove references to component `name`.
@@ -220,21 +224,15 @@ class _HasConstraintsBase(object):
             if name in constraint.get_referenced_compnames():
                 self.remove_constraint(cname)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
         """
-        # Not exactly safe here...
-        if isinstance(refs, ordereddict.OrderedDict):
-            self._constraints = refs
-        else:
-            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
-                            % refs)
+        for name, constraint in refs.items():
+            self.add_constraint(str(constraint), name,
+                                constraint.lhs.scope)
 
     def clear_constraints(self):
         """Removes all constraints."""
@@ -572,7 +570,8 @@ class HasConstraints(object):
         name: string
             Name of component being removed.
         """
-        return (self._eq.get_references(name), self._ineq.get_references(name))
+        return (self._eq.get_references(name), 
+                self._ineq.get_references(name))
 
     def remove_references(self, name):
         """Remove references to component `name`.
@@ -583,19 +582,15 @@ class HasConstraints(object):
         self._eq.remove_references(name)
         self._ineq.remove_references(name)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: dict
             References returned by :meth:`get_references`.
         """
-        # Not exactly safe here...
         if isinstance(refs, tuple) and len(refs) == 2:
-            self._eq.restore_references(refs[0], name)
-            self._ineq.restore_references(refs[1], name)
+            self._eq.restore_references(refs[0])
+            self._ineq.restore_references(refs[1])
         else:
             raise TypeError('refs should be tuple of ordereddict.OrderedDict, got %r' 
                             % refs)

@@ -195,7 +195,7 @@ class Driver(Component):
         `name` in preparation for subsequent :meth:`restore_references` call.
 
         name: string
-            Name of component being removed.
+            Name of component being referenced.
         """
         refs = {}
         if hasattr(self, '_delegates_'):
@@ -222,12 +222,9 @@ class Driver(Component):
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component
         `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
@@ -238,7 +235,7 @@ class Driver(Component):
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
-                    inst.restore_references(refs[inst], name)
+                    inst.restore_references(refs[inst])
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):

@@ -942,10 +942,10 @@ class Component(Container):
                 if hasattr(delegate, 'mimic'):
                     delegate.mimic(tdel)  # use target delegate as target
 
-        # now update any matching inputs from the target
-        for inp in target.list_inputs():
-            if hasattr(self, inp):
-                setattr(self, inp, getattr(target, inp))
+        # # now update any matching inputs from the target
+        # for inp in target.list_inputs():
+        #     if hasattr(self, inp):
+        #         setattr(self, inp, getattr(target, inp))
 
         # Update slots that aren't inputs.
         target_inputs = target.list_inputs()
@@ -955,7 +955,6 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
-                #setattr(self, name, getattr(target, name))
                 self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.
