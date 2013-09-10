@@ -964,6 +964,20 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 1.0, .001)
         assert_rel_error(self, J[1, 1], -4.5, .001)
         
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x', low=-100., high=100.)
+        top.driver.add_objective('3.9*atarget[1]+comp.f_xy')
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], -6.0, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], -6.0, .001)
+        
     def test_first_derivative_with_units(self):
         top = set_as_top(Assembly())
         

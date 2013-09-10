@@ -516,6 +516,7 @@ class SequentialWorkflow(Workflow):
                     input_input_xref[target] = edge
         
         # Poke results into the return vector
+        #print inputs, outputs
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
@@ -657,6 +658,7 @@ class SequentialWorkflow(Workflow):
             applyJT(comp, inputs[name], outputs[name])
 
         # Poke results into the return vector
+        #print inputs, outputs
         result = zeros(len(arg))
         
         for edge in edges:

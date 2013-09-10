@@ -152,7 +152,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             j += 1
     
-    print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs):
@@ -231,7 +231,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J
     return J
 
 
@@ -322,7 +322,7 @@ def applyJ(obj, arg, result):
                 
             result[okey] += tmp.reshape(oshape)
                         
-    print 'applyJ', arg, result
+    #print 'applyJ', arg, result
 
 def applyJT(obj, arg, result):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
@@ -405,7 +405,7 @@ def applyJT(obj, arg, result):
                 
             result[okey] += tmp.reshape(oshape)
 
-    print 'applyJT', arg, result
+    #print 'applyJT', arg, result
     
 def get_bounds(obj, input_keys, output_keys):
     """ Returns a pair of dictionaries that contain the stop and end index
