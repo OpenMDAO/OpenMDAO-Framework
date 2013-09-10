@@ -778,14 +778,14 @@ class SequentialWorkflow(Workflow):
                                 var_edge.add(pcomp_edge)
                     else:
                         var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    outputs = outputs.union(var_edge)
+                    outputs.update(var_edge)
                     
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
                     
                     var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    inputs = inputs.union(var_edge)
+                    inputs.update(var_edge)
                     
             # Input and outputs that crossed the cut line should be included
             # for the pseudo-assembly.
@@ -794,16 +794,15 @@ class SequentialWorkflow(Workflow):
                 comp2, _, _ = edge[1].partition('.')
                 
                 if comp1 in group:
-                    outputs = outputs.union([edge])
+                    outputs.add(edge)
                 if comp2 in group:
-                    inputs = inputs.union([edge])
+                    inputs.add(edge)
                     
                 if edge in self._hidden_edges:
                     self._hidden_edges.remove(edge)
             
             # Remove old nodes
-            for node in group:
-                graph.remove_node(node)
+            graph.remove_nodes_from(group)
 
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]

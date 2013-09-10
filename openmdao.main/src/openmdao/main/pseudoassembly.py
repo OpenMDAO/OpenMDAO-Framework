@@ -61,7 +61,7 @@ class PseudoAssembly(object):
 
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
-        if not self.fd:
+        if self.fd is None:
             self.fd = FiniteDifference(self)
 
         # The only reason not to turn on fake is if we are in a global

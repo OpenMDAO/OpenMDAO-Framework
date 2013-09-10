@@ -70,10 +70,16 @@ def _sub_or_super(s1, s2):
 # NODE selectors
 
 def is_input_node(graph, node):
-    return graph.node[node].get('iotype') == 'in'
+    if graph.node[node].get('iotype') == 'in':
+        return True
+    base = graph.node[node].get('basevar')
+    return base in graph and graph.node[base].get('iotype') == 'in'
 
 def is_output_node(graph, node):
-    return graph.node[node].get('iotype') == 'out'
+    if graph.node[node].get('iotype') == 'out':
+        return True
+    base = graph.node[node].get('basevar')
+    return base in graph and graph.node[base].get('iotype') == 'out'
 
 def is_boundary_node(graph, node):
     return '.' not in node and is_var_node(graph, node)
@@ -634,11 +640,14 @@ class DependencyGraph(nx.DiGraph):
             for node in self.nodes_iter():
                 if is_external_node(self, node):
                     succs = self.succ.get(node)
-                    if succs:
-                        ins.extend(succs.keys())
+                    for n in succs:
+                        if is_input_node(self, n):
+                            ins.append(n)
             return ins
         else:
-            return [n for n in nodes if self.in_degree(n) > 0]
+            return [n for n in nodes 
+                       if self.in_degree(n) > 0 and
+                       is_input_node(self, n)]
 
     def get_connected_outputs(self, nodes=None):
         """Returns outputs that are connected externally.
@@ -650,11 +659,14 @@ class DependencyGraph(nx.DiGraph):
             for node in self.nodes_iter():
                 if is_external_node(self, node):
                     preds = self.pred.get(node)
-                    if preds:
-                        outs.extend(preds.keys())
+                    for n in preds:
+                        if is_output_node(self, n):
+                            outs.append(n)
             return outs
         else:
-            return [n for n in nodes if self.out_degree(n) > 0]
+            return [n for n in nodes 
+                        if self.out_degree(n) > 0 and
+                        is_output_node(self, n)]
 
     def list_inputs(self, cname, connected=False):
         """Return a list of names of input nodes to a component.

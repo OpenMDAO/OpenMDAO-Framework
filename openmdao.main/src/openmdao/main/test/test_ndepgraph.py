@@ -178,6 +178,9 @@ class DepGraphTestCase(unittest.TestCase):
     def test_get_connected_outputs(self):
         self.assertEqual(set(self.dep.get_connected_outputs()), 
                          set(['c', 'D.d']))
+        self.dep.connect('D.a', 'parent.foo.bar')
+        self.assertEqual(set(self.dep.get_connected_outputs()), 
+                         set(['c', 'D.d']))
     
     def test_already_connected(self):
         # internal connection
