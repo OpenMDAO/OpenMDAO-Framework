@@ -587,7 +587,7 @@ class DependencyGraph(nx.DiGraph):
 
             # FIXME: fix this to include ONLY inputs that are also outputs
             if srccomp: 
-                srcvars += self.list_inputs(srccomp)
+                srcvars += self.list_input_outputs(srccomp)
             
             if not srcvars:
                 continue
@@ -601,7 +601,11 @@ class DependencyGraph(nx.DiGraph):
             for dcomp, dests in cmap.items():
                 if dests:
                     if dcomp in invalidated:
-                        diff = set(dests) - invalidated[dcomp]
+                        if dcomp:
+                            ldests = ['.'.join([dcomp, n]) for n in dests]
+                        else:
+                            ldests = dests
+                        diff = set(ldests) - invalidated[dcomp]
                         if diff:
                             invalidated[dcomp].update(diff)
                         else:
@@ -663,6 +667,16 @@ class DependencyGraph(nx.DiGraph):
                                             if self.in_degree(n)>0]
         else:
             return self.pred[cname].keys()
+
+    def list_input_outputs(self, cname):
+        """Return a list of names of input nodes that are used
+        as outputs. This can happen if an input is part of a 
+        constraint or an objective.
+        """
+        if not is_comp_node(self, cname):
+            raise RuntimeError("'%s' is not a component node" % cname)
+        return [n for n in self.pred[cname]
+                             if self.out_degree(n)>1]
 
     def list_outputs(self, cname, connected=False):
         """Return a list of names of output nodes for a component.

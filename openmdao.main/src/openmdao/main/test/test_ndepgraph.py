@@ -360,6 +360,14 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(dep.comp_iter('C', reverse=True)), set(['A','B']))
         self.assertEqual(set(dep.comp_iter('A')), set(['D','C']))
 
+    def test_input_as_output(self):
+        dep, scope = self.make_graph(['A','B','C'], [],
+                                     [('A.c','B.a'),('B.d','C.b')])
+        self.assertEqual(dep.list_input_outputs('A'), [])
+        dep.connect('A.a','C.a')
+        self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
+
+
           
 if __name__ == "__main__":
     unittest.main()
