@@ -564,7 +564,7 @@ def _test_console_errors(browser):
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."
     time.sleep(0.5)
-    eq(workspace_page.history, expected)
+    assert workspace_page.history.endswith(expected)
     editor.close()
 
     # Attempt to save file with syntax error.
