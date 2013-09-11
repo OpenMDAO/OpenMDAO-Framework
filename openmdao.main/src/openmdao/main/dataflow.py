@@ -98,10 +98,10 @@ class Dataflow(SequentialWorkflow):
                 iterset = [c.name for c in comp.iteration_set()]
                 itersets[cname] = iterset
                 removes.update(iterset)
-                for u, v in graph.edges_iter(nbunch=iterset):  # outgoing edges
+                for u,v in graph_with_subs.edges_iter(nbunch=iterset): # outgoing edges
                     if v != cname and v not in iterset and not v.startswith('_pseudo_'):
                         collapsed_graph.add_edge(cname, v)
-                for u, v in graph.in_edges_iter(nbunch=iterset):  # incoming edges
+                for u,v in graph_with_subs.in_edges_iter(nbunch=iterset): # incoming edges
                     if u != cname and u not in iterset and not u.startswith('_pseudo_'):
                         collapsed_graph.add_edge(u, cname)
 
@@ -117,6 +117,8 @@ class Dataflow(SequentialWorkflow):
                     if u != drv:
                         to_add.append((u, drv))
         collapsed_graph.add_edges_from(to_add)
+
+        collapsed_graph = collapsed_graph.subgraph(cnames-removes)
 
         # now add some fake dependencies for degree 0 nodes in an attempt to
         # mimic a SequentialWorkflow in cases where nodes aren't connected.
@@ -138,9 +140,11 @@ class Dataflow(SequentialWorkflow):
                         else:
                             for n in self._names[0:i]:
                                 to_add.append((n, cname))
-            collapsed_graph.add_edges_from(to_add)
+            collapsed_graph.add_edges_from([(u,v) for u,v in to_add
+                                            if u in collapsed_graph and v in collapsed_graph])
 
-        self._collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+        self._collapsed_graph = collapsed_graph
+
         return self._collapsed_graph
 
     def _insert_duplicates(self):

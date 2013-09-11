@@ -40,11 +40,13 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
+                                     IContainer, IParametricGeometry, \
+                                     IComponent
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
-                                     is_instance, CLASSES_TO_PROXY
+                                     is_instance, CLASSES_TO_PROXY, \
+                                     has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
@@ -629,8 +631,10 @@ class Container(SafeHasTraits):
             else:
                 obj.parent = self
             # if an old child with that name exists, remove it
+            removed = False
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
+                removed = True
             obj.name = name
             setattr(self, name, obj)
             if self._cached_traits_ is None:
@@ -638,11 +642,14 @@ class Container(SafeHasTraits):
             else:
                 self._cached_traits_[name] = self.trait(name)
             io = self._cached_traits_[name].iotype
-            if io and not isinstance(self._depgraph, _ContainerDepends):
-                # since we just removed this container and it was
-                # being used as an io variable, we need to put
-                # it back in the dep graph and valids dict
-                self._depgraph.add_boundary_var(name, iotype=io)
+            if removed and not isinstance(self._depgraph, _ContainerDepends):
+                if io:
+                    # since we just removed this container and it was
+                    # being used as an io variable, we need to put
+                    # it back in the dep graph
+                    self._depgraph.add_boundary_var(name, iotype=io)
+                elif has_interface(obj, IComponent):
+                    self._depgraph.add_component(name, obj)
 
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its

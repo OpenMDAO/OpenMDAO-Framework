@@ -557,8 +557,8 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['', 'cons_is_linear', '[]', '',
-        'Array designating whether each constraint is linear.'])
+       ['', 'conmin_diff', 'False', '',
+        'Set to True to let CONMINcalculate the gradient.'])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
@@ -589,10 +589,9 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    expected = "RuntimeError: top: Can't connect 'comp.result' to" \
-               " 'postproc.result_in': top: Can't find 'comp.result'"
+    expected = "Can't connect 'comp.result' to 'postproc.result_in'"
     time.sleep(0.5)
-    assert workspace_page.history.endswith(expected)
+    assert workspace_page.history.find(expected) >= 0
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()

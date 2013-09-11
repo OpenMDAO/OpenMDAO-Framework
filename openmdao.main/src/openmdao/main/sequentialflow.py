@@ -207,14 +207,14 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
-        graph = self._parent.workflow_subgraph()
+        graph = self._parent.workflow_graph()
         comps = [comp.name for comp in self.__iter__()]
         edges = set(graph.get_interior_connections(comps))
         edges.update(self.get_driver_edges())
         edges.update(self._additional_edges)
         edges = edges - self._hidden_edges
                 
-        # Somtimes we connect an input to an input (particularly with
+        # Sometimes we connect an input to an input (particularly with
         # constraints). These need to be rehooked to corresponding source
         # edges.
         
@@ -778,14 +778,14 @@ class SequentialWorkflow(Workflow):
                                 var_edge.add(pcomp_edge)
                     else:
                         var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    outputs = outputs.union(var_edge)
+                    outputs.update(var_edge)
                     
                 elif edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
                     graph.add_edge(edge[0], pa_name)
                     
                     var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    inputs = inputs.union(var_edge)
+                    inputs.update(var_edge)
                     
             # Input and outputs that crossed the cut line should be included
             # for the pseudo-assembly.
@@ -794,16 +794,15 @@ class SequentialWorkflow(Workflow):
                 comp2, _, _ = edge[1].partition('.')
                 
                 if comp1 in group:
-                    outputs = outputs.union([edge])
+                    outputs.add(edge)
                 if comp2 in group:
-                    inputs = inputs.union([edge])
+                    inputs.add(edge)
                     
                 if edge in self._hidden_edges:
                     self._hidden_edges.remove(edge)
             
             # Remove old nodes
-            for node in group:
-                graph.remove_node(node)
+            graph.remove_nodes_from(group)
 
             # You don't need the whole edge.
             inputs  = [b for a, b in inputs]
@@ -924,7 +923,7 @@ class SequentialWorkflow(Workflow):
                                     self, recursed_components=rcomps,
                                     no_fake_fd=True)
             pseudo.ffd_order = 0
-            graph = self._parent.workflow_subgraph()
+            graph = self._parent.workflow_graph()
             self._hidden_edges = set(graph.get_interior_connections(self.get_names(full=True)))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 

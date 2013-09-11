@@ -236,6 +236,7 @@ class Component(Container):
 
         self._input_check(name, old)
         self._input_updated(name)
+        print '%s updated to %s' % (name, new)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
@@ -402,6 +403,9 @@ class Component(Container):
                 valids[name.split('[', 1)[0]] = True
         else:
             valids = self._valid_dict
+            print '%s connected inputs: %s' % (self.name, self._depgraph.get_connected_inputs())
+            for inp in self._depgraph.get_connected_inputs():
+                print 'valid[%s] = %s' % (inp, self._valid_dict[inp])
             invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
                                     if valids.get(inp.split('[', 1)[0]) is False]
             if invalid_ins:
@@ -554,7 +558,6 @@ class Component(Container):
             self._set_exec_state('RUNNING')
 
             if self._call_execute or force:
-                #print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
@@ -562,6 +565,7 @@ class Component(Container):
                    and (hasattr(self, 'provideJ')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
+                    print 'execute_ffd: %s' % self.get_pathname()
                     self._execute_ffd(1)
 
                 elif ffd_order == 2 and \
@@ -571,6 +575,7 @@ class Component(Container):
                     pass
 
                 else:
+                    print 'execute: %s' % self.get_pathname()
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
@@ -582,8 +587,8 @@ class Component(Container):
                     self.execute()
 
                 self._post_execute()
-            #else:
-                #print 'skipping: %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
@@ -642,7 +647,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph:# and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -940,7 +945,7 @@ class Component(Container):
                 if hasattr(delegate, 'mimic'):
                     delegate.mimic(tdel)  # use target delegate as target
 
-        # now update any matching inputs from the target
+        # # now update any matching inputs from the target
         for inp in target.list_inputs():
             if hasattr(self, inp):
                 setattr(self, inp, getattr(target, inp))
@@ -953,7 +958,6 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
-                #setattr(self, name, getattr(target, name))
                 self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.

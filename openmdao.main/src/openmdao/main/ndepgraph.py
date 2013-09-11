@@ -1,6 +1,8 @@
 import networkx as nx
 
 from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver, IComponent
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -68,10 +70,16 @@ def _sub_or_super(s1, s2):
 # NODE selectors
 
 def is_input_node(graph, node):
-    return graph.node[node].get('iotype') == 'in'
+    if graph.node[node].get('iotype') == 'in':
+        return True
+    base = graph.node[node].get('basevar')
+    return base in graph and graph.node[base].get('iotype') == 'in'
 
 def is_output_node(graph, node):
-    return graph.node[node].get('iotype') == 'out'
+    if graph.node[node].get('iotype') == 'out':
+        return True
+    base = graph.node[node].get('basevar')
+    return base in graph and graph.node[base].get('iotype') == 'out'
 
 def is_boundary_node(graph, node):
     return '.' not in node and is_var_node(graph, node)
@@ -229,22 +237,24 @@ class DependencyGraph(nx.DiGraph):
         for n in rem_outs:
             self.remove(n)
 
-    def add_component(self, cname, inputs, outputs, **kwargs):
+    def add_component(self, cname, obj, **kwargs):
         """Create nodes in the graph for the component and all of
-        its input and output variables.  inputs and outputs names
-        are local to the component.  Any other named args that
+        its input and output variables. Any other named args that
         are passed will be placed in the metadata for the component
         node.
         """
 
+        if has_interface(obj, IDriver):
+            kwargs['driver'] = True
+        if hasattr(obj, '_pseudo_type'):
+            kwargs['pseudo'] = obj._pseudo_type
         if 'comp' not in kwargs:
             kwargs['comp'] = True
 
+        inputs  = ['.'.join([cname, v]) for v in obj.list_inputs()]
+        outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
+
         self.add_node(cname, **kwargs)
-
-        inputs  = ['.'.join([cname, v]) for v in inputs]
-        outputs = ['.'.join([cname, v]) for v in outputs]
-
         self.add_nodes_from(inputs, var=True, iotype='in')
         self.add_nodes_from(outputs, var=True, iotype='out')
 
@@ -583,7 +593,7 @@ class DependencyGraph(nx.DiGraph):
 
             # FIXME: fix this to include ONLY inputs that are also outputs
             if srccomp:
-                srcvars += self.list_inputs(srccomp)
+                srcvars += self.list_input_outputs(srccomp)
 
             if not srcvars:
                 continue
@@ -597,7 +607,11 @@ class DependencyGraph(nx.DiGraph):
             for dcomp, dests in cmap.items():
                 if dests:
                     if dcomp in invalidated:
-                        diff = set(dests) - invalidated[dcomp]
+                        if dcomp:
+                            ldests = ['.'.join([dcomp, n]) for n in dests]
+                        else:
+                            ldests = dests
+                        diff = set(ldests) - invalidated[dcomp]
                         if diff:
                             invalidated[dcomp].update(diff)
                         else:
@@ -626,11 +640,14 @@ class DependencyGraph(nx.DiGraph):
             for node in self.nodes_iter():
                 if is_external_node(self, node):
                     succs = self.succ.get(node)
-                    if succs:
-                        ins.extend(succs.keys())
+                    for n in succs:
+                        if is_input_node(self, n):
+                            ins.append(n)
             return ins
         else:
-            return [n for n in nodes if self.in_degree(n) > 0]
+            return [n for n in nodes
+                       if self.in_degree(n) > 0 and
+                       is_input_node(self, n)]
 
     def get_connected_outputs(self, nodes=None):
         """Returns outputs that are connected externally.
@@ -642,11 +659,14 @@ class DependencyGraph(nx.DiGraph):
             for node in self.nodes_iter():
                 if is_external_node(self, node):
                     preds = self.pred.get(node)
-                    if preds:
-                        outs.extend(preds.keys())
+                    for n in preds:
+                        if is_output_node(self, n):
+                            outs.append(n)
             return outs
         else:
-            return [n for n in nodes if self.out_degree(n) > 0]
+            return [n for n in nodes
+                        if self.out_degree(n) > 0 and
+                        is_output_node(self, n)]
 
     def list_inputs(self, cname, connected=False):
         """Return a list of names of input nodes to a component.
@@ -659,6 +679,16 @@ class DependencyGraph(nx.DiGraph):
                                             if self.in_degree(n)>0]
         else:
             return self.pred[cname].keys()
+
+    def list_input_outputs(self, cname):
+        """Return a list of names of input nodes that are used
+        as outputs. This can happen if an input is part of a
+        constraint or an objective.
+        """
+        if not is_comp_node(self, cname):
+            raise RuntimeError("'%s' is not a component node" % cname)
+        return [n for n in self.pred[cname]
+                             if self.out_degree(n)>1]
 
     def list_outputs(self, cname, connected=False):
         """Return a list of names of output nodes for a component.

@@ -143,15 +143,7 @@ class Assembly(Component):
         Returns the added object.
         """
         if has_interface(obj, IComponent):
-            kwargs = {}
-            if has_interface(obj, IDriver):
-                kwargs['driver'] = True
-            if isinstance(obj, PseudoComponent):
-                kwargs['pseudo'] = obj._pseudo_type
-            self._depgraph.add_component(name,
-                                         obj.list_inputs(),
-                                         obj.list_outputs(),
-                                         **kwargs)
+            self._depgraph.add_component(name, obj)
         try:
             super(Assembly, self).add(name, obj)
         except:
@@ -166,7 +158,7 @@ class Assembly(Component):
         to either in the source or the destination.
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u, v) for u, v in self.list_connections(show_passthrough=True)
+        return [(u, v) for u, v in self._depgraph.list_connections(show_passthrough=True, show_external=True)
                                         if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
@@ -235,8 +227,8 @@ class Assembly(Component):
                 self.parent.connect(u, v)
 
     def replace(self, target_name, newobj):
-        """Replace one object with another, attempting to mimic the inputs and connections
-        of the replaced object as much as possible.
+        """Replace one object with another, attempting to mimic the
+        inputs and connections of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
 
@@ -249,6 +241,7 @@ class Assembly(Component):
 
         if has_interface(newobj, IComponent):  # remove any existing connections to replacement object
             self.disconnect(newobj.name)
+
         if hasattr(newobj, 'mimic'):
             try:
                 newobj.mimic(tobj)  # this should copy inputs, delegates and set name
@@ -258,12 +251,13 @@ class Assembly(Component):
                                           type(newobj).__name__))
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
-        target_rgx = re.compile(r'(\W?)%s.' % target_name)
-        conns.extend([(u, v) for u, v in self._depgraph.list_autopassthroughs() if
-                                 re.search(target_rgx, u) is not None or
-                                 re.search(target_rgx, v) is not None])
+        #target_rgx = re.compile(r'(\W?)%s.' % target_name)
+        #conns.extend([(u, v) for u, v in self._depgraph.list_autopassthroughs() if
+                                 #re.search(target_rgx, u) is not None or
+                                 #re.search(target_rgx, v) is not None])
 
-        self.add(target_name, newobj)  # this will remove the old object (and any connections to it)
+        self.add(target_name, newobj)  # this will remove the old object
+                                       # and any connections to it
 
         # recreate old connections
         for u, v in conns:
@@ -278,7 +272,7 @@ class Assembly(Component):
         if refs:
             for obj in self.__dict__.values():
                 if obj is not newobj and is_instance(obj, Driver):
-                    obj.restore_references(refs[obj], target_name)
+                    obj.restore_references(refs[obj])
 
         # Workflows need a reference to their new parent driver
         if is_instance(newobj, Driver):
@@ -525,13 +519,14 @@ class Assembly(Component):
 
         graph = self._depgraph
 
-        for u, v in graph.list_connections(show_external=True):
-            if (u, v) in to_remove:
-                super(Assembly, self).disconnect(u, v)
+        if to_remove:
+            for u, v in graph.list_connections(show_external=True):
+                if (u, v) in to_remove:
+                    super(Assembly, self).disconnect(u, v)
 
-        for u, v in graph.list_autopassthroughs():
-            if (u, v) in to_remove:
-                super(Assembly, self).disconnect(u, v)
+            for u, v in graph.list_autopassthroughs():
+                if (u, v) in to_remove:
+                    super(Assembly, self).disconnect(u, v)
 
         for name in pcomps:
             try:
@@ -734,8 +729,10 @@ class Assembly(Component):
         by the child that has been invalidated.
         """
         bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
-        if bouts and self.parent:
-            self.parent.child_invalidated(self.name, bouts, force)
+        if bouts:
+            self.set_valid(bouts, False)
+            if self.parent:
+                self.parent.child_invalidated(self.name, bouts, force)
         return bouts
 
     def invalidate_deps(self, varnames=None, force=False):
@@ -780,7 +777,8 @@ class Assembly(Component):
             self.set_valid(invalidated_ins, False)
         else:  # only invalidate *connected* inputs, because unconnected inputs
                # are always valid
-            self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
+            self.set_valid([n for n in invalidated_ins
+                                  if n in conn_ins], False)
 
         if invalidated_ins:
             outs = self._depgraph.invalidate_deps(self, '',

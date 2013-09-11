@@ -195,7 +195,7 @@ class Driver(Component):
         `name` in preparation for subsequent :meth:`restore_references` call.
 
         name: string
-            Name of component being removed.
+            Name of component being referenced.
         """
         refs = {}
         if hasattr(self, '_delegates_'):
@@ -222,12 +222,9 @@ class Driver(Component):
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component
         `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
@@ -238,7 +235,7 @@ class Driver(Component):
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
-                    inst.restore_references(refs[inst], name)
+                    inst.restore_references(refs[inst])
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
@@ -379,28 +376,9 @@ class Driver(Component):
         if self.workflow is not None:
             self.workflow.config_changed()
 
-    def workflow_subgraph(self):
-        """Return the workflow dependency subgraph for this Driver.
-        This graph is a combination of the parent Assembly's graph and this
-        Driver's dependencies due to its objectives, constraints,
-        and parameters.
+    def workflow_graph(self):
+        """Return the dependency graph for the scope of this Driver.
         """
-        #if self._graph is None:
-            #parent_graph = self.get_expr_scope()._depgraph
-            #compgraph = parent_graph.component_graph()
-            #compnames = set(self.workflow._explicit_names)
-            #compnames.update(self._get_required_compnames())
-            #compnames.update(find_related_pseudos(compgraph, compnames))
-            #g = parent_graph.full_subgraph(compnames)
-            #self._graph = g
-
-            #for pname in self.list_pseudocomps():
-                #pcomp = getattr(self.parent, pname)
-                #g.add_component(pname, pcomp.list_inputs(),
-                                #pcomp.list_outputs(), pseudo=True)
-                #pcomp.make_connections(self.get_expr_scope())
-
-        #return self._graph
         return self.parent._depgraph
 
     def record_case(self):
