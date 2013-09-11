@@ -516,6 +516,7 @@ class SequentialWorkflow(Workflow):
                     input_input_xref[target] = edge
         
         # Poke results into the return vector
+        #print inputs, outputs
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
@@ -657,6 +658,7 @@ class SequentialWorkflow(Workflow):
             applyJT(comp, inputs[name], outputs[name])
 
         # Poke results into the return vector
+        #print inputs, outputs
         result = zeros(len(arg))
         
         for edge in edges:
@@ -914,6 +916,8 @@ class SequentialWorkflow(Workflow):
         # no fake fd.
         if fd is True:
             
+            mode = 'forward'
+            
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.
             comps = [comp for comp in self]
@@ -998,9 +1002,34 @@ class SequentialWorkflow(Workflow):
             self._find_nondiff_blocks = False
         
         # Auto-determine which mode to use.
-        if mode == 'auto':
-            # TODO - determine based on size and presence of apply_derivT
-            mode = 'forward'
+        if mode == 'auto' and fd is False:
+            # TODO - additional determination based on presence of
+            # apply_derivT
+            
+            # TODO: This is repeated in derivatives.calc_gradient for sizing.
+            # We should cache it and only do it once.
+            
+            num_in = 0
+            for item in inputs:
+                
+                # For parameter groups, only size the first
+                if isinstance(item, tuple):
+                    item = item[0]
+                    
+                val = self.scope.get(item)
+                width = flattened_size(item, val)
+                num_in += width
+        
+            num_out = 0
+            for item in outputs:
+                val = self.scope.get(item)
+                width = flattened_size(item, val)
+                num_out += width
+                
+            if num_in > num_out:
+                mode = 'adjoint'
+            else:
+                mode = 'forward'
             
         if mode == 'adjoint':
             return calc_gradient_adjoint(self, inputs, outputs)
