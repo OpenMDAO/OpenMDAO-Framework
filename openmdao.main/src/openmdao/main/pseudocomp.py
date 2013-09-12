@@ -236,6 +236,8 @@ class PseudoComponent(object):
             scope.disconnect(src, dest)
 
     def invalidate_deps(self, varnames=None, force=False):
+        print "* pseudo %s invalidate_deps" % self.name
+        print "* varnames = %s" % varnames
         if varnames is None:
             varnames = self._inputs
         for name in varnames:

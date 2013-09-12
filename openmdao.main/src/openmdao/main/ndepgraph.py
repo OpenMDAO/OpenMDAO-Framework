@@ -171,6 +171,13 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
+def is_severed(graph, src, dest):
+    """Returns True is an edge is marked as severed."""
+    try:
+        return 'severed' in graph.edge[src][dest]
+    except KeyError:
+        return False
+
 # predicate factories
 
 def all_preds(*args):
@@ -565,7 +572,8 @@ class DependencyGraph(nx.DiGraph):
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
-        
+        print '* depgraph invalidate_deps',
+        print ' %s: %s' % (cname, srcvars)
         if srcvars is None:
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
@@ -577,9 +585,9 @@ class DependencyGraph(nx.DiGraph):
         if not srcvars:
             return outset
 
-        # Keep track of the comp/var we already invalidated, so we
+        # Keep track of the vars we already invalidated, so we
         # don't keep doing them. This allows us to invalidate loops.
-        invalidated = {}
+        invalidated = set()
 
         while(stack):
             srccomp, srcvars = stack.pop()
@@ -588,34 +596,29 @@ class DependencyGraph(nx.DiGraph):
                 srcvars = self.list_outputs(srccomp, connected=True)
            
             # KTM1 - input-input connections were excluded. Add them in by
-            # adding the inputs to our check. The extra unconnected ones
-            # shouldn't hurt the call into find_nodes.
-
-            # FIXME: fix this to include ONLY inputs that are also outputs
+            # adding the inputs to our check. 
             if srccomp: 
                 srcvars += self.list_input_outputs(srccomp)
             
             if not srcvars:
                 continue
 
-            invalidated.setdefault(srccomp, set()).update(srcvars) 
+            invalidated.update(srcvars) 
             
-            cmap = partition_names_by_comp(self.find_nodes(srcvars, 
-                                                           is_basevar_node, 
-                                                           is_comp_node))
-            
+            #nodes = self.find_nodes(srcvars, is_basevar_node, is_comp_node)
+
+            cmap = partition_names_by_comp(self.basevar_iter(srcvars, follow_severed=False))
             for dcomp, dests in cmap.items():
                 if dests:
-                    if dcomp in invalidated:
-                        if dcomp:
-                            ldests = ['.'.join([dcomp, n]) for n in dests]
-                        else:
-                            ldests = dests
-                        diff = set(ldests) - invalidated[dcomp]
-                        if diff:
-                            invalidated[dcomp].update(diff)
-                        else:
-                            continue
+                    if dcomp:
+                        ldests = ['.'.join([dcomp, n.split('.',1)[0]]) for n in dests]
+                    else:
+                        ldests = [n.split('.',1)[0] for n in dests]
+                    diff = set(ldests) - invalidated
+                    if diff:
+                        invalidated.update(diff)
+                    else:
+                        continue
                     if dcomp:
                         comp = getattr(scope, dcomp)
                         newouts = comp.invalidate_deps(varnames=dests,
@@ -804,7 +807,7 @@ class DependencyGraph(nx.DiGraph):
                 except StopIteration:
                     stack.pop()
 
-    def _var_connections(self, path, direction=None):
+    def _var_connections(self, path, direction=None, show_severed=True):
         """Returns a list of tuples of the form (srcpath, destpath) for all
         variable connections to the specified variable.  If direction is None, both
         ins and outs are included. Other allowed values for direction are
@@ -812,32 +815,49 @@ class DependencyGraph(nx.DiGraph):
         """
         conns = []
 
+        if show_severed:
+            is_conn = is_connection
+        else:
+            is_conn = lambda g,u,v: is_connection(g,u,v) and not is_severed(g,u,v)
+
         if direction != 'in':  # get 'out' connections
             for u,v in self.edges_iter(path):
-                if is_connection(self, u, v):
+                if is_conn(self, u, v):
                     conns.append((u,v))
                 else:
-                    for uu,vv in self.edges_iter(v):
-                        if is_connection(self, uu, vv):
-                            conns.append((uu,vv))
+                    conns.extend([(uu,vv) for uu,vv in self.edges_iter(u)
+                                    if is_conn(self, uu, vv)])
 
         if direction != 'out':  # get 'in' connections
             for u,v in self.in_edges_iter(path):
-                if is_connection(self, u, v):
+                if is_conn(self, u, v):
                     conns.append((u,v))
                 else:
-                    for uu,vv in self.in_edges_iter(u):
-                        if is_connection(self, uu, vv):
-                            conns.append((uu,vv))
-
+                    conns.extend([(uu,vv) for uu,vv in self.in_edges_iter(u)
+                                    if is_conn(self, uu, vv)])
         return conns
 
-    def basevar_iter(self, nodes, reverse=False):
+    def basevar_iter(self, nodes, reverse=False, follow_severed=True):
         """Given a group of nodes, return an iterator
         over all base variable nodes that are nearest in one
         direction.
         """
-        return self.find_nodes(nodes, is_basevar_node, reverse=reverse)
+        if reverse:
+            edge_iter = self.in_edges_iter
+            idx = 0  # tuple index to grab the source node
+        else:
+            edge_iter = self.edges_iter
+            idx = 1 # tuple index to grab the dest node
+
+        for node in nodes:
+            for edge in edge_iter(node):
+                if is_basevar_node(self, edge[idx]):
+                    if is_connection(self, edge[0], edge[1]):
+                        if follow_severed or 'severed' not in self.node[edge[0]][edge[1]]:
+                            yield edge[idx]
+                else:
+                    for bv in self.basevar_iter([node], reverse, follow_severed):
+                        yield bv
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator

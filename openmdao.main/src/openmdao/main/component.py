@@ -237,7 +237,7 @@ class Component(Container):
 
         self._input_check(name, old)
         self._input_updated(name)
-        print '%s updated to %s' % (name, new)
+        print '   %s = %s' % (name, new)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
@@ -404,15 +404,16 @@ class Component(Container):
                 valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
-            print '%s connected inputs: %s' % (self.name, self._depgraph.get_connected_inputs())
+            print '%s _pre_execute' % self.name,
             for inp in self._depgraph.get_connected_inputs():
-                print 'valid[%s] = %s' % (inp, self._valid_dict[inp])
+                print 'valid[%s] = %s' % (inp, self._valid_dict[inp.split('[',1)[0]])
             invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
                                     if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
+                    print "setting %s to True" % name.split('[',1)[0]
                     valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
@@ -511,6 +512,7 @@ class Component(Container):
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
+        print '%s: resetting validity of all inputs/outputs' % self.name
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
@@ -898,7 +900,7 @@ class Component(Container):
         """Removes the connection between one source variable and one
         destination variable.
         """
-
+        print "%s: disconnect" % self.name
         super(Component, self).disconnect(srcpath, destpath)
         if destpath.split('[',1)[0] in self._valid_dict:
             if '.' in destpath:
@@ -1562,6 +1564,8 @@ class Component(Container):
         Returns None, indicating that all outputs are newly invalidated, or [],
         indicating that no outputs are newly invalidated.
         """
+        print "* (comp) '%s' invalidate_deps" % self.name,
+        print ': varnames = %s' % varnames
         outs = self.list_outputs()
         valids = self._valid_dict
 
@@ -1579,6 +1583,7 @@ class Component(Container):
                 conn = [c.split('[',1)[0] for c in conn]
                 for var in varnames:
                     if var in conn:
+                        print "invalidating %s" % var.split('[',1)[0]
                         valids[var.split('[',1)[0]] = False
 
         # this assumes that all outputs are either valid or invalid

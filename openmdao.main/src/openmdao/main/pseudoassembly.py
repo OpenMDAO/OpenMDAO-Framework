@@ -61,7 +61,7 @@ class PseudoAssembly(object):
                          extra_in=None, extra_out=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
-
+        print "pa calc_derivatives"
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
@@ -82,6 +82,7 @@ class PseudoAssembly(object):
                 comp.calc_derivatives(first, second, savebase)
 
         self.J = self.fd.calculate()
+        print "pa calc_derivatives done"
         
     def provideJ(self):
         """Jacobian for this block"""

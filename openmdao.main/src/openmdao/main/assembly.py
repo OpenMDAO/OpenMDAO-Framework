@@ -627,6 +627,7 @@ class Assembly(Component):
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
+        print "update_inputs: %s, %s" % (compname, inputs)
         invalids = []
         conns = []
         graph = self._depgraph
@@ -644,6 +645,7 @@ class Assembly(Component):
         srcs = [u for u,v in conns]
         srcvars = [s.split('[',1)[0] for s in srcs]
         invalids = [srcs[i] for i,valid in enumerate(self.get_valid(srcvars)) if not valid]
+        print "  invalids = %s" % invalids
 
         # if source vars are invalid, request an update
         if invalids:
@@ -677,6 +679,7 @@ class Assembly(Component):
                 srcexpr = self._exprmapper.get_expr(u)
                 destexpr = self._exprmapper.get_expr(v)
                 destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
+                print "assembly setting %s = %s" % (v, srcexpr.evaluate())
             except Exception as err:
                 self.raise_exception("cannot set '%s' from '%s': %s" %
                                      (destexpr.text, srcexpr.text, str(err)), type(err))
@@ -729,6 +732,7 @@ class Assembly(Component):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
+        print "+ child_invalidated: '%s', outs=%s" % (childname, outs)
         bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
         if bouts:
             self.set_valid(bouts, False)
@@ -747,6 +751,8 @@ class Assembly(Component):
             If True, force the invalidation to proceed beyond the
             boundary even if all outputs were already invalid.
         """
+        print "* %s invalidate deps" % self.name
+        print '* varnames = %s' % varnames
         valids = self._valid_dict
         conn_ins = set(self.list_inputs(connected=True))
 

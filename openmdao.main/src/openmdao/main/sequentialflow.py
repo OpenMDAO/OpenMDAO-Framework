@@ -352,6 +352,7 @@ class SequentialWorkflow(Workflow):
             # Prevent OpenMDAO from stomping on our poked input.
             comp_name, _, var_name = target.partition('.')
             comp = self.scope.get(comp_name)
+            print 'setting %s to valid' % var_name.split('[',1)[0]
             comp._valid_dict[var_name.split('[',1)[0]] = True
 
             #(An alternative way to prevent the stomping. This is more
