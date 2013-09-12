@@ -5,6 +5,7 @@ except ImportError:
     import json
 import logging
 import os.path
+from os import utime
 import sys
 import traceback
 
@@ -35,6 +36,23 @@ from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 
+def update_last_modified(target):
+    '''Decorator for methods that update
+       a project. Method touches _settings.cfg file
+       of the project. The timestamp of _settings.cfg
+       will be used for determining 'last_saved' metadata.
+    '''
+    def wrapper(self, *args, **kargs):
+        result = target(self, *args, **kargs)
+        settings_path = self.files._get_abs_path("_settings.cfg")
+        
+        with file(settings_path, 'a'):
+            utime(settings_path, None)
+
+        return result
+
+    return wrapper
+
 def modifies_model(target):
     ''' Decorator for methods that may have modified the model;
         performs maintenance on root level containers/assemblies and
@@ -44,7 +62,7 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
-        self._update_workflows()
+        # self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
@@ -173,6 +191,7 @@ class ConsoleServer(cmd.Cmd):
         #self._hist += [line.strip()]
         return line
 
+    @update_last_modified
     @modifies_model
     def onecmd(self, line):
         self._hist.append(line)
@@ -247,6 +266,7 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("Execution failed: No %r component was found." %
                               pathname)
 
+    @update_last_modified
     @modifies_model
     def execfile(self, filename):
         ''' Execfile in server's globals.
@@ -485,6 +505,7 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
+    @update_last_modified
     def commit_project(self, comment=''):
         ''' Save the current project macro and commit to the project repo.
         '''
@@ -498,6 +519,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             self._print_error('No Project to commit')
 
+    @update_last_modified
     @modifies_model
     def revert_project(self, commit_id=None):
         ''' Revert to the most recent commit of the project.
@@ -537,6 +559,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             self.add_object(pathname, classname, args)
 
+    @update_last_modified
     @modifies_model
     def add_object(self, pathname, classname, args):
         ''' Add a new object of the given type to the specified parent.
@@ -559,6 +582,7 @@ class ConsoleServer(cmd.Cmd):
             self._print_error('Error adding object:'
                               ' "%s" is not a valid identifier' % name)
 
+    @update_last_modified
     @modifies_model
     def replace_object(self, pathname, classname, args=None):
         ''' Replace existing object with object of the given type.
@@ -601,12 +625,14 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self.files.get_file(filename)
 
+    @update_last_modified
     def ensure_dir(self, dirname):
         ''' Create directory
             (does nothing if directory already exists).
         '''
         return self.files.ensure_dir(dirname)
 
+    @update_last_modified
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
@@ -614,17 +640,20 @@ class ConsoleServer(cmd.Cmd):
         if not ret is True:
             return ret
 
+    @update_last_modified
     def add_file(self, filename, contents):
         ''' Add file.
         '''
         return self.files.add_file(filename, contents)
 
+    @update_last_modified
     def delete_file(self, filename):
         ''' Delete file from project.
             Returns False if file was not found; otherwise returns True.
         '''
         return self.files.delete_file(filename)
 
+    @update_last_modified
     def rename_file(self, oldpath, newname):
         ''' Rename file.
         '''

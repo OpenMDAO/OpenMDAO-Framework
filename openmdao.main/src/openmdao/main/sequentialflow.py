@@ -447,9 +447,16 @@ class SequentialWorkflow(Workflow):
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
                     
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
-                inputs[comp_name][var_name] = arg[i1:i2]
-
+                if var_name not in outputs:
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
+                else:
+                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                    
+                if var_name not in inputs:
+                    inputs[comp_name][var_name] = arg[i1:i2].copy()
+                else:
+                    inputs[comp_name][var_name] += arg[i1:i2].copy()
+                    
             if targets != '@out':
                 
                 # Parameter group support
@@ -472,7 +479,7 @@ class SequentialWorkflow(Workflow):
                         var_name = '%s.%s' % (comp_name, var_name)
                         comp_name = pa_ref[comp_name]
                     inputs[comp_name][var_name] = arg[i1:i2]
-
+            #print i1, i2, edge, '\n', inputs, '\n', outputs
         # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
@@ -525,20 +532,25 @@ class SequentialWorkflow(Workflow):
                     input_input_xref[target] = edge
         
         # Poke results into the return vector
+        #print inputs, '\n', outputs
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
             if src == '@in':
-                src = target
+                # Extra eqs for parameters contribute a 1.0 on diag
+                result[i1:i2] = arg[i1:i2]
+                continue
+            else:
+                result[i1:i2] = -arg[i1:i2]
                 
             # Input-input connections are not in the jacobians. We need
             # to add the derivative using our cross reference.
-            elif src in self._input_outputs:
+            if src in self._input_outputs:
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
                     i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] = arg[i3:i4] - arg[i1:i2]
+                    result[i1:i2] += arg[i3:i4]
                 continue
                 
             # Parameter group support
@@ -559,7 +571,8 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                result[i1:i2] = outputs[comp_name][var_name]
+                result[i1:i2] += outputs[comp_name][var_name]
+                #print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
             
         #print arg, result
         return result
@@ -602,6 +615,8 @@ class SequentialWorkflow(Workflow):
             if '~' in name:
                 for item in comp.list_all_comps():
                     pa_ref[item] = name
+                    
+        deriv_iter_comps = [comp.name for comp in self.derivative_iter()]
 
         # Fill input dictionaries with values from input arg.
         for edge in edges:
@@ -622,9 +637,13 @@ class SequentialWorkflow(Workflow):
                 elif comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                    
-                inputs[comp_name][var_name] = arg[i1:i2]
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
+                
+                if var_name in inputs[comp_name]: 
+                    inputs[comp_name][var_name] += arg[i1:i2].copy()
+                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                else:
+                    inputs[comp_name][var_name] = arg[i1:i2].copy()
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
 
             # Parameter group support
             if not isinstance(targets, tuple):
@@ -652,10 +671,9 @@ class SequentialWorkflow(Workflow):
                     else:
                         # Interior comp edges contribute a -1.0 on diag
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
-
+                            
         # Call ApplyMinvT on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
+        for name in deriv_iter_comps:
             if hasattr(comp, 'applyMinvT'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinvT(pre_inputs, inputs[name])
@@ -666,6 +684,7 @@ class SequentialWorkflow(Workflow):
             applyJT(comp, inputs[name], outputs[name])
 
         # Poke results into the return vector
+        #print inputs, outputs
         result = zeros(len(arg))
         
         for edge in edges:
@@ -679,7 +698,7 @@ class SequentialWorkflow(Workflow):
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
                     i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] = result[i1:i2] - arg[i1:i2]
+                    result[i1:i2] = -arg[i1:i2]
                     result[i3:i4] = result[i3:i4] + arg[i1:i2]
                     
                     # This column shouldn't have anything else in it.
@@ -710,6 +729,7 @@ class SequentialWorkflow(Workflow):
                 result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
                 
         #print arg, result
+        #print self.get_interior_edges()
         return result
     
     def group_nondifferentiables(self):
@@ -923,6 +943,8 @@ class SequentialWorkflow(Workflow):
         # no fake fd.
         if fd is True:
             
+            mode = 'forward'
+            
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.
             comps = [comp for comp in self]
@@ -1007,9 +1029,34 @@ class SequentialWorkflow(Workflow):
             self._find_nondiff_blocks = False
         
         # Auto-determine which mode to use.
-        if mode == 'auto':
-            # TODO - determine based on size and presence of apply_derT
-            mode = 'forward'
+        if mode == 'auto' and fd is False:
+            # TODO - additional determination based on presence of
+            # apply_derivT
+            
+            # TODO: This is repeated in derivatives.calc_gradient for sizing.
+            # We should cache it and only do it once.
+            
+            num_in = 0
+            for item in inputs:
+                
+                # For parameter groups, only size the first
+                if isinstance(item, tuple):
+                    item = item[0]
+                    
+                val = self.scope.get(item)
+                width = flattened_size(item, val)
+                num_in += width
+        
+            num_out = 0
+            for item in outputs:
+                val = self.scope.get(item)
+                width = flattened_size(item, val)
+                num_out += width
+                
+            if num_in > num_out:
+                mode = 'adjoint'
+            else:
+                mode = 'forward'
             
         if mode == 'adjoint':
             return calc_gradient_adjoint(self, inputs, outputs)

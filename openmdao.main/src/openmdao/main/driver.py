@@ -162,24 +162,24 @@ class Driver(Component):
         """
         if self._required_compnames is None:
             conns = super(Driver, self).get_expr_depends()
-            getcomps = set([u for u,v in conns if u != self.name])
-            setcomps = set([v for u,v in conns if v != self.name])
+            getcomps = set([u for u, v in conns if u != self.name])
+            setcomps = set([v for u, v in conns if v != self.name])
 
             full = set(setcomps)
-            
+
             compgraph = self.parent._depgraph.component_graph()
 
             for end in getcomps:
                 for start in setcomps:
                     full.update(find_all_connecting(compgraph, start, end))
-                    
+
             self._required_compnames = full
 
         return self._required_compnames
 
     @rbac(('owner', 'user'))
     def list_pseudocomps(self):
-        """Return a list of names of pseudocomps resulting from 
+        """Return a list of names of pseudocomps resulting from
         our parameters, objectives, and constraints.
         """
         pcomps = []
@@ -346,10 +346,10 @@ class Driver(Component):
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
-                         extra_in = None, extra_out=None):
+                         extra_in=None, extra_out=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase, 
+        self.workflow.calc_derivatives(first, second, savebase,
                                        extra_in, extra_out)
 
     def calc_gradient(self, inputs=None, outputs=None):
@@ -377,7 +377,7 @@ class Driver(Component):
             self.workflow.config_changed()
 
     def workflow_graph(self):
-        """Return the dependency graph for the scope of this Driver. 
+        """Return the dependency graph for the scope of this Driver.
         """
         return self.parent._depgraph
 
@@ -500,7 +500,7 @@ class Driver(Component):
         ret['type'] = type(self).__module__ + '.' + type(self).__name__
         ret['workflow'] = []
         ret['valid'] = self.is_valid()
-        for comp in self.workflow:
+        for comp in self.workflow.get_components():
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
                 ret['workflow'].append({
@@ -508,7 +508,7 @@ class Driver(Component):
                     'type':     type(comp).__module__ + '.' + type(comp).__name__,
                     'driver':   comp.driver.get_workflow(),
                     'valid':    comp.is_valid()
-                  })
+                })
             elif is_instance(comp, Driver):
                 ret['workflow'].append(comp.get_workflow())
             else:
@@ -516,7 +516,7 @@ class Driver(Component):
                     'pathname': pathname,
                     'type':     type(comp).__module__ + '.' + type(comp).__name__,
                     'valid':    comp.is_valid()
-                  })
+                })
         return ret
 
 

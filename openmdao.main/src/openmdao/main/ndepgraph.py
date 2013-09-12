@@ -334,7 +334,7 @@ class DependencyGraph(nx.DiGraph):
             self.config_changed()
 
     def check_connect(self, srcpath, destpath):
-        if is_external_node(self, destpath): # error will be caught at parent level
+        if is_external_node(self, destpath):  # error will be caught at parent level
             return
 
         dpbase = base_var(self, destpath)
@@ -608,11 +608,12 @@ class DependencyGraph(nx.DiGraph):
             Names of sources from each starting node. If None,
             all outputs from specified component are assumed
             to be invalidated.
-            
+
         force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
+
         if srcvars is None:
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
@@ -630,15 +631,14 @@ class DependencyGraph(nx.DiGraph):
 
         while(stack):
             srccomp, srcvars = stack.pop()
-   
+
             if srcvars is None:
                 srcvars = self.list_outputs(srccomp, connected=True)
-           
-            # KTM1 - input-input connections were excluded. Add them in by
-            # adding the inputs to our check. 
+
+            # add inputs that are used as outputs
             if srccomp: 
                 srcvars += self.list_input_outputs(srccomp)
-            
+
             if not srcvars:
                 continue
 
@@ -685,7 +685,7 @@ class DependencyGraph(nx.DiGraph):
                             ins.append(n)
             return ins
         else:
-            return [n for n in nodes 
+            return [n for n in nodes
                        if self.in_degree(n) > 0 and
                        is_input_node(self, n)]
 
@@ -704,7 +704,7 @@ class DependencyGraph(nx.DiGraph):
                             outs.append(n)
             return outs
         else:
-            return [n for n in nodes 
+            return [n for n in nodes
                         if self.out_degree(n) > 0 and
                         is_output_node(self, n)]
 
@@ -722,7 +722,7 @@ class DependencyGraph(nx.DiGraph):
 
     def list_input_outputs(self, cname):
         """Return a list of names of input nodes that are used
-        as outputs. This can happen if an input is part of a 
+        as outputs. This can happen if an input is part of a
         constraint or an objective.
         """
         if not is_comp_node(self, cname):
@@ -962,4 +962,3 @@ def find_all_connecting(graph, start, end):
         tmpset.update(graph.succ[node].keys())
 
     return fwdset.intersection(backset)
-
