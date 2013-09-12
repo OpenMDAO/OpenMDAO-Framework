@@ -60,7 +60,7 @@ class DepGraphTestCase(unittest.TestCase):
         for comp in comps:
             if isinstance(comp, basestring):
                 comp = DumbClass(comp)
-            dep.add_component(comp.name, comp.list_inputs(), comp.list_outputs())
+            dep.add_component(comp.name, comp)
             setattr(scope, comp.name, comp)
 
         for v, iotype in variables:
@@ -176,6 +176,9 @@ class DepGraphTestCase(unittest.TestCase):
                          set(['a','D.b']))
     
     def test_get_connected_outputs(self):
+        self.assertEqual(set(self.dep.get_connected_outputs()), 
+                         set(['c', 'D.d']))
+        self.dep.connect('D.a', 'parent.foo.bar')
         self.assertEqual(set(self.dep.get_connected_outputs()), 
                          set(['c', 'D.d']))
     
@@ -359,6 +362,14 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(dep.comp_iter('C')), set(['D','E']))
         self.assertEqual(set(dep.comp_iter('C', reverse=True)), set(['A','B']))
         self.assertEqual(set(dep.comp_iter('A')), set(['D','C']))
+
+    def test_input_as_output(self):
+        dep, scope = self.make_graph(['A','B','C'], [],
+                                     [('A.c','B.a'),('B.d','C.b')])
+        self.assertEqual(dep.list_input_outputs('A'), [])
+        dep.connect('A.a','C.a')
+        self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
+
 
           
 if __name__ == "__main__":

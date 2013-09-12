@@ -3,7 +3,7 @@ import os
 import time
 import datetime
 import re
-import pkg_resources 
+import pkg_resources
 
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -25,7 +25,7 @@ def test_generator():
 
 #Test metadata of a project:
 def _test_last_saved_metadata(browser):
-    
+
     def last_saved(target):
         def wrapper(projects_page, project_name, timestamp, *args, **kargs):
             workspace_page = projects_page.open_project( project_name )
@@ -60,7 +60,7 @@ def _test_last_saved_metadata(browser):
         seconds = int( match_object.group(3) )
 
         return datetime.datetime( year, month, day, hours, minutes, seconds  )
-  
+
     @last_saved
     def add_file(workspace_page):
         file_path = pkg_resources.resource_filename('openmdao.gui.test.functional', 'files/simple_paraboloid.py')
@@ -69,7 +69,7 @@ def _test_last_saved_metadata(browser):
     @last_saved
     def new_file(workspace_page):
         workspace_page.new_file( 'test_file.py' )
-    
+
     @last_saved
     def rename_file(workspace_page):
         file_names = workspace_page.get_files()
@@ -114,8 +114,8 @@ def _test_last_saved_metadata(browser):
     def revert_project(workspace_page):
         workspace_page.add_library_item_to_dataflow("openmdao.main.assembly.Assembly", 'top')
         workspace_page = workspace_page.revert_project()
-        
-     
+
+
     projects_page = begin(browser)
     projects_page, project_dict = new_project(projects_page.new_project(),
                                               verify=True, load_workspace=False)
@@ -137,9 +137,7 @@ def _test_last_saved_metadata(browser):
     projects_page, project_name, commit_project_time = commit_project(projects_page, project_name, replace_object_time)
     projects_page, project_name, revert_project_time = revert_project(projects_page, project_name, commit_project_time)
 
-    projects_page.logout()
 
-    
 #Test creating a project
 def _test_new_project(browser):
 
