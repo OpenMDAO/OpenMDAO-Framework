@@ -241,7 +241,7 @@ def applyJ(obj, arg, result):
     function hook "apply_deriv".
     """
     for key in result:
-        result[key] = -arg[key]
+        result[key] = 0.0*-arg[key]
 
     if hasattr(obj, 'apply_deriv'):
         

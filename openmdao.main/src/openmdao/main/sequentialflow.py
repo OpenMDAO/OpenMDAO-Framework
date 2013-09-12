@@ -523,21 +523,25 @@ class SequentialWorkflow(Workflow):
                     input_input_xref[target] = edge
         
         # Poke results into the return vector
-        print inputs, '\n', outputs
+        #print inputs, '\n', outputs
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
             
             if src == '@in':
-                src = target
+                # Extra eqs for parameters contribute a 1.0 on diag
+                result[i1:i2] = arg[i1:i2]
+                continue
+            else:
+                result[i1:i2] = -arg[i1:i2]
                 
             # Input-input connections are not in the jacobians. We need
             # to add the derivative using our cross reference.
-            elif src in self._input_outputs:
+            if src in self._input_outputs:
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
                     i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] = arg[i3:i4] - arg[i1:i2]
+                    result[i1:i2] += arg[i3:i4]
                 continue
                 
             # Parameter group support
@@ -558,10 +562,10 @@ class SequentialWorkflow(Workflow):
                 if comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                result[i1:i2] = outputs[comp_name][var_name]
-                print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
+                result[i1:i2] += outputs[comp_name][var_name]
+                #print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
             
-        print arg, result
+        #print arg, result
         return result
     
     def matvecREV(self, arg):
@@ -626,10 +630,10 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 
                 if var_name in inputs[comp_name]: 
-                    inputs[comp_name][var_name] += arg[i1:i2]
+                    inputs[comp_name][var_name] += arg[i1:i2].copy()
                     outputs[comp_name][var_name] += arg[i1:i2].copy()
                 else:
-                    inputs[comp_name][var_name] = arg[i1:i2]
+                    inputs[comp_name][var_name] = arg[i1:i2].copy()
                     outputs[comp_name][var_name] = arg[i1:i2].copy()
 
             # Parameter group support
@@ -685,7 +689,7 @@ class SequentialWorkflow(Workflow):
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
                     i3, i4 = self.bounds[ref_edge]
-                    result[i1:i2] = result[i1:i2] - arg[i1:i2]
+                    result[i1:i2] = -arg[i1:i2]
                     result[i3:i4] = result[i3:i4] + arg[i1:i2]
                     
                     # This column shouldn't have anything else in it.
@@ -716,6 +720,7 @@ class SequentialWorkflow(Workflow):
                 result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
                 
         #print arg, result
+        #print self.get_interior_edges()
         return result
     
     def group_nondifferentiables(self):
