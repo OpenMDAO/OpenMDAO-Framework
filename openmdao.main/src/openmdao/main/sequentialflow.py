@@ -438,9 +438,16 @@ class SequentialWorkflow(Workflow):
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
                     
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
-                inputs[comp_name][var_name] = arg[i1:i2]
-
+                if var_name not in outputs:
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
+                else:
+                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                    
+                if var_name not in inputs:
+                    inputs[comp_name][var_name] = arg[i1:i2].copy()
+                else:
+                    inputs[comp_name][var_name] += arg[i1:i2].copy()
+                    
             if targets != '@out':
                 
                 # Parameter group support
@@ -463,7 +470,7 @@ class SequentialWorkflow(Workflow):
                         var_name = '%s.%s' % (comp_name, var_name)
                         comp_name = pa_ref[comp_name]
                     inputs[comp_name][var_name] = arg[i1:i2]
-
+            #print i1, i2, edge, '\n', inputs, '\n', outputs
         # Call ApplyMinv on each component (preconditioner)
         for comp in self.derivative_iter():
             name = comp.name
@@ -516,7 +523,7 @@ class SequentialWorkflow(Workflow):
                     input_input_xref[target] = edge
         
         # Poke results into the return vector
-        #print inputs, outputs
+        print inputs, '\n', outputs
         for edge in edges:
             src, target = edge
             i1, i2 = self.bounds[edge]
@@ -552,8 +559,9 @@ class SequentialWorkflow(Workflow):
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
                 result[i1:i2] = outputs[comp_name][var_name]
+                print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
             
-        #print arg, result
+        print arg, result
         return result
     
     def matvecREV(self, arg):
@@ -594,6 +602,8 @@ class SequentialWorkflow(Workflow):
             if '~' in name:
                 for item in comp.list_all_comps():
                     pa_ref[item] = name
+                    
+        deriv_iter_comps = [comp.name for comp in self.derivative_iter()]
 
         # Fill input dictionaries with values from input arg.
         for edge in edges:
@@ -614,9 +624,13 @@ class SequentialWorkflow(Workflow):
                 elif comp_name in pa_ref:
                     var_name = '%s.%s' % (comp_name, var_name)
                     comp_name = pa_ref[comp_name]
-                    
-                inputs[comp_name][var_name] = arg[i1:i2]
-                outputs[comp_name][var_name] = arg[i1:i2].copy()
+                
+                if var_name in inputs[comp_name]: 
+                    inputs[comp_name][var_name] += arg[i1:i2]
+                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                else:
+                    inputs[comp_name][var_name] = arg[i1:i2]
+                    outputs[comp_name][var_name] = arg[i1:i2].copy()
 
             # Parameter group support
             if not isinstance(targets, tuple):
@@ -644,10 +658,9 @@ class SequentialWorkflow(Workflow):
                     else:
                         # Interior comp edges contribute a -1.0 on diag
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
-
+                            
         # Call ApplyMinvT on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
+        for name in deriv_iter_comps:
             if hasattr(comp, 'applyMinvT'):
                 pre_inputs = inputs[name].copy()
                 comp.applyMinvT(pre_inputs, inputs[name])

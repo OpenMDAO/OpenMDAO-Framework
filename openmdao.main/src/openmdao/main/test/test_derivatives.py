@@ -192,6 +192,22 @@ class SimpleDriver(Driver):
 
     implements(IHasParameters)
     
+class SimpleComp(Component):
+    
+    x = Float(3.0, iotype='in')
+    y = Float(6.0, iotype='out')
+    
+    def execute(self):
+        
+        self.y = 2.0*self.x
+        
+    def linearize(self):
+        pass
+    
+    def provideJ(self):
+        
+        return ('x',), ('y',), array([[2.0]])    
+    
         
 class CompFoot(Component):
     """ Evaluates the equation y=x^2"""
@@ -735,17 +751,40 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.comp1.x1 = 2.0
         self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
+                                                   outputs=['comp5.y1', 'comp4.y3'],
                                                    mode='forward')
+        print J
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
-                                                   outputs=['comp5.y1'],
+                                                   outputs=['comp5.y1', 'comp4.y3'],
                                                    mode='adjoint')
         
+        print J
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
+        
+    def test_bug(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis2', SimpleComp())
+        self.top.driver.add_objective('(dis2.y)**2')
+        self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis2.y < 24.0')   
+        
+        self.top.run()
+        
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .001)
+        assert_rel_error(self, J[1, 0], 2.0, .001) 
+        
+        self.top.driver.workflow.config_changed()
+        J = self.top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .001)
+        assert_rel_error(self, J[1, 0], 2.0, .001) 
         
     def test_nondifferentiable_blocks(self):
         
