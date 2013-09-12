@@ -701,7 +701,7 @@ class SequentialWorkflow(Workflow):
                     result[i1:i2] = -arg[i1:i2]
                     result[i3:i4] = result[i3:i4] + arg[i1:i2]
                     
-                    # This column shouldn't have anything else in it.
+                    # This entry shouldn't have anything else in it.
                     if arg[i1:i2] != 0.0:
                         continue
             
