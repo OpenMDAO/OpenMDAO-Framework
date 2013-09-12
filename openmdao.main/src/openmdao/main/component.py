@@ -237,7 +237,6 @@ class Component(Container):
 
         self._input_check(name, old)
         self._input_updated(name)
-        print '   %s = %s' % (name, new)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
@@ -404,16 +403,12 @@ class Component(Container):
                 valids[name.split('[',1)[0]] = True
         else:
             valids = self._valid_dict
-            print '%s _pre_execute' % self.name,
-            for inp in self._depgraph.get_connected_inputs():
-                print 'valid[%s] = %s' % (inp, self._valid_dict[inp.split('[',1)[0]])
             invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
                                     if valids.get(inp.split('[',1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
-                    print "setting %s to True" % name.split('[',1)[0]
                     valids[name.split('[',1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
@@ -512,7 +507,6 @@ class Component(Container):
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
-        print '%s: resetting validity of all inputs/outputs' % self.name
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
@@ -569,7 +563,7 @@ class Component(Container):
                    and (hasattr(self, 'provideJ')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
-                    print 'execute_ffd: %s' % self.get_pathname()
+                    #print 'execute_ffd: %s' % self.get_pathname()
                     self._execute_ffd(1)
 
                 elif ffd_order == 2 and \
@@ -579,7 +573,7 @@ class Component(Container):
                     pass
 
                 else:
-                    print 'execute: %s' % self.get_pathname()
+                    #print 'execute: %s' % self.get_pathname()
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
@@ -591,8 +585,8 @@ class Component(Container):
                     self.execute()
 
                 self._post_execute()
-            else:
-                print 'skipping: %s' % self.get_pathname()
+            #else:
+            #    print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
@@ -900,7 +894,6 @@ class Component(Container):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        print "%s: disconnect" % self.name
         super(Component, self).disconnect(srcpath, destpath)
         if destpath.split('[',1)[0] in self._valid_dict:
             if '.' in destpath:
@@ -1564,8 +1557,6 @@ class Component(Container):
         Returns None, indicating that all outputs are newly invalidated, or [],
         indicating that no outputs are newly invalidated.
         """
-        print "* (comp) '%s' invalidate_deps" % self.name,
-        print ': varnames = %s' % varnames
         outs = self.list_outputs()
         valids = self._valid_dict
 
@@ -1583,7 +1574,6 @@ class Component(Container):
                 conn = [c.split('[',1)[0] for c in conn]
                 for var in varnames:
                     if var in conn:
-                        print "invalidating %s" % var.split('[',1)[0]
                         valids[var.split('[',1)[0]] = False
 
         # this assumes that all outputs are either valid or invalid
@@ -1669,8 +1659,6 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
-        array_regex = re.compile("(?P<index>\[\d+\])(?P=index)*")
-
         attrs = {}
         attrs['type'] = type(self).__name__
 
@@ -1752,7 +1740,6 @@ class Component(Container):
             io_attr['connection_types'] = 0
 
             connected = []
-            partially_connected = []
             partially_connected_indices = []
             
             for inp in connected_inputs:
@@ -1762,9 +1749,6 @@ class Component(Container):
                     connections = self._depgraph._var_connections(inp)
                     connections = [src for src, dst in connections]
                     connected.extend(connections)
-
-                    if '[' not in inp:
-                        io_attr['connection_types'] = io_attr['connection_types'] | 1
 
                     if '[' in inp:
 
@@ -1784,8 +1768,11 @@ class Component(Container):
 
                         partially_connected_indices.append( column_index )
 
+                    else: # '[' not in imp
+                        io_attr['connection_types'] = io_attr['connection_types'] | 1
+
             if connected:
-                io_attr['connected'] = str(connected)#.replace('@xin.', '')
+                io_attr['connected'] = str(connected)
             
             if partially_connected_indices:
                 io_attr['partially_connected_indices'] = str(partially_connected_indices)
@@ -1793,7 +1780,7 @@ class Component(Container):
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
-                    str([dst for src, dst in connections])#.replace('@xout.', '')
+                    str([dst for src, dst in connections])
             
             io_attr['implicit'] = []
 

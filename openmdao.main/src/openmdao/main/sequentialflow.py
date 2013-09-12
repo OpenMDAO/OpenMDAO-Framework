@@ -91,6 +91,15 @@ class SequentialWorkflow(Workflow):
         self._input_outputs = []
         self._names = None
 
+    def sever_edges(self, edges):
+        """Temporarily remove the specified edges but save
+        them and their metadata for later restoration. 
+        """
+        self.scope._depgraph.sever_edges(edges)
+
+    def unsever_edges(self):
+        self.scope._depgraph.unsever_edges()
+        
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
         If full is True, include hidden pseudo-components in the list.
@@ -352,7 +361,6 @@ class SequentialWorkflow(Workflow):
             # Prevent OpenMDAO from stomping on our poked input.
             comp_name, _, var_name = target.partition('.')
             comp = self.scope.get(comp_name)
-            print 'setting %s to valid' % var_name.split('[',1)[0]
             comp._valid_dict[var_name.split('[',1)[0]] = True
 
             #(An alternative way to prevent the stomping. This is more

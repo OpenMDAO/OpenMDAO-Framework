@@ -758,7 +758,6 @@ class FiniteDifference(object):
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                print 'deriv setting %s to True' % var_name.split('[',1)[0]
                 comp._valid_dict[var_name.split('[',1)[0]] = True
     
                 # Make sure we execute!

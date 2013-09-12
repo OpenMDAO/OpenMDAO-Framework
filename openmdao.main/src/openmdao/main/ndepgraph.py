@@ -1,8 +1,9 @@
+from collections import deque
 import networkx as nx
 
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IComponent
+from openmdao.main.interfaces import IDriver
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -171,13 +172,6 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-def is_severed(graph, src, dest):
-    """Returns True is an edge is marked as severed."""
-    try:
-        return 'severed' in graph.edge[src][dest]
-    except KeyError:
-        return False
-
 # predicate factories
 
 def all_preds(*args):
@@ -206,11 +200,50 @@ def any_preds(*args):
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
+        self._severed_edges = {}
+        self._saved_comp_graph = None
+        self._saved_loops = None
         self.config_changed()
+
+    def sever_edges(self, edges):
+        """Temporarily remove the specified edges but save
+        them and their metadata for later restoration. 
+        """
+        # Note: This will NOT call config_changed(), and if 
+        # component_graph() has not been called since the last 
+        # config_changed, it WILL create a temporary new 
+        # component graph which will be overwritten by the original
+        # one when unsever_edges() is called.
+        if self._severed_edges:
+            raise RuntimeError("only one set of severed edges is permitted")
+
+        # save old stuff to restore later
+        self._saved_comp_graph = self._component_graph
+        self._saved_loops = self._loops
+
+        self._severed_edges = list(edges)
+        
+        for u,v in edges:
+            self.disconnect(u, v, config_change=False)
+
+    def unsever_edges(self):
+        """Restore previously severed edges."""
+        if not self._severed_edges:
+            return
+
+        for u,v in self._severed_edges:
+            self.connect(u, v, config_change=False)
+            
+        self._severed_edges = []
+
+        self._loops = self._saved_loops
+        self._component_graph = self._saved_comp_graph
 
     def config_changed(self):
         self._component_graph = None
         self._loops = None
+        self._saved_loops = None
+        self._saved_comp_graph = None
 
     def child_config_changed(self, child):
         """A child has changed its input or output lists, so
@@ -330,7 +363,7 @@ class DependencyGraph(nx.DiGraph):
             raise RuntimeError("'%s' is already connected to '%s'" %
                                   (conns[0][1], conns[0][0]))
 
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, config_change=True):
         """Create a connection between srcpath and destpath,
         and create any necessary additional connections to base
         variable nodes.  For example, connecting A.b[3] to
@@ -374,9 +407,10 @@ class DependencyGraph(nx.DiGraph):
         # from other edges (for list_connections, etc.)
         self.edge[srcpath][destpath]['conn'] = True
 
-        self.config_changed()
+        if config_change:
+            self.config_changed()
 
-    def disconnect(self, srcpath, destpath=None):
+    def disconnect(self, srcpath, destpath=None, config_change=True):
 
         if destpath is None:
             if is_comp_node(self, srcpath):
@@ -409,7 +443,8 @@ class DependencyGraph(nx.DiGraph):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
-        self.config_changed()
+        if config_change:
+            self.config_changed()
 
     def get_interior_connections(self, comps=None):
         """ Returns all interior connections between the given comps.
@@ -434,9 +469,15 @@ class DependencyGraph(nx.DiGraph):
         comp2: str
             Dest component name
         """
-        in_set = set(self._var_connections(self.list_inputs(comp2), 'in'))
-        return in_set.intersection(
-                    self._var_connections(self.list_outputs(comp1), 'out'))
+        in_set = set()
+        for inp in self.list_inputs(comp2):
+            in_set.update(self._var_connections(inp, 'in'))
+
+        out_set = set()
+        for out in self.list_outputs(comp1):
+            out_set.update(self._var_connections(out, 'out'))
+
+        return in_set.intersection(out_set)
 
     def connections_to(self, path, direction=None):
         if is_comp_node(self, path) or is_pseudo_node(self, path):
@@ -572,8 +613,6 @@ class DependencyGraph(nx.DiGraph):
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
-        print '* depgraph invalidate_deps',
-        print ' %s: %s' % (cname, srcvars)
         if srcvars is None:
             srcvars = self.list_outputs(cname, connected=True)
         elif cname:
@@ -605,9 +644,7 @@ class DependencyGraph(nx.DiGraph):
 
             invalidated.update(srcvars) 
             
-            #nodes = self.find_nodes(srcvars, is_basevar_node, is_comp_node)
-
-            cmap = partition_names_by_comp(self.basevar_iter(srcvars, follow_severed=False))
+            cmap = partition_names_by_comp(self.basevar_iter(srcvars))
             for dcomp, dests in cmap.items():
                 if dests:
                     if dcomp:
@@ -807,57 +844,68 @@ class DependencyGraph(nx.DiGraph):
                 except StopIteration:
                     stack.pop()
 
-    def _var_connections(self, path, direction=None, show_severed=True):
+    def _var_connections(self, path, direction=None):
         """Returns a list of tuples of the form (srcpath, destpath) for all
-        variable connections to the specified variable.  If direction is None, both
-        ins and outs are included. Other allowed values for direction are
-        'in' and 'out'.
+        variable connections to the specified variable or sub-variable.  
+        If direction is None, both ins and outs are included. Other allowed 
+        values for direction are 'in' and 'out'.
         """
         conns = []
 
-        if show_severed:
-            is_conn = is_connection
-        else:
-            is_conn = lambda g,u,v: is_connection(g,u,v) and not is_severed(g,u,v)
-
         if direction != 'in':  # get 'out' connections
-            for u,v in self.edges_iter(path):
-                if is_conn(self, u, v):
-                    conns.append((u,v))
-                else:
-                    conns.extend([(uu,vv) for uu,vv in self.edges_iter(u)
-                                    if is_conn(self, uu, vv)])
+            for u,v in self.var_edge_iter(path):
+                if is_connection(self, u, v):
+                    conns.append((u, v))
 
         if direction != 'out':  # get 'in' connections
-            for u,v in self.in_edges_iter(path):
-                if is_conn(self, u, v):
-                    conns.append((u,v))
-                else:
-                    conns.extend([(uu,vv) for uu,vv in self.in_edges_iter(u)
-                                    if is_conn(self, uu, vv)])
+            for u,v in self.var_edge_iter(path, reverse=True):
+                if is_connection(self, u, v):
+                    conns.append((u, v))
+
         return conns
 
-    def basevar_iter(self, nodes, reverse=False, follow_severed=True):
+    def var_edge_iter(self, source, reverse=False):
+        """Iterater over edges from the given source to the
+        nearest basevars.
+        """
+        # Adapted from the networkx bfs_edges function
+        G = self
+        if reverse and isinstance(G, nx.DiGraph):
+            neighbors = G.predecessors_iter
+        else:
+            neighbors = G.neighbors_iter
+        visited=set()
+        queue = deque([(source, neighbors(source))])
+
+        while queue:
+            parent, children = queue[0]
+            try:
+                child = next(children)
+                if (parent,child) not in visited:
+                    visited.add((parent,child))
+                    if reverse:
+                        yield child, parent
+                    else:
+                        yield parent, child
+                    if not is_basevar_node(self, child) and not is_comp_node(self, child):
+                        queue.append((child, neighbors(child)))
+            except StopIteration:
+                queue.popleft()
+
+    def basevar_iter(self, nodes, reverse=False):
         """Given a group of nodes, return an iterator
         over all base variable nodes that are nearest in one
         direction.
         """
         if reverse:
-            edge_iter = self.in_edges_iter
-            idx = 0  # tuple index to grab the source node
+            idx = 0
         else:
-            edge_iter = self.edges_iter
-            idx = 1 # tuple index to grab the dest node
+            idx = 1
 
         for node in nodes:
-            for edge in edge_iter(node):
+            for edge in self.var_edge_iter(node, reverse=reverse):
                 if is_basevar_node(self, edge[idx]):
-                    if is_connection(self, edge[0], edge[1]):
-                        if follow_severed or 'severed' not in self.node[edge[0]][edge[1]]:
-                            yield edge[idx]
-                else:
-                    for bv in self.basevar_iter([node], reverse, follow_severed):
-                        yield bv
+                    yield edge[idx]
 
     def comp_iter(self, nodes, reverse=False, include_pseudo=True):
         """Given a group of nodes, return an iterator
