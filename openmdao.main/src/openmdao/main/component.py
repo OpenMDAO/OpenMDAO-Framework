@@ -152,8 +152,8 @@ class Component(Container):
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
-        # dependency graph between us and our boundaries (bookkeeps connections
-        # between our variables and external ones).
+        # dependency graph between us and our boundaries
+        # (bookkeeps connections between our variables and external ones).
         # This replaces self._depgraph from Container.
         self._depgraph = DependencyGraph()
 
@@ -162,8 +162,7 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
             if trait.iotype:  # input or output
-                self._depgraph.add_boundary_var(name, 
-                                                iotype=trait.iotype)
+                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
 
         # contains validity flag for each io Trait (inputs are valid since
         # they're not connected yet, and outputs are invalid)
@@ -237,10 +236,11 @@ class Component(Container):
 
         self._input_check(name, old)
         self._input_updated(name)
+        print '%s updated to %s' % (name, new)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self._valid_dict[name.split('[',1)[0]]:  # if var is not already invalid
+        if self._valid_dict[name.split('[', 1)[0]]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
@@ -400,16 +400,19 @@ class Component(Container):
             self._call_execute = True
             valids = self._valid_dict
             for name in self.list_inputs():
-                valids[name.split('[',1)[0]] = True
+                valids[name.split('[', 1)[0]] = True
         else:
             valids = self._valid_dict
+            print '%s connected inputs: %s' % (self.name, self._depgraph.get_connected_inputs())
+            for inp in self._depgraph.get_connected_inputs():
+                print 'valid[%s] = %s' % (inp, self._valid_dict[inp])
             invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
-                                    if valids.get(inp.split('[',1)[0]) is False]
+                                    if valids.get(inp.split('[', 1)[0]) is False]
             if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
                 for name in invalid_ins:
-                    valids[name.split('[',1)[0]] = True
+                    valids[name.split('[', 1)[0]] = True
             elif self._call_execute is False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 
@@ -441,64 +444,63 @@ class Component(Container):
                 y = self._ffd_outputs[out_name]
                 for i, in_name in enumerate(input_keys):
                     y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
-                    
+
                 self.set(out_name, y, force=True)
-                    
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          extra_in=None, extra_out=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
         requested. The user must supply *linearize* in the component.
-        
+
         This function should not be overriden.
-        
+
         first: Bool
             Set to True to calculate first derivatives.
-        
+
         second: Bool
             Set to True to calculate second derivatives.
-            
+
         savebase: Bool
             If set to true, then we save our baseline state for fake finite
             difference.
-            
+
         extra_in:
             Not needed by Component
-        
+
         extra_out
             Not needed by Component
         """
-        
+
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'linearize'):
-            
+
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
             if savebase and has_interface(self, IAssembly):
                 self.driver.calc_derivatives(first, second, savebase,
                                              extra_in, extra_out)
                 return
-            
+
             if has_interface(self, IAssembly):
                 self.linearize(extra_in=extra_in, extra_out=extra_out)
             else:
                 self.linearize()
-                
+
             self.derivative_exec_count += 1
         else:
             return
-            
+
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
         if savebase and hasattr(self, 'provideJ'):
             self._ffd_inputs = {}
             self._ffd_outputs = {}
             ffd_inputs, ffd_outputs, _ = self.provideJ()
-            
+
             for name in ffd_inputs:
                 self._ffd_inputs[name] = self.get(name)
-    
+
             for name in ffd_outputs:
                 self._ffd_outputs[name] = self.get(name)
 
@@ -510,10 +512,10 @@ class Component(Container):
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
-            valids[name.split('[',1)[0]] = True
+            valids[name.split('[', 1)[0]] = True
         ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
-            valids[name.split('[',1)[0]] = True
+            valids[name.split('[', 1)[0]] = True
         self._call_execute = False
         self._set_exec_state('VALID')
         self.publish_vars()
@@ -556,7 +558,6 @@ class Component(Container):
             self._set_exec_state('RUNNING')
 
             if self._call_execute or force:
-                #print 'execute: %s' % self.get_pathname()
 
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
@@ -564,6 +565,7 @@ class Component(Container):
                    and (hasattr(self, 'provideJ')):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
+                    print 'execute_ffd: %s' % self.get_pathname()
                     self._execute_ffd(1)
 
                 elif ffd_order == 2 and \
@@ -573,6 +575,7 @@ class Component(Container):
                     pass
 
                 else:
+                    print 'execute: %s' % self.get_pathname()
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
@@ -584,8 +587,8 @@ class Component(Container):
                     self.execute()
 
                 self._post_execute()
-            #else:
-                #print 'skipping: %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
@@ -632,7 +635,7 @@ class Component(Container):
             super(Component, self).add(name, obj)
         finally:
             self.config_changed()
-            
+
         trait = self.trait(name)
         if trait.iotype == 'out':
             self._valid_dict[name] = False
@@ -644,7 +647,7 @@ class Component(Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and name in self._depgraph and not is_instance(obj, Component):
+        if is_instance(obj, Container) and name in self._depgraph:# and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -789,7 +792,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._input_names
-        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
+        ret = [n for n in ret if valids[n.split('[', 1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_inputs]
@@ -829,7 +832,7 @@ class Component(Container):
 
         valids = self._valid_dict
         ret = self._output_names
-        ret = [n for n in ret if valids[n.split('[',1)[0]] == valid]
+        ret = [n for n in ret if valids[n.split('[', 1)[0]] == valid]
 
         if connected is True:
             return [n for n in ret if n in self._connected_outputs]
@@ -874,7 +877,7 @@ class Component(Container):
 
         valid_updates = []
         if not srcexpr.refs_parent():
-            if srcexpr.text.split('[',1)[0] not in self._valid_dict:
+            if srcexpr.text.split('[', 1)[0] not in self._valid_dict:
                 valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
@@ -886,7 +889,7 @@ class Component(Container):
         # this is after the super connect call so if there's a
         # problem we don't have to undo it
         for valids_update in valid_updates:
-            self._valid_dict[valids_update[0].split('[',1)[0]] = valids_update[1]
+            self._valid_dict[valids_update[0].split('[', 1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -895,11 +898,11 @@ class Component(Container):
         """
 
         super(Component, self).disconnect(srcpath, destpath)
-        if destpath.split('[',1)[0] in self._valid_dict:
+        if destpath.split('[', 1)[0] in self._valid_dict:
             if '.' in destpath:
-                del self._valid_dict[destpath.split('[',1)[0]]
+                del self._valid_dict[destpath.split('[', 1)[0]]
             else:
-                self._valid_dict[destpath.split('[',1)[0]] = True  # disconnected boundary outputs are always valid
+                self._valid_dict[destpath.split('[', 1)[0]] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -942,7 +945,7 @@ class Component(Container):
                 if hasattr(delegate, 'mimic'):
                     delegate.mimic(tdel)  # use target delegate as target
 
-        # now update any matching inputs from the target
+        # # now update any matching inputs from the target
         for inp in target.list_inputs():
             if hasattr(self, inp):
                 setattr(self, inp, getattr(target, inp))
@@ -955,7 +958,6 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
-                #setattr(self, name, getattr(target, name))
                 self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.
@@ -1538,13 +1540,13 @@ class Component(Container):
             Names of variables whose validity is requested.
         """
         valids = self._valid_dict
-        return [valids[n.split('[',1)[0]] for n in names]
+        return [valids[n.split('[', 1)[0]] for n in names]
 
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
         valids = self._valid_dict
         for name in names:
-            valids[name.split('[',1)[0]] = valid
+            valids[name.split('[', 1)[0]] = valid
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, force=False):
@@ -1568,22 +1570,22 @@ class Component(Container):
         # should never be invalidated
         if varnames is None:
             for var in self.list_inputs(connected=True):
-                valids[var.split('[',1)[0]] = False
+                valids[var.split('[', 1)[0]] = False
         else:
             conn = self.list_inputs(connected=True)
             if conn:
-                conn = [c.split('[',1)[0] for c in conn]
+                conn = [c.split('[', 1)[0] for c in conn]
                 for var in varnames:
                     if var in conn:
-                        valids[var.split('[',1)[0]] = False
+                        valids[var.split('[', 1)[0]] = False
 
         # this assumes that all outputs are either valid or invalid
-        if not force and outs and (valids[outs[0].split('[',1)[0]] is False):
+        if not force and outs and (valids[outs[0].split('[', 1)[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
 
         for out in outs:
-            valids[out.split('[',1)[0]] = False
+            valids[out.split('[', 1)[0]] = False
 
         return None  # None indicates that all of our outputs are invalid.
 
@@ -1660,14 +1662,12 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
-        array_regex = re.compile("(?P<index>\[\d+\])(?P=index)*")
-
         attrs = {}
         attrs['type'] = type(self).__name__
 
         parameters = {}
         implicit = {}
-        partial_parameters = {} 
+        partial_parameters = {}
         # We need connection information before we process the variables.
         if self.parent is None:
             connected_inputs = []
@@ -1743,9 +1743,8 @@ class Component(Container):
             io_attr['connection_types'] = 0
 
             connected = []
-            partially_connected = []
             partially_connected_indices = []
-            
+
             for inp in connected_inputs:
                 cname = inp.split('[')[0]  # Could be 'inp[0]'.
 
@@ -1761,56 +1760,56 @@ class Component(Container):
 
                         io_attr['connection_types'] = io_attr['connection_types'] | 2
                         array_indices = re.findall("\[\d+\]", inp)
-                        array_indices = [ index.split('[')[1].split(']')[0] for index in array_indices ]
-                        array_indices = [ int(index) for index in array_indices ]
-                       
+                        array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
+                        array_indices = [int(index) for index in array_indices]
+
                         dimensions = self.get(name).ndim - 1
                         shape = self.get(name).shape
                         column_index = 0
 
-                        for dimension, array_index in enumerate( array_indices[:-1] ):
-                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
-                        
+                        for dimension, array_index in enumerate(array_indices[:-1]):
+                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+
                         column_index = column_index + array_indices[-1]
 
-                        partially_connected_indices.append( column_index )
+                        partially_connected_indices.append(column_index)
 
             if connected:
-                io_attr['connected'] = str(connected)#.replace('@xin.', '')
-            
+                io_attr['connected'] = str(connected)  # .replace('@xin.', '')
+
             if partially_connected_indices:
                 io_attr['partially_connected_indices'] = str(partially_connected_indices)
 
             if name in connected_outputs:  # No array element indications.
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
-                    str([dst for src, dst in connections])#.replace('@xout.', '')
-            
+                    str([dst for src, dst in connections])  # .replace('@xout.', '')
+
             io_attr['implicit'] = []
 
             if "%s.%s" % (self.name, name) in partial_parameters:
                 implicit_partial_indices = []
                 shape = self.get(name).shape
                 io_attr['connection_types'] = io_attr['connection_types'] | 8
-                
+
                 for key, target in partial_parameters.iteritems():
                     for value in target:
                         array_indices = re.findall("\[\d+\]", value)
                         array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
                         array_indices = [int(index) for index in array_indices]
-                            
+
                         dimensions = self.get(name).ndim - 1
                         shape = self.get(name).shape
                         column_index = 0
 
-                        for dimension, array_index in enumerate( array_indices[:-1] ):
-                            column_index = column_index + ( shape[-1] ** ( dimensions - dimension ) * array_index )
-                        
+                        for dimension, array_index in enumerate(array_indices[:-1]):
+                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+
                         column_index = column_index + array_indices[-1]
-                        implicit_partial_indices.append( column_index )
+                        implicit_partial_indices.append(column_index)
 
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)
-                
+
                 io_attr['implicit'].extend([driver_name.split('.')[0] for
                     driver_name in partial_parameters["%s.%s" % (self.name, name)]])
 
@@ -1956,10 +1955,8 @@ class Component(Container):
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
-                    attr['name']    = str(key)
-                    attr['expr']    = str(con)
-                    attr['scaler']  = con.scaler
-                    attr['adder']   = con.adder
+                    attr['name'] = str(key)
+                    attr['expr'] = str(con)
                     constraints.append(attr)
 
             if has_interface(self, IHasConstraints) or \
@@ -1968,10 +1965,8 @@ class Component(Container):
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
-                    attr['name']    = str(key)
-                    attr['expr']    = str(con)
-                    attr['scaler']  = con.scaler
-                    attr['adder']   = con.adder
+                    attr['name'] = str(key)
+                    attr['expr'] = str(con)
                     constraints.append(attr)
 
             if has_constraints:

@@ -62,7 +62,7 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
-        self._update_workflows()
+        # self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
