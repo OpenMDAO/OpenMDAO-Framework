@@ -802,7 +802,7 @@ def apply_linear_model(self, comp, ffd_order):
     input_keys, output_keys, J = comp.provideJ()
 
     # First order derivatives
-    if order == 1:
+    if ffd_order == 1:
 
         for j, out_name in enumerate(output_keys):
             y = comp.get(out_name)

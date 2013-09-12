@@ -45,7 +45,6 @@ class PseudoAssembly(object):
         """Run all components contained in this assy. Used by finite
         difference."""
 
-        print 'running %s' % self.name
         # Override fake finite difference if requested. This enables a pure
         # finite-differences for check_derivatives.
         if self.ffd_order == 0:
@@ -53,15 +52,12 @@ class PseudoAssembly(object):
 
         for comp in self.comps:
             comp.set_itername(self.itername+'-fd')
-            print 'pa running %s, ffd_order=%s' % (comp.name, ffd_order)
             comp.run(ffd_order=ffd_order, case_id=case_id)
-        print 'pa done'
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
                          extra_in=None, extra_out=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
-
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
@@ -74,14 +70,19 @@ class PseudoAssembly(object):
         else:
             savebase = True
 
-        # First, linearize about operating point.
-        # Note: Only needed for differentiable islands, which are handled
-        # with Fake Finite Difference.
-        if first:
-            for comp in self.comps:
-                comp.calc_derivatives(first, second, savebase)
+        self.wflow.sever_edges(self.wflow._severed_edges)
 
-        self.J = self.fd.calculate()
+        try:
+            # First, linearize about operating point.
+            # Note: Only needed for differentiable islands, which are handled
+            # with Fake Finite Difference.
+            if first:
+                for comp in self.comps:
+                    comp.calc_derivatives(first, second, savebase)
+
+            self.J = self.fd.calculate()
+        finally:
+            self.wflow.unsever_edges()
         
     def provideJ(self):
         """Jacobian for this block"""
