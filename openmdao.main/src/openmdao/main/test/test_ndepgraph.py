@@ -516,7 +516,12 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect('A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-
+    def test_iograph(self):
+        iograph = self.dep.io_graph()
+        self.assertEqual(set(iograph.nodes()), 
+                         set(['a','b','c','d']))
+        self.assertEqual(set(iograph.edges()), 
+                         set([('a','c'),('b','c')]))
           
 if __name__ == "__main__":
     unittest.main()
