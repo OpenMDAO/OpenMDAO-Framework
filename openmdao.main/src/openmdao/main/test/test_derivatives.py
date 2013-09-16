@@ -687,6 +687,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         # TODO: Support array slices.
         top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x[(0, 0)]',],
                                               outputs=['nest.y[(0, 0)]'],
                                               mode='forward')
@@ -695,6 +696,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
         top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x[(0, 1)]',],
                                               outputs=['nest.y[(1, 0)]'],
                                               mode='forward')

@@ -216,8 +216,17 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
+        #required_floating_vars = []
+        #for src, target in self._additional_edges:
+            #if src=='@in' and '.' not in target:
+                #required_floating_vars.append(target)
+                
+            #elif target=='@out' and '.' not in src:
+                #required_floating_vars.append(src)
+               
         graph = self._parent.workflow_graph()
-        comps = [comp.name for comp in self.__iter__()]
+        comps = [comp.name for comp in self.__iter__()]# + \
+                #required_floating_vars
         edges = set(graph.get_interior_connections(comps))
         edges.update(self.get_driver_edges())
         edges.update(self._additional_edges)

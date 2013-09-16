@@ -808,12 +808,12 @@ class Assembly(Component):
                 for varpath in varpaths:
                     compname, _, var = varpath.partition('.')
                     if compname == self.name:
-                        required_inputs.append(var.split('[')[0])
+                        required_inputs.append(var)
 
         for src, target in self.parent.list_connections():
             compname, _, var = target.partition('.')
             if compname == self.name:
-                required_inputs.append(var.split('[')[0])
+                required_inputs.append(var)
 
         # Only calc derivatives for outputs we need
         required_outputs = []
@@ -826,12 +826,12 @@ class Assembly(Component):
                 for varpath in varpaths:
                     compname, _, var = varpath.partition('.')
                     if compname == self.name:
-                        required_outputs.append(var.split('[')[0])
+                        required_outputs.append(var)
 
         for src, target in self.parent.list_connections():
             compname, _, var = src.partition('.')
             if compname == self.name:
-                required_outputs.append(var.split('[')[0])
+                required_outputs.append(var)
 
         # Sub-assembly sourced
         input_keys = []
@@ -840,32 +840,43 @@ class Assembly(Component):
         # Parent-assembly sourced
         self.J_input_keys = []
         self.J_output_keys = []
-
-        for src, target in self.list_connections():
-
-            # Outputs
-            if '.' in src and '.' not in target:
-
-                if target not in required_outputs:
+        
+        for src in required_inputs:
+            varname, _, tail = src.partition('[')
+            target = self._depgraph.successors(varname)
+            if len(target) == 0:
+                target = self._depgraph.successors(src)
+                if len(target) == 0:
                     continue
-
-                val = self.get(src)
-                if isinstance(val, float) or hasattr(val, 'shape'):
-                    output_keys.append(src)
-                    self.J_output_keys.append(target)
-
-            # Inputs
-            elif '.' in target and '.' not in src:
-
-                if src not in required_inputs:
+                
+            # If array slice, only ask the assembly to calculate the
+            # elements we need.
+            if '[' in src and '[' not in target[0]:
+                target = ['%s[%s' % (targ, tail) for targ in target]
+                
+            input_keys.append(tuple(target))
+            self.J_input_keys.append(src)
+                
+        for target in required_outputs:
+            varname, _, tail = target.partition('[')
+            src = self._depgraph.predecessors(varname)
+            if len(src) == 0:
+                src = self._depgraph.get_sources(target)
+                if len(src) == 0:
                     continue
-
-                val = self.get(target)
-                if isinstance(val, float) or hasattr(val, 'shape'):
-                    input_keys.append(target)
-                    self.J_input_keys.append(src)
+                
+            src = src[0]
+            
+            # If array slice, only ask the assembly to calculate the
+            # elements we need.
+            if '[' in target and '[' not in src:
+                src = '%s[%s' % (src, tail)
+                
+            output_keys.append(src)
+            self.J_output_keys.append(target)
 
         self.J = self.driver.calc_gradient(input_keys, output_keys)
+        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
 
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''
