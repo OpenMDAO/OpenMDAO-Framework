@@ -491,7 +491,7 @@ class SequentialWorkflow(Workflow):
         for comp in self.derivative_iter():
             name = comp.name
             applyJ(comp, inputs[name], outputs[name])
-
+            
         # Each parameter adds an equation
         for edge in self._additional_edges:
             if edge[0] == '@in':

@@ -241,7 +241,7 @@ def applyJ(obj, arg, result):
     function hook "apply_deriv".
     """
     for key in result:
-        result[key] = 0.0*-arg[key]
+        result[key] = -arg[key]*0.0
 
     if hasattr(obj, 'apply_deriv'):
         
@@ -249,25 +249,25 @@ def applyJ(obj, arg, result):
         # each input and output to have the same shape as the input/output.
 
         for key, value in result.iteritems():
-            if len(value) > 1:
-                var = obj.get(key)
+            var = obj.get(key)
+            if hasattr(var, 'shape'):
                 shape = var.shape
                 result[key] = value.reshape(shape)
 
         for key, value in arg.iteritems():
-            if len(value) > 1:
-                var = obj.get(key)
+            var = obj.get(key)
+            if hasattr(var, 'shape'):
                 shape = var.shape
                 arg[key] = value.reshape(shape)
 
         obj.apply_deriv(arg, result)
 
         for key, value in result.iteritems():
-            if len(value) > 1:
+            if hasattr(value, 'flatten'):
                 result[key] = value.flatten()
 
         for key, value in arg.iteritems():
-            if len(value) > 1:
+            if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
         return
