@@ -128,7 +128,7 @@ Site-Wide Installation
 At some sites it can be convenient to have a standard OpenMDAO configuration
 available to all users.  This would include the base OpenMDAO installation,
 possibly a collection of pre-installed plugins, site-specific configuration
-files, etc.  Using the ``go-openmdao.py`` script of an activated environment
+files, etc.  Using the ``go-openmdao.py`` script of an activated environment,
 you can create a zip file containing everything needed to install an OpenMDAO
 configuration on a user's system.
 
@@ -140,8 +140,8 @@ To create the zip file, type this from within an activated environment
     python go-openmdao.py --relocatable
 
 This will create ``openmdao-0.8.0-linux-x86_64.zip``.
-Now to install at some other location you need to extract all the files from
-the created zip file and execute ``script-fixup.py`` which is part of the
+Now, to install at some other location, you need to extract all the files from
+the created zip file and execute ``script-fixup.py``, which is part of the
 generated zip file:
 
 ::

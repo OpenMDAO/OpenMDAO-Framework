@@ -235,11 +235,12 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 
 .. figure:: doe.png
    :align: center
+   :alt: Multi-colored graph of output from the execution of the DOE
+
  
    A Graph of the Output from the Execution of the DOE 
 
-    
-
+   
 
 At times it's necessary to rerun an analysis. This can be a problem if the
 DOE generator used has a random component. To handle this, DOEdriver records
