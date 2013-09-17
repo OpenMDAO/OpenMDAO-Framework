@@ -1,12 +1,9 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import logging
-import StringIO
-from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, \
-                              Dataflow, SequentialWorkflow, set_as_top, \
+                              SequentialWorkflow, set_as_top, \
                               dump_iteration_tree
 from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
@@ -14,8 +11,6 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-
-from openmdao.main.component import _show_validity
 
 exec_order = []
 

@@ -116,7 +116,7 @@ class _ContainerDepends(object):
                 raise RuntimeError("'%s' is already connected to source '%s'" %
                                    (dst, src))
 
-    def connect(self, srcpath, destpath):
+    def connect(self, scope, srcpath, destpath):
         self._srcs[destpath] = srcpath
 
     def disconnect(self, srcpath, destpath):
@@ -329,7 +329,7 @@ class Container(SafeHasTraits):
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest))
 
-            graph.connect(srcpath, destpath)
+            graph.connect(self, srcpath, destpath)
         except Exception as err:
             try:
                 for child, childsrc, childdest in child_connections:
@@ -1200,7 +1200,8 @@ class Container(SafeHasTraits):
             pass
         if not eq:
             self._call_execute = True
-            if name in self._valid_dict:
+            #if name in self._valid_dict:
+            if hasattr(self, name):
                 self._input_updated(name)
 
     def _input_check(self, name, old):

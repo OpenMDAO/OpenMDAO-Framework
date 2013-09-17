@@ -469,6 +469,7 @@ class Assembly(Component):
                    self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
+        # TODO: change this to use 'param' metadata stored in depgraph
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
@@ -498,10 +499,10 @@ class Assembly(Component):
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
 
-                destcompname, destcomp, destvarname = self._split_varpath(dest)
-
-                outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
+                #outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
+                outs = self._depgraph.invalidate_deps(self, [dest])#, force=True)
                 if (outs is None) or outs:
+                    destcompname, destcomp, destvarname = self._split_varpath(dest)
                     self.child_invalidated(destcompname, outs, force=True)
 
     @rbac(('owner', 'user'))
@@ -564,28 +565,34 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
-        self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
+        self.driver.run(ffd_order=self.ffd_order, 
+                        case_id=self._case_id)
 
-        valids = self._valid_dict
+        for u,v,data in self._depgraph.get_invalid_out_edges():
+            srcexpr = self._exprmapper.get_expr(u)
+            destexpr = self._exprmapper.get_expr(v)
+            destexpr.set(srcexpr.evaluate(), src=u)
 
-        # now update boundary outputs
-        for expr in self._exprmapper.get_output_exprs():
-            if valids[expr.text.split('[', 1)[0]] is False:
-                srctxt = self._depgraph.get_sources(expr.text)[0]
-                srcexpr = self._exprmapper.get_expr(srctxt)
-                expr.set(srcexpr.evaluate(), src=srctxt)
-                # setattr(self, dest, srccomp.get_wrapped_attr(src))
-            else:
-                # PassthroughProperty always valid for some reason.
-                try:
-                    dst_type = self.get_trait(expr.text).trait_type
-                except AttributeError:
-                    pass
-                else:
-                    if isinstance(dst_type, PassthroughProperty):
-                        srctxt = self._exprmapper.get_source(expr.text)
-                        srcexpr = self._exprmapper.get_expr(srctxt)
-                        expr.set(srcexpr.evaluate(), src=srctxt)
+        # valids = self._valid_dict
+
+        # # now update boundary outputs
+        # for expr in self._exprmapper.get_output_exprs():
+        #     if valids[expr.text.split('[', 1)[0]] is False:
+        #         srctxt = self._depgraph.get_sources(expr.text)[0]
+        #         srcexpr = self._exprmapper.get_expr(srctxt)
+        #         expr.set(srcexpr.evaluate(), src=srctxt)
+        #         # setattr(self, dest, srccomp.get_wrapped_attr(src))
+        #     else:
+        #         # PassthroughProperty always valid for some reason.
+        #         try:
+        #             dst_type = self.get_trait(expr.text).trait_type
+        #         except AttributeError:
+        #             pass
+        #         else:
+        #             if isinstance(dst_type, PassthroughProperty):
+        #                 srctxt = self._exprmapper.get_source(expr.text)
+        #                 srcexpr = self._exprmapper.get_expr(srctxt)
+        #                 expr.set(srcexpr.evaluate(), src=srctxt)
 
     def step(self):
         """Execute a single child component and return."""
@@ -620,29 +627,40 @@ class Assembly(Component):
         return conns
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, inputs):
+    def update_inputs(self, compname):#, inputs):
         """Transfer input data to input expressions on the specified component.
         The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        invalids = []
-        conns = []
+        invalid_ins = self._depgraph.list_inputs(compname, 
+                                                 invalid=True)
+        if invalid_ins:
+            self._update_invalid_dests(compname, invalid_ins)
+
+    def update_outputs(self, outnames):
+        """Execute any necessary internal or predecessor 
+        components in order to make the specified output 
+        variables valid.
+        """
+        data = self._depgraph.node
+        invalid_dests = [n for n in outnames 
+                           if data[n]['valid'] is False]
+        if invalid_dests:
+            self._update_invalid_dests(None, invalid_dests)
+
+        # for cname, vnames in partition_names_by_comp(outnames).items():
+        #     if cname is None:  # boundary outputs
+        #         self.update_inputs(None, vnames)
+        #     else:
+        #         getattr(self, cname).update_outputs(vnames)
+
+    def _update_invalid_dests(self, startcomp, invalid_dests):
         graph = self._depgraph
-
-        if compname is None:
-            for inp in inputs:
-                conns.extend(graph._var_connections(inp, 'in'))
-        else:
-            if inputs is None:
-                conns = graph._comp_connections(compname, 'in')
-            else:
-                for inp in inputs:
-                    conns.extend(graph._var_connections('.'.join([compname, inp]), 'in'))
-
-        srcs = [u for u, v in conns]
-        srcvars = [s.split('[', 1)[0] for s in srcs]
-        invalids = [srcs[i] for i, valid in enumerate(self.get_valid(srcvars)) if not valid]
+        invalids = set()
+        for inv_dest in invalid_dests:
+            invalids.update([s for s in graph.get_sources(inv_dest) 
+                                if not graph.node[s]['valid']])
 
         # if source vars are invalid, request an update
         if invalids:
@@ -651,143 +669,102 @@ class Assembly(Component):
             for cname, vnames in partition_names_by_comp(invalids).items():
                 if cname is None:
                     if self.parent:
-                        self.parent.update_inputs(self.name,
-                                                  vnames)
+                        self.parent.update_inputs(self.name)
 
-                # If our source component is in a loop with us, don't
+                # If our start component is in a loop with us, don't
                 # run it. Otherwise you have infinite recursion. It is
                 # the responsibility of the solver to properly execute
                 # the comps in its loop.
                 elif loops:
                     for loop in loops:
-                        if compname in loop and cname in loop:
+                        if startcomp in loop and cname in loop:
                             break
                     else:
                         getattr(self, cname).update_outputs(vnames)
-
                 else:
                     getattr(self, cname).update_outputs(vnames)
-
-        # these connections all come from the depgraph, so they will only
-        # contain simple expressions, i.e. only one variable ref (may be
-        # an array index).
-        for u, v in conns:
-            try:
-                srcexpr = self._exprmapper.get_expr(u)
-                destexpr = self._exprmapper.get_expr(v)
-                destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
-            except Exception as err:
-                self.raise_exception("cannot set '%s' from '%s': %s" %
-                                     (destexpr.text, srcexpr.text, str(err)), type(err))
-
-    def update_outputs(self, outnames):
-        """Execute any necessary internal or predecessor components in order
-        to make the specified output variables valid.
-        """
-        for cname, vnames in partition_names_by_comp(outnames).items():
-            if cname is None:  # boundary outputs
-                self.update_inputs(None, vnames)
-            else:
-                getattr(self, cname).update_outputs(vnames)
-                self.set_valid(vnames, True)
-
-    def get_valid(self, names):
-        """Returns a list of boolean values indicating whether the named
-        variables are valid (True) or invalid (False). Entries in names may
-        specify either direct traits of self or those of children.
-        """
-
-        vnames = [n.split('[', 1)[0] for n in names]
-        ret = [None] * len(vnames)
-        posdict = dict([(name, i) for i, name in enumerate(vnames)])
-
-        for compname, varnames in partition_names_by_comp(vnames).items():
-            if compname is None:
-                vals = super(Assembly, self).get_valid(varnames)
-                for i, val in enumerate(vals):
-                    ret[posdict[varnames[i]]] = val
-            else:
-                comp = getattr(self, compname)
-                if isinstance(comp, Component) or isinstance(comp, PseudoComponent):
-                    vals = comp.get_valid(varnames)
-                else:
-                    vals = [self._valid_dict['.'.join([compname, vname])]
-                                     for vname in varnames]
-                for i, val in enumerate(vals):
-                    full = '.'.join([compname, varnames[i]])
-                    ret[posdict[full]] = val
-        return ret
+        try:
+            for inv_dest in invalid_dests:
+                self._depgraph.update_destvar(self, inv_dest)
+        except Exception as err:
+            self.raise_exception(str(err), type(err))
 
     def _input_updated(self, name, fullpath=None):
-        if self._valid_dict[name.split('[', 1)[0]]:  # if var is not already invalid
-            outs = self.invalidate_deps(varnames=set([name]))
-            if ((outs is None) or outs) and self.parent:
-                self.parent.child_invalidated(self.name, outs)
+        outs = self._depgraph.invalidate_deps(self, [name])
+        if outs and self.parent:
+            self.parent.child_invalidated(self.name, outs)
 
-    def child_invalidated(self, childname, outs=None, force=False):
-        """Invalidate all variables that depend on the outputs provided
+    def child_invalidated(self, childname, vnames, force=False):
+        """Invalidate all variables that depend on the variable provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
-        if bouts:
-            self.set_valid(bouts, False)
-            if self.parent:
-                self.parent.child_invalidated(self.name, bouts, force)
+        if vnames is None:
+            vnames = [childname]
+        elif childname:
+            vnames = ['.'.join([childname, n]) for n in vnames]
+            
+        bouts = self._depgraph.invalidate_deps(self, vnames)#, force)
+        if bouts and self.parent:
+            self.parent.child_invalidated(self.name, bouts, force)
         return bouts
 
-    def invalidate_deps(self, varnames=None, force=False):
+    def child_run_finished(self, childname):
+        """Called by a child when it completes its run() function."""
+        self._depgraph.child_run_finished(childname)
+
+    def io_graph(self):
+        """Return a directed graph of input boundary variables to 
+        output boundary variables.
+        """
+        return self._depgraph.io_graph(self.name)
+
+    def invalidate_deps(self, varnames=None): # , force=False):
         """Mark all Variables invalid that depend on varnames.
         Returns a list of our newly invalidated boundary outputs.
 
         varnames: iter of str (optional)
             An iterator of names of destination variables.
-
-        force: bool (optional)
-            If True, force the invalidation to proceed beyond the
-            boundary even if all outputs were already invalid.
         """
-        valids = self._valid_dict
-        conn_ins = set(self.list_inputs(connected=True))
+        # conn_ins = set(self.list_inputs(connected=True))
 
         # If varnames is None, we're being called from a parent Assembly
         # as part of a higher level invalidation, so we only need to look
         # at our connected inputs
         if varnames is None:
-            names = conn_ins
+            names = self._depgraph.get_connected_inputs()
         else:
             names = varnames
 
-        # We only care about inputs that are changing from valid to invalid.
-        # If they're already invalid, then we've already done what we needed to do,
-        # unless force is True, in which case we continue with the invalidation.
-        if force:
-            invalidated_ins = names
-        else:
-            invalidated_ins = []
-            for name in names:
-                short = name.split('[', 1)[0]
-                if ('.' not in name and valids[short]) or self.get_valid([short])[0]:
-                    invalidated_ins.append(name)
-            if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
-                return []
+        # # We only care about inputs that are changing from valid to invalid.
+        # # If they're already invalid, then we've already done what we needed to do,
+        # # unless force is True, in which case we continue with the invalidation.
+        # if force:
+        #     invalidated_ins = names
+        # else:
+        #     invalidated_ins = []
+        #     for name in names:
+        #         short = name.split('[', 1)[0]
+        #         if ('.' not in name and valids[short]) or self.get_valid([short])[0]:
+        #             invalidated_ins.append(name)
+        #     if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
+        #         return []
 
         self._set_exec_state('INVALID')
 
-        if varnames is None:
-            self.set_valid(invalidated_ins, False)
-        else:  # only invalidate *connected* inputs, because unconnected inputs
-               # are always valid
-            self.set_valid([n for n in invalidated_ins
-                                  if n in conn_ins], False)
+        # if varnames is None:
+        #     self.set_valid(invalidated_ins, False)
+        # else:  # only invalidate *connected* inputs, because unconnected inputs
+        #        # are always valid
+        #     self.set_valid([n for n in invalidated_ins
+        #                           if n in conn_ins], False)
 
-        if invalidated_ins:
-            outs = self._depgraph.invalidate_deps(self, '',
-                                                  invalidated_ins, force)
+        # if invalidated_ins:
+        return self._depgraph.invalidate_deps(self, names) #, force)
 
-        if outs:
-            self.set_valid(outs, False)
+        # if outs:
+        #     self.set_valid(outs, False)
 
-        return outs
+        #return outs
 
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]

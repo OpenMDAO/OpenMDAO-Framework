@@ -235,6 +235,9 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.disconnect(src, dest)
 
+    def io_graph(self):
+        return None
+        
     def invalidate_deps(self, varnames=None, force=False):
         if varnames is None:
             varnames = self._inputs
@@ -269,7 +272,7 @@ class PseudoComponent(object):
         #print self.name, [(z, getattr(self, z)) for z in self.list_inputs()], self.out0
 
     def update_inputs(self, inputs):
-        self._parent.update_inputs(self.name, inputs)
+        self._parent.update_inputs(self.name)#, inputs)
         
     def update_outputs(self, names):
         self.run()
