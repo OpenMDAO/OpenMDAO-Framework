@@ -231,7 +231,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    #print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J, dx
     return J
 
 
@@ -250,12 +250,16 @@ def applyJ(obj, arg, result):
 
         for key, value in result.iteritems():
             var = obj.get(key)
+            if isinstance(var, float):
+                continue
             if hasattr(var, 'shape'):
                 shape = var.shape
                 result[key] = value.reshape(shape)
 
         for key, value in arg.iteritems():
             var = obj.get(key)
+            if isinstance(var, float):
+                continue
             if hasattr(var, 'shape'):
                 shape = var.shape
                 arg[key] = value.reshape(shape)

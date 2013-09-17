@@ -927,7 +927,7 @@ class SequentialWorkflow(Workflow):
         """
         
         if inputs is None:
-            if hasattr(self._parent, 'get_parameters'):
+            if hasattr(self._parent, 'list_param_group_targets'):
                 inputs = self._parent.list_param_group_targets()
             else:
                 msg = "No inputs given for derivatives."
