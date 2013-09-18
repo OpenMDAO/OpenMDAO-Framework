@@ -738,7 +738,6 @@ class SequentialWorkflow(Workflow):
                 result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
                 
         #print arg, result
-        #print self.get_interior_edges()
         return result
     
     def group_nondifferentiables(self):

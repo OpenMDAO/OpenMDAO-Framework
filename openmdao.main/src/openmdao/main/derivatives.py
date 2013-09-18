@@ -243,6 +243,8 @@ def applyJ(obj, arg, result):
     for key in result:
         result[key] = -arg[key]*0.0
 
+    # If storage of the local Jacobian is a problem, the user can specify the
+    # 'apply_deriv' function instead of provideJ.
     if hasattr(obj, 'apply_deriv'):
         
         # The apply_deriv function expects the argument and result dicts for
@@ -337,6 +339,8 @@ def applyJT(obj, arg, result):
     for key in arg:
         result[key] = -arg[key]
 
+    # If storage of the local Jacobian is a problem, the user can specify the
+    # 'apply_derivT' function instead of provideJ.
     if hasattr(obj, 'apply_derivT'):
         
         # The apply_deriv function expects the argument and result dicts for
