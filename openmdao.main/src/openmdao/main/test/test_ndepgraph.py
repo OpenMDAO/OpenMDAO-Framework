@@ -1,7 +1,6 @@
 import unittest
 
 from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, find_all_connecting
-from openmdao.main.pseudocomp import PseudoComponent
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -17,6 +16,15 @@ class DumbClass(object):
 
         self._inputs = inputs[:]
         self._outputs = outputs[:]
+        self._valid_dict = {}
+        for inp in inputs:
+            self._valid_dict[inp] = True
+        for out in outputs:
+            self._valid_dict[out] = False
+
+    def run(self, *args, **kwargs):
+        for name in self._valid_dict:
+            self._valid_dict[name] = True
 
     def list_inputs(self):
         return self._inputs
@@ -26,6 +34,13 @@ class DumbClass(object):
 
     def contains(self, name):
         return hasattr(self, name)
+
+    def invalidate_deps(self, varnames, force=False):
+        for name in varnames:
+            self._valid_dict[name] = False
+        for name in self._outputs:
+            self._valid_dict[name] = False
+        return None
 
 #
 # tests TODO:
@@ -37,11 +52,11 @@ class DumbClass(object):
 #    - input and output
 
 def _make_xgraph():
-    """Make an X shaped make_graph
+    """Make an X shaped graph
     A   D
      \ /
       C
-     / \
+     / \ 
     B   E
     """
     conns = [
@@ -342,6 +357,76 @@ class DepGraphTestCase(unittest.TestCase):
         #dep.disconnect('3.4*B.d+2.3')
         #self.assertEqual(dep.list_connections(), [])
         
+    def test_invalidate(self):
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1','B.in1')],
+                                 inputs=['in1','in2'],
+                                 outputs=['out1','out2'])
+        scope.A.run()
+        scope.B.run()
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict.values(), [True]*4)
+
+        dep.invalidate_deps(scope, 'A', ['out2'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict.values(), [True]*4)
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.connect('B.out1', 'A.in1') # make a cycle
+
+        scope.A.run()
+        scope.B.run()
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict['in1'], False)
+        self.assertEqual(scope.A._valid_dict['in2'], True)
+        self.assertEqual(scope.A._valid_dict['out1'], False)
+        self.assertEqual(scope.A._valid_dict['out2'], False)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        scope.A.run()
+        scope.B.run()
+
+        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.unsever_edges() # put cycle back
+        scope.A.run()
+        scope.B.run()
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict['in1'], False)
+        self.assertEqual(scope.A._valid_dict['in2'], True)
+        self.assertEqual(scope.A._valid_dict['out1'], False)
+        self.assertEqual(scope.A._valid_dict['out2'], False)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
+        try:
+            dep.sever_edges([('A.out1','B.in1')])
+        except Exception as err:
+            self.assertEqual("only one set of severed edges is permitted", str(err))
+        else:
+            self.fail("Exception expected")
+
+
     def test_var_edge_iter(self):
         # basevar to basevar connection
         dep, scope = _make_graph(comps=['A','B'],
@@ -383,6 +468,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual([('A.out1','B.in1[1]'),('B.in1[1]','B.in1')], list(dep.var_edge_iter('A.out1')))
         self.assertEqual([('B.in1[1]','B.in1'),('A.out1','B.in1[1]')], list(dep.var_edge_iter('B.in1', reverse=True)))
         
+    def test_basevar_iter(self):
         dep = self.dep
         self.assertEqual(set(dep.basevar_iter('a')), set(['A.a']))
         self.assertEqual(set(dep.basevar_iter(['a'])), set(['A.a']))
@@ -430,7 +516,12 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect('A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-
+    def test_iograph(self):
+        iograph = self.dep.io_graph()
+        self.assertEqual(set(iograph.nodes()), 
+                         set(['a','b','c','d']))
+        self.assertEqual(set(iograph.edges()), 
+                         set([('a','c'),('b','c')]))
           
 if __name__ == "__main__":
     unittest.main()

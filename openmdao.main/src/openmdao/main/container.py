@@ -1037,22 +1037,15 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            if '[' in path:
-                path, idx = path.replace(']', '').split('[')
-                if path:
-                    if idx.isdigit():
-                        obj = getattr(self, path, Missing)[int(idx)]
-                    elif idx.startswith('('):  # ndarray index
-                        obj = getattr(self, path, Missing)
-                        if obj is Missing:
-                            return self._get_failed(path, index)
-                        idx = idx[1:-1].split(',')
-                        for i in idx:
-                            obj = obj[int(i)]
-                        return obj
-                    else:
-                        key = re.sub('\'|"', '', str(idx))  # strip any quotes
-                        obj = getattr(self, path, Missing)[key]
+            if ('[' in path or '(' in path) and index is None:
+                # caller has put indexing in the string instead of
+                # using the indexing protocol
+                # TODO: document somewhere that passing indexing 
+                #       information as part of the path string has
+                #       higher overhead than constructing the index
+                #       using the indexing protocol or using ExprEvaluators
+                #       that you keep around and evaluate repeatedly.
+                obj = ExprEvaluator(path, scope=self).evaluate()
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:

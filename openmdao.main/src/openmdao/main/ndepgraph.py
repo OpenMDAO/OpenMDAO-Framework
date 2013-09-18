@@ -76,11 +76,17 @@ def is_input_node(graph, node):
     base = graph.node[node].get('basevar')
     return base in graph and graph.node[base].get('iotype') == 'in'
 
+def is_input_base_node(graph, node):
+    return graph.node[node].get('iotype') == 'in'
+
 def is_output_node(graph, node):
     if graph.node[node].get('iotype') == 'out':
         return True
     base = graph.node[node].get('basevar')
     return base in graph and graph.node[base].get('iotype') == 'out'
+
+def is_output_base_node(graph, node):
+    return graph.node[node].get('iotype') == 'out'
 
 def is_boundary_node(graph, node):
     return '.' not in node and is_var_node(graph, node)
@@ -781,6 +787,31 @@ class DependencyGraph(nx.DiGraph):
 
         self._component_graph = g
         return g
+
+    def io_graph(self):
+        """Return a graph showing connections between boundary
+        inputs and boundary outputs only, for use by parent
+        graphs.
+        """
+        iograph = nx.DiGraph()
+        inputs = set()
+        outputs = set()
+        for node in self.nodes_iter():
+            if is_boundary_node(self, node) and is_basevar_node(self, node):
+                if is_input_node(self, node):
+                    inputs.add(node)
+                elif is_output_node(self, node):
+                    outputs.add(node)
+
+        iograph.add_nodes_from(inputs)
+        iograph.add_nodes_from(outputs)
+
+        for inp in inputs:
+            for u,v in nx.dfs_edges(self, source=inp):
+                if v in outputs:
+                    iograph.add_edge(inp, v)
+
+        return iograph
 
     def get_loops(self):
         if self._loops is None:
