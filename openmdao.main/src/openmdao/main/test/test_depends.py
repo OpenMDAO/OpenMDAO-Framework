@@ -11,6 +11,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
+from openmdao.main.ndepgraph import dumpmeta, nodes_matching_all
 
 import random
 

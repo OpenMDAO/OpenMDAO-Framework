@@ -1082,15 +1082,80 @@ def find_all_connecting(graph, start, end):
 
     return fwdset.intersection(backset)
 
-def get_meta_dict(graph, metaname):
-    dct = {}
-    for n, data in graph.nodes(data=True):
-        try:
-            dct[n] = data[metaname]
-        except KeyError:
-            pass
-    return dct
+
+# utility/debugging functions
 
 def dumpmeta(graph, metaname):
-    pprint.pprint(get_meta_dict(graph, metaname))
+    pprint.pprint(nx.get_node_attributes(graph, metaname))
+
+def nodes_matching_all(graph, **kwargs):
+    """Return nodes matching all kwargs names and values. For
+    example, nodes_matching_all(G, valid=True, boundary=True) would
+    return a list of all nodes that are marked as valid that
+    are also boundary nodes.
+    """
+    nodes = []
+    for n,d in graph.node.items():
+        for arg,val in kwargs.items():
+            try:
+                if d[arg] != val:
+                    break
+            except KeyError:
+                break
+        else:
+            nodes.append(n)
+    return nodes
+
+def nodes_matching_some(graph, **kwargs):
+    """Return nodes matching at least one of the kwargs names 
+    and values. For
+    example, nodes_matching_some(G, valid=True, boundary=True) would
+    return a list of all nodes that either are marked as valid or nodes
+    that are boundary nodes, or nodes that are both.
+    """
+    nodes = []
+    for n,d in graph.node.items():
+        for arg,val in kwargs.items():
+            try:
+                if d[arg] == val:
+                    nodes.append(n)
+                    break
+            except KeyError:
+                pass
+    return nodes
+
+def edges_matching_all(graph, **kwargs):
+    """Return edges matching all kwargs names and values. For
+    example, edges_matching_all(G, foo=True, bar=True) would
+    return a list of all edges that are marked with True
+    values of both foo and bar.
+    """
+    edges = []
+    for u,v,d in graph.edges(data=True):
+        for arg,val in kwargs.items():
+            try:
+                if d[arg] != val:
+                    break
+            except KeyError:
+                break
+        else:
+            edges.append((u,v))
+    return edges
+
+def edges_matching_some(graph, **kwargs):
+    """Return edges matching some kwargs names and values. For
+    example, edges_matching_some(G, foo=True, bar=True) would
+    return a list of all edges that are marked with True
+    values of either foo or bar or both.
+    """
+    edges = []
+    for u,v,d in graph.edges(data=True):
+        for arg,val in kwargs.items():
+            try:
+                if d[arg] == val:
+                    edges.append((u,v))
+                    break
+            except KeyError:
+                pass
+    return edges
 

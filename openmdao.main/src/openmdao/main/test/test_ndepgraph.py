@@ -1,7 +1,9 @@
 import unittest
 
 import networkx as nx
-from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, find_all_connecting, get_meta_dict, dumpmeta
+from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, \
+                                    find_all_connecting, dumpmeta, nodes_matching_all, \
+                                    nodes_matching_some, edges_matching_all, edges_matching_some
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -359,6 +361,54 @@ class DepGraphTestCase(unittest.TestCase):
         for node, data in dep.nodes(data=True):
             data['valid'] = True
             
+    def test_nodes_matching(self):
+        g = nx.DiGraph()
+        g.add_nodes_from(range(10), foo=True)
+        g.node[3]['bar'] = True
+        g.node[4]['bar'] = False
+        g.node[5]['bar'] = True
+        
+        self.assertEqual(set(nodes_matching_all(g, foo=True, bar=True)),
+                         set([3,5]))
+        self.assertEqual(set(nodes_matching_all(g, foo=True, bar=True)),
+                         set([3,5]))
+        self.assertEqual(set(nodes_matching_all(g, foo=True)),
+                         set(range(10)))
+        self.assertEqual(set(nodes_matching_all(g, foo=False, bar=True)),
+                         set())
+        self.assertEqual(nodes_matching_all(g, bar=False), [4])
+        
+        self.assertEqual(set(nodes_matching_some(g, foo=True, bar=False)),
+                         set(range(10)))
+        self.assertEqual(nodes_matching_some(g, foo=False, bar=False), [4])
+
+    def test_edges_matching(self):
+        g = nx.DiGraph()
+        g.add_path(range(10), foo=True, bar=False)
+        g.edge[2][3]['baz'] = True
+        g.edge[5][6]['baz'] = True
+        g.edge[5][6]['bar'] = True
+        
+        self.assertEqual(set(edges_matching_all(g, foo=True, bar=False)),
+                         set(g.edges())-set([(5,6)]))
+        
+        self.assertEqual(set(edges_matching_all(g, foo=True)),
+                         set(g.edges()))
+        
+        self.assertEqual(set(edges_matching_all(g, foo=False, baz=True)),
+                         set())
+        
+        self.assertEqual(set(edges_matching_all(g, foo=True, baz=True)),
+                         set([(2,3),(5,6)]))
+        
+        self.assertEqual(set(edges_matching_some(g, baz=True, bar=True)),
+                         set([(2,3),(5,6)]))
+        
+        self.assertEqual(set(edges_matching_some(g, foo=False, baz=False)),
+                         set())
+
+
+
     def test_invalidate(self):
         dep, scope = _make_graph(comps=['A','B'],
                                  connections=[('A.out1','B.in1')],

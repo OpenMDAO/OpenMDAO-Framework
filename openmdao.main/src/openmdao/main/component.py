@@ -1493,8 +1493,8 @@ class Component(Container):
         names: iterator of str
             Names of variables whose validity is requested.
         """
-        graph = self._depgraph
-        return [graph.node[n]['valid'] for n in names]
+        data = self._depgraph.node
+        return [data[n]['valid'] for n in names]
 
     # def set_valid(self, names, valid):
     #     """Mark the io traits with the given names as valid or invalid."""
