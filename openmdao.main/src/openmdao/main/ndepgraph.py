@@ -236,13 +236,13 @@ class DependencyGraph(nx.DiGraph):
         for u,v in edges:
             self.disconnect(u, v, config_change=False)
 
-    def unsever_edges(self):
+    def unsever_edges(self, scope):
         """Restore previously severed edges."""
         if not self._severed_edges:
             return
 
         for u,v in self._severed_edges:
-            self.connect(u, v, config_change=False)
+            self.connect(scope, u, v, config_change=False)
             
         self._severed_edges = []
 
@@ -484,7 +484,7 @@ class DependencyGraph(nx.DiGraph):
                 for node in self.successors_iter(v):
                     self.node[node]['valid'] = True
                     if is_subvar_node(self, node):
-                        for uu,vv in self.successors_iter(node):
+                        for vv in self.successors_iter(node):
                             self.node[vv]['valid'] = True
 
             self.node[v]['valid'] = True
@@ -594,15 +594,15 @@ class DependencyGraph(nx.DiGraph):
         """
         bunch = []
         if direction != 'in':
-            succ = self.successors(node)
+            succ = self.successors_iter(node)
             bunch.extend(succ)
             for s in succ:
-                bunch.extend(self.successors(s))
+                bunch.extend(self.successors_iter(s))
         if direction != 'out':
-            pred = self.predecessors(node)
+            pred = self.predecessors_iter(node)
             bunch.extend(pred)
             for p in pred:
-                bunch.extend(self.predecessors(p))
+                bunch.extend(self.predecessors_iter(p))
         ndot = node+'.'
         nbrack = node+'['
         return [n for n in bunch if n.startswith(ndot)
@@ -670,37 +670,37 @@ class DependencyGraph(nx.DiGraph):
         stack = [(n, self.successors_iter(n), ndata[n]['valid']) 
                     for n in vnames]
 
-        visited_comps = set()
+        visited = set()
         while(stack):
-            srcvar, neighbors, valid = stack.pop()
-            if valid is False:
-                continue
-            elif valid != 'partial':
-                if self.in_degree(srcvar): # don't invalidate unconnected inputs
-                    ndata[srcvar]['valid'] = False
-
-            if is_boundary_node(self, srcvar) and is_output_base_node(self, srcvar):
-                outset.add(srcvar)
+            src, neighbors, valid = stack.pop()
+            if is_comp_node(self, src):
+                ndata[src]['valid'] = False
+            else:
+                visited.add(src)
+                if valid is False:
+                    continue
+                if self.in_degree(src): # don't invalidate unconnected inputs
+                    ndata[src]['valid'] = False
+                    
+                if is_boundary_node(self, src) and is_output_base_node(self, src):
+                    outset.add(src)
 
             for node in neighbors:
-                nvalid = ndata[node]['valid']
-                if nvalid is False:
-                    continue
                 if is_comp_node(self, node):
-                    if node not in visited_comps:
-                        outs = getattr(scope, node).invalidate_deps()
-                        if outs is None:
-                            stack.append((node, self.successors_iter(node), 
-                                         nvalid))
-                        else: # partial invalidation
-                            outs = ['.'.join([node,n]) for n in outs]
-                            stack.extend([(n, self.successors_iter(n),
-                                                 ndata[n]['valid'])
-                                            for n in outs]) 
-                    visited_comps.add(node)
-                else:
-                    stack.append((node, self.successors_iter(node), 
-                                  nvalid))
+                    outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
+                    if outs is None:
+                        stack.append((node, self.successors_iter(node), 
+                                     False))
+                    else: # partial invalidation
+                        outs = ['.'.join([node,n]) for n in outs]
+                        stack.extend([(n, self.successors_iter(n),
+                                             ndata[n]['valid'])
+                                        for n in outs]) 
+                elif node not in visited:
+                    nvalid = ndata[node]['valid']
+                    if nvalid:
+                        stack.append((node, self.successors_iter(node), 
+                                        nvalid))
                 # else: # a component node with partial invalidation
                 #     stack.extend([(n,iograph.successors_iter(n),
                 #                                  ndata[n]['valid']) 
@@ -710,42 +710,37 @@ class DependencyGraph(nx.DiGraph):
 
         return outset
 
-    def get_connected_inputs(self, nodes=None):
-        """Returns inputs that are connected externally.
-        If nodes is not None, return a list of those nodes
-        that are connected.
+    def get_boundary_inputs(self, connected=False):
+        """Returns inputs that are on the component boundary.
+        If connected is True, return a list of those nodes
+        that are connected externally.
         """
-        if nodes is None:
-            ins = []
-            for node in self.nodes_iter():
-                if is_boundary_node(self, node) and \
-                   is_input_base_node(self, node) and \
-                   self.in_degree(node) > 0:
-                    ins.append(node)
-            return ins
-        else:
-            return [n for n in nodes
-                       if self.in_degree(n) > 0 and
-                       is_input_node(self, n)]
+        ins = []
+        for node in self.nodes_iter():
+            if is_boundary_node(self, node) and \
+               is_input_base_node(self, node):
+                    if connected:
+                        if self.in_degree(node) > 0:
+                            ins.append(node)
+                    else:
+                        ins.append(node)
+        return ins
 
-    def get_connected_outputs(self, nodes=None):
-        """Returns outputs that are connected externally.
-        If nodes is not None, return a list of those nodes
-        that are connected.
+    def get_boundary_outputs(self, connected=False):
+        """Returns outputs that are on the component boundary.
+        If connected is True, return a list of those nodes
+        that are connected externally.
         """
-        if nodes is None:
-            outs = []
-            for node in self.nodes_iter():
-                if is_external_node(self, node):
-                    preds = self.pred.get(node)
-                    for n in preds:
-                        if is_output_node(self, n):
-                            outs.append(n)
-            return outs
-        else:
-            return [n for n in nodes
-                        if self.out_degree(n) > 0 and
-                        is_output_node(self, n)]
+        outs = []
+        for node in self.nodes_iter():
+            if is_boundary_node(self, node) and \
+               is_output_base_node(self, node):
+                    if connected:
+                        if self.out_degree(node) > 0:
+                            outs.append(node)
+                    else:
+                        outs.append(node)
+        return outs
 
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
@@ -997,17 +992,11 @@ class DependencyGraph(nx.DiGraph):
                 
     def child_run_finished(self, childname):
         """Called by a child when it completes its run() function."""
-        cvalid = self.node[childname]['valid']
-        if cvalid is False:
-            self.node[childname]['valid'] = True
-        for out in self.list_outputs(childname):
-            self.node[out]['valid'] = True
-            out_dot = out+'.'
-            out_bracket = out+'['
-            # validate output subvars
-            for node in self.successors_iter(out):
-                if node.startswith(out_dot) or node.startswith(out_bracket):
-                    self.node[node]['valid'] = True
+        data = self.node
+        data[childname]['valid'] = True
+
+        for var in self._all_vars(childname):
+            data[var]['valid'] = True
 
     def get_invalid_out_edges(self):
         """Return a list of edges connected to invalid boundary

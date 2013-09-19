@@ -31,7 +31,7 @@ class DumbClass(object):
     def contains(self, name):
         return hasattr(self, name)
     
-    def io_graph(self):
+    def invalidate_deps(self, vnames=None):
         return None
 
 #
@@ -92,7 +92,7 @@ def _make_graph(comps=(), variables=(), connections=(), inputs=None, outputs=Non
         dep.add_boundary_var(v, iotype=iotype)
 
     for src, dest in connections:
-        dep.connect(src, dest)
+        dep.connect(scope, src, dest)
 
     return dep, scope
 
@@ -197,16 +197,16 @@ class DepGraphTestCase(unittest.TestCase):
                               ('B.b[4]','B.b')]))
         
     def test_multi_subvar_inputs(self):
-        self.dep.connect('D.c', 'B.b[5]')
+        self.dep.connect(self.scope, 'D.c', 'B.b[5]')
     
     def test_get_connected_inputs(self):
         self.assertEqual(set(self.dep.get_connected_inputs()), 
-                         set(['a','D.b']))
+                         set(['a']))
     
     def test_get_connected_outputs(self):
         self.assertEqual(set(self.dep.get_connected_outputs()), 
                          set(['c', 'D.d']))
-        self.dep.connect('D.a', 'parent.foo.bar')
+        self.dep.connect(self.scope, 'D.a', 'parent.foo.bar')
         self.assertEqual(set(self.dep.get_connected_outputs()), 
                          set(['c', 'D.d']))
     
@@ -294,7 +294,7 @@ class DepGraphTestCase(unittest.TestCase):
         g = self.dep.component_graph()
         self.assertEqual(set(g.nodes()), set(self.comps))
         self.assertEqual(set(g.edges()), set([('A','B'),('B','C')]))
-        self.dep.connect('C.d', 'D.a')
+        self.dep.connect(self.scope, 'C.d', 'D.a')
         g = self.dep.component_graph()
         self.assertEqual(set(g.nodes()), set(self.comps))
         self.assertEqual(set(g.edges()), set([('A','B'),('B','C'),('C','D')]))
@@ -381,7 +381,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(vdict['B.out1'], True)
         self.assertEqual(vdict['B.out2'], True)
             
-        dep.invalidate_deps(['A.out2'])
+        dep.invalidate_deps(scope, ['A.out2'])
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], True)
@@ -397,11 +397,11 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(vdict['B.out2'], True)
             
         self._set_all_valid(dep)
-        dep.invalidate_deps(['A.in1'])
+        dep.invalidate_deps(scope, ['A.in1'])
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], False)
-        self.assertEqual(vdict['A.in1'], False)
+        self.assertEqual(vdict['A.in1'], True)
         self.assertEqual(vdict['A.in2'], True)
         self.assertEqual(vdict['A.out1'], False)
         self.assertEqual(vdict['A.out2'], False)
@@ -414,7 +414,7 @@ class DepGraphTestCase(unittest.TestCase):
     
         self._set_all_valid(dep)
             
-        dep.connect('B.out1', 'A.in1') # make a cycle
+        dep.connect(scope, 'B.out1', 'A.in1') # make a cycle
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], False)
@@ -430,7 +430,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(vdict['B.out2'], False)
         
         self._set_all_valid(dep)
-        dep.invalidate_deps(['A.out1'])
+        dep.invalidate_deps(scope, ['A.out1'])
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], False)
@@ -448,7 +448,7 @@ class DepGraphTestCase(unittest.TestCase):
         self._set_all_valid(dep)
 
         dep.sever_edges([('B.out1','A.in1')]) # remove cycle
-        dep.invalidate_deps(['A.out1'])
+        dep.invalidate_deps(scope, ['A.out1'])
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], True)
@@ -463,10 +463,10 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(vdict['B.out1'], False)
         self.assertEqual(vdict['B.out2'], False)
 
-        dep.unsever_edges() # put cycle back
+        dep.unsever_edges(self.scope) # put cycle back
         self._set_all_valid(dep)
 
-        dep.invalidate_deps(['A.out1'])
+        dep.invalidate_deps(scope, ['A.out1'])
         vdict = get_meta_dict(dep, 'valid')
         
         self.assertEqual(vdict['A'], False)
@@ -562,8 +562,8 @@ class DepGraphTestCase(unittest.TestCase):
         
         dep.add_edges_from([('_pseudo_0.in0','_pseudo_0'),
                             ('_pseudo_0','_pseudo_0.out0')])
-        dep.connect('C.d', '_pseudo_0.in0')
-        dep.connect('_pseudo_0.out0', 'D.a')
+        dep.connect(self.scope, 'C.d', '_pseudo_0.in0')
+        dep.connect(self.scope, '_pseudo_0.out0', 'D.a')
         self.assertEqual(list(dep.comp_iter('C', include_pseudo=False)), ['D'])
         self.assertEqual(list(dep.comp_iter('D', include_pseudo=False, reverse=True)),
                                             ['C'])
@@ -580,15 +580,15 @@ class DepGraphTestCase(unittest.TestCase):
         dep, scope = _make_graph(['A','B','C'], [],
                                  [('A.c','B.a'),('B.d','C.b')])
         self.assertEqual(dep.list_input_outputs('A'), [])
-        dep.connect('A.a','C.a')
+        dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-    def test_iograph(self):
-        iograph = self.dep.io_graph('')
-        self.assertEqual(set(iograph.nodes()), 
-                         set(['a','b','c','d']))
-        self.assertEqual(set(iograph.edges()), 
-                         set([('a','c'),('b','c')]))
+    #def test_iograph(self):
+        #iograph = self.dep.io_graph('')
+        #self.assertEqual(set(iograph.nodes()), 
+                         #set(['a','b','c','d']))
+        #self.assertEqual(set(iograph.edges()), 
+                         #set([('a','c'),('b','c')]))
           
 if __name__ == "__main__":
     unittest.main()

@@ -404,7 +404,7 @@ class Component(Container):
             #     valids[name.split('[', 1)[0]] = True
         else:
             #valids = self._valid_dict
-            #invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
+            #invalid_ins = [inp for inp in self._depgraph.get_boundary_inputs(connected=True)
             #                        if valids.get(inp.split('[', 1)[0]) is False]
             # if invalid_ins:
             #     self._call_execute = True
@@ -509,12 +509,7 @@ class Component(Container):
         called if execute() actually ran.
         """
         # make our output Variables valid again
-        valids = self._depgraph.node
-        for name in self.list_outputs():
-            valids[name.split('[', 1)[0]]['valid'] = True
-        ## make sure our inputs are valid too
-        for name in self.list_inputs():
-            valids[name.split('[', 1)[0]]['valid'] = True
+        self._validate()
 
         if self.parent:
             self.parent.child_run_finished(self.name)
@@ -782,14 +777,14 @@ class Component(Container):
             of inputs with matching *external* connectivity status.
         """
         if self._connected_inputs is None:
-            nset = set([k for k, v in self.items(iotype='in')])
-            self._connected_inputs = self._depgraph.get_connected_inputs(nset)
-            self._input_names = list(nset)
+            self._connected_inputs = \
+                       self._depgraph.get_boundary_inputs(connected=True)
+            self._input_names = [k for k, v in self.items(iotype='in')]
 
         if connected is None:
-            return self._input_names
+            return self._input_names[:]
         elif connected is True:
-            return self._connected_inputs
+            return self._connected_inputs[:]
         else:  # connected is False
             return [n for n in self._input_names
                             if n not in self._connected_inputs]
@@ -803,17 +798,14 @@ class Component(Container):
             of outputs with matching *external* connectivity status.
         """
         if self._connected_outputs is None:
-            nset = set([k for k, v in self.items(iotype='out')])
-            self._connected_outputs = self._depgraph.get_connected_outputs()
-            nset.update(self._connected_outputs)
-            self._output_names = list(nset)
-        self._output_names = [name_ for name_ in self._output_names
-                                              if "[" not in name_]
+            self._connected_outputs = \
+                       self._depgraph.get_boundary_outputs(connected=True)
+            self._output_names = [k for k, v in self.items(iotype='out')]
 
         if connected is None:
-            return self._output_names
+            return self._output_names[:]
         elif connected is True:
-            return self._connected_outputs
+            return self._connected_outputs[:]
         else:  # connected is False
             return [n for n in self._output_names
                             if n not in self._connected_outputs]
@@ -1510,11 +1502,16 @@ class Component(Container):
     #     for name in names:
     #         valids[name.split('[', 1)[0]] = valid
 
-    def io_graph(self):
-        """Returns None, indicating that all inputs connect to all
-        outputs.
-        """
-        return None
+    #def io_graph(self):
+        #"""Returns None, indicating that all inputs connect to all
+        #outputs.
+        #"""
+        #return None
+
+    def _validate(self):
+        """Mark all inputs and outputs and their subvars as valid."""
+        for n, data in self._depgraph.nodes_iter(data=True):
+            data['valid'] = True
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None): #, force=False):
@@ -1530,11 +1527,16 @@ class Component(Container):
         """
         self._call_execute = True
         self._set_exec_state('INVALID')
+        conn_ins = self._depgraph.get_boundary_inputs(connected=True)
+        vnames = self.list_outputs()
         if varnames is None:
-            varnames = self._depgraph.get_connected_inputs()
-            varnames.extend(self.list_outputs())
-
-        self._depgraph.invalidate_deps(self, varnames)
+            vnames.extend(conn_ins)
+        else:
+            vnames.extend([v for v in varnames if v in conn_ins])
+            
+        data = self._depgraph.node
+        for v in vnames:
+            data[v]['valid'] = False
 
         return None  # None indicates that all of our outputs are invalid.
 
@@ -1622,8 +1624,8 @@ class Component(Container):
             connected_inputs = []
             connected_outputs = []
         else:
-            connected_inputs = self._depgraph.get_connected_inputs()
-            connected_outputs = self._depgraph.get_connected_outputs()
+            connected_inputs = self._depgraph.get_boundary_inputs(connected=True)
+            connected_outputs = self._depgraph.get_boundary_outputs(connected=True)
 
         # Additionally, we need to know if anything is connected to a
         # param, objective, or constraint.

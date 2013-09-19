@@ -210,9 +210,9 @@ class VariableTree(Container):
         else:
             graph = self.parent._parent._depgraph
             if self_io == 'in':
-                connected = graph.get_connected_inputs()
+                connected = graph.get_boundary_inputs(connected=True)
             else:
-                connected = graph.get_connected_outputs()
+                connected = graph.get_boundary_outputs(connected=True)
 
         variables = []
         for name in self.list_vars():

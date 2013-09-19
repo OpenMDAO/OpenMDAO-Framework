@@ -7,7 +7,6 @@ import copy
 import pprint
 import socket
 import sys
-import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with

@@ -92,13 +92,13 @@ class PassthroughTestCase(unittest.TestCase):
     def test_basics(self):
         c = Simple()
         c.connect('parent.c1.foo', 'a')
-        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
-        self.assertEqual([], c._depgraph.get_connected_outputs())
+        self.assertEqual(['a'], c._depgraph.get_boundary_inputs(connected=True))
+        self.assertEqual([], c._depgraph.get_boundary_outputs(connected=True))
         self.assertTrue('parent.c1.foo' in c._depgraph)
         c.connect('c', 'parent.c2.a')
         self.assertTrue('parent.c2.a' in c._depgraph)
-        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
-        self.assertEqual(['c'], c._depgraph.get_connected_outputs())
+        self.assertEqual(['a'], c._depgraph.get_boundary_inputs(connected=True))
+        self.assertEqual(['c'], c._depgraph.get_boundary_outputs(connected=True))
         
         
         
