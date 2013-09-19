@@ -1103,7 +1103,6 @@ class Comp2(Component):
 
     def execute(self):
         """ Executes it """
-        
         pass
 
     def linearize(self):
@@ -1117,6 +1116,40 @@ class Comp2(Component):
         output_keys = ('y1', 'y2')
         return input_keys, output_keys, self.J
 
+class Comp2_array(Component):
+    """ two-input, two-output"""
+    
+    x = Array(zeros((2, 2)), iotype='in')
+    y = Array(zeros((2, 2)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        pass
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[3.0, 5.0, 7.0, 11.0],
+                        [8.1, -5.9, 0.0, 1.23],
+                        [4.11, 5.0, 17.0, -5.0],
+                        [7.77, 6.12, -3.5, 11.0]])
+        
+        self.JT = self.J.T
+        
+    def apply_deriv(self, arg, result):
+        
+        if 'y' in result and 'x' in arg:
+            for i in range(2):
+                for j in range(2):
+                    result['y'][i, j] = self.J[i, j] * arg['x'][i, j]
+        
+    def apply_derivT(self, arg, result):
+        
+        if 'y' in arg and 'x' in result:
+            for i in range(2):
+                for j in range(2):
+                    result['x'][i, j] = self.JT[i, j] * arg['y'][i, j]
+        
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
@@ -1154,6 +1187,23 @@ class Testcase_applyJT(unittest.TestCase):
         
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
+        
+    def test_deriv_slices(self):
+        
+        comp = Comp2_array()
+        comp.linearize()
+        
+        arg = {}
+        arg['y[0, 1]'] = array([1.0])
+        arg['x[1, 0]'] = array([0.0])
+        
+        result = {}
+        result['x[1, 0]'] = array([0.0])
+        
+        applyJ(comp, arg, result)
+        
+        print arg
+        print result
         
     def test_matvecREV2(self):
         # Larger system

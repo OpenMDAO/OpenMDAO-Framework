@@ -251,6 +251,7 @@ def applyJ(obj, arg, result):
         # each input and output to have the same shape as the input/output.
 
         for key, value in result.iteritems():
+            
             var = obj.get(key)
             if isinstance(var, float):
                 continue
@@ -258,13 +259,26 @@ def applyJ(obj, arg, result):
                 shape = var.shape
                 result[key] = value.reshape(shape)
 
-        for key, value in arg.iteritems():
-            var = obj.get(key)
-            if isinstance(var, float):
-                continue
-            if hasattr(var, 'shape'):
-                shape = var.shape
-                arg[key] = value.reshape(shape)
+        argkeys = arg.keys()
+        for key in argkeys:
+            
+            value = arg[key]
+
+            if '[' in key:
+                basekey = key.split('[')[0]
+                var = obj.get(basekey)
+                if basekey not in argkeys:
+                    width = flattened_size(basekey, var)
+                    arg[basekey] = zeros((width, 1))
+            else:
+                var = obj.get(key)
+                
+                if isinstance(var, float):
+                    continue
+                
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    arg[key] = value.reshape(shape)
 
         obj.apply_deriv(arg, result)
 
