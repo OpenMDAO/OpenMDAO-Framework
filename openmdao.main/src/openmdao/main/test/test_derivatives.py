@@ -1129,8 +1129,8 @@ class Comp2_array(Component):
     def linearize(self):
         """Analytical first derivatives"""
         
-        self.J = array([[3.0, 5.0, 7.0, 11.0],
-                        [8.1, -5.9, 0.0, 1.23],
+        self.J = array([[3.0, 133.0, 7.0, 11.0],
+                        [8.1, -5.9, 13.3, 1.23],
                         [4.11, 5.0, 17.0, -5.0],
                         [7.77, 6.12, -3.5, 11.0]])
         
@@ -1139,16 +1139,17 @@ class Comp2_array(Component):
     def apply_deriv(self, arg, result):
         
         if 'y' in result and 'x' in arg:
-            for i in range(2):
-                for j in range(2):
-                    result['y'][i, j] = self.J[i, j] * arg['x'][i, j]
+            dx = self.J.dot(arg['x'].flatten())
+            
+            result['y'] = dx.reshape((2, 2))
         
     def apply_derivT(self, arg, result):
         
         if 'y' in arg and 'x' in result:
-            for i in range(2):
-                for j in range(2):
-                    result['x'][i, j] = self.JT[i, j] * arg['y'][i, j]
+            dy = self.JT.dot(arg['y'].flatten())
+            
+            result['x'] = dy.reshape((2, 2))
+        
         
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
@@ -1194,16 +1195,37 @@ class Testcase_applyJT(unittest.TestCase):
         comp.linearize()
         
         arg = {}
-        arg['y[0, 1]'] = array([1.0])
-        arg['x[1, 0]'] = array([0.0])
+        arg['x[0, 1]'] = array([1.0])
+        arg['y[1, 0]'] = array([0.0])
         
         result = {}
-        result['x[1, 0]'] = array([0.0])
+        result['y[1, 0]'] = array([0.0])
         
         applyJ(comp, arg, result)
         
-        print arg
-        print result
+        self.assertEqual(result['y[1, 0]'], 5.0)
+        
+        arg = {}
+        arg['x[0, 1]'] = array([0.0])
+        arg['y[1, 0]'] = array([1.0])
+        
+        result = {}
+        result['x[0, 1]'] = array([0.0])
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x[0, 1]'], 5.0)
+        
+        arg = {}
+        arg['x[0, 1]'] = array([0.0])
+        arg['y[:, 0]'] = array([1.0, 1.0])
+        
+        result = {}
+        result['x[0, 1]'] = array([0.0])
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x[0, 1]'], 138.0)
         
     def test_matvecREV2(self):
         # Larger system

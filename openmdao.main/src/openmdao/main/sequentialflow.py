@@ -407,6 +407,9 @@ class SequentialWorkflow(Workflow):
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
+        #print arg.max()
+        #import sys
+        #sys.stdout.flush()
 
         # Bookkeeping dictionaries
         inputs = {}
@@ -590,7 +593,10 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the transpose matrix vector
         product of the workflow's full Jacobian with an incoming vector
         arg.'''
-
+        #print arg.max()
+        #import sys
+        #sys.stdout.flush()
+        
         # Bookkeeping dictionaries
         inputs = {}
         outputs = {}

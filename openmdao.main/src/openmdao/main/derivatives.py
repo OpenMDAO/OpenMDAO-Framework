@@ -249,27 +249,49 @@ def applyJ(obj, arg, result):
         
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
-
-        for key, value in result.iteritems():
+        resultkeys = result.keys()
+        for key in resultkeys:
             
-            var = obj.get(key)
-            if isinstance(var, float):
-                continue
-            if hasattr(var, 'shape'):
-                shape = var.shape
-                result[key] = value.reshape(shape)
+            value = result[key]
+
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in result:
+                    result[basekey] = zeros(var.shape)
+                    
+                exec("result[basekey]%s = value" % index)
+                
+            else:
+                var = obj.get(key)
+                if isinstance(var, float):
+                    continue
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    result[key] = value.reshape(shape)
 
         argkeys = arg.keys()
         for key in argkeys:
             
             value = arg[key]
 
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
             if '[' in key:
-                basekey = key.split('[')[0]
+                basekey, _, index = key.partition('[')
+                index = '[' + index
                 var = obj.get(basekey)
-                if basekey not in argkeys:
-                    width = flattened_size(basekey, var)
-                    arg[basekey] = zeros((width, 1))
+                
+                if basekey not in arg:
+                    arg[basekey] = zeros(var.shape)
+                    
+                exec("arg[basekey]%s = value" % index)
             else:
                 var = obj.get(key)
                 
@@ -280,20 +302,35 @@ def applyJ(obj, arg, result):
                     shape = var.shape
                     arg[key] = value.reshape(shape)
 
+
         obj.apply_deriv(arg, result)
 
-        for key, value in result.iteritems():
-            if hasattr(value, 'flatten'):
-                result[key] = value.flatten()
+        # Result vector needs to be flattened.
+        for key in resultkeys:
+            
+            value = result[key]
+            
+            # If we have sliced arrays in our index, then we need to
+            # poke the data back into the sliced keys.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                exec("result[key] = result[basekey]%s" % index)
+            else:
+                if hasattr(value, 'flatten'):
+                    result[key] = value.flatten()
 
-        for key, value in arg.iteritems():
+        # Arg is still called afterwards, so flatten it back.
+        for key in argkeys:
+            value = arg[key]
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
         return
 
-    # Optional specification of the Jacobian
-    # (Subassemblies do this by default)
+    # Otherwise, most users will just specify a Jacobian as a matrix.
+    # (Also, all subassemblies use specify J during recursion)
     input_keys, output_keys, J = obj.provideJ()
     
     #print 'J', input_keys, output_keys, J
@@ -352,34 +389,88 @@ def applyJT(obj, arg, result):
     
     for key in arg:
         result[key] = -arg[key]
-
+    
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_derivT' function instead of provideJ.
     if hasattr(obj, 'apply_derivT'):
         
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
+        resultkeys = result.keys()
+        for key in resultkeys:
+            
+            value = result[key]
 
-        for key, value in result.iteritems():
-            if len(value) > 1:
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in result:
+                    result[basekey] = zeros(var.shape)
+                    
+                exec("result[basekey]%s = value" % index)
+                
+            else:
                 var = obj.get(key)
-                shape = var.shape
-                result[key] = value.reshape(shape)
+                if isinstance(var, float):
+                    continue
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    result[key] = value.reshape(shape)
 
-        for key, value in arg.iteritems():
-            if len(value) > 1:
+        argkeys = arg.keys()
+        for key in argkeys:
+            
+            value = arg[key]
+
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in arg:
+                    arg[basekey] = zeros(var.shape)
+                    
+                exec("arg[basekey]%s = value" % index)
+            else:
                 var = obj.get(key)
-                shape = var.shape
-                arg[key] = value.reshape(shape)
+                
+                if isinstance(var, float):
+                    continue
+                
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    arg[key] = value.reshape(shape)
 
         obj.apply_derivT(arg, result)
 
-        for key, value in result.iteritems():
-            if len(value) > 1:
-                result[key] = value.flatten()
+        # Result vector needs to be flattened.
+        for key in resultkeys:
+            
+            value = result[key]
+            
+            # If we have sliced arrays in our index, then we need to
+            # poke the data back into the sliced keys.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                exec("result[key] = result[basekey]%s" % index)
+            else:
+                if hasattr(value, 'flatten'):
+                    result[key] = value.flatten()
 
-        for key, value in arg.iteritems():
-            if len(value) > 1:
+        # Arg is still called afterwards, so flatten it back.
+        for key in argkeys:
+            value = arg[key]
+            if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
         return
