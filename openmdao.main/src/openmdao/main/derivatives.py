@@ -777,20 +777,20 @@ class FiniteDifference(object):
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    comp._input_updated(var_name)
+                    comp._input_updated(var_name.split('[')[0])
                 else:
-                    self.scope._input_updated(comp_name)
+                    self.scope._input_updated(comp_name.split('[')[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                comp._valid_dict[var_name.split('[', 1)[0]] = True
+                comp.set_valid([var_name.split('[', 1)[0]], True)
                 
                 # Make sure we execute!
                 comp._call_execute = True
                 
             else:
-                self.scope._valid_dict[comp_name.split('[', 1)[0]] = True
+                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
 
 def apply_linear_model(self, comp, ffd_order):

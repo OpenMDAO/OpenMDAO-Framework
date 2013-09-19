@@ -66,16 +66,16 @@ class PassthroughTestCase(unittest.TestCase):
         self.assertTrue('b' in self.asm.a1.list_inputs())
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-2,2,0,-4))
-        self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c3.get_valid(varnames),
                          [True,True,True,True])
-        self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.a1.c2.get_valid(varnames),
                          [True,True,True,True])
-        self.assertEqual([self.asm.c1._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c1.get_valid(varnames),
                          [True,True,True,True])
         self.asm.c1.a = 6
-        self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c3.get_valid(varnames),
                          [False,True,False,False])
-        self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.a1.c2.get_valid(varnames),
                          [True,False,False,False])
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-7,2,-5,-9))

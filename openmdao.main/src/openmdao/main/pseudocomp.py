@@ -297,10 +297,10 @@ class PseudoComponent(object):
             if self._parent:
                 self._parent.child_invalidated(self.name, None)
 
-    def get_wrapped_attr(self, name, index=None):
-        if index is not None:
-            raise RuntimeError("pseudocomponent attr accessed using an index")
-        return getattr(self, name)
+    # def get_wrapped_attr(self, name, index=None):
+    #     if index is not None:
+    #         raise RuntimeError("pseudocomponent attr accessed using an index")
+    #     return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:

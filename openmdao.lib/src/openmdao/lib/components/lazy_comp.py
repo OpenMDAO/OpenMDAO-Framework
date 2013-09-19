@@ -27,10 +27,10 @@ class LazyComponent(Component):
     def _post_execute(self): 
         super(LazyComponent, self)._post_execute()
 
-        valids = self._valid_dict
+        data = self._depgraph.node
         for name in self.list_outputs(): 
             if name in self._connected_outputs:
-                valids[name.split('[',1)[0]] = True
+                data[name.split('[',1)[0]]['valid'] = True
             else:
-                valids[name.split('[',1)[0]] = False    
+                data[name.split('[',1)[0]]['valid'] = False    
 

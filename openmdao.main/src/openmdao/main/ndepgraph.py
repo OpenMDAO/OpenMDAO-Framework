@@ -441,8 +441,8 @@ class DependencyGraph(nx.DiGraph):
 
         # create expression objects to handle setting of 
         # array indces, etc.
-        self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath)
-        self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath)
+        self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath, getter='get_attr')
+        self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath, getter='get_attr')
 
         self.invalidate_deps(scope, [destpath])
         

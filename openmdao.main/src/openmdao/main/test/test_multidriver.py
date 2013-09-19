@@ -1,6 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
+from math import sqrt  # so expr can find it
 
 from openmdao.main.api import Assembly, Component, Driver, \
                               SequentialWorkflow, set_as_top, \
@@ -166,9 +167,11 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         self.top.run()
         self.top.comp1.x = 12.3
-        self.assertEqual([False, True, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, True, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         self.top.comp2.x = 32.1
-        self.assertEqual([False, False, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, False, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         
     def test_one_driver(self):
         global exec_order

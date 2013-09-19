@@ -239,13 +239,13 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self.parent:
-            self.parent.child_invalidated(self.name, [name])
-        # if self._valid_dict[name.split('[', 1)[0]]:  # if var is not already invalid
-        #     outs = self.invalidate_deps(varnames=[name])
-        #     if (outs is None) or outs:
-        #         if self.parent:
-        #             self.parent.child_invalidated(self.name, outs)
+        #if self.parent and hasattr(self.parent, 'child_invalidated'):
+            #self.parent.child_invalidated(self.name, [name])
+        if self._depgraph.node[name]['valid']:  # if var is not already invalid
+            outs = self.invalidate_deps(varnames=[name])
+            if (outs is None) or outs:
+                if self.parent and hasattr(self.parent, 'child_invalidated'):
+                    self.parent.child_invalidated(self.name, outs)
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -1332,6 +1332,12 @@ class Component(Container):
                 if name and not glob.glob(join(name, '*')):
                     # Cleanup unused directory.
                     os.rmdir(name)
+                    # setting the directory attribute below was causing an
+                    # exception because the parent was unaware of the 'top' object.
+                    # It doesn't seem valid that a newly loaded object would ever have
+                    # a parent, but setting the parent to None up above breaks things...
+                    if getattr(top.parent, name, None) is not top:
+                        top.parent = None  # our parent doesn't know us, so why do we have a parent?
                     top.directory = ''
 
         if call_post_load:
@@ -1496,17 +1502,11 @@ class Component(Container):
         data = self._depgraph.node
         return [data[n]['valid'] for n in names]
 
-    # def set_valid(self, names, valid):
-    #     """Mark the io traits with the given names as valid or invalid."""
-    #     valids = self._valid_dict
-    #     for name in names:
-    #         valids[name.split('[', 1)[0]] = valid
-
-    #def io_graph(self):
-        #"""Returns None, indicating that all inputs connect to all
-        #outputs.
-        #"""
-        #return None
+    def set_valid(self, names, valid):
+        """Mark the io traits with the given names as valid or invalid."""
+        data = self._depgraph.node
+        for name in names:
+            data[name]['valid'] = valid
 
     def _validate(self):
         """Mark all inputs and outputs and their subvars as valid."""

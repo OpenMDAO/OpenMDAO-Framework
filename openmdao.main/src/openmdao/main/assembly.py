@@ -678,6 +678,7 @@ class Assembly(Component):
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
 
+    @rbac(('owner', 'user'))
     def child_run_finished(self, childname):
         """Called by a child when it completes its run() function."""
         self._depgraph.child_run_finished(childname)
