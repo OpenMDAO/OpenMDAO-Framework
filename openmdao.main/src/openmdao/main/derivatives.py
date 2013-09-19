@@ -10,7 +10,7 @@ from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index, arange, prod
+         ravel_multi_index, arange, prod, vstack, hstack
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -346,8 +346,8 @@ def applyJ(obj, arg, result):
         if okey in obounds:
             o1, o2, osh = obounds[okey]
         else:
-            o1, o2, osh = obounds[okey.split('[')[0]]
-            odx = okey.strip(']').split('[')[1]            
+            basekey, _, odx = okey.partition('[')
+            o1, o2, osh = obounds[basekey]
             
         if o2 - o1 == 1:
             oshape = 1
@@ -363,8 +363,8 @@ def applyJ(obj, arg, result):
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
             else:
-                i1, i2, ish = ibounds[ikey.split('[')[0]]
-                idx = ikey.strip(']').split('[')[1]
+                basekey, _, idx = ikey.partition('[')
+                i1, i2, ish = ibounds[basekey]
 
             # Param groups make it tricky. We only want to add the
             # piece of J once for the whole group.
@@ -494,8 +494,8 @@ def applyJT(obj, arg, result):
         if okey in obounds:
             o1, o2, osh = obounds[okey]
         else:
-            o1, o2, osh = obounds[okey.split('[')[0]]
-            odx = okey.strip(']').split('[')[1]
+            basekey, _, odx = okey.partition('[')
+            o1, o2, osh = obounds[basekey]
             
         if o2 - o1 == 1:
             oshape = 1
@@ -508,8 +508,8 @@ def applyJT(obj, arg, result):
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
             else:
-                i1, i2, ish = ibounds[ikey.split('[')[0]]
-                idx = ikey.strip(']').split('[')[1]
+                basekey, _, idx = ikey.partition('[')
+                i1, i2, ish = ibounds[basekey]
             
             Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
                                    i1, i2, idx, ish).T
@@ -584,12 +584,12 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     
     # J inputs
     if idx:
-        idx = idx.strip('(').strip(')')
         
         # Handle complicated slices that may have : or -1 in them
         # We just use numpy index math to convert unravelable indices into
         # index arrays so that we can ravel them to find the set of indices
         # that we need to grab from J.
+        idx = idx.replace(' ', '').replace('][', ',').strip(']')
         if '-' in idx or ':' in idx:
             
             idx_list = idx.split(',')
@@ -602,8 +602,8 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
                 
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
-            rav_ind = ravel_multi_index(indices, dims=osh) + i1
-            istring = 'rav_ind'
+            i_rav_ind = ravel_multi_index(indices, dims=osh) + i1
+            istring = 'i_rav_ind'
                 
         # Single index into a multi-D array
         elif ',' in idx:
@@ -622,12 +622,12 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         
     # J Outputs
     if odx:
-        odx = odx.strip('(').strip(')')
         
         # Handle complicated slices that may have : or -1 in them
         # We just use numpy index math to convert unravelable indices into
         # index arrays so that we can ravel them to find the set of indices
         # that we need to grab from J.
+        odx = odx.replace(' ', '').replace('][', ',').strip(']')
         if '-' in odx or ':' in odx:
             
             idx_list = odx.split(',')
@@ -641,8 +641,8 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
                 
-            rav_ind = ravel_multi_index(indices, dims=osh) + o1
-            ostring = 'rav_ind'
+            o_rav_ind = ravel_multi_index(indices, dims=osh) + o1
+            ostring = 'o_rav_ind'
             
         # Single index into a multi-D array
         elif ',' in odx:
@@ -659,7 +659,10 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     else:
         ostring = 'o1:o2'
     
-    Jsub = eval('J[%s, %s]' % (ostring, istring))
+    if ostring == 'o_rav_ind' and istring == 'i_rav_ind':
+        Jsub = eval('J[vstack(%s), hstack(%s)]' % (ostring, istring))
+    else:        
+        Jsub = eval('J[%s, %s]' % (ostring, istring))
     return Jsub
     
     
@@ -819,9 +822,9 @@ class FiniteDifference(object):
 
             if '[' in src:
                 src, _, idx = src.partition('[')
-                idx = int(idx[:-1])
+                idx = '[' + idx
                 old_val = self.scope.get(src)
-                old_val[idx] = new_val
+                exec('old_val%s = new_val' % idx)
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
@@ -869,9 +872,9 @@ class FiniteDifference(object):
             if index is None:
                 if '[' in src:
                     src, _, idx = src.partition('[')
-                    idx = int(idx[:-1])
+                    idx = '[' + idx
                     old_val = self.scope.get(src)
-                    old_val[idx] += val
+                    exec('old_val%s += val' % idx)
     
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -890,7 +893,7 @@ class FiniteDifference(object):
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    comp._input_updated(var_name)
+                    comp._input_updated(var_name.split('[', 1)[0])
                 else:
                     self.scope._input_updated(comp_name)
     

@@ -80,6 +80,7 @@ class SensitivityDriverTestCase(unittest.TestCase):
     def test_error_messages(self):
         
         self.model.driver.clear_objectives()
+        self.model.driver.clear_constraints()
         try:
             self.model.driver._check()
         except ValueError, err:
