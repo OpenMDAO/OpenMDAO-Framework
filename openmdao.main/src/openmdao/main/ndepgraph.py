@@ -594,12 +594,12 @@ class DependencyGraph(nx.DiGraph):
         """
         bunch = []
         if direction != 'in':
-            succ = self.successors_iter(node)
+            succ = self.successors(node)
             bunch.extend(succ)
             for s in succ:
                 bunch.extend(self.successors_iter(s))
         if direction != 'out':
-            pred = self.predecessors_iter(node)
+            pred = self.predecessors(node)
             bunch.extend(pred)
             for p in pred:
                 bunch.extend(self.predecessors_iter(p))
