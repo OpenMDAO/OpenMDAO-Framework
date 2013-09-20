@@ -1,14 +1,8 @@
-"""A set of classes, Body and Shell, that apply a group of axisymetric free-form-deformations
-to stl geometries""" 
-
-
 import copy
 
 import numpy as np
 
 from bspline import Bspline
-
-
 
 
 class Coordinates(object): 
@@ -39,7 +33,7 @@ class Coordinates(object):
 class Body(object): 
     """FFD class for solid bodies which only have one surface""" 
     
-    def __init__(self,stl,controls,name="body"): 
+    def __init__(self,stl,controls,name="body", r_ref=None, x_ref=None): 
         """stl must be an STL object"""
 
         self.stl = stl
@@ -68,7 +62,18 @@ class Body(object):
         self.bs = Bspline(self.C,geom_points)
 
         self.name = name
-        self.r_mag = np.average(np.abs(geom_points[:,1]))
+
+        if x_ref is not None: 
+            self.x_mag = float(x_ref)
+        else: 
+            self.x_mag = 10**np.floor(np.log10(np.average(geom_points[:,0])))
+
+        if r_ref is not None: 
+            self.r_mag = float(r_ref)
+        else: 
+            indecies = np.logical_and(abs(geom_points[:,2])<.0001, geom_points[:,1]>0)
+            points = geom_points[indecies]
+            self.r_mag = 10**np.floor(np.log10(np.average(points[:,1]))) #grab the order of magnitude of the average
         
 
         #for revolution of 2-d profile
@@ -82,7 +87,7 @@ class Body(object):
 
         #calculate derivatives
         #in polar coordinates
-        self.dP_bar_xqdC = np.array(self.bs.B.flatten())
+        self.dP_bar_xqdC = np.array(self.x_mag*self.bs.B.flatten())
         self.dP_bar_rqdC = np.array(self.r_mag*self.bs.B.flatten())
 
         #Project Polar derivatives into revolved cartisian coordinates
@@ -93,12 +98,11 @@ class Body(object):
     def copy(self): 
         return copy.deepcopy(self)
 
-    def deform(self,delta_C=None): 
+    def deform(self,delta_C): 
         """returns new point locations for the given motion of the control 
-        points"""
-
-        if delta_C is not None: 
-            self.delta_C = delta_C 
+        points""" 
+        self.delta_C = delta_C  
+        self.delta_C[:,0] = self.delta_C[:,0]*self.x_mag
         self.C_bar = self.C+self.delta_C
         delta_P = self.bs.calc(self.C_bar)
 
@@ -124,7 +128,8 @@ class Body(object):
 class Shell(object): 
     """FFD class for shell bodies which have two connected surfaces"""
     
-    def __init__(self,outer_stl,inner_stl,center_line_controls,thickness_controls,name='shell'): 
+    def __init__(self, outer_stl, inner_stl, center_line_controls,
+        thickness_controls, name='shell', r_ref=None, x_ref=None): 
 
         self.outer_stl = outer_stl
         self.inner_stl = inner_stl
@@ -163,6 +168,7 @@ class Shell(object):
         self.Cc_bar = self.Cc.copy()
         self.delta_Cc = np.zeros(self.Cc.shape)
 
+
         if isinstance(thickness_controls,int): 
             X = inner_points[:,0]
             x_max = np.max(X)
@@ -177,8 +183,6 @@ class Shell(object):
             self.n_t_controls = len(thickness_controls)
         self.Ct_bar = self.Ct.copy()
         self.delta_Ct = np.zeros(self.Ct.shape)
-
-
          
         self.bsc_o = Bspline(self.Cc,outer_points)
         self.bsc_i = Bspline(self.Cc,inner_points)
@@ -186,7 +190,19 @@ class Shell(object):
         self.bst_o = Bspline(self.Ct,outer_points)
         self.bst_i = Bspline(self.Ct,inner_points)
         
-        self.r_mag = np.average(np.abs(outer_points[:,1]))
+        self.name = name
+
+        if x_ref is not None: 
+            self.x_mag = float(x_ref)
+        else: 
+            self.x_mag = 10**np.floor(np.log10(np.average(outer_points[:,0])))
+
+        if r_ref is not None: 
+            self.r_mag = float(r_ref)
+        else: 
+            indecies = np.logical_and(abs(outer_points[:,2])<.0001, outer_points[:,1]>0)
+            points = outer_points[indecies]
+            self.r_mag = 10**np.floor(np.log10(np.average(points[:,1]))) #grab the order of magnitude of the average
 
 
         self.outer_theta = self.Po[:,2]
@@ -203,10 +219,10 @@ class Shell(object):
 
         #calculate derivatives
         #in polar coordinates
-        self.dPo_bar_xqdCc = np.array(self.bsc_o.B.flatten())
+        self.dPo_bar_xqdCc = np.array(self.x_mag*self.bsc_o.B.flatten())
         self.dPo_bar_rqdCc = np.array(self.r_mag*self.bsc_o.B.flatten())
 
-        self.dPi_bar_xqdCc = np.array(self.bsc_i.B.flatten())
+        self.dPi_bar_xqdCc = np.array(self.x_mag*self.bsc_i.B.flatten())
         self.dPi_bar_rqdCc = np.array(self.r_mag*self.bsc_i.B.flatten())
 
         self.dPo_bar_rqdCt = np.array(self.r_mag*self.bst_o.B.flatten())
@@ -252,18 +268,17 @@ class Shell(object):
         ax.plot(map_points[:,0],map_points[:,1],label="Thickness b-spline Curve",c=line_color)
 
 
-    def deform(self,delta_Cc=None,delta_Ct=None): 
+    def deform(self,delta_Cc,delta_Ct): 
         """returns new point locations for the given motion of the control 
         points for center-line and thickness"""      
         
-        if delta_Cc is not None: 
-            self.delta_Cc = delta_Cc
+        self.delta_Cc = delta_Cc
+        self.delta_Cc[:,0]*=self.x_mag
         self.Cc_bar = self.Cc+self.delta_Cc
         delta_Pc_o = self.bsc_o.calc(self.Cc_bar)
         delta_Pc_i = self.bsc_i.calc(self.Cc_bar)
         
-        if delta_Ct is not None: 
-            self.delta_Ct = delta_Ct
+        self.delta_Ct = delta_Ct
         self.Ct_bar = self.Ct+self.delta_Ct
         delta_Pt_o = self.bst_o.calc(self.Ct_bar)
         delta_Pt_i = self.bst_i.calc(self.Ct_bar)
