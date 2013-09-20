@@ -50,25 +50,6 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.comp = MyComponent()
 
-    def test_get_valid(self):
-        comp = MyComponent()
-        valids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(valids, [True, False])
-        try:
-            comp.get_valid(['x', 'foobar'])
-        except KeyError as err:
-            self.assertEqual(str(err), "'foobar'")
-        else:
-            self.fail("Expected KeyError")
-
-    def test_set_valid(self):
-        comp = self.comp
-        valids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(valids, [True, False])
-        comp.set_valid(['x', 'xout'], True)
-        newvalids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(newvalids, [True, True])
-
     def test_connect(self):
         comp = self.comp
 

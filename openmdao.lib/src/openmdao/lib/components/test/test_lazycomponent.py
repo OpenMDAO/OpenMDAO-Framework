@@ -60,7 +60,7 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 4)
 
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
                          [True,True,True])
 
     def test_partial_connected(self): 
@@ -73,7 +73,7 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
                          [True,True,False])
 
         #now try re-running with a different configuration to test the validy reseting
@@ -87,7 +87,7 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3) #this value is carried over from the first run call, but it's wrong... so not valid
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
                          [True,False,False])
 
     #not needed right now, since we're not checking for this 
@@ -125,7 +125,7 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 0)
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
                          [True,False,False])
 
         #new connection is made, but no inputs are invalid. Still need to run!
@@ -137,7 +137,7 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
                          [True,True,False])
 
     def test_dynamic_trait(self): 
@@ -157,7 +157,7 @@ class TestLazyComponent(unittest.TestCase):
         #    self.fail("RuntimeError Expected")
 
         self.top.run()
-        self.assertEqual(self.top.t.get_valid(['w','x','y','z']),
+        self.assertEqual(self.top.get_valid(['t.w','t.x','t.y','t.z']),
                          [True,True,True,False])
 
     def test_output_stays_at_default(self): 

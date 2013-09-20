@@ -1160,5 +1160,5 @@ def get_valids(graph, val):
     """Returns all nodes with validity matching the
     given value.
     """
-    nodes_matching_all(graph, valid=val)
+    return nodes_matching_all(graph, valid=val)
 

@@ -368,9 +368,7 @@ class SequentialWorkflow(Workflow):
             self.scope.set(target, new_val, force=True)
 
             # Prevent OpenMDAO from stomping on our poked input.
-            comp_name, _, var_name = target.partition('.')
-            comp = self.scope.get(comp_name)
-            comp.set_valid([var_name.split('[',1)[0]], True)
+            self.scope.set_valid([target.split('[',1)[0]], True)
 
             #(An alternative way to prevent the stomping. This is more
             #concise, but setting an output and allowing OpenMDAO to pull it

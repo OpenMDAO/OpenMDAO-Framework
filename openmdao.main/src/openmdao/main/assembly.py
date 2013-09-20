@@ -660,11 +660,11 @@ class Assembly(Component):
             self.raise_exception(str(err), type(err))
 
     def _input_updated(self, name, fullpath=None):
-        outs = self._depgraph.invalidate_deps(self, [name])
+        outs = self.invalidate_deps([name])
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
 
-    def child_invalidated(self, childname, vnames, force=False):
+    def child_invalidated(self, childname, vnames=None):
         """Invalidate all variables that depend on the variable provided
         by the child that has been invalidated.
         """
@@ -673,15 +673,32 @@ class Assembly(Component):
         elif childname:
             vnames = ['.'.join([childname, n]) for n in vnames]
             
-        bouts = self._depgraph.invalidate_deps(self, vnames)#, force)
+        bouts = self.invalidate_deps(vnames)
         if bouts and self.parent:
-            self.parent.child_invalidated(self.name, bouts, force)
+            self.parent.child_invalidated(self.name, bouts)
         return bouts
 
     @rbac(('owner', 'user'))
     def child_run_finished(self, childname):
         """Called by a child when it completes its run() function."""
         self._depgraph.child_run_finished(childname)
+
+    @rbac(('owner', 'user'))
+    def get_valid(self, names):
+        """Get the value of the validity flag for the specified variables.
+        Returns a list of bools.
+
+        names: iterator of str
+            Names of variables whose validity is requested.
+        """
+        data = self._depgraph.node
+        return [data[n]['valid'] for n in names]
+
+    def set_valid(self, names, valid):
+        """Mark the io traits with the given names as valid or invalid."""
+        data = self._depgraph.node
+        for name in names:
+            data[name]['valid'] = valid
 
     def _validate(self):
         # validate boundary inputs and outputs and their subvars
@@ -693,10 +710,10 @@ class Assembly(Component):
 
         for out in graph.get_boundary_outputs():
             graph.node[out]['valid'] = True
-            for var in graph._all_vars(inp):
+            for var in graph._all_vars(out):
                 graph.node[var]['valid'] = True
 
-    def invalidate_deps(self, varnames=None): # , force=False):
+    def invalidate_deps(self, varnames=None):
         """Mark all Variables invalid that depend on varnames.
         Returns a list of our newly invalidated boundary outputs.
 
@@ -713,7 +730,7 @@ class Assembly(Component):
 
         self._set_exec_state('INVALID')
 
-        return self._depgraph.invalidate_deps(self, names) #, force)
+        return self._depgraph.invalidate_deps(self, names)
 
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
@@ -919,6 +936,10 @@ class Assembly(Component):
             src = self
         connected = src.list_outputs(connected=True)
         for name in src.list_outputs():
+            if src is self:
+                full = name
+            else:
+                full = '.'.join([src.name,name])
             var = src.get(name)
             vtype = type(var).__name__
             if not '.' in name:  # vartree vars handled separately
@@ -926,7 +947,7 @@ class Assembly(Component):
                 meta = src.get_metadata(name)
                 if meta and 'units' in meta:
                     units = meta['units']
-                valid = src.get_valid([name])[0]
+                valid = self.get_valid([full])[0]
                 sources.append({
                     'name': name,
                     'type': vtype,
@@ -1018,6 +1039,10 @@ class Assembly(Component):
             dst = self
         connected = dst.list_inputs(connected=True)
         for name in dst.list_inputs():
+            if dst is self:
+                full = name
+            else:
+                full = '.'.join([dst.name,name])
             var = dst.get(name)
             vtype = type(var).__name__
             if not '.' in name:  # vartree vars handled separately
@@ -1028,7 +1053,7 @@ class Assembly(Component):
                 dests.append({
                     'name': name,
                     'type': vtype,
-                    'valid': dst.get_valid([name])[0],
+                    'valid': self.get_valid([full])[0],
                     'units': units,
                     'connected': (name in connected)
                 })
@@ -1061,7 +1086,7 @@ class Assembly(Component):
                     })
 
         # connections to assembly can be passthrough (output to output)
-        if dst == self:
+        if dst is self:
             connected = dst.list_outputs(connected=True)
             for name in dst.list_outputs():
                 var = dst.get(name)

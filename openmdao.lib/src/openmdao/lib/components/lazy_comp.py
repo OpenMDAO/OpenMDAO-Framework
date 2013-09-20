@@ -23,14 +23,20 @@ class LazyComponent(Component):
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
         self._connected_outputs = self.list_outputs(connected=True)
+
+    def _input_updated(self, name, fullpath=None):
+        outs = self.invalidate_deps([name])
+        if outs and self.parent:
+            self.parent.child_invalidated(self.name, outs)
+
+    def invalidate_deps(self, varnames=None):
+        """Mark all Variables invalid that depend on varnames.
+        Returns a list of our newly invalidated boundary outputs.
+
+        varnames: iter of str (optional)
+            An iterator of names of destination variables.
+        """
+        self._set_exec_state('INVALID')
+
+        return self._connected_outputs
         
-    def _post_execute(self): 
-        super(LazyComponent, self)._post_execute()
-
-        data = self._depgraph.node
-        for name in self.list_outputs(): 
-            if name in self._connected_outputs:
-                data[name.split('[',1)[0]]['valid'] = True
-            else:
-                data[name.split('[',1)[0]]['valid'] = False    
-

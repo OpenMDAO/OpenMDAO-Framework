@@ -900,7 +900,7 @@ class FiniteDifference(object):
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                comp.set_valid([var_name.split('[', 1)[0]], True)
+                self.set_valid([src.split('[', 1)[0]], True)
                 
                 # Make sure we execute!
                 comp._call_execute = True

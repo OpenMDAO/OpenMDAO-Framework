@@ -81,6 +81,9 @@ subouts = ['comp1.c', 'comp1.d',
 
 subvars = subins+subouts
 
+def fullvnames(cname, vnames):
+    return ['.'.join([cname,n]) for n in vnames]
+
 def _nested_model():
     global exec_order
     exec_order = []
@@ -206,14 +209,14 @@ class DependsTestCase(unittest.TestCase):
                          [self.top.get(x).exec_count for x in allcomps])
         
     def test_lazy2(self):
-        vars = ['a','b','c','d']
+        vars = ['comp6.a','comp6.b','comp6.c','comp6.d']
         self.top.run()        
         exec_count = [self.top.get(x).exec_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], exec_count)
-        valids = self.top.sub.comp6.get_valid(vars)
+        valids = self.top.sub.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         self.top.sub.b6 = 3
-        valids = self.top.sub.comp6.get_valid(vars)
+        valids = self.top.sub.get_valid(vars)
         self.assertEqual(valids, [True, False, False, False])
         self.top.run()  
         # exec_count should change only for comp6
@@ -229,25 +232,25 @@ class DependsTestCase(unittest.TestCase):
         self.top.run()        
         exec_count = [self.top.get(x).exec_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], exec_count)
-        valids = self.top.sub.comp3.get_valid(vars)
+        valids = self.top.sub.get_valid(fullvnames('comp3', vars))
         self.assertEqual(valids, [True, True, True, True])
         self.top.comp7.a = 3
-        #valids = self.top.sub.comp1.get_valid(vars)
-        #self.assertEqual(valids, [True, False, False, False])
-        #valids = self.top.sub.comp2.get_valid(vars)
-        #self.assertEqual(valids, [True, True, True, True])
-        #valids = self.top.sub.comp3.get_valid(vars)
-        #self.assertEqual(valids, [False, True, False, False])
-        #valids = self.top.sub.comp4.get_valid(vars)
-        #self.assertEqual(valids, [False, True, False, False])
-        #valids = self.top.sub.comp5.get_valid(vars)
-        #self.assertEqual(valids, [False, True, False, False])
-        #valids = self.top.sub.comp6.get_valid(vars)
-        #self.assertEqual(valids, [False, True, False, False])
-        #valids = self.top.comp7.get_valid(vars)
-        #self.assertEqual(valids, [True, True, False, False])
-        #valids = self.top.comp8.get_valid(vars)
-        #self.assertEqual(valids, [False, False, False, False])
+        valids = self.top.sub.get_valid(fullvnames('comp1', vars))
+        self.assertEqual(valids, [True, False, False, False])
+        valids = self.top.sub.get_valid(fullvnames('comp2', vars))
+        self.assertEqual(valids, [True, True, True, True])
+        valids = self.top.sub.get_valid(fullvnames('comp3', vars))
+        self.assertEqual(valids, [False, True, False, False])
+        valids = self.top.sub.get_valid(fullvnames('comp4', vars))
+        self.assertEqual(valids, [False, True, False, False])
+        valids = self.top.sub.get_valid(fullvnames('comp5', vars))
+        self.assertEqual(valids, [False, True, False, False])
+        valids = self.top.sub.get_valid(fullvnames('comp6', vars))
+        self.assertEqual(valids, [False, True, False, False])
+        valids = self.top.get_valid(fullvnames('comp7', vars))
+        self.assertEqual(valids, [True, True, False, False])
+        valids = self.top.get_valid(fullvnames('comp8', vars))
+        self.assertEqual(valids, [False, False, False, False])
         self.top.run()  
         # exec_count should change for all sub comps but comp2
         exec_count = [self.top.get(x).exec_count for x in allcomps]
@@ -414,6 +417,18 @@ class DependsTestCase(unittest.TestCase):
         self.assertEqual(top.comp3.exec_count, 3)
         
 
+class ArrSimple(Component):
+    ain  = Array([0.,1.,2.,3.], iotype='in')
+    aout = Array([0.,1.,2.,3.], iotype='out')
+    
+    def __init__(self):
+        super(ArrSimple, self).__init__()
+
+    def execute(self):
+        global exec_order
+        exec_order.append(self.name)
+        self.a_out = self.ain * 2.0
+
         
 class SimplePTAsm(Assembly):
     def configure(self):
@@ -491,48 +506,54 @@ class DependsTestCase2(unittest.TestCase):
         
     def test_simple_passthrough(self):
         cnames = ['a','b','c','d']
-        modnames = ['a1', 'd2']
+        c1names = ['.'.join(['c1',n]) for n in cnames]
+        c2names = ['.'.join(['c2',n]) for n in cnames]
+        modnames = ['model.a1', 'model.d2']
         
         self.top.add('model', SimplePTAsm())
         self.top.driver.workflow.add(['model'])
         self.top.connect('c1.c', 'model.a1')
         self.top.connect('model.d2', 'c2.a')
         
-        self.assertEqual(self.top.c1.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c1names), 
                          [True, True, False, False])
-        self.assertEqual(self.top.c2.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c2names), 
                          [False, True, False, False])
-        self.assertEqual(self.top.model.get_valid(modnames), 
+        self.assertEqual(self.top.model.get_valid(['a1','d2']), 
                          [False, False])
-        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(modnames), 
+                         [False, False])
+        self.assertEqual(self.top.model.get_valid(c1names), 
                          [False, True, False, False])
-        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+        self.assertEqual(self.top.model.get_valid(c2names), 
                          [False, False, False, False])
         
         self.top.run()
         
-        self.assertEqual(self.top.c1.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c1names), 
                          [True, True, True, True])
-        self.assertEqual(self.top.c2.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c2names), 
                          [True, True, True, True])
-        self.assertEqual(self.top.model.get_valid(modnames), 
+        self.assertEqual(self.top.get_valid(modnames), 
                          [True, True])
-        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+        self.assertEqual(self.top.model.get_valid(['a1','d2']), 
+                         [True, True])
+        self.assertEqual(self.top.model.get_valid(c1names), 
                          [True, True, True, True])
-        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+        self.assertEqual(self.top.model.get_valid(c2names), 
                          [True, True, True, True])
 
         # test invalidation
         self.top.c1.a = 99
-        self.assertEqual(self.top.c1.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c1names), 
                          [True, True, False, False])
-        self.assertEqual(self.top.model.get_valid(modnames), 
+        self.assertEqual(self.top.get_valid(modnames), 
                          [False, False])
-        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+        self.assertEqual(self.top.model.get_valid(c1names), 
                          [False, True, False, False])
-        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+        self.assertEqual(self.top.model.get_valid(c2names), 
                          [False, False, False, False])
-        self.assertEqual(self.top.c2.get_valid(cnames), 
+        self.assertEqual(self.top.get_valid(c2names), 
                          [False, True, False, False])
         
     def test_array_expr(self):
@@ -564,25 +585,32 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(s.d2.x[1,1], 2)
 
     def test_array2(self):
-        class ArrSimple(Component):
-            a_in  = Array([0.,1.,2.,3.], iotype='in')
-            a_out = Array([0.,1.,2.,3.], iotype='out')
-            
-            def __init__(self):
-                super(Simple, self).__init__()
-
-            def execute(self):
-                global exec_order
-                exec_order.append(self.name)
-                self.a_out = self.a_in + 1.0     
-
         top = set_as_top(Assembly())
         top.add('c1', ArrSimple())
         top.add('c3', ArrSimple())
         top.driver.workflow.add(['c1','c3'])
-        top.connect('c1.a_out[1]', 'c3.a_in[2]')
+        top.connect('c1.aout[1]', 'c3.ain[2]')
 
-        self.assertEqual(set(get_valids(False)), set())   
+        expected = set(['c1', 'c1.aout', 'c1.aout[1]',
+                        'c3', 'c3.ain', 'c3.ain[2]', 'c3.aout'])
+
+        for v in expected:
+            self.assertEqual(top._depgraph.node[v]['valid'], False)
+            
+        self.assertEqual(top.c1.is_valid(), False)
+        self.assertEqual(top.c3.is_valid(), False)
+        
+        top.run()
+        self.assertEqual(get_valids(top._depgraph, False), [])
+        
+        top.c1.ain = [55.,44.,33.]
+        for v in expected:
+            self.assertEqual(top._depgraph.node[v]['valid'], False)
+            
+        top.run()
+        self.assertEqual(get_valids(top._depgraph, False), [])
+        self.assertEqual(top.c3.ain[2], 45.)
+        
 
 
     def test_units(self):
@@ -706,19 +734,19 @@ class ExprDependsTestCase(unittest.TestCase):
         global exec_order
         vnames = ['a','b','c','d']
         self.top.run()
-        valids = self.top.c2.get_valid(vnames)
+        valids = self.top.get_valid(fullvnames('c2', vnames))
         self.assertEqual(valids, [True, True, True, True])
         self.top.connect('c1.c[2]', 'c2.a[3]')
-        self.assertEqual(self.top.c2.get_valid(['a[3]']), [False])
+        self.assertEqual(self.top.get_valid(fullvnames('c2', ['a[3]'])), [False])
         exec_order = []
         self.top.run()
-        self.assertEqual(self.top.c2.get_valid(['a[3]']), [True])
+        self.assertEqual(self.top.get_valid(fullvnames('c2', ['a[3]'])), [True])
         self.assertEqual(exec_order, ['c2'])
         exec_order = []
         self.top.c1.a = [9,9,9,9,9]
         self.top.c2.run()
         self.assertEqual(exec_order, ['c1', 'c2'])
-        valids = self.top.c2.get_valid(vnames)
+        valids = self.top.get_valid(fullvnames('c2', vnames))
         self.assertEqual(valids, [True, True, True, True])
         self.assertEqual(list(self.top.c2.a), [1,2,3,12,5])
         
@@ -727,29 +755,30 @@ class ExprDependsTestCase(unittest.TestCase):
         vnames = ['a','b','c','d']
         top = _nested_model()
         top.run()
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), 
+                         [True, True, True, True])
         
         total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
         top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), [False, True, False, False])
         exec_order = []
         top.run()
         self.assertEqual(exec_order, ['comp4'])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), [True, True, True, True])
         self.assertEqual(total, top.sub.comp4.a)
         
         top.sub.comp2.a = 99
-        self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp2', vnames)), [True, True, False, False])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), [False, True, False, False])
         exec_order = []
         top.sub.run()
         total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
         self.assertEqual(total, top.sub.comp4.a)
         self.assertEqual(exec_order, ['comp2','comp4'])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), [True, True, True, True])
         top.sub.comp2.a = 88
         top.comp7.a = 11
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), [False, True, False, False])
         top.sub.run()
         total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
         self.assertEqual(total, top.sub.comp4.a)
@@ -762,11 +791,13 @@ class ExprDependsTestCase(unittest.TestCase):
         
         total = math.sin(3.14)*top.sub.comp2.c
         top.sub.connect('sin(3.14)*comp2.c', 'comp4.a')
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), 
+                         [False, True, False, False])
         exec_order = []
         top.run()
         self.assertEqual(exec_order, ['comp4'])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(top.sub.get_valid(fullvnames('comp4', vnames)), 
+                         [True, True, True, True])
         self.assertEqual(total, top.sub.comp4.a)
         
         top.sub.disconnect('sin(3.14)*comp2.c', 'comp4.a')
@@ -782,11 +813,13 @@ class ExprDependsTestCase(unittest.TestCase):
         top.run()
         total = top.c1.c[3:]
         top.connect('c1.c[3:]', 'c2.a[0:2]')
-        self.assertEqual(top.c2.get_valid(vnames), [False, False, True, False, False])
+        self.assertEqual(top.get_valid(fullvnames('c2', vnames)), 
+                        [False, False, True, False, False])
         exec_order = []
         top.run()
         self.assertEqual(exec_order, ['c2'])
-        self.assertEqual(top.c2.get_valid(vnames), [True, True, True, True, True])
+        self.assertEqual(top.get_valid(fullvnames('c2', vnames)), 
+                         [True, True, True, True, True])
         self.assertEqual(list(total), list(top.c2.a[0:2]))
         
     def _all_nested_connections(self, obj):

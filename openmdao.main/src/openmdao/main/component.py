@@ -239,13 +239,10 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        #if self.parent and hasattr(self.parent, 'child_invalidated'):
-            #self.parent.child_invalidated(self.name, [name])
-        if self._depgraph.node[name]['valid']:  # if var is not already invalid
-            outs = self.invalidate_deps(varnames=[name])
-            if (outs is None) or outs:
-                if self.parent and hasattr(self.parent, 'child_invalidated'):
-                    self.parent.child_invalidated(self.name, outs)
+        if self._exec_state != "INVALID":
+            self._set_exec_state("INVALID")
+            if self.parent:
+                self.parent.child_invalidated(self.name)
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -381,9 +378,9 @@ class Component(Container):
 
         if force:
             outs = self.invalidate_deps()
-            # if (outs is None) or outs:
-            #     if self.parent:
-            #         self.parent.child_invalidated(self.name, outs)
+            if (outs is None) or outs:
+                if self.parent:
+                    self.parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
                 self._call_execute = True
@@ -392,27 +389,14 @@ class Component(Container):
                 # we're valid, but we're running anyway because of our input CaseIterators,
                 # so we need to notify downstream comps so they grab our new outputs
                 outs = self.invalidate_deps()
-                # if (outs is None) or outs:
-                #     if self.parent:
-                #         self.parent.child_invalidated(self.name, outs)
+                if (outs is None) or outs:
+                    if self.parent:
+                        self.parent.child_invalidated(self.name, outs)
 
         if self.parent is None:  # if parent is None, we're not part of an Assembly
                                  # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
-            # valids = self._valid_dict
-            # for name in self.list_inputs():
-            #     valids[name.split('[', 1)[0]] = True
         else:
-            #valids = self._valid_dict
-            #invalid_ins = [inp for inp in self._depgraph.get_boundary_inputs(connected=True)
-            #                        if valids.get(inp.split('[', 1)[0]) is False]
-            # if invalid_ins:
-            #     self._call_execute = True
-            #     self.parent.update_inputs(self.name, invalid_ins)
-            #     for name in invalid_ins:
-            #         valids[name.split('[', 1)[0]] = True
-            # elif self._call_execute is False and len(self.list_outputs(valid=False)):
-            #     self._call_execute = True
             self.parent.update_inputs(self.name)
 
         self.check_configuration()
@@ -508,7 +492,6 @@ class Component(Container):
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
-        # make our output Variables valid again
         self._validate()
 
         if self.parent:
@@ -729,14 +712,17 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def is_valid(self):
         """Return False if any of our variables is invalid."""
-        if self._call_execute:
+        if self._call_execute or self._exec_state == 'INVALID':
             return False
+        return True
+    
+        #    return False
         # if False in self._valid_dict.values():
         #     self._call_execute = True
         #     return False
-        for node, data in self._depgraph.nodes_iter(data=True):
-            if not node.startswith('parent.') and data['valid'] is False:
-                return False
+        # for node, data in self._depgraph.nodes_iter(data=True):
+        #     if not node.startswith('parent.') and data['valid'] is False:
+        #         return False
 
         #if self.parent is not None:
         #    return self.parent._depgraph.node[self.name]['valid']
@@ -750,7 +736,7 @@ class Component(Container):
         #                 for i, tup in enumerate(self._expr_sources):
         #                     self._expr_sources[i] = (tup[0], count)
         #                 return False
-        return True
+        #return True
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
@@ -1491,27 +1477,9 @@ class Component(Container):
         """Stop this component."""
         self._stop = True
 
-    @rbac(('owner', 'user'))
-    def get_valid(self, names):
-        """Get the value of the validity flag for the specified variables.
-        Returns a list of bools.
-
-        names: iterator of str
-            Names of variables whose validity is requested.
-        """
-        data = self._depgraph.node
-        return [data[n]['valid'] for n in names]
-
-    def set_valid(self, names, valid):
-        """Mark the io traits with the given names as valid or invalid."""
-        data = self._depgraph.node
-        for name in names:
-            data[name]['valid'] = valid
-
     def _validate(self):
         """Mark all inputs and outputs and their subvars as valid."""
-        for n, data in self._depgraph.nodes_iter(data=True):
-            data['valid'] = True
+        pass  # components without partial invalidation do nothing
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None): #, force=False):
@@ -1526,19 +1494,24 @@ class Component(Container):
         indicating that no outputs are newly invalidated.
         """
         self._call_execute = True
-        self._set_exec_state('INVALID')
-        conn_ins = self._depgraph.get_boundary_inputs(connected=True)
-        vnames = self.list_outputs()
-        if varnames is None:
-            vnames.extend(conn_ins)
-        else:
-            vnames.extend([v for v in varnames if v in conn_ins])
-            
-        data = self._depgraph.node
-        for v in vnames:
-            data[v]['valid'] = False
+        if self._exec_state == 'INVALID':
+            return []
 
-        return None  # None indicates that all of our outputs are invalid.
+        self._set_exec_state('INVALID')
+        return None
+
+        # conn_ins = self._depgraph.get_boundary_inputs(connected=True)
+        # vnames = self.list_outputs()
+        # if varnames is None:
+        #     vnames.extend(conn_ins)
+        # else:
+        #     vnames.extend([v for v in varnames if v in conn_ins])
+            
+        # data = self._depgraph.node
+        # for v in vnames:
+        #     data[v]['valid'] = False
+
+        #return None  # None indicates that all of our outputs are invalid.
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
@@ -1932,6 +1905,19 @@ class Component(Container):
 
         return attrs
 
+    @rbac(('owner', 'user'))
+    def get_valid(self, names):
+        """Get the value of the validity flag for the specified variables.
+        Returns a list of bools.
+
+        names: iterator of str
+            Names of variables whose validity is requested.
+        """
+        if self.parent:
+            return self.parent.get_valid(
+                ['.'.join([self.name,n]) for n in names])
+        else:
+            return [True]*len(names)
 
 # def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
 #     """Prints out validity status of all input and output traits
