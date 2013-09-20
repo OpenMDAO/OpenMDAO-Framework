@@ -9,6 +9,7 @@ import numpy as np
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.variable import Variable
+from openmdao.util.testutil import assert_rel_error
 
 
 class DataObject(object):
@@ -26,32 +27,13 @@ class DataObject(object):
     def get(self):
         return self.x, self.y, self.z
 
-class Custom(Variable):
-    '''Trait type for holding our data object.'''
-    
-    def __init__(self, default_value=None, iotype=None, shape=None, **metadata):
-
-        # Put iotype in the metadata dictionary
-        if iotype is not None:
-            metadata['iotype'] = iotype
-
-        # Put iotype in the metadata dictionary
-        if shape is not None:
-            metadata['shape'] = shape
-
-        super(Custom, self).__init__(default_value, **metadata)
-
-    def validate(self, obj, name, value):
-        '''Don't really need any validation.'''
-        return value    
-    
 class Comp_Send(Component):
     '''Passes a data object as output.'''
     
     p1 = Float(0.0, iotype='in')
     p2 = Float(0.0, iotype='in')
     
-    data = Custom(DataObject(), iotype='out', data_shape=(3, 1))
+    data = Variable(DataObject(), iotype='out', data_shape=(3, ))
     dummy = Float(1.0, iotype='out')
     
     def execute(self):
@@ -95,7 +77,7 @@ class Comp_Send(Component):
 class Comp_Receive(Component):
     '''Takes a data object as input.'''
     
-    data = Custom(iotype='in', data_shape=(3, 1))
+    data = Variable(iotype='in')
     
     q1 = Float(0.0, iotype='out')
     q2 = Float(0.0, iotype='out')
@@ -158,20 +140,36 @@ class Testcase_deriv_obj(unittest.TestCase):
         top.c1.p2 = 5.0
         top.run()
         
-        print top.c2.q1, top.c2.q2, top.c2.q3
-        
         inputs = ['c1.p1', 'c1.p2']
         outputs = ['c2.q1', 'c2.q2', 'c2.q3']
         J = top.driver.workflow.calc_gradient(inputs, outputs, fd=True)
-        print J
+        
+        assert_rel_error(self, J[0, 0], -6.0, .00001)
+        assert_rel_error(self, J[0, 1], -1.0, .00001)
+        assert_rel_error(self, J[1, 0], -2.0, .00001)
+        assert_rel_error(self, J[1, 1], 20.0, .00001)
+        assert_rel_error(self, J[2, 0], 6.0, .00001)
+        assert_rel_error(self, J[2, 1], 9.0, .00001)
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        print J
+        
+        assert_rel_error(self, J[0, 0], -6.0, .00001)
+        assert_rel_error(self, J[0, 1], -1.0, .00001)
+        assert_rel_error(self, J[1, 0], -2.0, .00001)
+        assert_rel_error(self, J[1, 1], 20.0, .00001)
+        assert_rel_error(self, J[2, 0], 6.0, .00001)
+        assert_rel_error(self, J[2, 1], 9.0, .00001)
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
-        print J
+        
+        assert_rel_error(self, J[0, 0], -6.0, .00001)
+        assert_rel_error(self, J[0, 1], -1.0, .00001)
+        assert_rel_error(self, J[1, 0], -2.0, .00001)
+        assert_rel_error(self, J[1, 1], 20.0, .00001)
+        assert_rel_error(self, J[2, 0], 6.0, .00001)
+        assert_rel_error(self, J[2, 1], 9.0, .00001)
         
         
 if __name__ == '__main__':

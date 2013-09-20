@@ -284,11 +284,22 @@ def applyJ(obj, arg, result):
                 
             else:
                 var = obj.get(key)
+                
                 if isinstance(var, float):
                     continue
+                
                 if hasattr(var, 'shape'):
                     shape = var.shape
-                    result[key] = value.reshape(shape)
+                else:
+                    meta = obj.get_metadata(key)
+                    
+                    # Custom data objects with data_shape in the metadata
+                    if 'data_shape' in meta:
+                        shape = meta['data_shape']
+                    else:
+                        continue
+                    
+                result[key] = value.reshape(shape)
 
         argkeys = arg.keys()
         for key in argkeys:
@@ -315,7 +326,16 @@ def applyJ(obj, arg, result):
                 
                 if hasattr(var, 'shape'):
                     shape = var.shape
-                    arg[key] = value.reshape(shape)
+                else:
+                    meta = obj.get_metadata(key)
+                    
+                    # Custom data objects with data_shape in the metadata
+                    if 'data_shape' in meta:
+                        shape = meta['data_shape']
+                    else:
+                        continue
+                    
+                arg[key] = value.reshape(shape)
 
 
         obj.apply_deriv(arg, result)
