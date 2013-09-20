@@ -10,7 +10,7 @@ from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index, arange, prod
+         ravel_multi_index, arange, prod, vstack, hstack
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -231,7 +231,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
             j += 1
     
-    #print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J, dx
     return J
 
 
@@ -243,37 +243,94 @@ def applyJ(obj, arg, result):
     for key in result:
         result[key] = -arg[key]*0.0
 
+    # If storage of the local Jacobian is a problem, the user can specify the
+    # 'apply_deriv' function instead of provideJ.
     if hasattr(obj, 'apply_deriv'):
         
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
+        resultkeys = result.keys()
+        for key in resultkeys:
+            
+            value = result[key]
 
-        for key, value in result.iteritems():
-            var = obj.get(key)
-            if hasattr(var, 'shape'):
-                shape = var.shape
-                result[key] = value.reshape(shape)
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in result:
+                    result[basekey] = zeros(var.shape)
+                    
+                exec("result[basekey]%s = value" % index)
+                
+            else:
+                var = obj.get(key)
+                if isinstance(var, float):
+                    continue
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    result[key] = value.reshape(shape)
 
-        for key, value in arg.iteritems():
-            var = obj.get(key)
-            if hasattr(var, 'shape'):
-                shape = var.shape
-                arg[key] = value.reshape(shape)
+        argkeys = arg.keys()
+        for key in argkeys:
+            
+            value = arg[key]
+
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in arg:
+                    arg[basekey] = zeros(var.shape)
+                    
+                exec("arg[basekey]%s = value" % index)
+            else:
+                var = obj.get(key)
+                
+                if isinstance(var, float):
+                    continue
+                
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    arg[key] = value.reshape(shape)
+
 
         obj.apply_deriv(arg, result)
 
-        for key, value in result.iteritems():
-            if hasattr(value, 'flatten'):
-                result[key] = value.flatten()
+        # Result vector needs to be flattened.
+        for key in resultkeys:
+            
+            value = result[key]
+            
+            # If we have sliced arrays in our index, then we need to
+            # poke the data back into the sliced keys.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                exec("result[key] = result[basekey]%s" % index)
+            else:
+                if hasattr(value, 'flatten'):
+                    result[key] = value.flatten()
 
-        for key, value in arg.iteritems():
+        # Arg is still called afterwards, so flatten it back.
+        for key in argkeys:
+            value = arg[key]
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
         return
 
-    # Optional specification of the Jacobian
-    # (Subassemblies do this by default)
+    # Otherwise, most users will just specify a Jacobian as a matrix.
+    # (Also, all subassemblies use specify J during recursion)
     input_keys, output_keys, J = obj.provideJ()
     
     #print 'J', input_keys, output_keys, J
@@ -289,8 +346,8 @@ def applyJ(obj, arg, result):
         if okey in obounds:
             o1, o2, osh = obounds[okey]
         else:
-            o1, o2, osh = obounds[okey.split('[')[0]]
-            odx = okey.strip(']').split('[')[1]            
+            basekey, _, odx = okey.partition('[')
+            o1, o2, osh = obounds[basekey]
             
         if o2 - o1 == 1:
             oshape = 1
@@ -306,8 +363,8 @@ def applyJ(obj, arg, result):
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
             else:
-                i1, i2, ish = ibounds[ikey.split('[')[0]]
-                idx = ikey.strip(']').split('[')[1]
+                basekey, _, idx = ikey.partition('[')
+                i1, i2, ish = ibounds[basekey]
 
             # Param groups make it tricky. We only want to add the
             # piece of J once for the whole group.
@@ -332,32 +389,88 @@ def applyJT(obj, arg, result):
     
     for key in arg:
         result[key] = -arg[key]
-
+    
+    # If storage of the local Jacobian is a problem, the user can specify the
+    # 'apply_derivT' function instead of provideJ.
     if hasattr(obj, 'apply_derivT'):
         
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
+        resultkeys = result.keys()
+        for key in resultkeys:
+            
+            value = result[key]
 
-        for key, value in result.iteritems():
-            if len(value) > 1:
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in result:
+                    result[basekey] = zeros(var.shape)
+                    
+                exec("result[basekey]%s = value" % index)
+                
+            else:
                 var = obj.get(key)
-                shape = var.shape
-                result[key] = value.reshape(shape)
+                if isinstance(var, float):
+                    continue
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    result[key] = value.reshape(shape)
 
-        for key, value in arg.iteritems():
-            if len(value) > 1:
+        argkeys = arg.keys()
+        for key in argkeys:
+            
+            value = arg[key]
+
+            # For arrays, apply_deriv expects full arrays, not
+            # indexed ones. We need to create the full array on
+            # the fly, then poke in the values.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                
+                if basekey not in arg:
+                    arg[basekey] = zeros(var.shape)
+                    
+                exec("arg[basekey]%s = value" % index)
+            else:
                 var = obj.get(key)
-                shape = var.shape
-                arg[key] = value.reshape(shape)
+                
+                if isinstance(var, float):
+                    continue
+                
+                if hasattr(var, 'shape'):
+                    shape = var.shape
+                    arg[key] = value.reshape(shape)
 
         obj.apply_derivT(arg, result)
 
-        for key, value in result.iteritems():
-            if len(value) > 1:
-                result[key] = value.flatten()
+        # Result vector needs to be flattened.
+        for key in resultkeys:
+            
+            value = result[key]
+            
+            # If we have sliced arrays in our index, then we need to
+            # poke the data back into the sliced keys.
+            if '[' in key:
+                basekey, _, index = key.partition('[')
+                index = '[' + index
+                var = obj.get(basekey)
+                exec("result[key] = result[basekey]%s" % index)
+            else:
+                if hasattr(value, 'flatten'):
+                    result[key] = value.flatten()
 
-        for key, value in arg.iteritems():
-            if len(value) > 1:
+        # Arg is still called afterwards, so flatten it back.
+        for key in argkeys:
+            value = arg[key]
+            if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
         return
@@ -381,8 +494,8 @@ def applyJT(obj, arg, result):
         if okey in obounds:
             o1, o2, osh = obounds[okey]
         else:
-            o1, o2, osh = obounds[okey.split('[')[0]]
-            odx = okey.strip(']').split('[')[1]
+            basekey, _, odx = okey.partition('[')
+            o1, o2, osh = obounds[basekey]
             
         if o2 - o1 == 1:
             oshape = 1
@@ -395,8 +508,8 @@ def applyJT(obj, arg, result):
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
             else:
-                i1, i2, ish = ibounds[ikey.split('[')[0]]
-                idx = ikey.strip(']').split('[')[1]
+                basekey, _, idx = ikey.partition('[')
+                i1, i2, ish = ibounds[basekey]
             
             Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
                                    i1, i2, idx, ish).T
@@ -471,12 +584,12 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     
     # J inputs
     if idx:
-        idx = idx.strip('(').strip(')')
         
         # Handle complicated slices that may have : or -1 in them
         # We just use numpy index math to convert unravelable indices into
         # index arrays so that we can ravel them to find the set of indices
         # that we need to grab from J.
+        idx = idx.replace(' ', '').replace('][', ',').strip(']')
         if '-' in idx or ':' in idx:
             
             idx_list = idx.split(',')
@@ -489,8 +602,8 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
                 
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
-            rav_ind = ravel_multi_index(indices, dims=osh) + i1
-            istring = 'rav_ind'
+            i_rav_ind = ravel_multi_index(indices, dims=osh) + i1
+            istring = 'i_rav_ind'
                 
         # Single index into a multi-D array
         elif ',' in idx:
@@ -509,12 +622,12 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         
     # J Outputs
     if odx:
-        odx = odx.strip('(').strip(')')
         
         # Handle complicated slices that may have : or -1 in them
         # We just use numpy index math to convert unravelable indices into
         # index arrays so that we can ravel them to find the set of indices
         # that we need to grab from J.
+        odx = odx.replace(' ', '').replace('][', ',').strip(']')
         if '-' in odx or ':' in odx:
             
             idx_list = odx.split(',')
@@ -528,8 +641,8 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
             if len(indices) > 1:
                 indices = zip(*itertools.product(*indices))
                 
-            rav_ind = ravel_multi_index(indices, dims=osh) + o1
-            ostring = 'rav_ind'
+            o_rav_ind = ravel_multi_index(indices, dims=osh) + o1
+            ostring = 'o_rav_ind'
             
         # Single index into a multi-D array
         elif ',' in odx:
@@ -546,7 +659,10 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     else:
         ostring = 'o1:o2'
     
-    Jsub = eval('J[%s, %s]' % (ostring, istring))
+    if ostring == 'o_rav_ind' and istring == 'i_rav_ind':
+        Jsub = eval('J[vstack(%s), hstack(%s)]' % (ostring, istring))
+    else:        
+        Jsub = eval('J[%s, %s]' % (ostring, istring))
     return Jsub
     
     
@@ -706,9 +822,9 @@ class FiniteDifference(object):
 
             if '[' in src:
                 src, _, idx = src.partition('[')
-                idx = int(idx[:-1])
+                idx = '[' + idx
                 old_val = self.scope.get(src)
-                old_val[idx] = new_val
+                exec('old_val%s = new_val' % idx)
                 self.scope.set(src, old_val, force=True)
             else:
                 self.scope.set(src, new_val, force=True)
@@ -756,9 +872,9 @@ class FiniteDifference(object):
             if index is None:
                 if '[' in src:
                     src, _, idx = src.partition('[')
-                    idx = int(idx[:-1])
+                    idx = '[' + idx
                     old_val = self.scope.get(src)
-                    old_val[idx] += val
+                    exec('old_val%s += val' % idx)
     
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -777,7 +893,7 @@ class FiniteDifference(object):
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    comp._input_updated(var_name.split('[')[0])
+                    comp._input_updated(var_name.split('[', 1)[0])
                 else:
                     self.scope._input_updated(comp_name.split('[')[0])
     

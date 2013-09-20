@@ -605,7 +605,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
-        # TODO: Support for slices here
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
                                               outputs=['comp2.y[0]'],
@@ -613,7 +612,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 39.0, .001)
         
-        # TODO: Support for slices here
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
                                               outputs=['comp2.y[1]'],
@@ -623,7 +621,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
-                                              outputs=['comp2.y[(-1)]'],
+                                              outputs=['comp2.y[-1]'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 44.0, .001)
@@ -687,20 +685,92 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         # TODO: Support array slices.
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[(0, 0)]',],
-                                              outputs=['nest.y[(0, 0)]'],
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
+                                              outputs=['nest.y[0, 0]'],
                                               mode='forward')
         
         diff = J - top.nest.comp.J[0, 0]
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[(0, 1)]',],
-                                              outputs=['nest.y[(1, 0)]'],
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
+                                              outputs=['nest.y[0, 0]'],
+                                              mode='adjoint')
+        
+        diff = J - top.nest.comp.J[0, 0]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
+                                              outputs=['nest.y[1, 0]'],
                                               mode='forward')
         
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
+                                              outputs=['nest.y[1, 0]'],
+                                              mode='adjoint')
+        
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
+                                              outputs=['nest.y[1, 0]'],
+                                              fd=True)
+        
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
+                                              outputs=['nest.y[-1, 0]'],
+                                              mode='forward')
+        
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
+                                              outputs=['nest.y[-1, 0]'],
+                                              mode='adjoint')
+        
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
+                                              outputs=['nest.y[1][:]'],
+                                              mode='forward')
+        
+        assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
+                                              outputs=['nest.y[1][:]'],
+                                              mode='adjoint')
+        
+        assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        
+        # TODO - make a finite-difference increment a slice.
+        #top.driver.workflow.config_changed()
+        #top.nest.driver.workflow.config_changed()
+        #J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
+                                              #outputs=['nest.y[1][:]'],
+                                              #fd=True)
+        #print J
+        #assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
         
     def test_large_dataflow(self):
         
@@ -1101,7 +1171,6 @@ class Comp2(Component):
 
     def execute(self):
         """ Executes it """
-        
         pass
 
     def linearize(self):
@@ -1115,6 +1184,41 @@ class Comp2(Component):
         output_keys = ('y1', 'y2')
         return input_keys, output_keys, self.J
 
+class Comp2_array(Component):
+    """ two-input, two-output"""
+    
+    x = Array(zeros((2, 2)), iotype='in')
+    y = Array(zeros((2, 2)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        pass
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[3.0, 133.0, 7.0, 11.0],
+                        [8.1, -5.9, 13.3, 1.23],
+                        [4.11, 5.0, 17.0, -5.0],
+                        [7.77, 6.12, -3.5, 11.0]])
+        
+        self.JT = self.J.T
+        
+    def apply_deriv(self, arg, result):
+        
+        if 'y' in result and 'x' in arg:
+            dx = self.J.dot(arg['x'].flatten())
+            
+            result['y'] = dx.reshape((2, 2))
+        
+    def apply_derivT(self, arg, result):
+        
+        if 'y' in arg and 'x' in result:
+            dy = self.JT.dot(arg['y'].flatten())
+            
+            result['x'] = dy.reshape((2, 2))
+        
+        
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
@@ -1152,6 +1256,44 @@ class Testcase_applyJT(unittest.TestCase):
         
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
+        
+    def test_deriv_slices(self):
+        
+        comp = Comp2_array()
+        comp.linearize()
+        
+        arg = {}
+        arg['x[0, 1]'] = array([1.0])
+        arg['y[1, 0]'] = array([0.0])
+        
+        result = {}
+        result['y[1, 0]'] = array([0.0])
+        
+        applyJ(comp, arg, result)
+        
+        self.assertEqual(result['y[1, 0]'], 5.0)
+        
+        arg = {}
+        arg['x[0, 1]'] = array([0.0])
+        arg['y[1, 0]'] = array([1.0])
+        
+        result = {}
+        result['x[0, 1]'] = array([0.0])
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x[0, 1]'], 5.0)
+        
+        arg = {}
+        arg['x[0, 1]'] = array([0.0])
+        arg['y[:, 0]'] = array([1.0, 1.0])
+        
+        result = {}
+        result['x[0, 1]'] = array([0.0])
+        
+        applyJT(comp, arg, result)
+        
+        self.assertEqual(result['x[0, 1]'], 138.0)
         
     def test_matvecREV2(self):
         # Larger system

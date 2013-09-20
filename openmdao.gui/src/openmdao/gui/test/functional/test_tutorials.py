@@ -119,6 +119,11 @@ def _test_MDAO_MDF(browser):
     dialog('ok').click()
     editor.close()
 
+    # Set Initial Conditions
+    workspace_page.do_command("top.dis1.z1 = top.dis2.z1 = 5.0")    
+    workspace_page.do_command("top.dis1.z2 = top.dis2.z2 = 2.0")    
+    workspace_page.do_command("top.dis1.x1 = 1.0")    
+
     # Get an implicitly connected output before the run.
     dis1_fig = workspace_page.get_dataflow_figure('dis1', 'top')
     editor = dis1_fig.editor_page()

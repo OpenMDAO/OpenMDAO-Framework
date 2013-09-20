@@ -216,8 +216,17 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         
+        #required_floating_vars = []
+        #for src, target in self._additional_edges:
+            #if src=='@in' and '.' not in target:
+                #required_floating_vars.append(target)
+                
+            #elif target=='@out' and '.' not in src:
+                #required_floating_vars.append(src)
+               
         graph = self._parent.workflow_graph()
-        comps = [comp.name for comp in self.__iter__()]
+        comps = [comp.name for comp in self.__iter__()]# + \
+                #required_floating_vars
         edges = set(graph.get_interior_connections(comps))
         edges.update(self.get_driver_edges())
         edges.update(self._additional_edges)
@@ -398,6 +407,9 @@ class SequentialWorkflow(Workflow):
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
+        #print arg.max()
+        #import sys
+        #sys.stdout.flush()
 
         # Bookkeeping dictionaries
         inputs = {}
@@ -581,7 +593,10 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the transpose matrix vector
         product of the workflow's full Jacobian with an incoming vector
         arg.'''
-
+        #print arg.max()
+        #import sys
+        #sys.stdout.flush()
+        
         # Bookkeeping dictionaries
         inputs = {}
         outputs = {}
@@ -729,7 +744,6 @@ class SequentialWorkflow(Workflow):
                 result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
                 
         #print arg, result
-        #print self.get_interior_edges()
         return result
     
     def group_nondifferentiables(self):
@@ -918,7 +932,7 @@ class SequentialWorkflow(Workflow):
         """
         
         if inputs is None:
-            if hasattr(self._parent, 'get_parameters'):
+            if hasattr(self._parent, 'list_param_group_targets'):
                 inputs = self._parent.list_param_group_targets()
             else:
                 msg = "No inputs given for derivatives."

@@ -42,6 +42,7 @@ class Assy(Assembly):
         # Sensitivity outputs
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
+        self.driver.add_constraint('comp.v + comp.y < 0')
         
         
 class SensitivityDriverTestCase(unittest.TestCase):
@@ -65,6 +66,10 @@ class SensitivityDriverTestCase(unittest.TestCase):
                                3.0, .001)
         assert_rel_error(self, self.model.driver.dF[1][1], 
                                2.0, .001)
+        assert_rel_error(self, self.model.driver.dG[0][0], 
+                               9.0, .001)
+        assert_rel_error(self, self.model.driver.dG[0][1], 
+                               15.0, .001)
         assert_rel_error(self, self.model.driver.x[0], 
                                1.0, .001)
         assert_rel_error(self, self.model.driver.F[0], 
@@ -75,6 +80,7 @@ class SensitivityDriverTestCase(unittest.TestCase):
     def test_error_messages(self):
         
         self.model.driver.clear_objectives()
+        self.model.driver.clear_constraints()
         try:
             self.model.driver._check()
         except ValueError, err:
