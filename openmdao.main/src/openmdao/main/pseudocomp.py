@@ -246,9 +246,8 @@ class PseudoComponent(object):
         self._valid_dict['out0'] = False
 
     def connect(self, src, dest):
-        for name in self._inputs:
-            self._valid[name] = False
-        self._valid = False
+        self._valid[dest.split('.',1)[0]] = False
+        self._valid_dict['out0'] = False
 
     def run(self, ffd_order=0, case_id=''):
         invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
@@ -259,22 +258,14 @@ class PseudoComponent(object):
             return
         
         src = self._srcexpr.evaluate()
-        if isinstance(src, PhysicalQuantity):
-            units = self._meta['out0'].get('units')
-            if units is not None:
-                src = src.in_units_of(units).value
-            else:
-                src = src.value
         setattr(self, 'out0', src)
         for name in self._valid_dict:
             self._valid_dict[name] = True
             
         self._parent.child_run_finished(self.name)
             
-        #print self.name, [(z, getattr(self, z)) for z in self.list_inputs()], self.out0
-
     def update_inputs(self, inputs):
-        self._parent.update_inputs(self.name)#, inputs)
+        self._parent.update_inputs(self.name)
         
     def update_outputs(self, names):
         self.run()
@@ -287,20 +278,11 @@ class PseudoComponent(object):
     def set(self, path, value, index=None, src=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        if isinstance(value, UnitsAttrWrapper):
-            value = value.pq.value
-        elif isinstance(value, PhysicalQuantity):
-            value = value.value
         if getattr(self, path) != value:
             setattr(self, path, value)
             self.invalidate_deps()
             if self._parent:
                 self._parent.child_invalidated(self.name, None)
-
-    # def get_wrapped_attr(self, name, index=None):
-    #     if index is not None:
-    #         raise RuntimeError("pseudocomponent attr accessed using an index")
-    #     return getattr(self, name)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:

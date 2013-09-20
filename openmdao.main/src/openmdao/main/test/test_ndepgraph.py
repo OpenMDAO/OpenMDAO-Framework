@@ -2,7 +2,7 @@ import unittest
 
 import networkx as nx
 from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, \
-                                    find_all_connecting, dumpmeta, nodes_matching_all, \
+                                    find_all_connecting, nodes_matching_all, \
                                     nodes_matching_some, edges_matching_all, edges_matching_some
 
 def fullpaths(cname, names):

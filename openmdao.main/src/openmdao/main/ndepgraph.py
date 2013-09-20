@@ -649,7 +649,7 @@ class DependencyGraph(nx.DiGraph):
                 conns.extend(self._var_connections(inp, 'in'))
         return conns
 
-    def invalidate_deps(self, scope, vnames):#, force=False):
+    def invalidate_deps(self, scope, vnames):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on the given variable names.
 
@@ -1085,9 +1085,6 @@ def find_all_connecting(graph, start, end):
 
 # utility/debugging functions
 
-def dumpmeta(graph, metaname):
-    pprint.pprint(nx.get_node_attributes(graph, metaname))
-
 def nodes_matching_all(graph, **kwargs):
     """Return nodes matching all kwargs names and values. For
     example, nodes_matching_all(G, valid=True, boundary=True) would
@@ -1158,4 +1155,10 @@ def edges_matching_some(graph, **kwargs):
             except KeyError:
                 pass
     return edges
+
+def get_valids(graph, val):
+    """Returns all nodes with validity matching the
+    given value.
+    """
+    nodes_matching_all(graph, valid=val)
 

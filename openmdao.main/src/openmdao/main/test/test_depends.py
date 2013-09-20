@@ -11,7 +11,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
-from openmdao.main.ndepgraph import dumpmeta, nodes_matching_all
+from openmdao.main.ndepgraph import get_valids
 
 import random
 
@@ -562,6 +562,28 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(s.d2.x[1,0], -5)
         self.assertEqual(s.d2.x[0,1], 1)
         self.assertEqual(s.d2.x[1,1], 2)
+
+    def test_array2(self):
+        class ArrSimple(Component):
+            a_in  = Array([0.,1.,2.,3.], iotype='in')
+            a_out = Array([0.,1.,2.,3.], iotype='out')
+            
+            def __init__(self):
+                super(Simple, self).__init__()
+
+            def execute(self):
+                global exec_order
+                exec_order.append(self.name)
+                self.a_out = self.a_in + 1.0     
+
+        top = set_as_top(Assembly())
+        top.add('c1', ArrSimple())
+        top.add('c3', ArrSimple())
+        top.driver.workflow.add(['c1','c3'])
+        top.connect('c1.a_out[1]', 'c3.a_in[2]')
+
+        self.assertEqual(set(get_valids(False)), set())   
+
 
     def test_units(self):
         top = self.top

@@ -21,7 +21,7 @@ class Discipline(Component):
         super(Discipline,self).__init__()        
 
         self.add_trait("z",Array(zeros((prob_size,1)),iotype="in",
-                                 desc="global varaibles",
+                                 desc="global variables",
                                  shape=(prob_size,1)))
         
         self.add_trait("C_z",Array(ones((prob_size,prob_size)), iotype="in", 

@@ -553,65 +553,6 @@ class Container(SafeHasTraits):
 
         super(Container, self).remove_trait(name)
 
-    # @rbac(('owner', 'user'))
-    # def get_wrapped_attr(self, name, index=None):
-    #     """If the variable can return an AttrWrapper, then this
-    #     function will return that, with the value set to the current value of
-    #     the variable. Otherwise, it functions like *getattr*, just
-    #     returning the value of the variable. Raises an exception if the
-    #     variable cannot be found. The value will be copied if the variable has
-    #     a 'copy' metadata attribute that is not None. Possible values for
-    #     'copy' are 'shallow' and 'deep'.
-    #     """
-    #     scopename, _, restofpath = name.partition('.')
-    #     if restofpath:
-    #         obj = getattr(self, scopename)
-    #         if is_instance(obj, Container):
-    #             return obj.get_wrapped_attr(restofpath, index)
-    #         return get_indexed_value(obj, restofpath)
-
-    #     trait = self.get_trait(name)
-    #     if trait is None:
-    #         self.raise_exception("trait '%s' does not exist" %
-    #                              name, AttributeError)
-
-    #     # trait itself is most likely a CTrait, which doesn't have
-    #     # access to member functions on the original trait, aside
-    #     # from validate and one or two others, so we need to get access
-    #     # to the original trait which is held in the 'trait_type' attribute.
-    #     ttype = trait.trait_type
-    #     getwrapper = ttype.get_val_wrapper
-
-    #     # if we have an index, try to figure out if we can still use the trait
-    #     # metadata or not.  For example, if we have an Array that has units,
-    #     # it's also valid to return the units metadata if we're indexing into
-    #     # the Array, assuming that all entries in the Array have the same units.
-
-    #     val = getattr(self, name)
-    #     if index is None:
-    #         # copy value if 'copy' found in metadata
-    #         if ttype.copy:
-    #             if isinstance(val, Container):
-    #                 old_parent = val.parent
-    #                 val.parent = None
-    #                 try:
-    #                     val_copy = _copydict[ttype.copy](val)
-    #                 finally:
-    #                     val.parent = old_parent
-    #                 val_copy.parent = self
-    #                 if hasattr(val_copy, 'install_callbacks'):
-    #                     val_copy.install_callbacks()
-    #                 val = val_copy
-    #             else:
-    #                 val = _copydict[ttype.copy](val)
-
-    #     if getwrapper is not None:
-    #         return getwrapper(val, index)
-
-    #     if index is not None:
-    #         val = get_indexed_value(self, name, index)
-    #     return val
-
     @rbac(('owner', 'user'))
     def get_attr(self, name, index=None):
         """The value will be copied if the variable has a 'copy' metadata 

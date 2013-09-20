@@ -98,7 +98,7 @@ class SequentialWorkflow(Workflow):
         self.scope._depgraph.sever_edges(edges)
 
     def unsever_edges(self):
-        self.scope._depgraph.unsever_edges(self._parent)
+        self.scope._depgraph.unsever_edges(self._parent.get_expr_scope())
         
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
