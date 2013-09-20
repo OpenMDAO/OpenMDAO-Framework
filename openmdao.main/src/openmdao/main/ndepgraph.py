@@ -159,8 +159,14 @@ def is_non_driver_pseudo_node(graph, node):
     pseudo = graph.node[node].get('pseudo')
     return pseudo == 'units' or pseudo == 'multi_var_expr'
 
-def is_external_node(graph, node):
+def is_extern_node(graph, node):
     return node.startswith('parent.')
+
+def is_extern_src(graph, node):
+    return node.startswith('parent.') and graph.out_degree(node) > 0
+
+def is_extern_dest(graph, node):
+    return node.startswith('parent.') and graph.in_degree(node) > 0
 
 def is_nested_node(graph, node):
     """Returns True if the given node refers to an attribute that
@@ -364,7 +370,7 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
     def check_connect(self, srcpath, destpath):
-        if is_external_node(self, destpath):  # error will be caught at parent level
+        if is_extern_node(self, destpath):  # error will be caught at parent level
             return
 
         dpbase = base_var(self, destpath)
@@ -687,7 +693,9 @@ class DependencyGraph(nx.DiGraph):
 
             for node in neighbors:
                 if is_comp_node(self, node):
-                    outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
+                    #outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
+                    outs = getattr(scope, node).invalidate_deps(['.'.join(['parent',n]) 
+                                                                  for n in self.get_sources(src)])
                     if outs is None:
                         stack.append((node, self.successors_iter(node), 
                                      False))
@@ -742,6 +750,20 @@ class DependencyGraph(nx.DiGraph):
                         outs.append(node)
         return outs
 
+    def get_extern_srcs(self):
+        """Returns sources from external to our parent
+        component that are connected to our boundary inputs.
+        """
+        return [n for n in self.nodes_iter()
+                    if is_extern_src(self, n)]
+
+    def get_extern_dests(self):
+        """Returns destinations that are external to our parent
+        component that are connected to our boundary outputs.
+        """
+        return [n for n in self.nodes_iter()
+                    if is_extern_dest(self, n)]
+
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
         If connected is True, return only connected inputs.
@@ -789,7 +811,7 @@ class DependencyGraph(nx.DiGraph):
         """
         conns = []
         for n in self.nodes_iter():
-            if is_external_node(self, n):
+            if is_extern_node(self, n):
                 for p in self.predecessors_iter(n):
                     if self.has_edge(p, n) and '.' in p:
                         conns.append((p, n))
@@ -1037,6 +1059,29 @@ class DependencyGraph(nx.DiGraph):
         for node in valid_set:
             self.node[node]['valid'] = True
 
+    def validate_boundary_vars(self):
+        """Mark extern and boundary vars and their
+        subvars as valid.
+        """
+        meta = self.node
+        for inp in self.get_extern_srcs():
+            meta[inp]['valid'] = True
+            for n in self.successors_iter(inp):
+                meta[n]['valid'] = True
+                if is_subvar_node(self, n):
+                    for var in self._all_vars(inp):
+                        meta[var]['valid'] = True
+
+        for out in self.get_boundary_outputs():
+            meta[out]['valid'] = True
+            for n in self.successors_iter(out):
+                meta[n]['valid'] = True
+                if is_subvar_node(self, n):
+                    for var in self._all_vars(out):
+                        meta[var]['valid'] = True
+
+        ??? not finished!
+
 
 def find_related_pseudos(compgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
@@ -1156,9 +1201,12 @@ def edges_matching_some(graph, **kwargs):
                 pass
     return edges
 
-def get_valids(graph, val):
+def get_valids(graph, val, prefix=None):
     """Returns all nodes with validity matching the
     given value.
     """
+    if prefix:
+        return [n for n in nodes_matching_all(graph, valid=val)
+                    if n.startswith(prefix)]
     return nodes_matching_all(graph, valid=val)
 

@@ -702,16 +702,7 @@ class Assembly(Component):
 
     def _validate(self):
         # validate boundary inputs and outputs and their subvars
-        graph = self._depgraph
-        for inp in graph.get_boundary_inputs():
-            graph.node[inp]['valid'] = True
-            for var in graph._all_vars(inp):
-                graph.node[var]['valid'] = True
-
-        for out in graph.get_boundary_outputs():
-            graph.node[out]['valid'] = True
-            for var in graph._all_vars(out):
-                graph.node[var]['valid'] = True
+        self._depgraph.validate_boundary_vars()
 
     def invalidate_deps(self, varnames=None):
         """Mark all Variables invalid that depend on varnames.
@@ -724,7 +715,7 @@ class Assembly(Component):
         # as part of a higher level invalidation, so we only need to look
         # at our connected inputs
         if varnames is None:
-            names = self._depgraph.get_boundary_inputs(connected=True)
+            names = self._depgraph.get_extern_srcs()
         else:
             names = varnames
 

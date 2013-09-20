@@ -427,7 +427,7 @@ class ArrSimple(Component):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        self.a_out = self.ain * 2.0
+        self.aout = self.ain * 2.0
 
         
 class SimplePTAsm(Assembly):
@@ -609,7 +609,45 @@ class DependsTestCase2(unittest.TestCase):
             
         top.run()
         self.assertEqual(get_valids(top._depgraph, False), [])
-        self.assertEqual(top.c3.ain[2], 45.)
+        self.assertEqual(top.c3.ain[2], 88.)
+                
+    def test_array3(self):
+        top = set_as_top(Assembly())
+        top.add('c1', ArrSimple())
+        top.add('sub',Assembly())
+        top.sub.add('c2',ArrSimple())
+        top.sub.create_passthrough('c2.ain')
+        top.sub.create_passthrough('c2.aout')
+        top.add('c3', ArrSimple())
+        top.driver.workflow.add(['c1','sub', 'c3'])
+        top.connect('c1.aout[2]', 'sub.ain[1]')
+        top.connect('sub.aout[1]', 'c3.ain[2]')
+
+        expected = set(['c1', 'c1.aout', 'c1.aout[2]',
+                        'c3', 'c3.ain', 'c3.ain[2]', 'c3.aout',
+                        'sub', 'sub.ain', 'sub.ain[1]', 'sub.aout', 'sub.aout[1]'])
+
+        for v in expected:
+            self.assertEqual(top._depgraph.node[v]['valid'], False)
+            
+        subexpected = set(['c2','c2.ain','ain[1]','c2.aout','aout[1]','ain','aout'])
+        for v in subexpected:
+            self.assertEqual(top.sub._depgraph.node[v]['valid'], False)
+        
+        self.assertEqual(top.c1.is_valid(), False)
+        self.assertEqual(top.c3.is_valid(), False)
+        self.assertEqual(top.sub.is_valid(), False)
+        
+        top.run()
+        self.assertEqual(get_valids(top._depgraph, False), [])
+        
+        top.c1.ain = [55.,44.,33.]
+        for v in expected:
+            self.assertEqual(top._depgraph.node[v]['valid'], False)
+            
+        top.run()
+        self.assertEqual(get_valids(top._depgraph, False), [])
+        self.assertEqual(top.c3.ain[2], 88.)
         
 
 
