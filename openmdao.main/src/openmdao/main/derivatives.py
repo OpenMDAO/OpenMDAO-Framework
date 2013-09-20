@@ -22,21 +22,36 @@ except ImportError as err:
                                              ones
 
 
-def flattened_size(name, val):
+def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
+    
+    # Floats
     if isinstance(val, float):
         return 1
+    
+    # Numpy arrays
     elif isinstance(val, ndarray):
         return val.size
+    
+    # Variable Trees
     elif isinstance(val, VariableTree):
         size = 0
         for key in sorted(val.list_vars()):  # Force repeatable order.
             value = getattr(val, key)
             size += flattened_size('.'.join((name, key)), value)
         return size
+    
     else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
+        meta = scope.get_metadata(name)
+        
+        # Custom data objects with data_shape in the metadata
+        if 'data_shape' in meta:
+            return prod(meta['data_shape'])
+            
+        #Nothing else is differentiable
+        else:
+            raise TypeError('Variable %s is of type %s which is not convertable'
+                            ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """

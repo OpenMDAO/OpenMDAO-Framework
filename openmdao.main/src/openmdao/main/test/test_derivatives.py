@@ -1,6 +1,5 @@
 """
-This mainly tests the CyclicWorkflow's ability to generate its topological
-sort.
+Basic unit testing of OpenMDAO's derivative capability.
 """
 
 from cStringIO import StringIO
