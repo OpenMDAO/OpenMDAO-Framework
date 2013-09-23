@@ -135,7 +135,7 @@ class STLGroup(object):
 
         #print box
 
-        wv.set_face_data(xyzs, tris, name="surface")
+        wv.set_face_data(xyzs, tris, name="surface",bbox=box)
 
 
     #end methods for IStaticGeometry
@@ -379,16 +379,16 @@ class STLGroup(object):
 
 class STLGroupSender(STLSender):
 
-    def initialize(self, **kwargs):
-        eye    = np.array([5.0, 0.0, 70.0], dtype=np.float32)
-        center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        fov   = 30.0
-        zNear = 1.0
-        zFar  = 100
+    #def initialize(self, **kwargs):
+    #    eye    = np.array([0.0, 0.0, 5.0], dtype=np.float32)
+    #    center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    #    up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    #    fov   = 30.0
+    #    zNear = 1.0
+    #    zFar  = 100
 
-        bias  = 0
-        self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
+    #    bias  = 0
+    #    self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
 
     @staticmethod
     def supports(obj):

@@ -109,13 +109,15 @@ class BoxGeometry(object):
             wv.set_face_data(points=pgeom.vertices[i], 
                              tris=pgeom.triangles, 
                              colors=pgeom.colors[i],
+                             #bbox=pgeom.bbox,
                              #normals=pgeom.normals[i],
-                             bbox=pgeom.bbox,
                              name="Face %d"%(i+1))
 
             wv.set_edge_data(points=pgeom.vertices[i],
-                             bbox=pgeom.bbox,
+                             #bbox=pgeom.bbox,
                              name="Edge %d"%(i+1))
+
+        wv.focus_vertices()
 
 
 class BoxSender(WV_Sender):
@@ -123,16 +125,16 @@ class BoxSender(WV_Sender):
     if no real binpub plugins have been installed.
     """
 
-    def initialize(self, **kwargs):
-        eye    = array([0.0, 0.0, 7.0], dtype=float32)
-        center = array([0.0, 0.0, 0.0], dtype=float32)
-        up     = array([0.0, 1.0, 0.0], dtype=float32)
-        fov   = 30.0
-        zNear = 1.0
-        zFar  = 10.0
+    #def initialize(self, **kwargs):
+        #eye    = array([0.0, 0.0, 10.0], dtype=float32)
+        #center = array([0.0, 0.0, 0.0], dtype=float32)
+        #up     = array([0.0, 1.0, 0.0], dtype=float32)
+        #fov   = 30.0
+        #zNear = 1.0
+        #zFar  = 10.0
 
-        bias = 0
-        self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
+        #bias = 0
+        #self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
 
     @staticmethod
     def supports(obj):
