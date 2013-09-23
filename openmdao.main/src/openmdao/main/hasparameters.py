@@ -13,7 +13,7 @@ except ImportError as err:
 __missing = object()
 
 
-class Parameter(object):
+class ParameterBase(object):
 
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
@@ -49,8 +49,6 @@ class Parameter(object):
                 except (TypeError, ValueError):
                     raise ValueError("Bad value given for parameter's 'adder'"
                                      " attribute.")
-        self._metadata = None
-
         self.low = low
         self.high = high
         self.scaler = scaler
@@ -74,12 +72,14 @@ class Parameter(object):
         self._expreval = _expreval
 
         try:
-            # metadata is in the form (varname, metadata), so use [1] to get
-            # the actual metadata dict
-            metadata = self.get_metadata()[1]
+            self._metadata = self._expreval.get_metadata()
         except AttributeError:
             raise AttributeError("Can't add parameter '%s' because it doesn't"
                                  " exist." % target)
+
+        # 'raw' metadata is in the form [(varname, metadata)],
+        # so use [0][1] to get the actual metadata dict
+        metadata = self._metadata[0][1]
 
         if 'iotype' in metadata and metadata['iotype'] == 'out':
             raise RuntimeError("Can't add parameter '%s' because '%s' is an"
@@ -90,9 +90,74 @@ class Parameter(object):
         except KeyError:
             self.vartypename = None
 
+    def __str__(self):
+        return self._expreval.text
+
+    def _do_nothing(self, val):
+        """ Used to overlay _transform and _untransform. """
+        return val
+
+    def _get_scope(self):
+        return self._expreval.scope
+
+    @property
+    def target(self):
+        """Returns the target of this parameter."""
+        return self._expreval.text
+
+    @property
+    def targets(self):
+        """Returns a one element list containing the target of this parameter."""
+        return [self._expreval.text]
+
+    def get_metadata(self, metaname=None):
+        """Returns a list of tuples of the form (varname, metadata), with one
+        entry for each variable referenced by the parameter expression. The
+        metadata value found in the tuple will be either the specified piece
+        of metadata, if metaname is provided, or the whole metadata dictionary
+        for that variable if it is not.
+        """
+        if metaname is None:
+            return self._metadata[0]
+        else:
+            return [(name, self._metadata.get(metaname))
+                    for name, val in self._metadata]
+
+    def get_referenced_compnames(self):
+        """Return a set of Component names based on the
+        pathnames of Variables referenced in our target string.
+        """
+        return self._expreval.get_referenced_compnames()
+
+    def get_referenced_varpaths(self):
+        """Return a set of Variable names referenced in our target string."""
+        return self._expreval.get_referenced_varpaths(copy=False)
+
+    def get_config(self):
+        return (self.target, self.low, self.high, self.fd_step,
+                self.scaler, self.adder, self.start, self.name)
+
+
+class Parameter(ParameterBase):
+
+    def __init__(self, target, high=None, low=None,
+                 scaler=None, adder=None, start=None,
+                 fd_step=None, scope=None, name=None,
+                 _expreval=None, _val=None):
+        """If scaler and/or adder are not None, then high, low, and start, if
+        not None, are assumed to be expressed in unscaled form. If high and low
+        are not supplied, then their values will be pulled from the target
+        variable (along with a start value), and are assumed to be in scaled
+        form, so their values will be unscaled prior to being stored in the
+        Parameter.
+        """
+        super(Parameter, self).__init__(target, high, low,
+                                        scaler, adder, start,
+                                        fd_step, scope, name,
+                                        _expreval, _val)
         if _val is None:
             try:
-                _val = _expreval.evaluate()
+                _val = self._expreval.evaluate()
             except Exception as err:
                 raise ValueError("Can't add parameter because I can't evaluate"
                                  " '%s'." % target)
@@ -106,6 +171,10 @@ class Parameter(object):
             raise ValueError("The value of parameter '%s' must be a real or"
                              " integral type, but its type is '%s'." %
                              (target, type(_val).__name__))
+
+        # metadata is in the form (varname, metadata), so use [1] to get
+        # the actual metadata dict
+        metadata = self.get_metadata()[1]
 
         meta_low = metadata.get('low')  # this will be None if 'low' isn't there
         if meta_low is not None:
@@ -122,7 +191,7 @@ class Parameter(object):
                                  "'low' argument was given. One or the "
                                  "other must be specified." % target)
 
-        meta_high = metadata.get('high')  # will be None if 'low' isn't there
+        meta_high = metadata.get('high')  # will be None if 'high' isn't there
         if meta_high is not None:
             if high is None:
                 self.high = self._untransform(meta_high)
@@ -150,15 +219,11 @@ class Parameter(object):
         else:
             self.set(self.start, scope)
 
-
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return False
-        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start,self.name)== \
+        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start,self.name) == \
                (other._expreval,other.scaler,other.adder,other.low,other.high,other.fd_step,other.start,self.name)
-
-    def __str__(self):
-        return self._expreval.text
 
     def __repr__(self):
         return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
@@ -172,55 +237,29 @@ class Parameter(object):
         """ Scales the variable (var space -> parameter space). """
         return val / self.scaler - self.adder
 
-    def _do_nothing(self, val):
-        """ Used to overlay _transform and _untransform. """
-        return val
-
-    def _get_scope(self):
-        return self._expreval.scope
-
     @property
-    def target(self):
-        """Returns the target of this parameter."""
-        return self._expreval.text
+    def size(self):
+        return 1
 
-    @property
-    def targets(self):
-        """Returns a one element list containing the target of this parameter."""
-        return [self._expreval.text]
+    def get_high(self):
+        """Returns upper limits as a sequence."""
+        return [self.high]
+
+    def get_low(self):
+        """Returns upper limits as a sequence."""
+        return [self.low]
+
+    def get_fd_step(self):
+        """Returns finite difference step size as a sequence."""
+        return [self.fd_step]
 
     def evaluate(self, scope=None):
-        """Returns the value of this parameter."""
-        return self._untransform(self._expreval.evaluate(scope))
+        """Returns the value of this parameter as a sequence."""
+        return [self._untransform(self._expreval.evaluate(scope))]
 
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
         self._expreval.set(self._transform(val), scope)
-
-    def get_metadata(self, metaname=None):
-        """Returns a list of tuples of the form (varname, metadata), with one
-        entry for each variable referenced by the parameter expression. The
-        metadata value found in the tuple will be either the specified piece
-        of metadata, if metaname is provided, or the whole metadata dictionary
-        for that variable if it is not.
-        """
-        if self._metadata is None:
-            self._metadata = self._expreval.get_metadata()
-        if metaname is None:
-            return self._metadata[0]
-        else:
-            return [(name, self._metadata.get(metaname))
-                    for name, val in self._metadata]
-
-    def get_referenced_compnames(self):
-        """Return a set of Component names based on the
-        pathnames of Variables referenced in our target string.
-        """
-        return self._expreval.get_referenced_compnames()
-
-    def get_referenced_varpaths(self):
-        """Return a set of Variable names referenced in our target string."""
-        return self._expreval.get_referenced_varpaths(copy=False)
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -230,10 +269,6 @@ class Parameter(object):
                          start=self.start,
                          fd_step=self.fd_step,
                          scope=self._get_scope(), name=self.name)
-
-    def get_config(self):
-        return (self.target, self.low, self.high, self.fd_step,
-                self.scaler, self.adder, self.start, self.name)
 
     def override(self, low=None, high=None,
                  scaler=None, adder=None, start=None,
@@ -281,7 +316,7 @@ class ParameterGroup(object):
     def __eq__(self, other):
         if not isinstance(other, ParameterGroup):
             return False
-        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name)==\
+        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name) == \
                (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step,self.name)
 
     def __str__(self):
@@ -293,12 +328,29 @@ class ParameterGroup(object):
                 self.adder, self.start, self.name)
 
     @property
+    def size(self):
+        return self._params[0].size
+
+    @property
     def target(self):
         return self._params[0].target
 
     @property
     def targets(self):
+        """Returns a list containing the targets of this parameter."""
         return [p.target for p in self._params]
+
+    def get_high(self):
+        """Returns upper limits as a sequence."""
+        return [self.high]
+
+    def get_low(self):
+        """Returns upper limits as a sequence."""
+        return [self.low]
+
+    def get_fd_step(self):
+        """Returns finite difference step size as a sequence."""
+        return [self.fd_step]
 
     def set(self, value, scope=None):
         """Set all targets to the given value."""
@@ -306,8 +358,8 @@ class ParameterGroup(object):
             param.set(value, scope)
 
     def evaluate(self, scope=None):
-        """Return the value of the first parameter in our target list. Values
-        of all of our targets are assumed to be the same.
+        """Return the value of the first parameter in our target list as a
+        sequence. Values of all of our targets are assumed to be the same.
         """
         return self._params[0].evaluate(scope)
 
@@ -395,47 +447,52 @@ class ParameterGroup(object):
             param.initialize(scope)
 
 
-class ParameterArray(object):
-    """A parameter whose target is an array. Internally this is handled as
-    individual Parameters for each array element. Externally it looks like
-    a single parameter.
+class ArrayParameter(ParameterBase):
+    """A parameter whose target is an array. If scaler and/or adder are not
+    None, then high, low, and start, if not None, are assumed to be expressed
+    in unscaled form. If high and low are not supplied, then their values
+    will be pulled from the target variable (along with a start value), and are
+    assumed to be in scaled form, so their values will be unscaled prior to
+    being stored in the ArrayParameter.
     """
 
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None,
                  _expreval=None, _val=None):
-        if _expreval is None:
-            try:
-                _expreval = ExprEvaluator(target, scope)
-            except Exception as err:
-                raise err.__class__("Can't add parameter: %s" % str(err))
-            if not _expreval.is_valid_assignee():
-                raise ValueError("Can't add parameter: '%s' is not a valid"
-                                 " parameter expression" % _expreval.text)
+        super(ArrayParameter, self).__init__(target, high, low,
+                                             scaler, adder, start,
+                                             fd_step, scope, name,
+                                             _expreval, _val)
         if _val is None:
             try:
-                _val = _expreval.evaluate()
+                _val = self._expreval.evaluate()
             except Exception as err:
                 raise ValueError("Can't add parameter because I can't evaluate"
                                  " '%s'." % target)
-        self._target = target
-        self.high = high
-        self.low = low
-        self.scaler = scaler
-        self.adder = adder
-        self.start = start
-        self.fd_step = fd_step
-        self.scope = scope
-        self.name = name or target
+
+        self.valtypename = _val.dtype
+
+        if _val.dtype.kind not in ('fi'):
+            raise TypeError('Only float or int arrays are supported')
+
         self.dtype = _val.dtype
         self.shape = _val.shape
+        self._size = _val.size
 
         self._params = []
         shape = _val.shape
         rank = len(shape)
         indices = [0] * rank
-        for i in range(_val.size):
+
+        highs = []
+        lows = []
+        scalers = []
+        adders = []
+        starts = []
+        fd_steps = []
+
+        for i, element in enumerate(_val.flat):
             index = ''.join(['[%s]' % idx for idx in indices])
 
             _target  = target + index
@@ -450,14 +507,28 @@ class ParameterArray(object):
 
             param = Parameter(_target, _high, _low,
                               _scaler, _adder, _start,
-                              _fd_step, _scope, _name)
+                              _fd_step, _scope, _name, _val=element)
             self._params.append(param)
+
+            highs.append(param.high)
+            lows.append(param.low)
+            scalers.append(param.scaler)
+            adders.append(param.adder)
+            starts.append(param.start)
+            fd_steps.append(param.fd_step)
 
             indices[-1] += 1
             for j in reversed(range(rank)):
                 if indices[j] >= shape[j] and j > 0:
                     indices[j] = 0
                     indices[j-1] += 1
+
+        self._high = array(highs, 'd')
+        self._low = array(lows, 'd')
+        self._scaler = array(scalers, 'd')
+        self._adder = array(adders, 'd')
+        self._start = array(starts, 'd')
+        self._fd_step = array(fd_steps, 'd')
 
     def _fetch(self, attr, val, i):
         """Fetch value for ith element of val (if it's an array)."""
@@ -470,114 +541,84 @@ class ParameterArray(object):
         else:
             return val
 
-    def __eq__(self, other):
-        if not isinstance(other, ParameterArray):
-            return False
-        return self._params == other._params
+    def initialize(self, scope):
+        """Set parameter to initial value."""
+        if self.start is None:
+            self.set(self._untransform(self._expreval.evaluate(scope).ravel()))
+        else:
+            self.set(self.start, scope)
 
-    def __str__(self):
-        return '%s' % self.target
+    def __eq__(self, other):
+        if not isinstance(other, ArrayParameter):
+            return False
+        return self.get_config() == other.get_config()
 
     def __repr__(self):
-        return '<ParameterArray(target=%s,high=%s,low=%s,scaler=%s,adder=%s,start=%s,fd_step=%s,name=%s)>' \
-               % (self.target, self.high, self.low,
-                  self.scaler, self.adder, self.start,
-                  self.fd_step, self.name)
+        return '<ArrayParameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' \
+               % self.get_config()
 
-    def _get_scope(self):
-        return self._params[0]._get_scope()
+    def _transform(self, val):
+        """ Unscales the variable (parameter space -> var space). """
+        return (val + self._adder) * self._scaler
 
-    @property
-    def target(self):
-        """Returns the target of this parameter."""
-        return self._target
+    def _untransform(self, val):
+        """ Scales the variable (var space -> parameter space). """
+        return val / self._scaler - self._adder
 
     @property
-    def targets(self):
-        """Returns a list containing the targets of this parameter."""
-        return [param.target for param in self._params]
+    def size(self):
+        return self._size
+
+    def get_high(self):
+        """Returns upper limits as a sequence."""
+        return self._high
+
+    def get_low(self):
+        """Returns lower limits as a sequence."""
+        return self._low
+
+    def get_fd_step(self):
+        """Returns finite difference step size as a sequence."""
+        return self._fd_step
 
     def evaluate(self, scope=None):
-        """Returns the value of this parameter."""
-        return array([param.evaluate(scope) for param in self._params],
-                     dtype=self.dtype, shape=self.shape)
+        """Returns the value of this parameter as a sequence."""
+        return self._untransform(self._expreval.evaluate(scope).ravel()).flat
 
     def set(self, value, scope=None):
         """Assigns the given value to the array referenced by this parameter."""
-        if isinstance(value, ndarray):
-            if value.shape == self.shape:
-                elements = value.flat
-                for i, param in enumerate(self._params):
-                    param.set(elements[i], scope)
+        if isinstance(value, list):
+            if len(value) == self._size:
+                for element, param in zip(value, self._params):
+                    param.set(element, scope)
             else:
-                raise ValueError('value shape is %s but parameter shape is %s'
-                                 % (value.shape, self.shape))
+                raise ValueError('value size is %s but parameter size is %s'
+                                 % (value.size, len(self._params)))
+
+        elif isinstance(value, ndarray):
+            if value.size == self._size:
+                elements = value.flat
+                for element, param in zip(elements, self._params):
+                    param.set(element, scope)
+            else:
+                raise ValueError('value size is %s but parameter size is %s'
+                                 % (value.size, len(self._params)))
         else:
             for param in self._params:
                 param.set(value, scope)
 
-    def get_metadata(self, metaname=None):
-        """Returns a list of tuples of the form (varname, metadata), with one
-        entry for each variable referenced by a target expression. The
-        metadata value found in the tuple will be either the specified piece
-        of metadata, if metaname is provided, or the whole metadata dictionary
-        for that variable if it is not.
-        """
-        dct = {'low':self.low,
-               'high':self.high,
-               'start':self.start,
-               'scaler':self.scaler,
-               'adder':self.adder,
-               'fd_step':self.fd_step,
-               'name':self.name}
-
-        if metaname is not None:
-            val = dct.get(metaname, __missing)
-            if val is __missing:
-                val = None
-            return [(param.target, val) for param in self._params]
-        else:
-            return [(param.target, dct) for param in self._params]
-
-    def get_referenced_compnames(self):
-        """Return a set of Component names based on the
-        pathnames of Variables referenced in our target strings.
-        """
-        result = set()
-        result.update(self._params[0].get_referenced_compnames())
-        return result
-
-    def get_referenced_vars_by_compname(self):
-        result = dict()
-        comp = self._params[0].get_referenced_compnames().pop()
-        for param in self._params:
-            try:
-                result[comp].update([param,])
-            except KeyError:
-                result[comp] = set([param,])
-        return result
-
-    def get_referenced_varpaths(self):
-        """Return a set of Variable names referenced in our target strings."""
-        result = set()
-        for param in self._params:
-            result.update(param.get_referenced_varpaths())
-        return result
-
     def copy(self):
         """Return a copy of this ParameterArrray."""
-        return ParameterArray(self.target, high=self.high, low=self.low,
+        return ArrayParameter(self.target,
+                              high=self.high, low=self.low,
                               scaler=self.scaler, adder=self.adder,
                               start=self.start, fd_step=self.fd_step,
                               scope=self._get_scope(), name=self.name)
 
-    def get_config(self):
-        return [param.get_config() for param in self._params]
-
     def override(self, low=None, high=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, name=None):
-        """Called by add_parameter() when the target is this ParameterArray."""
+        """Called by add_parameter() when the target is this ArrayPartameter."""
         self._override('low',     low)
         self._override('high',    high)
         self._override('scaler',  scaler)
@@ -608,11 +649,6 @@ class ParameterArray(object):
             setattr(self, attr, val)
             for i, param in enumerate(self._params):
                 setattr(param, attr, self._fetch(attr, val, i))
-
-    def initialize(self, scope):
-        """Set parameter to initial value."""
-        for param in self._params:
-            param.initialize(scope)
 
 
 class HasParameters(object):
@@ -695,7 +731,7 @@ class HasParameters(object):
                                                  " target" % target,
                                                  RuntimeError)
 
-        if isinstance(target, (Parameter, ParameterGroup, ParameterArray)):
+        if isinstance(target, (Parameter, ParameterGroup, ArrayParameter)):
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
             #target.deactivate(self._parent.get_expr_scope())
@@ -738,7 +774,7 @@ class HasParameters(object):
                         val = None  # Let Parameter code sort out why.
 
                     if isinstance(val, ndarray):
-                        target = ParameterArray(names[0], low=low, high=high,
+                        target = ArrayParameter(names[0], low=low, high=high,
                                                 scaler=scaler, adder=adder,
                                                 start=start, fd_step=fd_step,
                                                 name=key, scope=_scope,
@@ -819,8 +855,8 @@ class HasParameters(object):
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter,
-        ParameterGroup, and ParameterArray objects since ParameterGroup and
-        ParameterArray instances have multiple targets.
+        ParameterGroup, and ArrayParameter objects since ParameterGroup
+        instances have multiple targets.
         """
         targets = []
         for param in self._parameters.values():
@@ -831,8 +867,10 @@ class HasParameters(object):
         """Returns a list of tuples that contain the targets for each
         parameter group.
         """
-        return [tuple(param.targets)
-                for param in self.get_parameters().values()]
+        targets = []
+        for param in self.get_parameters().values():
+            targets.append(tuple(param.targets))
+        return targets
 
     def clear_parameters(self):
         """Removes all parameters."""
@@ -844,12 +882,16 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
+    def total_parameters(self):
+        """Returns the total number of values to be set."""
+        return sum([param.size for param in self._parameters.values()])
+
     def init_parameters(self):
         """Sets all parameters to their start value if a
         start value is given
         """
         scope = self._get_scope()
-        for key, param in self._parameters.iteritems():
+        for param in self._parameters.itervalues():
             if param.start is not None:
                 param.set(param.start, scope)
         self._parent._invalidate()
@@ -870,7 +912,6 @@ class HasParameters(object):
             targets and added as inputs to the Case instead of being set
             directly into the model.
         """
-
         param = self._parameters[name]
         if case is None:
             param.set(value, self._get_scope(scope))
@@ -894,20 +935,92 @@ class HasParameters(object):
             targets and added as inputs to the Case instead of being set
             directly into the model.
         """
-        if len(values) != len(self._parameters):
-            raise ValueError("number of input values (%s) != number of"
-                             " parameters (%s)" %
-                             (len(values),len(self._parameters)))
-
+        if len(values) != self.total_parameters():
+            raise ValueError("number of input values (%s) != expected number of"
+                             " values (%s)" %
+                             (len(values), self.total_parameters()))
         if case is None:
             scope = self._get_scope(scope)
-            for val, param in zip(values, self._parameters.values()):
-                param.set(val, scope)
+            start = 0
+            for param in self._parameters.values():
+                size = param.size
+                if size == 1:
+                    param.set(values[start], scope)
+                    start += 1
+                else:
+                    end = start + size
+                    param.set(values[start:end], scope)
+                    start = end
         else:
-            for val, parameter in zip(values, self._parameters.values()):
-                for target in parameter.targets:
-                    case.add_input(target, val)
+            start = 0
+            for param in self._parameters.values():
+                size = param.size
+                if size == 1:
+                    for target in param.targets:
+                        case.add_input(target, values[start])
+                    start += 1
+                else:
+                    end = start + size
+                    for target in param.targets:
+                        case.add_input(target, values[start:end])
+                    start = end
             return case
+
+    def evaluate_parameters(self, scope=None, dtype='d'):
+        """Return evaluated parameter values.
+
+        dtype: string or None
+            If set, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+        result = []
+        for param in self._parameters.values():
+            result.extend(param.evaluate(scope))
+        if dtype:
+            result = array(result, dtype)
+        return result
+
+    def get_lower_bounds(self, dtype='d'):
+        """Return lower bound values.
+
+        dtype: string or None
+            If set, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+        result = []
+        for param in self._parameters.values():
+            result.extend(param.get_low())
+        if dtype:
+            result = array(result, dtype)
+        return result
+
+    def get_upper_bounds(self, dtype='d'):
+        """Return upper bound values.
+
+        dtype: string or None
+            If set, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+        result = []
+        for param in self._parameters.values():
+            result.extend(param.get_high())
+        if dtype:
+            result = array(result, dtype)
+        return result
+
+    def get_fd_steps(self, dtype='d'):
+        """Return fd_step values, they may include None.
+
+        dtype: string or None
+            If set, return an array of this dtype. Otherwise just return
+            a list (useful if it's valid to have None for a step size).
+        """
+        result = []
+        for param in self._parameters.values():
+            result.extend(param.get_fd_step())
+        if dtype:
+            result = array(result, dtype)
+        return result
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
@@ -915,7 +1028,7 @@ class HasParameters(object):
         """
         conn_list = []
         pname = self._parent.name
-        for name, param in self._parameters.items():
+        for param in self._parameters.values():
             for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list

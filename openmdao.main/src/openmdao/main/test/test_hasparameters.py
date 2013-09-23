@@ -339,8 +339,8 @@ class ParametersTestCase(unittest.TestCase):
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()
 
-        d1val = params['comp.a'].evaluate()
-        d2val = params2['comp.a'].evaluate()
+        d1val = params['comp.a'].evaluate()[0]
+        d2val = params2['comp.a'].evaluate()[0]
 
         self.assertEqual(d1val, 9.0)
         self.assertEqual(d2val, 5.75)
@@ -414,7 +414,7 @@ class ParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.v1', scaler=0.5, adder=-2.0)
 
         params = self.top.driver.get_parameters()
-        self.assertEqual(params['comp.v1'].evaluate(), 12.0)
+        self.assertEqual(params['comp.v1'].evaluate()[0], 12.0)
         self.assertEqual(params['comp.v1'].high, 22.0)
         self.assertEqual(params['comp.v1'].low, 2.0)
 
@@ -438,8 +438,8 @@ class ParametersTestCase(unittest.TestCase):
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()
 
-        d1val = params['comp.v1'].evaluate()
-        d2val = params2['comp.v1'].evaluate()
+        d1val = params['comp.v1'].evaluate()[0]
+        d2val = params2['comp.v1'].evaluate()[0]
 
         self.assertEqual(d1val, 10.0)
         self.assertEqual(d2val, 17.0)
@@ -516,18 +516,10 @@ class ArrayTest(unittest.TestCase):
         driver.add_parameter('comp.x2d', low=-10, high=10, start=2)
 
         targets = driver.list_param_targets()
-        expected =  [
-            'comp.x1d[0]', 'comp.x1d[1]', 'comp.x1d[2]',
-            'comp.x2d[0][0]', 'comp.x2d[0][1]', 'comp.x2d[0][2]',
-            'comp.x2d[1][0]', 'comp.x2d[1][1]', 'comp.x2d[1][2]']
-        self.assertEqual(targets, expected)
+        self.assertEqual(targets, ['comp.x1d', 'comp.x2d'])
 
         targets = driver.list_param_group_targets()
-        expected =  [
-            ('comp.x1d[0]', 'comp.x1d[1]', 'comp.x1d[2]'),
-            ('comp.x2d[0][0]', 'comp.x2d[0][1]', 'comp.x2d[0][2]',
-             'comp.x2d[1][0]', 'comp.x2d[1][1]', 'comp.x2d[1][2]')]
-        self.assertEqual(targets, expected)
+        self.assertEqual(targets, [('comp.x1d',), ('comp.x2d',)])
 
         self.assertEqual(list(comp.x1d), [1, 2, 3])
         self.assertEqual([list(row) for row in comp.x2d[:]],
@@ -552,8 +544,7 @@ class ArrayTest(unittest.TestCase):
         self.assertEqual([list(row) for row in comp.x2d[:]],
                          [[5, 6, 7], [8, 9, 0]])
 
-        driver.set_parameters((array([7, 8, 9]),
-                               array([[1, 2, 3], [4, 5, 6]])))
+        driver.set_parameters([7, 8, 9, 1, 2, 3, 4, 5, 6])
         self.assertEqual(list(comp.x1d), [7, 8, 9])
         self.assertEqual([list(row) for row in comp.x2d[:]],
                          [[1, 2, 3], [4, 5, 6]])
