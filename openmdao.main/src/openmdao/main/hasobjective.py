@@ -36,8 +36,6 @@ class Objective(ConnectedExprEvaluator):
                 #can't getattr it anymore. We still have the obj, so let's
                 #manually finish this up.
                 
-                #scope.remove(pcomp.name)
-                
                 name = pcomp.name
                 scope.disconnect(name)
                 for obj in scope.__dict__.values():
@@ -139,8 +137,11 @@ class HasObjectives(object):
         name: string
             Name of component being removed.
         """
-        # Just returning everything for now.
-        return self._objectives.copy()
+        refs = ordereddict.OrderedDict()
+        for oname, obj in self._objectives.items():
+            if name in obj.get_referenced_compnames():
+                refs[oname] = obj
+        return refs
 
     def remove_references(self, name):
         """Remove references to component `name`.
@@ -152,21 +153,14 @@ class HasObjectives(object):
             if name in obj.get_referenced_compnames():
                 self.remove_objective(oname)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
         """
-        # Not exactly safe here...
-        if isinstance(refs, ordereddict.OrderedDict):
-            self._objectives = refs
-        else:
-            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
-                            % refs)
+        for name, obj in self._objectives.items():
+            self.add_objective(str(obj), name, obj.scope)
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""

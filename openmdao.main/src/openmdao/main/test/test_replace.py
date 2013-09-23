@@ -4,8 +4,8 @@ import logging
 import math
 import nose
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Float, Int, Array
+from openmdao.main.api import Assembly, Component, Driver, VariableTree, set_as_top, Dataflow
+from openmdao.lib.datatypes.api import Float, Int, Array, Slot
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -170,5 +170,53 @@ class ReplaceTestCase(unittest.TestCase):
         except Exception as err:
             self.assertEqual(str(err),
                              ": Couldn't replace 'driver' of type InEqdriver with type Objectivesdriver: driver: target delegate '_hasineqconstraints' has no match")
-        
-            
+             
+             
+class Replace2TestCase(unittest.TestCase):
+    def test_replace(self):
+             
+        class Dummy(Component):
+            fin = Float(1.5, iotype="in")
+            fout = Float(3.0, iotype='out')
+         
+            def execute(self):
+                self.fout = self.fin * 2
+         
+         
+        class Dummy2(Dummy):
+            def execute(self):
+                self.fout = self.fin * 4
+         
+         
+        class AutoAssemb(Assembly):
+         
+            d2 = Slot(Dummy)
+         
+            def configure(self):
+         
+                self.add('d1', Dummy())
+                self.add('d2', Dummy())
+                self.add('d3', Dummy())
+         
+                self.driver.workflow.add(['d1', 'd2', 'd3'])
+                self.connect('d1.fout', 'd2.fin')
+                self.connect('d2.fout', 'd3.fin')
+         
+                self.create_passthrough('d1.fin')
+                self.create_passthrough('d3.fout')
+                
+                
+        aa = set_as_top(AutoAssemb())
+        aa.fin = 10
+        aa.run()
+        self.assertEqual(aa.fout, 80.0)
+        self.assertEqual(aa.d1.fout, 20.0)
+        self.assertEqual(aa.d2.fin, 20.0)
+     
+        aa.replace('d2', Dummy2())
+        self.assertEqual(aa.d2.fin, 20.0)
+        aa.run()
+        self.assertEqual(aa.d2.fin, 20.0)
+        self.assertEqual(aa.d2.fout, 80.0)
+        self.assertEqual(aa.d3.fout, 160.0)
+        self.assertEqual(aa.fout, 160.0)

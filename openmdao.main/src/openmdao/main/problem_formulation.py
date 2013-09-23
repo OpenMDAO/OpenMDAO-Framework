@@ -9,7 +9,7 @@ from openmdao.main.interfaces import IArchitecture, implements, \
                                      IHasCouplingVars, IHasObjectives
 
 from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
+from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasobjective import HasObjectives
 
 
@@ -213,7 +213,7 @@ class ArchitectureAssembly(Assembly):
         all single-target parameters."""
         comps = {}
         for v in self.get_parameters().values():
-            if isinstance(v, Parameter):
+            if not isinstance(v, ParameterGroup):
                 comp_names = v.get_referenced_compnames()
                 if len(comp_names) > 1:
                     continue
@@ -229,7 +229,7 @@ class ArchitectureAssembly(Assembly):
     def get_local_des_vars(self):
         """Return a list of single-target Parameters."""
         return [(k, v) for k, v in self.get_parameters().items()
-                                        if isinstance(v, Parameter)]
+                                if not isinstance(v, ParameterGroup)]
 
     def get_global_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters for
@@ -249,7 +249,7 @@ class ArchitectureAssembly(Assembly):
     def get_global_des_vars(self):
         """Return a list of multi-target Parameters."""
         return [(k, v) for k, v in self.get_parameters().items()
-                                        if isinstance(v, ParameterGroup)]
+                                if isinstance(v, ParameterGroup)]
 
     def get_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters

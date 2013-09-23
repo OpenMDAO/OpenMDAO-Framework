@@ -58,10 +58,9 @@ class PseudoAssembly(object):
                          extra_in=None, extra_out=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
-
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
-        if not self.fd:
+        if self.fd is None:
             self.fd = FiniteDifference(self)
 
         # The only reason not to turn on fake is if we are in a global
@@ -71,14 +70,19 @@ class PseudoAssembly(object):
         else:
             savebase = True
 
-        # First, linearize about operating point.
-        # Note: Only needed for differentiable islands, which are handled
-        # with Fake Finite Difference.
-        if first:
-            for comp in self.comps:
-                comp.calc_derivatives(first, second, savebase)
+        self.wflow.sever_edges(self.wflow._severed_edges)
 
-        self.J = self.fd.calculate()
+        try:
+            # First, linearize about operating point.
+            # Note: Only needed for differentiable islands, which are handled
+            # with Fake Finite Difference.
+            if first:
+                for comp in self.comps:
+                    comp.calc_derivatives(first, second, savebase)
+
+            self.J = self.fd.calculate()
+        finally:
+            self.wflow.unsever_edges()
         
     def provideJ(self):
         """Jacobian for this block"""

@@ -345,6 +345,8 @@ class TestCase1D(unittest.TestCase):
     def test_conmin_gradient(self):
         # Run with 1D parameter and CONMIN gradient.
         self.top.driver.conmin_diff = True
+        self.top.driver.fdch = .000001
+        self.top.driver.fdchm = .000001
         self.top.run()
 
         # pylint: disable-msg=E1101

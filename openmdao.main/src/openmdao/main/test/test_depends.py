@@ -1,17 +1,14 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import logging
 import math
-import nose
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Float, Int, Array, List, Dict
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.lib.datatypes.api import Float, Array, List, Dict
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
-from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
@@ -324,23 +321,23 @@ class DependsTestCase(unittest.TestCase):
         self.assertEqual(exec_order, ['c4','c3'])
         
         
-    #def test_expr_deps(self):
-        #top = set_as_top(Assembly())
-        #driver1 = top.add('driver1', DumbDriver())
-        #driver2 = top.add('driver2', DumbDriver())
-        #top.add('c1', Simple())
-        #top.add('c2', Simple())
-        #top.add('c3', Simple())
+    def test_expr_deps(self):
+        top = set_as_top(Assembly())
+        top.add('driver1', DumbDriver())
+        top.add('driver2', DumbDriver())
+        top.add('c1', Simple())
+        top.add('c2', Simple())
+        top.add('c3', Simple())
         
-        #top.driver.workflow.add(['driver1','driver2','c3'])
-        #top.driver1.workflow.add('c2')
-        #top.driver2.workflow.add('c1')
+        top.driver.workflow.add(['driver1','driver2','c3'])
+        top.driver1.workflow.add('c2')
+        top.driver2.workflow.add('c1')
         
-        #top.connect('c1.c', 'c2.a')
-        #top.driver1.add_objective("c2.c*c2.d")
-        #top.driver2.add_objective("c1.c")
-        #top.run()
-        #self.assertEqual(exec_order, ['driver2','c1','driver1','c2','c3'])
+        top.connect('c1.c', 'c2.a')
+        top.driver1.add_objective("c2.c*c2.d")
+        top.driver2.add_objective("c1.c")
+        top.run()
+        self.assertEqual(exec_order, ['driver1','c1','c2','driver2','c3'])
         
 
     def test_set_already_connected(self):

@@ -1,17 +1,30 @@
 import unittest
 
 from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, find_all_connecting
-from openmdao.main.pseudocomp import PseudoComponent
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
 
 
 class DumbClass(object):
-    def __init__(self, name, inputs=('a','b'), outputs=('c','d')):
+    def __init__(self, name, inputs=None, outputs=None):
         self.name = name
+        if inputs is None:
+            inputs = ('a','b')
+        if outputs is None:
+            outputs = ('c','d')
+
         self._inputs = inputs[:]
         self._outputs = outputs[:]
+        self._valid_dict = {}
+        for inp in inputs:
+            self._valid_dict[inp] = True
+        for out in outputs:
+            self._valid_dict[out] = False
+
+    def run(self, *args, **kwargs):
+        for name in self._valid_dict:
+            self._valid_dict[name] = True
 
     def list_inputs(self):
         return self._inputs
@@ -22,6 +35,13 @@ class DumbClass(object):
     def contains(self, name):
         return hasattr(self, name)
 
+    def invalidate_deps(self, varnames, force=False):
+        for name in varnames:
+            self._valid_dict[name] = False
+        for name in self._outputs:
+            self._valid_dict[name] = False
+        return None
+
 #
 # tests TODO:
 #
@@ -31,45 +51,61 @@ class DumbClass(object):
 #    - vartree
 #    - input and output
 
+def _make_xgraph():
+    """Make an X shaped graph
+    A   D
+     \ /
+      C
+     / \ 
+    B   E
+    """
+    conns = [
+        ('A.c[2]', 'D.a[4]'),
+        ('A.d.z', 'C.a.x.y'),
+        ('B.c', 'C.b[1]'),
+        ('B.d.x', 'E.b'),
+        ('C.c', 'D.b'),
+        ('C.d[2]', 'E.a')
+    ]
+    comps = ['A','B','C','D','E']
+    bvariables = []
+    return _make_graph(comps, bvariables, conns)
+
+def _make_base_sub_permutations():
+    """create a simple graph with all permutations of connections, i.e.,
+    base-base, sub-sub, base-sub, sub-base
+    """
+    comps = ['C1', 'C2']
+    conns = [
+        ('C1.out1', 'C2.in1'),       # base to base
+        ('C1.out2[1]', 'C2.in2'),    # sub to base
+        ('C1.out3[1]', 'C2.in3[1]'), # sub to sub
+        ('C1.out4', 'C2.in4[1]'),    # base to sub
+    ]
+    bvariables = []
+    inputs = ('in1', 'in2', 'in3', 'in4', 'in5', 'in6', 'in7')
+    outputs = ('out1', 'out2', 'out3', 'out4')
+    return _make_graph(comps, bvariables, conns, inputs, outputs)
+
+def _make_graph(comps=(), variables=(), connections=(), inputs=None, outputs=None):
+    scope = DumbClass('')
+    dep = DependencyGraph()
+    for comp in comps:
+        if isinstance(comp, basestring):
+            comp = DumbClass(comp, inputs=inputs, outputs=outputs)
+        dep.add_component(comp.name, comp)
+        setattr(scope, comp.name, comp)
+
+    for v, iotype in variables:
+        dep.add_boundary_var(v, iotype=iotype)
+
+    for src, dest in connections:
+        dep.connect(src, dest)
+
+    return dep, scope
+
 
 class DepGraphTestCase(unittest.TestCase):
-
-    def make_xgraph(self):
-        """Make an X shaped make_graph
-        A   D
-         \ /
-          C
-         / \
-        B   E
-        """
-        conns = [
-            ('A.c[2]', 'D.a[4]'),
-            ('A.d.z', 'C.a.x.y'),
-            ('B.c', 'C.b[1]'),
-            ('B.d.x', 'E.b'),
-            ('C.c', 'D.b'),
-            ('C.d[2]', 'E.a')
-        ]
-        comps = ['A','B','C','D','E']
-        bvariables = []
-        return self.make_graph(comps, bvariables, conns)
-
-    def make_graph(self, comps=(), variables=(), connections=()):
-        scope = DumbClass('')
-        dep = DependencyGraph()
-        for comp in comps:
-            if isinstance(comp, basestring):
-                comp = DumbClass(comp)
-            dep.add_component(comp.name, comp.list_inputs(), comp.list_outputs())
-            setattr(scope, comp.name, comp)
-
-        for v, iotype in variables:
-            dep.add_boundary_var(v, iotype=iotype)
-
-        for src, dest in connections:
-            dep.connect(src, dest)
-
-        return dep, scope
 
     def get_comp(self, name):
         return getattr(self.scope, name)
@@ -96,11 +132,11 @@ class DepGraphTestCase(unittest.TestCase):
         self.comps = ['A','B','C','D']
         self.bvariables = [('a','in'), ('b','in'),
                           ('c','out'), ('d','out')]
-        self.dep, self.scope = self.make_graph(self.comps,
-                                               self.bvariables,
-                                               self.conns +
-                                               self.boundary_conns +
-                                               self.ext_conns)
+        self.dep, self.scope = _make_graph(self.comps,
+                                           self.bvariables,
+                                           self.conns +
+                                           self.boundary_conns +
+                                           self.ext_conns)
 
     def test_add(self):
         for name in self.comps:
@@ -176,6 +212,9 @@ class DepGraphTestCase(unittest.TestCase):
                          set(['a','D.b']))
     
     def test_get_connected_outputs(self):
+        self.assertEqual(set(self.dep.get_connected_outputs()), 
+                         set(['c', 'D.d']))
+        self.dep.connect('D.a', 'parent.foo.bar')
         self.assertEqual(set(self.dep.get_connected_outputs()), 
                          set(['c', 'D.d']))
     
@@ -303,20 +342,131 @@ class DepGraphTestCase(unittest.TestCase):
     # so the DependencyGraph will never see anything other than connections
     # between base variables or subvars (or some permutation)
     #def test_expr(self):
-        #dep, scope = self.make_graph(comps=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
+        #dep, scope = _make_graph(comps=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
         #self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
         #dep.disconnect('3.4*B.d+2.3', 'C.b')
         #self.assertEqual(dep.list_connections(), [])
-        #dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
-                                                                   #('3.4*B.d+2.3', 'C.a')])
+        #dep, scope = _make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                               #('3.4*B.d+2.3', 'C.a')])
         #self.assertEqual(set(dep.list_connections()), set([('3.4*B.d+2.3','C.b'),('3.4*B.d+2.3','C.a')]))
         #dep.disconnect('3.4*B.d+2.3', 'C.b')
         #self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.a')])
        
-        #dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
-                                                                   #('3.4*B.d+2.3', 'C.a')])
+        #dep, scope = _make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                               #('3.4*B.d+2.3', 'C.a')])
         #dep.disconnect('3.4*B.d+2.3')
         #self.assertEqual(dep.list_connections(), [])
+        
+    def test_invalidate(self):
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1','B.in1')],
+                                 inputs=['in1','in2'],
+                                 outputs=['out1','out2'])
+        scope.A.run()
+        scope.B.run()
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict.values(), [True]*4)
+
+        dep.invalidate_deps(scope, 'A', ['out2'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict.values(), [True]*4)
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.connect('B.out1', 'A.in1') # make a cycle
+
+        scope.A.run()
+        scope.B.run()
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict['in1'], False)
+        self.assertEqual(scope.A._valid_dict['in2'], True)
+        self.assertEqual(scope.A._valid_dict['out1'], False)
+        self.assertEqual(scope.A._valid_dict['out2'], False)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        scope.A.run()
+        scope.B.run()
+
+        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict.values(), [True]*4)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.unsever_edges() # put cycle back
+        scope.A.run()
+        scope.B.run()
+
+        dep.invalidate_deps(scope, 'A', ['out1'])
+        self.assertEqual(scope.A._valid_dict['in1'], False)
+        self.assertEqual(scope.A._valid_dict['in2'], True)
+        self.assertEqual(scope.A._valid_dict['out1'], False)
+        self.assertEqual(scope.A._valid_dict['out2'], False)
+        self.assertEqual(scope.B._valid_dict['in1'], False)
+        self.assertEqual(scope.B._valid_dict['in2'], True)
+        self.assertEqual(scope.B._valid_dict['out1'], False)
+        self.assertEqual(scope.B._valid_dict['out2'], False)
+
+        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
+        try:
+            dep.sever_edges([('A.out1','B.in1')])
+        except Exception as err:
+            self.assertEqual("only one set of severed edges is permitted", str(err))
+        else:
+            self.fail("Exception expected")
+
+
+    def test_var_edge_iter(self):
+        # basevar to basevar connection
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1','B.in1')],
+                                 inputs=['in1'],
+                                 outputs=['out1'])
+        self.assertEqual([('A.out1','B.in1')], list(dep.var_edge_iter('A.out1')))
+        self.assertEqual([('A.out1','B.in1')], list(dep.var_edge_iter('B.in1', reverse=True)))
+        
+        # subvar to basevar connection
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1[1]','B.in1')],
+                                 inputs=['in1'],
+                                 outputs=['out1'])
+        self.assertEqual([('A.out1','A.out1[1]'),('A.out1[1]','B.in1')], list(dep.var_edge_iter('A.out1')))
+        self.assertEqual([('A.out1[1]','B.in1'),('A.out1','A.out1[1]')], list(dep.var_edge_iter('B.in1', reverse=True)))
+        
+        # subvar to subvar connection (multiple connections between two basevars)
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1[1]','B.in1[1]'),('A.out1[2]','B.in1[2]')],
+                                 inputs=['in1'],
+                                 outputs=['out1'])
+        expected = [
+            ('A.out1','A.out1[1]'),
+            ('A.out1','A.out1[2]'),
+            ('A.out1[1]','B.in1[1]'),
+            ('A.out1[2]','B.in1[2]'),
+            ('B.in1[1]','B.in1'),
+            ('B.in1[2]','B.in1')
+        ]
+        self.assertEqual(set(expected), set(dep.var_edge_iter('A.out1')))
+        self.assertEqual(set(expected), set(dep.var_edge_iter('B.in1', reverse=True)))
+        
+        # basevar to subvar connection
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.out1','B.in1[1]')],
+                                 inputs=['in1'],
+                                 outputs=['out1'])
+        self.assertEqual([('A.out1','B.in1[1]'),('B.in1[1]','B.in1')], list(dep.var_edge_iter('A.out1')))
+        self.assertEqual([('B.in1[1]','B.in1'),('A.out1','B.in1[1]')], list(dep.var_edge_iter('B.in1', reverse=True)))
         
     def test_basevar_iter(self):
         dep = self.dep
@@ -327,15 +477,14 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(dep.basevar_iter(['B.d'])), set(['C.b']))
         self.assertEqual(set(dep.basevar_iter(['C.c'])), set(['c']))
         self.assertEqual(list(dep.basevar_iter(['parent.C2.a'])), [])
-        self.assertEqual(set(dep.basevar_iter(['D.b'])), set(['D.c','D.d']))
-        self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set(['D.c','D.d']))
-        self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 2)
+        self.assertEqual(list(dep.basevar_iter(['D.b'])), [])
+        self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set())
+        self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 0)
 
-        dep, scope = self.make_xgraph()
+        dep, scope = _make_xgraph()
         self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['C.a','D.a']))
         self.assertEqual(set(dep.basevar_iter(['C.a','C.b'], reverse=True)), 
                          set(['A.d','B.c']))
-
 
     def test_comp_iter(self):
         dep = self.dep
@@ -354,12 +503,25 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(list(dep.comp_iter('C')), ['_pseudo_0'])
         self.assertEqual(list(dep.comp_iter('D', reverse=True)), ['_pseudo_0'])
 
-        dep, scope = self.make_xgraph()
+        dep, scope = _make_xgraph()
 
         self.assertEqual(set(dep.comp_iter('C')), set(['D','E']))
         self.assertEqual(set(dep.comp_iter('C', reverse=True)), set(['A','B']))
         self.assertEqual(set(dep.comp_iter('A')), set(['D','C']))
 
+    def test_input_as_output(self):
+        dep, scope = _make_graph(['A','B','C'], [],
+                                 [('A.c','B.a'),('B.d','C.b')])
+        self.assertEqual(dep.list_input_outputs('A'), [])
+        dep.connect('A.a','C.a')
+        self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
+
+    def test_iograph(self):
+        iograph = self.dep.io_graph()
+        self.assertEqual(set(iograph.nodes()), 
+                         set(['a','b','c','d']))
+        self.assertEqual(set(iograph.edges()), 
+                         set([('a','c'),('b','c')]))
           
 if __name__ == "__main__":
     unittest.main()

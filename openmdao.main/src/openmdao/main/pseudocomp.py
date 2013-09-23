@@ -328,4 +328,5 @@ class PseudoComponent(object):
         self.J = array([[grad[n] for n in self._inputs]])
 
     def provideJ(self):
+        #print self._inputs, self.J
         return tuple(self._inputs), ('out0',), self.J

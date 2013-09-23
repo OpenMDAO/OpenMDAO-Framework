@@ -40,11 +40,13 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
+                                     IContainer, IParametricGeometry, \
+                                     IComponent
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
-                                     is_instance, CLASSES_TO_PROXY
+                                     is_instance, CLASSES_TO_PROXY, \
+                                     has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
@@ -629,8 +631,10 @@ class Container(SafeHasTraits):
             else:
                 obj.parent = self
             # if an old child with that name exists, remove it
+            removed = False
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
+                removed = True
             obj.name = name
             setattr(self, name, obj)
             if self._cached_traits_ is None:
@@ -638,11 +642,14 @@ class Container(SafeHasTraits):
             else:
                 self._cached_traits_[name] = self.trait(name)
             io = self._cached_traits_[name].iotype
-            if io and not isinstance(self._depgraph, _ContainerDepends):
-                # since we just removed this container and it was
-                # being used as an io variable, we need to put
-                # it back in the dep graph and valids dict
-                self._depgraph.add_boundary_var(name, iotype=io)
+            if removed and not isinstance(self._depgraph, _ContainerDepends):
+                if io:
+                    # since we just removed this container and it was
+                    # being used as an io variable, we need to put
+                    # it back in the dep graph
+                    self._depgraph.add_boundary_var(name, iotype=io)
+                elif has_interface(obj, IComponent):
+                    self._depgraph.add_component(name, obj)
 
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
@@ -1030,22 +1037,15 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            if '[' in path:
-                path, idx = path.replace(']', '').split('[')
-                if path:
-                    if idx.isdigit():
-                        obj = getattr(self, path, Missing)[int(idx)]
-                    elif idx.startswith('('):  # ndarray index
-                        obj = getattr(self, path, Missing)
-                        if obj is Missing:
-                            return self._get_failed(path, index)
-                        idx = idx[1:-1].split(',')
-                        for i in idx:
-                            obj = obj[int(i)]
-                        return obj
-                    else:
-                        key = re.sub('\'|"', '', str(idx))  # strip any quotes
-                        obj = getattr(self, path, Missing)[key]
+            if ('[' in path or '(' in path) and index is None:
+                # caller has put indexing in the string instead of
+                # using the indexing protocol
+                # TODO: document somewhere that passing indexing 
+                #       information as part of the path string has
+                #       higher overhead than constructing the index
+                #       using the indexing protocol or using ExprEvaluators
+                #       that you keep around and evaluate repeatedly.
+                obj = ExprEvaluator(path, scope=self).evaluate()
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:
