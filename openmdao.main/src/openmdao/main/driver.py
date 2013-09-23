@@ -500,7 +500,8 @@ class Driver(Component):
         ret['type'] = type(self).__module__ + '.' + type(self).__name__
         ret['workflow'] = []
         ret['valid'] = self.is_valid()
-        for comp in self.workflow.get_components():
+        comps = [comp for comp in self.workflow]
+        for comp in comps:
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
                 ret['workflow'].append({
