@@ -83,6 +83,7 @@ class Workflow(object):
 
     def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
+
         self._stop = False
         self._iterator = self.__iter__()
         self._exec_count += 1
@@ -91,7 +92,9 @@ class Workflow(object):
         for comp in self._iterator:
             self._comp_count += 1
             comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+
             comp.run(ffd_order=ffd_order, case_id=case_id)
+
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
