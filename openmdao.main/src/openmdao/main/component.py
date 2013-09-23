@@ -31,7 +31,7 @@ from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
-from openmdao.main.ndepgraph import DependencyGraph
+from openmdao.main.ndepgraph import DependencyGraph, is_output_node, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
@@ -1917,7 +1917,19 @@ class Component(Container):
             return self.parent.get_valid(
                 ['.'.join([self.name,n]) for n in names])
         else:
-            return [True]*len(names)
+            valids = []
+            if self._exec_state == 'INVALID':
+                isvalid = False
+            else:
+                isvalid = True
+            for name in names:
+                if is_input_node(self._depgraph, name):
+                    valids.append(True)
+                elif isvalid:
+                    valids.append(True)
+                else:
+                    valids.append(False)
+            return valids
 
 # def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
 #     """Prints out validity status of all input and output traits

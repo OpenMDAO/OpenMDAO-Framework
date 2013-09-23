@@ -1069,7 +1069,7 @@ class DependencyGraph(nx.DiGraph):
             for n in self.successors_iter(inp):
                 meta[n]['valid'] = True
                 if is_subvar_node(self, n):
-                    for var in self._all_vars(inp):
+                    for var in self._all_vars(self.node[n]['basevar']):
                         meta[var]['valid'] = True
 
         for out in self.get_boundary_outputs():
@@ -1080,7 +1080,8 @@ class DependencyGraph(nx.DiGraph):
                     for var in self._all_vars(out):
                         meta[var]['valid'] = True
 
-        ??? not finished!
+        for out in self.get_extern_dests():
+            meta[out]['valid'] = True
 
 
 def find_related_pseudos(compgraph, nodes):
