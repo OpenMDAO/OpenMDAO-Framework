@@ -265,7 +265,7 @@ def applyJ(obj, arg, result):
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
-        for key in resultkeys:
+        for key in sorted(resultkeys):
             
             value = result[key]
 
@@ -279,7 +279,8 @@ def applyJ(obj, arg, result):
                 
                 if basekey not in result:
                     result[basekey] = zeros(var.shape)
-                    exec("result[basekey]%s = value" % index)
+                    
+                exec("result[basekey]%s += value" % index)
                 
             else:
                 var = obj.get(key)
@@ -301,7 +302,7 @@ def applyJ(obj, arg, result):
                 result[key] = value.reshape(shape)
 
         argkeys = arg.keys()
-        for key in argkeys:
+        for key in sorted(argkeys):
             
             value = arg[key]
 
@@ -315,7 +316,8 @@ def applyJ(obj, arg, result):
                 
                 if basekey not in arg:
                     arg[basekey] = zeros(var.shape)
-                    exec("arg[basekey]%s = value" % index)
+                    
+                exec("arg[basekey]%s += value" % index)
             else:
                 var = obj.get(key)
                 
@@ -430,7 +432,7 @@ def applyJT(obj, arg, result):
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
-        for key in resultkeys:
+        for key in sorted(resultkeys):
             
             value = result[key]
 
@@ -444,7 +446,8 @@ def applyJT(obj, arg, result):
                 
                 if basekey not in result:
                     result[basekey] = zeros(var.shape)
-                    exec("result[basekey]%s = value" % index)
+                    
+                exec("result[basekey]%s += value" % index)
                 
             else:
                 var = obj.get(key)

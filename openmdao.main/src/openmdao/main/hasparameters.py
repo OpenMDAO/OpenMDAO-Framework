@@ -14,7 +14,7 @@ class Parameter(object):
         are assumed to be expressed in unscaled form.  If high and low are not supplied, then
         their values will be pulled from the target variable (along with a start value), and
         are assumed to be in scaled form, so their values will be unscaled prior to being 
-        stored in the Paramter.
+        stored in the Parameter.
         """
 
         if scaler is None and adder is None:

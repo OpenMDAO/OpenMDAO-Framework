@@ -319,6 +319,52 @@ class ArrayComp2D(Component):
         return input_keys, output_keys, self.J
     
 
+class ArrayComp2D_der(Component):
+    '''2D Array component'''
+    
+    x = Array(zeros((2, 2)), iotype='in')
+    y = Array(zeros((2, 2)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0][0] = 2.0*self.x[0][0] + 1.0*self.x[0][1] + \
+                       3.0*self.x[1][0] + 7.0*self.x[1][1]
+        
+        self.y[0][1] = 4.0*self.x[0][0] + 2.0*self.x[0][1] + \
+                       6.0*self.x[1][0] + 5.0*self.x[1][1]
+        
+        self.y[1][0] = 3.0*self.x[0][0] + 6.0*self.x[0][1] + \
+                       9.0*self.x[1][0] + 8.0*self.x[1][1]
+        
+        self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
+                       2.0*self.x[1][0] + 4.0*self.x[1][1]
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[2.0, 1.0, 3.0, 7.0],
+                        [4.0, 2.0, 6.0, 5.0],
+                        [3.0, 6.0, 9.0, 8.0],
+                        [1.0, 3.0, 2.0, 4.0]])
+
+    def apply_deriv(self, arg, result):
+        
+        result['y'] = result['y'].flatten()
+        if 'x' in arg and 'y' in result:
+            result['y'] += self.J.dot(arg['x'].flatten())
+            
+        result['y'] = result['y'].reshape(2, 2)
+        
+    def apply_derivT(self, arg, result):
+        
+        result['x'] = result['x'].flatten()
+        if 'y' in arg and 'x' in result:
+            result['x'] += self.J.T.dot(arg['y'].flatten())
+        
+        result['x'] = result['x'].reshape(2, 2)
+    
+
 class GComp_noD(Component):
     
     x1 = Float(1.0, iotype='in')
@@ -771,6 +817,182 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         #print J
         #assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
         
+    def test_nested_2Darray_simul_element_and_full_connection(self):
+        
+        top = Assembly()
+        top.add('comp', ArrayComp2D())
+        top.add('nest', Assembly())
+        top.nest.add('comp', ArrayComp2D())
+        
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest', 'comp'])
+        top.connect('nest.y', 'comp.x')
+        top.driver.add_parameter('nest.x[0][0]', low=-10, high=10)
+        top.driver.add_objective('comp.y[0][0]')
+        top.driver.add_constraint('nest.y[0][1] < 0')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+
+        # Slightly different config
+        
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ArrayComp2D())
+        top.nest.add('comp2', ArrayComp2D())
+        
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+        top.nest.connect('comp1.y', 'comp2.x')
+        top.nest.create_passthrough('comp1.x')
+        top.nest.create_passthrough('comp1.y')
+        top.nest.add('yy', Array(iotype='out'))
+        top.nest.connect('comp2.y', 'yy')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest'])
+        top.driver.add_parameter('nest.x[0][0]', low=-10, high=10)
+        top.driver.add_objective('nest.yy[0][0]')
+        top.driver.add_constraint('nest.y[0][1] < 0')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        # Do it all over with apply_deriv defined derivatives
+        
+        top = Assembly()
+        top.add('comp', ArrayComp2D_der())
+        top.add('nest', Assembly())
+        top.nest.add('comp', ArrayComp2D_der())
+        
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest', 'comp'])
+        top.connect('nest.y', 'comp.x')
+        top.driver.add_parameter('nest.x[0][0]', low=-10, high=10)
+        top.driver.add_objective('comp.y[0][0]')
+        top.driver.add_constraint('nest.y[0][1] < 0')
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+
+        # Slightly different config
+        
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ArrayComp2D_der())
+        top.nest.add('comp2', ArrayComp2D_der())
+        
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+        top.nest.connect('comp1.y', 'comp2.x')
+        top.nest.create_passthrough('comp1.x')
+        top.nest.create_passthrough('comp1.y')
+        top.nest.add('yy', Array(iotype='out'))
+        top.nest.connect('comp2.y', 'yy')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest'])
+        top.driver.add_parameter('nest.x[0][0]', low=-10, high=10)
+        top.driver.add_objective('nest.yy[0][0]')
+        top.driver.add_constraint('nest.y[0][1] < 0')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+    
+        # Multi param
+        
+        top = Assembly()
+        top.add('comp', ArrayComp2D_der())
+        top.add('nest', Assembly())
+        top.nest.add('comp', ArrayComp2D_der())
+        
+        top.nest.driver.workflow.add(['comp'])
+        top.nest.create_passthrough('comp.x')
+        top.nest.create_passthrough('comp.y')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest', 'comp'])
+        top.connect('nest.y', 'comp.x')
+        top.driver.add_parameter('nest.x[0][0]', low=-10, high=10)
+        top.driver.add_parameter('nest.x[1][0]', low=-10, high=10)
+        top.driver.add_objective('comp.y[0][0]')
+        top.driver.add_constraint('nest.y[0][1] < 0')
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+        assert_rel_error(self, J[0, 1], 53.0, .000001)
+        assert_rel_error(self, J[1, 1], 6.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+        assert_rel_error(self, J[0, 1], 53.0, .000001)
+        assert_rel_error(self, J[1, 1], 6.0, .000001)
+    
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], 24.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+        assert_rel_error(self, J[0, 1], 53.0, .000001)
+        assert_rel_error(self, J[1, 1], 6.0, .000001)
+
     def test_large_dataflow(self):
         
         self.top = set_as_top(Assembly())
