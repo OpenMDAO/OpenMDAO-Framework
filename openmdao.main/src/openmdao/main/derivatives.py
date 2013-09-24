@@ -10,7 +10,7 @@ from openmdao.main.mp_support import has_interface
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \
-         ravel_multi_index
+         ravel_multi_index, arange, vstack, hstack
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator

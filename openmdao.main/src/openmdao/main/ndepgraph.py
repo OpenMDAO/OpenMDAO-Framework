@@ -90,7 +90,7 @@ def is_input_node(graph, node):
     if graph.node[node].get('iotype') == 'in':
         return True
     base = graph.node[node].get('basevar')
-    return base in graph and graph.node[base].get('iotype') == 'in'
+    return base is not None and graph.node[base].get('iotype') == 'in'
 
 def is_input_base_node(graph, node):
     return graph.node[node].get('iotype') == 'in'
@@ -99,7 +99,7 @@ def is_output_node(graph, node):
     if graph.node[node].get('iotype') == 'out':
         return True
     base = graph.node[node].get('basevar')
-    return base in graph and graph.node[base].get('iotype') == 'out'
+    return base is not None and graph.node[base].get('iotype') == 'out'
 
 def is_output_base_node(graph, node):
     return graph.node[node].get('iotype') == 'out'
@@ -525,8 +525,7 @@ class DependencyGraph(nx.DiGraph):
         """ Returns all interior connections between the given comps.
         """
         if comps is None:
-            pred = any_preds(is_comp_node, is_pseudo_node)
-            compset = set([n for n in self.nodes_iter() if pred(self, n)])
+            compset = set([n for n in self.nodes_iter() if is_comp_node(self, n)])
         else:
             compset = set(comps)
         return [(u,v) for u, v in self.edges_iter()
@@ -555,7 +554,7 @@ class DependencyGraph(nx.DiGraph):
         return in_set.intersection(out_set)
 
     def connections_to(self, path, direction=None):
-        if is_comp_node(self, path) or is_pseudo_node(self, path):
+        if is_comp_node(self, path):
             return self._comp_connections(path, direction)
         else:
             return self._var_connections(path, direction)
@@ -715,42 +714,6 @@ class DependencyGraph(nx.DiGraph):
                         stack.append((node, ['.'.join([node,n]) for n in outs], False))
                 else:
                     stack.append((node, self.successors_iter(node), True))
-
-        # visited = set()
-        # while(stack):
-        #     src, neighbors, valid = stack.pop()
-        #     if is_comp_node(self, src):
-        #         ndata[src]['valid'] = False
-        #     else:
-        #         visited.add(src)
-        #         if valid is False:
-        #             continue
-        #         if src.startswith('parent.'):
-        #             ndata[src]['valid'] = False
-        #         elif self.in_degree(src): # don't invalidate unconnected inputs
-        #             ndata[src]['valid'] = False
-                    
-        #         if is_boundary_node(self, src) and is_output_base_node(self, src):
-        #             outset.add(src)
-
-        #     for node in neighbors:
-        #         if is_comp_node(self, node):
-        #             #outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
-        #             outs = getattr(scope, node).invalidate_deps(['.'.join(['parent',n]) 
-        #                                                           for n in self.get_sources(src)])
-        #             if outs is None:
-        #                 stack.append((node, self.successors_iter(node), 
-        #                              False))
-        #             else: # partial invalidation
-        #                 outs = ['.'.join([node,n]) for n in outs]
-        #                 stack.extend([(n, self.successors_iter(n),
-        #                                      ndata[n]['valid'])
-        #                                 for n in outs]) 
-        #         elif node not in visited:
-        #             nvalid = ndata[node]['valid']
-        #             if nvalid:
-        #                 stack.append((node, self.successors_iter(node), 
-        #                                 nvalid))
 
         return outset
 
