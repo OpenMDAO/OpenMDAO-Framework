@@ -856,6 +856,28 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 2.0, .001) 
         
+    def test_equality_constraint(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis', ArrayComp1())
+        self.top.driver.add_parameter('dis.x[0]', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis.y[0] = 2.0*dis.y[-1]')   
+        
+        self.top.run()
+        
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], -8.0, .001) 
+        
+        self.top.driver.workflow.config_changed()
+        J = self.top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], -8.0, .001) 
+        
+        self.top.driver.workflow.config_changed()
+        J = self.top.driver.workflow.calc_gradient(fd=True)
+        assert_rel_error(self, J[0, 0], -8.0, .001) 
+        
     def test_nondifferentiable_blocks(self):
         
         self.top = set_as_top(Assembly())
