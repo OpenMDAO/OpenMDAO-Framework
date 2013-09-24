@@ -1,11 +1,23 @@
 from collections import deque
-import pprint
 
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver
 from openmdao.main.expreval import ExprEvaluator
+
+_spaces = 0
+def spaces():
+    return _spaces*' '
+
+def tab():
+    global _spaces
+    _spaces += 3
+
+def untab():
+    global _spaces
+    _spaces -=3
+    
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -407,6 +419,10 @@ class DependencyGraph(nx.DiGraph):
         will also add an edge from base variable A.b to A.b[3],
         and another edge from B.c.x to base variable B.c.
         """
+        tab()
+        print spaces(), ' ** connect(%s, %s)' % (srcpath, destpath)
+        for n in self.nodes():
+            print spaces(),n,':',self.node[n]['valid']
 
         base_src  = base_var(self, srcpath)
         base_dest = base_var(self, destpath)
@@ -418,7 +434,9 @@ class DependencyGraph(nx.DiGraph):
         if base_src in self:
             src_validity = self.node[base_src]['valid']
         else:
-            src_validity = False
+            src_validity = True
+
+        print spaces(), 'src_validity = %s' % src_validity
             
         path = [(base_src, base_src, src_validity)]
 
@@ -434,10 +452,10 @@ class DependencyGraph(nx.DiGraph):
 
         for i in range(len(path)):
             var, base, valid = path[i]
-            if var not in self:
-                self.add_node(var, basevar=base, valid=valid) # subvar
-            else:
+            if var in self:
                 self.node[var]['valid'] = valid
+            else:
+                self.add_node(var, basevar=base, valid=valid) # subvar
             if i > 0:
                 self.add_edge(path[i-1][0], var)
 
@@ -450,10 +468,14 @@ class DependencyGraph(nx.DiGraph):
         self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath, getter='get_attr')
         self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath, getter='get_attr')
 
-        self.invalidate_deps(scope, [destpath])
+        self.invalidate_deps(scope, [srcpath])
         
         if config_change:
             self.config_changed()
+        print spaces(), ' ** after connect(%s, %s)' % (srcpath, destpath)
+        for n in self.nodes():
+            print spaces(),n,':',self.node[n]['valid']
+        untab()
 
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
@@ -666,7 +688,11 @@ class DependencyGraph(nx.DiGraph):
         vnames: list or set of str
             Names of var nodes.
         """
-
+        tab()
+        print spaces(), "invalidate_deps for '%s'" % scope.name
+        print spaces(), 'vnames = %s' % vnames
+        for n in self.nodes():
+            print spaces(),n,':',self.node[n]['valid']
         if not vnames:
             return []
 
@@ -681,34 +707,48 @@ class DependencyGraph(nx.DiGraph):
             src, neighbors, valid = stack.pop()
             if is_comp_node(self, src):
                 ndata[src]['valid'] = False
+                print spaces(), src,': False'
             else:
                 visited.add(src)
                 if valid is False:
+                    print spaces(), src,'is already invalid **'
                     continue
-                if self.in_degree(src): # don't invalidate unconnected inputs
+                if src.startswith('parent.'):
                     ndata[src]['valid'] = False
+                    print spaces(), src,': False'
+                elif self.in_degree(src): # don't invalidate unconnected inputs
+                    ndata[src]['valid'] = False
+                    print spaces(), src,': False'
                     
                 if is_boundary_node(self, src) and is_output_base_node(self, src):
+                    print spaces(), 'adding',src,' to outset'
                     outset.add(src)
 
             for node in neighbors:
+                print spaces(), 'neighbor =',node
                 if is_comp_node(self, node):
                     #outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
                     outs = getattr(scope, node).invalidate_deps(['.'.join(['parent',n]) 
                                                                   for n in self.get_sources(src)])
+                    print spaces(), "%s invalidated reported from comp '%s'" % (outs, node)
                     if outs is None:
+                        print spaces(), 'adding %s to stack' % node
                         stack.append((node, self.successors_iter(node), 
                                      False))
                     else: # partial invalidation
                         outs = ['.'.join([node,n]) for n in outs]
+                        print spaces(), 'adding %s to stack' % outs
                         stack.extend([(n, self.successors_iter(n),
                                              ndata[n]['valid'])
                                         for n in outs]) 
                 elif node not in visited:
                     nvalid = ndata[node]['valid']
                     if nvalid:
+                        print spaces(), 'adding %s to stack' % node
                         stack.append((node, self.successors_iter(node), 
                                         nvalid))
+                    else:
+                        print spaces(), node,'already invalid'
                 # else: # a component node with partial invalidation
                 #     stack.extend([(n,iograph.successors_iter(n),
                 #                                  ndata[n]['valid']) 
@@ -716,6 +756,7 @@ class DependencyGraph(nx.DiGraph):
                 #                       if iograph.out_degree(n)>0 and
                 #                          self.in_degree(n)>0])
 
+        untab()
         return outset
 
     def get_boundary_inputs(self, connected=False):

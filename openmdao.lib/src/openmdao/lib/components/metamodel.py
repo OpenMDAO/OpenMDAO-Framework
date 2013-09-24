@@ -335,7 +335,7 @@ class MetaModel(Component):
             return
         super(MetaModel, self).invalidate_deps(varnames=varnames)
 
-    def child_invalidated(self, childname, vname, force=False):
+    def child_invalidated(self, childname, vname):
         pass
 
     def exec_counts(self, compnames):

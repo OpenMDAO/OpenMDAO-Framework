@@ -620,6 +620,7 @@ class DependsTestCase2(unittest.TestCase):
         top.sub.create_passthrough('c2.aout')
         top.add('c3', ArrSimple())
         top.driver.workflow.add(['c1','sub', 'c3'])
+        top.sub.driver.workflow.add('c2')
         top.connect('c1.aout[2]', 'sub.ain[1]')
         top.connect('sub.aout[1]', 'c3.ain[2]')
 
@@ -641,6 +642,7 @@ class DependsTestCase2(unittest.TestCase):
         top.run()
         self.assertEqual(get_valids(top._depgraph, False), [])
         
+        print '---------------'
         top.c1.ain = [55.,44.,33.]
         for v in expected:
             self.assertEqual(top._depgraph.node[v]['valid'], False)

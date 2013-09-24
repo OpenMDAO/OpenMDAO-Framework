@@ -501,8 +501,8 @@ class Assembly(Component):
 
                 outs = self._depgraph.invalidate_deps(self, [dest])#, force=True)
                 if (outs is None) or outs:
-                    destcompname, destcomp, destvarname = self._split_varpath(dest)
-                    self.child_invalidated(destcompname, outs, force=True)
+                    for cname, vnames in partition_names_by_comp(outs).items():
+                        self.child_invalidated(cname, vnames) #, force=True)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
