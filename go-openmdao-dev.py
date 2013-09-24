@@ -2299,6 +2299,7 @@ def after_install(options, home_dir, activated=False):
  ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
  ('openmdao.examples.mdao', 'examples', 'sdist'),
  ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
+ ('openmdao.examples.nozzle_geometry_doe', 'examples', 'sdist'),
  ('openmdao.devtools', '', 'sdist')]
 
         try:

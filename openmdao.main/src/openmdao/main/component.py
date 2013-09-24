@@ -540,6 +540,8 @@ class Component(Container):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+
+
         if self.directory:
             self.push_dir()
 
@@ -549,6 +551,7 @@ class Component(Container):
         self._stop = False
         self.ffd_order = ffd_order
         self._case_id = case_id
+
         try:
             self._pre_execute(force)
             self._set_exec_state('RUNNING')
@@ -592,6 +595,7 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+
 
     def _run_terminated(self):
         """ Executed at end of top-level run. """
