@@ -4,11 +4,11 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.typegroups import real_types, int_types
 
 try:
-    from numpy import array, ndarray
+    from numpy import array, ndarray, ones, ravel, reshape
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray
+    from openmdao.main.numpy_fallback import array, ndarray, ones, ravel, reshape
 
 __missing = object()
 
@@ -18,7 +18,7 @@ class ParameterBase(object):
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None,
-                 _expreval=None, _val=None):
+                 _expreval=None):
         """If scaler and/or adder are not None, then high, low, and start, if
         not None, are assumed to be expressed in unscaled form. If high and low
         are not supplied, then their values will be pulled from the target
@@ -154,11 +154,11 @@ class Parameter(ParameterBase):
         super(Parameter, self).__init__(target, high, low,
                                         scaler, adder, start,
                                         fd_step, scope, name,
-                                        _expreval, _val)
+                                        _expreval)
         if _val is None:
             try:
                 _val = self._expreval.evaluate()
-            except Exception as err:
+            except Exception:
                 raise ValueError("Can't add parameter because I can't evaluate"
                                  " '%s'." % target)
 
@@ -463,15 +463,15 @@ class ArrayParameter(ParameterBase):
         super(ArrayParameter, self).__init__(target, high, low,
                                              scaler, adder, start,
                                              fd_step, scope, name,
-                                             _expreval, _val)
+                                             _expreval)
         if _val is None:
             try:
                 _val = self._expreval.evaluate()
-            except Exception as err:
+            except Exception:
                 raise ValueError("Can't add parameter because I can't evaluate"
                                  " '%s'." % target)
 
-        self.valtypename = _val.dtype
+        self.valtypename = _val.dtype.name
 
         if _val.dtype.kind not in ('fi'):
             raise TypeError('Only float or int arrays are supported')
@@ -480,11 +480,6 @@ class ArrayParameter(ParameterBase):
         self.shape = _val.shape
         self._size = _val.size
 
-        self._params = []
-        shape = _val.shape
-        rank = len(shape)
-        indices = [0] * rank
-
         highs = []
         lows = []
         scalers = []
@@ -492,36 +487,62 @@ class ArrayParameter(ParameterBase):
         starts = []
         fd_steps = []
 
-        for i, element in enumerate(_val.flat):
-            index = ''.join(['[%s]' % idx for idx in indices])
+        # metadata is in the form (varname, metadata), so use [1] to get
+        # the actual metadata dict
+        metadata = self.get_metadata()[1]
 
-            _target  = target + index
+        for i in range(_val.size):
             _high    = self._fetch('high', high, i)
             _low     = self._fetch('low', low, i)
             _scaler  = self._fetch('scaler', scaler, i)
             _adder   = self._fetch('adder', adder, i)
             _start   = self._fetch('start', start, i)
             _fd_step = self._fetch('fd_step', fd_step, i)
-            _scope   = scope
-            _name    = None if name is None else name + index
 
-            param = Parameter(_target, _high, _low,
-                              _scaler, _adder, _start,
-                              _fd_step, _scope, _name, _val=element)
-            self._params.append(param)
+            meta_low = self._fetch('meta_low', metadata.get('low'), i)
+            meta_high = self._fetch('meta_high', metadata.get('high'), i)
 
-            highs.append(param.high)
-            lows.append(param.low)
-            scalers.append(param.scaler)
-            adders.append(param.adder)
-            starts.append(param.start)
-            fd_steps.append(param.fd_step)
+            if meta_low is not None:
+                if _low is None:
+                    _low = self._untransform(meta_low)
+                elif _low < self._untransform(meta_low):
+                    raise ValueError("Trying to add parameter '%s', but the"
+                                     " lower limit supplied (%s) exceeds the"
+                                     " built-in lower limit (%s)."
+                                     % (target, _low, meta_low))
+            else:
+                if _low is None:
+                    raise ValueError("Trying to add parameter '%s', "
+                                     "but no lower limit was found and no "
+                                     "'low' argument was given. One or the "
+                                     "other must be specified." % target)
 
-            indices[-1] += 1
-            for j in reversed(range(rank)):
-                if indices[j] >= shape[j] and j > 0:
-                    indices[j] = 0
-                    indices[j-1] += 1
+            if meta_high is not None:
+                if _high is None:
+                    _high = self._untransform(meta_high)
+                elif _high > self._untransform(meta_high):
+                    raise ValueError("Trying to add parameter '%s', but the"
+                                     " upper limit supplied (%s) exceeds the"
+                                     " built-in upper limit (%s)."
+                                     % (target, _high, meta_high))
+            else:
+                if _high is None:
+                    raise ValueError("Trying to add parameter '%s', "
+                                     "but no upper limit was found and no "
+                                     "'high' argument was given. One or the "
+                                     "other must be specified." % target)
+
+            if _low > _high:
+                raise ValueError("Parameter '%s' has a lower bound (%s) that"
+                                 " exceeds its upper bound (%s)" %
+                                 (target, _low, _high))
+
+            highs.append(_high)
+            lows.append(_low)
+            scalers.append(_scaler)
+            adders.append(_adder)
+            starts.append(_start)
+            fd_steps.append(_fd_step)
 
         self._high = array(highs, 'd')
         self._low = array(lows, 'd')
@@ -532,12 +553,18 @@ class ArrayParameter(ParameterBase):
 
     def _fetch(self, attr, val, i):
         """Fetch value for ith element of val (if it's an array)."""
+        if isinstance(val, (list, tuple)):
+            if len(val) == self._size:
+                return val[i]
+            else:
+                raise ValueError('%r length is %s but parameter size is %s'
+                                 % (attr, len(val), self._size))
         if isinstance(val, ndarray):
-            if val.shape == self.shape:
+            if val.size == self._size:
                 return val.flat[i]
             else:
-                raise ValueError('%r shape is %s but parameter shape is %s'
-                                 % (attr, val.shape, self.shape))
+                raise ValueError('%r size is %s but parameter size is %s'
+                                 % (attr, val.size, self._size))
         else:
             return val
 
@@ -587,25 +614,22 @@ class ArrayParameter(ParameterBase):
 
     def set(self, value, scope=None):
         """Assigns the given value to the array referenced by this parameter."""
-        if isinstance(value, list):
+        if isinstance(value, (list, tuple)):
             if len(value) == self._size:
-                for element, param in zip(value, self._params):
-                    param.set(element, scope)
+                value = reshape(array(value, self.dtype), self.shape)
             else:
-                raise ValueError('value size is %s but parameter size is %s'
-                                 % (value.size, len(self._params)))
+                raise ValueError('value length is %s but parameter size is %s'
+                                 % (len(value), self._size))
 
         elif isinstance(value, ndarray):
             if value.size == self._size:
-                elements = value.flat
-                for element, param in zip(elements, self._params):
-                    param.set(element, scope)
+                value = reshape(value, self.shape)
             else:
                 raise ValueError('value size is %s but parameter size is %s'
-                                 % (value.size, len(self._params)))
+                                 % (value.size, self._size))
         else:
-            for param in self._params:
-                param.set(value, scope)
+            value = value * ones(self.shape, self.dtype)
+        self._expreval.set(self._transform(value), scope)
 
     def copy(self):
         """Return a copy of this ParameterArrray."""
@@ -618,7 +642,7 @@ class ArrayParameter(ParameterBase):
     def override(self, low=None, high=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, name=None):
-        """Called by add_parameter() when the target is this ArrayPartameter."""
+        """Called by add_parameter() when the target is this ArrayParameter."""
         self._override('low',     low)
         self._override('high',    high)
         self._override('scaler',  scaler)
@@ -628,27 +652,19 @@ class ArrayParameter(ParameterBase):
 
         if name is not None:
             self.name = name
-            shape = self.shape
-            rank = len(shape)
-            indices = [0] * rank
-            for param in self._params:
-                index = ''.join(['[%s]' % idx for idx in indices])
-                param.name = name + index
-                indices[-1] += 1
-                for j in reversed(range(rank)):
-                    if indices[j] >= shape[j] and j > 0:
-                        indices[j] = 0
-                        indices[j-1] += 1
 
     def _override(self, attr, val):
         if val is not None:
+            if isinstance(val, (list, tuple)):
+                if len(val) != self._size:
+                    raise ValueError('%s length is %s but parameter size is %s'
+                                     % (attr, len(val), self._size))
+                val = array(val, self.dtype)
             if isinstance(val, ndarray):
-                if val.shape != self.shape:
-                    raise ValueError('%s shape is %s but parameter shape is %s'
-                                     % (attr, val.shape, self.shape))
-            setattr(self, attr, val)
-            for i, param in enumerate(self._params):
-                setattr(param, attr, self._fetch(attr, val, i))
+                if val.size != self._size:
+                    raise ValueError('%s size is %s but parameter size is %s'
+                                     % (attr, val.size, self._size))
+            setattr(self, attr, ravel(val))
 
 
 class HasParameters(object):
@@ -734,8 +750,8 @@ class HasParameters(object):
         if isinstance(target, (ParameterBase, ParameterGroup)):
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
-        else:     
-            if isinstance(target, basestring): 
+        else:
+            if isinstance(target, basestring):
                 names = [target]
                 key = target
             else:

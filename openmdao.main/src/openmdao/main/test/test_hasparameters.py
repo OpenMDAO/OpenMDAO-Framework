@@ -489,13 +489,13 @@ class ArrayTest(unittest.TestCase):
 
         code = "driver.add_parameter('comp.x1d')"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: Trying to add parameter 'comp.x1d[0]', but no"
+                      "driver: Trying to add parameter 'comp.x1d', but no"
                       " lower limit was found and no 'low' argument was given."
                       " One or the other must be specified.")
 
         code = "driver.add_parameter('comp.x1d', low=-10)"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: Trying to add parameter 'comp.x1d[0]', but no"
+                      "driver: Trying to add parameter 'comp.x1d', but no"
                       " upper limit was found and no 'high' argument was given."
                       " One or the other must be specified.")
 
@@ -503,13 +503,13 @@ class ArrayTest(unittest.TestCase):
 
         code = "driver.add_parameter('comp.x2d')"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: Trying to add parameter 'comp.x2d[0][0]', but no"
+                      "driver: Trying to add parameter 'comp.x2d', but no"
                       " lower limit was found and no 'low' argument was given."
                       " One or the other must be specified.")
 
         code = "driver.add_parameter('comp.x2d', low=-10)"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: Trying to add parameter 'comp.x2d[0][0]', but no"
+                      "driver: Trying to add parameter 'comp.x2d', but no"
                       " upper limit was found and no 'high' argument was given."
                       " One or the other must be specified.")
 
