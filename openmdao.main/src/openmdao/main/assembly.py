@@ -813,7 +813,7 @@ class Assembly(Component):
         for src, target in self.parent.list_connections():
             compname, _, var = target.partition('.')
             if compname == self.name:
-                required_inputs.append(var)
+                required_inputs.append(var.replace('(', '').replace(')', ''))
 
         # Only calc derivatives for outputs we need
         required_outputs = []
@@ -831,7 +831,7 @@ class Assembly(Component):
         for src, target in self.parent.list_connections():
             compname, _, var = src.partition('.')
             if compname == self.name:
-                required_outputs.append(var)
+                required_outputs.append(var.replace('(', '').replace(')', ''))
 
         # Sub-assembly sourced
         input_keys = []

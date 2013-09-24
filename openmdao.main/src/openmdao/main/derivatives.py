@@ -279,8 +279,7 @@ def applyJ(obj, arg, result):
                 
                 if basekey not in result:
                     result[basekey] = zeros(var.shape)
-                    
-                exec("result[basekey]%s = value" % index)
+                    exec("result[basekey]%s = value" % index)
                 
             else:
                 var = obj.get(key)
@@ -316,8 +315,7 @@ def applyJ(obj, arg, result):
                 
                 if basekey not in arg:
                     arg[basekey] = zeros(var.shape)
-                    
-                exec("arg[basekey]%s = value" % index)
+                    exec("arg[basekey]%s = value" % index)
             else:
                 var = obj.get(key)
                 
@@ -341,7 +339,7 @@ def applyJ(obj, arg, result):
         obj.apply_deriv(arg, result)
 
         # Result vector needs to be flattened.
-        for key in resultkeys:
+        for key in sorted(resultkeys, reverse=True):
             
             value = result[key]
             
@@ -446,8 +444,7 @@ def applyJT(obj, arg, result):
                 
                 if basekey not in result:
                     result[basekey] = zeros(var.shape)
-                    
-                exec("result[basekey]%s = value" % index)
+                    exec("result[basekey]%s = value" % index)
                 
             else:
                 var = obj.get(key)
@@ -483,8 +480,7 @@ def applyJT(obj, arg, result):
                 
                 if basekey not in arg:
                     arg[basekey] = zeros(var.shape)
-                    
-                exec("arg[basekey]%s = value" % index)
+                    exec("arg[basekey]%s = value" % index)
             else:
                 var = obj.get(key)
                 
@@ -507,7 +503,7 @@ def applyJT(obj, arg, result):
         obj.apply_derivT(arg, result)
 
         # Result vector needs to be flattened.
-        for key in resultkeys:
+        for key in sorted(resultkeys, reverse=True):
             
             value = result[key]
             
