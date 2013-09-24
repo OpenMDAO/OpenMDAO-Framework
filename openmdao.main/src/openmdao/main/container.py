@@ -1126,7 +1126,8 @@ class Container(SafeHasTraits):
                     # callback, so it's a good test for whether the
                     # value changed.
                     if hasattr(self, "_call_execute") and self._call_execute:
-                        self._input_updated(path.split('.',1)[0])
+                        if self._do_invalidate and iotype=='in':
+                            self._input_updated(path.split('.',1)[0])
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:

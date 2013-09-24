@@ -9,8 +9,8 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index, arange, prod, vstack, hstack
+    from numpy import array, ndarray, zeros, ones, unravel_index, \
+         ravel_multi_index
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -18,7 +18,7 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros, inner, \
+    from openmdao.main.numpy_fallback import array, ndarray, zeros, \
                                              ones
 
 

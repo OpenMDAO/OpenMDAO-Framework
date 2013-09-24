@@ -703,6 +703,7 @@ class Assembly(Component):
     def _validate(self):
         # validate boundary inputs and outputs and their subvars
         self._depgraph.validate_boundary_vars()
+        super(Assembly, self)._validate()
 
     def invalidate_deps(self, varnames=None):
         """Mark all Variables invalid that depend on varnames.

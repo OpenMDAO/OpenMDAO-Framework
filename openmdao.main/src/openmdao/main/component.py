@@ -151,6 +151,7 @@ class Component(Container):
         super(Component, self).__init__()
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
+        self._do_invalidate = True  # determines if input changes wil invalidate graph
 
         # dependency graph between us and our boundaries
         # (bookkeeps connections between our variables and external ones).
@@ -235,7 +236,8 @@ class Component(Container):
                 name = n
 
         self._input_check(name, old)
-        self._input_updated(name)
+        if self._do_invalidate:
+            self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
@@ -496,8 +498,6 @@ class Component(Container):
 
         if self.parent:
             self.parent.child_run_finished(self.name)
-        self._call_execute = False
-        self._set_exec_state('VALID')
         self.publish_vars()
 
     def _post_run(self):
@@ -533,6 +533,9 @@ class Component(Container):
         self._stop = False
         self.ffd_order = ffd_order
         self._case_id = case_id
+        if not force:
+            self._do_invalidate = False # don't do unnecessary invalidations
+
         try:
             self._pre_execute(force)
             self._set_exec_state('RUNNING')
@@ -574,6 +577,7 @@ class Component(Container):
             self._set_exec_state('INVALID')
             raise
         finally:
+            self._do_invalidate = True
             # If this is the top-level component, perform run termination.
             if self.parent is None:
                 self._run_terminated()
@@ -1478,8 +1482,9 @@ class Component(Container):
         self._stop = True
 
     def _validate(self):
-        """Mark all inputs and outputs and their subvars as valid."""
-        pass  # components without partial invalidation do nothing
+        """Mark self as valid."""
+        self._call_execute = False
+        self._set_exec_state('VALID')
 
     @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None): #, force=False):
@@ -1494,9 +1499,6 @@ class Component(Container):
         indicating that no outputs are newly invalidated.
         """
         self._call_execute = True
-        if self._exec_state == 'INVALID':
-            return []
-
         self._set_exec_state('INVALID')
         return None
 

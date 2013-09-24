@@ -86,7 +86,8 @@ class PseudoComponent(object):
         self.name = _get_new_name()
         self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
-        self._valid_dict = {}
+        #self._valid_dict = {}
+        self._valid = False
         self._parent = parent
         self._inputs = []
         self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
@@ -104,7 +105,7 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
-            self._valid_dict[in_name] = True
+            #self._valid_dict[in_name] = True
 
         refs = list(destexpr.refs())
         if refs:
@@ -120,7 +121,7 @@ class PseudoComponent(object):
         for name, meta in destexpr.get_metadata():
             self._meta[varmap[name]] = meta
             
-        self._valid_dict['out0'] = False
+        #self._valid_dict['out0'] = False
 
         if translate:
             xformed_src = transform_expression(srcexpr.text, self._inmap)
@@ -226,7 +227,7 @@ class PseudoComponent(object):
         """
         for src, dest in self.list_connections():
             scope.connect(src, dest)
-        self.invalidate_deps()
+        #self.invalidate_deps()
 
     def remove_connections(self, scope):
         """Disconnect all of the inputs and outputs of this comp
@@ -239,32 +240,36 @@ class PseudoComponent(object):
         return None
         
     def invalidate_deps(self, varnames=None, force=False):
-        if varnames is None:
-            varnames = self._inputs
-        for name in varnames:
-            self._valid_dict[name] = False
-        self._valid_dict['out0'] = False
+        self._valid = False
+        return None
+        # if varnames is None:
+        #     varnames = self._inputs
+        # for name in varnames:
+        #     self._valid_dict[name] = False
+        # self._valid_dict['out0'] = False
 
     def connect(self, src, dest):
-        self._valid[dest.split('.',1)[0]] = False
-        self._valid_dict['out0'] = False
+        pass
+        # self._valid_dict[dest.split('.',1)[0]] = False
+        # self._valid_dict['out0'] = False
 
     def run(self, ffd_order=0, case_id=''):
-        invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
-        if invalid_ins:
-            self.update_inputs(invalid_ins)
+        #invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
+        #if invalid_ins:
+        #    self.update_inputs(invalid_ins)
+        self.update_inputs()
 
-        if not invalid_ins and self._valid_dict['out0'] is True:
-            return
+        #if not invalid_ins and self._valid_dict['out0'] is True:
+        #    return
         
         src = self._srcexpr.evaluate()
         setattr(self, 'out0', src)
-        for name in self._valid_dict:
-            self._valid_dict[name] = True
-            
+        #for name in self._valid_dict:
+        #    self._valid_dict[name] = True
+        self._valid = True    
         self._parent.child_run_finished(self.name)
             
-    def update_inputs(self, inputs):
+    def update_inputs(self, inputs=None):
         self._parent.update_inputs(self.name)
         
     def update_outputs(self, names):
@@ -278,25 +283,27 @@ class PseudoComponent(object):
     def set(self, path, value, index=None, src=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        if getattr(self, path) != value:
-            setattr(self, path, value)
-            self.invalidate_deps()
-            if self._parent:
-                self._parent.child_invalidated(self.name, None)
+        # if getattr(self, path) != value:
+        #     setattr(self, path, value)
+        #     #self.invalidate_deps()
+        #     if self._parent:
+        #         self._parent.child_invalidated(self.name, None)
+        setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
             return {}
         return None
 
-    def get_valid(self, names):
-        return [self._valid_dict[n] for n in names]
+    # def get_valid(self, names):
+    #     return [self._valid_dict[n] for n in names]
 
     def is_valid(self):
-        for k,v in self._valid_dict.items():
-            if not v:
-                return False
-        return True
+        return self._valid
+        # for k,v in self._valid_dict.items():
+        #     if not v:
+        #         return False
+        # return True
 
     def set_itername(self, itername):
         self._itername = itername

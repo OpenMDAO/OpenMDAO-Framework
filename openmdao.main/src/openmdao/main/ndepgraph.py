@@ -419,10 +419,6 @@ class DependencyGraph(nx.DiGraph):
         will also add an edge from base variable A.b to A.b[3],
         and another edge from B.c.x to base variable B.c.
         """
-        tab()
-        print spaces(), ' ** connect(%s, %s)' % (srcpath, destpath)
-        for n in self.nodes():
-            print spaces(),n,':',self.node[n]['valid']
 
         base_src  = base_var(self, srcpath)
         base_dest = base_var(self, destpath)
@@ -431,31 +427,31 @@ class DependencyGraph(nx.DiGraph):
             if not v.startswith('parent.') and v not in self:
                 raise RuntimeError("Can't find variable '%s' in graph." % v)
 
-        if base_src in self:
-            src_validity = self.node[base_src]['valid']
-        else:
-            src_validity = True
+        #if base_src in self:
+            #src_validity = self.node[base_src]['valid']
+        #else:
+            #src_validity = True
 
-        print spaces(), 'src_validity = %s' % src_validity
-            
-        path = [(base_src, base_src, src_validity)]
+        path = [(base_src, base_src)] #, src_validity)]
 
         if srcpath != base_src:
-            path.append((srcpath, base_src, src_validity))
+            path.append((srcpath, base_src))#, src_validity))
 
         if destpath != base_dest:
-            path.append((destpath, base_dest, True))
+            path.append((destpath, base_dest))#, True))
 
-        path.append((base_dest, base_dest, True))
+        path.append((base_dest, base_dest))#, True))
 
         self.check_connect(srcpath, destpath)
 
         for i in range(len(path)):
-            var, base, valid = path[i]
-            if var in self:
-                self.node[var]['valid'] = valid
-            else:
-                self.add_node(var, basevar=base, valid=valid) # subvar
+            var, base = path[i]#, valid = path[i]
+            #if var in self:
+                #self.node[var]['valid'] = valid
+                #self.node[var]['valid'] = True
+            #else:
+            if var not in self:
+                self.add_node(var, basevar=base, valid=True)#valid=valid) # subvar
             if i > 0:
                 self.add_edge(path[i-1][0], var)
 
@@ -472,10 +468,6 @@ class DependencyGraph(nx.DiGraph):
         
         if config_change:
             self.config_changed()
-        print spaces(), ' ** after connect(%s, %s)' % (srcpath, destpath)
-        for n in self.nodes():
-            print spaces(),n,':',self.node[n]['valid']
-        untab()
 
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
@@ -688,75 +680,78 @@ class DependencyGraph(nx.DiGraph):
         vnames: list or set of str
             Names of var nodes.
         """
-        tab()
-        print spaces(), "invalidate_deps for '%s'" % scope.name
-        print spaces(), 'vnames = %s' % vnames
-        for n in self.nodes():
-            print spaces(),n,':',self.node[n]['valid']
+
         if not vnames:
             return []
 
         outset = set()  # set of changed boundary outputs
 
         ndata = self.node
-        stack = [(n, self.successors_iter(n), ndata[n]['valid']) 
-                    for n in vnames]
+        stack = [(n, self.successors_iter(n), not is_comp_node(self, n)) for n in vnames]
 
         visited = set()
         while(stack):
-            src, neighbors, valid = stack.pop()
-            if is_comp_node(self, src):
-                ndata[src]['valid'] = False
-                print spaces(), src,': False'
+            src, neighbors, checkvisited = stack.pop()
+            if checkvisited and src in visited:
+                continue
             else:
                 visited.add(src)
-                if valid is False:
-                    print spaces(), src,'is already invalid **'
-                    continue
-                if src.startswith('parent.'):
+            
+            oldvalid = ndata[src]['valid']
+            if oldvalid is True:
+                if self.in_degree(src) or src.startswith('parent.'): # don't invalidate unconnected inputs
                     ndata[src]['valid'] = False
-                    print spaces(), src,': False'
-                elif self.in_degree(src): # don't invalidate unconnected inputs
-                    ndata[src]['valid'] = False
-                    print spaces(), src,': False'
-                    
                 if is_boundary_node(self, src) and is_output_base_node(self, src):
-                    print spaces(), 'adding',src,' to outset'
                     outset.add(src)
 
+            parsources = self.get_sources(src)
             for node in neighbors:
-                print spaces(), 'neighbor =',node
                 if is_comp_node(self, node):
-                    #outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
-                    outs = getattr(scope, node).invalidate_deps(['.'.join(['parent',n]) 
-                                                                  for n in self.get_sources(src)])
-                    print spaces(), "%s invalidated reported from comp '%s'" % (outs, node)
+                    outs = getattr(scope, node).invalidate_deps(['.'.join(['parent', n]) 
+                                                                  for n in parsources])
                     if outs is None:
-                        print spaces(), 'adding %s to stack' % node
-                        stack.append((node, self.successors_iter(node), 
-                                     False))
+                        stack.append((node, self.successors_iter(node), True))
                     else: # partial invalidation
-                        outs = ['.'.join([node,n]) for n in outs]
-                        print spaces(), 'adding %s to stack' % outs
-                        stack.extend([(n, self.successors_iter(n),
-                                             ndata[n]['valid'])
-                                        for n in outs]) 
-                elif node not in visited:
-                    nvalid = ndata[node]['valid']
-                    if nvalid:
-                        print spaces(), 'adding %s to stack' % node
-                        stack.append((node, self.successors_iter(node), 
-                                        nvalid))
-                    else:
-                        print spaces(), node,'already invalid'
-                # else: # a component node with partial invalidation
-                #     stack.extend([(n,iograph.successors_iter(n),
-                #                                  ndata[n]['valid']) 
-                #                     for n in iograph.nodes()
-                #                       if iograph.out_degree(n)>0 and
-                #                          self.in_degree(n)>0])
+                        stack.append((node, ['.'.join([node,n]) for n in outs], False))
+                else:
+                    stack.append((node, self.successors_iter(node), True))
 
-        untab()
+        # visited = set()
+        # while(stack):
+        #     src, neighbors, valid = stack.pop()
+        #     if is_comp_node(self, src):
+        #         ndata[src]['valid'] = False
+        #     else:
+        #         visited.add(src)
+        #         if valid is False:
+        #             continue
+        #         if src.startswith('parent.'):
+        #             ndata[src]['valid'] = False
+        #         elif self.in_degree(src): # don't invalidate unconnected inputs
+        #             ndata[src]['valid'] = False
+                    
+        #         if is_boundary_node(self, src) and is_output_base_node(self, src):
+        #             outset.add(src)
+
+        #     for node in neighbors:
+        #         if is_comp_node(self, node):
+        #             #outs = getattr(scope, node).invalidate_deps([src.split('.',1)[1]])
+        #             outs = getattr(scope, node).invalidate_deps(['.'.join(['parent',n]) 
+        #                                                           for n in self.get_sources(src)])
+        #             if outs is None:
+        #                 stack.append((node, self.successors_iter(node), 
+        #                              False))
+        #             else: # partial invalidation
+        #                 outs = ['.'.join([node,n]) for n in outs]
+        #                 stack.extend([(n, self.successors_iter(n),
+        #                                      ndata[n]['valid'])
+        #                                 for n in outs]) 
+        #         elif node not in visited:
+        #             nvalid = ndata[node]['valid']
+        #             if nvalid:
+        #                 stack.append((node, self.successors_iter(node), 
+        #                                 nvalid))
+
         return outset
 
     def get_boundary_inputs(self, connected=False):
@@ -1250,5 +1245,5 @@ def get_valids(graph, val, prefix=None):
     if prefix:
         return [n for n in nodes_matching_all(graph, valid=val)
                     if n.startswith(prefix)]
-    return nodes_matching_all(graph, valid=val)
+    return sorted(nodes_matching_all(graph, valid=val))
 
