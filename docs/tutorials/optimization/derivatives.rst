@@ -26,12 +26,14 @@ these two steps:
 
 :: 
  
-  1. Declare a ``linearize`` method that calculates and saves the Jacobian that containts the derivatives between its numerical outputs and inputs.
-  2. Declare a ``provideJ`` method that returns the Jacobian along with a list of inputs and outputs.
+   1. Declare a ``linearize`` method that calculates and saves the Jacobian that 
+      contains the derivatives between its numerical outputs and inputs.
+   2. Declare a ``provideJ`` method that returns the Jacobian along with a 
+      list of inputs and outputs.
 
 
-You can add analytical derivatives to the Paraboloid component by following
-the steps mentioned above. Starting with the original code, but calling our new
+Lets look at an example, using the Paraboloid component, to see how this would work in 
+practice. Starting with the original code, but calling our new
 class ``ParaboloidDerivative``, we have:
 
 .. testcode:: Paraboloid_derivative
@@ -57,7 +59,8 @@ component's outputs with respect to its inputs, evaluated at the current
 state of the model. The paraboloid model has one input and two outputs, so
 the Jacobian is a 1 by 2 numpy array. This also requires the numpy import
 seen in the code above. The ``linearize`` function doesn't return the
-Jacobian, but instead stores it in our Component.
+Jacobian, but instead stores it in our Component. 
+
 
 .. testcode:: Paraboloid_derivative
 
@@ -69,16 +72,20 @@ Jacobian, but instead stores it in our Component.
     
         self.J = array([[df_dx, df_dy]])
 
-So self.J is our stored Jacobian that we can recall later. The ``linearize``
+So `self.J` is our stored Jacobian that we will use later. The ``linearize``
 function is called once when an optimizer asks for a gradient of its
 workflow. When this component is part of a much larger model, it only
 contributes a small portion of the full Jacobian. OpenMDAO uses a numerical
-method to solve for the gradient of the full model The full Jacobian is
-represented as a linear operator, or a function that returns a product of the
-Jacobian with an input vector. In this way, the full Jacobian never needs to
-be stored. However, since the solution is iterative, a component's Jacobian
-needs to be queried multiple times after it is calculated. So, we need a method
-to provide the Jacobian and its ordering:
+method, developed by `Martins and Hwang <martins_citation>`_ 
+to solve for the gradient of the full problem. For large problems, the Jacobian could grow 
+to be very large and it would become impractical to construct the entire thing. 
+Instead the scheme used here represents the Jacobian as a linear operator
+or a function that returns a product of the Jacobian with an input vector. 
+In this way, the full Jacobian never needs to be stored. However, since the solution is 
+iterative, a component's Jacobian needs to be queried multiple times after it is 
+calculated. So, we need a method to provide the Jacobian and its ordering:
+
+.. _martins_citation: http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary
 
 .. testcode:: Paraboloid_derivative
 
@@ -90,12 +97,22 @@ to provide the Jacobian and its ordering:
         
         return input_keys, output_keys, self.J
 
+
 Here, ``input_keys`` and ``output_keys`` provide an index into the Jacobian
-to declare that, for this example, the (0,0) term is the derivative of f_xy
-with respect to x. Note that you don't have to include all of the inputs and
+so OpenMDAO knows which columns correspond to each input and which rows to 
+each output. For our paraboloid example, if you linearized around the point (0,0)
+then the Jacobian would look like: 
+
++--------+-------+-------+
+|        | **x** | **y** |
++========+=======+=======+
+|**f_xy**| -6.0  |  8.0  |
++--------+-------+-------+
+
+Note that you don't have to include all of the inputs and
 outputs in the Jacobian. There is certainly no reason to provide the
-derivative of inputs that are constant or are never hooked up to other
-outputs.
+derivative of inputs that are are never hooked up to other
+outputs or irrelevant to the gradient for some other reason. 
 
 The ParaboloidDerivative component can be placed into a model, and the
 derivatives will be used with no changes required to the
@@ -107,6 +124,8 @@ the new component with derivatives. We put this model in a file called
 <../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
+
+.. [#1] J. R. R. A. Martins and J. T. Hwang, "Review and Unification of Methods for Computing Derivatives of Multidisciplinary Computational Models", AIAA Journal, 2013.
 
 *Benchmarking*
 ~~~~~~~~~~~~~~
@@ -150,4 +169,6 @@ cost of a small number of derivative evaluations.
 This concludes an introduction to OpenMDAO using a simple problem of
 component creation and execution. The next tutorial introduces a problem with
 more complexity and presents additional features of the framework.
+
+
 
