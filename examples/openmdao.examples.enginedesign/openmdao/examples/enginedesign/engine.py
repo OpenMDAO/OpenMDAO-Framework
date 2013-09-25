@@ -374,7 +374,7 @@ class Engine(Component):
 
 if __name__ == "__main__": # pragma: no cover
     
-    MyEngine = Engine("Testing")
+    MyEngine = Engine()
     
     import time
     start_time = time.time()
