@@ -594,6 +594,41 @@ class IHasParameters(Interface):
              the len() function.
         """
 
+    def total_parameters(self):
+        """Returns the total number of values to be set."""
+
+    def evaluate_parameters(self, scope=None, dtype='d'):
+        """Return evaluated parameter values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_lower_bounds(self, dtype='d'):
+        """Return lower bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_upper_bounds(self, dtype='d'):
+        """Return upper bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_fd_steps(self, dtype='d'):
+        """Return fd_step values, they may include None.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if it's valid to have None for a step size).
+        """
+
 
 class IHasEvents(Interface):
     def add_event(name):
