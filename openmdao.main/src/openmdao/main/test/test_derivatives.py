@@ -1612,11 +1612,15 @@ class PreComp(Component):
         
         result['x1'] = 0.03092784*arg['x1'] + 0.07216495*arg['x2']
         result['x2'] = 0.13402062*arg['x1'] - 0.02061856*arg['x2']
+        
+        return result
     
     def applyMinvT(self, arg, result):
         
         result['y1'] = 0.03092784*arg['y1'] + 0.13402062*arg['y2']
         result['y2'] = 0.07216495*arg['y1'] - 0.02061856*arg['y2']
+        
+        return result
     
     
 class Testcase_preconditioning(unittest.TestCase):
