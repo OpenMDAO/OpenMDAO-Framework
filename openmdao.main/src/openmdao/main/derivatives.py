@@ -249,7 +249,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     #print inputs, '\n', outputs, '\n', J, dx
     return J
 
-def preprocess_dicts(obj, key, arg_or_result):
+def pre_process_dicts(obj, key, arg_or_result):
     '''If the component supplies apply_deriv or applyMinv or their adjoint
     counterparts, it expects the contents to be shaped like the original
     variables. Also, it doesn't know how to handle array elements, so we need
@@ -304,7 +304,7 @@ def post_process_dicts(obj, key, result):
         basekey, _, index = key.partition('[')
         index = '[' + index
         var = obj.get(basekey)
-        exec("result[key] = result[basekey]%s" % index)
+        exec("result[key][:] = result[basekey]%s" % index)
     else:
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
@@ -325,11 +325,11 @@ def applyJ(obj, arg, result):
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
         for key in sorted(resultkeys):
-            preprocess_dicts(obj, key, result)
+            pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
         for key in sorted(argkeys):
-            preprocess_dicts(obj, key, arg)
+            pre_process_dicts(obj, key, arg)
 
         obj.apply_deriv(arg, result)
 
@@ -414,11 +414,11 @@ def applyJT(obj, arg, result):
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
         for key in sorted(resultkeys):
-            preprocess_dicts(obj, key, result)
+            pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
-        for key in argkeys:
-            preprocess_dicts(obj, key, arg)
+        for key in sorted(argkeys):
+            pre_process_dicts(obj, key, arg)
             
         obj.apply_derivT(arg, result)
 
@@ -486,7 +486,7 @@ def applyMinv(obj, inputs):
     
     inputkeys = inputs.keys()
     for key in sorted(inputkeys):
-        preprocess_dicts(obj, key, inputs)
+        pre_process_dicts(obj, key, inputs)
 
     pre_inputs = inputs.copy()
 
@@ -495,6 +495,11 @@ def applyMinv(obj, inputs):
     # Result vector needs to be flattened.
     for key in sorted(inputkeys, reverse=True):
         post_process_dicts(obj, key, inputs)
+        
+    # Clean out any leftover keys we added
+    for key in inputs.keys():
+        if key not in inputkeys:
+            inputs.pop(key)
 
     return inputs
 
@@ -505,7 +510,7 @@ def applyMinvT(obj, inputs):
     
     inputkeys = inputs.keys()
     for key in sorted(inputkeys):
-        preprocess_dicts(obj, key, inputs)
+        pre_process_dicts(obj, key, inputs)
 
     pre_inputs = inputs.copy()
 
@@ -515,6 +520,11 @@ def applyMinvT(obj, inputs):
     for key in sorted(inputkeys, reverse=True):
         post_process_dicts(obj, key, inputs)
         
+    # Clean out any leftover keys we added
+    for key in inputs.keys():
+        if key not in inputkeys:
+            inputs.pop(key)
+
     return inputs
 
 def get_bounds(obj, input_keys, output_keys):

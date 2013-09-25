@@ -691,7 +691,9 @@ class SequentialWorkflow(Workflow):
         for comp in self.derivative_iter():
             name = comp.name
             if hasattr(comp, 'applyMinvT'):
+                print 'before', inputs[name]
                 inputs[name] = applyMinvT(comp, inputs[name])
+                print 'after', inputs[name]
             
         # Call ApplyJT on each component
         for comp in self.derivative_iter():
