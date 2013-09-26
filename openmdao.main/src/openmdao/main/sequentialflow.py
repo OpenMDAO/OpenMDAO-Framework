@@ -8,7 +8,8 @@ import sys
 from openmdao.main.derivatives import flattened_size, flattened_value, \
                                       flattened_names, \
                                       calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, recursive_components
+                                      applyJ, applyJT, recursive_components, \
+                                      applyMinvT, applyMinv
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
@@ -309,7 +310,7 @@ class SequentialWorkflow(Workflow):
             else:
                 src = edge[0]
             val = self.scope.get(src)
-            width = flattened_size(src, val)
+            width = flattened_size(src, val, self.scope)
             self.bounds[edge] = (nEdge, nEdge+width)
             
             # ApplyJ needs the individual cross-references in bounds
@@ -500,8 +501,7 @@ class SequentialWorkflow(Workflow):
         for comp in self.derivative_iter():
             name = comp.name
             if hasattr(comp, 'applyMinv'):
-                pre_inputs = inputs[name].copy()
-                comp.applyMinv(pre_inputs, inputs[name])
+                inputs[name] = applyMinv(comp, inputs[name])
             
         # Call ApplyJ on each component
         for comp in self.derivative_iter():
@@ -692,10 +692,12 @@ class SequentialWorkflow(Workflow):
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
                             
         # Call ApplyMinvT on each component (preconditioner)
-        for name in deriv_iter_comps:
+        for comp in self.derivative_iter():
+            name = comp.name
             if hasattr(comp, 'applyMinvT'):
-                pre_inputs = inputs[name].copy()
-                comp.applyMinvT(pre_inputs, inputs[name])
+                print 'before', inputs[name]
+                inputs[name] = applyMinvT(comp, inputs[name])
+                print 'after', inputs[name]
             
         # Call ApplyJT on each component
         for comp in self.derivative_iter():
