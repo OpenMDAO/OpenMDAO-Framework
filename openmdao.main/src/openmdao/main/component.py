@@ -1905,7 +1905,7 @@ class Component(Container):
         names: iterator of str
             Names of variables whose validity is requested.
         """
-        if self.parent and has_interface(IAssembly):
+        if self.parent and has_interface(self.parent, IAssembly):
             return self.parent.get_valid(
                 ['.'.join([self.name,n]) for n in names])
         else:
