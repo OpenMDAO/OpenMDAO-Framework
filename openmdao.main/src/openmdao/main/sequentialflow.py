@@ -493,11 +493,12 @@ class SequentialWorkflow(Workflow):
                         comp_name = pa_ref[comp_name]
                     inputs[comp_name][var_name] = arg[i1:i2]
             #print i1, i2, edge, '\n', inputs, '\n', outputs
+            
         # Call ApplyMinv on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
-            if hasattr(comp, 'applyMinv'):
-                inputs[name] = applyMinv(comp, inputs[name])
+        #for comp in self.derivative_iter():
+            #name = comp.name
+            #if hasattr(comp, 'applyMinv'):
+                #inputs[name] = applyMinv(comp, inputs[name])
             
         # Call ApplyJ on each component
         for comp in self.derivative_iter():
@@ -654,8 +655,8 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 
                 if var_name in inputs[comp_name]: 
-                    inputs[comp_name][var_name] += arg[i1:i2].copy()
-                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                    inputs[comp_name][var_name] += arg[i1:i2]
+                    outputs[comp_name][var_name] += arg[i1:i2]
                 else:
                     inputs[comp_name][var_name] = arg[i1:i2].copy()
                     outputs[comp_name][var_name] = arg[i1:i2].copy()
@@ -688,12 +689,10 @@ class SequentialWorkflow(Workflow):
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
                             
         # Call ApplyMinvT on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
-            if hasattr(comp, 'applyMinvT'):
-                print 'before', inputs[name]
-                inputs[name] = applyMinvT(comp, inputs[name])
-                print 'after', inputs[name]
+        #for comp in self.derivative_iter():
+            #name = comp.name
+            #if hasattr(comp, 'applyMinvT'):
+                #inputs[name] = applyMinvT(comp, inputs[name])
             
         # Call ApplyJT on each component
         for comp in self.derivative_iter():
