@@ -60,7 +60,7 @@ class DialogPage(BasePageObject):
         """ Move dialog. """
         chain = ActionChains(self.browser)
         chain.click_and_hold(self('dialog_title').element)
-        chain.move_by_offset(delta_x, delta_y)
+        chain.move_by_offset(int(delta_x), int(delta_y))
         chain.release(None)
         chain.perform()
         time.sleep(0.5)
