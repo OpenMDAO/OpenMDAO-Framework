@@ -93,7 +93,14 @@ def assert_rel_error(test_case, actual, desired, tolerance):
                 test_case.fail('at %d: actual %s, desired %s, rel error %s,'
                                ' tolerance %s' % (i, act, des, error, tolerance))
 
-
+def case_assert_rel_error(case1, case2, test_case, tolerance):
+    """Perform assert_rel_error when comparing two Case objects."""
+    for tup1, tup2 in zip(case1.items(flatten=True), case2.items(flatten=True)):
+        assert_rel_error(test_case, tup1[1], tup2[1], tolerance)
+        if tup1[0] != tup2[0]:
+            test_case.fail("Case entry names ('%s', '%s') don't match" % (tup1[0], tup2[0]))
+    
+    
 def find_python():
     """ Return path to the OpenMDAO Python command."""
     return sys.executable

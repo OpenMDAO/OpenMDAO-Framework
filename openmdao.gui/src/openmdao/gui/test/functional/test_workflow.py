@@ -131,7 +131,7 @@ def _test_parameter_auto(browser):
     dialog('ok').click()
 
     parameters = editor.get_parameters()
-    expected = [['', 'comp.x', '0', '299', '', '', '', 'comp.x']]
+    expected = [['', 'comp.x', '0', '299', '1', '0', '', 'comp.x']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
@@ -139,6 +139,38 @@ def _test_parameter_auto(browser):
     editor.close()
 
     closeout(project_dict, workspace_page)
+
+
+def _test_array_parameter(browser):
+    # Test adding an array parameter.
+    project_dict, workspace_page = startup(browser)
+
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/array_parameters.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('array_parameters.ArrayParameters',
+                                                'top')
+    # Add parameter to driver.
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'paraboloid.x'
+    dialog.low = '-50'
+    dialog.high = '[40, 50]'
+    dialog.scaler = '[[1., 1]]'
+    dialog('ok').click()
+
+    parameters = editor.get_parameters()
+    expected = [['', 'paraboloid.x', '-50.', '[40., 50.]', '[1., 1.]', '0', '', 'paraboliod.x']]
+    eq(len(parameters.value), len(expected))
+    for i, row in enumerate(parameters.value):
+        eq(row, expected[i])
+
+    editor.close()
+
+    closeout(project_dict, workspace_page)
+
 
 if __name__ == '__main__':
     main()

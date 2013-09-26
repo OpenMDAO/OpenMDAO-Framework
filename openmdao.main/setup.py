@@ -1,3 +1,4 @@
+
 # pylint: disable-msg=F0401
 
 import os
@@ -56,15 +57,14 @@ setup(name='openmdao.main',
           'Traits==4.3.0',
           'zope.interface',
       ],
-      extras_require = {
+      extras_require={
           'numpy_comps': ['numpy'],
       },
-      entry_points = """
+      entry_points="""
       [console_scripts]
       idle=idlelib.PyShell:main
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
-      get_full_libpath=openmdao.main.plugin:get_full_libpath
       openmdao=openmdao.main.cli:openmdao
       
       [openmdao.component]

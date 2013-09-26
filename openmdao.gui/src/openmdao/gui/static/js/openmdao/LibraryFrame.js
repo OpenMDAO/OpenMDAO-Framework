@@ -77,12 +77,11 @@ openmdao.LibraryFrame = function(id, project) {
                     "CaseRecorder",
                     "CaseIterator",
                     "Component",
-                    "Differentiator",
                     "DOEgenerator",
                     "Driver",
                     "Optimizer",
                     "Solver",
-                    "Surrogate",
+                    "Surrogate"
                 ];
         var input_obj = self.elm.find('#objtt-filter');
 

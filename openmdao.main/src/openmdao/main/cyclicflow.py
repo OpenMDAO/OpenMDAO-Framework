@@ -26,15 +26,18 @@ class CyclicWorkflow(SequentialWorkflow):
         """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
-        self._collapsed_graph = None
+        self._workflow_graph = None
         self._topsort = None
-        self._severed_edges = None
+        self._severed_edges = []
+        self._hidden_edges = set()
         self.res = None
         self.bounds = None
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
         around this by placing them in an assembly."""         
+        
+        super(CyclicWorkflow, self).check_config()
         
         for comp in self.get_components():
             if has_interface(comp, IDriver):
@@ -93,15 +96,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Keep a list of the edges we break, so that a solver
                     # can use them as its independents/dependents.
                     depgraph = self.scope._depgraph
-                    edge_set = depgraph.get_interior_edges([strong[-1], 
-                                                            strong[0]])
+                    edge_set = set(depgraph.get_directional_interior_edges(strong[-1], 
+                                                                            strong[0]))
                     
-                    out_set = set(depgraph.var_edges(strong[-1]))
-                    
-                    # Our cut is directional, so only include that direction.
-                    edges = edge_set.intersection(out_set)      
-                
-                    self._severed_edges += list(edges)
+                    self._severed_edges += list(edge_set)
                 
         return self._topsort
     
@@ -110,23 +108,20 @@ class CyclicWorkflow(SequentialWorkflow):
         in it. This graph can be cyclic."""
         
         # Cached
-        if self._collapsed_graph:
-            return self._collapsed_graph
-        
-        # Parent assembly's graph
-        scope = self.scope
-        graph = scope._depgraph.copy_graph()
-        
-        contents = self.get_components()
-        
-        # add any dependencies due to ExprEvaluators
-        for comp in contents:
-            graph.add_edges_from([tup for tup in comp.get_expr_depends()])
-        
-        # this way avoids a deep copy of edge/node data    
-        collapsed_graph = nx.DiGraph(graph)  
-
-        cnames = set(self._names)
-        self._collapsed_graph = collapsed_graph.subgraph(cnames)
-        return self._collapsed_graph
+        if self._workflow_graph is None:
+       
+            contents = self.get_components()
+           
+            # get the parent assembly's component graph
+            scope = self.scope
+            compgraph = scope._depgraph.component_graph()
+            graph = compgraph.subgraph([c.name for c in contents])
+           
+            # add any dependencies due to ExprEvaluators
+            for comp in contents:
+                graph.add_edges_from([tup for tup in comp.get_expr_depends()])
+                
+            self._workflow_graph = graph
+       
+        return self._workflow_graph
     

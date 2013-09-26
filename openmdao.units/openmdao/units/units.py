@@ -130,8 +130,8 @@ class PhysicalQuantity(object):
         return str(self.value) + ' ' + self.unit.name()
   
     def __repr__(self):
-        return (self.__class__.__name__ + '(' + `self.value` + ',' +
-                `self.unit.name()` + ')')
+        return (self.__class__.__name__ + '(' + repr(self.value) + ',' +
+                repr(self.unit.name()) + ')')
 
 
     def _sum(self, other, sign1, sign2):
@@ -331,6 +331,45 @@ class PhysicalQuantity(object):
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
         else:
             raise TypeError('Argument of tan must be an angle')
+        
+        
+class UnitsOnlyPQ(PhysicalQuantity):
+    """When you want to determine the units of a combined expression without
+    worrying about possible problems with the actual values (divide by zero, etc.), 
+    replace the variables in the expression with instances of this class, evaluate
+    the expression, and retrieve the units of the result.
+    
+    WARNING: only the units of the resulting UnitsOnlyPQ object will be correct. The value
+    may be incorrect, so don't use it.
+    """
+    def __div__(self, other):
+        if not isinstance(other, PhysicalQuantity):
+            return self.__class__(self.value, self.unit)
+        value = self.value
+        unit = self.unit/other.unit
+        if unit.is_dimensionless():
+            return value*unit.factor
+        else:
+            return self.__class__(value, unit)
+
+    def __rdiv__(self, other):
+        if not isinstance(other, PhysicalQuantity):
+            return self.__class__(other, pow(self.unit, -1))
+        value = other.value
+        unit = other.unit/self.unit
+        if unit.is_dimensionless():
+            return value*unit.factor
+        else:
+            return self.__class__(value, unit)
+    
+    def tan(self):
+        if self.unit.is_angle():
+            #return N.tan(self.value * \
+            return tan(0. * \
+                self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
+        else:
+            raise TypeError('Argument of tan must be an angle')
+
 
 class PhysicalUnit(object):
     """

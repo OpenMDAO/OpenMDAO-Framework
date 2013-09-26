@@ -28,7 +28,6 @@ plugin_groups = { 'openmdao.container': ['IContainer'],
                   'openmdao.architecture': ['IArchitecture'],
                   'openmdao.optproblem': ['IOptProblem','IAssembly',
                                           'IComponent','IContainer'],
-                  'openmdao.differentiator': ['IDifferentiator'],
                   'openmdao.parametric_geometry': ['IParametricGeometry'],
                   }
 

@@ -450,17 +450,6 @@ class IDOEgenerator(Interface):
         """
 
 
-class IDifferentiator(Interface):
-    """A plugin to driver that can determine derivatives between a driver's
-    parameters and its objectives and constraints."""
-
-    def calc_gradient():
-        """Returns the gradient vectors for this Driver's workflow"""
-
-    def calc_hessian():
-        """Returns the Hessian matrix for this Driver's workflow"""
-
-
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
     def getvalue():
@@ -605,6 +594,41 @@ class IHasParameters(Interface):
              the len() function.
         """
 
+    def total_parameters(self):
+        """Returns the total number of values to be set."""
+
+    def evaluate_parameters(self, scope=None, dtype='d'):
+        """Return evaluated parameter values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_lower_bounds(self, dtype='d'):
+        """Return lower bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_upper_bounds(self, dtype='d'):
+        """Return upper bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_fd_steps(self, dtype='d'):
+        """Return fd_step values, they may include None.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if it's valid to have None for a step size).
+        """
+
 
 class IHasEvents(Interface):
     def add_event(name):
@@ -656,13 +680,10 @@ class IHasEqConstraints(Interface):
         """Returns an ordered dictionary of equality constraint objects."""
 
     def eval_eq_constraints():
-        """Evaluates the constraint expressions and returns a list of tuples of the
-        form (lhs, rhs, operator, is_violated), where rhs is the right-hand side
-        of the equality, lhs is the left-hand side of the equality, operator is
-        the string '=', and is_violated is a boolean which is True if the constraint
-        is currently violated.  The operator entry in the tuple is always the same
-        for an equality constraint, but is included for consistency with the
-        eval_ineq_constraints function used for inequality constraints.
+        """Evaluates the constraint expressions and returns a list of values.
+        The form of the constraint is transformed if necessary such that the 
+        right-hand-side is 0.0.  The values returned are the evaluation of the
+        left-hand-side.
         """
 
 
@@ -684,8 +705,9 @@ class IHasIneqConstraints(Interface):
         """Returns an ordered dict of inequality constraint objects."""
 
     def eval_ineq_constraints():
-        """Evaluates the constraint expressions and returns a list of tuples of the
-        form (lhs, rhs, relation, is_violated).
+        """Evaluates the constraint expressions and returns a list their values. Constraints
+        are coerced into a form where the right-hand-side is 0., and the value returned
+        is the evaluation of the left-hand-side.
         """
 
 
