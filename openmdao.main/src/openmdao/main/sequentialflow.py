@@ -51,6 +51,7 @@ class SequentialWorkflow(Workflow):
         self._topsort = None
         self._find_nondiff_blocks = True
         self._input_outputs = []
+        self._interior_edges = None
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""

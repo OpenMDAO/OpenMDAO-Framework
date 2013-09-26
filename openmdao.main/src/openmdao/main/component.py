@@ -151,7 +151,7 @@ class Component(Container):
         super(Component, self).__init__()
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
-        self._do_invalidate = True  # determines if input changes wil invalidate graph
+        self._invalidation_type = 'full'
 
         # dependency graph between us and our boundaries
         # (bookkeeps connections between our variables and external ones).
@@ -213,6 +213,10 @@ class Component(Container):
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
 
     @rbac(('owner', 'user'))
+    def get_invalidation_type(self):
+        return self._invalidation_type
+
+    @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
         return self.itername
@@ -236,15 +240,13 @@ class Component(Container):
                 name = n
 
         self._input_check(name, old)
-        if self._do_invalidate:
-            self._input_updated(name)
+        self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self._exec_state != "INVALID":
-            self._set_exec_state("INVALID")
-            if self.parent:
-                self.parent.child_invalidated(self.name)
+        self._set_exec_state("INVALID")
+        if self.parent and hasattr(self.parent, 'child_invalidated'):
+            self.parent.child_invalidated(self.name, vnames=[name])
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -533,8 +535,6 @@ class Component(Container):
         self._stop = False
         self.ffd_order = ffd_order
         self._case_id = case_id
-        if not force:
-            self._do_invalidate = False # don't do unnecessary invalidations
 
         try:
             self._pre_execute(force)
@@ -555,6 +555,7 @@ class Component(Container):
                    hasattr(self, 'calculate_second_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
+                    #print "FFD pass. doing nothing for %s" % self.get_pathname()
                     pass
 
                 else:
@@ -577,7 +578,6 @@ class Component(Container):
             self._set_exec_state('INVALID')
             raise
         finally:
-            self._do_invalidate = True
             # If this is the top-level component, perform run termination.
             if self.parent is None:
                 self._run_terminated()
@@ -1502,19 +1502,6 @@ class Component(Container):
         self._set_exec_state('INVALID')
         return None
 
-        # conn_ins = self._depgraph.get_boundary_inputs(connected=True)
-        # vnames = self.list_outputs()
-        # if varnames is None:
-        #     vnames.extend(conn_ins)
-        # else:
-        #     vnames.extend([v for v in varnames if v in conn_ins])
-            
-        # data = self._depgraph.node
-        # for v in vnames:
-        #     data[v]['valid'] = False
-
-        #return None  # None indicates that all of our outputs are invalid.
-
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
@@ -1933,27 +1920,3 @@ class Component(Container):
                     valids.append(False)
             return valids
 
-# def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
-#     """Prints out validity status of all input and output traits
-#     for the given object, optionally recursing down to all of its
-#     Component children as well.
-#     """
-#     exclude = exclude or set()
-
-#     def _show_validity_(comp, recurse, exclude, valid, result):
-#         pname = comp.get_pathname()
-#         for name, val in comp._valid_dict.items():
-#             if name not in exclude and (valid is None or val is valid):
-#                 if '.' in name:  # mark as fake boundary var
-#                     result['.'.join([pname, '*%s*' % name])] = val
-#                 else:
-#                     result['.'.join([pname, name])] = val
-#         if recurse:
-#             for name in comp.list_containers():
-#                 obj = getattr(comp, name)
-#                 if is_instance(obj, Component):
-#                     _show_validity_(obj, recurse, exclude, valid, result)
-#     result = {}
-#     _show_validity_(comp, recurse, exclude, valid, result)
-#     for name, val in sorted([(n, v) for n, v in result.items()], key=lambda v: v[0]):
-#         print '%s: %s' % (name, val)

@@ -86,7 +86,6 @@ class PseudoComponent(object):
         self.name = _get_new_name()
         self._inmap = {} # mapping of component vars to our inputs
         self._meta = {}
-        #self._valid_dict = {}
         self._valid = False
         self._parent = parent
         self._inputs = []
@@ -227,7 +226,6 @@ class PseudoComponent(object):
         """
         for src, dest in self.list_connections():
             scope.connect(src, dest)
-        #self.invalidate_deps()
 
     def remove_connections(self, scope):
         """Disconnect all of the inputs and outputs of this comp
@@ -236,36 +234,22 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.disconnect(src, dest)
 
-    def io_graph(self):
-        return None
-        
     def invalidate_deps(self, varnames=None, force=False):
         self._valid = False
         return None
-        # if varnames is None:
-        #     varnames = self._inputs
-        # for name in varnames:
-        #     self._valid_dict[name] = False
-        # self._valid_dict['out0'] = False
+
+    def get_invalidation_type(self):
+        return 'full'
 
     def connect(self, src, dest):
+        self._valid = False
         pass
-        # self._valid_dict[dest.split('.',1)[0]] = False
-        # self._valid_dict['out0'] = False
 
     def run(self, ffd_order=0, case_id=''):
-        #invalid_ins = [n for n in self._inputs if not self._valid_dict[n]]
-        #if invalid_ins:
-        #    self.update_inputs(invalid_ins)
         self.update_inputs()
 
-        #if not invalid_ins and self._valid_dict['out0'] is True:
-        #    return
-        
         src = self._srcexpr.evaluate()
         setattr(self, 'out0', src)
-        #for name in self._valid_dict:
-        #    self._valid_dict[name] = True
         self._valid = True    
         self._parent.child_run_finished(self.name)
             
@@ -283,11 +267,7 @@ class PseudoComponent(object):
     def set(self, path, value, index=None, src=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        # if getattr(self, path) != value:
-        #     setattr(self, path, value)
-        #     #self.invalidate_deps()
-        #     if self._parent:
-        #         self._parent.child_invalidated(self.name, None)
+        self.invalidate_deps()
         setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
@@ -295,15 +275,8 @@ class PseudoComponent(object):
             return {}
         return None
 
-    # def get_valid(self, names):
-    #     return [self._valid_dict[n] for n in names]
-
     def is_valid(self):
         return self._valid
-        # for k,v in self._valid_dict.items():
-        #     if not v:
-        #         return False
-        # return True
 
     def set_itername(self, itername):
         self._itername = itername
@@ -322,5 +295,4 @@ class PseudoComponent(object):
         self.J = array([[grad[n] for n in self._inputs]])
 
     def provideJ(self):
-        #print self._inputs, self.J
         return tuple(self._inputs), ('out0',), self.J

@@ -1,23 +1,11 @@
 from collections import deque
+import pprint
 
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver
 from openmdao.main.expreval import ExprEvaluator
-
-_spaces = 0
-def spaces():
-    return _spaces*' '
-
-def tab():
-    global _spaces
-    _spaces += 3
-
-def untab():
-    global _spaces
-    _spaces -=3
-    
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -42,6 +30,8 @@ def base_var(graph, node):
         base = graph.node[node].get('basevar')
         if base:
             return base
+        elif 'var' in graph.node[node]:
+            return node
 
     parts = node.split('[', 1)[0].split('.')
     # for external connections, we don't do the error checking at
@@ -86,6 +76,9 @@ def _sub_or_super(s1, s2):
 
 # NODE selectors
 
+def is_valid_node(graph, node):
+    return graph.node['valid']
+
 def is_input_node(graph, node):
     if graph.node[node].get('iotype') == 'in':
         return True
@@ -108,6 +101,7 @@ def is_boundary_node(graph, node):
     return 'boundary' in graph.node[node]
 
 def is_comp_node(graph, node):
+    """Returns True for Component or PseudoComponent nodes."""
     return 'comp' in graph.node.get(node, '')
 
 def is_driver_node(graph, node):
@@ -200,30 +194,6 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-# predicate factories
-
-def all_preds(*args):
-    """Returns a function that returns True if all preds passed to it
-    return True.  If called with no predicates, always returns False.
-    """
-    def _all_preds(graph, node):
-        for pred in args:
-            if not pred(graph, node):
-                return False
-        return False
-    return _all_preds
-
-def any_preds(*args):
-    """Returns a function that returns True if any preds passed to it
-    return True.  If called with no predicates, always returns False.
-    """
-    def _any_preds(graph, node):
-        for pred in args:
-            if pred(graph, node):
-                return True
-        return False
-    return _any_preds
-
 
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
@@ -308,9 +278,6 @@ class DependencyGraph(nx.DiGraph):
         for n in rem_outs:
             self.remove(n)
 
-        # update the iograph for the component
-        #self.node[cname]['iograph'] = child.io_graph()
-
     def add_component(self, cname, obj, **kwargs):
         """Create nodes in the graph for the component and all of
         its input and output variables. Any other named args that
@@ -322,18 +289,12 @@ class DependencyGraph(nx.DiGraph):
             kwargs['driver'] = True
         if hasattr(obj, '_pseudo_type'):
             kwargs['pseudo'] = obj._pseudo_type
-        if 'comp' not in kwargs:
-            kwargs['comp'] = True
+        kwargs['invalidation'] = obj.get_invalidation_type()
+        kwargs['comp'] = True
+        kwargs['valid'] = False
 
         inputs  = ['.'.join([cname, v]) for v in obj.list_inputs()]
         outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
-        #iograph = obj.io_graph()
-        #kwargs['iograph'] = iograph
-        #if iograph is None:
-        kwargs['valid'] = False
-        #else:
-        #    kwargs['valid'] = 'partial' # have to handle comps with partial
-                                        # invalidation in a special way
 
         self.add_node(cname, **kwargs)
         self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
@@ -631,8 +592,7 @@ class DependencyGraph(nx.DiGraph):
         """Returns a list of all component and PseudoComponent
         nodes.
         """
-        pred = any_preds(is_comp_node, is_pseudo_node)
-        return [n for n in self.nodes_iter() if pred(self, n)]
+        return [n for n in self.nodes_iter() if is_comp_node(self, n)]
 
     def find_prefixed_nodes(self, nodes, data=False):
         """Returns a list of nodes including the given nodes and
@@ -686,7 +646,8 @@ class DependencyGraph(nx.DiGraph):
         outset = set()  # set of changed boundary outputs
 
         ndata = self.node
-        stack = [(n, self.successors_iter(n), not is_comp_node(self, n)) for n in vnames]
+        stack = [(n, self.successors_iter(n), not is_comp_node(self, n)) 
+                        for n in vnames]
 
         visited = set()
         while(stack):
@@ -706,12 +667,13 @@ class DependencyGraph(nx.DiGraph):
             parsources = self.get_sources(src)
             for node in neighbors:
                 if is_comp_node(self, node):
-                    outs = getattr(scope, node).invalidate_deps(['.'.join(['parent', n]) 
-                                                                  for n in parsources])
-                    if outs is None:
-                        stack.append((node, self.successors_iter(node), True))
-                    else: # partial invalidation
-                        stack.append((node, ['.'.join([node,n]) for n in outs], False))
+                    if ndata[node]['valid'] or ndata[node].get('invalidation')=='partial':
+                        outs = getattr(scope, node).invalidate_deps(['.'.join(['parent', n]) 
+                                                                      for n in parsources])
+                        if outs is None:
+                            stack.append((node, self.successors_iter(node), True))
+                        else: # partial invalidation
+                            stack.append((node, ['.'.join([node,n]) for n in outs], False))
                 else:
                     stack.append((node, self.successors_iter(node), True))
 
@@ -842,100 +804,12 @@ class DependencyGraph(nx.DiGraph):
         self._component_graph = g
         return g
 
-    # def io_graph(self, cname):
-    #     """Return a graph showing connections between boundary
-    #     inputs and boundary outputs only, for use by parent
-    #     graphs.
-    #     """
-    #     iograph = nx.DiGraph()
-    #     inputs = set()
-    #     outputs = set()
-    #     for node in self.nodes_iter():
-    #         if is_boundary_node(self, node):
-    #             if is_input_base_node(self, node):
-    #                 inputs.add(node)
-    #             elif is_output_base_node(self, node):
-    #                 outputs.add(node)
-
-    #     edges = []
-    #     for inp in inputs:
-    #         for u,v in nx.dfs_edges(self, source=inp):
-    #             if v in outputs:
-    #                 edges.append((inp, v))
-
-    #     if cname:
-    #         inputs = ['.'.join([cname,n]) for n in inputs]
-    #         outputs = ['.'.join([cname,n]) for n in outputs]
-    #         edges = [('.'.join([cname,u]),'.'.join([cname,v]))
-    #                       for u,v in edges]
-
-    #     iograph.add_nodes_from(inputs)
-    #     iograph.add_nodes_from(outputs)
-    #     iograph.add_edges_from(edges)
-
-    #     return iograph
-
     def get_loops(self):
         if self._loops is None:
             self._loops = [s for s in
                 nx.strongly_connected_components(self.component_graph())
                 if len(s)>1]
         return self._loops
-
-    def find_nodes(self, nodes, predicate, stop_predicate=None, reverse=False):
-        """Returns an iterator over the nearest successor nodes that satisfy the predicate.
-        For example, if node is a base variable node and predicate is True for base variable
-        nodes, then the nearest base variable successors would be returned in the iterator.
-        Note that depending on iotype, the behavior may be surprising.  For example, if node is
-        an input base variable of a component, then the iterator will return all of the output
-        base variable nodes of the component because they are the next base variable successors,
-        but if node is an output variable, then any input base variables connected to that node
-        will be returned.
-
-        nodes: str or iter of str
-            The group of starting nodes, or just a single node
-
-        predicate: boolean function of the form  f(graph, node)
-            Should return True for nodes that should be included
-            in the iterator
-
-        stop_predicate: boolean function of the form f(graph, node) (optional)
-            Should return True for nodes that should stop the traversal
-            of that branch.  Traversal on a branch will stop when the first
-            node satisfying 'predicate' is found OR if stop_predicate is True.
-
-        reverse: bool (optional)
-            if True, find previous nodes instead of successor nodes.
-
-        If predicate is True AND stop_predicate is True, the node will still
-        be added to the iterator and traversal on the branch will stop.
-        """
-        if isinstance(nodes, basestring):
-            nodes = [nodes]
-
-        if reverse:
-            neighbors = self.predecessors_iter
-        else:
-            neighbors = self.successors_iter
-
-        visited=set()
-        for start in nodes:
-            if start in visited:
-                continue
-            visited.add(start)
-            stack = [(start, neighbors(start))]
-            while stack:
-                parent, children = stack[-1]
-                try:
-                    child = next(children)
-                    if child not in visited:
-                        visited.add(child)
-                        if predicate(self, child):
-                            yield child
-                        elif not (stop_predicate is not None and stop_predicate(self, child)):
-                            stack.append((child, neighbors(child)))
-                except StopIteration:
-                    stack.pop()
 
     def _var_connections(self, path, direction=None):
         """Returns a list of tuples of the form (srcpath, destpath) for all
@@ -1000,17 +874,6 @@ class DependencyGraph(nx.DiGraph):
                 if is_basevar_node(self, edge[idx]):
                     yield edge[idx]
 
-    def comp_iter(self, nodes, reverse=False, include_pseudo=True):
-        """Given a group of nodes, return an iterator
-        over all component nodes that are nearest in one
-        direction.
-        """
-        if include_pseudo:
-            return self.find_nodes(nodes, any_preds(is_comp_node, is_pseudo_node),
-                                   reverse=reverse)
-        else:
-            return self.find_nodes(nodes, is_comp_node, reverse=reverse)
-                
     def child_run_finished(self, childname):
         """Called by a child when it completes its run() function."""
         data = self.node
@@ -1019,16 +882,10 @@ class DependencyGraph(nx.DiGraph):
         for var in self._all_vars(childname):
             data[var]['valid'] = True
 
-    def get_invalid_out_edges(self):
-        """Return a list of edges connected to invalid boundary
-        outputs.
-        """
-        edges = []
-        for u,v,data in self.edges_iter(data=True):
-            if 'conn' in data and is_boundary_node(self,v) \
-                                and self.node[v]['valid'] is False:
-                edges.append((u,v,data))
-        return edges
+    def update_boundary_outputs(self, scope):
+        """Update destination vars on our boundary."""
+        for out in self.get_boundary_outputs():
+            self.update_destvar(scope, out)
 
     def update_destvar(self, scope, vname):
         """Update the value of the given variable in the 
@@ -1210,3 +1067,11 @@ def get_valids(graph, val, prefix=None):
                     if n.startswith(prefix)]
     return sorted(nodes_matching_all(graph, valid=val))
 
+
+def dump_valid(graph, filter=None, stream=None):
+    dct = {}
+    for node in graph.nodes_iter():
+        if filter and not filter(node):
+            continue
+        dct[node] = graph.node[node]['valid']
+    pprint.pprint(dct, stream=stream)

@@ -3,7 +3,8 @@ import unittest
 import networkx as nx
 from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, \
                                     find_all_connecting, nodes_matching_all, \
-                                    nodes_matching_some, edges_matching_all, edges_matching_some
+                                    nodes_matching_some, edges_matching_all, \
+                                    edges_matching_some
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -23,6 +24,9 @@ class DumbClass(object):
 
     def run(self, *args, **kwargs):
         self.dep.child_run_finished(self.name)
+        
+    def get_invalidation_type(self):
+        return 'full'
 
     def list_inputs(self):
         return self._inputs
@@ -444,6 +448,16 @@ class DepGraphTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def test_invalidate_input_as_output(self):
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.in1','B.in1')],
+                                 inputs=['in1','in2'],
+                                 outputs=['out1','out2'])
+        
+        self._set_all_valid(dep)
+        dep.invalidate_deps(scope, ['A.in1'])
+        self.assertEqual(set(['A','A.out1','A.out2','B.in1','B','B.out1','B.out2']), 
+                         set(nodes_matching_all(dep, valid=False)))
 
     def test_var_edge_iter(self):
         # basevar to basevar connection
@@ -504,32 +518,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(dep.basevar_iter(['C.a','C.b'], reverse=True)), 
                          set(['A.d','B.c']))
 
-    def test_comp_iter(self):
-        dep = self.dep
-        self.assertEqual(list(dep.comp_iter('B')), ['C'])
-        self.assertEqual(list(dep.comp_iter('B', include_pseudo=True)), ['C'])
-        self.assertEqual(list(dep.comp_iter('B', reverse=True)), ['A'])
-        dep.add_node('_pseudo_0', pseudo=True, valid=False)
-        dep.add_nodes_from(['_pseudo_0.in0','_pseudo_0.out0'], var=True)
-        dep.node['_pseudo_0.in0']['valid'] = True
-        dep.node['_pseudo_0.out0']['valid'] = False
-        
-        dep.add_edges_from([('_pseudo_0.in0','_pseudo_0'),
-                            ('_pseudo_0','_pseudo_0.out0')])
-        dep.connect(self.scope, 'C.d', '_pseudo_0.in0')
-        dep.connect(self.scope, '_pseudo_0.out0', 'D.a')
-        self.assertEqual(list(dep.comp_iter('C', include_pseudo=False)), ['D'])
-        self.assertEqual(list(dep.comp_iter('D', include_pseudo=False, reverse=True)),
-                                            ['C'])
-        self.assertEqual(list(dep.comp_iter('C')), ['_pseudo_0'])
-        self.assertEqual(list(dep.comp_iter('D', reverse=True)), ['_pseudo_0'])
-
-        dep, scope = _make_xgraph()
-
-        self.assertEqual(set(dep.comp_iter('C')), set(['D','E']))
-        self.assertEqual(set(dep.comp_iter('C', reverse=True)), set(['A','B']))
-        self.assertEqual(set(dep.comp_iter('A')), set(['D','C']))
-
     def test_input_as_output(self):
         dep, scope = _make_graph(['A','B','C'], [],
                                  [('A.c','B.a'),('B.d','C.b')])
@@ -537,12 +525,6 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-    #def test_iograph(self):
-        #iograph = self.dep.io_graph('')
-        #self.assertEqual(set(iograph.nodes()), 
-                         #set(['a','b','c','d']))
-        #self.assertEqual(set(iograph.edges()), 
-                         #set([('a','c'),('b','c')]))
           
 if __name__ == "__main__":
     unittest.main()

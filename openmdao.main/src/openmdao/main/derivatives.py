@@ -7,6 +7,7 @@ import itertools
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
+from openmdao.main.ndepgraph import base_var
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \
@@ -900,7 +901,7 @@ class FiniteDifference(object):
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                self.scope.set_valid([src.split('[', 1)[0]], True)
+                self.scope.set_valid([base_var(self.scope._depgraph, src)], True)
                 
                 # Make sure we execute!
                 comp._call_execute = True

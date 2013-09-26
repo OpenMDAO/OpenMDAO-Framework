@@ -113,6 +113,11 @@ class Assembly(Component):
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
 
+        # TODO: depending on internal depgraph, this value could be
+        # set to full to speed up invalidate_deps
+        self._invalidation_type = 'partial' # parent depgraph may have to invalidate us
+                                            # multiple times per pass
+
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
 
@@ -566,11 +571,7 @@ class Assembly(Component):
         """Runs driver and updates our boundary variables."""
         self.driver.run(ffd_order=self.ffd_order, 
                         case_id=self._case_id)
-
-        for u,v,data in self._depgraph.get_invalid_out_edges():
-            srcexpr = self._exprmapper.get_expr(u)
-            destexpr = self._exprmapper.get_expr(v)
-            destexpr.set(srcexpr.evaluate(), src=u)
+        self._depgraph.update_boundary_outputs(self)
 
     def step(self):
         """Execute a single child component and return."""
@@ -704,6 +705,9 @@ class Assembly(Component):
         # validate boundary inputs and outputs and their subvars
         self._depgraph.validate_boundary_vars()
         super(Assembly, self)._validate()
+
+    def has_partial_validation(self):
+        return True
 
     def invalidate_deps(self, varnames=None):
         """Mark all Variables invalid that depend on varnames.

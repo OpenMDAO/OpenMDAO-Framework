@@ -19,12 +19,16 @@ class LazyComponent(Component):
     should only use it in the case where you have outputs that are computationally expensive 
     and you wish to only calculate them when they are relevant to the current simulation. 
     """
-    
+    def __init__(self):
+        super(LazyComponent, self).__init__()
+        self._invalidation_type = 'partial'
+
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
         self._connected_outputs = self.list_outputs(connected=True)
 
     def _input_updated(self, name, fullpath=None):
+        self._call_execute = True
         outs = self.invalidate_deps([name])
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
@@ -39,4 +43,4 @@ class LazyComponent(Component):
         self._set_exec_state('INVALID')
 
         return self._connected_outputs
-        
+
