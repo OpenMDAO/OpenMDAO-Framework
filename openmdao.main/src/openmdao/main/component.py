@@ -499,7 +499,7 @@ class Component(Container):
         self._validate()
 
         if self.parent:
-            self.parent.child_run_finished(self.name)
+            self.parent.child_run_finished(self.name, self._outputs_to_validate())
         self.publish_vars()
 
     def _post_run(self):
@@ -1487,7 +1487,7 @@ class Component(Container):
         self._set_exec_state('VALID')
 
     @rbac(('owner', 'user'))
-    def invalidate_deps(self, varnames=None): #, force=False):
+    def invalidate_deps(self, varnames=None):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
         there will never be partial validation of outputs.
@@ -1501,6 +1501,9 @@ class Component(Container):
         self._call_execute = True
         self._set_exec_state('INVALID')
         return None
+
+    def _outputs_to_validate(self):
+        return None  # indicates that all outputs should be validated
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

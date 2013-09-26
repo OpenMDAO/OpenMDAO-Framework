@@ -33,14 +33,18 @@ class LazyComponent(Component):
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
 
-    def invalidate_deps(self, varnames=None):
-        """Mark all Variables invalid that depend on varnames.
-        Returns a list of our newly invalidated boundary outputs.
-
-        varnames: iter of str (optional)
-            An iterator of names of destination variables.
-        """
-        self._set_exec_state('INVALID')
-
+    def _outputs_to_validate(self):
         return self._connected_outputs
 
+    def connect(self, srcexpr, destexpr):
+        super(LazyComponent, self).connect(srcexpr, destexpr)
+
+        if str(destexpr).startswith('parent.'): # our output is being used externally
+            self._call_execute = True
+
+    def disconnect(self, srcpath, destpath):
+        super(LazyComponent, self).disconnect(srcpath, destpath)
+        # invalidate our disconnected output in the parent depgraph
+        if destpath.startswith('parent.'): 
+            self.parent._depgraph.node['.'.join([self.name,
+                                                 srcpath])]['valid'] = False

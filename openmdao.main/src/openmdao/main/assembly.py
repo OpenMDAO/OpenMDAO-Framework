@@ -256,10 +256,6 @@ class Assembly(Component):
                                           type(newobj).__name__))
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
-        #target_rgx = re.compile(r'(\W?)%s.' % target_name)
-        #conns.extend([(u, v) for u, v in self._depgraph.list_autopassthroughs() if
-                                 #re.search(target_rgx, u) is not None or
-                                 #re.search(target_rgx, v) is not None])
 
         self.add(target_name, newobj)  # this will remove the old object
                                        # and any connections to it
@@ -680,9 +676,9 @@ class Assembly(Component):
         return bouts
 
     @rbac(('owner', 'user'))
-    def child_run_finished(self, childname):
+    def child_run_finished(self, childname, outs=None):
         """Called by a child when it completes its run() function."""
-        self._depgraph.child_run_finished(childname)
+        self._depgraph.child_run_finished(childname, outs)
 
     @rbac(('owner', 'user'))
     def get_valid(self, names):

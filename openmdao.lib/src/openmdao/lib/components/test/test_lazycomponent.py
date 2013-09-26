@@ -166,7 +166,6 @@ class TestLazyComponent(unittest.TestCase):
         #note: this is not really necessary, unless we start testing 
         #that outputs were actually calculated
 
-        return 
         self.top.connect('t.x', 's.i1')
         self.top.set('t.a', -1)
 

@@ -388,12 +388,7 @@ class DependencyGraph(nx.DiGraph):
             if not v.startswith('parent.') and v not in self:
                 raise RuntimeError("Can't find variable '%s' in graph." % v)
 
-        #if base_src in self:
-            #src_validity = self.node[base_src]['valid']
-        #else:
-            #src_validity = True
-
-        path = [(base_src, base_src)] #, src_validity)]
+        path = [(base_src, base_src)]
 
         if srcpath != base_src:
             path.append((srcpath, base_src))#, src_validity))
@@ -407,10 +402,6 @@ class DependencyGraph(nx.DiGraph):
 
         for i in range(len(path)):
             var, base = path[i]#, valid = path[i]
-            #if var in self:
-                #self.node[var]['valid'] = valid
-                #self.node[var]['valid'] = True
-            #else:
             if var not in self:
                 self.add_node(var, basevar=base, valid=True)#valid=valid) # subvar
             if i > 0:
@@ -874,13 +865,22 @@ class DependencyGraph(nx.DiGraph):
                 if is_basevar_node(self, edge[idx]):
                     yield edge[idx]
 
-    def child_run_finished(self, childname):
+    def child_run_finished(self, childname, outs=None):
         """Called by a child when it completes its run() function."""
         data = self.node
         data[childname]['valid'] = True
 
-        for var in self._all_vars(childname):
-            data[var]['valid'] = True
+        if outs:
+            if childname:
+                outs = ['.'.join([childname,n]) for n in outs]
+            for out in outs:
+                data[out]['valid'] = True
+                for var in self._all_vars(out, direction='out'):
+                    data[var]['valid'] = True
+        else:
+            for var in self._all_vars(childname, direction='out'):
+                data[var]['valid'] = True
+
 
     def update_boundary_outputs(self, scope):
         """Update destination vars on our boundary."""
