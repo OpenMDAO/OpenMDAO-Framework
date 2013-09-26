@@ -164,7 +164,7 @@ class MetaModel(Component):
 
         self._new_train_data = True
 
-    def child_run_finished(self, childname):
+    def child_run_finished(self, childname, outs=None):
         pass
 
     def check_config(self):
