@@ -298,6 +298,8 @@ wv["Initialize"] = function()
   //
   // the shaders
   var vShaderSrc = [
+"    precision mediump int;",
+"    precision mediump float;",
 "    uniform mat4   u_modelViewMatrix;           // not currently used",
 "    uniform mat4   u_modelViewProjMatrix;",
 "    uniform mat4   u_normalMatrix;",
@@ -365,6 +367,7 @@ wv["Initialize"] = function()
   ].join("\n");
 
   var fShaderSrc = [
+"    precision mediump int;",
 "    precision mediump float;",
 "    uniform float bColor;                       // Backface color switch",
 "    uniform int   picking;                      // picking flag",

@@ -131,6 +131,11 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
                         return;
                     }
 
+                    //Do not include vartree roots
+                    if(input.hasOwnProperty('vt')){
+                        return;
+                    }
+
                     lowlimit = null;
                     highlimit = null;
                     if (input.low !== null) {
@@ -139,7 +144,15 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
                     if (input.high !== null) {
                         highlimit = input.high;
                     }
-                    fullpath = comppath + '.' + input.name;
+
+                    if(input.hasOwnProperty("parent")){
+                        fullpath = comppath + '.' + input.id;
+                    }
+                    
+                    else{
+                        fullpath = comppath + '.' + input.name;
+                    }
+
                     candidates.push(fullpath);
                     limits[fullpath] = [lowlimit, highlimit];
                 });
