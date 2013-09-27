@@ -310,6 +310,11 @@ class ParameterDialog(DialogPage):
     ok     = ButtonElement((By.ID, 'parameter-ok'))
     cancel = ButtonElement((By.ID, 'parameter-cancel'))
 
+    def get_autocomplete_targets(self, target):
+        self.target = target
+        return self.browser.find_elements_by_xpath("//ul[contains(@class, 'ui-autocomplete')]/li")
+
+
 
 class ObjectiveDialog(DialogPage):
     """ Dialog for adding a new objective. """

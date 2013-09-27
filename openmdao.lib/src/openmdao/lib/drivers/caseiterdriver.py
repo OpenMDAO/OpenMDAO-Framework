@@ -509,6 +509,7 @@ class CaseIterDriverBase(Driver):
 
     def _start_next_case(self, server, stepping=False):
         """ Look for the next case and start it. """
+
         if self._todo:
             self._logger.debug('    run startup case')
             case, seqno = self._todo.pop(0)

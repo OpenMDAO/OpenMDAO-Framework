@@ -38,6 +38,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     
     def initialize(self, addr):
         self.addr = addr
+        self.websocket_closed = False
 
     def open(self):
         stream = None
@@ -84,13 +85,19 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 return
 
         # write message to websocket
-        self.write_message(message, binary=binary)
+        if self.websocket_closed:
+            print 'ZMQStreamHandler message received after websocket closed:', message
+        else: 
+            try:
+                self.write_message(message, binary=binary)
+            except Exception as err:
+                print 'ZMQStreamHandler ERROR writing message to websocket:', err
 
     def on_message(self, message):
         pass
 
     def on_close(self):
-        pass
+        self.websocket_closed = True
 
 
 class ZMQStreamApp(web.Application):

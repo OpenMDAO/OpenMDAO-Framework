@@ -40,20 +40,22 @@ compilers.
 
   - *gfortran*
 
-    If these compilers are not already on your system, they should be easily installable using
-    your package manager. OpenMDAO currently builds and passes all tests with gcc/gfortran 4.1.2.
-    We expect that later versions of gcc/gfortran 4.X should also work.
+   If these compilers are not already on your system, they should be easily installable using
+   your package manager. OpenMDAO currently builds and passes all tests with gcc/gfortran 4.1.2.
+   We expect that later versions of gcc/gfortran 4.X should also work.
 
 
 - *Mac OS X*:
 
   - Xcode 
 
-    You can get the latest version from Apple, but you'll have to fill out a (free)
-    registration to do it. If you're using Lion or Mountain Lion, you can also get Xcode from the
-    App store. If you don't want to get the whole X-Code environment, for Lion and Mountain Lion 
-    Apple offers a smaller compiler-only library called *Command Line Tools for Xcode*. You can
-    get the latest Xcode or the  smaller compiler package `here <https://daw.apple.com/cgi-bin/WebObjects/DSAuthWeb.woa/wa/login?appIdKey=d4f7d769c2abecc664d0dadfed6a67f943442b5e9c87524d4587a95773750cea&path=%2F%2Fdownloads%2Findex.action>`_. 
+    You can get the latest version from Apple, but to do so you'll have to register (free) as a developer
+    or log in if you are already registered. If you're using Lion or Mountain Lion, you can also get
+    Xcode from the App store. If you don't want to get the whole X-Code environment, for Lion and
+    Mountain Lion  Apple offers a smaller compiler-only library called *Command Line Tools for Xcode*.
+    You can get the latest Xcode or the  smaller compiler package `here
+    <https://developer.apple.com/xcode>`_.
+
 
   - gfortran 
 
@@ -72,7 +74,7 @@ compilers.
 
       .. figure:: OSX_Lion_Screenshot.png
          :align: center
-         :alt: Screenshot of XCode's Downloads screen showing options
+         :alt: Screenshot of Xcode's Downloads screen showing options
 
          XCode's *Downloads* Screen     
 
@@ -183,6 +185,8 @@ using Git and GitHub.
 
 .. figure:: version_control.png
    :align: center
+   :alt: GitHub version control process with arrows showing relationship among OpenMDAO repository, personal fork of that repo, and personal copy of OpenMDAO repo with its branches
+
 
    Version Control Process
 
@@ -204,7 +208,7 @@ Git repositories, you should follow the instructions `here`__ to set your userna
 and API token. This way, your contact information will be included whenever you
 :term:`commit` to a :term:`repository` on that machine.
 
-.. __: https://help.github.com/articles/setting-your-email-in-git
+.. __: https://help.github.com/articles/set-up-git
 
 
 .. index:: repository

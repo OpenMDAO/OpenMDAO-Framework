@@ -14,6 +14,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
+from openmdao.main.derivatives import flattened_size, flattened_value
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, is_input_node
 from openmdao.main.interfaces import IDriver

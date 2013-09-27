@@ -87,6 +87,7 @@ class Workflow(object):
 
     def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
+
         self._stop = False
         self._iterator = self.__iter__()
         self._exec_count += 1

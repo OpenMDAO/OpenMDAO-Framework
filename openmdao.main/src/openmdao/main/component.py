@@ -526,6 +526,8 @@ class Component(Container):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+
+
         if self.directory:
             self.push_dir()
 
@@ -583,6 +585,7 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+
 
     def _run_terminated(self):
         """ Executed at end of top-level run. """

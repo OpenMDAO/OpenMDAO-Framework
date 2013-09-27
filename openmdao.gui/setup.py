@@ -77,7 +77,7 @@ setup(name='openmdao.gui',
               'zope.exceptions==3.6.1'
           ],
           'functionalTest': [
-              'selenium==2.20.0',
+              'selenium==2.35.0',
               'PyVirtualDisplay==0.1',
           ]
       },   
