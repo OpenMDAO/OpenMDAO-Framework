@@ -23,7 +23,8 @@ To create a GitHub issue, follow these steps:
     
     .. figure:: new_issue.png
        :align: center
-
+       :alt: screen for creating a GitHub issue
+       
        Creating a Issue on GitHub
 
     
@@ -64,6 +65,7 @@ coding," and we hope you will make use of it!
 
 .. figure:: existing_issue.png
    :align: center
+   :alt: screenshot of an existing GitHub issue
  
    Viewing an Existing Issue  
        
@@ -97,6 +99,8 @@ moves to the CURRENT column.
 
 .. figure:: pivotal_tracker.png
    :align: center
+   :alt: screenshot of Pivotal Tracker with 3 columns of stories: Done, Current, and Backlog 
+
  
    Example of OpenMDAO Story Tracking in Pivotal Tracker
 

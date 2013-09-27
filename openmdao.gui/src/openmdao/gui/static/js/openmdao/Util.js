@@ -303,9 +303,10 @@ openmdao.Util = {
         var msgId = baseId+'-msg',
             win = null;
 
-        // FIXME: this looks like a bug, should be removed in handleResponse()
-        if (jQuery('#'+baseId).length > 0) {
-            jQuery('#'+baseId).remove();
+        // Don't put up a notification with a duplicate ID
+        if (jQuery('#'+msgId).length > 0) {
+            debug.warn('Util.notify() removing duplicate notification:', msgId);
+            jQuery('#'+msgId).remove();
         }
 
         win = jQuery('<div id="'+msgId+'"></div>');

@@ -42,11 +42,13 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
+                                     IContainer, IParametricGeometry, \
+                                     IComponent
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
-                                     is_instance, CLASSES_TO_PROXY
+                                     is_instance, CLASSES_TO_PROXY, \
+                                     has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
@@ -135,6 +137,13 @@ class _ContainerDepends(object):
         or None if not connected.
         """
         return self._srcs.get(destname)
+
+    def _check_source(self, path, src):
+        source = self.get_source(path)
+        if source is not None and src != source:
+            raise RuntimeError("'%s' is connected to source '%s' and cannot be "
+                "set by source '%s'" %
+                (path, source, src))
 
 
 class _MetaSafe(MetaHasTraits):
@@ -285,31 +294,21 @@ class Container(SafeHasTraits):
         destpath = destexpr.text
         srcpath = srcexpr.text
 
+        graph = self._depgraph
+
         # check for self connections
         if not destpath.startswith('parent.'):
             vpath = destpath.split('[', 1)[0]
             cname2, _, destvar = vpath.partition('.')
             destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
-                self.raise_exception("Cannot connect '%s' to '%s'. Both refer"
+                self.raise_exception("Can't connect '%s' to '%s'. Both refer"
                                      " to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
-            self._depgraph.check_connect(srcpath, destpath)
+            graph.check_connect(srcpath, destpath)
 
             if not destpath.startswith('parent.'):
-                if not self.contains(destpath.split('[', 1)[0]):
-                    self.raise_exception("Can't find '%s'" % destpath,
-                                         AttributeError)
-                parts = destpath.split('.')
-                for i in range(len(parts)):
-                    dname = '.'.join(parts[:i+1])
-                    sname = self._depgraph.get_source(dname)
-                    if sname is not None:
-                        self.raise_exception(
-                            "'%s' is already connected to source '%s'" %
-                            (dname, sname), RuntimeError)
-
                 if destvar:
                     child = getattr(self, cname2)
                     if is_instance(child, Container):
@@ -334,21 +333,23 @@ class Container(SafeHasTraits):
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest))
 
-            self._depgraph.connect(srcpath, destpath)
+            graph.connect(srcpath, destpath)
         except Exception as err:
             try:
                 for child, childsrc, childdest in child_connections:
                     child.disconnect(childsrc, childdest)
-            except:
-                pass
-            self.raise_exception("Can't connect '%s' to '%s': %s"
-                                 % (srcpath, destpath, str(err)), RuntimeError)
+            except Exception as err:
+                self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
+                                   (childsrc, childdest, srcpath, destpath, err))
+            raise
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one
         destination variable.
         """
+        graph = self._depgraph
+
         cname = cname2 = None
         destvar = destpath.split('[', 1)[0]
         srcexpr = ExprEvaluator(srcpath, self)
@@ -380,7 +381,7 @@ class Container(SafeHasTraits):
                                  "Both variables are on the same component" %
                                  (srcpath, destpath), RuntimeError)
 
-        self._depgraph.disconnect(srcpath, destpath)
+        graph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
     # no execute, they can have no inputs/outputs, which means that validity should have
@@ -634,14 +635,26 @@ class Container(SafeHasTraits):
             else:
                 obj.parent = self
             # if an old child with that name exists, remove it
+            removed = False
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
+                removed = True
             obj.name = name
             setattr(self, name, obj)
             if self._cached_traits_ is None:
                 self.get_trait(name)
             else:
                 self._cached_traits_[name] = self.trait(name)
+            io = self._cached_traits_[name].iotype
+            if removed and not isinstance(self._depgraph, _ContainerDepends):
+                if io:
+                    # since we just removed this container and it was
+                    # being used as an io variable, we need to put
+                    # it back in the dep graph
+                    self._depgraph.add_boundary_var(name, iotype=io)
+                elif has_interface(obj, IComponent):
+                    self._depgraph.add_component(name, obj)
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
@@ -721,9 +734,16 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, NameError)
-        trait = self.get_trait(name)
-        if trait is not None:
+        try:
             obj = getattr(self, name)
+        except:
+            self.raise_exception("cannot remove '%s': not found" %
+                                 name, AttributeError)
+            
+        trait = self.get_trait(name)
+        if trait is None:
+            delattr(self, name)
+        else:
             # for Slot traits, set their value to None but don't remove
             # the trait
             if trait.is_trait_type(Slot):
@@ -733,10 +753,8 @@ class Container(SafeHasTraits):
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
-            return obj
-        else:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
+                
+        return obj
 
     @rbac(('owner', 'user'))
     def configure(self):
@@ -942,7 +960,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            elif is_instance(obj, Container):
+            elif hasattr(obj, 'get_metadata'):
                 return obj.get_metadata(restofpath, metaname)
             else:
                 # if the thing being accessed is an attribute of a Variable's
@@ -1023,22 +1041,15 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            if '[' in path:
-                path, idx = path.replace(']', '').split('[')
-                if path:
-                    if idx.isdigit():
-                        obj = getattr(self, path, Missing)[int(idx)]
-                    elif idx.startswith('('):  # ndarray index
-                        obj = getattr(self, path, Missing)
-                        if obj is Missing:
-                            return self._get_failed(path, index)
-                        idx = idx[1:-1].split(',')
-                        for i in idx:
-                            obj = obj[int(i)]
-                        return obj
-                    else:
-                        key = re.sub('\'|"', '', str(idx))  # strip any quotes
-                        obj = getattr(self, path, Missing)[key]
+            if ('[' in path or '(' in path) and index is None:
+                # caller has put indexing in the string instead of
+                # using the indexing protocol
+                # TODO: document somewhere that passing indexing 
+                #       information as part of the path string has
+                #       higher overhead than constructing the index
+                #       using the indexing protocol or using ExprEvaluators
+                #       that you keep around and evaluate repeatedly.
+                obj = ExprEvaluator(path, scope=self).evaluate()
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:
@@ -1057,12 +1068,10 @@ class Container(SafeHasTraits):
         """Raise an exception if the given source variable is not the one
         that is connected to the destination variable specified by 'path'.
         """
-        source = self._depgraph.get_source(path)
-        if source is not None and src != source:
-            self.raise_exception(
-                "'%s' is connected to source '%s' and cannot be "
-                "set by source '%s'" %
-                (path, source, src), RuntimeError)
+        try:
+            self._depgraph._check_source(path, src)
+        except Exception as err:
+            self.raise_exception(str(err), RuntimeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype
@@ -1183,8 +1192,10 @@ class Container(SafeHasTraits):
         #        be called if we do it this way
         eq = (old == value)
 
-        if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
-            eq = False
+        try:
+            eq = all(eq)
+        except TypeError:
+            pass
         if not eq:
             # need to find first item going up the parent tree that is a Component
             item = self
@@ -1204,7 +1215,7 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.get_source(name):
+        if self._depgraph.pred[name]:
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:
@@ -1214,7 +1225,7 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set" %
-                (name, self._depgraph.get_source(name)), RuntimeError)
+                (name, self._depgraph.get_sources(name)[0]), RuntimeError)
 
     def _input_nocheck(self, name, old):
         """This method is substituted for `_input_check` to avoid source

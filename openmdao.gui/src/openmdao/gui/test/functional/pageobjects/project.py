@@ -139,14 +139,15 @@ class ProjectsPage(BasePageObject):
         elements = element.find_elements_by_xpath('../../td')
 
         metadata = {
-            "name" : elements[0].text,
-            "description" : elements[1].text,
-            "version" : elements[2].text,
-            "created" : elements[3].text,
-            "last_saved" : elements[4].text,
+            "name":        elements[0].text,
+            "description": elements[1].text,
+            "version":     elements[2].text,
+            "created":     elements[3].text,
+            "last_saved":  elements[4].text,
         }
 
         return metadata
+
 
 class MetadataModal(BootstrapModal):
 

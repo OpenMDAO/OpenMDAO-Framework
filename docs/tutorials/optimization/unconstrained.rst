@@ -183,7 +183,7 @@ lines in this file are:
     :hide:
 
     ...
-    Minimum found at (6.666667, -7.333334)
+    Minimum found at (6.666666, -7.333334)
     Elapsed time:  ... seconds
         
  

@@ -1,9 +1,12 @@
 # pylint: disable-msg=C0111,C0103
 import unittest
+import logging
+import StringIO
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int, Event, Float, List, Enum, Str
 from openmdao.util.decorators import add_delegate
+from openmdao.util.log import logger
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
 
@@ -137,7 +140,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter('comp.x', 0., 1.e99) 
         except Exception, err:
-            msg = 'driver: Cannot add target parameter "comp.x" - incoming connection exists'
+            msg = "driver: 'comp.x' is already a Parameter target"
             self.assertEqual(str(err), msg)
         else:
             self.fail('Exception Expected')
@@ -269,7 +272,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
         try: 
             self.top.driver.add_parameter('comp.y')
-        except ValueError,err: 
+        except Exception,err: 
             self.assertEqual(str(err),"driver: 'comp.y' is already a Parameter target")
         else: 
             self.fail('RuntimeError expected')
@@ -316,7 +319,8 @@ class HasParametersTestCase(unittest.TestCase):
         
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         pg = ParameterGroup([p,p2])
-        self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
+        self.assertEqual(pg.get_metadata(),[('comp.x',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': 0.0}),
+                                           ('comp.y',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': 0.0})])    
 
     def test_connected_input_as_parameter(self):
         self.top.add('comp2', ExecComp(exprs=['c=x+y','d=x-y']))
@@ -353,11 +357,11 @@ class ParametersTestCase(unittest.TestCase):
         
     def test_transform(self):
 
+        self.top.comp.a = 15.
+        
         # Vars with no bounds params with bounds
         self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.5, adder=1.)
         self.top.driver2.add_parameter('comp.a', low=-6., high=10., scaler=4., adder=-2.)
-        
-        self.top.comp.a = 15.
         
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()
@@ -373,7 +377,49 @@ class ParametersTestCase(unittest.TestCase):
         
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
+
+    #def test_scaled_var_with_initial_violation(self):
+        # KTM1 - This tested pulling values into the param pseudocomps. We don't
+        # have those anymore, so don't need the test.
         
+        #self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
+        
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = 1.5
+        #self.top.driver.run()
+
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = 2.5
+        
+        #sout = StringIO.StringIO()
+        #sh = logging.StreamHandler(sout)
+        #sh.setLevel(logging.WARNING)
+        #logger.addHandler(sh)
+        
+        #self.top.driver.run()
+        #self.assertEqual(sout.getvalue().strip(), 
+                         #"Setting 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
+        #oldlogval = sout.getvalue()
+
+        #self.top.comp.svar = 0.5 # put svar back in valid range
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.driver.run()
+
+        #self.top.driver.clear_parameters()
+        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        #self.top.driver.ctlmin = 1.0
+        #self.top.comp.svar = -2.5
+        
+        #self.top.driver.run()
+        
+        #self.assertEqual(sout.getvalue()[len(oldlogval):].strip(), 
+                         #"Setting 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
+
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)
         self.top.driver.add_parameter(('comp.c','comp.d'),0,1e99)
@@ -409,11 +455,11 @@ class ParametersTestCase(unittest.TestCase):
 
     def test_transform_just_scale_or_add(self):
 
+        self.top.comp.v1 = 15.
+        
         self.top.comp.add_trait('v1', Float(0.0, low=-100.0, high=100.0, iotype='in'))
         self.top.driver.add_parameter('comp.v1', high=12.0, scaler=1.5)
         self.top.driver2.add_parameter('comp.v1', low=-6.0, adder=-2.)
-        
-        self.top.comp.v1 = 15.
         
         params = self.top.driver.get_parameters()
         params2 = self.top.driver2.get_parameters()

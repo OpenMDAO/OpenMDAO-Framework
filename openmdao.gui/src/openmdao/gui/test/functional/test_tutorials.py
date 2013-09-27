@@ -67,6 +67,8 @@ def _test_MDAO_MDF(browser):
     editor = driver.editor_page(base_type='Driver')
     editor.move(-100, -100)
 
+    editor('inputs_tab').click()
+    
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
     dialog.target = 'dis1.y2'
@@ -118,6 +120,12 @@ def _test_MDAO_MDF(browser):
     dialog.expr = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)'
     dialog('ok').click()
     editor.close()
+
+    # Set Initial Conditions
+    workspace_page.do_command("top.dis1.z1 = top.dis2.z1 = 5.0")    
+    workspace_page.do_command("top.dis1.z2 = top.dis2.z2 = 2.0")    
+    workspace_page.do_command("top.dis1.x1 = 1.0")    
+    workspace_page.do_command("top.solver.tolerance = .00001")    
 
     # Get an implicitly connected output before the run.
     dis1_fig = workspace_page.get_dataflow_figure('dis1', 'top')

@@ -1,7 +1,6 @@
 ''' Demonstration of swapping optimizers on a problem '''
 
 from openmdao.examples.simple.paraboloid_derivative import ParaboloidDerivative
-from openmdao.lib.differentiators.api import FiniteDifference
 from openmdao.lib.drivers.api import COBYLAdriver, CONMINdriver, \
         NEWSUMTdriver, SLSQPdriver, Genetic
 from openmdao.main.api import Assembly
@@ -34,9 +33,6 @@ class DemoOpt(Assembly):
         
         # Equality Constraints
         #self.driver.add_constraint('comp.x-comp.y=15.0')
-        
-        # Differentiator
-        #self.driver.differentiator = FiniteDifference()
         
         # General flag - suppress output
         self.driver.iprint = 0

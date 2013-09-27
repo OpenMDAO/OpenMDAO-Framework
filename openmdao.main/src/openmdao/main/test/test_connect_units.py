@@ -170,8 +170,9 @@ class VariableTestCase(unittest.TestCase):
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio1')      # Pa  to mm
         except Exception, err:
-            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio1': "+\
-                  "ratio1: units 'Pa' are incompatible with assigning units of 'mm'"
+            msg = ": Can't connect 'oneout.ratio1' to 'oneinp.ratio1': Incompatible units "\
+                  "for 'oneout.ratio1' and 'oneinp.ratio1': units 'Pa' are incompatible with "\
+                  "assigning units of 'mm'"
             self.assertEqual(str(err), msg)
         else:
             self.fail('Exception Expected')

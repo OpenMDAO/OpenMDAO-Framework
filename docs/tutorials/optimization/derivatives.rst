@@ -5,62 +5,40 @@
 Adding Derivatives to Your Components
 ======================================
 
-Many optimization algorithms make use of gradients. In our simple example problem, the SLSQP driver estimates
-the gradient at various times during the solution procedure by performing a
-local finite-difference step. Calculating the gradient typically involves one or
-more executions of the objective function depending on the finite difference
-method that is used. This, of course, means that your model is executed 
-additional times each iteration.
+Many optimization algorithms make use of gradients. In our simple example
+problem, the SLSQP driver estimates the gradient at various times during the
+solution procedure by performing a local finite-difference step. Calculating
+the gradient typically involves one or more executions of the objective
+function depending on the finite difference method that is used. This, of
+course, means that your model is executed additional times each iteration.
 
-Sometimes, the solution process can be sped up by having a component supply its own
-derivatives. These derivatives may be analytical (as you will see in this example),
-or they might be estimated by some other means. Additionally, these derivatives can
-be more accurate than those estimated by finite differencing the component, and
-they are not dependent on the right choice of a step-size parameter.
+Sometimes, the solution process can be sped up by having a component supply
+its own derivatives. These derivatives may be analytical (as you will see in
+this example), or they might be estimated by some other means. Additionally,
+these derivatives can be more accurate than those estimated by finite
+differencing the component, and they are not dependent on the right choice of
+a step-size parameter.
 
-.. index:: Finite Difference with Analytical Derivatives (FFAD)
+.. index:: Finite Difference
 
-In OpenMDAO, derivatives can be specified in the component API. A component's
-set of specified derivatives is used to replace that component's output
-with the first-order Taylor series expansion whenever the optimizer initiates
-a finite difference estimation of the gradient. This is called *Finite
-Difference with Analytical Derivatives* (FFAD). It provides an efficient 
-way of calculating gradients for mixed models -- models with components 
-that can provide derivatives and those that cannot. Via FFAD you can specify gradients (first
-derivatives) and Hessians (second derivatives) in mixed models. Not all optimizers 
-will use gradients or Hessians, so they only get calculated if requested by an optimizer. 
-
-Four steps are involved in specifying derivatives for a component:
+In OpenMDAO, derivatives can be specified in the component API by following
+these two steps:
 
 :: 
  
-  1. Inherit from Component (ComponentWithDerivatives is deprecated)
-  2. Declare derivatives in the "__init__" method
-  3. Calculate the first derivatives in the "calculate_first_derivatives" method
-  4. Calculate the second derivatives in the "calculate_second_derivatives" method (if needed)
+   1. Declare a ``linearize`` method that calculates and saves the Jacobian that 
+      contains the derivatives between its numerical outputs and inputs.
+   2. Declare a ``provideJ`` method that returns the Jacobian along with a 
+      list of inputs and outputs.
 
-You must declare the derivatives that you want to define so that the component can
-be checked for missing derivatives. In declaration, you aren't defining a value
-but just declaring that this derivative is provided by the component. In
-the general case, you need to have derivatives for all possible permutations
-between the inputs and outputs of your component. However, during any specific
-optimization, you only need the derivatives for inputs that are connected to
-upstream components and outputs that pass info to downstream components. This set
-can be reduced further when you consider that you only need the inputs and outputs
-that are active in the loop between the optimizer's parameters and its objective and
-constraints. Derivatives are valid only for the `Float` variable type.
 
-Derivative declaration is guided by the *sparse matrix* policy: if you don't
-declare a derivative, it is assumed to be zero. You don't have to actively
-set it to zero, and there is no superfluous multiplication by zero in any part
-of the calculation. This philosophy leads to a clean interface and efficient
-calculation, but the burden is on the component developer to make sure not
-to miss a declaration of a derivative for an important output pair.
-
-You can add analytical derivatives to the Paraboloid component by following
-the steps mentioned above. Starting with the original code:
+Lets look at an example, using the Paraboloid component, to see how this would work in 
+practice. Starting with the original code, but calling our new
+class ``ParaboloidDerivative``, we have:
 
 .. testcode:: Paraboloid_derivative
+
+    from numpy import array
 
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
@@ -69,80 +47,85 @@ the steps mentioned above. Starting with the original code:
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
         # set up interface to the framework  
-        # pylint: disable-msg=E1101
         x = Float(0.0, iotype='in', desc='The variable x')
         y = Float(0.0, iotype='in', desc='The variable y')
 
-        f_xy = Float(iotype='out', desc='F(x,y)')        
+        f_xy = Float(iotype='out', desc='F(x,y)')
+
+
+The first function we need to add is ``linearize``. This function calculates
+and saves a matrix (called the Jacobian) of the derivatives of the
+component's outputs with respect to its inputs, evaluated at the current
+state of the model. The paraboloid model has one input and two outputs, so
+the Jacobian is a 1 by 2 numpy array. This also requires the numpy import
+seen in the code above. The ``linearize`` function doesn't return the
+Jacobian, but instead stores it in our Component. 
 
 
 .. testcode:: Paraboloid_derivative
-    :hide:
-    
-    from openmdao.examples.simple.paraboloid import Paraboloid
-    self = Paraboloid()
 
-The ``__init__`` method is a function that every class calls when it is instantiated.
-We need to add an ``__init__`` method that defines derivatives between the inputs
-(`x, y`) and the output ``f_xy``. Let's add both first and second derivatives.
-
-.. testcode:: Paraboloid_derivative
-
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
-        
-        super(Paraboloid_Derivative, self).__init__()
-
-        self.derivatives.declare_first_derivative('f_xy', 'x')
-        self.derivatives.declare_first_derivative('f_xy', 'y')
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
-
-The *super* command executes the parent's ``__init__`` function. **This is
-required for the component to behave properly in OpenMDAO, so don't forget to
-include it.**
-
-Also, don't forget the cross-variable terms when declaring second derivatives
-(in this case, the second derivative of ``f_xy`` with respect to `x` **and** `y`.)
-
-Next, we define the ``calculate_first_derivatives`` and the
-``calculate_second_derivatives`` methods.
-
-.. testcode:: Paraboloid_derivative
-
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
+    def linearize(self):
+        """Caculate the Jacobian"""
         
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
-        
-        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
-        
-    def calculate_second_derivatives(self):
-        """Analytical second derivatives"""
-        
-        df_dxdx = 2.0
-        df_dxdy = 1.0
-        df_dydy = 2.0
-            
-        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
-            
+    
+        self.J = array([[df_dx, df_dy]])
 
-The Hessian matrix is symmetric, so ``df/dxdy`` is the same as
-``df/dydx``, and only one of these has to be set.
+So `self.J` is our stored Jacobian that we will use later. The ``linearize``
+function is called once when an optimizer asks for a gradient of its
+workflow. When this component is part of a much larger model, it only
+contributes a small portion of the full Jacobian. OpenMDAO uses a numerical
+method, developed by `Martins and Hwang <martins_citation>`_ 
+to solve for the gradient of the full problem. For large problems, the Jacobian could grow 
+to be very large and it would become impractical to construct the entire thing. 
+Instead the scheme used here represents the Jacobian as a linear operator
+or a function that returns a product of the Jacobian with an input vector. 
+In this way, the full Jacobian never needs to be stored. However, since the solution is 
+iterative, a component's Jacobian needs to be queried multiple times after it is 
+calculated. So, we need a method to provide the Jacobian and its ordering:
 
-Note that no changes are required to the OptimizationConstrained or
-OptimizationUnconstrained assembly at this point. If the driver uses
-gradients (or Hessians) and can take advantage of the analytical ones
-you provide, then it will do so. Below is our model, using the new 
-component with derivatives. We put this model in a file called
-:download:`optimization_constrained_derivative.py <../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
+.. _martins_citation: http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary
+
+.. testcode:: Paraboloid_derivative
+
+    def provideJ(self):
+        """Provide full Jacobian."""
+        
+        input_keys = ('x', 'y')
+        output_keys = ('f_xy',)
+        
+        return input_keys, output_keys, self.J
+
+
+Here, ``input_keys`` and ``output_keys`` provide an index into the Jacobian
+so OpenMDAO knows which columns correspond to each input and which rows to 
+each output. For our paraboloid example, if you linearized around the point (0,0)
+then the Jacobian would look like: 
+
++--------+-------+-------+
+|        | **x** | **y** |
++========+=======+=======+
+|**f_xy**| -6.0  |  8.0  |
++--------+-------+-------+
+
+Note that you don't have to include all of the inputs and
+outputs in the Jacobian. There is certainly no reason to provide the
+derivative of inputs that are are never hooked up to other
+outputs or irrelevant to the gradient for some other reason. 
+
+The ParaboloidDerivative component can be placed into a model, and the
+derivatives will be used with no changes required to the
+OptimizationConstrained or OptimizationUnconstrained assembly at this point.
+If the driver uses gradients (or Hessians) and can take advantage of the
+analytical ones you provide, then it will do so. Below is our model, using
+the new component with derivatives. We put this model in a file called
+:download:`optimization_constrained_derivative.py
+<../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
+
+.. [#1] J. R. R. A. Martins and J. T. Hwang, "Review and Unification of Methods for Computing Derivatives of Multidisciplinary Computational Models", AIAA Journal, 2013.
 
 *Benchmarking*
 ~~~~~~~~~~~~~~
@@ -163,7 +146,7 @@ example shows how they can be accessed and used.
         >>> model = OptimizationConstrained()
         >>> model.run()
         >>> print model.paraboloid.exec_count
-        29
+        10
         >>> print model.paraboloid.derivative_exec_count
         0
         >>> # Paraboloid Model with analytical derivatives
@@ -172,9 +155,9 @@ example shows how they can be accessed and used.
         >>> model = OptimizationConstrained()
         >>> model.run()
         >>> print model.paraboloid.exec_count
-        17
+        4
         >>> print model.paraboloid.derivative_exec_count
-        6
+        3
 
 Here, we've printed out the number of function and derivative executions for
 the paraboloid examples, both without and with analytical derivatives.
@@ -183,7 +166,9 @@ analytical derivative isn't evident in a comparison of the clock time, but
 the number of functional executions is much lower when you have them, at a
 cost of a small number of derivative evaluations.
         
-This concludes an introduction to OpenMDAO using a simple problem of component creation and
-execution. The next tutorial introduces a problem with more complexity and presents additional
-features of the framework.
+This concludes an introduction to OpenMDAO using a simple problem of
+component creation and execution. The next tutorial introduces a problem with
+more complexity and presents additional features of the framework.
+
+
 

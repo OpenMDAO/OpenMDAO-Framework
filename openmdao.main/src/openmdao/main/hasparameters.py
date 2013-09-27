@@ -3,17 +3,25 @@ import ordereddict
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.typegroups import real_types, int_types
 
+__missing = object()
 
 class Parameter(object):
 
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None):
-        self._metadata = None
+        """If scaler and/or adder are not None, then high, low, and start, if not None,
+        are assumed to be expressed in unscaled form.  If high and low are not supplied, then
+        their values will be pulled from the target variable (along with a start value), and
+        are assumed to be in scaled form, so their values will be unscaled prior to being 
+        stored in the Parameter.
+        """
 
         if scaler is None and adder is None:
             self._transform = self._do_nothing
             self._untransform = self._do_nothing
+            scaler = 1.0
+            adder = 0.0
         else:
             if scaler is None:
                 scaler = 1.0
@@ -30,12 +38,15 @@ class Parameter(object):
                 except (TypeError, ValueError):
                     raise ValueError("Bad value given for parameter's 'adder' attribute.")
 
+        self._metadata = None
+
         self.low = low
         self.high = high
-        self.start = start
         self.scaler = scaler
         self.adder = adder
+        self.start = start
         self.fd_step = fd_step
+
         if name is not None:
             self.name = name
         else:
@@ -116,6 +127,13 @@ class Parameter(object):
             raise ValueError("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high))
 
+    def initialize(self, scope):
+        if self.start is None:
+            self.set(self._untransform(self._expreval.evaluate(scope)))
+        else:
+            self.set(self.start, scope)
+
+
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return False
@@ -139,6 +157,9 @@ class Parameter(object):
 
     def _do_nothing(self, val):
         return val
+
+    def _get_scope(self):
+        return self._expreval.scope
 
     @property
     def target(self):
@@ -184,13 +205,32 @@ class Parameter(object):
 
     def copy(self):
         """Return a copy of this Parameter."""
-        return Parameter(self._expreval.text, high=self.high, low=self.low,
-                         scaler=self.scaler, adder=self.adder, start=self.start,
-                         fd_step=self.fd_step, scope=self._expreval.scope, name=self.name)
+        return Parameter(self._expreval.text, 
+                         high=self.high, low=self.low,
+                         scaler=self.scaler, adder=self.adder, 
+                         start=self.start,
+                         fd_step=self.fd_step, 
+                         scope=self._get_scope(), name=self.name)
 
     def get_config(self):
         return (self.target, self.low, self.high, self.fd_step,
                 self.scaler, self.adder, self.start, self.name)
+
+    def override(self, low=None, high=None, 
+                 scaler=None, adder=None, start=None,
+                 fd_step=None, name=None):
+        if low is not None: 
+            self.low = low
+        if high is not None: 
+            self.high = high
+        if scaler is not None: 
+            self.scaler = scaler
+        if start is not None: 
+            self.start = start
+        if fd_step is not None: 
+            self.fd_step = fd_step
+        if name is not None: 
+            self.name = name
 
 
 class ParameterGroup(object):
@@ -205,13 +245,16 @@ class ParameterGroup(object):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
 
         self._params = params[:]
+        param0 = self._params[0]
+
         self.low = max([x.low for x in self._params])
         self.high = min([x.high for x in self._params])
-        self.start = self._params[0].start
-        self.scaler = self._params[0].scaler
-        self.adder = self._params[0].adder
-        self.fd_step = self._params[0].fd_step
-        self.name = self._params[0].name
+        self.start = param0.start
+        self.scaler = param0.scaler
+        self.adder = param0.adder
+        self.fd_step = param0.fd_step
+        self.name = param0.name
+        self.typename = param0.valtypename
 
     def __eq__(self, other):
         if not isinstance(other,ParameterGroup):
@@ -259,8 +302,14 @@ class ParameterGroup(object):
                'adder':self.adder,
                'fd_step':self.fd_step,
                'name':self.name}
-        targets = [p.target for p in self._params]
-        return (targets,dct)
+
+        if metaname is not None:
+            val = dct.get(metaname, __missing)
+            if val is __missing:
+                val = None
+            return [(p.target, val) for p in self._params]
+        else:
+            return [(p.target, dct) for p in self._params]
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
@@ -294,6 +343,29 @@ class ParameterGroup(object):
     def get_config(self):
         return [p.get_config() for p in self._params]
 
+    def _get_scope(self):
+        return self._params[0]._get_scope()
+
+    def override(self, low=None, high=None, 
+                 scaler=None, adder=None, start=None,
+                 fd_step=None, name=None):
+        if low is not None:
+            self.low = low
+        if high is not None:
+            self.high = high
+        if scaler is not None:
+            self.scaler = scaler
+        if start is not None:
+            self.start = start
+        if fd_step is not None: 
+            self.fd_step = fd_step
+        if name is not None:
+            self.name = name
+
+    def initialize(self, scope):
+        self._params[0].initialize(scope)
+
+
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -312,17 +384,6 @@ class HasParameters(object):
         replacing object doesn't have this delegate.
         """
         return len(self._parameters)
-
-    def _override_param(self, param, low=None, high=None, 
-                        scaler=None, adder=None, start=None,
-                        fd_step=None, name=None):
-        if low is not None: param.low = low
-        if high is not None: param.high = high
-        if scaler is not None: param.scaler = scaler
-        if start is not None: param.start = start
-        if fd_step is not None: param.fd_step = fd_step
-        if name is not None: param.name = name
-        return param
 
     def add_parameter(self, target, low=None, high=None, 
                       scaler=None, adder=None, start=None,
@@ -381,22 +442,12 @@ class HasParameters(object):
             parent_cnns = self._parent.parent.list_connections()
             for lhs, rhs in parent_cnns:
                 if rhs == target:
-                    self._parent.raise_exception('Cannot add target'
-                    ' parameter "%s" - incoming connection exists' % target,
-                                                                 RuntimeError)
+                    self._parent.raise_exception("'%s' is already a Parameter target" % target,
+                                                 RuntimeError)
 
-        if isinstance(target, Parameter): 
-            self._parameters[target.name] = self._override_param(target, low, high, 
-                                                                 scaler, adder, start,
-                                                                 fd_step, name)
-        elif isinstance(target, ParameterGroup): 
-            self._parameters[target.name] = self._override_param(target, low, high, 
-                                                                 scaler, adder, start,
-                                                                 fd_step, name)
-            for param in target._params: 
-                self._override_param(param, low, high, 
-                                     scaler, adder, start,
-                                     fd_step, name)
+        if isinstance(target, (Parameter, ParameterGroup)): 
+            self._parameters[target.name] = target
+            target.override(low, high, scaler, adder, start, fd_step, name)
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -416,46 +467,45 @@ class HasParameters(object):
                 self._parent.raise_exception("%s are already Parameter targets" %
                                              sorted(list(dups)), ValueError)
 
-            try:
-                parameters = [Parameter(name, low=low, high=high,
-                                        scaler=scaler, adder=adder, start=start,
-                                        fd_step=fd_step, name=key,
-                                        scope=self._get_scope(scope))
-                              for name in names]
-            except Exception as err:
-                self._parent.raise_exception(str(err), type(err))
-
             if key in self._parameters:
                 self._parent.raise_exception("%s is already a Parameter" % key,
                                              ValueError)
+            try:
+                if len(names) == 1:
+                    self._parameters[key] = target = \
+                        Parameter(names[0], low=low, high=high,
+                                  scaler=scaler, adder=adder, start=start,
+                                  fd_step=fd_step, name=key,
+                                  scope=self._get_scope(scope))
+                else:  # defining a ParameterGroup
+                    parameters = [Parameter(n, low=low, high=high,
+                                            scaler=scaler, adder=adder, 
+                                            start=start,
+                                            fd_step=fd_step, name=key,
+                                            scope=self._get_scope(scope))
+                                  for n in names]
+                    types = set([p.valtypename for p in parameters])
+                    if len(types) > 1: 
+                        raise ValueError("Can't add parameter %s because "
+                                         "%s are not all of the same type" %
+                                         (key," and ".join(names)))
+                    target = ParameterGroup(parameters)
+                    self._parameters[key] = target
+            except Exception as err:
+                self._parent.raise_exception(str(err), type(err))
 
-            if len(parameters) == 1:
-                self._parameters[key] = parameters[0]
-            else:  # defining a ParameterGroup
-                types = set([p.valtypename for p in parameters])
-                if len(types) > 1: 
-                    self._parent.raise_exception("Can't add parameter %s because "
-                        "%s are not all of the same type" %
-                        (key," and ".join(names)), ValueError)
-                pg = ParameterGroup(parameters)
-                pg.typename = parameters[0].valtypename
-                self._parameters[key] = pg
-
-            #if start is given, then initialze the var now
-            if start is not None:
-                self._parameters[key].set(start, self._get_scope(scope))
-
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
-        try:
+        param = self._parameters.get(name)
+        if param:
             del self._parameters[name]
-        except KeyError:
+        else:
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -464,8 +514,11 @@ class HasParameters(object):
         name: string
             Name of component being removed.
         """
-        # Just returning everything for now.
-        return self._parameters.copy()
+        refs = ordereddict.OrderedDict()
+        for pname, param in self._parameters.items():
+            if name in param.get_referenced_compnames():
+                refs[pname] = param
+        return refs
 
     def remove_references(self, name):
         """Remove references to component `name`.
@@ -477,21 +530,14 @@ class HasParameters(object):
             if name in param.get_referenced_compnames():
                 self.remove_parameter(pname)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
         """
-        # Not exactly safe here...
-        if isinstance(refs, ordereddict.OrderedDict):
-            self._parameters = refs
-        else:
-            raise TypeError('refs should be ordereddict.OrderedDict, got %r'
-                            % refs)
+        for pname, param in refs.items():
+            self.add_parameter(param)
 
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
@@ -503,17 +549,27 @@ class HasParameters(object):
             targets.extend(param.targets)
         return targets
 
+    def list_param_group_targets(self):
+        """Returns a list of tuples that contain the targets for each
+        parameter group.
+        """
+        return [tuple(param.targets) for param in \
+                self.get_parameters().values()]
+
     def clear_parameters(self):
         """Removes all parameters."""
+        for name in self._parameters.keys():
+            self.remove_parameter(name)
         self._parameters = ordereddict.OrderedDict()
-        self._parent._invalidate()
 
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
     def init_parameters(self): 
-        """Sets all parameters to their start value if a start value is given""" 
+        """Sets all parameters to their start value if a 
+        start value is given
+        """ 
         for key,param in self._parameters.iteritems():
             if param.start is not None: 
                 param.set(param.start, self._get_scope())
@@ -582,7 +638,7 @@ class HasParameters(object):
             for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
-    
+
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
         pathnames of Variables referenced in our target strings. 

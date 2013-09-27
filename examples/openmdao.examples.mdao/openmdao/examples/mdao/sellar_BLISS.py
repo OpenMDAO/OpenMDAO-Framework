@@ -10,7 +10,6 @@
 
 from openmdao.main.api import Assembly, SequentialWorkflow
 from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 
@@ -22,8 +21,8 @@ class SellarBLISS(Assembly):
     Disciplines coupled with FixedPointIterator.
     """
 
-    z_store = Array([0,0],dtype=Float)
-    x1_store = Float(0.0)
+    z_store = Array([0,0],dtype=Float, iotype='in')
+    x1_store = Float(0.0, iotype='in')
     
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -65,8 +64,6 @@ class SellarBLISS(Assembly):
         self.sa_dis1.add_constraint(constraint1) 
         self.sa_dis1.add_constraint(constraint2) 
         self.sa_dis1.add_objective(objective, name='obj')
-        self.sa_dis1.differentiator = FiniteDifference()
-        self.sa_dis1.default_stepsize = 1.0e-6
         
         # Discipline 2 Sensitivity Analysis
         # dis2 has no local parameter, so there is no need to treat it as
@@ -82,8 +79,6 @@ class SellarBLISS(Assembly):
         self.ssa.add_constraint(constraint1)
         self.ssa.add_constraint(constraint2)
         self.ssa.add_objective(objective, name='obj')
-        self.ssa.differentiator = FiniteDifference()
-        self.ssa.default_stepsize = 1.0e-6
         
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
