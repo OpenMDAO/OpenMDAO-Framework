@@ -93,10 +93,7 @@ class GeomComponent(Component):
         self._input_var_names = set()
         self._output_var_names = set()
 
-        self.on_trait_change(self._auto_run_notify,'auto_run')
-        #self.on_trait_change(self._test_notify,'auto_run')
-
-    
+        self.on_trait_change(self._auto_run_notify, 'auto_run')
 
     def _parametric_geometry_changed(self, old, new):
         """Called whenever the parametric geometry is set.
@@ -104,6 +101,8 @@ class GeomComponent(Component):
         self._update_iovar_set()
 
         if new is not None:
+            self._update_deriv_functs(new)
+
             if isinstance(new, Container):
                 new.parent = self
                 new.name = 'parametric_geometry'
@@ -149,7 +148,6 @@ class GeomComponent(Component):
         be value of auto_run variable.""" 
         for var in self._input_var_names: 
             self.on_trait_change(self.run,name=var,remove=(not new))
-
 
     def _var_cleanup(self, names):
         for name in names:
@@ -281,6 +279,29 @@ class GeomComponent(Component):
                 setattr(obj, parts[-1], value)
             else:
                 raise RuntimeError('index not supported')
-        except AttributeError as err:
+        except AttributeError:
             super(GeomComponent, self)._set_failed(path, value, index, src, force)
+
+    def _update_deriv_functs(self, geom):
+        functs = ['linearize','apply_deriv','apply_derivT','provideJ']
+        if geom is None: # remove derivative functions
+            for funct in functs:
+                if hasattr(self, funct):
+                    del self.funct
+        else:
+            for funct in functs:
+                if hasattr(geom, funct):
+                    setattr(self, '_'+funct, getattr(geom, funct))
+
+    def _linearize(self):
+        return self.parametric_geometry.linearize()
+
+    def _apply_deriv(self, arg, result):
+        return self.parametric_geometry.apply_deriv(arg, result)
+
+    def _apply_derivT(self, arg, result):
+        return self.parametric_geometry.apply_derivT(arg, result)
+
+    def _provideJ(self):
+        return self.parametric_geometry.provideJ()
 
