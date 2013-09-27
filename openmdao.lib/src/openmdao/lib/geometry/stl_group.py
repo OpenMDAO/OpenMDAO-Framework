@@ -78,6 +78,8 @@ class STLGroup(object):
         return lines      
 
     def _linearize(self): 
+        if not self._needs_linerize: 
+            return 
         self.list_parameters() #makes up to date param_loc_map
 
         points = []
@@ -195,8 +197,12 @@ class STLGroup(object):
                 deriv_values[start+1:end:3] = Y.flatten() 
                 deriv_values[start+2:end:3] = Z.flatten() 
 
-            Jdata.append(deriv_values)
-        self.J = np.array(Jdata)
+            Jdata.append(deriv_values) 
+        self.J = np.array(Jdata) #weird format used for tecplot fepoint, x,y,z interlaced
+        self.Jx = self.J[:,0::3]
+        self.Jy = self.J[:,1::3]
+        self.Jz = self.J[:,2::3]
+
         self._needs_linerize = False
 
     def writeSTL(self, file_name, ascii=False): 
@@ -270,7 +276,7 @@ class STLGroup(object):
         f.close()
 
     def project_profile(self): 
-        self.__linearize()
+        self._linearize()
 
         point_sets = []
         for comp in self._comps: 
@@ -294,6 +300,39 @@ class STLGroup(object):
                 point_sets.append(points)
 
         return point_sets
+
+    #begin methods for OpenMDAO geometry derivatives
+    def apply_deriv(self, arg, result): 
+        self._linearize()
+
+        for name, value in arg.iteritems(): 
+            i_start = self.param_loc_map[name]
+            length = value.shape[0]
+            sub_Jx = self.Jx[:,i_start:i_start+length]
+            #print name, length, sub_Jx.shape
+            result['geom_out'][:,0] += sub_Jx.dot(value)
+
+            sub_Jy = self.Jy[:,i_start:i_start+length]
+            result['geom_out'][:,1] += sub_Jy.dot(value)
+
+            sub_Jz = self.Jz[:,i_start:i_start+length]
+            result['geom_out'][:,2] += sub_Jy.dot(value)
+
+        return result
+
+    def apply_derivT(self, arg, result): 
+        self._linearize()
+
+        if 'geom_out' in arg: 
+            for name, value in result.iteritems(): 
+                i_start = self.param_loc_map[name]
+                length = value.shape[0]
+                sub_JT = self.JT[i_start:length,:]
+                result[name] = sub_JT*arg['geom_out']
+
+        return result
+
+    #end methods for OpenMDAO geometry derivatives
 
     #begin methods for IParametricGeometry
     def list_parameters(self): 

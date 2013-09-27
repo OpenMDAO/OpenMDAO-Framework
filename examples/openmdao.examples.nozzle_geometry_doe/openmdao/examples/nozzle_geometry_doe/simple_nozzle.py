@@ -30,10 +30,15 @@ class PlugNozzleGeometry(STLGroup):
 
 if __name__=="__main__": 
     pn = PlugNozzleGeometry()
+    pn._linearize()
 
-    print pn.list_parameters()
+    arg = dict([(p[0],p[1]['value']) for p in pn.list_parameters()])
 
-    pn.writeFEPOINT('test.fepoint')
+    result = {'geom_out':np.zeros((len(pn.points),3))}
+
+    pn.apply_deriv(arg, result)
+
+
 
 
 
