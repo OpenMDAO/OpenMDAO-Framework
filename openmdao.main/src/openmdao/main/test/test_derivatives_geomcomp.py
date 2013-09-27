@@ -39,7 +39,7 @@ class DummyGeometry(object):
         self.params.append(('z', meta))
 
         meta = {'iotype':'out', 'data_shape':(2,), 'type':IStaticGeometry}
-        self.params.append('geom_out',meta)
+        self.params.append(('geom_out',meta))
 
         return self.params
 
