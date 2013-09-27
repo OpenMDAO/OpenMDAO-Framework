@@ -77,7 +77,7 @@ class STLGroup(object):
             lines.append(struct.pack(BINARY_FACET,*facet))  
         return lines      
 
-    def _linearize(self): 
+    def linearize(self): 
         if not self._needs_linerize: 
             return 
         self.list_parameters() #makes up to date param_loc_map
@@ -111,6 +111,7 @@ class STLGroup(object):
                 i_offset = size
 
         self.points = points
+        self.n_controls = n_controls
         self.n_points = len(points)
         self.triangles = triangles
         self.n_triangles = len(triangles)
@@ -203,6 +204,10 @@ class STLGroup(object):
         self.Jy = self.J[:,1::3]
         self.Jz = self.J[:,2::3]
 
+        self.JxT = self.Jx.T
+        self.JyT = self.Jy.T
+        self.JzT = self.Jy.T
+
         self._needs_linerize = False
 
     def writeSTL(self, file_name, ascii=False): 
@@ -233,7 +238,7 @@ class STLGroup(object):
 
         jacobian should have a shape of (len(points),len(control_points))"""
         
-        self._linearize()
+        self.linearize()
   
         
         lines = ['TITLE = "FFD_geom"',]
@@ -276,7 +281,7 @@ class STLGroup(object):
         f.close()
 
     def project_profile(self): 
-        self._linearize()
+        self.linearize()
 
         point_sets = []
         for comp in self._comps: 
@@ -303,13 +308,12 @@ class STLGroup(object):
 
     #begin methods for OpenMDAO geometry derivatives
     def apply_deriv(self, arg, result): 
-        self._linearize()
+        self.linearize()
 
         for name, value in arg.iteritems(): 
             i_start = self.param_loc_map[name]
             length = value.shape[0]
             sub_Jx = self.Jx[:,i_start:i_start+length]
-            #print name, length, sub_Jx.shape
             result['geom_out'][:,0] += sub_Jx.dot(value)
 
             sub_Jy = self.Jy[:,i_start:i_start+length]
@@ -321,14 +325,21 @@ class STLGroup(object):
         return result
 
     def apply_derivT(self, arg, result): 
-        self._linearize()
+        self.linearize()
 
         if 'geom_out' in arg: 
             for name, value in result.iteritems(): 
+
                 i_start = self.param_loc_map[name]
                 length = value.shape[0]
-                sub_JT = self.JT[i_start:length,:]
-                result[name] = sub_JT*arg['geom_out']
+                sub_JxT = self.JxT[i_start:i_start+length,:]
+                result[name] += sub_JxT.dot(arg['geom_out'][:,0])
+
+                sub_JyT = self.JyT[i_start:i_start+length,:]
+                result[name] += sub_JyT.dot(arg['geom_out'][:,1])
+
+                sub_JzT = self.JzT[i_start:i_start+length,:]
+                result[name] += sub_JzT.dot(arg['geom_out'][:,2])
 
         return result
 
@@ -449,7 +460,7 @@ class STLGroup(object):
 
     #methods for IStaticGeometry
     def get_visualization_data(self, wv):
-        self._linearize()
+        self.linearize()
 
         xyzs = np.array(self.points).flatten().astype(np.float32)
         tris = np.array(self.triangles).flatten().astype(np.int32)

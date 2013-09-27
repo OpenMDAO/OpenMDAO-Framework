@@ -33,10 +33,11 @@ if __name__=="__main__":
     pn._linearize()
 
     arg = dict([(p[0],p[1]['value']) for p in pn.list_parameters()])
-
     result = {'geom_out':np.zeros((len(pn.points),3))}
 
-    pn.apply_deriv(arg, result)
+    print pn.apply_deriv(arg, result)
+
+    print pn.apply_derivT(result, arg)
 
 
 
