@@ -34,7 +34,7 @@ def _test_partial_array_connections(browser):
     workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly2', 'top_2')
 
     paraboloid = workspace_page.get_dataflow_figure("paraboloid_1", "top")
-    var_fields_path = '//*[@id="inArray-editor"]/input'
+    #var_fields_path = '//*[@id="inArray-editor"]/input'
 
     props = paraboloid.properties_page()
 
