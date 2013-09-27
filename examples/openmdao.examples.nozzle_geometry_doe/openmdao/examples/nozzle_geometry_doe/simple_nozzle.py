@@ -33,6 +33,8 @@ if __name__=="__main__":
 
     print pn.list_parameters()
 
+    pn.writeFEPOINT('test.fepoint')
+
 
 
 
