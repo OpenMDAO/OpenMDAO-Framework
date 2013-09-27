@@ -291,7 +291,7 @@ class GeomComponent(Component):
         else:
             for funct in functs:
                 if hasattr(geom, funct):
-                    setattr(self, '_'+funct, getattr(geom, funct))
+                    setattr(self, funct, getattr(self, '_'+funct))
 
     def _linearize(self):
         return self.parametric_geometry.linearize()
