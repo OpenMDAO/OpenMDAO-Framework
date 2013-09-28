@@ -112,15 +112,20 @@ class GeomRecieve(Component):
 
     def execute(self): 
         self.out = self.geom_in.z
+
+
+class GeomRecieveDerivProvideJ(GeomRecieve):
+
+    def linearize(self): 
         self.J = np.ones(2,)
-
-
-class GeomRecieveDerivProvideJ(GeomRecieve): 
-
+         
     def provideJ(self): 
-        return ('geom_in'), ('out'), self.J
+        return ('geom_in',), ('out',), self.J
 
 class GeomRecieveDerivApplyDeriv(GeomRecieve): 
+
+    def linearize(self): 
+        self.J = np.ones(2,)
 
     def apply_deriv(self, arg, result):
         if 'geom_in' in arg:
@@ -186,10 +191,11 @@ class Testcase_deriv_obj(unittest.TestCase):
     def test_geom_provide_deriv_check_fd_tail(self):    
         self.top.run()
 
-    def test_geom_provide_deriv_check_analytic_tail(self):    
+    def test_geom_provide_deriv_check_analytic_tail_provideJ(self):    
         self.top.replace('c2', GeomRecieveDerivProvideJ())
         self.top.run()
 
+    def test_geom_provide_deriv_check_analytic_tail_apply_deriv(self):    
         self.top.replace('c2', GeomRecieveDerivApplyDeriv())
         self.top.run()
 
