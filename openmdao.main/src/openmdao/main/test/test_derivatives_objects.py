@@ -120,7 +120,7 @@ class Comp_Receive(Component):
             result['data'] += self.J.T[1, :]*arg['q2']
             result['data'] += self.J.T[2, :]*arg['q3']
     
-class Testcase_deriv_obj(unittest.TestCase):
+class TestcaseDerivObj(unittest.TestCase):
     """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
