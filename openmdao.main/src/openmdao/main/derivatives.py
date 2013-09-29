@@ -534,6 +534,7 @@ def get_bounds(obj, input_keys, output_keys):
     
     ibounds = {}
     nvar = 0
+    scope=None
     for key in input_keys:
         
         # For parameter group, all should be equal so just get first.
@@ -541,7 +542,11 @@ def get_bounds(obj, input_keys, output_keys):
             key = [key]
             
         val = obj.get(key[0])
-        width = flattened_size('.'.join((obj.name, key[0])), val)
+        if hasattr(obj, 'parent'):
+            scope = obj.parent
+            
+        width = flattened_size('.'.join((obj.name, key[0])), val, 
+                               scope=scope)
         shape = val.shape if hasattr(val, 'shape') else None
         for item in key:
             ibounds[item] = (nvar, nvar+width, shape)
@@ -699,7 +704,7 @@ class FiniteDifference(object):
                 srcs = [srcs]
                 
             val = self.scope.get(srcs[0])
-            width = flattened_size(srcs[0], val)
+            width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
                 self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
