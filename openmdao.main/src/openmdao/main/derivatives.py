@@ -699,7 +699,7 @@ class FiniteDifference(object):
                 srcs = [srcs]
                 
             val = self.scope.get(srcs[0])
-            width = flattened_size(srcs[0], val)
+            width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
                 self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
