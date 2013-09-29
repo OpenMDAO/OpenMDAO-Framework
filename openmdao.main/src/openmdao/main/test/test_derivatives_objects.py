@@ -2,6 +2,7 @@
 Testing differentiation of user-defined datatypes.
 """
 
+from nose import SkipTest
 import unittest
 
 import numpy as np
@@ -155,6 +156,9 @@ class TestcaseDerivObj(unittest.TestCase):
         self.outputs = ['c2.q1', 'c2.q2', 'c2.q3']
 
     def tearDown(self):
+        self.top = None
+        
+    def _check_derivs(self):
         """ Called after each test. """
         inputs = self.inputs
         outputs = self.outputs 
@@ -179,16 +183,18 @@ class TestcaseDerivObj(unittest.TestCase):
         assert_rel_error(self, J[2, 0], 6.0, .00001)
         assert_rel_error(self, J[2, 1], 9.0, .00001)
 
-    def test_provideJ_fd_tail(self):    
-        self.top.run()
-
-    def test_provideJ_analytic_tail_provideJ(self):   
+    def test_analytic_tail_provideJ(self): 
+        
+        raise SkipTest('ProvideJ not supported for non-differentiable conections yet')
+    
         self.top.replace('c2', Comp_Receive_ProvideJ()) 
         self.top.run()
+        self._check_derivs()
 
-    def test_provideJ_analytic_tail_apply_deriv(self):   
+    def test_analytic_tail_apply_deriv(self):   
         self.top.replace('c2', Comp_Receive_ApplyDeriv()) 
         self.top.run()
+        self._check_derivs()
 
 
 class GeoWithDerivatives(BoxParametricGeometry): 

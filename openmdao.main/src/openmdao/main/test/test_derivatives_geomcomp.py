@@ -2,6 +2,7 @@
 Testing differentiation of user-defined datatypes.
 """
 
+import nose
 import unittest
 
 import numpy as np
@@ -71,14 +72,14 @@ class DummyGeometry(object):
 
     def apply_derivT(self, arg, result): 
         if 'z' in arg: 
-            if 'x' in 'result':
-                result['x'] += self.JT[:1,:].dot(arg['z'])
-            if 'y' in 'result': 
+            if 'x' in result:
+                result['x'] += self.JT[:2,:].dot(arg['z'])
+            if 'y' in result: 
                 result['y'] += self.JT[2,:].dot(arg['z'])
         if 'geom_out' in arg: 
-            if 'x' in 'result':
-                result['x'] += self.JT[:1,:].dot(arg['geom_out'])
-            if 'y' in 'result': 
+            if 'x' in result:
+                result['x'] += self.JT[:2,:].dot(arg['geom_out'])
+            if 'y' in result: 
                 result['y'] += self.JT[2,:].dot(arg['geom_out'])
         
         return result
@@ -117,7 +118,7 @@ class GeomRecieve(Component):
 class GeomRecieveDerivProvideJ(GeomRecieve):
 
     def linearize(self): 
-        self.J = np.ones(2,)
+        self.J = np.eye(2)
          
     def provideJ(self): 
         return ('geom_in',), ('out',), self.J
@@ -125,7 +126,7 @@ class GeomRecieveDerivProvideJ(GeomRecieve):
 class GeomRecieveDerivApplyDeriv(GeomRecieve): 
 
     def linearize(self): 
-        self.J = np.ones(2,)
+        self.J = np.eye(2)
 
     def apply_deriv(self, arg, result):
         if 'geom_in' in arg:
@@ -170,42 +171,45 @@ class Testcase_deriv_obj(unittest.TestCase):
         self.outputs = ['c1.z','c2.out']
 
     def tearDown(self): 
+        self.top = None
+    
+    def _check_derivs(self): 
         top = self.top 
         inputs = self.inputs
         outputs = self.outputs
 
         J = top.driver.workflow.calc_gradient(inputs, outputs, fd=True)
-        print J
         self._check_J(J)
         
         self.top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        print J 
         self._check_J(J)
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
-        print J
         self._check_J(J)
-    
+        
     def test_geom_provide_deriv_check_fd_tail(self):    
+        
+        raise nose.SkipTest("OpenMDAO can't identify when half a connection is non-differntiable yet")
         self.top.run()
+        self._check_derivs()
 
     def test_geom_provide_deriv_check_analytic_tail_provideJ(self):    
+        
+        raise nose.SkipTest('ProvideJ not supported for non-differentiable conections yet')
+    
         self.top.replace('c2', GeomRecieveDerivProvideJ())
         self.top.run()
+        self._check_derivs()
 
     def test_geom_provide_deriv_check_analytic_tail_apply_deriv(self):    
         self.top.replace('c2', GeomRecieveDerivApplyDeriv())
         self.top.run()
-
-       
-
-
+        self._check_derivs()
     
         
 if __name__ == '__main__':
-    import nose
     import sys
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')

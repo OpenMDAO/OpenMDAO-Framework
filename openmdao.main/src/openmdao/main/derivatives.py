@@ -534,6 +534,7 @@ def get_bounds(obj, input_keys, output_keys):
     
     ibounds = {}
     nvar = 0
+    scope=None
     for key in input_keys:
         
         # For parameter group, all should be equal so just get first.
@@ -541,7 +542,11 @@ def get_bounds(obj, input_keys, output_keys):
             key = [key]
             
         val = obj.get(key[0])
-        width = flattened_size('.'.join((obj.name, key[0])), val)
+        if hasattr(obj, 'parent'):
+            scope = obj.parent
+            
+        width = flattened_size('.'.join((obj.name, key[0])), val, 
+                               scope=scope)
         shape = val.shape if hasattr(val, 'shape') else None
         for item in key:
             ibounds[item] = (nvar, nvar+width, shape)
