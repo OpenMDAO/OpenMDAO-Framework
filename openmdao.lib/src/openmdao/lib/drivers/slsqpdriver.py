@@ -93,7 +93,7 @@ class SLSQPdriver(Driver):
         self.ncon = len(self.get_constraints())
         self.neqcon = len(self.get_eq_constraints())
 
-        self.x = self.evaluate_parameters(self.parent)
+        self.x = self.eval_parameters(self.parent)
         self.x_lower_bounds = self.get_lower_bounds()
         self.x_upper_bounds = self.get_upper_bounds()
 
@@ -167,9 +167,7 @@ class SLSQPdriver(Driver):
 
         # Constraints. Note that SLSQP defines positive as satisfied.
         if self.ncon > 0:
-            con_list = [-v.evaluate(self.parent)
-                        for v in self.get_constraints().values()]
-            g = array(con_list)
+            g = array([-v for v in self.eval_constraints(self.parent)])
 
         if self.iprint > 0:
             pyflush(self.iout)

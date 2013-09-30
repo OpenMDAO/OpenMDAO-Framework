@@ -67,13 +67,12 @@ class SensitivityDriver(Driver):
         self.run_iteration()
 
         objs = self.get_objectives().keys()
-        constraints = list(self.get_eq_constraints().keys() + \
-                           self.get_ineq_constraints().keys())
+        constraints = self.get_constraints().keys()
         inputs = self.list_param_group_targets()
-        obj = ["%s.out0" % item.pcomp_name for item in \
-                self.get_objectives().values()]
-        con = ["%s.out0" % item.pcomp_name for item in \
-                       self.get_constraints().values()]
+        obj = ["%s.out0" % item.pcomp_name
+               for item in self.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name
+               for item in self.get_constraints().values()]
 
         nparm = self.total_parameters()
         nobj = len(obj)
@@ -87,9 +86,8 @@ class SensitivityDriver(Driver):
         self.dx_names = inputs
 
         self.F = self.eval_objectives()
-        self.G = [v.evaluate(self.parent) for \
-                       v in self.get_constraints().values()]
-        self.x = self.evaluate_parameters(self.parent)
+        self.G = self.eval_constraints(self.parent)
+        self.x = self.eval_parameters(self.parent)
 
         # Finally, calculate gradient
         J = self.workflow.calc_gradient(inputs, obj + con)
@@ -106,13 +104,11 @@ class SensitivityDriver(Driver):
     def _check(self):
         """Make sure we aren't missing inputs or outputs."""
 
-        if len(self.get_parameters().values()) < 1:
+        if self.total_parameters() < 1:
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
-        if len(self.get_objectives().values()) + \
-           len(self.get_eq_constraints().values()) + \
-           len(self.get_ineq_constraints().values()) < 1:
+        if len(self.get_objectives()) + len(self.get_constraints()) < 1:
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 

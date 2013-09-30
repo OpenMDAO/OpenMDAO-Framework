@@ -139,8 +139,8 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
 
         # evaluate constraint functions
         if info == 2:
-            for i, v in enumerate(driver.get_ineq_constraints().values()):
-                g[i] = -v.evaluate(driver.parent)
+            for i, v in enumerate(driver.eval_ineq_constraints(driver.parent)):
+                g[i] = -v
 
         # save constraint values in driver if this isn't a finite difference
         if imode != 1:
@@ -166,8 +166,9 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         dobj = driver.differentiator.get_gradient(obj_name)
 
         i_current = 0
-        for row, name1 in enumerate(driver.get_parameters().keys()):
-            for name2 in driver.get_parameters().keys()[0:row+1]:
+        names = driver.get_parameters().keys()
+        for row, name1 in enumerate(names):
+            for name2 in names[0:row+1]:
                 ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
                 i_current += 1
 
@@ -187,8 +188,8 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             driver.ffd_order = 0
 
         i_current = 0
-        for param_name in driver.get_parameters().keys():
-            for con_name in driver.get_ineq_constraints().keys():
+        for param_name in driver.get_parameters():
+            for con_name in driver.get_ineq_constraints():
                 dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
                 i_current += 1
 
@@ -385,7 +386,7 @@ class NEWSUMTdriver(Driver):
 
         # get the values of the parameters
         # check if any min/max constraints are violated by initial values
-        self.design_vals = self.evaluate_parameters(self.parent)
+        self.design_vals = self.eval_parameters(self.parent)
         self.__design_vals_tmp = self.design_vals.copy()
 
         # Call the interruptible version of SUMT in a loop that we manage

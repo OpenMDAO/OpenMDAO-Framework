@@ -628,9 +628,9 @@ class HasConstraints(object):
         return self._ineq.get_ineq_constraints()
 
     def get_constraints(self):
-        """Return a list of constraint objects"""
-
-        return dict(self._eq.get_eq_constraints().items()+self._ineq.get_ineq_constraints().items())
+        """Returns an ordered dict of constraint objects"""
+        return ordereddict.OrderedDict(self._eq.get_eq_constraints().items() +
+                                       self._ineq.get_ineq_constraints().items())
 
     def eval_eq_constraints(self, scope=None):
         """Returns a list of constraint values.
@@ -641,6 +641,12 @@ class HasConstraints(object):
         """Returns a list of constraint values.
         """
         return self._ineq.eval_ineq_constraints(scope)
+
+    def eval_constraints(self, scope=None):
+        """Returns a list of constraint values.
+        """
+        return self._eq.eval_eq_constraints(scope) + \
+               self._ineq.eval_ineq_constraints(scope)
 
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""

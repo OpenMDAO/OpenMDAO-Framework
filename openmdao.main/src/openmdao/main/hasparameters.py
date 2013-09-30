@@ -981,7 +981,7 @@ class HasParameters(object):
                     start = end
             return case
 
-    def evaluate_parameters(self, scope=None, dtype='d'):
+    def eval_parameters(self, scope=None, dtype='d'):
         """Return evaluated parameter values.
 
         dtype: string or None

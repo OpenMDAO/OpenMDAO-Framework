@@ -97,7 +97,7 @@ class COBYLAdriver(Driver):
         self.work_vector = zeros(self.ncon, 'd')
 
         # get the initial values of the parameters
-        self.x = self.evaluate_parameters(self.parent)
+        self.x = self.eval_parameters(self.parent)
 
         n = self.nparam
         m = self.ncon
@@ -146,11 +146,10 @@ class COBYLAdriver(Driver):
             self.raise_exception(msg, RuntimeError)
 
         # Constraints (COBYLA defines positive as satisfied)
-        con_list = [-v.evaluate(self.parent)
-                    for v in self.get_ineq_constraints().values()]
+        con_list = [-v for v in self.eval_ineq_constraints()]
 
         # Side Constraints
-        vals = self.evaluate_parameters(self.parent)
+        vals = self.eval_parameters(self.parent)
         upper = self.get_upper_bounds()
         lower = self.get_lower_bounds()
         g = hstack([array(con_list, 'd'), (vals - lower), (upper - vals)])
