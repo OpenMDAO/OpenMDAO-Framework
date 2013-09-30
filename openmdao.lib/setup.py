@@ -83,6 +83,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.lazy_comp.LazyComponent = openmdao.lib.components.lazy_comp:LazyComponent
+      openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
 
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
@@ -139,6 +140,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
       openmdao.lib.geometry.box.BoxSender = openmdao.lib.geometry.box:BoxSender
+      openmdao.lib.geometry.stl_group.STLGroupSender = openmdao.lib.geometry.stl_group:STLGroupSender
 
       """,
       )
