@@ -249,7 +249,66 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     #print inputs, '\n', outputs, '\n', J, dx
     return J
 
+def pre_process_dicts(obj, key, arg_or_result):
+    '''If the component supplies apply_deriv or applyMinv or their adjoint
+    counterparts, it expects the contents to be shaped like the original
+    variables. Also, it doesn't know how to handle array elements, so we need
+    to do a fair amount of preparation on the way in.
+    '''
+    
+    value = arg_or_result[key]
+    
+    # For arrays, apply_deriv expects full arrays, not
+    # indexed ones. We need to create the full array on
+    # the fly, then poke in the values.
+    if '[' in key:
+        basekey, _, index = key.partition('[')
+        index = '[' + index
+        var = obj.get(basekey)
+        
+        if basekey not in arg_or_result:
+            arg_or_result[basekey] = zeros(var.shape)
+            
+        exec("arg_or_result[basekey]%s += value" % index)
+        
+    else:
+        var = obj.get(key)
+        
+        if isinstance(var, float):
+            return
+        
+        if hasattr(var, 'shape'):
+            shape = var.shape
+        else:
+            meta = obj.get_metadata(key)
+            
+            # Custom data objects with data_shape in the metadata
+            if 'data_shape' in meta:
+                shape = meta['data_shape']
+            else:
+                return
+            
+        arg_or_result[key] = value.reshape(shape)
 
+def post_process_dicts(obj, key, result):
+    '''Once we've called apply_deriv or appyMinv (or their adjoint
+    counterparts, we need to restore them to their expected format, so
+    basically flatten and poke array elements.
+    '''
+    
+    value = result[key]
+    
+    # If we have sliced arrays in our index, then we need to
+    # poke the data back into the sliced keys.
+    if '[' in key:
+        basekey, _, index = key.partition('[')
+        index = '[' + index
+        var = obj.get(basekey)
+        exec("result[key][:] = result[basekey]%s" % index)
+    else:
+        if hasattr(value, 'flatten'):
+            result[key] = value.flatten()
+    
 def applyJ(obj, arg, result):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
@@ -265,94 +324,18 @@ def applyJ(obj, arg, result):
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
-        for key in resultkeys:
-            
-            value = result[key]
-
-            # For arrays, apply_deriv expects full arrays, not
-            # indexed ones. We need to create the full array on
-            # the fly, then poke in the values.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                
-                if basekey not in result:
-                    result[basekey] = zeros(var.shape)
-                    exec("result[basekey]%s = value" % index)
-                
-            else:
-                var = obj.get(key)
-                
-                if isinstance(var, float):
-                    continue
-                
-                if hasattr(var, 'shape'):
-                    shape = var.shape
-                else:
-                    meta = obj.get_metadata(key)
-                    
-                    # Custom data objects with data_shape in the metadata
-                    if 'data_shape' in meta:
-                        shape = meta['data_shape']
-                    else:
-                        continue
-                    
-                result[key] = value.reshape(shape)
+        for key in sorted(resultkeys):
+            pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
-        for key in argkeys:
-            
-            value = arg[key]
-
-            # For arrays, apply_deriv expects full arrays, not
-            # indexed ones. We need to create the full array on
-            # the fly, then poke in the values.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                
-                if basekey not in arg:
-                    arg[basekey] = zeros(var.shape)
-                    exec("arg[basekey]%s = value" % index)
-            else:
-                var = obj.get(key)
-                
-                if isinstance(var, float):
-                    continue
-                
-                if hasattr(var, 'shape'):
-                    shape = var.shape
-                else:
-                    meta = obj.get_metadata(key)
-                    
-                    # Custom data objects with data_shape in the metadata
-                    if 'data_shape' in meta:
-                        shape = meta['data_shape']
-                    else:
-                        continue
-                    
-                arg[key] = value.reshape(shape)
-
+        for key in sorted(argkeys):
+            pre_process_dicts(obj, key, arg)
 
         obj.apply_deriv(arg, result)
 
         # Result vector needs to be flattened.
         for key in sorted(resultkeys, reverse=True):
-            
-            value = result[key]
-            
-            # If we have sliced arrays in our index, then we need to
-            # poke the data back into the sliced keys.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                exec("result[key] = result[basekey]%s" % index)
-            else:
-                if hasattr(value, 'flatten'):
-                    result[key] = value.flatten()
+            post_process_dicts(obj, key, result)
 
         # Arg is still called afterwards, so flatten it back.
         for key in argkeys:
@@ -430,93 +413,18 @@ def applyJT(obj, arg, result):
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
         resultkeys = result.keys()
-        for key in resultkeys:
-            
-            value = result[key]
-
-            # For arrays, apply_deriv expects full arrays, not
-            # indexed ones. We need to create the full array on
-            # the fly, then poke in the values.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                
-                if basekey not in result:
-                    result[basekey] = zeros(var.shape)
-                    exec("result[basekey]%s = value" % index)
-                
-            else:
-                var = obj.get(key)
-                
-                if isinstance(var, float):
-                    continue
-                
-                if hasattr(var, 'shape'):
-                    shape = var.shape
-                else:
-                    meta = obj.get_metadata(key)
-                    
-                    # Custom data objects with data_shape in the metadata
-                    if 'data_shape' in meta:
-                        shape = meta['data_shape']
-                    else:
-                        continue
-                    
-                result[key] = value.reshape(shape)
+        for key in sorted(resultkeys):
+            pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
-        for key in argkeys:
+        for key in sorted(argkeys):
+            pre_process_dicts(obj, key, arg)
             
-            value = arg[key]
-
-            # For arrays, apply_deriv expects full arrays, not
-            # indexed ones. We need to create the full array on
-            # the fly, then poke in the values.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                
-                if basekey not in arg:
-                    arg[basekey] = zeros(var.shape)
-                    exec("arg[basekey]%s = value" % index)
-            else:
-                var = obj.get(key)
-                
-                if isinstance(var, float):
-                    continue
-                
-                if hasattr(var, 'shape'):
-                    shape = var.shape
-                else:
-                    meta = obj.get_metadata(key)
-                    
-                    # Custom data objects with data_shape in the metadata
-                    if 'data_shape' in meta:
-                        shape = meta['data_shape']
-                    else:
-                        continue
-                    
-                arg[key] = value.reshape(shape)
-
         obj.apply_derivT(arg, result)
 
         # Result vector needs to be flattened.
         for key in sorted(resultkeys, reverse=True):
-            
-            value = result[key]
-            
-            # If we have sliced arrays in our index, then we need to
-            # poke the data back into the sliced keys.
-            if '[' in key:
-                basekey, _, index = key.partition('[')
-                index = '[' + index
-                var = obj.get(basekey)
-                exec("result[key] = result[basekey]%s" % index)
-            else:
-                if hasattr(value, 'flatten'):
-                    result[key] = value.flatten()
+            post_process_dicts(obj, key, result)
 
         # Arg is still called afterwards, so flatten it back.
         for key in argkeys:
@@ -571,6 +479,54 @@ def applyJT(obj, arg, result):
 
     #print 'applyJT', arg, result
     
+def applyMinv(obj, inputs):
+    """Simple wrapper around a component's applyMinv where we can reshape the arrays for each
+    input and expand any needed array elements into full arrays".
+    """
+    
+    inputkeys = inputs.keys()
+    for key in sorted(inputkeys):
+        pre_process_dicts(obj, key, inputs)
+
+    pre_inputs = inputs.copy()
+
+    inputs = obj.applyMinv(pre_inputs, inputs)
+
+    # Result vector needs to be flattened.
+    for key in sorted(inputkeys, reverse=True):
+        post_process_dicts(obj, key, inputs)
+        
+    # Clean out any leftover keys we added
+    for key in inputs.keys():
+        if key not in inputkeys:
+            inputs.pop(key)
+
+    return inputs
+
+def applyMinvT(obj, inputs):
+    """Simple wrapper around a component's applyMinvT where we can reshape the arrays for each
+    input and expand any needed array elements into full arrays".
+    """
+    
+    inputkeys = inputs.keys()
+    for key in sorted(inputkeys):
+        pre_process_dicts(obj, key, inputs)
+
+    pre_inputs = inputs.copy()
+
+    inputs = obj.applyMinvT(pre_inputs, inputs)
+
+    # Result vector needs to be flattened.
+    for key in sorted(inputkeys, reverse=True):
+        post_process_dicts(obj, key, inputs)
+        
+    # Clean out any leftover keys we added
+    for key in inputs.keys():
+        if key not in inputkeys:
+            inputs.pop(key)
+
+    return inputs
+
 def get_bounds(obj, input_keys, output_keys):
     """ Returns a pair of dictionaries that contain the stop and end index
     for each input and output in a pair of lists.
@@ -578,6 +534,7 @@ def get_bounds(obj, input_keys, output_keys):
     
     ibounds = {}
     nvar = 0
+    scope=None
     for key in input_keys:
         
         # For parameter group, all should be equal so just get first.
@@ -585,7 +542,11 @@ def get_bounds(obj, input_keys, output_keys):
             key = [key]
             
         val = obj.get(key[0])
-        width = flattened_size('.'.join((obj.name, key[0])), val)
+        if hasattr(obj, 'parent'):
+            scope = obj.parent
+            
+        width = flattened_size('.'.join((obj.name, key[0])), val, 
+                               scope=scope)
         shape = val.shape if hasattr(val, 'shape') else None
         for item in key:
             ibounds[item] = (nvar, nvar+width, shape)
@@ -743,7 +704,7 @@ class FiniteDifference(object):
                 srcs = [srcs]
                 
             val = self.scope.get(srcs[0])
-            width = flattened_size(srcs[0], val)
+            width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
                 self.in_bounds[src] = (in_size, in_size+width)
             in_size += width

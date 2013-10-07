@@ -59,7 +59,7 @@ class FiniteDifferenceGenerator(Container):
     def _get_input_values(self):
         '''Generator for the values'''
 
-        baseline = self.driver.evaluate_parameters()
+        baseline = self.driver.eval_parameters()
         delta = self.driver.get_fd_steps()
         mask = zeros(baseline.size, 'd')
 
@@ -112,7 +112,7 @@ class DistributionCaseDriver(CaseIterDriverBase):
                        desc='Iterator supplying values of point distribitions.')
 
     case_outputs = List(Str, iotype='in',
-                           desc='A list of outputs to be saved with each case.')
+                        desc='A list of outputs to be saved with each case.')
 
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""

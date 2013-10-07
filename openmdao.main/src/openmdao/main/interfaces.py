@@ -597,7 +597,7 @@ class IHasParameters(Interface):
     def total_parameters(self):
         """Returns the total number of values to be set."""
 
-    def evaluate_parameters(self, scope=None, dtype='d'):
+    def eval_parameters(self, scope=None, dtype='d'):
         """Return evaluated parameter values.
 
         dtype: string or None
@@ -679,7 +679,7 @@ class IHasEqConstraints(Interface):
     def get_eq_constraints():
         """Returns an ordered dictionary of equality constraint objects."""
 
-    def eval_eq_constraints():
+    def eval_eq_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values.
         The form of the constraint is transformed if necessary such that the 
         right-hand-side is 0.0.  The values returned are the evaluation of the
@@ -704,8 +704,8 @@ class IHasIneqConstraints(Interface):
     def get_ineq_constraints():
         """Returns an ordered dict of inequality constraint objects."""
 
-    def eval_ineq_constraints():
-        """Evaluates the constraint expressions and returns a list their values. Constraints
+    def eval_ineq_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values. Constraints
         are coerced into a form where the right-hand-side is 0., and the value returned
         is the evaluation of the left-hand-side.
         """
@@ -719,6 +719,11 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
+    def get_constraints():
+        """Returns an ordered dict of constraint objects."""
+
+    def eval_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values."""
 
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""

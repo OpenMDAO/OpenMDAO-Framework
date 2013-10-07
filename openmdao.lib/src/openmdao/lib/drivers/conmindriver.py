@@ -204,7 +204,7 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution.
 
-    cons_is_linear = Array(zeros(0,'i'), dtype=numpy_int, iotype='in',
+    cons_is_linear = Array(zeros(0, 'i'), dtype=numpy_int, iotype='in',
         desc='Array designating whether each constraint is linear.')
 
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
@@ -259,8 +259,8 @@ class CONMINdriver(Driver):
         # config_conmin.
 
         # basic stuff
-        self.design_vals = zeros(0,'d')
-        self._scal = zeros(0,'d')
+        self.design_vals = zeros(0, 'd')
+        self._scal = zeros(0, 'd')
         self.cons_active_or_violated = zeros(0, 'i')
         self._cons_is_linear = zeros(0, 'i')
         self.d_const = zeros(0, 'd')
@@ -277,8 +277,8 @@ class CONMINdriver(Driver):
         self._ms1 = zeros(0, 'i')
 
         # temp storage for constraints
-        self.g1 = zeros(0,'d')
-        self.g2 = zeros(0,'d')
+        self.g1 = zeros(0, 'd')
+        self.g2 = zeros(0, 'd')
 
 
     def start_iteration(self):
@@ -289,7 +289,7 @@ class CONMINdriver(Driver):
         self.iter_count = 0
 
         # get the initial values of the parameters
-        self.design_vals[:-2] = self.evaluate_parameters(self.parent)
+        self.design_vals[:-2] = self.eval_parameters(self.parent)
 
         # check if any min/max constraints are violated by initial values
         start = 0
@@ -403,10 +403,10 @@ class CONMINdriver(Driver):
             self.cnmn1.obj = self.eval_objective()
 
             # update constraint value array
-            for i, v in enumerate(self.get_ineq_constraints().values()):
-                self.constraint_vals[i] = v.evaluate(self.parent)
+            self.constraint_vals[0:len(self.get_ineq_constraints())] = \
+                self.eval_ineq_constraints()
 
-            #self._logger.debug('constraints = %s'%self.constraint_vals)
+            #self._logger.debug('constraints = %s' % self.constraint_vals)
 
         # calculate gradient of constraints and gradient of objective
         # We also have to determine which constrints are active/violated, and
@@ -414,15 +414,13 @@ class CONMINdriver(Driver):
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
 
             inputs = self.list_param_group_targets()
-            obj = ["%s.out0" % item.pcomp_name for item in
-                   self.get_objectives().values()]
-            con = ["%s.out0" % item.pcomp_name for item in
-                   self.get_ineq_constraints().values()]
+            obj = self.list_objective_targets()
+            con = self.list_ineq_constraint_targets()
 
             J = self.workflow.calc_gradient(inputs, obj + con)
 
             nobj = len(obj)
-            self.d_obj[:-2] = J[0:nobj, :].flatten()
+            self.d_obj[:-2] = J[0:nobj, :].ravel()
 
             for i in range(len(self.cons_active_or_violated)):
                 self.cons_active_or_violated[i] = 0
@@ -434,8 +432,8 @@ class CONMINdriver(Driver):
                     self.d_const[:-2, self.cnmn1.nac] = J[nobj+i, :]
                     self.cnmn1.nac += 1
         else:
-            self.raise_exception('Unexpected value for flag INFO returned \
-                    from CONMIN.', RuntimeError)
+            self.raise_exception('Unexpected value for flag INFO returned'
+                                 ' from CONMIN.', RuntimeError)
 
 
     def post_iteration(self):
@@ -446,8 +444,7 @@ class CONMINdriver(Driver):
         # Iteration count comes from CONMIN. You can't just count over the
         # loop because some cycles do other things (e.g., numerical
         # gradient calculation)
-        if (self.iter_count != self.cnmn1.iter) or \
-            self.cnmn1.igoto == 0:
+        if (self.iter_count != self.cnmn1.iter) or self.cnmn1.igoto == 0:
 
             self.iter_count = self.cnmn1.iter
 
@@ -497,9 +494,9 @@ class CONMINdriver(Driver):
         self._cons_is_linear = zeros(length, 'i')
         if len(self.cons_is_linear) > 0:
             if len(self.cons_is_linear) != len(self.get_ineq_constraints()):
-                self.raise_exception('size of cons_is_linear (%d) does not \
-                                      match number of constraints (%d)'%
-                               (len(self.cons_is_linear),length), ValueError)
+                self.raise_exception('size of cons_is_linear (%d) does not'
+                                     ' match number of constraints (%d)' %
+                               (len(self.cons_is_linear), length), ValueError)
             else:
                 for i, val in enumerate(self.cons_is_linear):
                     self._cons_is_linear[i] = val

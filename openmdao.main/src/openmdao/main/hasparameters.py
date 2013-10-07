@@ -709,26 +709,32 @@ class HasParameters(object):
 
         low: float (optional)
             Minimum allowed value of the parameter. If scaler and/or adder
-            is supplied, use the transformed value here.
+            is supplied, use the transformed value here. If target is an array,
+            this may also be an array, but must have the same size.
 
         high: float (optional)
             Maximum allowed value of the parameter. If scaler and/or adder
-            is supplied, use the transformed value here.
+            is supplied, use the transformed value here. If target is an array,
+            this may also be an array, but must have the same size.
 
         scaler: float (optional)
-            Value to multiply the possibly offset parameter value by.
+            Value to multiply the possibly offset parameter value by. If target
+            is an array, this may also be an array, but must have the same size.
 
         adder: float (optional)
-            Value to add to parameter prior to possible scaling.
+            Value to add to parameter prior to possible scaling. If target is
+            an array, this may also be an array, but must have the same size.
 
         start: any (optional)
             Value to set into the target or targets of a parameter before
             starting any executions. If not given, analysis will start with
-            whatever values are in the target or targets at that time.
+            whatever values are in the target or targets at that time. If target
+            is an array, this may also be an array, but must have the same size.
 
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
-            given, the differentitator will use its own default.
+            given, the differentiator will use its own default. If target is an
+            array, this may also be an array, but must have the same size.
 
         name: str (optional)
             Name used to refer to the parameter in place of the name of the
@@ -981,7 +987,7 @@ class HasParameters(object):
                     start = end
             return case
 
-    def evaluate_parameters(self, scope=None, dtype='d'):
+    def eval_parameters(self, scope=None, dtype='d'):
         """Return evaluated parameter values.
 
         dtype: string or None

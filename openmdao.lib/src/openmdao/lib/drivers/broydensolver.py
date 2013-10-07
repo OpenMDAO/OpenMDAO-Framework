@@ -74,28 +74,27 @@ class BroydenSolver(Driver):
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                 'termination.')
 
-    alpha = Float(0.4, iotype='in',
-                  desc='Mixing Coefficient.')
+    alpha = Float(0.4, iotype='in', desc='Mixing Coefficient.')
 
     alphamax = Float(1.0, iotype='in', desc='Maximum Mixing Coefficient (only '
                                             'used with excitingmixing.)')
 
     tol = Float(0.00001, iotype='in',
-                  desc='Convergence tolerance. If the norm of the independent '
-                  'vector is lower than this, then terminate successfully.')
+                desc='Convergence tolerance. If the norm of the independent '
+                     'vector is lower than this, then terminate successfully.')
 
     def __init__(self):
 
         super(BroydenSolver, self).__init__()
 
-        self.xin = numpy.zeros(0,'d')
-        self.F = numpy.zeros(0,'d')
+        self.xin = numpy.zeros(0, 'd')
+        self.F = numpy.zeros(0, 'd')
 
 
     def execute(self):
         """Solver execution."""
         # get the initial values of the independents
-        self.xin = self.evaluate_parameters(self.parent)
+        self.xin = self.eval_parameters(self.parent)
 
         # perform an initial run for self-consistency
         self.pre_iteration()
@@ -103,10 +102,7 @@ class BroydenSolver(Driver):
         self.post_iteration()
 
         # get initial dependents
-        dependents = self.get_eq_constraints().values()
-        self.F = numpy.zeros(len(dependents),'d')
-        for i, val in enumerate(dependents):
-            self.F[i] = val.evaluate(self.parent)
+        self.F = numpy.array(self.eval_eq_constraints())
 
         # pick solver algorithm
         if self.algorithm == 'broyden2':
@@ -139,7 +135,7 @@ class BroydenSolver(Driver):
             xm = xm + deltaxm.T
 
             # update the new independents in the model
-            self.set_parameters(xm.flat)
+            self.set_parameters(numpy.asarray(xm).flat)
 
             # run the model
             self.pre_iteration()
@@ -147,8 +143,7 @@ class BroydenSolver(Driver):
             self.post_iteration()
 
             # get dependents
-            for i, val in enumerate(self.get_eq_constraints().values()):
-                self.F[i] = val.evaluate(self.parent)
+            self.F[:] = self.eval_eq_constraints()
 
             self.record_case()
 
@@ -160,10 +155,10 @@ class BroydenSolver(Driver):
             deltaFxm = Fxm1 - Fxm
 
             if norm(deltaFxm) == 0:
-                msg = "Broyden iteration has stopped converging. Change in " + \
-                      "input has produced no change in output. This could " + \
-                      "indicate a problem with your component connections. " + \
-                      "It could also mean that this solver method is " + \
+                msg = "Broyden iteration has stopped converging. Change in " \
+                      "input has produced no change in output. This could " \
+                      "indicate a problem with your component connections. " \
+                      "It could also mean that this solver method is " \
                       "inadequate for your problem."
                 raise RuntimeError(msg)
 
@@ -205,7 +200,7 @@ class BroydenSolver(Driver):
             xm = xm + deltaxm.T
 
             # update the new independents in the model
-            self.set_parameters(xm.flat)
+            self.set_parameters(numpy.asarray(xm).flat)
 
             # run the model
             self.pre_iteration()
@@ -213,8 +208,7 @@ class BroydenSolver(Driver):
             self.post_iteration()
 
             # get dependents
-            for i, val in enumerate(self.get_eq_constraints().values()):
-                self.F[i] = val.evaluate(self.parent)
+            self.F[:] = self.eval_eq_constraints()
 
             self.record_case()
 
@@ -226,10 +220,10 @@ class BroydenSolver(Driver):
             deltaFxm = Fxm1 - Fxm
 
             if norm(deltaFxm) == 0:
-                msg = "Broyden iteration has stopped converging. Change in " + \
-                      "input has produced no change in output. This could " + \
-                      "indicate a problem with your component connections. " + \
-                      "It could also mean that this solver method is " + \
+                msg = "Broyden iteration has stopped converging. Change in " \
+                      "input has produced no change in output. This could " \
+                      "indicate a problem with your component connections. " \
+                      "It could also mean that this solver method is " \
                       "inadequate for your problem."
                 raise RuntimeError(msg)
 
@@ -262,7 +256,7 @@ class BroydenSolver(Driver):
             xm = xm + deltaxm
 
             # update the new independents in the model
-            self.set_parameters(xm.flat)
+            self.set_parameters(numpy.asarray(xm).flat)
 
             # run the model
             self.pre_iteration()
@@ -270,8 +264,7 @@ class BroydenSolver(Driver):
             self.post_iteration()
 
             # get dependents
-            for i, val in enumerate(self.get_eq_constraints().values()):
-                self.F[i] = val.evaluate(self.parent)
+            self.F[:] = self.eval_eq_constraints()
 
             self.record_case()
 

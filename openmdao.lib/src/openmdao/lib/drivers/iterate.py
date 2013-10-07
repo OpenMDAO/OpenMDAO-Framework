@@ -58,14 +58,13 @@ class FixedPointIterator(Driver):
         delta = zeros(nvar)
 
         # Get and save the intial value of the input parameters
-        val0 = self.evaluate_parameters(self.parent)
+        val0 = self.eval_parameters(self.parent)
 
         # perform an initial run
         self.run_iteration()
         self.current_iteration = 0
 
-        for i, val in enumerate(self.get_eq_constraints().values()):
-            history[0, i] = val.evaluate(self.parent)
+        history[0, :] = self.eval_eq_constraints(self.parent)
 
         if self.norm_order == 'Infinity':
             order = float('inf')
@@ -98,8 +97,7 @@ class FixedPointIterator(Driver):
             self.current_iteration += 1
 
             # check convergence
-            for i, val in enumerate(self.get_eq_constraints().values()):
-                delta[i] = val.evaluate(self.parent)
+            delta[:] = self.eval_eq_constraints(self.parent)
             history[self.current_iteration] = delta
 
             if norm(delta, order) < self.tolerance:
@@ -125,7 +123,7 @@ class FixedPointIterator(Driver):
             self.raise_exception(msg, RuntimeError)
 
         if ncon != nparm:
-            msg = "The number of input parameters must equal the number of" + \
+            msg = "The number of input parameters must equal the number of" \
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)
 

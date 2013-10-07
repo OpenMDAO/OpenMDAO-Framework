@@ -117,7 +117,7 @@ class NeighborhoodDOEdriver(CaseIterDriverBase):
 
         upper = self.get_upper_bounds()
         lower = self.get_lower_bounds()
-        P = self.evaluate_parameters()
+        P = self.eval_parameters()
         M = (P - lower) / (upper - lower)
 
         for row in list(self.DOEgenerator)+[tuple(M)]:

@@ -37,26 +37,32 @@ def _get_trait_from_meta(name, meta):
     of meta, which contains a 'value', plus possibly
     other information, e.g., 'type'.
     """
-    meta = meta.copy()
-    val = meta['value']
-    
-    try:
-        # if 'type' is provided in the metadata, use that
-        if 'type' in meta:
-            typ = _ttdict[meta['type']]
-        else:  # otherwise just infer the Variable type from the value type
-            typ = _ttdict[type(val)]
-    except KeyError:
-        if isinstance(val, list):
-            typ = List
-        elif isinstance(val, dict):
-            typ = Dict
-        else:
-            logger.warning("no Variable type found for key of type %s (value=%s), using Python Variable type, which performs no validation" % (type(val),val))
-            typ = Python   # FIXME
-            
-    del meta['value']  # don't include value in trait metadata
-    return typ(val, **meta)
+    if name == 'geom_out': 
+        typ = IStaticGeometry
+        return Geom(IStaticGeometry, **meta)
+    else: 
+        meta = meta.copy()
+        val = meta['value']
+        try:
+            # if 'type' is provided in the metadata, use that
+            if 'type' in meta:
+                typ = _ttdict[meta['type']]
+            else:  # otherwise just infer the Variable type from the value type
+                typ = _ttdict[type(val)]
+        except KeyError:
+            if isinstance(val, list):
+                typ = List
+            elif isinstance(val, dict):
+                typ = Dict
+            else:
+                logger.warning("no Variable type found for key of type %s (value=%s), using Python Variable type, which performs no validation" % (type(val),val))
+                typ = Python   # FIXME
+                
+        try: 
+            del meta['value']  # don't include value in trait metadata
+        except KeyError: 
+            pass #wasn't in there to delete it
+        return typ(val, **meta)
 
 def _create_trait(parent, name, meta):
     """Create a trait based on the type of value and
@@ -82,8 +88,8 @@ class GeomComponent(Component):
     parametric_geometry = Slot(IParametricGeometry, allow_none=True,
                                desc='Slot for a parametric geometry.')
 
-    geom_out = Geom(IStaticGeometry, iotype='out',
-                  desc='a geometry generated using the set of current input parameters')
+    #geom_out = Geom(IStaticGeometry, iotype='out',
+    #              desc='a geometry generated using the set of current input parameters')
 
     auto_run = Bool(False, iotype="in", desc="When set to True, component will automatically execute whenever any input values are changed")
 
@@ -93,10 +99,7 @@ class GeomComponent(Component):
         self._input_var_names = set()
         self._output_var_names = set()
 
-        self.on_trait_change(self._auto_run_notify,'auto_run')
-        #self.on_trait_change(self._test_notify,'auto_run')
-
-    
+        self.on_trait_change(self._auto_run_notify, 'auto_run')
 
     def _parametric_geometry_changed(self, old, new):
         """Called whenever the parametric geometry is set.
@@ -104,6 +107,8 @@ class GeomComponent(Component):
         self._update_iovar_set()
 
         if new is not None:
+            self._update_deriv_functs(new)
+
             if isinstance(new, Container):
                 new.parent = self
                 new.name = 'parametric_geometry'
@@ -139,7 +144,8 @@ class GeomComponent(Component):
         corresponding values in the geometry.
         """
         if self._output_var_names:
-            outs = self.parametric_geometry.get_parameters(self._output_var_names)
+            _output_var_names = [n for n in self._output_var_names if n!='geom_out'] 
+            outs = self.parametric_geometry.get_parameters(_output_var_names)
             for name, out in zip(self._output_var_names, outs):
                 setattr(self, name, out)
         self.geom_out = self.parametric_geometry.get_static_geometry()
@@ -149,7 +155,6 @@ class GeomComponent(Component):
         be value of auto_run variable.""" 
         for var in self._input_var_names: 
             self.on_trait_change(self.run,name=var,remove=(not new))
-
 
     def _var_cleanup(self, names):
         for name in names:
@@ -168,6 +173,14 @@ class GeomComponent(Component):
         self._auto_run_notify(False)        
 
         inps, outps = self._get_io_info()
+
+        if not 'geom_out' in [t[0] for t in outps]:
+            geom_out = ('geom_out',{'iotype':'out',
+                'desc':'a geometry generated using the set of current input parameters',
+                'type':IStaticGeometry})
+            outps.append(geom_out)
+
+
 
         # these are flattened lists of names, so they 
         # may contain dots
@@ -199,9 +212,9 @@ class GeomComponent(Component):
         for plist in (inps, outps):
             for name, meta in plist:
                 if name in added_ins or name in added_outs or '.' in name:
-                    val = meta['value']
                     _create_trait(self, name, meta)
                     if meta['iotype'] == 'in':
+                        val = meta['value']
                         setattr(self, name, val)
 
     def _remove_var(self, name):
@@ -281,6 +294,29 @@ class GeomComponent(Component):
                 setattr(obj, parts[-1], value)
             else:
                 raise RuntimeError('index not supported')
-        except AttributeError as err:
+        except AttributeError:
             super(GeomComponent, self)._set_failed(path, value, index, src, force)
+
+    def _update_deriv_functs(self, geom):
+        functs = ['linearize','apply_deriv','apply_derivT','provideJ']
+        if geom is None: # remove derivative functions
+            for funct in functs:
+                if hasattr(self, funct):
+                    del self.funct
+        else:
+            for funct in functs:
+                if hasattr(geom, funct):
+                    setattr(self, funct, getattr(self, '_'+funct))
+
+    def _linearize(self):
+        return self.parametric_geometry.linearize()
+
+    def _apply_deriv(self, arg, result):
+        return self.parametric_geometry.apply_deriv(arg, result)
+
+    def _apply_derivT(self, arg, result):
+        return self.parametric_geometry.apply_derivT(arg, result)
+
+    def _provideJ(self):
+        return self.parametric_geometry.provideJ()
 

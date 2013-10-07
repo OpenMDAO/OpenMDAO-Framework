@@ -93,7 +93,7 @@ class SLSQPdriver(Driver):
         self.ncon = len(self.get_constraints())
         self.neqcon = len(self.get_eq_constraints())
 
-        self.x = self.evaluate_parameters(self.parent)
+        self.x = self.eval_parameters(self.parent)
         self.x_lower_bounds = self.get_lower_bounds()
         self.x_upper_bounds = self.get_upper_bounds()
 
@@ -167,9 +167,7 @@ class SLSQPdriver(Driver):
 
         # Constraints. Note that SLSQP defines positive as satisfied.
         if self.ncon > 0:
-            con_list = [-v.evaluate(self.parent)
-                        for v in self.get_constraints().values()]
-            g = array(con_list)
+            g = array([-v for v in self.eval_constraints(self.parent)])
 
         if self.iprint > 0:
             pyflush(self.iout)
@@ -186,21 +184,18 @@ class SLSQPdriver(Driver):
         Note: m, me, la, n, f, g, df, and dg are unused inputs."""
 
         inputs = self.list_param_group_targets()
-
-        obj = ["%s.out0" % item.pcomp_name
-               for item in self.get_objectives().values()]
-        con = ["%s.out0" % item.pcomp_name
-               for item in self.get_constraints().values()]
+        obj = self.list_objective_targets()
+        con = self.list_constraint_targets()
 
         J = self.workflow.calc_gradient(inputs, obj + con)
 
         nobj = len(obj)
-        df[0:self.nparam] = J[0:nobj, :].flatten()
+        df[0:self.nparam] = J[0:nobj, :].ravel()
 
-        ncon = self.ncon + self.neqcon
-        n1 = nobj
-        n2 = nobj + ncon
-        if ncon > 0:
+        ncon = len(con)
+        if ncon:
+            n1 = nobj
+            n2 = nobj + ncon
             dg[0:ncon, 0:self.nparam] = -J[n1:n2, :]
 
         return df, dg
