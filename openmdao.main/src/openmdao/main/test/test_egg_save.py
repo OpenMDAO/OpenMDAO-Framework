@@ -245,6 +245,11 @@ class OddballContainer(Container):
         self.obj_list = [DataObj(i) for i in range(3)]
 
 
+def local_getpid():
+    """ Example of function defined in __main__. """
+    return os.getpid()
+
+
 def observer(state, string, file_fraction, byte_fraction):
     """ Observe progress. """
     if state != 'analyze':  # 'analyze' is sporadic due to re-use of analyses.
@@ -608,21 +613,13 @@ class TestCase(unittest.TestCase):
         msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
         assert_raises(self, code, globals(), locals(), ValueError, msg)
 
-    def test_save_bad_function(self):
+    def test_save_function(self):
         logging.debug('')
-        logging.debug('test_save_bad_function')
+        logging.debug('test_save_function')
 
-        # Set reference to unpickleable function.
-        self.model.Oddball.function_socket = observer
-        try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except RuntimeError, exc:
-            msg = "Egg_TestModel: Can't save: reference to function defined" \
-                  " in main module"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            if MODULE_NAME == '__main__':
-                self.fail('Expected RuntimeError')
+        # Set reference to function defined in __main__.
+        self.model.Oddball.function_socket = local_getpid 
+        self.save_load()
 
     def test_save_bad_method(self):
         logging.debug('')
