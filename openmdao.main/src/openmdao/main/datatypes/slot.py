@@ -91,8 +91,8 @@ class Slot(Variable):
                 if issubclass(self._instance.klass, Interface):
                     self._iface_error(obj, name, self._instance.klass.__name__)
                 else:
-                    obj.raise_exception("%s must be an instance of class '%s'" %
-                                        (name, self._instance.klass.__name__),
+                    obj.raise_exception("%s must be an instance of class '%s', got %s" %
+                                        (name, self._instance.klass.__name__, type(value)),
                                         TypeError)
 
         return value
