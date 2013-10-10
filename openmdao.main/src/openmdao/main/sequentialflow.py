@@ -966,8 +966,7 @@ class SequentialWorkflow(Workflow):
             comp_names = self.get_names(full=True)
             rcomps = recursive_components(self.scope, comp_names)            
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
-                                    self, recursed_components=rcomps,
-                                    no_fake_fd=True)
+                                    self, recursed_components=rcomps)
             pseudo.ffd_order = 0
             graph = self._parent.workflow_graph()
             self._hidden_edges = set(graph.get_interior_connections(self.get_names(full=True)))
