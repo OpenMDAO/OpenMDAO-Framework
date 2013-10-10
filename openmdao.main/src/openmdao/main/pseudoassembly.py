@@ -63,20 +63,14 @@ class PseudoAssembly(object):
         if self.fd is None:
             self.fd = FiniteDifference(self)
 
-        # The only reason not to turn on fake is if we are in a global
-        # finite-difference.
-        if self.no_fake_fd:
-            savebase = False
-        else:
-            savebase = True
-
         self.wflow.sever_edges(self.wflow._severed_edges)
 
         try:
             # First, linearize about operating point.
             # Note: Only needed for differentiable islands, which are handled
             # with Fake Finite Difference.
-            if first:
+            # Don't do this for full-model finite difference.
+            if first and not self.no_fake_fd:
                 for comp in self.comps:
                     comp.calc_derivatives(first, second, savebase)
 
