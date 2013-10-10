@@ -6,6 +6,7 @@ import logging
 import os
 import pkg_resources
 import re
+import subprocess
 import sys
 import time
 import unittest
@@ -525,6 +526,28 @@ class TestCase(unittest.TestCase):
         sub.driver.iterator = ListCaseIterator(cases)
         top.run()
         self.verify_itername(sub.driver.evaluated, subassembly=True)
+
+    def test_main_module_slot(self):
+        logging.debug('')
+        logging.debug('test_main_module_slot')
+
+        orig_dir = os.getcwd()
+        os.chdir(pkg_resources.resource_filename('openmdao.lib.drivers', 'test'))
+        try:
+            cmdline = [sys.executable, 'cid_slot.py']
+            stdout = open('cid_slot.out', 'w')
+            retcode = subprocess.call(cmdline, stdout=stdout,
+                                      stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open('cid_slot.out', 'r')
+            for line in stdout:
+                logging.debug('    %s' % line.rstrip())
+            stdout.close()
+            os.remove('cid_slot.out')
+        finally:
+            os.chdir(orig_dir)
+
+        self.assertEqual(retcode, 0)
 
 
 if __name__ == '__main__':
