@@ -9,7 +9,7 @@ class PseudoAssembly(object):
     assembly, and should never be used in an OpenMDAO model."""
 
     def __init__(self, name, comps, inputs, outputs, wflow,
-                 recursed_components=None, no_fake_fd=False):
+                 recursed_components=None):
         """Initialized with list of components, and the parent workflow."""
 
         if '~' not in name:
@@ -18,7 +18,6 @@ class PseudoAssembly(object):
         self.name = name
         self.comps = comps
         self.wflow = wflow
-        self.no_fake_fd = no_fake_fd
         self.inputs = list(inputs)
         self.outputs = list(outputs)
         self.itername = ''
@@ -63,22 +62,16 @@ class PseudoAssembly(object):
         if self.fd is None:
             self.fd = FiniteDifference(self)
 
-        # The only reason not to turn on fake is if we are in a global
-        # finite-difference.
-        if self.no_fake_fd:
-            savebase = False
-        else:
-            savebase = True
-
         self.wflow.sever_edges(self.wflow._severed_edges)
 
         try:
             # First, linearize about operating point.
             # Note: Only needed for differentiable islands, which are handled
             # with Fake Finite Difference.
-            if first:
+            # Don't do this for full-model finite difference.
+            if first and self.ffd_order>0:
                 for comp in self.comps:
-                    comp.calc_derivatives(first, second, savebase)
+                    comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
         finally:
