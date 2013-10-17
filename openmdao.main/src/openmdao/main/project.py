@@ -22,7 +22,7 @@ from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.publisher import publish
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5, \
-                                   find_in_path, find_in_dir_list
+                                   find_in_path
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
 from openmdao.util.astutil import parse_ast, text_to_node
@@ -574,7 +574,10 @@ description =
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir + PROJ_DIR_EXT)
+            if self._gui:
+                sys.path.remove(modeldir + PROJ_DIR_EXT)
+            else:
+                sys.path.remove(self.path)
         except:
             pass
 
