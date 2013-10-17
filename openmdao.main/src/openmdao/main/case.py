@@ -1,13 +1,12 @@
 
 from uuid import uuid1
-import re
 from array import array
 import traceback
 from StringIO import StringIO
 from inspect import getmro
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError
+from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
@@ -82,7 +81,8 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
-        self.label = label   # optional label
+        self.exc = None                 # Exception during execution.
+        self.label = label              # Optional label.
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
@@ -121,9 +121,11 @@ class Case(object):
             stream.write("   retries: %s\n" % self.retries)
         if self.msg:
             stream.write("   msg: %s\n" % self.msg)
+        if self.exc is not None:
+            stream.write("   exc: %s\n" % traceback_str(self.exc))
         return stream.getvalue()
     
-    def __eq__(self,other): 
+    def __eq__(self, other): 
         if self is other:
             return True
         try:
@@ -296,7 +298,7 @@ class Case(object):
                             self.msg = str(err)
                         else:
                             self.msg = self.msg + " %s" % err
-        if last_excpt:
+        if last_excpt is not None:
             raise last_excpt
             
     def add_input(self, name, value):
