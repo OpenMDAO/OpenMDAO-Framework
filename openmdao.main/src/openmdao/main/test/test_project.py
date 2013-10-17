@@ -214,6 +214,8 @@ p = PkgClass2()
         finally:
             sys.path = sys.path[1:]
 
+
+class LoadProjectTestCase(unittest.TestCase):
     def test_load_project_globals(self):
         pdir = os.path.join(os.path.dirname(__file__), 'load_test')
         self.assertFalse('top' in globals())
