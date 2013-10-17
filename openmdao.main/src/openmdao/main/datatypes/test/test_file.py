@@ -2,13 +2,11 @@
 Test of File traits.
 """
 
-import cPickle
-import os.path
 import shutil
 import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.datatypes.api import Bool, Str, File, Array
+from openmdao.main.datatypes.api import Str, File
 from openmdao.util.fileutil import onerror
 
 # pylint: disable-msg=E1101
@@ -18,77 +16,48 @@ from openmdao.util.fileutil import onerror
 class Source(Component):
     """ Produces files. """
 
-    write_files = Bool(True, iotype='in')
-    text_data = Str(iotype='in')
-    binary_data = Array(dtype='d', iotype='in')
-    text_file = File(path='source.txt', iotype='out', content_type='txt')
-    binary_file = File(path='source.bin', iotype='out', binary=True,
-                            extra_stuff='Hello world!')
+    text_data = Str('Hello world', iotype='in')
+    text_file = File('source.txt', iotype='out')
 
     def execute(self):
         """ Write test data to files. """
-        if self.write_files:
-            out = open(self.text_file.path, 'w')
+        with open(self.text_file.path, 'w') as out:
             out.write(self.text_data)
-            out.close()
-
-            out = open(self.binary_file.path, 'wb')
-            cPickle.dump(self.binary_data, out, 2)
-            out.close()
 
 
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
-    text_in = File(iotype='in', local_path='tout',
-                        legal_types=['xyzzy', 'txt'])
-    binary_in = File(iotype='in', local_path='bout')
-    text_out = File(path='tout', iotype='out')
-    binary_out = File(path='bout', iotype='out', binary=True)
+
+    text_in = File(iotype='in', local_path='tout')
+    text_out = File(iotype='out')
 
     def execute(self):
-        """ File copies are performed implicitly. """
-        # We have to manually propagate 'extra_stuff' because the output
-        # FileRef isn't copied from the input FileRef.
-        self.binary_out.extra_stuff = self.binary_in.extra_stuff
+        """ Just set name of output file. """
+        self.text_out = 'tout'
 
 
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
     def configure(self):
-
         comp = Passthrough()
         comp.directory = 'Passthrough'
-        self.add('passthrough', comp)
+        comp = self.add('passthrough', comp)
         self.driver.workflow.add('passthrough')
-
         self.create_passthrough('passthrough.text_in')
-        self.create_passthrough('passthrough.binary_in')
-
         self.create_passthrough('passthrough.text_out')
-        self.create_passthrough('passthrough.binary_out')
 
 
 class Sink(Component):
     """ Consumes files. """
 
-    bogus_path = Str('', iotype='in')
     text_data = Str(iotype='out')
-    binary_data = Array(dtype='d', iotype='out')
     text_file = File(iotype='in')
-    binary_file = File(iotype='in')
 
     def execute(self):
         """ Read test data from files. """
-        if self.bogus_path:
-            self.text_file.path = self.bogus_path
-        inp = self.text_file.open()
-        self.text_data = inp.read()
-        inp.close()
-
-        inp = self.binary_file.open()
-        self.binary_data = cPickle.load(inp)
-        inp.close()
+        with self.text_file.open() as inp:
+            self.text_data = inp.read()
 
 
 class Model(Assembly):
@@ -108,21 +77,7 @@ class Model(Assembly):
         self.driver.workflow.add(['source', 'middle', 'sink'])
 
         self.connect('source.text_file', 'middle.text_in')
-        self.connect('source.binary_file', 'middle.binary_in')
-
         self.connect('middle.text_out', 'sink.text_file')
-        self.connect('middle.binary_out', 'sink.binary_file')
-
-        self.source.text_data = 'Hello World!'
-        self.source.binary_data = [3.14159, 2.781828, 42]
-
-        self.middle.passthrough.get_trait('text_in').trait_type._metadata['local_path'] = \
-            os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.get_trait('text_in').local_path)
-
-        self.middle.passthrough.get_trait('text_out').trait_type._metadata['path'] = \
-            os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.get_trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):
@@ -134,13 +89,11 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         """ Called after each test in this class. """
-        self.model.pre_delete()
         for directory in ('Source', 'Middle', 'Sink'):
             try:
                 shutil.rmtree(directory, onerror=onerror)
             except OSError:
                 pass
-        self.model = None
 
     def test_items(self):
         # This verifies a fix to a problem in Container.items() detected by
@@ -150,6 +103,12 @@ class TestCase(unittest.TestCase):
             if name == 'sink.text_file':
                 return
         self.fail('sink.text_file not found')
+
+    def test_basic(self):
+        # Just run the model. This model uses strings rather than FileRefs like
+        # test_filevar, so the coverage is somewhat different.
+        self.model.run()
+        self.assertEqual(self.model.sink.text_data, self.model.source.text_data)
 
 
     # Need to come up with some good tests to cover what's not covered
@@ -162,5 +121,5 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao.lib')
+    sys.argv.append('--cover-package=openmdao.main.datatypes')
     nose.runmodule()

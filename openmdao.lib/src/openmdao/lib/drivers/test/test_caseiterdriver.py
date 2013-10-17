@@ -6,6 +6,7 @@ import logging
 import os
 import pkg_resources
 import re
+import subprocess
 import sys
 import time
 import unittest
@@ -18,7 +19,6 @@ from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Slot, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
@@ -65,9 +65,9 @@ class DrivenComponent(Component):
 
     def execute(self):
         """ Compute results from input vector. """
-        
+
         self.extra = 2.5
-        
+
         if self.sleep:
             time.sleep(self.sleep)
         self.rosen_suzuki = rosen_suzuki(self.x)
@@ -146,7 +146,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         random.seed(10)
         numpy_random.seed(10)
-        
+
         os.chdir(self.directory)
         self.model = set_as_top(MyModel())
         self.generate_cases()
@@ -183,13 +183,13 @@ class TestCase(unittest.TestCase):
         self.generate_cases(force_errors=True)
         self.run_cases(sequential=True, forced_errors=True, retry=False)
         self.run_cases(sequential=True, forced_errors=True, retry=True)
-        
+
     def test_output_errors(self):
         inputs = [('driven.x', numpy_random.normal(size=4)),
                   ('driven.y', numpy_random.normal(size=10)),
                   ('driven.raise_error', False),
                   ('driven.stop_exec', False)]
-        outputs = ['driven.rosen_suzuki','driven.foobar']
+        outputs = ['driven.rosen_suzuki', 'driven.foobar']
         self.cases = [Case(inputs, outputs, label='1')]
         self.model.driver.sequential = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
@@ -197,7 +197,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
         self.model.run()
-        
+
     def test_run_stop_step_resume(self):
         logging.debug('')
         logging.debug('test_run_stop_step_resume')
@@ -240,7 +240,6 @@ class TestCase(unittest.TestCase):
 
     def test_concurrent(self):
         # This can always test using a LocalAllocator (forked processes).
-        # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
         init_cluster(encrypted=True, allow_shell=True)
@@ -282,10 +281,12 @@ class TestCase(unittest.TestCase):
                 self.model.run()
             except Exception as err:
                 err = replace_uuid(str(err))
+                if not sequential: # RemoteError has different format.
+                    err = err[:-76]
                 startmsg = 'driver: Run aborted: Traceback '
                 endmsg = 'driven (UUID.4-1): Forced error'
-                self.assertEqual(str(err)[:len(startmsg)], startmsg)
-                self.assertEqual(str(err)[-len(endmsg):], endmsg)
+                self.assertEqual(err[:len(startmsg)], startmsg)
+                self.assertEqual(err[-len(endmsg):], endmsg)
             else:
                 self.fail("Exception expected")
 
@@ -297,7 +298,22 @@ class TestCase(unittest.TestCase):
             if error_expected:
                 expected = 'driven \(UUID.[0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
-                self.assertTrue(re.match(expected, msg))
+                if self.model.driver.sequential:
+                    if not re.match(expected, msg):
+                        self.fail('%s does not match %s' % (msg, expected))
+                else: # RemoteError has different format.
+                    if not re.search(expected, msg):
+                        self.fail('%s not found in %s' % (expected, msg))
+                # Check that traceback is displayed.
+                case_str = replace_uuid(str(case))
+                expected = (
+                    "      driven.raise_error: True",
+                    "   exc: Traceback \(most recent call last\):",
+                    "    self.raise_exception\('Forced error', RuntimeError\)",
+                    "RuntimeError: driven \(UUID.[0-9]+-1\): Forced error")
+                for line in expected:
+                    if not re.search(line, case_str):
+                        self.fail('expected %r in:\n%s' % (line, case_str))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -525,6 +541,28 @@ class TestCase(unittest.TestCase):
         sub.driver.iterator = ListCaseIterator(cases)
         top.run()
         self.verify_itername(sub.driver.evaluated, subassembly=True)
+
+    def test_main_module_slot(self):
+        logging.debug('')
+        logging.debug('test_main_module_slot')
+
+        orig_dir = os.getcwd()
+        os.chdir(pkg_resources.resource_filename('openmdao.lib.drivers', 'test'))
+        try:
+            cmdline = [sys.executable, 'cid_slot.py']
+            stdout = open('cid_slot.out', 'w')
+            retcode = subprocess.call(cmdline, stdout=stdout,
+                                      stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open('cid_slot.out', 'r')
+            for line in stdout:
+                logging.debug('    %s' % line.rstrip())
+            stdout.close()
+            os.remove('cid_slot.out')
+        finally:
+            os.chdir(orig_dir)
+
+        self.assertEqual(retcode, 0)
 
 
 if __name__ == '__main__':
