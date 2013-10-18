@@ -1,6 +1,8 @@
-
 import struct 
 import copy
+import time
+import cPickle
+import os
 
 import numpy as np
 
@@ -74,7 +76,26 @@ class STL(object):
         array of n_facetsx3 points.""" 
 
         if not hasattr(stl_file,'readline'): 
+            stl_file_name = stl_file
             stl_file = open(stl_file,'rb')
+        else: 
+            stl_file_name = stl_file.name
+
+        #check for a pickle, to skip all the loading calcs if possible
+        last_edited = time.ctime(os.path.getmtime(stl_file_name))
+        h1 = str(hash(last_edited)).replace('-','n')
+        h2 = str(hash(stl_file_name)).replace('-','n')
+        pkl_file_name = '%s_%s.stl_pkl'%(h1,h2)
+        pkl_folder = "pyBspline_pkl"
+        pkl_file_name = os.path.join(pkl_folder,pkl_file_name)
+        if not os.path.exists(pkl_folder): 
+            os.mkdir(pkl_folder)
+
+        if os.path.exists(pkl_file_name): 
+            self.facets, self.stl_i0, self.stl_i1, self.p_count, self.stl_indecies, \
+            self.stl_i0, self.points, self.point_indecies, \
+            self.triangles = cPickle.load(open(pkl_file_name))
+            return 
 
         ascii = (stl_file.readline().strip().split()[0] == 'solid')
         stl_file.seek(0)
@@ -131,6 +152,20 @@ class STL(object):
         self.points = np.array(points)
         self.point_indecies = point_indecies
         self.triangles = np.array(triangles)
+
+        #pickle for efficiency, instead of re-doing the load every time
+        pkl_data = (self.facets,
+            self.stl_i0,
+            self.stl_i1,
+            self.p_count, 
+            self.stl_indecies, 
+            self.stl_i0, 
+            self.points, 
+            self.point_indecies, 
+            self.triangles)
+
+        cPickle.dump(pkl_data,open(pkl_file_name,'w'))
+
 
     def copy(self): 
         return copy.deepcopy(self)

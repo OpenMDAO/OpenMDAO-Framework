@@ -448,6 +448,7 @@ class CaseIterDriverBase(Driver):
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
+                case.exc = exc
 
             if case.msg is not None and self.error_policy == 'ABORT':
                 if self._abort_exc is None:

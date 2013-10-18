@@ -14,7 +14,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
-from openmdao.main.derivatives import flattened_size, flattened_value
+
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, is_input_node
 from openmdao.main.interfaces import IDriver
@@ -498,11 +498,12 @@ class SequentialWorkflow(Workflow):
                         comp_name = pa_ref[comp_name]
                     inputs[comp_name][var_name] = arg[i1:i2]
             #print i1, i2, edge, '\n', inputs, '\n', outputs
+            
         # Call ApplyMinv on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
-            if hasattr(comp, 'applyMinv'):
-                inputs[name] = applyMinv(comp, inputs[name])
+        #for comp in self.derivative_iter():
+            #name = comp.name
+            #if hasattr(comp, 'applyMinv'):
+                #inputs[name] = applyMinv(comp, inputs[name])
             
         # Call ApplyJ on each component
         for comp in self.derivative_iter():
@@ -659,8 +660,8 @@ class SequentialWorkflow(Workflow):
                     comp_name = pa_ref[comp_name]
                 
                 if var_name in inputs[comp_name]: 
-                    inputs[comp_name][var_name] += arg[i1:i2].copy()
-                    outputs[comp_name][var_name] += arg[i1:i2].copy()
+                    inputs[comp_name][var_name] += arg[i1:i2]
+                    outputs[comp_name][var_name] += arg[i1:i2]
                 else:
                     inputs[comp_name][var_name] = arg[i1:i2].copy()
                     outputs[comp_name][var_name] = arg[i1:i2].copy()
@@ -693,12 +694,10 @@ class SequentialWorkflow(Workflow):
                         outputs[comp_name][var_name] = -arg[i1:i2].copy()
                             
         # Call ApplyMinvT on each component (preconditioner)
-        for comp in self.derivative_iter():
-            name = comp.name
-            if hasattr(comp, 'applyMinvT'):
-                print 'before', inputs[name]
-                inputs[name] = applyMinvT(comp, inputs[name])
-                print 'after', inputs[name]
+        #for comp in self.derivative_iter():
+            #name = comp.name
+            #if hasattr(comp, 'applyMinvT'):
+                #inputs[name] = applyMinvT(comp, inputs[name])
             
         # Call ApplyJT on each component
         for comp in self.derivative_iter():
@@ -972,8 +971,7 @@ class SequentialWorkflow(Workflow):
             comp_names = [comp.name for comp in comps]
             rcomps = recursive_components(self.scope, comp_names)            
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
-                                    self, recursed_components=rcomps,
-                                    no_fake_fd=True)
+                                    self, recursed_components=rcomps)
             pseudo.ffd_order = 0
             graph = self._parent.workflow_graph()
             self._hidden_edges = set(graph.get_interior_connections(comp_names))

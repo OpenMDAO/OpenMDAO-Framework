@@ -72,7 +72,7 @@ class MDASolver(Driver):
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        #print "Residual vector norm:\n", norm
         
         # Loop until the residuals converge
         iter_num = 0
@@ -88,7 +88,7 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
+            #print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()
@@ -109,7 +109,7 @@ class MDASolver(Driver):
             
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        #print "Residual vector norm:\n", norm
         
         # Loop until convergence of residuals
         iter_num = 0
@@ -132,7 +132,7 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
+            #print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()       

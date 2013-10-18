@@ -2,12 +2,17 @@
 Testing differentiation of user-defined datatypes.
 """
 
+from nose import SkipTest
 import unittest
 
 import numpy as np
 
+from openmdao.lib.components.geomcomp import GeomComponent
+from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
+from openmdao.main.interfaces import IParametricGeometry, implements, \
+                                     IStaticGeometry
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
 
@@ -73,7 +78,7 @@ class Comp_Send(Component):
             
             result['p1'] += self.J.T[0, :].dot(arg['data'])
             result['p2'] += self.J.T[1, :].dot(arg['data'])
-    
+
 class Comp_Receive(Component):
     '''Takes a data object as input.'''
     
@@ -92,6 +97,23 @@ class Comp_Receive(Component):
         self.q1 = -1.0*x
         self.q2 = 2.0*y
         self.q3 = 3.0*z
+
+    
+class Comp_Receive_ProvideJ(Comp_Receive):
+    '''Takes a data object as input.'''
+    
+    def linearize(self):
+        ''' Jacobian'''
+        
+        self.J = np.array([[-1.0, 0.0, 0.0], 
+                           [0.0, 2.0, 0.0], 
+                           [0.0, 0.0, 3.0]])
+
+    def provideJ(self): 
+        return ('data',), ('q1','q2','q3'), self.J
+
+class Comp_Receive_ApplyDeriv(Comp_Receive):
+    '''Takes a data object as input.'''
     
     def linearize(self):
         ''' Jacobian'''
@@ -116,7 +138,83 @@ class Comp_Receive(Component):
             result['data'] += self.J.T[1, :]*arg['q2']
             result['data'] += self.J.T[2, :]*arg['q3']
     
-class Testcase_deriv_obj(unittest.TestCase):
+class TestcaseDerivObj(unittest.TestCase):
+    """ Test run/step/stop aspects of a simple workflow. """
+
+    def setUp(self):
+        """ Called before each test. """
+        self.top = set_as_top(Assembly())
+        self.top.add('c1', Comp_Send())
+        self.top.add('c2', Comp_Receive())
+        self.top.connect('c1.data', 'c2.data')
+        self.top.driver.workflow.add(['c1', 'c2'])
+        
+        self.top.c1.p1 = 3.0
+        self.top.c1.p2 = 5.0
+        
+        self.inputs = ['c1.p1', 'c1.p2']
+        self.outputs = ['c2.q1', 'c2.q2', 'c2.q3']
+
+    def tearDown(self):
+        self.top = None
+        
+    def _check_derivs(self):
+        """ Called after each test. """
+        inputs = self.inputs
+        outputs = self.outputs 
+        top = self.top
+
+        J = top.driver.workflow.calc_gradient(inputs, outputs, fd=True)
+        self._check_J(J)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        self._check_J(J)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
+        self._check_J(J)
+
+    def _check_J(self, J): 
+        assert_rel_error(self, J[0, 0], -6.0, .00001)
+        assert_rel_error(self, J[0, 1], -1.0, .00001)
+        assert_rel_error(self, J[1, 0], -2.0, .00001)
+        assert_rel_error(self, J[1, 1], 20.0, .00001)
+        assert_rel_error(self, J[2, 0], 6.0, .00001)
+        assert_rel_error(self, J[2, 1], 9.0, .00001)
+
+    def test_analytic_tail_provideJ(self): 
+        
+        raise SkipTest('ProvideJ not supported for non-differentiable conections yet')
+    
+        self.top.replace('c2', Comp_Receive_ProvideJ()) 
+        self.top.run()
+        self._check_derivs()
+
+    def test_analytic_tail_apply_deriv(self):   
+        self.top.replace('c2', Comp_Receive_ApplyDeriv()) 
+        self.top.run()
+        self._check_derivs()
+
+
+class GeoWithDerivatives(BoxParametricGeometry): 
+    '''Adds derivative functions to the famous box geometry.'''
+
+    implements(IParametricGeometry, IStaticGeometry)
+
+    def linearize(self):
+        pass
+    
+    def apply_deriv(self, arg, result):
+        pass
+    
+    def apply_derivT(self, arg, result):
+        pass
+    
+    def provideJ(self):
+        pass
+        
+class Testcase_geom_deriv(unittest.TestCase):
     """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
@@ -127,49 +225,24 @@ class Testcase_deriv_obj(unittest.TestCase):
         """ Called after each test. """
         pass
     
-    def test_provideJ(self):    
+    def test_basic_delegation(self):
         
-        top = set_as_top(Assembly())
-        top.add('c1', Comp_Send())
-        top.add('c2', Comp_Receive())
-        top.connect('c1.data', 'c2.data')
-        #top.connect('c1.dummy', 'c2.dummy')
-        top.driver.workflow.add(['c1', 'c2'])
+        top = Assembly()
+        top.add('geo', GeomComponent())
         
-        top.c1.p1 = 3.0
-        top.c1.p2 = 5.0
-        top.run()
+        # Function not there before we slot
+        self.assertTrue(not hasattr(top.geo, 'linearize'))
+        self.assertTrue(not hasattr(top.geo, 'apply_deriv'))
+        self.assertTrue(not hasattr(top.geo, 'apply_derivT'))
+        self.assertTrue(not hasattr(top.geo, 'provideJ'))
         
-        inputs = ['c1.p1', 'c1.p2']
-        outputs = ['c2.q1', 'c2.q2', 'c2.q3']
-        J = top.driver.workflow.calc_gradient(inputs, outputs, fd=True)
+        top.geo.add('parametric_geometry', GeoWithDerivatives())
         
-        assert_rel_error(self, J[0, 0], -6.0, .00001)
-        assert_rel_error(self, J[0, 1], -1.0, .00001)
-        assert_rel_error(self, J[1, 0], -2.0, .00001)
-        assert_rel_error(self, J[1, 1], 20.0, .00001)
-        assert_rel_error(self, J[2, 0], 6.0, .00001)
-        assert_rel_error(self, J[2, 1], 9.0, .00001)
-        
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        
-        assert_rel_error(self, J[0, 0], -6.0, .00001)
-        assert_rel_error(self, J[0, 1], -1.0, .00001)
-        assert_rel_error(self, J[1, 0], -2.0, .00001)
-        assert_rel_error(self, J[1, 1], 20.0, .00001)
-        assert_rel_error(self, J[2, 0], 6.0, .00001)
-        assert_rel_error(self, J[2, 1], 9.0, .00001)
-        
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
-        
-        assert_rel_error(self, J[0, 0], -6.0, .00001)
-        assert_rel_error(self, J[0, 1], -1.0, .00001)
-        assert_rel_error(self, J[1, 0], -2.0, .00001)
-        assert_rel_error(self, J[1, 1], 20.0, .00001)
-        assert_rel_error(self, J[2, 0], 6.0, .00001)
-        assert_rel_error(self, J[2, 1], 9.0, .00001)
+        # Now they should be there.
+        self.assertTrue(hasattr(top.geo, 'linearize'))
+        self.assertTrue(hasattr(top.geo, 'apply_deriv'))
+        self.assertTrue(hasattr(top.geo, 'apply_derivT'))
+        self.assertTrue(hasattr(top.geo, 'provideJ'))
         
         
 if __name__ == '__main__':
