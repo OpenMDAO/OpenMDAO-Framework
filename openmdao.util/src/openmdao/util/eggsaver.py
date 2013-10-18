@@ -194,6 +194,14 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                     if path.endswith('.py'):
                         local_modules.add(os.path.join(dirpath, path))
 
+        # Ensure module defining root is local. Saving a root which is defined
+        # in a package can be hidden if the package was installed.
+        root_mod = root.__class__.__module__
+        root_mod = sys.modules[root_mod].__file__
+        if root_mod.endswith('.pyc') or root_mod.endswith('.pyo'):
+            root_mod = root_mod[:-1]
+        local_modules.add(os.path.abspath(root_mod))
+
         logger.log(LOG_DEBUG2, '    py_dir: %s', py_dir)
         logger.log(LOG_DEBUG2, '    src_dir: %s', src_dir)
         logger.log(LOG_DEBUG2, '    local_modules:')
