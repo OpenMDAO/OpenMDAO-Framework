@@ -102,7 +102,6 @@ class FixedPointIterator(Driver):
         
             # check convergence
             for i, val in enumerate(self.get_eq_constraints().values()):
-            
                 delta[i] = val.evaluate(self.parent)
             history[self.current_iteration] = delta
             

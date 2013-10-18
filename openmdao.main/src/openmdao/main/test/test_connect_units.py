@@ -8,7 +8,7 @@
 
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Int, Str, Bool
+from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Array
 
 
 class Oneout(Component):
@@ -35,6 +35,8 @@ class Oneout(Component):
                    desc='Float variable')                     #   no units defined 
     ratio10 = Float(1, iotype='out',
                    desc='Float variable', units= 'rad')       #   angle in rad 
+    arr_in = Array([1.,2.,3.], units='ft', iotype='in')
+    arr_out = Array([4.,5.,6.], units='kg', iotype='out')
 
     def __init__(self):
 
@@ -85,6 +87,8 @@ class Oneinp(Component):
                    desc='Float variable', units= 'dyn')   #   force in dyn  
     ratio17 = Float(1, iotype='in',
                    desc='Float variable', units= 'deg')   #   angle in deg 
+    arr_in = Array([1.,2.,3.], units='ft', iotype='in')
+    arr_out = Array([4.,5.,6.], units='kg', iotype='out')
 
     def __init__(self):
 
@@ -176,6 +180,27 @@ class VariableTestCase(unittest.TestCase):
             self.assertEqual(str(err), msg)
         else:
             self.fail('Exception Expected')
+            
+        try:
+            self.top.connect('oneout.arr_out', 'oneinp.arr_in')
+        except Exception as err:
+            msg = ": Can't connect 'oneout.arr_out' to 'oneinp.arr_in': Incompatible units "\
+                  "for 'oneout.arr_out' and 'oneinp.arr_in': units 'kg' are incompatible with "\
+                  "assigning units of 'ft'"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+            
+        try:
+            self.top.connect('oneout.arr_out[1]', 'oneinp.arr_in[0]')
+        except Exception as err:
+            msg = ": Can't connect 'oneout.arr_out[1]' to 'oneinp.arr_in[0]': Incompatible units "\
+                  "for 'oneout.arr_out[1]' and 'oneinp.arr_in[0]': units 'kg' are incompatible with "\
+                  "assigning units of 'ft'"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("Exception expected")
+
 
 #   def test_unit3(self):
 #       self.top.oneout.ratio9 = 20

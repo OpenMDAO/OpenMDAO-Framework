@@ -55,7 +55,7 @@ class Comp(Component):
     def get_cont(self, i):
         return self.contlist[i]
     
-    def get_attr(self, name):
+    def get_attrib(self, name):
         return getattr(self, name)
     
 
@@ -251,7 +251,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
         self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
-        ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
+        ex = ExprEvaluator("comp.get_attrib('get_cont')(1).a1d", self.top)
         self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
         
