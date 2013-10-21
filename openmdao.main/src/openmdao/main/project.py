@@ -376,9 +376,9 @@ def add_proj_to_path(path):
     """Puts this project's directory on sys.path so that imports from it
     will be processed by our special loader.
     """
-    modeldir = path + PROJ_DIR_EXT
-    if modeldir not in sys.path:
-        sys.path = [modeldir] + sys.path
+    projectdir = path + PROJ_DIR_EXT
+    if projectdir not in sys.path:
+        sys.path = [projectdir] + sys.path
 
 
 class Project(object):
@@ -392,7 +392,7 @@ class Project(object):
         self._recorded_cmds = []
         self._cmds_to_save = []
         self.path = expand_path(projpath)
-        self._model_globals = {}
+        self._project_globals = {}
 
         self.macrodir = os.path.join(self.path, '_macros')
         self.macro = 'default'
@@ -435,8 +435,8 @@ description =
             self.config.write(f)
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
-        if server is None and res_desc is None and typname in self._model_globals:
-            return getattr(self._model_globals, typname)(**ctor_args)
+        if server is None and res_desc is None and typname in self._project_globals:
+            return getattr(self._project_globals, typname)(**ctor_args)
         return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property
@@ -446,7 +446,7 @@ description =
     def __contains__(self, pathname):
         parts = pathname.split('.')
         try:
-            obj = self._model_globals[parts[0]]
+            obj = self._project_globals[parts[0]]
             for name in parts[1:]:
                 obj = getattr(obj, name)
         except Exception:
@@ -454,7 +454,7 @@ description =
         return True
 
     def items(self):
-        return self._model_globals.items()
+        return self._project_globals.items()
 
     def execfile(self, fname, digest=None):
         # first, make sure file has been imported
@@ -466,7 +466,7 @@ description =
         with open(fname) as f:
             contents = f.read()
         node = add_init_monitors(parse(contents, fname, mode='exec'))
-        exec compile(node, fname, 'exec') in self._model_globals
+        exec compile(node, fname, 'exec') in self._project_globals
 
         # make the recorded execfile command use the current md5 hash
         self._cmds_to_save.append("execfile('%s', '%s')" % (fname, newdigest))
@@ -474,7 +474,7 @@ description =
     def get(self, pathname):
         parts = pathname.split('.')
         try:
-            obj = self._model_globals[parts[0]]
+            obj = self._project_globals[parts[0]]
             for name in parts[1:]:
                 obj = getattr(obj, name)
         except (KeyError, AttributeError) as err:
@@ -525,12 +525,12 @@ description =
             code = compile(cmd, '<string>', 'eval')
         except SyntaxError:
             try:
-                exec(cmd) in self._model_globals
+                exec(cmd) in self._project_globals
             except Exception as err:
                 pass
         else:
             try:
-                result = eval(code, self._model_globals)
+                result = eval(code, self._project_globals)
             except Exception as err:
                 pass
 
@@ -555,10 +555,10 @@ description =
             self.command("# Auto-generated file - MODIFY AT YOUR OWN RISK")
 
     def _init_globals(self):
-        self._model_globals['create'] = self.create   # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
-        self._model_globals['execfile'] = self.execfile
-        self._model_globals['set_as_top'] = set_as_top
+        self._project_globals['create'] = self.create   # add create funct here so macros can call it
+        self._project_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
+        self._project_globals['execfile'] = self.execfile
+        self._project_globals['set_as_top'] = set_as_top
 
     def activate(self):
         """Make this project active by putting its directory on sys.path and
@@ -568,15 +568,15 @@ description =
         SimulationRoot.chroot(self.path)
         add_proj_to_path(self.path)
 
-        # set up the model
+        # set up the project
         self._init_globals()
         self._initialize()
 
     def deactivate(self):
         """Removes this project's directory from sys.path."""
-        modeldir = self.path
+        projectdir = self.path
         try:
-            sys.path.remove(modeldir + PROJ_DIR_EXT)
+            sys.path.remove(projectdir + PROJ_DIR_EXT)
         except:
             pass
 
