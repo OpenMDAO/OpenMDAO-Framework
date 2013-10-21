@@ -130,6 +130,15 @@ def is_subvar_node(graph, node):
     """
     return 'basevar' in graph.node.get(node, '')
 
+def is_var_node_with_solution_bounds(graph, node):
+    """Returns True if this variable node stores metadata
+    for calculating the gradient. The metadata whose keys
+    are driver iternames, and whose values are a tuple
+    containing the start and end index where this var's
+    values get poked into the solution vector.
+    """
+    return 'bounds' in graph.node.get(node, '')
+
 def is_connected_src_node(graph, node):
     """Return True if this node is part of a connection,
     i.e., there is at least one successor edge that
@@ -427,6 +436,16 @@ class DependencyGraph(nx.DiGraph):
         if config_change:
             self.config_changed()
 
+    def add_subvar_input(self, subvar):
+        """ Adds a subvar node for a model input. This node is used to
+        represent parameters that are array slices, mainly for metadat
+        storage and for defining edge iterators, but not for workflow
+        execution.
+        """
+        base = subvar.split('[')[0]
+        self.add_node(subvar, basevar=base, valid=True)
+        self.add_edge(subvar, base)
+    
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
         if destpath is None:

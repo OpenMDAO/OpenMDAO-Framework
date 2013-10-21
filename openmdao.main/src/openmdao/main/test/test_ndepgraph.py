@@ -525,6 +525,14 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
+    def test_add_subvar_input(self):
+        
+        subvar = 'B.b[1]'
+        self.assertTrue(subvar not in self.dep.node)
+        
+        self.dep.add_subvar_input(subvar)
+        self.assertTrue(subvar in self.dep.node)
+        self.assertTrue('B.b' in self.dep.succ[subvar])
           
 if __name__ == "__main__":
     unittest.main()

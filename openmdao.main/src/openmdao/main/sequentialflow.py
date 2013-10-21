@@ -313,12 +313,14 @@ class SequentialWorkflow(Workflow):
             val = self.scope.get(src)
             width = flattened_size(src, val, self.scope)
             self.bounds[edge] = (nEdge, nEdge+width)
+            self.set_bounds(src, (nEdge, nEdge+width))
             
             # ApplyJ needs the individual cross-references in bounds
             if isinstance(edge[1], tuple):
                 for src in edge[1]:
                     src_name = (edge[0], src)
                     self.bounds[src_name] = (nEdge, nEdge+width)
+                    self.set_bounds(src, (nEdge, nEdge+width))
                     
             nEdge += width
 
@@ -329,6 +331,25 @@ class SequentialWorkflow(Workflow):
 
         return nEdge
 
+    def get_bounds(self, node):
+        """ Return a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        
+        return self.scope._depgraph.node[node][self._parent.itername]
+        
+    def set_bounds(self, node, bounds):
+        """ Set a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        try:
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+            
+        # Array indexed parameter nodes are not in the graph, so add them.
+        except KeyError:
+            self.scope._depgraph.add_subvar_input(node)
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+        
     def calculate_residuals(self):
         """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
