@@ -1165,16 +1165,13 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-<<<<<<< HEAD
-=======
 
         try:
             eq = all(eq)
         except TypeError:
             pass
-        if not eq:
->>>>>>> ffab3bcba53502eeaa1ba444248b50506257419d
 
+        if not eq:
             # need to find first item going up the parent tree that is a Component
             item = self
             while item:
@@ -1184,13 +1181,8 @@ class Container(SafeHasTraits):
                 if hasattr( item, '_call_execute' ): 
                     # This is a Component so do Component things
                     item._call_execute = True
-<<<<<<< HEAD
-                    if hasattr(item, name):
-                        item._input_updated(name)
-=======
                     if hasattr(self, name):
                         self._input_updated(name.split('.',1)[0])
->>>>>>> ffab3bcba53502eeaa1ba444248b50506257419d
                     break 
                 item = item.parent
 
