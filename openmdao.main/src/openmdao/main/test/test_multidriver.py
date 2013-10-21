@@ -1,12 +1,10 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import logging
-import StringIO
-from math import sqrt
+from math import sqrt  # so expr can find it
 
 from openmdao.main.api import Assembly, Component, Driver, \
-                              Dataflow, SequentialWorkflow, set_as_top, \
+                              SequentialWorkflow, set_as_top, \
                               dump_iteration_tree
 from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
@@ -14,8 +12,6 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-
-from openmdao.main.component import _show_validity
 
 exec_order = []
 
@@ -171,9 +167,11 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         self.top.run()
         self.top.comp1.x = 12.3
-        self.assertEqual([False, True, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, True, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         self.top.comp2.x = 32.1
-        self.assertEqual([False, False, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, False, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         
     def test_one_driver(self):
         global exec_order

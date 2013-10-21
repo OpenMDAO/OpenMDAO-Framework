@@ -20,9 +20,10 @@ from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import find_files, plugin_groups
 from openmdao.util.fileutil import get_module_path
 from openmdao.util.log import logger
+from openmdao.util.astutil import parse_ast
 from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
-from openmdao.main.project import PROJ_DIR_EXT, parse
+from openmdao.main.project import PROJ_DIR_EXT
 
 
 class PyWatcher(FileSystemEventHandler):
@@ -125,7 +126,7 @@ class _ClassVisitor(ast.NodeVisitor):
 
         with open(fname, 'Ur') as f:
             contents = f.read()
-        self.visit(parse(contents, fname))
+        self.visit(parse_ast(contents, fname))
 
     def visit_ClassDef(self, node):
         self.classes.append(node.name)

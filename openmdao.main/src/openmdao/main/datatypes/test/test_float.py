@@ -53,22 +53,6 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.get_trait('float1').units,
                                          'inch')
         self.assertAlmostEqual(36., self.hobj.float2,5)
-
-    def test_unit_conversion(self):
-        self.hobj.float2 = 12.  # inches
-        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.get_trait('float2').units,
-                                         'ft')
-        self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
-        
-        # now set to a value that will violate constraint after conversion
-        self.hobj.float2 = 1200.  # inches
-        try:
-            self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
-        except ValueError, err:
-            self.assertEqual(str(err), 
-                ": Variable 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
-        else:
-            self.fail('ValueError expected')
         
     def test_bogus_units(self):
         try:
@@ -122,17 +106,6 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         
-    def test_bad_connection(self):
-        srcwrapper = self.hobj.get_wrapped_attr('float2')
-        self.hobj.float1 = srcwrapper
-        try:
-            self.hobj.float3 = srcwrapper
-        except Exception, err:
-            self.assertEqual(str(err), 
-                "float3: units 'inch' are incompatible with assigning units of 'kg'")
-        else:
-            self.fail('Exception expected')
-
     def test_constructor_defaults(self):
         
         self.hobj.add('float_nodefault1',

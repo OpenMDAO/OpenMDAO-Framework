@@ -7,10 +7,11 @@ import itertools
 from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
+from openmdao.main.ndepgraph import base_var
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index, arange, prod, vstack, hstack
+    from numpy import array, ndarray, zeros, ones, unravel_index, \
+         ravel_multi_index, arange, vstack, hstack, prod
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -18,7 +19,7 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros, inner, \
+    from openmdao.main.numpy_fallback import array, ndarray, zeros, \
                                              ones
 
 
@@ -907,18 +908,18 @@ class FiniteDifference(object):
                 if var_name:
                     comp._input_updated(var_name.split('[', 1)[0])
                 else:
-                    self.scope._input_updated(comp_name)
+                    self.scope._input_updated(comp_name.split('[')[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                comp._valid_dict[var_name.split('[', 1)[0]] = True
+                self.scope.set_valid([base_var(self.scope._depgraph, src)], True)
                 
                 # Make sure we execute!
                 comp._call_execute = True
                 
             else:
-                self.scope._valid_dict[comp_name.split('[', 1)[0]] = True
+                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
 
 def apply_linear_model(self, comp, ffd_order):

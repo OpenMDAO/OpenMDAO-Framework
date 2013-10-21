@@ -135,7 +135,4 @@ class MDASolver(Driver):
             #print "Residual vector norm:\n", norm
             
             iter_num += 1
-            self.record_case()
-            
-            
-            
+            self.record_case()       
