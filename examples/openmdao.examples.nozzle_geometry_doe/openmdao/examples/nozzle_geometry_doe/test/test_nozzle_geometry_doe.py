@@ -5,7 +5,9 @@
 import unittest
 
 from openmdao.examples.nozzle_geometry_doe.test.nozzle_geometry_doe import NozzleGeometryDOE
-from openmdao.main.api import set_as_top
+from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
+from openmdao.lib.casehandlers.api import ListCaseIterator
+from openmdao.main.api import set_as_top, Case
 
 class NozzleGeometryDOETestCase(unittest.TestCase):
     """ NozzleGeometryDOE test case """
