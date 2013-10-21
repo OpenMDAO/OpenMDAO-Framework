@@ -1181,7 +1181,7 @@ class Container(SafeHasTraits):
                 if hasattr( item, '_call_execute' ): 
                     # This is a Component so do Component things
                     item._call_execute = True
-                    if hasattr(self, name):
+                    if hasattr(item, name):
                         self._input_updated(name.split('.',1)[0])
                     break 
                 item = item.parent

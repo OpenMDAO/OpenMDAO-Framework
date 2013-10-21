@@ -68,6 +68,9 @@ def _sub_or_super(s1, s2):
 #   var     means it's a simple Variable node (no indexing or attr access)
 #   basevar means it's some reference to a part of a Variable (like an array ref or attr access)
 #              and the value of basevar is the name of the Variable it refers to
+#   driver  means it's a Driver node
+#   iotype  is present in var and subvar nodes and indicates i/o direction
+#   boundary means it's a boundary variable node
 #
 # EDGES:
 #   conn    means that the edge is a connection that was specified
@@ -343,6 +346,9 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
     def check_connect(self, srcpath, destpath):
+        """Raise an exception if the specified destination is already
+        connected.
+        """
         if is_extern_node(self, destpath):  # error will be caught at parent level
             return
 
@@ -543,6 +549,11 @@ class DependencyGraph(nx.DiGraph):
         return srcs
 
     def _check_source(self, path, src):
+        """Raise an exception if the specified source differs from
+        the connected source.  This prevents the setting of a 
+        destination value by any object other than the source
+        specified in the graph.
+        """
         preds = self.predecessors(path)
         for pred in preds:
             if src == pred:
@@ -557,7 +568,7 @@ class DependencyGraph(nx.DiGraph):
                 "set by source '%s'" %
                 (path, preds[0], src))
 
-    def _all_vars(self, node, direction=None):
+    def _all_child_vars(self, node, direction=None):
         """Return a list of nodes containing all nodes that are one
         or two connections out from the starting node that are prefixed
         by the starting node.  This captures all var and subvar
@@ -594,7 +605,7 @@ class DependencyGraph(nx.DiGraph):
 
         full = []
         for node in nodes:
-            full.extend(self._all_vars(node))
+            full.extend(self._all_child_vars(node))
             full.append(node)
 
         if data:
@@ -604,8 +615,9 @@ class DependencyGraph(nx.DiGraph):
             return full
 
     def full_subgraph(self, nodes):
-        """Returns the subgraph specified by the given nodes and
-        any variable or expr nodes corresponding to those nodes.
+        """Returns the subgraph specified by the given component
+        or pseudocomp nodes and any variable or expr nodes 
+        corresponding to those nodes.
         """
         return self.subgraph(self.find_prefixed_nodes(nodes))
 
@@ -875,10 +887,10 @@ class DependencyGraph(nx.DiGraph):
                 outs = ['.'.join([childname,n]) for n in outs]
             for out in outs:
                 data[out]['valid'] = True
-                for var in self._all_vars(out, direction='out'):
+                for var in self._all_child_vars(out, direction='out'):
                     data[var]['valid'] = True
         else:
-            for var in self._all_vars(childname, direction='out'):
+            for var in self._all_child_vars(childname, direction='out'):
                 data[var]['valid'] = True
 
 
@@ -925,7 +937,7 @@ class DependencyGraph(nx.DiGraph):
             for n in self.successors_iter(inp):
                 meta[n]['valid'] = True
                 if is_subvar_node(self, n):
-                    for var in self._all_vars(self.node[n]['basevar']):
+                    for var in self._all_child_vars(self.node[n]['basevar']):
                         meta[var]['valid'] = True
 
         for out in self.get_boundary_outputs():
@@ -933,7 +945,7 @@ class DependencyGraph(nx.DiGraph):
             for n in self.successors_iter(out):
                 meta[n]['valid'] = True
                 if is_subvar_node(self, n):
-                    for var in self._all_vars(out):
+                    for var in self._all_child_vars(out):
                         meta[var]['valid'] = True
 
         for out in self.get_extern_dests():
