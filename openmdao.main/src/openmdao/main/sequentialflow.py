@@ -220,13 +220,6 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         if self._interior_edges is None:
-            #required_floating_vars = []
-            #for src, target in self._additional_edges:
-                #if src=='@in' and '.' not in target:
-                    #required_floating_vars.append(target)
-                    
-                #elif target=='@out' and '.' not in src:
-                    #required_floating_vars.append(src)
                    
             graph = self._parent.workflow_graph()
             comps = [comp.name for comp in self.__iter__()]# + \
@@ -246,15 +239,6 @@ class SequentialWorkflow(Workflow):
                     continue
                 if is_input_node(graph, src):
                     self._input_outputs.add(src)
-                #compname, _, var = src.partition('.')
-                #if var:
-                    #var = var.split('[')[0]
-                    #comp = self.scope.get(compname)
-                    #if var in comp.list_inputs():
-                        #self._input_outputs.add(src)
-                #else:
-                    ## Free-floating var in assembly.
-                    #self._input_outputs.add(src)
                     
             self._input_outputs = list(self._input_outputs)
                     
@@ -321,6 +305,8 @@ class SequentialWorkflow(Workflow):
                     src_name = (edge[0], src)
                     self.bounds[src_name] = (nEdge, nEdge+width)
                     self.set_bounds(src, (nEdge, nEdge+width))
+            else:
+                self.set_bounds(src, (nEdge, nEdge+width))
                     
             nEdge += width
 
