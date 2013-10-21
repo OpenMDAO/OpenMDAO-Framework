@@ -110,11 +110,11 @@ class BoxGeometry(object):
                              tris=pgeom.triangles, 
                              colors=pgeom.colors[i],
                              #normals=pgeom.normals[i],
-                             bbox=pgeom.bbox,
+                             #bbox=pgeom.bbox,
                              name="Face %d"%(i+1))
 
             wv.set_edge_data(points=pgeom.vertices[i],
-                             bbox=pgeom.bbox,
+                             #bbox=pgeom.bbox,
                              name="Edge %d"%(i+1))
 
 

@@ -137,6 +137,8 @@ class STLGroup(object):
 
         wv.set_face_data(xyzs, tris, name="surface")
 
+        #wv.focus_vertices()
+
 
     #end methods for IStaticGeometry
 
@@ -378,17 +380,9 @@ class STLGroup(object):
         f.close()
 
 class STLGroupSender(STLSender):
-
-    def initialize(self, **kwargs):
-        eye    = np.array([5.0, 0.0, 70.0], dtype=np.float32)
-        center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        fov   = 30.0
-        zNear = 1.0
-        zFar  = 100
-
-        bias  = 0
-        self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
+    def __init__(self, *args, **kargs):
+        super(STLGroupSender, self).__init__(*args, **kargs)
+        self.wv.set_context_bias(0)
 
     @staticmethod
     def supports(obj):
