@@ -193,7 +193,6 @@ class SequentialWorkflow(Workflow):
                 msg = "Components must be added by name to a workflow."
                 raise TypeError(msg)
 
-
     def remove(self, compname):
         """Remove a component from the workflow by name. Do not report an
         error if the specified component is not found.
@@ -734,8 +733,6 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             if '@in' not in src:
                 i1, i2 = self.get_bounds(src)
-            else:
-                i1, i2 = self.get_bounds(target)
             
             # Input-input connections are not in the jacobians. We need
             # to add the contribution.
@@ -759,6 +756,7 @@ class SequentialWorkflow(Workflow):
                 target = [target]
             
             for item in target:
+                i1, i2 = self.get_bounds(item)
                 comp_name, dot, var_name = item.partition('.')
                 
                 # Free-floating variables
