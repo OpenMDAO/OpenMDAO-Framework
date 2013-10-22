@@ -275,9 +275,11 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(edict['B.d'], ['C.a'])
         
         edict = get_inner_edges(dep, ['A.a'], ['C.c'])
-        self.assertEqual(len(edict), 2)
+        self.assertEqual(len(edict), 4)
         self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
         self.assertEqual(edict['B.d'], ['C.a'])
+        self.assertEqual(edict['@in'], ['A.a'])
+        self.assertEqual(edict['@out'], ['C.c'])
 
         # loop
         dep, scope = _make_graph(comps=['A','B', 'C'],
