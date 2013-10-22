@@ -278,8 +278,8 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(len(edict), 4)
         self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
         self.assertEqual(edict['B.d'], ['C.a'])
-        self.assertEqual(edict['@in'], ['A.a'])
-        self.assertEqual(edict['@out'], ['C.c'])
+        self.assertEqual(edict['@in0'], ['A.a'])
+        self.assertEqual(edict['C.c'], ['@out0'])
 
         # loop
         dep, scope = _make_graph(comps=['A','B', 'C'],
