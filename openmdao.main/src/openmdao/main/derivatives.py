@@ -108,16 +108,14 @@ def calc_gradient(wflow, inputs, outputs):
         if isinstance(item, tuple):
             item = item[0]
             
-        val = wflow.scope.get(item)
-        width = flattened_size(item, val)
-        num_in += width
+        i1, i2 = wflow.get_bounds(item)
+        num_in += i2-i1
 
 
     num_out = 0
     for item in outputs:
-        val = wflow.scope.get(item)
-        width = flattened_size(item, val)
-        num_out += width
+        i1, i2 = wflow.get_bounds(item)
+        num_out += i2-i1
 
     J = zeros((num_out, num_in))
 
@@ -129,6 +127,9 @@ def calc_gradient(wflow, inputs, outputs):
     j = 0
     for param in inputs:
 
+        if isinstance(param, tuple):
+            param = param[0]
+            
         i1, i2 = wflow.get_bounds(param)
         for irhs in range(i1, i2):
 
@@ -168,15 +169,13 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
         if isinstance(item, tuple):
             item = item[0]
             
-        val = wflow.scope.get(item)
-        width = flattened_size(item, val)
-        num_in += width
+        i1, i2 = wflow.get_bounds(item)
+        num_in += i2-i1
 
     num_out = 0
     for item in outputs:
-        val = wflow.scope.get(item)
-        width = flattened_size(item, val)
-        num_out += width
+        i1, i2 = wflow.get_bounds(item)
+        num_out += i2-i1
 
     J = zeros((num_out, num_in))
    
@@ -188,6 +187,9 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     j = 0
     for output in outputs:
 
+        if isinstance(output, tuple):
+            output = output[0]
+            
         i1, i2 = wflow.get_bounds(output)
         for irhs in range(i1, i2):
 
@@ -201,6 +203,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             
             i = 0
             for param in inputs:
+                
+                if isinstance(param, tuple):
+                    param = param[0]
+                    
                 k1, k2 = wflow.get_bounds(param)
                 J[j, i:i+(k2-k1)] = dx[k1:k2]
                 i += k2-k1

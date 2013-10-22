@@ -733,8 +733,6 @@ class SequentialWorkflow(Workflow):
             src, target = edge
             if '@in' not in src:
                 i1, i2 = self.get_bounds(src)
-            else:
-                i1, i2 = self.get_bounds(target)
             
             # Input-input connections are not in the jacobians. We need
             # to add the contribution.
@@ -758,6 +756,7 @@ class SequentialWorkflow(Workflow):
                 target = [target]
             
             for item in target:
+                i1, i2 = self.get_bounds(item)
                 comp_name, dot, var_name = item.partition('.')
                 
                 # Free-floating variables
