@@ -498,10 +498,10 @@ class Assembly(Component):
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
 
-                outs = self._depgraph.invalidate_deps(self, [dest])#, force=True)
+                outs = self._depgraph.invalidate_deps(self, [dest])
                 if (outs is None) or outs:
                     for cname, vnames in partition_names_by_comp(outs).items():
-                        self.child_invalidated(cname, vnames) #, force=True)
+                        self.child_invalidated(cname, vnames)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
