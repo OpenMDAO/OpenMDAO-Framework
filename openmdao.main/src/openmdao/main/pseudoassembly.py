@@ -24,7 +24,7 @@ class PseudoAssembly(object):
 
         self.recursed_comp_names = []
         if recursed_components is not None:
-            self.recursed_comp_names = recursed_components
+            self.recursed_comp_names = recursed_components[:]
 
         self.fd = None
         self.J = None

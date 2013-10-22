@@ -893,10 +893,11 @@ class ResourceAllocator(object):
 #FIXME: shouldn't pollute the environment like this does.
         not_found = []
         for module in sorted(resource_value):
-            try:
-                __import__(module)
-            except ImportError:
-                not_found.append(module)
+            if module:
+                try:
+                    __import__(module)
+                except ImportError:
+                    not_found.append(module)
         return not_found
 
     # To be implemented by real allocator.

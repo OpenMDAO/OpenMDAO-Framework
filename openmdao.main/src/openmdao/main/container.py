@@ -7,7 +7,6 @@ import copy
 import pprint
 import socket
 import sys
-import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -120,7 +119,7 @@ class _ContainerDepends(object):
                 raise RuntimeError("'%s' is already connected to source '%s'" %
                                    (dst, src))
 
-    def connect(self, srcpath, destpath):
+    def connect(self, scope, srcpath, destpath):
         self._srcs[destpath] = srcpath
 
     def disconnect(self, srcpath, destpath):
@@ -333,7 +332,7 @@ class Container(SafeHasTraits):
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest))
 
-            graph.connect(srcpath, destpath)
+            graph.connect(self, srcpath, destpath)
         except Exception as err:
             try:
                 for child, childsrc, childdest in child_connections:
@@ -559,20 +558,18 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
 
     @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name, index=None):
-        """If the variable can return an AttrWrapper, then this
-        function will return that, with the value set to the current value of
-        the variable. Otherwise, it functions like *getattr*, just
-        returning the value of the variable. Raises an exception if the
-        variable cannot be found. The value will be copied if the variable has
-        a 'copy' metadata attribute that is not None. Possible values for
-        'copy' are 'shallow' and 'deep'.
+    def get_attr(self, name, index=None):
+        """The value will be copied if the variable has a 'copy' metadata 
+        attribute that is not None. Possible values for 'copy' are 
+        'shallow' and 'deep'. 
+        Raises an exception if the variable cannot be found. 
+        
         """
         scopename, _, restofpath = name.partition('.')
         if restofpath:
             obj = getattr(self, scopename)
             if is_instance(obj, Container):
-                return obj.get_wrapped_attr(restofpath, index)
+                return obj.get_attr(restofpath, index)
             return get_indexed_value(obj, restofpath)
 
         trait = self.get_trait(name)
@@ -585,12 +582,6 @@ class Container(SafeHasTraits):
         # from validate and one or two others, so we need to get access
         # to the original trait which is held in the 'trait_type' attribute.
         ttype = trait.trait_type
-        getwrapper = ttype.get_val_wrapper
-
-        # if we have an index, try to figure out if we can still use the trait
-        # metadata or not.  For example, if we have an Array that has units,
-        # it's also valid to return the units metadata if we're indexing into
-        # the Array, assuming that all entries in the Array have the same units.
 
         val = getattr(self, name)
         if index is None:
@@ -609,12 +600,9 @@ class Container(SafeHasTraits):
                     val = val_copy
                 else:
                     val = _copydict[ttype.copy](val)
-
-        if getwrapper is not None:
-            return getwrapper(val, index)
-
-        if index is not None:
+        else: # index is not None
             val = get_indexed_value(self, name, index)
+
         return val
 
     def add(self, name, obj):
@@ -1142,7 +1130,8 @@ class Container(SafeHasTraits):
                     # callback, so it's a good test for whether the
                     # value changed.
                     if hasattr(self, "_call_execute") and self._call_execute:
-                        self._input_updated(path)
+                        if iotype=='in':
+                            self._input_updated(path.split('.',1)[0])
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1154,23 +1143,8 @@ class Container(SafeHasTraits):
                 setattr(self, path, value)
 
     def _index_set(self, name, value, index):
-        obj = self.get_wrapped_attr(name, index[:-1])
+        obj = self.get_attr(name, index[:-1])
         idx = index[-1]
-        if isinstance(obj, AttrWrapper):
-            wrapper = obj
-            obj = obj.value
-        else:
-            wrapper = None
-        if isinstance(value, AttrWrapper):
-            truval = value.value
-            if wrapper:
-                if idx[0] != ATTR:
-                    truval = wrapper.convert_from(value)
-                elif isinstance(obj, Container):
-                    att = obj.get_wrapped_attr(idx[1])
-                    if isinstance(att, AttrWrapper):
-                        truval = att.convert_from(value)
-            value = truval
         try:
             old = process_index_entry(obj, idx)
         except KeyError:
@@ -1196,6 +1170,7 @@ class Container(SafeHasTraits):
             eq = all(eq)
         except TypeError:
             pass
+
         if not eq:
             # need to find first item going up the parent tree that is a Component
             item = self
@@ -1206,8 +1181,8 @@ class Container(SafeHasTraits):
                 if hasattr( item, '_call_execute' ): 
                     # This is a Component so do Component things
                     item._call_execute = True
-                    if name in item._valid_dict:
-                        item._input_updated(name)
+                    if hasattr(item, name):
+                        self._input_updated(name.split('.',1)[0])
                     break 
                 item = item.parent
 

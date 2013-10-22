@@ -114,6 +114,7 @@ def _test_last_saved_metadata(browser):
         workspace_page.add_library_item_to_dataflow("openmdao.main.assembly.Assembly", 'top')
         workspace_page = workspace_page.revert_project()
 
+
     projects_page = begin(browser)
     projects_page, project_dict = random_project(projects_page.new_project(),
                                                  verify=True, load_workspace=False)
@@ -136,6 +137,7 @@ def _test_last_saved_metadata(browser):
     projects_page, project_name, revert_project_time = revert_project(projects_page, project_name, commit_project_time)
 
     projects_page.delete_project(project_name)
+
 
 #Test creating a project
 def _test_new_project(browser):
