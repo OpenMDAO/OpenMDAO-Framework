@@ -1046,7 +1046,7 @@ def _get_inner_edges(G, srcs, dests):
             try:
                 child = next(children)
                 if is_connection(G, parent, child):
-                   cstack.append((parent, child))
+                    cstack.append((parent, child))
                 if child in marked:
                     edges.update(cstack)
                     if parent not in marked:
@@ -1073,7 +1073,14 @@ def get_inner_edges(graph, srcs, dests):
 
     """
 
-    edges = edges_to_dict(_get_inner_edges(graph, srcs, dests))
+    newsrcs = []
+    for s in srcs:
+        if isinstance(s, basestring):
+            newsrcs.append(s)
+        else:
+            newsrcs.extend(s)
+
+    edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
 
     # replace inputs-as-outputs with their sources (if any)
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
@@ -1082,8 +1089,9 @@ def get_inner_edges(graph, srcs, dests):
         if not isinstance(src, basestring):  # parameter group
             newlst = []
             for s in src:
-                newlst.extend(edges[s])
-                del edges[s]
+                if s in edges:
+                    newlst.extend(edges[s])
+                    del edges[s]
             edges[src] = newlst
         edges['@in%d' % i] = [src]
 
