@@ -121,17 +121,6 @@ def calc_gradient(wflow, inputs, outputs):
 
     J = zeros((num_out, num_in))
 
-    # Locate the output keys:
-    obounds = {}
-    interior = wflow.get_interior_edges()
-
-    # Not necessarily efficient, but outputs can be anywhere
-    for output in outputs:
-        for edge in interior:
-            if output == edge[0]:
-                obounds[output] = wflow.bounds[edge]
-                break
-
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
@@ -140,13 +129,7 @@ def calc_gradient(wflow, inputs, outputs):
     j = 0
     for param in inputs:
 
-        if ('@in', param) in wflow.bounds:
-            i1, i2 = wflow.get_bounds(param)
-        else:
-            if isinstance(param, tuple):
-                param = param[0]
-            i1, i2 = wflow.get_bounds(param.split('[')[0])
-            
+        i1, i2 = wflow.get_bounds(param)
         for irhs in range(i1, i2):
 
             RHS = zeros((nEdge, 1))
@@ -159,10 +142,7 @@ def calc_gradient(wflow, inputs, outputs):
 
             i = 0
             for item in outputs:
-                if item in obounds:
-                    k1, k2 = obounds[item]
-                else:
-                    k1, k2 = obounds[item.split('[')[0]]
+                k1, k2 = wflow.get_bounds(item)
                 J[i:i+(k2-k1), j] = dx[k1:k2]
                 i += k2-k1
 
@@ -200,16 +180,6 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
 
     J = zeros((num_out, num_in))
    
-    # Locate the output keys:
-    obounds = {}
-    interior = wflow.get_interior_edges()
-    # Not necessarily efficient, but outputs can be anywhere
-    for item in outputs:
-        for edge in interior:
-            if item == edge[0]:
-                obounds[item] = wflow.bounds[edge]
-                break
-
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
@@ -218,11 +188,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     j = 0
     for output in outputs:
 
-        if output in obounds:
-            i1, i2 = obounds[output]
-        else:
-            i1, i2 = obounds[output.split('[')[0]]
-            
+        i1, i2 = wflow.get_bounds(output)
         for irhs in range(i1, i2):
 
             RHS = zeros((nEdge, 1))
@@ -235,13 +201,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
             
             i = 0
             for param in inputs:
-                if ('@in', param) in wflow.bounds:
-                    k1, k2 = wflow.bounds[('@in', param)]
-                else:
-                    if isinstance(param, tuple):
-                        param = param[0]
-                    k1, k2 = wflow.bounds[('@in', param.split('[')[0])]
-                    
+                k1, k2 = wflow.get_bounds(param)
                 J[j, i:i+(k2-k1)] = dx[k1:k2]
                 i += k2-k1
 

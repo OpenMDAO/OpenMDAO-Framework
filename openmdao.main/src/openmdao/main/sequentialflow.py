@@ -452,10 +452,11 @@ class SequentialWorkflow(Workflow):
         edges = self.get_interior_edges()
         for edge in edges:
             src, targets = edge
-            i1, i2 = self.get_bounds(src)
             
             if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
+                
+                i1, i2 = self.get_bounds(src)
                 
                 # Free-floating variables
                 if not var_name:
@@ -487,6 +488,7 @@ class SequentialWorkflow(Workflow):
                     
                 for target in targets:
                     
+                    i1, i2 = self.get_bounds(target)
                     comp_name, dot, var_name = target.partition('.')
                     
                     # Free-floating variables
@@ -524,7 +526,7 @@ class SequentialWorkflow(Workflow):
                     p_edges = [p_edges]
                     
                 for p_edge in p_edges:
-                    i1, i2 = self.get_bounds(src)
+                    i1, i2 = self.get_bounds(p_edge)
                     comp_name, dot, var_name = p_edge.partition('.')
                     
                     # Free-floating variables
@@ -557,7 +559,13 @@ class SequentialWorkflow(Workflow):
         #print inputs, '\n', outputs
         for edge in edges:
             src, target = edge
-            i1, i2 = self.get_bounds(src)
+            if '@in' not in src:
+                i1, i2 = self.get_bounds(src)
+            else:
+                if isinstance(target, tuple):
+                    i1, i2 = self.get_bounds(target[0])
+                else:
+                    i1, i2 = self.get_bounds(target)
             
             if src == '@in':
                 # Extra eqs for parameters contribute a 1.0 on diag
@@ -646,10 +654,11 @@ class SequentialWorkflow(Workflow):
         # Fill input dictionaries with values from input arg.
         for edge in edges:
             src, targets = edge
-            i1, i2 = self.get_bounds(src)
             
             if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
+                
+                i1, i2 = self.get_bounds(src)
                 
                 # Free-floating variables
                 if not var_name:
@@ -676,6 +685,7 @@ class SequentialWorkflow(Workflow):
                    
             for target in targets:
                 if target != '@out':
+                    i1, i2 = self.get_bounds(target)
                     comp_name, dot, var_name = target.partition('.')
                     
                     # Free-floating variables
@@ -714,7 +724,10 @@ class SequentialWorkflow(Workflow):
         
         for edge in edges:
             src, target = edge
-            i1, i2 = self.get_bounds(src)
+            if '@in' not in src:
+                i1, i2 = self.get_bounds(src)
+            else:
+                i1, i2 = self.get_bounds(target)
             
             # Input-input connections are not in the jacobians. We need
             # to add the contribution.

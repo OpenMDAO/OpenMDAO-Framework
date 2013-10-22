@@ -31,7 +31,6 @@ class CyclicWorkflow(SequentialWorkflow):
         self._severed_edges = []
         self._hidden_edges = set()
         self.res = None
-        self.bounds = None
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
