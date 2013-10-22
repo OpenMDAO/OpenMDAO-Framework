@@ -113,8 +113,6 @@ class Assembly(Component):
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
 
-        # TODO: depending on internal depgraph, this value could be
-        # set to full to speed up invalidate_deps
         self._invalidation_type = 'partial' # parent depgraph may have to invalidate us
                                             # multiple times per pass
 

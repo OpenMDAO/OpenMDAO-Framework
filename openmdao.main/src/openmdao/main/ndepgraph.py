@@ -1050,7 +1050,7 @@ def get_inner_edges(graph, srcs, dests):
         {src1: [dest1], src2: [dest2,dest3], ...}
 
     For sources that are actually inputs, the source will be replaced
-    with the source of the input.
+    with the source of the input. 
 
     """
 
@@ -1060,6 +1060,12 @@ def get_inner_edges(graph, srcs, dests):
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
 
     for i,src in enumerate(srcs):
+        if not isinstance(src, basestring):  # parameter group
+            newlst = []
+            for s in src:
+                newlst.extend(edges[s])
+                del edges[s]
+            edges[src] = newlst
         edges['@in%d' % i] = [src]
 
     for i, dest in enumerate(dests):
