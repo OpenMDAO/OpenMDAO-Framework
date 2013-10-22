@@ -104,7 +104,6 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[_get_varname(ref)] = in_name
             setattr(self, in_name, None)
-            #self._valid_dict[in_name] = True
 
         refs = list(destexpr.refs())
         if refs:
@@ -120,8 +119,6 @@ class PseudoComponent(object):
         for name, meta in destexpr.get_metadata():
             self._meta[varmap[name]] = meta
             
-        #self._valid_dict['out0'] = False
-
         if translate:
             xformed_src = transform_expression(srcexpr.text, self._inmap)
         else:
@@ -243,7 +240,6 @@ class PseudoComponent(object):
 
     def connect(self, src, dest):
         self._valid = False
-        pass
 
     def run(self, ffd_order=0, case_id=''):
         self.update_inputs()

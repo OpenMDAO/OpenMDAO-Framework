@@ -4,7 +4,8 @@ import networkx as nx
 from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, \
                                     find_all_connecting, nodes_matching_all, \
                                     nodes_matching_some, edges_matching_all, \
-                                    edges_matching_some
+                                    edges_matching_some, get_inner_edges, \
+                                    _get_inner_edges, edges_to_dict
 
 def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
@@ -40,14 +41,6 @@ class DumbClass(object):
     def invalidate_deps(self, vnames=None):
         return None
 
-#
-# tests TODO:
-#
-# boundary conections to a sub-assembly
-#    - normal variable
-#    - array entry
-#    - vartree
-#    - input and output
 
 def _make_xgraph():
     """Make an X shaped graph
@@ -250,6 +243,51 @@ class DepGraphTestCase(unittest.TestCase):
                                             ['A', 'B', 'D'])),
                          set([('A.c[2]','B.a.x.y'),('A.d.z','B.b[4]')]))
 
+    def test_get_inner_edges(self):
+        self.assertEqual(_get_inner_edges(self.dep, ['b'], ['c']),
+                         set([('b[3]','A.b'),('A.d.z','B.b[4]'),('A.c[2]','B.a.x.y'),
+                              ('B.c','C.a'),('B.d','C.b'),('C.c','c')]))
+
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.c','B.a'),('A.d','B.b')],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['B.c']),
+                         set([('A.c','B.a'),('A.d','B.b')]))
+        
+        dep, scope = _make_graph(comps=['A','B', 'C'],
+                                 connections=[('A.c','B.a'),('A.d','B.b'),('B.d','C.a')],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['C.c']),
+                         set([('A.c','B.a'),('A.d','B.b'),('B.d','C.a')]))
+
+        # same output feeding two inputs
+        dep, scope = _make_graph(comps=['A','B', 'C'],
+                                 connections=[('A.d','B.a'),('A.d','B.b'),('B.d','C.a')],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+        edges = _get_inner_edges(dep, ['A.a'], ['C.c'])
+        self.assertEqual(edges, set([('A.d','B.a'),('A.d','B.b'),('B.d','C.a')]))
+        edict = edges_to_dict(edges)
+        self.assertEqual(len(edict), 2)
+        self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
+        self.assertEqual(edict['B.d'], ['C.a'])
+        
+        edict = get_inner_edges(dep, ['A.a'], ['C.c'])
+        self.assertEqual(len(edict), 4)
+        self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
+        self.assertEqual(edict['B.d'], ['C.a'])
+        self.assertEqual(edict['@in'], ['A.a'])
+        self.assertEqual(edict['@out'], ['C.c'])
+
+        # loop
+        dep, scope = _make_graph(comps=['A','B', 'C'],
+                                 connections=[('A.d','B.a'),('B.d','C.a'),('C.d','A.a')],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['C.d']),
+                         set([('A.d','B.a'),('B.d','C.a')]))
 
     def test_disconnect_comp(self):
         allcons = set(self.dep.list_connections())
@@ -312,6 +350,15 @@ class DepGraphTestCase(unittest.TestCase):
         g = self.dep.component_graph()
         self.assertEqual(set(g.nodes()), set(self.comps))
         self.assertEqual(set(g.edges()), set([('B','C'),('C','D')]))
+
+    def test_comp_graph_input_as_output(self):
+        dep, scope = _make_graph(comps=['A','B'],
+                                 connections=[('A.in1','B.in1')],
+                                 inputs=['in1','in2'],
+                                 outputs=['out1','out2'])
+        cgraph = dep.component_graph()
+        self.assertEqual(set(cgraph.edges()), set([('A','B')]))
+
         
     def test_connections_to(self):
         self.assertEqual(set(self.dep.connections_to('c')),
@@ -338,7 +385,8 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_find_all_connecting(self):
         self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())
-        self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','C'), set(['A','B','C']))
+        self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','C'), 
+                         set(['A','B','C']))
         
     def _get_valids_dict(self, dep):
         dct = {}
@@ -365,11 +413,11 @@ class DepGraphTestCase(unittest.TestCase):
                          set(range(10)))
         self.assertEqual(set(nodes_matching_all(g, foo=False, bar=True)),
                          set())
-        self.assertEqual(nodes_matching_all(g, bar=False), [4])
+        self.assertEqual(list(nodes_matching_all(g, bar=False)), [4])
         
         self.assertEqual(set(nodes_matching_some(g, foo=True, bar=False)),
                          set(range(10)))
-        self.assertEqual(nodes_matching_some(g, foo=False, bar=False), [4])
+        self.assertEqual(list(nodes_matching_some(g, foo=False, bar=False)), [4])
 
     def test_edges_matching(self):
         g = nx.DiGraph()
