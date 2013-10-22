@@ -285,23 +285,24 @@ class SequentialWorkflow(Workflow):
         """
         nEdge = 0
         for edge in self.get_interior_edges():
-            if edge[0] == '@in':
-                src = edge[1]
+            src, targets = edge
+            if '@in' in src:
+                src = targets
                 
-                # Only size the first entry of a parameter group
                 if isinstance(src, tuple):
                     src = src[0]
-            else:
-                src = edge[0]
                 
             val = self.scope.get(src)
             width = flattened_size(src, val, self.scope)
+            self.set_bounds(src, (nEdge, nEdge+width))
             
-            if isinstance(edge[1], tuple):
-                for src in edge[1]:
-                    self.set_bounds(src, (nEdge, nEdge+width))
+            if isinstance(targets, tuple):
+                for target in targets:
+                    if '@out' not in target:
+                        self.set_bounds(target, (nEdge, nEdge+width))
             else:
-                self.set_bounds(src, (nEdge, nEdge+width))
+                if '@out' not in targets:
+                    self.set_bounds(targets, (nEdge, nEdge+width))
                     
             nEdge += width
 
@@ -318,20 +319,27 @@ class SequentialWorkflow(Workflow):
         """ Return a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        
-        return self.scope._depgraph.node[node][self._parent.itername]
+        itername = 'top.'+self._parent.itername
+        return self.scope._depgraph.node[node]['bounds'][itername]
         
     def set_bounds(self, node, bounds):
         """ Set a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
+        itername = 'top.'+self._parent.itername
+        
         try:
-            self.scope._depgraph.node[node][self._parent.itername] = bounds
+            meta = self.scope._depgraph.node[node]
             
         # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
             self.scope._depgraph.add_subvar_input(node)
-            self.scope._depgraph.node[node][self._parent.itername] = bounds
+            meta = self.scope._depgraph.node[node]
+        
+        if 'bounds' not in meta:
+            meta['bounds'] = {}
+            
+        meta['bounds'][itername] = bounds
         
     def calculate_residuals(self):
         """Calculate and return the vector of residuals based on the current
