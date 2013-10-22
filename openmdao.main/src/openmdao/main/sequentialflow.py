@@ -193,7 +193,6 @@ class SequentialWorkflow(Workflow):
                 msg = "Components must be added by name to a workflow."
                 raise TypeError(msg)
 
-
     def remove(self, compname):
         """Remove a component from the workflow by name. Do not report an
         error if the specified component is not found.
