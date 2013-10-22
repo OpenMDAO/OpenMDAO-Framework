@@ -310,8 +310,8 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
-        print get_inner_edges(self.scope._depgraph, inputs, outputs)
-        print self.get_interior_edges()
+        print 'iterator:  ', get_inner_edges(self.scope._depgraph, inputs, outputs)
+        print 'old one:  ', self.get_interior_edges()
         return nEdge
 
     def get_bounds(self, node):

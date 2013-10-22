@@ -1092,7 +1092,8 @@ def get_inner_edges(graph, srcs, dests):
                 if s in edges:
                     newlst.extend(edges[s])
                     del edges[s]
-            edges[src] = newlst
+            if newlst:
+                edges[src] = newlst
         edges['@in%d' % i] = [src]
 
     for i, dest in enumerate(dests):
