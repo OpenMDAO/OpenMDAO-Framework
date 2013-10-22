@@ -48,8 +48,8 @@ class CompWithVarTree(Component):
 
         self.J = ones((2,3))
         self.J[:,0] *= 2 
-        self.J[:,0] *= 3
-        self.J[:,0] *= 4
+        self.J[:,1] *= 3
+        self.J[:,2] *= 4
 
     def provideJ(self): 
         ins = ('ins.x.x1', 'ins.x.x2', 'ins.y')
@@ -57,10 +57,23 @@ class CompWithVarTree(Component):
 
         return ins, outs, self.J
 
+class CompWithVarTree2(Component): 
+    x1 = Float(iotype="in")
+    ins = VarTree(Tree3(), iotype="in")
+    outs = VarTree(Tree3(), iotype="out")
+    z = Float(iotype="out")
+
+    def execute(self): 
+        self.outs.z = 2*self.ins.z + 6*self.x1
+        self.z = 4*self.ins.z + 6*self.x1
+
+    def linearize(self): 
+        self.J = array([[2., 6.],[4., 6.]])
+
+    def provideJ(self): 
+        return ('ins.z', 'x1'), ('outs.z', 'z')
+
         
-
-
-
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
 class SimpleDriver(Driver):
@@ -82,6 +95,8 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.driver.add_parameter('comp.ins.y', low=-1000, high=1000)
 
         top.driver.add_objective('comp.z')
+        top.driver.add_constraint('comp.outs.z < 0')
+        top.driver.add_constraint('comp.ins.x1 +  comp.ins.x2 + < 0')
 
         top.comp.ins.x.x1 = 3
         top.comp.ins.x.x2 = 3
@@ -94,16 +109,65 @@ class TestDerivativeVarTree(unittest.TestCase):
                top.driver.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
+
         
-        J_fd = top.driver.workflow.calc_gradient(inputs, obj, fd=True)
-        J_forward = top.driver.workflow.calc_gradient(inputs, obj, mode="forward")
-        J_reverse = top.driver.workflow.calc_gradient(inputs, obj, mode="adjoint")
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, fd=True)
+        J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         
-        J_true = array([[2., 3., 4.],[2., 3., 4.]])
+        J_true = array([[2., 3., 4.], #obj
+                        [2., 3., 4.], #c1 
+                         2., 3., 0.]]) #c2
 
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
+
+    def _test_check_deriv_vartrees(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp', CompWithVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
+        top.driver.add_parameter('comp.ins.x.x2', low=-1000, high=1000)
+        top.driver.add_parameter('comp.ins.y', low=-1000, high=1000)
+
+        top.driver.add_objective('comp.z')
+
+        top.comp.ins.x.x1 = 3
+        top.comp.ins.x.x2 = 3
+        top.comp.ins.y = 5
+        top.comp.run()
+
+        #this is throwing an error but should not be!
+        top.driver.workflow.check_gradient(outputs=["comp.outs.z"])
+
+    def test_varTree_connections_whole_tree(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp1', CompWithVarTree())
+        top.add('comp2', CompWithVarTree())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.driver.add_parameter('comp1.ins.x.x1', low=-1000, high=1000)
+        top.driver.add_parameter('comp1.ins.x.x2', low=-1000, high=1000)
+        top.driver.add_parameter('comp1.ins.y', low=-1000, high=1000)
+
+        top.driver.connect('comp1.outs', 'comp2.ins')
+
+        top.driver.add_objective('comp2.z')
+        top.driver.add_constraint('comp1.outs.z+comp1.ins.x1 < 0')
+
+        J_true = array([[8., 12., 16.],  #obj
+                        [2., 0., 4.]]) #c1 
+                       
+        assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
+
+
+
 
 
 
