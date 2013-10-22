@@ -390,7 +390,7 @@ class DependencyGraph(nx.DiGraph):
             raise RuntimeError("'%s' is already connected to '%s'" %
                                   (conns[0][1], conns[0][0]))
 
-    def connect(self, scope, srcpath, destpath, config_change=True):
+    def connect(self, scope, srcpath, destpath, config_change=True, check=True):
         """Create a connection between srcpath and destpath,
         and create any necessary additional connections to base
         variable nodes.  For example, connecting A.b[3] to
@@ -409,19 +409,20 @@ class DependencyGraph(nx.DiGraph):
         path = [(base_src, base_src)]
 
         if srcpath != base_src:
-            path.append((srcpath, base_src))#, src_validity))
+            path.append((srcpath, base_src))
 
         if destpath != base_dest:
-            path.append((destpath, base_dest))#, True))
+            path.append((destpath, base_dest))
 
-        path.append((base_dest, base_dest))#, True))
+        path.append((base_dest, base_dest))
 
-        self.check_connect(srcpath, destpath)
+        if check:
+            self.check_connect(srcpath, destpath)
 
         for i in range(len(path)):
-            var, base = path[i]#, valid = path[i]
+            var, base = path[i]
             if var not in self:
-                self.add_node(var, basevar=base, valid=True)#valid=valid) # subvar
+                self.add_node(var, basevar=base, valid=True)
             if i > 0:
                 self.add_edge(path[i-1][0], var)
 
@@ -439,17 +440,26 @@ class DependencyGraph(nx.DiGraph):
         if config_change:
             self.config_changed()
 
-    def add_subvar_input(self, subvar):
+    def add_subvar(self, subvar):
         """ Adds a subvar node for a model input. This node is used to
         represent parameters that are array slices, mainly for metadata
         storage and for defining edge iterators, but not for workflow
         execution.
         """
         base = base_var(self, subvar)
-        if not is_input_node(base):
-            raise RuntimeError("add_subvar_input called with a non-input var")
+        if base not in self:
+            raise RuntimeError("can't find basevar '%s' in graph" % base)
         self.add_node(subvar, basevar=base, valid=True)
-        self.add_edge(base, subvar)
+        if is_boundary_node(self, base):
+            if is_input_node(self, base):
+                self.add_edge(base, subvar)
+            else:
+                self.add_edge(subvar, base)
+        else:  # it's a var of a child component
+            if is_input_node(self, base):
+                self.add_edge(subvar, base)
+            else:
+                self.add_edge(base, subvar)
     
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
@@ -1080,7 +1090,7 @@ def get_inner_edges(graph, srcs, dests):
         if isinstance(s, basestring):
             newsrcs.append(s)
         else:
-            newsrcs.extend(s)
+            newsrcs.extend(list(s))
 
     edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
 
@@ -1088,18 +1098,23 @@ def get_inner_edges(graph, srcs, dests):
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
 
     for i,src in enumerate(srcs):
-        if not isinstance(src, basestring):  # parameter group
+        if isinstance(src, basestring): 
+            edges['@in%d' % i] = [src]
+        else:  # param group  
             newlst = []
             for s in src:
                 if s in edges:
-                    newlst.extend(edges[s])
+                    newlst.extend(list(edges[s]))
                     del edges[s]
             if newlst:
                 edges[src] = newlst
-        edges['@in%d' % i] = [src]
+            edges['@in%d' % i] = list(src)
 
     for i, dest in enumerate(dests):
-        edges[dest] = ['@out%d' % i]
+        if isinstance(dest, basestring):
+            edges[dest] = ['@out%d' % i]
+        else:
+            edges[dest[0]] = ['@out%d' % i]
 
     return edges
 

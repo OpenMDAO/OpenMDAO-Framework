@@ -332,7 +332,7 @@ class SequentialWorkflow(Workflow):
             
         # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
-            self.scope._depgraph.add_subvar_input(node)
+            self.scope._depgraph.add_subvar(node)
             meta = self.scope._depgraph.node[node]
         
         if 'bounds' not in meta:
