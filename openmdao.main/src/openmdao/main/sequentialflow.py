@@ -297,7 +297,6 @@ class SequentialWorkflow(Workflow):
             val = self.scope.get(src)
             width = flattened_size(src, val, self.scope)
             self.bounds[edge] = (nEdge, nEdge+width)
-            self.set_bounds(src, (nEdge, nEdge+width))
             
             # ApplyJ needs the individual cross-references in bounds
             if isinstance(edge[1], tuple):
