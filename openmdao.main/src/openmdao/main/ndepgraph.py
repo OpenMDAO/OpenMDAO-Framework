@@ -441,13 +441,15 @@ class DependencyGraph(nx.DiGraph):
 
     def add_subvar_input(self, subvar):
         """ Adds a subvar node for a model input. This node is used to
-        represent parameters that are array slices, mainly for metadat
+        represent parameters that are array slices, mainly for metadata
         storage and for defining edge iterators, but not for workflow
         execution.
         """
-        base = subvar.split('[')[0]
+        base = base_var(self, subvar)
+        if not is_input_node(base):
+            raise RuntimeError("add_subvar_input called with a non-input var")
         self.add_node(subvar, basevar=base, valid=True)
-        self.add_edge(subvar, base)
+        self.add_edge(base, subvar)
     
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
