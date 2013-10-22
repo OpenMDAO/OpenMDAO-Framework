@@ -1058,10 +1058,12 @@ def get_inner_edges(graph, srcs, dests):
 
     # replace inputs-as-outputs with their sources (if any)
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
-    
 
-    edges['@in'] = srcs[:]
-    edges['@out'] = dests[:]
+    for i,src in enumerate(srcs):
+        edges['@in%d' % i] = [src]
+
+    for i, dest in enumerate(dests):
+        edges[dest] = ['@out%d' % i]
 
     return edges
 
