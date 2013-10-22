@@ -71,6 +71,9 @@ def _sub_or_super(s1, s2):
 #   driver  means it's a Driver node
 #   iotype  is present in var and subvar nodes and indicates i/o direction
 #   boundary means it's a boundary variable node
+#   valid   indicates validity of the node. can be True or False
+#   invalidate  indicates whether a comp node has partial or full invalidation. allowed
+#               values are ['partial', 'full']
 #
 # EDGES:
 #   conn    means that the edge is a connection that was specified
@@ -893,7 +896,6 @@ class DependencyGraph(nx.DiGraph):
             for var in self._all_child_vars(childname, direction='out'):
                 data[var]['valid'] = True
 
-
     def update_boundary_outputs(self, scope):
         """Update destination vars on our boundary."""
         for out in self.get_boundary_outputs():
@@ -996,79 +998,134 @@ def find_all_connecting(graph, start, end):
 
     return fwdset.intersection(backset)
 
+def _get_inner_edges(G, srcs, dests):
+    """Return a set of connection edges between the
+    given sources and destinations.
+
+    srcs: iter of (str or tuple of str)
+        Starting var or subvar nodes
+
+    dests: iter of str
+        Ending var or subvar nodes
+
+    """
+    # Based on dfs_edges from networkx
+
+    nodes=srcs
+    cstack = []  # stack of candidate edges
+    edges = set()
+    marked = set(dests)
+
+    visited=set()
+    for start in nodes:
+        if start in visited:
+            continue
+        visited.add(start)
+        stack = [(start, iter(G[start]))]
+        while stack:
+            parent,children = stack[-1]
+            try:
+                child = next(children)
+                if is_connection(G, parent, child):
+                   cstack.append((parent, child))
+                if child in marked:
+                    edges.update(cstack)
+                    if parent not in marked:
+                        marked.update([p for p,c in stack])
+                elif child not in visited:
+                    visited.add(child)
+                    stack.append((child, iter(G[child])))
+            except StopIteration:
+                if cstack and cstack[-1][1] == parent:
+                    cstack.pop()
+                stack.pop()
+
+    return edges
+
+def get_inner_edges(graph, srcs, dests):
+    """Return a dict containing all connections in the graph
+    between the sources and the destinations, in the following
+    form:
+
+        {src1: [dest1], src2: [dest2,dest3], ...}
+
+    For sources that are actually inputs, the source will be replaced
+    with the source of the input.
+
+    """
+
+    edges = edges_to_dict(_get_inner_edges(graph, srcs, dests))
+
+    # replace inputs-as-outputs with their sources (if any)
+    inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
+    
+
+    edges['@in'] = srcs[:]
+    edges['@out'] = dests[:]
+
+    return edges
 
 # utility/debugging functions
 
+def edges_to_dict(edges):
+    """Take an iterator of edges and return a dict of sources mapped to lists
+    of destinations.
+    """
+    dct = {}
+    for u, v in edges:
+        dct.setdefault(u, []).append(v)
+    return dct
+
 def nodes_matching_all(graph, **kwargs):
-    """Return nodes matching all kwargs names and values. For
-    example, nodes_matching_all(G, valid=True, boundary=True) would
+    """Return an iterator over nodes matching all kwargs names and values. 
+    For example, nodes_matching_all(G, valid=True, boundary=True) would
     return a list of all nodes that are marked as valid that
     are also boundary nodes.
     """
-    nodes = []
-    for n,d in graph.node.items():
+    for n,data in graph.node.iteritems():
         for arg,val in kwargs.items():
-            try:
-                if d[arg] != val:
-                    break
-            except KeyError:
+            if data.get(arg, _missing) != val:
                 break
         else:
-            nodes.append(n)
-    return nodes
+            yield n
 
 def nodes_matching_some(graph, **kwargs):
-    """Return nodes matching at least one of the kwargs names 
-    and values. For
+    """Return an iterator over nodes matching at least one of 
+    the kwargs names and values. For
     example, nodes_matching_some(G, valid=True, boundary=True) would
     return a list of all nodes that either are marked as valid or nodes
     that are boundary nodes, or nodes that are both.
     """
-    nodes = []
-    for n,d in graph.node.items():
+    for n,data in graph.node.iteritems():
         for arg,val in kwargs.items():
-            try:
-                if d[arg] == val:
-                    nodes.append(n)
-                    break
-            except KeyError:
-                pass
-    return nodes
+            if data.get(arg, _missing) == val:
+                yield n
+                break
 
 def edges_matching_all(graph, **kwargs):
-    """Return edges matching all kwargs names and values. For
-    example, edges_matching_all(G, foo=True, bar=True) would
+    """Return an iterator over edges matching all kwargs names and 
+    values. For example, edges_matching_all(G, foo=True, bar=True) would
     return a list of all edges that are marked with True
     values of both foo and bar.
     """
-    edges = []
     for u,v,d in graph.edges(data=True):
         for arg,val in kwargs.items():
-            try:
-                if d[arg] != val:
-                    break
-            except KeyError:
+            if d.get(arg, _missing) != val:
                 break
         else:
-            edges.append((u,v))
-    return edges
+            yield (u,v)
 
 def edges_matching_some(graph, **kwargs):
-    """Return edges matching some kwargs names and values. For
-    example, edges_matching_some(G, foo=True, bar=True) would
-    return a list of all edges that are marked with True
+    """Return an iterator over edges matching some kwargs names 
+    and values. For example, edges_matching_some(G, foo=True, bar=True) 
+    would return a list of all edges that are marked with True
     values of either foo or bar or both.
     """
-    edges = []
     for u,v,d in graph.edges(data=True):
         for arg,val in kwargs.items():
-            try:
-                if d[arg] == val:
-                    edges.append((u,v))
-                    break
-            except KeyError:
-                pass
-    return edges
+            if d.get(arg, _missing) == val:
+                yield (u,v)
+                break
 
 def get_valids(graph, val, prefix=None):
     """Returns all nodes with validity matching the
@@ -1078,7 +1135,6 @@ def get_valids(graph, val, prefix=None):
         return [n for n in nodes_matching_all(graph, valid=val)
                     if n.startswith(prefix)]
     return sorted(nodes_matching_all(graph, valid=val))
-
 
 def dump_valid(graph, filter=None, stream=None):
     dct = {}
