@@ -96,7 +96,7 @@ def calc_gradient(wflow, inputs, outputs):
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual()
+    nEdge = wflow.initialize_residual(inputs, outputs)
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
@@ -141,11 +141,11 @@ def calc_gradient(wflow, inputs, outputs):
     for param in inputs:
 
         if ('@in', param) in wflow.bounds:
-            i1, i2 = wflow.bounds[('@in', param)]
+            i1, i2 = wflow.get_bounds(param)
         else:
             if isinstance(param, tuple):
                 param = param[0]
-            i1, i2 = wflow.bounds[('@in', param.split('[')[0])]
+            i1, i2 = wflow.get_bounds(param.split('[')[0])
             
         for irhs in range(i1, i2):
 
@@ -177,7 +177,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual()
+    nEdge = wflow.initialize_residual(inputs, outputs)
     A = LinearOperator((nEdge, nEdge),
                        matvec=wflow.matvecREV,
                        dtype=float)

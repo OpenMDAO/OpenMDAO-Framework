@@ -16,7 +16,8 @@ from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import find_related_pseudos, is_input_node
+from openmdao.main.ndepgraph import find_related_pseudos, is_input_node, \
+                                    get_inner_edges
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -46,7 +47,6 @@ class SequentialWorkflow(Workflow):
         self._hidden_edges = set()
         self._driver_edges = None
         self.res = None
-        self.bounds = None
         
         self.derivative_iterset = None
         self._collapsed_graph = None
@@ -279,12 +279,11 @@ class SequentialWorkflow(Workflow):
         self._driver_edges = sub_edge
         return self._driver_edges
         
-    def initialize_residual(self):
+    def initialize_residual(self, inputs, outputs):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
         nEdge = 0
-        self.bounds = {}
         for edge in self.get_interior_edges():
             if edge[0] == '@in':
                 src = edge[1]
@@ -294,15 +293,12 @@ class SequentialWorkflow(Workflow):
                     src = src[0]
             else:
                 src = edge[0]
+                
             val = self.scope.get(src)
             width = flattened_size(src, val, self.scope)
-            self.bounds[edge] = (nEdge, nEdge+width)
             
-            # ApplyJ needs the individual cross-references in bounds
             if isinstance(edge[1], tuple):
                 for src in edge[1]:
-                    src_name = (edge[0], src)
-                    self.bounds[src_name] = (nEdge, nEdge+width)
                     self.set_bounds(src, (nEdge, nEdge+width))
             else:
                 self.set_bounds(src, (nEdge, nEdge+width))
@@ -314,6 +310,8 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
+        print get_inner_edges(self.scope._depgraph, inputs, outputs)
+        print self.get_interior_edges()
         return nEdge
 
     def get_bounds(self, node):
@@ -344,7 +342,7 @@ class SequentialWorkflow(Workflow):
             src_val = flattened_value(src, src_val).reshape(-1, 1)
             target_val = self.scope.get(target)
             target_val = flattened_value(target, target_val).reshape(-1, 1)
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             self.res[i1:i2] = src_val - target_val
 
         return self.res
@@ -358,7 +356,7 @@ class SequentialWorkflow(Workflow):
         """
         for edge in self._severed_edges:
             src, target = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             old_val = self.scope.get(target)
 
             if isinstance(old_val, float):
@@ -454,7 +452,7 @@ class SequentialWorkflow(Workflow):
         edges = self.get_interior_edges()
         for edge in edges:
             src, targets = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             
             if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
@@ -526,7 +524,7 @@ class SequentialWorkflow(Workflow):
                     p_edges = [p_edges]
                     
                 for p_edge in p_edges:
-                    i1, i2 = self.bounds[edge]
+                    i1, i2 = self.get_bounds(src)
                     comp_name, dot, var_name = p_edge.partition('.')
                     
                     # Free-floating variables
@@ -559,7 +557,7 @@ class SequentialWorkflow(Workflow):
         #print inputs, '\n', outputs
         for edge in edges:
             src, target = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             
             if src == '@in':
                 # Extra eqs for parameters contribute a 1.0 on diag
@@ -573,7 +571,7 @@ class SequentialWorkflow(Workflow):
             if src in self._input_outputs:
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
-                    i3, i4 = self.bounds[ref_edge]
+                    i3, i4 = self.get_bounds(ref_edge[0])
                     result[i1:i2] += arg[i3:i4]
                 continue
                 
@@ -648,7 +646,7 @@ class SequentialWorkflow(Workflow):
         # Fill input dictionaries with values from input arg.
         for edge in edges:
             src, targets = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             
             if src != '@in' and src not in self._input_outputs:
                 comp_name, dot, var_name = src.partition('.')
@@ -716,7 +714,7 @@ class SequentialWorkflow(Workflow):
         
         for edge in edges:
             src, target = edge
-            i1, i2 = self.bounds[edge]
+            i1, i2 = self.get_bounds(src)
             
             # Input-input connections are not in the jacobians. We need
             # to add the contribution.
@@ -724,7 +722,7 @@ class SequentialWorkflow(Workflow):
                 
                 if src in input_input_xref:
                     ref_edge = input_input_xref[src]
-                    i3, i4 = self.bounds[ref_edge]
+                    i3, i4 = self.get_bounds(ref_edge[0])
                     result[i1:i2] = -arg[i1:i2]
                     result[i3:i4] = result[i3:i4] + arg[i1:i2]
                     
