@@ -573,14 +573,42 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
 
-    def test_add_subvar_input(self):
+    def test_add_subvar(self):
         
+        dep, scope = _make_graph(comps=['A','B'],
+                                 variables=[('b','in'),('c','out')],
+                                 connections=[],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+        
+        # component input
         subvar = 'B.b[1]'
-        self.assertTrue(subvar not in self.dep.node)
+        self.assertTrue(subvar not in dep.node)
+        dep.add_subvar(subvar)
+        self.assertTrue(subvar in dep.node)
+        self.assertTrue('B.b' in dep.successors(subvar))
         
-        self.dep.add_subvar_input(subvar)
-        self.assertTrue(subvar in self.dep.node)
-        self.assertTrue('B.b' in self.dep.succ[subvar])
+        # boundary input
+        subvar = 'b[1]'
+        self.assertTrue(subvar not in dep.node)
+        dep.add_subvar(subvar)
+        self.assertTrue(subvar in dep.node)
+        self.assertTrue('b' in dep.predecessors(subvar))
+        
+        # component output
+        subvar = 'B.c[1]'
+        self.assertTrue(subvar not in dep.node)
+        dep.add_subvar(subvar)
+        self.assertTrue(subvar in dep.node)
+        self.assertTrue('B.c' in dep.predecessors(subvar))
+        
+        # boundary output
+        subvar = 'c[1]'
+        self.assertTrue(subvar not in dep.node)
+        dep.add_subvar(subvar)
+        self.assertTrue(subvar in dep.node)
+        self.assertTrue('c' in dep.successors(subvar))
+        
           
 if __name__ == "__main__":
     unittest.main()
