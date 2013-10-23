@@ -564,6 +564,57 @@ def get_bounds(obj, input_keys, output_keys):
 
     return ibounds, obounds
 
+def flatten_slice(index, shape, name='ix', offset=0):
+    """ Return a string index that flattens an arbitrary slice denoted by
+    'index' into an matrix of shape 'shape'.
+    
+    index: string
+        OpenMDAO string index
+        
+    shape: tuple
+        Numpy style shape tuple
+        
+    name: string
+        Name for the returned var in the string, default is 'ix'
+        
+    offset: int
+        Starting index for target flat slice
+    """
+    
+    # Handle complicated slices that may have : or -1 in them
+    # We just use numpy index math to convert unravelable indices into
+    # index arrays so that we can ravel them to find the set of indices
+    # that we need to grab from J.
+    idx = index.replace(' ', '').replace('][', ',').strip(']')
+    if '-' in idx or ':' in idx:
+        
+        idx_list = idx.split(',')
+        indices = []
+        for index, size in zip(idx_list, shape):
+            temp = eval('arange(size)[%s]' % index)
+            if not isinstance(temp, ndarray):
+                temp = array([temp]) 
+            indices.append(temp)
+            
+        if len(indices) > 1:
+            indices = zip(*itertools.product(*indices))
+        ix = ravel_multi_index(indices, dims=shape) + offset
+        istring = name
+            
+    # Single index into a multi-D array
+    elif ',' in idx:
+        idx = eval(idx)
+        ix = ravel_multi_index(idx, shape) + offset
+        istring = '%s:%s+1' % (name, name)
+        
+    # Single index into a 1D array
+    else:
+        ix = int(idx) + offset
+        istring = '%s:%s+1' % (name, name)
+        
+    return istring, ix
+    
+
 def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     """ Return the subportion of the Jacobian that is valid for a particular\
     input and output slice.
@@ -592,91 +643,30 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     ish, osh: tuples
         Shapes of the original input and output variables before being 
         flattened.
-        
     """
     
     # J inputs
     if idx:
+        istring, ix = flatten_slice(idx, ish, offset=i1)
         
-        # Handle complicated slices that may have : or -1 in them
-        # We just use numpy index math to convert unravelable indices into
-        # index arrays so that we can ravel them to find the set of indices
-        # that we need to grab from J.
-        idx = idx.replace(' ', '').replace('][', ',').strip(']')
-        if '-' in idx or ':' in idx:
-            
-            idx_list = idx.split(',')
-            indices = []
-            for index, size in zip(idx_list, ish):
-                temp = eval('arange(size)[%s]' % index)
-                if not isinstance(temp, ndarray):
-                    temp = array([temp]) 
-                indices.append(temp)
-                
-            if len(indices) > 1:
-                indices = zip(*itertools.product(*indices))
-            i_rav_ind = ravel_multi_index(indices, dims=osh) + i1
-            istring = 'i_rav_ind'
-                
-        # Single index into a multi-D array
-        elif ',' in idx:
-            idx = eval(idx)
-            ix = ravel_multi_index(idx, ish) + i1
-            istring = 'ix:ix+1'
-            
-        # Single index into a 1D array
-        else:
-            ix = int(idx) + i1
-            istring = 'ix:ix+1'
-            
     # The entire array, already flat
     else:
         istring = 'i1:i2'
         
     # J Outputs
     if odx:
+        ostring, ox = flatten_slice(odx, osh, offset=o1, name='ox')
         
-        # Handle complicated slices that may have : or -1 in them
-        # We just use numpy index math to convert unravelable indices into
-        # index arrays so that we can ravel them to find the set of indices
-        # that we need to grab from J.
-        odx = odx.replace(' ', '').replace('][', ',').strip(']')
-        if '-' in odx or ':' in odx:
-            
-            idx_list = odx.split(',')
-            indices = []
-            for index, size in zip(idx_list, osh):
-                temp = eval('arange(size)[%s]' % index)
-                if not isinstance(temp, ndarray):
-                    temp = array([temp]) 
-                indices.append(temp)
-                    
-            if len(indices) > 1:
-                indices = zip(*itertools.product(*indices))
-                
-            o_rav_ind = ravel_multi_index(indices, dims=osh) + o1
-            ostring = 'o_rav_ind'
-            
-        # Single index into a multi-D array
-        elif ',' in odx:
-            odx = eval(odx)
-            ox = ravel_multi_index(odx, osh) + o1
-            ostring = 'ox:ox+1'
-            
-        # Single index into a 1D array
-        else:
-            ox = int(odx) + o1
-            ostring = 'ox:ox+1'
-            
     # The entire array, already flat
     else:
         ostring = 'o1:o2'
     
-    if ostring == 'o_rav_ind' and istring == 'i_rav_ind':
-        Jsub = eval('J[vstack(%s), hstack(%s)]' % (ostring, istring))
-    else:        
-        Jsub = eval('J[%s, %s]' % (ostring, istring))
-    return Jsub
+    if ':' not in ostring:
+        ostring = 'vstack(%s)' % ostring
+    if ':' not in istring:
+        istring = 'hstack(%s)' % istring
+        
+    return eval('J[%s, %s]' % (ostring, istring))
     
     
 class FiniteDifference(object):
