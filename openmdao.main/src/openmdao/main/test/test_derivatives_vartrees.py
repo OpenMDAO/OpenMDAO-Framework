@@ -36,7 +36,7 @@ class Tree3(VariableTree):
 class CompWithVarTree(Component): 
 
     ins = VarTree(Tree2(), iotype="in")
-    outs = VarTree(Tree3(), iotype="in")
+    outs = VarTree(Tree3(), iotype="out")
     z = Float(iotype='out')
 
     def execute(self): 
@@ -96,7 +96,7 @@ class TestDerivativeVarTree(unittest.TestCase):
 
         top.driver.add_objective('comp.z')
         top.driver.add_constraint('comp.outs.z < 0')
-        top.driver.add_constraint('comp.ins.x1 +  comp.ins.x2 + < 0')
+        top.driver.add_constraint('(comp.ins.x.x1 +  comp.ins.x.x2) < 0')
 
         top.comp.ins.x.x1 = 3
         top.comp.ins.x.x2 = 3
@@ -117,13 +117,13 @@ class TestDerivativeVarTree(unittest.TestCase):
         
         J_true = array([[2., 3., 4.], #obj
                         [2., 3., 4.], #c1 
-                         2., 3., 0.]]) #c2
+                        [2., 3., 0.]]) #c2
 
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
-    def _test_check_deriv_vartrees(self): 
+    def test_check_deriv_vartrees(self): 
 
         top = set_as_top(Assembly())
         top.add('comp', CompWithVarTree())
@@ -146,8 +146,9 @@ class TestDerivativeVarTree(unittest.TestCase):
     def test_varTree_connections_whole_tree(self): 
 
         top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
         top.add('comp1', CompWithVarTree())
-        top.add('comp2', CompWithVarTree())
+        top.add('comp2', CompWithVarTree2())
         top.driver.workflow.add(['comp1', 'comp2'])
 
         top.driver.add_parameter('comp1.ins.x.x1', low=-1000, high=1000)
