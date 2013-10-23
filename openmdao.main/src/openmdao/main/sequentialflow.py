@@ -5,9 +5,9 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 import sys
 
-from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      flattened_names, \
-                                      calc_gradient, calc_gradient_adjoint, \
+from openmdao.main.array_helpers import flattened_size, flattened_value, \
+                                        flattened_names
+from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
                                       applyMinvT, applyMinv
 from openmdao.main.exceptions import RunStopped
