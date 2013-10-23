@@ -4,7 +4,7 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.typegroups import real_types, int_types
 
 try:
-    from numpy import array, ndarray, ones
+    from numpy import array, ndarray, ndindex, ones
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
@@ -242,6 +242,11 @@ class Parameter(ParameterBase):
                self.get_config()
 
     @property
+    def names(self):
+        """A one element list containing the name of this parameter."""
+        return [self.name]
+
+    @property
     def size(self):
         """Total scalar items in this parameter."""
         return 1
@@ -332,6 +337,11 @@ class ParameterGroup(object):
         return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
                (self.targets, self.low, self.high, self.fd_step, self.scaler,
                 self.adder, self.start, self.name)
+
+    @property
+    def names(self):
+        """A one element list containing the name of this parameter."""
+        return [self.name]
 
     @property
     def size(self):
@@ -597,6 +607,15 @@ class ArrayParameter(ParameterBase):
                % self.get_config()
 
     @property
+    def names(self):
+        """A list containing the names of this parameter's scalar items."""
+        names = []
+        for index in ndindex(*self.shape):
+            index = ''.join(['[%s]' % i for i in index])
+            names.append("'%s%s'" % (self.name, index))
+        return names
+
+    @property
     def size(self):
         """Total scalar items in this parameter."""
         return self._size
@@ -636,7 +655,7 @@ class ArrayParameter(ParameterBase):
         self._expreval.set(self._transform(value), scope)
 
     def copy(self):
-        """Return a copy of this ParameterArrray."""
+        """Return a copy of this ParameterArray."""
         return ArrayParameter(self.target,
                               high=self.high, low=self.low,
                               scaler=self.scaler, adder=self.adder,
