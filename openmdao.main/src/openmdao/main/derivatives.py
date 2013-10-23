@@ -660,7 +660,7 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         # Single index into a multi-D array
         elif ',' in odx:
             odx = eval(odx)
-            ox = ravel_multi_index(odx, ish) + o1
+            ox = ravel_multi_index(odx, osh) + o1
             ostring = 'ox:ox+1'
             
         # Single index into a 1D array

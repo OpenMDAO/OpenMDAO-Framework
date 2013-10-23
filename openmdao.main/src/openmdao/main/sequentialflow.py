@@ -220,13 +220,6 @@ class SequentialWorkflow(Workflow):
         pseudo-assemblies, then those interior edges are excluded.
         """
         if self._interior_edges is None:
-            #required_floating_vars = []
-            #for src, target in self._additional_edges:
-                #if src=='@in' and '.' not in target:
-                    #required_floating_vars.append(target)
-                    
-                #elif target=='@out' and '.' not in src:
-                    #required_floating_vars.append(src)
                    
             graph = self._parent.workflow_graph()
             comps = [comp.name for comp in self.__iter__()]# + \
@@ -246,15 +239,6 @@ class SequentialWorkflow(Workflow):
                     continue
                 if is_input_node(graph, src):
                     self._input_outputs.add(src)
-                #compname, _, var = src.partition('.')
-                #if var:
-                    #var = var.split('[')[0]
-                    #comp = self.scope.get(compname)
-                    #if var in comp.list_inputs():
-                        #self._input_outputs.add(src)
-                #else:
-                    ## Free-floating var in assembly.
-                    #self._input_outputs.add(src)
                     
             self._input_outputs = list(self._input_outputs)
                     
@@ -319,6 +303,9 @@ class SequentialWorkflow(Workflow):
                 for src in edge[1]:
                     src_name = (edge[0], src)
                     self.bounds[src_name] = (nEdge, nEdge+width)
+                    self.set_bounds(src, (nEdge, nEdge+width))
+            else:
+                self.set_bounds(src, (nEdge, nEdge+width))
                     
             nEdge += width
 
@@ -329,6 +316,25 @@ class SequentialWorkflow(Workflow):
 
         return nEdge
 
+    def get_bounds(self, node):
+        """ Return a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        
+        return self.scope._depgraph.node[node][self._parent.itername]
+        
+    def set_bounds(self, node, bounds):
+        """ Set a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        try:
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+            
+        # Array indexed parameter nodes are not in the graph, so add them.
+        except KeyError:
+            self.scope._depgraph.add_subvar_input(node)
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+        
     def calculate_residuals(self):
         """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
