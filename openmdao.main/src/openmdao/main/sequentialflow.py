@@ -6,7 +6,7 @@ import networkx as nx
 import sys
 
 from openmdao.main.array_helpers import flattened_size, flattened_value, \
-                                        flattened_names
+                                        flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
                                       applyMinvT, applyMinv, edge_dict_to_comp_list
@@ -294,25 +294,39 @@ class SequentialWorkflow(Workflow):
                     self.scope._depgraph.add_subvar(varname)
                 
         self._edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
-        
+        basevars = []
         for src, targets in self._edges.iteritems():
+            
+            # Only need to grab the source (or first target for param) to
+            # figure out the size for the residual vector
             if '@in' in src:
                 src = targets
-                
                 if isinstance(src, list):
                     src = src[0]
                 
-            val = self.scope.get(src)
-            width = flattened_size(src, val, self.scope)
-            self.set_bounds(src, (nEdge, nEdge+width))
-            
-            if isinstance(targets, list):
-                for target in targets:
-                    if '@out' not in target:
-                        self.set_bounds(target, (nEdge, nEdge+width))
+            if '[' in src and src.split('[')[0] in basevars:
+                print "Found a basevar", src
+                base, _, idx = src.partition('[')
+                offset, _ = self.get_bounds(base)
+                shape = self.scope.get(base).shape
+                istring, ix = flatten_slice(idx, shape, offset=offset, name='ix')
+                bound = (istring, ix)
+                print bound
             else:
-                if '@out' not in targets:
-                    self.set_bounds(targets, (nEdge, nEdge+width))
+                val = self.scope.get(src)
+                width = flattened_size(src, val, self.scope)
+                bound = (nEdge, nEdge+width)
+                
+            self.set_bounds(src, bound)
+            basevars.append(src)
+            
+            if not isinstance(targets, list):
+                targets = [targets]
+                
+            # Putting the metadata in the targets makes life easier later on
+            for target in targets:
+                if '@out' not in target:
+                    self.set_bounds(target, bound)
                     
             nEdge += width
 
@@ -331,7 +345,16 @@ class SequentialWorkflow(Workflow):
         residual vector that correspond to a given variable name in this
         workflow."""
         itername = 'top.'+self._parent.itername
-        return self.scope._depgraph.node[node]['bounds'][itername]
+        i1, i2 = self.scope._depgraph.node[node]['bounds'][itername]
+        
+        # Handle index slices
+        if isinstance(i1, str):
+            if ':' in i1:
+                return i2, i2+1
+            else:
+                return i2, 0
+            
+        return i1, i2
         
     def set_bounds(self, node, bounds):
         """ Set a tuple containing the start and end indices into the
@@ -484,7 +507,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
                 
-        #print arg, result
+        print arg, result
         return result
         
     def matvecFWD_old(self, arg):
@@ -1015,8 +1038,13 @@ class SequentialWorkflow(Workflow):
         in this workflow."""
 
         self._stop = False
-        for node in self.derivative_iter():
-            node.calc_derivatives(first, second, savebase, extra_in, extra_out)
+        
+        comps = edge_dict_to_comp_list(self._edges)
+        for compname, data in comps.iteritems():
+            node = self.scope.get(compname)
+            inputs = data['inputs']
+            outputs = data['inputs']
+            node.calc_derivatives(first, second, savebase, inputs, outputs)
             if self._stop:
                 raise RunStopped('Stop requested')
 

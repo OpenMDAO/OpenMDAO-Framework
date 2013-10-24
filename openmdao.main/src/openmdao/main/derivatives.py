@@ -86,13 +86,16 @@ def calc_gradient(wflow, inputs, outputs):
     num_out = 0
     for item in outputs:
         i1, i2 = wflow.get_bounds(item)
-        num_out += i2-i1
+        if isinstance(i1, list):
+            num_out += len(i1)
+        else:
+            num_out += i2-i1
 
     J = zeros((num_out, num_in))
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
+    wflow.calc_derivatives(first=True)
 
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -115,7 +118,10 @@ def calc_gradient(wflow, inputs, outputs):
             i = 0
             for item in outputs:
                 k1, k2 = wflow.get_bounds(item)
-                J[i:i+(k2-k1), j] = dx[k1:k2]
+                if isinstance(k1, list):
+                    J[i:i+(len(k1)), j] = eval('dx[%s]') % k1
+                else:
+                    J[i:i+(k2-k1), j] = dx[k1:k2]
                 i += k2-k1
 
             j += 1
@@ -152,7 +158,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
    
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True, extra_in=inputs, extra_out=outputs)
+    wflow.calc_derivatives(first=True)
 
     # Adjoint mode, solve linear system for each output
     j = 0
