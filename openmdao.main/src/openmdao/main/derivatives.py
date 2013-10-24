@@ -253,7 +253,7 @@ def applyJ(obj, arg, result):
     function hook "apply_deriv".
     """
     for key in result:
-        result[key] = -arg[key]*0.0
+        result[key] = -arg[key]
 
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.

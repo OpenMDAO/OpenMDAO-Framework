@@ -1059,7 +1059,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                                    outputs=['comp5.y1', 'comp4.y3'],
                                                    mode='adjoint')
         
-        print J
         assert_rel_error(self, J[0, 0], 61.0, .001)
         assert_rel_error(self, J[1, 0], 126.0, .001)
         
@@ -1574,7 +1573,6 @@ class Testcase_applyJT(unittest.TestCase):
             arg[j] = 1.0
             Jt[:, j] = top.driver.workflow.matvecREV(arg)
             arg[j] = 0.0
-            
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
         
