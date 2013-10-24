@@ -9,7 +9,7 @@ from openmdao.main.array_helpers import flattened_size, flattened_value, \
                                         flattened_names
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
-                                      applyMinvT, applyMinv
+                                      applyMinvT, applyMinv, edge_dict_to_comp_list
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
@@ -310,8 +310,10 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
+        print 'old iter:  ', self.get_interior_edges()
+        edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
         print 'iterator:  ', get_inner_edges(self.scope._depgraph, inputs, outputs)
-        print 'old one:  ', self.get_interior_edges()
+        print edge_dict_to_comp_list(edges)
         return nEdge
 
     def get_bounds(self, node):
