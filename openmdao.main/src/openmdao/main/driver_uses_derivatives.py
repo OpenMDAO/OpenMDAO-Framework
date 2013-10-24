@@ -15,8 +15,8 @@ class DriverUsesDerivatives(Driver):
     def __init__(self, *args, **kwargs):
         """ Deprecated."""
         
-        logger.warning('DriverUsesDerivatives is deprecated. You can ' + 
-                        'use Component instead.')
+        logger.warning('DriverUsesDerivatives is deprecated. You can '
+                       'use Driver instead.')
         
         super(DriverUsesDerivatives, self).__init__(*args, **kwargs)        
         

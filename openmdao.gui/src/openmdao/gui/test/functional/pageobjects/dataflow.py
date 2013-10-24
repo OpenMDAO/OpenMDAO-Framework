@@ -78,6 +78,19 @@ class DataflowFigure(BasePageObject):
         return self.root.value_of_css_property('border')
 
     @property
+    def state(self):
+        """ Exec state of this component. """
+        border = self.border
+        if ('rgb(255, 0, 0)' in border):
+            return 'INVALID'
+        elif ('rgb(0, 255, 0)' in border):
+            return 'VALID'
+        elif ('rgb(0, 0, 255)' in border):
+            return 'RUNNING'
+        else:
+            return 'UNKNOWN'
+
+    @property
     def background_color(self):
         """ Figure background-color property. """
         return self.root.value_of_css_property('background-color')
@@ -91,7 +104,8 @@ class DataflowFigure(BasePageObject):
         top = int(top[0:-2])  # Drop 'px'.
         return (left, top)
 
-    def editor_page(self, double_click=True, base_type='Component', version=ComponentPage.Version.OLD):
+    def editor_page(self, double_click=True, base_type='Component',
+                    version=ComponentPage.Version.OLD):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
         if double_click:
@@ -105,7 +119,8 @@ class DataflowFigure(BasePageObject):
         elif base_type == 'Driver':
             return DriverPage(self.browser, self.port, (By.ID, editor_id))
         else:
-            return ComponentPage(self.browser, self.port, (By.ID, editor_id), version=version)
+            return ComponentPage(self.browser, self.port, (By.ID, editor_id),
+                                 version=version)
 
     def properties_page(self):
         """ Return :class:`PropertiesPage` for this component. """
@@ -263,6 +278,6 @@ def find_dataflow_component_names(page):
                 if n_headers == n_found:
                     return [h.text for h in dataflow_component_headers]
             n_found = n_headers
-    else:
-        logging.error('get_dataflow_component_names: n_found %s', n_found)
-        return names
+
+    logging.error('get_dataflow_component_names: n_found %s', n_found)
+    return names

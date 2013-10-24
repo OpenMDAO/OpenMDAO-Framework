@@ -594,6 +594,41 @@ class IHasParameters(Interface):
              the len() function.
         """
 
+    def total_parameters(self):
+        """Returns the total number of values to be set."""
+
+    def eval_parameters(self, scope=None, dtype='d'):
+        """Return evaluated parameter values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_lower_bounds(self, dtype='d'):
+        """Return lower bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_upper_bounds(self, dtype='d'):
+        """Return upper bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_fd_steps(self, dtype='d'):
+        """Return fd_step values, they may include None.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if it's valid to have None for a step size).
+        """
+
 
 class IHasEvents(Interface):
     def add_event(name):
@@ -644,7 +679,7 @@ class IHasEqConstraints(Interface):
     def get_eq_constraints():
         """Returns an ordered dictionary of equality constraint objects."""
 
-    def eval_eq_constraints():
+    def eval_eq_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values.
         The form of the constraint is transformed if necessary such that the 
         right-hand-side is 0.0.  The values returned are the evaluation of the
@@ -669,8 +704,8 @@ class IHasIneqConstraints(Interface):
     def get_ineq_constraints():
         """Returns an ordered dict of inequality constraint objects."""
 
-    def eval_ineq_constraints():
-        """Evaluates the constraint expressions and returns a list their values. Constraints
+    def eval_ineq_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values. Constraints
         are coerced into a form where the right-hand-side is 0., and the value returned
         is the evaluation of the left-hand-side.
         """
@@ -684,6 +719,11 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
+    def get_constraints():
+        """Returns an ordered dict of constraint objects."""
+
+    def eval_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values."""
 
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""

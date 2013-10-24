@@ -183,11 +183,15 @@ class HasObjectives(object):
         return objs
 
     def list_pseudocomps(self):
-        """Returns a list of pseudocompont names associcated with our
+        """Returns a list of pseudocomponent names associated with our
         parameters.
         """
         return [obj.pcomp_name for obj in self._objectives.values() 
                       if obj.pcomp_name]
+
+    def list_objective_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return ["%s.out0" % obj.pcomp_name for obj in self._objectives.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)

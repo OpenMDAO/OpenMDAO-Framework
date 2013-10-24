@@ -12,6 +12,8 @@ def main():
                       help='# trials to attempt')
     parser.add_option('-n', '--nonose', action='store_true',
                       help='if present, run outside of nose')
+    parser.add_option('-c', '--continue-after-error', action='store_true',
+                      help='if present, continue after error')
     options, files = parser.parse_args()
 
     args = ['-v']
@@ -51,7 +53,8 @@ def main():
                 msg = '        exit status %s' % status
                 print msg
                 logfile.write(msg+'\n')
-                sys.exit(status)
+                if not options.continue_after_error:
+                    sys.exit(status)
 
     logfile.close()
 
