@@ -244,7 +244,8 @@ class DepGraphTestCase(unittest.TestCase):
                          set([('A.c[2]','B.a.x.y'),('A.d.z','B.b[4]')]))
 
     def test_get_inner_edges(self):
-        self.assertEqual(_get_inner_edges(self.dep, ['b'], ['c']),
+        self.assertEqual(len(_get_inner_edges(self.dep, ['b'], ['c'])), 6)
+        self.assertEqual(set(_get_inner_edges(self.dep, ['b'], ['c'])),
                          set([('b[3]','A.b'),('A.d.z','B.b[4]'),('A.c[2]','B.a.x.y'),
                               ('B.c','C.a'),('B.d','C.b'),('C.c','c')]))
 
@@ -252,14 +253,15 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a'),('A.d','B.b')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['B.c']),
+        self.assertEqual(len(_get_inner_edges(dep, ['A.a'], ['B.c'])), 2)
+        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['B.c'])),
                          set([('A.c','B.a'),('A.d','B.b')]))
         
         dep, scope = _make_graph(comps=['A','B', 'C'],
                                  connections=[('A.c','B.a'),('A.d','B.b'),('B.d','C.a')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['C.c']),
+        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['C.c'])),
                          set([('A.c','B.a'),('A.d','B.b'),('B.d','C.a')]))
 
         # same output feeding two inputs
@@ -268,7 +270,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a','b'],
                                  outputs=['c','d'])
         edges = _get_inner_edges(dep, ['A.a'], ['C.c'])
-        self.assertEqual(edges, set([('A.d','B.a'),('A.d','B.b'),('B.d','C.a')]))
+        self.assertEqual(set(edges), set([('A.d','B.a'),('A.d','B.b'),('B.d','C.a')]))
         edict = edges_to_dict(edges)
         self.assertEqual(len(edict), 2)
         self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
@@ -286,8 +288,30 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.d','B.a'),('B.d','C.a'),('C.d','A.a')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(_get_inner_edges(dep, ['A.a'], ['C.d']),
+        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['C.d'])),
                          set([('A.d','B.a'),('B.d','C.a')]))
+
+    def test_inner_iter_inp_as_out(self):
+        dep, scope = _make_graph(comps=['A','B','P0','P1'],
+                                 connections=[('A.c','B.a[1]'),('A.d','B.a[2]'),
+                                              ('B.a','P1.b'),('B.a[1]','P0.b')],
+                                 inputs=['a','b'],
+                                 outputs=['c','d'])
+
+        try:
+            dep.connect(scope, 'B.b[1]', 'P1.a')
+        except Exception as err:
+            self.assertEqual(str(err), "subvar node 'B.b[1]' doesn't exist")
+        else:
+            self.fail("Exception expected")
+
+        edict = get_inner_edges(dep, ['A.a'], ['P0.b', 'P1.b'])
+        self.assertEqual(len(edict), 5)
+        self.assertEqual(edict['A.d'], ['B.a[2]', 'P1.b[2]'])
+        self.assertEqual(edict['A.c'], ['B.a[1]', 'P1.b[1]', 'P0.b'])
+        self.assertEqual(edict['@in0'], ['A.a'])
+        self.assertEqual(edict['P0.b'], ['@out0'])
+        self.assertEqual(edict['P1.b'], ['@out1'])
 
     def test_disconnect_comp(self):
         allcons = set(self.dep.list_connections())
