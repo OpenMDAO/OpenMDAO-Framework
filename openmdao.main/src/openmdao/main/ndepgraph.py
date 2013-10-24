@@ -1127,7 +1127,7 @@ def get_inner_edges(graph, srcs, dests):
         if isinstance(s, basestring):
             newsrcs.append(s)
         else:
-            newsrcs.extend(list(s))
+            newsrcs.extend(iter(s))
 
     edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
 
@@ -1138,16 +1138,19 @@ def get_inner_edges(graph, srcs, dests):
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
     for inp in inpsrcs:
         old_dests = edges[inp]
-        del edges[inp] # remove the old input-as-output edge(s)
 
         # if we have an input source basevar that has multiple inputs (subvars)
         # then we have to create fake subvars at the destination to store
         # derivative related metadata
         if is_basevar_node(graph, inp):
             subs = graph._all_child_vars(inp, direction='in')
+            if not subs:  # basevar with no input connections
+                continue
         else:
             subs = [inp]
 
+        del edges[inp] # remove the old input-as-output edge(s)
+        
         for sub in subs:
             newsrc = graph.predecessors(sub)[0]
             for dest in old_dests:
@@ -1173,6 +1176,10 @@ def get_inner_edges(graph, srcs, dests):
             if newlst:
                 edges[src] = newlst
             edges['@in%d' % i] = list(src)
+            
+        if src in edges:
+            edges['@in%d' % i].extend(edges[src])
+            del edges[src]
 
     # return fake edges for destination vars referenced by 
     # objectives and constraints
