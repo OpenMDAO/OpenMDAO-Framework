@@ -350,10 +350,8 @@ class SequentialWorkflow(Workflow):
         
         # Handle index slices
         if isinstance(i1, str):
-            if ':' in i1:
-                return i2, i2+1
-            else:
-                return i2, 0
+            i3 = i2+1 if ':' in i1 else 0
+            return i2, i3
             
         return i1, i2
         
@@ -508,203 +506,63 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
                 
-        print arg, result
-        return result
-        
-    def matvecFWD_old(self, arg):
-        '''Callback function for performing the matrix vector product of the
-        workflow's full Jacobian with an incoming vector arg.'''
-        #print arg.max()
-        #import sys
-        #sys.stdout.flush()
-
-        # Bookkeeping dictionaries
-        inputs = {}
-        outputs = {}
-
-        # Variables owned by containing assembly can be in our graph.
-        # The will be stored in 'parent'
-        inputs['parent'] = {}
-        outputs['parent'] = {}
-
-        # Start with zero-valued dictionaries containing keys for all inputs
-        pa_ref = {}
-        for comp in self.derivative_iter():
-            name = comp.name
-            inputs[name] = {}
-            outputs[name] = {}
-            
-            # Interior Edges use original names, so we need to know
-            # what comps are in a pseudo-assy.
-            if '~' in name:
-                for item in comp.list_all_comps():
-                    pa_ref[item] = name
-                    
-                # If our whole model is in a finite difference, then
-                # assembly variables should also be contained
-                if len(self.derivative_iterset) == 1:
-                    pa_ref['parent'] = name
-                    
-        # Fill input dictionaries with values from input arg.
-        edges = self.get_interior_edges()
-        for edge in edges:
-            src, targets = edge
-            
-            if src != '@in' and src not in self._input_outputs:
-                comp_name, dot, var_name = src.partition('.')
-                
-                i1, i2 = self.get_bounds(src)
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                    
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                    
-                if var_name not in outputs:
-                    outputs[comp_name][var_name] = arg[i1:i2].copy()
-                else:
-                    outputs[comp_name][var_name] += arg[i1:i2].copy()
-                    
-                if var_name not in inputs:
-                    inputs[comp_name][var_name] = arg[i1:i2].copy()
-                else:
-                    inputs[comp_name][var_name] += arg[i1:i2].copy()
-                    
-            if targets != '@out':
-                
-                # Parameter group support
-                if not isinstance(targets, tuple):
-                    targets = [targets]
-                    
-                for target in targets:
-                    
-                    i1, i2 = self.get_bounds(target)
-                    comp_name, dot, var_name = target.partition('.')
-                    
-                    # Free-floating variables
-                    if not var_name:
-                        var_name = comp_name
-                        if 'parent' in pa_ref:
-                            comp_name = pa_ref['parent']
-                        else:
-                            comp_name = 'parent'
-                    
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    inputs[comp_name][var_name] = arg[i1:i2]
-            #print i1, i2, edge, '\n', inputs, '\n', outputs
-            
-        # Call ApplyMinv on each component (preconditioner)
-        #for comp in self.derivative_iter():
-            #name = comp.name
-            #if hasattr(comp, 'applyMinv'):
-                #inputs[name] = applyMinv(comp, inputs[name])
-            
-        # Call ApplyJ on each component
-        for comp in self.derivative_iter():
-            name = comp.name
-            applyJ(comp, inputs[name], outputs[name])
-            
-        # Each parameter adds an equation
-        for edge in self._additional_edges:
-            if edge[0] == '@in':
-                
-                # Parameter group support
-                p_edges = edge[1]
-                if not isinstance(p_edges, tuple):
-                    p_edges = [p_edges]
-                    
-                for p_edge in p_edges:
-                    i1, i2 = self.get_bounds(p_edge)
-                    comp_name, dot, var_name = p_edge.partition('.')
-                    
-                    # Free-floating variables
-                    if not var_name:
-                        var_name = comp_name
-                        if 'parent' in pa_ref:
-                            comp_name = pa_ref['parent']
-                        else:
-                            comp_name = 'parent'
-                        
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    outputs[comp_name][var_name] = arg[i1:i2]
-
-        result = zeros(len(arg))
-        
-        # Reference back to the source for input-input connections.
-        input_input_xref = {}
-        edge_outs = [a for a, b in edges]
-        for edge in edges:
-            targ = edge[1]
-            if not isinstance(targ, tuple):
-                targ = [targ]
-            for target in targ:
-                if target in self._input_outputs:
-                    input_input_xref[target] = edge
-        
-        # Poke results into the return vector
-        #print inputs, '\n', outputs
-        for edge in edges:
-            src, target = edge
-            if '@in' not in src:
-                i1, i2 = self.get_bounds(src)
-            else:
-                if isinstance(target, tuple):
-                    i1, i2 = self.get_bounds(target[0])
-                else:
-                    i1, i2 = self.get_bounds(target)
-            
-            if src == '@in':
-                # Extra eqs for parameters contribute a 1.0 on diag
-                result[i1:i2] = arg[i1:i2]
-                continue
-            else:
-                result[i1:i2] = -arg[i1:i2]
-                
-            # Input-input connections are not in the jacobians. We need
-            # to add the derivative using our cross reference.
-            if src in self._input_outputs:
-                if src in input_input_xref:
-                    ref_edge = input_input_xref[src]
-                    i3, i4 = self.get_bounds(ref_edge[0])
-                    result[i1:i2] += arg[i3:i4]
-                continue
-                
-            # Parameter group support
-            if not isinstance(src, tuple):
-                src = [src]
-            
-            for item in src:
-                comp_name, dot, var_name = item.partition('.')
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                result[i1:i2] += outputs[comp_name][var_name]
-                #print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
-            
         #print arg, result
         return result
-    
+        
     def matvecREV(self, arg):
+        '''Callback function for performing the matrix vector product of the
+        workflow's full Jacobian with an incoming vector arg.'''
+        
+        comps = edge_dict_to_comp_list(self._edges)
+        result = zeros(len(arg))
+        
+        # We can call applyJ on each component one-at-a-time, and poke the
+        # results into the result vector.
+        for compname, data in comps.iteritems():
+            
+            comp_inputs = data['inputs']
+            comp_outputs = data['outputs']
+            inputs = {}
+            outputs = {}
+            
+            for varname in comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                inputs[varname] = arg[i1:i2].copy()
+                outputs[varname] = arg[i1:i2].copy()*0
+            
+            for varname in comp_inputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                outputs[varname] = arg[i1:i2].copy()*0
+                
+            comp = self.scope.get(compname)
+            
+            # Preconditioning
+            #if hasattr(comp, 'applyMinvT'):
+                #inputs = applyMinvT(comp, inputs)
+            
+            applyJT(comp, inputs, outputs)
+            #print inputs, outputs
+            
+            for varname in comp_inputs+comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                result[i1:i2] += outputs[varname]
+                
+        # Each parameter adds an equation
+        for src, target in self._edges.iteritems():
+            if '@in' in src:
+                if isinstance(target, list):
+                    target = target[0]
+                    
+                i1, i2 = self.get_bounds(target)
+                result[i1:i2] += arg[i1:i2]
+                        
+        #print arg, result
+        return result
+        
+    def matvecREV_old(self, arg):
         '''Callback function for performing the transpose matrix vector
         product of the workflow's full Jacobian with an incoming vector
         arg.'''
