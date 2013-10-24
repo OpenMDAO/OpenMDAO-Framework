@@ -42,6 +42,7 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
         # Bookkeeping for calculating the residual.
+        self._edges = None
         self._severed_edges = []
         self._additional_edges = []
         self._hidden_edges = set()
@@ -283,19 +284,20 @@ class SequentialWorkflow(Workflow):
         number of edges.
         """
         nEdge = 0
-        for edge in self.get_interior_edges():
-            src, targets = edge
+        self._edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
+        
+        for src, targets in self._edges.iteritems():
             if '@in' in src:
                 src = targets
                 
-                if isinstance(src, tuple):
+                if isinstance(src, list):
                     src = src[0]
                 
             val = self.scope.get(src)
             width = flattened_size(src, val, self.scope)
             self.set_bounds(src, (nEdge, nEdge+width))
             
-            if isinstance(targets, tuple):
+            if isinstance(targets, list):
                 for target in targets:
                     if '@out' not in target:
                         self.set_bounds(target, (nEdge, nEdge+width))
@@ -311,9 +313,8 @@ class SequentialWorkflow(Workflow):
             self.res = zeros((nEdge, 1))
 
         print 'old iter:  ', self.get_interior_edges()
-        edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
         print 'iterator:  ', get_inner_edges(self.scope._depgraph, inputs, outputs)
-        print edge_dict_to_comp_list(edges)
+        print edge_dict_to_comp_list(self._edges)
         return nEdge
 
     def get_bounds(self, node):
@@ -424,6 +425,60 @@ class SequentialWorkflow(Workflow):
         return i1
 
     def matvecFWD(self, arg):
+        '''Callback function for performing the matrix vector product of the
+        workflow's full Jacobian with an incoming vector arg.'''
+        
+        comps = edge_dict_to_comp_list(self._edges)
+        result = zeros(len(arg))
+        
+        # We can call applyJ on each component one-at-a-time, and poke the
+        # results into the result vector.
+        for compname, data in comps.iteritems():
+            
+            comp_inputs = data['inputs']
+            comp_outputs = data['outputs']
+            inputs = {}
+            outputs = {}
+            
+            for varname in comp_inputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                inputs[varname] = arg[i1:i2].copy()
+            
+            for varname in comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                inputs[varname] = arg[i1:i2].copy()
+                # applyJ needs to know what derivatives are needed
+                outputs[varname] = arg[i1:i2].copy()
+                
+            comp = self.scope.get(compname)
+            
+            # Preconditioning
+            #if hasattr(comp, 'applyMinv'):
+                #inputs = applyMinv(comp, inputs)
+            
+            applyJ(comp, inputs, outputs)
+            
+            for varname in comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                result[i1:i2] = outputs[varname]
+                
+        # Each parameter adds an equation
+        for src, targets in self._edges.iteritems():
+            if '@in' in src:
+                if not isinstance(targets, list):
+                    targets = [targets]
+                    
+                for target in targets:
+                    i1, i2 = self.get_bounds(target)
+                    result[i1:i2] = arg[i1:i2]
+                
+        #print arg, result
+        return result
+        
+    def matvecFWD_old(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         #print arg.max()
