@@ -878,7 +878,6 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
@@ -949,6 +948,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
+        print J
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
         assert_rel_error(self, J[2, 0], 6.0, .000001)

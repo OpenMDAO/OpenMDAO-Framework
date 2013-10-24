@@ -773,7 +773,6 @@ class Assembly(Component):
             self.J_output_keys.append(target)
 
         self.J = self.driver.calc_gradient(input_keys, output_keys)
-        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
 
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''
