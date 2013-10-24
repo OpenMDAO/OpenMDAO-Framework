@@ -1073,7 +1073,7 @@ def _get_inner_edges(G, srcs, dests):
 
     nodes=srcs
     cstack = []  # stack of candidate edges
-    edges = []
+    edges = set()
     marked = set(dests)
 
     visited=set()
@@ -1089,7 +1089,7 @@ def _get_inner_edges(G, srcs, dests):
                 if is_connection(G, parent, child):
                     cstack.append((parent, child))
                 if child in marked:
-                    edges.extend(cstack)
+                    edges.update(cstack)
                     if parent not in marked:
                         marked.update([p for p,c in stack])
                 elif child not in visited:
@@ -1100,14 +1100,17 @@ def _get_inner_edges(G, srcs, dests):
                     cstack.pop()
                 stack.pop()
 
-    # remove dup edges but maintain order
+    # order the edges so that basevar sources come first
+    subs = []
     final = []
-    eset = set()
     for edge in edges:
-        if edge not in eset:
+        if is_basevar_node(G, edge[0]):
             final.append(edge)
-            eset.add(edge)
-
+        else:
+            subs.append(edge)
+    
+    final.extend(subs)
+    
     return final
 
 def get_inner_edges(graph, srcs, dests):
@@ -1161,7 +1164,7 @@ def get_inner_edges(graph, srcs, dests):
 
     new_edges.extend(new_sub_edges)  # make sure that all subvars are after their basevars
 
-    edges = edges_to_dict(new_edges, edges)        
+    edges = edges_to_dict(new_edges, edges)
 
     # return fake edges for parameters
     for i,src in enumerate(srcs):
