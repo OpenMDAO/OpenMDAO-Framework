@@ -44,7 +44,8 @@ def edge_dict_to_comp_list(edges):
             basevar = src.split('[')[0]
             if basevar not in basevars:
                 comps[comp]['outputs'].append(var)
-                basevars.append(basevar)
+                if '[' not in src:
+                    basevars.append(basevar)
 
         if not isinstance(targets, list):
             targets = [targets]
@@ -59,7 +60,8 @@ def edge_dict_to_comp_list(edges):
                 basevar = target.split('[')[0]
                 if basevar not in basevars:
                     comps[comp]['inputs'].append(var)
-                    basevars.append(basevar)
+                    if '[' not in target:
+                        basevars.append(basevar)
                 
     return comps
 
