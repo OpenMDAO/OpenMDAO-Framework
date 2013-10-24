@@ -1,6 +1,7 @@
 from collections import deque
 import pprint
 
+from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
@@ -74,6 +75,8 @@ def _sub_or_super(s1, s2):
 #   valid   indicates validity of the node. can be True or False
 #   invalidate  indicates whether a comp node has partial or full invalidation. allowed
 #               values are ['partial', 'full']
+#   fake    used to designate subvar nodes that are essentially metadata placeholders and
+#           are not really part of the dataflow
 #
 # EDGES:
 #   conn    means that the edge is a connection that was specified
@@ -106,6 +109,12 @@ def is_output_base_node(graph, node):
 def is_boundary_node(graph, node):
     return 'boundary' in graph.node[node]
 
+def is_boundary_input_node(graph, node):
+    return is_boundary_node(graph, node) and is_input_node(graph, node)
+
+def is_boundary_output_node(graph, node):
+    return is_boundary_node(graph, node) and is_output_node(graph, node)
+
 def is_comp_node(graph, node):
     """Returns True for Component or PseudoComponent nodes."""
     return 'comp' in graph.node.get(node, '')
@@ -132,6 +141,9 @@ def is_subvar_node(graph, node):
     e.g., an array index -   comp_1.x[2]
     """
     return 'basevar' in graph.node.get(node, '')
+
+def is_fake_node(graph, node):
+    return 'fake' in graph.node.get(node, '')
 
 def is_var_node_with_solution_bounds(graph, node):
     """Returns True if this variable node stores metadata
@@ -392,7 +404,7 @@ class DependencyGraph(nx.DiGraph):
 
     def connect(self, scope, srcpath, destpath, config_change=True, check=True):
         """Create a connection between srcpath and destpath,
-        and create any necessary additional connections to base
+        and create any necessary additional subvars with connections to base
         variable nodes.  For example, connecting A.b[3] to
         B.c.x will create an edge between A.b[3] and B.c.x, and
         will also add an edge from base variable A.b to A.b[3],
@@ -403,15 +415,23 @@ class DependencyGraph(nx.DiGraph):
         base_dest = base_var(self, destpath)
 
         for v in [base_src, base_dest]:
-            if not v.startswith('parent.') and v not in self:
-                raise RuntimeError("Can't find variable '%s' in graph." % v)
+            if not v.startswith('parent.'):
+                if v not in self:
+                    raise RuntimeError("Can't find variable '%s' in graph." % v)
+                elif not is_var_node(self, v):
+                    raise RuntimeError("'%s' is not a variable node" % v)
 
+        # path is a list of tuples of the form (var, basevar)
         path = [(base_src, base_src)]
 
-        if srcpath != base_src:
+        if srcpath != base_src:  # srcpath is a subvar
+            if (is_input_node(self, base_src) and not is_boundary_node(self, base_src)) or \
+               (is_boundary_output_node(self, base_src) and not destpath.startswith('parent.')):
+                if srcpath not in self:
+                    raise RuntimeError("subvar node '%s' doesn't exist" % srcpath)
             path.append((srcpath, base_src))
 
-        if destpath != base_dest:
+        if destpath != base_dest:  # destpath is a subvar
             path.append((destpath, base_dest))
 
         path.append((base_dest, base_dest))
@@ -420,11 +440,18 @@ class DependencyGraph(nx.DiGraph):
             self.check_connect(srcpath, destpath)
 
         for i in range(len(path)):
-            var, base = path[i]
-            if var not in self:
-                self.add_node(var, basevar=base, valid=True)
+            dest, base = path[i]
+            if dest not in self:  # create a new subvar if it's not already there
+                self.add_node(dest, basevar=base, valid=True)
             if i > 0:
-                self.add_edge(path[i-1][0], var)
+                src = path[i-1][0]
+                # if an edge alreay exists from dest to src, then the edge
+                # from src to dest is going in an invalid dataflow direction,
+                # so skip it
+                if src in self[dest]:
+                    continue
+
+                self.add_edge(src, dest)
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -444,12 +471,13 @@ class DependencyGraph(nx.DiGraph):
         """ Adds a subvar node for a model input. This node is used to
         represent parameters that are array slices, mainly for metadata
         storage and for defining edge iterators, but not for workflow
-        execution.
+        execution. Subvars created using this function will be labeled
+        as 'fake' in their metadata.
         """
         base = base_var(self, subvar)
         if base not in self:
             raise RuntimeError("can't find basevar '%s' in graph" % base)
-        self.add_node(subvar, basevar=base, valid=True)
+        self.add_node(subvar, basevar=base, valid=True, fake=True)
         if is_boundary_node(self, base):
             if is_input_node(self, base):
                 self.add_edge(base, subvar)
@@ -506,7 +534,7 @@ class DependencyGraph(nx.DiGraph):
         # now clean up dangling subvars
         for edge in edges:
             for node in edge:
-                if is_subvar_node(self, node):
+                if is_subvar_node(self, node) and not is_fake_node(self, node):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
@@ -718,7 +746,7 @@ class DependencyGraph(nx.DiGraph):
 
     def get_boundary_inputs(self, connected=False):
         """Returns inputs that are on the component boundary.
-        If connected is True, return a list of those nodes
+        If connected is True, return a list of only those nodes
         that are connected externally.
         """
         ins = []
@@ -734,7 +762,7 @@ class DependencyGraph(nx.DiGraph):
 
     def get_boundary_outputs(self, connected=False):
         """Returns outputs that are on the component boundary.
-        If connected is True, return a list of those nodes
+        If connected is True, return a list of only those nodes
         that are connected externally.
         """
         outs = []
@@ -764,7 +792,8 @@ class DependencyGraph(nx.DiGraph):
 
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
-        If connected is True, return only connected inputs.
+        If connected is True, return only connected inputs.  If
+        invalid is True, return only invalid inputs.
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
@@ -1044,7 +1073,7 @@ def _get_inner_edges(G, srcs, dests):
 
     nodes=srcs
     cstack = []  # stack of candidate edges
-    edges = set()
+    edges = []
     marked = set(dests)
 
     visited=set()
@@ -1060,7 +1089,7 @@ def _get_inner_edges(G, srcs, dests):
                 if is_connection(G, parent, child):
                     cstack.append((parent, child))
                 if child in marked:
-                    edges.update(cstack)
+                    edges.extend(cstack)
                     if parent not in marked:
                         marked.update([p for p,c in stack])
                 elif child not in visited:
@@ -1071,7 +1100,15 @@ def _get_inner_edges(G, srcs, dests):
                     cstack.pop()
                 stack.pop()
 
-    return edges
+    # remove dup edges but maintain order
+    final = []
+    eset = set()
+    for edge in edges:
+        if edge not in eset:
+            final.append(edge)
+            eset.add(edge)
+
+    return final
 
 def get_inner_edges(graph, srcs, dests):
     """Return a dict containing all connections in the graph
@@ -1094,9 +1131,36 @@ def get_inner_edges(graph, srcs, dests):
 
     edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
 
+    new_edges = []
+    new_sub_edges = []
+
     # replace inputs-as-outputs with their sources (if any)
     inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
+    for inp in inpsrcs:
+        old_dests = edges[inp]
+        del edges[inp] # remove the old input-as-output edge(s)
 
+        # if we have an input source basevar that has multiple inputs (subvars)
+        # then we have to create fake subvars at the destination to store
+        # derivative related metadata
+        if is_basevar_node(graph, inp):
+            subs = graph._all_child_vars(inp, direction='in')
+        else:
+            subs = [inp]
+
+        for sub in subs:
+            newsrc = graph.predecessors(sub)[0]
+            for dest in old_dests:
+                if is_basevar_node(graph, newsrc):
+                    new_edges.append((newsrc, sub.replace(inp, dest, 1)))
+                else:
+                    new_sub_edges.append((newsrc, sub.replace(inp, dest, 1)))
+
+    new_edges.extend(new_sub_edges)  # make sure that all subvars are after their basevars
+
+    edges = edges_to_dict(new_edges, edges)        
+
+    # return fake edges for parameters
     for i,src in enumerate(srcs):
         if isinstance(src, basestring): 
             edges['@in%d' % i] = [src]
@@ -1110,6 +1174,8 @@ def get_inner_edges(graph, srcs, dests):
                 edges[src] = newlst
             edges['@in%d' % i] = list(src)
 
+    # return fake edges for destination vars referenced by 
+    # objectives and constraints
     for i, dest in enumerate(dests):
         if isinstance(dest, basestring):
             edges[dest] = ['@out%d' % i]
@@ -1120,11 +1186,12 @@ def get_inner_edges(graph, srcs, dests):
 
 # utility/debugging functions
 
-def edges_to_dict(edges):
-    """Take an iterator of edges and return a dict of sources mapped to lists
-    of destinations.
+def edges_to_dict(edges, dct=None):
+    """Take an iterator of edges and return an ordered dict (depth first)
+    of sources mapped to lists of destinations.
     """
-    dct = {}
+    if dct is None:
+        dct = OrderedDict()
     for u, v in edges:
         dct.setdefault(u, []).append(v)
     return dct
