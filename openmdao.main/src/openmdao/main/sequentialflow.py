@@ -286,9 +286,10 @@ class SequentialWorkflow(Workflow):
         nEdge = 0
         
         for varnames in inputs+outputs:
-            if not isinstance(varnames, list):
+            if not isinstance(varnames, tuple):
                 varnames = [varnames]
             for varname in varnames:
+                print varname, inputs, outputs
                 if varname not in self.scope._depgraph.node:
                     self.scope._depgraph.add_subvar(varname)
                 
