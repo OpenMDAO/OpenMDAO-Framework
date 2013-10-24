@@ -1125,14 +1125,14 @@ def get_inner_edges(graph, srcs, dests):
 
     """
 
-    newsrcs = []
+    flat_srcs = []
     for s in srcs:
         if isinstance(s, basestring):
-            newsrcs.append(s)
+            flat_srcs.append(s)
         else:
-            newsrcs.extend(iter(s))
+            flat_srcs.extend(iter(s))
 
-    edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
+    edges = edges_to_dict(_get_inner_edges(graph, flat_srcs, dests))
 
     new_edges = []
     new_sub_edges = []
@@ -1205,6 +1205,46 @@ def edges_to_dict(edges, dct=None):
     for u, v in edges:
         dct.setdefault(u, []).append(v)
     return dct
+
+
+def edge_dict_to_comp_list(graph, edges):
+    """Converts inner edge dict into an ordered dict whose keys are component
+    names, and whose values are lists of relevant (in the graph) inputs and
+    outputs.
+    """
+    comps = OrderedDict()
+    basevars = []
+    for src, targets in edges.iteritems():
+        
+        if '@in' not in src:
+            comp, _, var = src.partition('.')
+            if comp not in comps:
+                comps[comp] = {'inputs': [],
+                               'outputs': []}
+            
+            basevar = base_var(graph, src)
+            if basevar not in basevars:
+                comps[comp]['outputs'].append(var)
+                if src == basevar:
+                    basevars.append(src)
+
+        if not isinstance(targets, list):
+            targets = [targets]
+            
+        for target in targets:
+            if '@out' not in target:
+                comp, _, var = target.partition('.')
+                if comp not in comps:
+                    comps[comp] = {'inputs': [],
+                                   'outputs': []}
+                
+                basevar = base_var(graph, target)
+                if basevar not in basevars:
+                    comps[comp]['inputs'].append(var)
+                    if target == basevar:
+                        basevars.append(target)
+                
+    return comps
 
 def nodes_matching_all(graph, **kwargs):
     """Return an iterator over nodes matching all kwargs names and values. 

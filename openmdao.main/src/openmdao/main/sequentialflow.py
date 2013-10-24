@@ -9,7 +9,7 @@ from openmdao.main.array_helpers import flattened_size, flattened_value, \
                                         flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
-                                      applyMinvT, applyMinv, edge_dict_to_comp_list
+                                      applyMinvT, applyMinv
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
@@ -17,7 +17,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, is_input_node, \
-                                    get_inner_edges
+                                    get_inner_edges, edge_dict_to_comp_list
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -338,7 +338,7 @@ class SequentialWorkflow(Workflow):
 
         print 'old iter:  ', self.get_interior_edges()
         print 'iterator:  ', get_inner_edges(self.scope._depgraph, inputs, outputs)
-        print edge_dict_to_comp_list(self._edges)
+        print edge_dict_to_comp_list(self.scope._depgraph, self._edges)
         return nEdge
 
     def get_bounds(self, node):
@@ -461,7 +461,7 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._edges)
+        comps = edge_dict_to_comp_list(self.scope._depgraph, self._edges)
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -1040,7 +1040,7 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self._edges)
+        comps = edge_dict_to_comp_list(self.scope._depgraph, self._edges)
         for compname, data in comps.iteritems():
             node = self.scope.get(compname)
             inputs = data['inputs']

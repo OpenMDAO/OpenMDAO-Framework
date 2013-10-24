@@ -20,51 +20,6 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import array, ndarray, zeros, \
                                              ones
-
-
-def edge_dict_to_comp_list(edges):
-    """Converts inner edge dict into an ordered dict whose keys are component
-    names, and whose values are lists of relevant (in the graph) inputs and
-    outputs.
-    """
-    
-    # remove when i move to ndepgraph
-    import ordereddict
-    
-    comps = ordereddict.OrderedDict()
-    basevars = []
-    for src, targets in edges.iteritems():
-        
-        if '@in' not in src:
-            comp, _, var = src.partition('.')
-            if comp not in comps:
-                comps[comp] = {'inputs': [],
-                               'outputs': []}
-            
-            basevar = src.split('[')[0]
-            if basevar not in basevars:
-                comps[comp]['outputs'].append(var)
-                if '[' not in src:
-                    basevars.append(basevar)
-
-        if not isinstance(targets, list):
-            targets = [targets]
-            
-        for target in targets:
-            if '@out' not in target:
-                comp, _, var = target.partition('.')
-                if comp not in comps:
-                    comps[comp] = {'inputs': [],
-                                   'outputs': []}
-                
-                basevar = target.split('[')[0]
-                if basevar not in basevars:
-                    comps[comp]['inputs'].append(var)
-                    if '[' not in target:
-                        basevars.append(basevar)
-                
-    return comps
-
 def calc_gradient(wflow, inputs, outputs):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
