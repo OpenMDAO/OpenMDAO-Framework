@@ -284,6 +284,14 @@ class SequentialWorkflow(Workflow):
         number of edges.
         """
         nEdge = 0
+        
+        for varnames in inputs+outputs:
+            if not isinstance(varnames, list):
+                varnames = [varnames]
+            for varname in varnames:
+                if varname not in self.scope._depgraph.node:
+                    self.scope._depgraph.add_subvar(varname)
+                
         self._edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
         
         for src, targets in self._edges.iteritems():
