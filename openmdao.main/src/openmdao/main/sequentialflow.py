@@ -1034,7 +1034,7 @@ class SequentialWorkflow(Workflow):
         return self.derivative_iterset
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
 
@@ -1044,7 +1044,7 @@ class SequentialWorkflow(Workflow):
         for compname, data in comps.iteritems():
             node = self.scope.get(compname)
             inputs = data['inputs']
-            outputs = data['inputs']
+            outputs = data['outputs']
             node.calc_derivatives(first, second, savebase, inputs, outputs)
             if self._stop:
                 raise RunStopped('Stop requested')

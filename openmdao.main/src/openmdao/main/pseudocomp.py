@@ -278,7 +278,7 @@ class PseudoComponent(object):
         self._itername = itername
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         if first:
             self.linearize()
         if second:

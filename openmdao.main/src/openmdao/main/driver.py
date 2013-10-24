@@ -346,11 +346,11 @@ class Driver(Component):
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
         self.workflow.calc_derivatives(first, second, savebase,
-                                       extra_in, extra_out)
+                                       required_inputs, required_outputs)
 
     def calc_gradient(self, inputs=None, outputs=None):
         """Returns the gradient of the passed outputs with respect to

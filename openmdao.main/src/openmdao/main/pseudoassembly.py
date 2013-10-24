@@ -54,7 +54,7 @@ class PseudoAssembly(object):
             comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
         # We don't do this in __init__ because some inputs and outputs

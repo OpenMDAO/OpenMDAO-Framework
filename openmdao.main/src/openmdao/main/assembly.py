@@ -725,46 +725,10 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def linearize(self, extra_in=None, extra_out=None):
+    def linearize(self, required_inputs=None, required_outputs=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
-
-        # Only calc derivatives for inputs we need
-        required_inputs = []
-        if extra_in:
-            for varpaths in extra_in:
-
-                if not isinstance(varpaths, tuple):
-                    varpaths = [varpaths]
-
-                for varpath in varpaths:
-                    compname, _, var = varpath.partition('.')
-                    if compname == self.name:
-                        required_inputs.append(var)
-
-        for src, target in self.parent.list_connections():
-            compname, _, var = target.partition('.')
-            if compname == self.name:
-                required_inputs.append(var.replace('(', '').replace(')', ''))
-
-        # Only calc derivatives for outputs we need
-        required_outputs = []
-        if extra_out:
-            for varpaths in extra_out:
-
-                if not isinstance(varpaths, tuple):
-                    varpaths = [varpaths]
-
-                for varpath in varpaths:
-                    compname, _, var = varpath.partition('.')
-                    if compname == self.name:
-                        required_outputs.append(var)
-
-        for src, target in self.parent.list_connections():
-            compname, _, var = src.partition('.')
-            if compname == self.name:
-                required_outputs.append(var.replace('(', '').replace(')', ''))
 
         # Sub-assembly sourced
         input_keys = []
