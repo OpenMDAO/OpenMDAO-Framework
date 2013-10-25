@@ -559,6 +559,10 @@ class SequentialWorkflow(Workflow):
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
             
+            # for full-model fd, turn off fake finite difference
+            if fd==True:
+                pseudo.ffd_order = 0
+            
             # Clean up the old stuff in the graph
             dgraph.remove_nodes_from(allnodes)
             
