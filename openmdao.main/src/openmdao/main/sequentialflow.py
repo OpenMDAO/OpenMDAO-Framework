@@ -48,7 +48,6 @@ class SequentialWorkflow(Workflow):
         self.res = None
         
         self._severed_edges = []
-        self._find_nondiff_blocks = True
         self._interior_edges = None
         
     def __iter__(self):
@@ -85,7 +84,6 @@ class SequentialWorkflow(Workflow):
         self.res = None
         
         self._severed_edges = []
-        self._find_nondiff_blocks = True
         self._names = None
         self._interior_edges = None
 
@@ -205,17 +203,15 @@ class SequentialWorkflow(Workflow):
         self._explicit_names = []
         self.config_changed()
 
-    def initialize_residual(self, inputs, outputs):
+    def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
         nEdge = 0
-        dgraph = self.derivative_graph(inputs, outputs)
+        dgraph = self.derivative_graph()
         
-        self._edges = get_inner_edges(dgraph, dgraph.graph['inputs'],
-                                      dgraph.graph['outputs'])
         basevars = set()
-        for src, targets in self._edges.iteritems():
+        for src, targets in self.edge_list().iteritems():
             
             # Only need to grab the source (or first target for param) to
             # figure out the size for the residual vector
@@ -255,8 +251,7 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
-        print 'iterator:  ', get_inner_edges(self.derivative_graph(inputs, outputs), 
-                                             inputs, outputs)
+        print 'iterator:  ', self._edges
         print edge_dict_to_comp_list(self._edges)
         return nEdge
 
@@ -265,7 +260,8 @@ class SequentialWorkflow(Workflow):
         residual vector that correspond to a given variable name in this
         workflow."""
         itername = 'top.'+self._parent.itername
-        i1, i2 = self.scope._depgraph.node[node]['bounds'][itername]
+        dgraph = self._derivative_graph
+        i1, i2 = dgraph.node[node]['bounds'][itername]
         
         # Handle index slices
         if isinstance(i1, str):
@@ -279,14 +275,15 @@ class SequentialWorkflow(Workflow):
         residual vector that correspond to a given variable name in this
         workflow."""
         itername = 'top.'+self._parent.itername
+        dgraph = self._derivative_graph
         
         try:
-            meta = self.scope._depgraph.node[node]
+            meta = dgraph.node[node]
             
         # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
-            self.scope._depgraph.add_subvar(node)
-            meta = self.scope._depgraph.node[node]
+            dgraph.add_subvar(node)
+            meta = dgraph.node[node]
         
         if 'bounds' not in meta:
             meta['bounds'] = {}
@@ -402,7 +399,10 @@ class SequentialWorkflow(Workflow):
                 # applyJ needs to know what derivatives are needed
                 outputs[varname] = arg[i1:i2].copy()
                 
-            comp = self.scope.get(compname)
+                if '~' in compname:
+                    comp = self._derivative_graph.node[compname]['pa_object']
+                else:
+                    comp = self.scope.get(compname)
             
             # Preconditioning
             #if hasattr(comp, 'applyMinv'):
@@ -455,7 +455,10 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(node)
                 outputs[varname] = arg[i1:i2].copy()*0
                 
-            comp = self.scope.get(compname)
+            if '~' in compname:
+                comp = self._derivative_graph.node[compname]['pa_object']
+            else:
+                comp = self.scope.get(compname)
             
             # Preconditioning
             #if hasattr(comp, 'applyMinvT'):
@@ -491,23 +494,31 @@ class SequentialWorkflow(Workflow):
         cgraph = dgraph.component_graph()
 
         nondiff = []
-        for name in nx.topological_sort(cgraph):
-            comp = self.scope.get(name)
-            if not hasattr(comp, 'apply_deriv') and \
-               not hasattr(comp, 'apply_derivT') and \
-               not hasattr(comp, 'provideJ'):
-                nondiff.append(comp.name)
-                
-        if len(nondiff) == 0:
-            return
+        comps = nx.topological_sort(cgraph)
         
-        # Groups any connected non-differentiable blocks. Each block is a set
-        # of component names.
-        nondiff_groups = []
-        sub = cgraph.subgraph(nondiff)
-        nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-        for item in nd_graphs:
-            nondiff_groups.append(item.nodes())
+        # Full model finite-difference, so all components go in the PA
+        if 'fd' == True:
+            nondiff_groups = [comps]
+            
+        # Find the non-differentiable componentns
+        else:
+            for name in nx.topological_sort(cgraph):
+                comp = self.scope.get(name)
+                if not hasattr(comp, 'apply_deriv') and \
+                   not hasattr(comp, 'apply_derivT') and \
+                   not hasattr(comp, 'provideJ'):
+                    nondiff.append(comp.name)
+                
+            if len(nondiff) == 0:
+                return
+            
+            # Groups any connected non-differentiable blocks. Each block is a set
+            # of component names.
+            nondiff_groups = []
+            sub = cgraph.subgraph(nondiff)
+            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
+            for item in nd_graphs:
+                nondiff_groups.append(item.nodes())
                 
         # for cyclic workflows, remove cut edges.
         #for edge in self._severed_edges:
@@ -570,11 +581,36 @@ class SequentialWorkflow(Workflow):
             
         return None
 
-    def derivative_graph(self, inputs, outputs, fd=False):
+    def derivative_graph(self, inputs=None, outputs=None, fd=False):
         """Returns the local graph that we use for derivatives.
         """
+        
         if self._derivative_graph is None:
         
+            # If inputs aren't specified, use the parameters
+            if inputs is None:
+                if hasattr(self._parent, 'list_param_group_targets'):
+                    inputs = self._parent.list_param_group_targets()
+                else:
+                    msg = "No inputs given for derivatives."
+                    self.scope.raise_exception(msg, RuntimeError)
+        
+            # If outputs aren't specified, use the objectives and constraints
+            if outputs is None:
+                outputs = []
+                if hasattr(self._parent, 'get_objectives'):
+                    obj = ["%s.out0" % item.pcomp_name for item in \
+                            self._parent.get_objectives().values()]
+                    outputs.extend(obj)
+                if hasattr(self._parent, 'get_constraints'):
+                    con = ["%s.out0" % item.pcomp_name for item in \
+                                   self._parent.get_constraints().values()]
+                    outputs.extend(con)
+                    
+                if len(outputs) == 0:
+                    msg = "No outputs given for derivatives."
+                    self.scope.raise_exception(msg, RuntimeError)
+    
             graph = self.scope._depgraph
             
             # Inputs and outputs introduce subvars that aren't in the
@@ -598,6 +634,16 @@ class SequentialWorkflow(Workflow):
             self._group_nondifferentiables(fd)
             
         return self._derivative_graph
+    
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        if self._edges == None:
+            dgraph = self._derivative_graph
+            self._edges = get_inner_edges(dgraph, dgraph.graph['inputs'],
+                                          dgraph.graph['outputs'])
+            
+        return self._edges
         
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
@@ -623,62 +669,47 @@ class SequentialWorkflow(Workflow):
         
         # TODO: add upscope
         
-        if inputs is None:
-            if hasattr(self._parent, 'list_param_group_targets'):
-                inputs = self._parent.list_param_group_targets()
-            else:
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
+        dgraph = self.derivative_graph(inputs, outputs, fd=fd)
+        inputs = dgraph.graph['inputs']
+        outputs = dgraph.graph['outputs']
+        
+        n_edge = self.initialize_residual()
+        
+        # Size our Jacobian
+        num_in = 0
+        for item in inputs:
             
-        if outputs is None:
-            outputs = []
-            if hasattr(self._parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in \
-                        self._parent.get_objectives().values()]
-                outputs.extend(obj)
-            if hasattr(self._parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in \
-                               self._parent.get_constraints().values()]
-                outputs.extend(con)
+            # For parameter groups, only size the first
+            if isinstance(item, tuple):
+                item = item[0]
                 
-            if len(outputs) == 0:
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        # Auto-determine which mode to use.
+            i1, i2 = self.get_bounds(item)
+            num_in += i2-i1
+    
+        num_out = 0
+        for item in outputs:
+            i1, i2 = self.get_bounds(item)
+            if isinstance(i1, list):
+                num_out += len(i1)
+            else:
+                num_out += i2-i1
+                
+        shape = (num_out, num_in)
+            
+        # Auto-determine which mode to use based on Jacobian shape.
         if mode == 'auto' and fd is False:
             # TODO - additional determination based on presence of
             # apply_derivT
             
-            # TODO: This is repeated in derivatives.calc_gradient for sizing.
-            # We should cache it and only do it once.
-            
-            num_in = 0
-            for item in inputs:
-                
-                # For parameter groups, only size the first
-                if isinstance(item, tuple):
-                    item = item[0]
-                    
-                val = self.scope.get(item)
-                width = flattened_size(item, val)
-                num_in += width
-        
-            num_out = 0
-            for item in outputs:
-                val = self.scope.get(item)
-                width = flattened_size(item, val)
-                num_out += width
-                
             if num_in > num_out:
                 mode = 'adjoint'
             else:
                 mode = 'forward'
             
         if mode == 'adjoint':
-            return calc_gradient_adjoint(self, inputs, outputs)
+            return calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         else:
-            return calc_gradient(self, inputs, outputs)
+            return calc_gradient(self, inputs, outputs, n_edge, shape)
     
     def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -716,39 +747,9 @@ class SequentialWorkflow(Workflow):
         print >> stream, 24*'-'
         print >> stream, Jbase
 
-        if inputs is None:
-            if hasattr(self._parent, 'get_parameters'):
-                inputs = []
-                input_refs = []
-                for key, param in self._parent.get_parameters().items():
-                    inputs.extend(param.targets)
-                    input_refs.extend([key for t in param.targets])
-            # Should be caught in calc_gradient()
-            else:  # pragma no cover
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            input_refs = inputs
-            
-        if outputs is None:
-            outputs = []
-            output_refs = []
-            if hasattr(self._parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in \
-                        self._parent.get_objectives().values()]
-                outputs.extend(obj)
-                output_refs.extend(self._parent.get_objectives().keys())
-            if hasattr(self._parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in \
-                               self._parent.get_constraints().values()]
-                outputs.extend(con)
-                output_refs.extend(self._parent.get_constraints().keys())
-                
-            if len(outputs) == 0:  # pragma no cover
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            output_refs = outputs
+        dgraph = self.derivative_graph()
+        input_refs = dgraph.graph['inputs']
+        output_refs = dgraph.graph['outputs']
 
         out_width = 0
         for output, oref in zip(outputs, output_refs):

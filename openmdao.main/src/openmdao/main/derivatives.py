@@ -65,37 +65,17 @@ def edge_dict_to_comp_list(edges):
                 
     return comps
 
-def calc_gradient(wflow, inputs, outputs):
+def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual(inputs, outputs)
-    A = LinearOperator((nEdge, nEdge),
+    A = LinearOperator((n_edge, n_edge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
 
-    num_in = 0
-    for item in inputs:
-        
-        # For parameter groups, only size the first
-        if isinstance(item, tuple):
-            item = item[0]
-            
-        i1, i2 = wflow.get_bounds(item)
-        num_in += i2-i1
-
-
-    num_out = 0
-    for item in outputs:
-        i1, i2 = wflow.get_bounds(item)
-        if isinstance(i1, list):
-            num_out += len(i1)
-        else:
-            num_out += i2-i1
-
-    J = zeros((num_out, num_in))
+    J = zeros(shape)
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
@@ -111,7 +91,7 @@ def calc_gradient(wflow, inputs, outputs):
         i1, i2 = wflow.get_bounds(param)
         for irhs in range(i1, i2):
 
-            RHS = zeros((nEdge, 1))
+            RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
 
             # Call GMRES to solve the linear system
@@ -133,32 +113,16 @@ def calc_gradient(wflow, inputs, outputs):
     #print inputs, '\n', outputs, '\n', J
     return J
 
-def calc_gradient_adjoint(wflow, inputs, outputs):
+def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs. Calculation is done in adjoint mode.
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual(inputs, outputs)
-    A = LinearOperator((nEdge, nEdge),
+    A = LinearOperator((n_edge, n_edge),
                        matvec=wflow.matvecREV,
                        dtype=float)
-    num_in = 0
-    for item in inputs:
-        
-        # For parameter groups, only size the first
-        if isinstance(item, tuple):
-            item = item[0]
-            
-        i1, i2 = wflow.get_bounds(item)
-        num_in += i2-i1
-
-    num_out = 0
-    for item in outputs:
-        i1, i2 = wflow.get_bounds(item)
-        num_out += i2-i1
-
-    J = zeros((num_out, num_in))
+    J = zeros(shape)
    
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
@@ -174,7 +138,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
         i1, i2 = wflow.get_bounds(output)
         for irhs in range(i1, i2):
 
-            RHS = zeros((nEdge, 1))
+            RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
 
             # Call GMRES to solve the linear system
