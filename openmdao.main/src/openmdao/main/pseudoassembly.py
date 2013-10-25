@@ -81,6 +81,7 @@ class PseudoAssembly(object):
         """Jacobian for this block"""
         return self.inputs, self.outputs, self.J
 
+    # TODO: Maybe this is never used.
     def get(self, varname):
         """ Return the value of a variable in the Pseudoassembly"""
 
