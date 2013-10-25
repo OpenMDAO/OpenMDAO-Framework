@@ -1193,8 +1193,8 @@ class Testcase_derivatives(unittest.TestCase):
     
         # Case 1 - differentiable (comp4)
         
-        iterlist = self.top.driver.workflow.group_nondifferentiables()
-        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        #iterlist = self.top.driver.workflow.group_nondifferentiables()
+        #self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
         
         self.top.comp1.x1 = 2.0
         self.top.run()

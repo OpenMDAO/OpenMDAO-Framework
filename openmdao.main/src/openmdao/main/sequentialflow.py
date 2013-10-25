@@ -594,9 +594,9 @@ class SequentialWorkflow(Workflow):
             pa_name = '~~%d' % j
             
             # First, find our group boundary
-            allnodes = dgraph.find_prefixed_nodes(comp)
-                
-            print allnodes
+            allnodes = dgraph.find_prefixed_nodes(group)
+            boundary_edges = nx.edge_boundary(dgraph, allnodes)
+            print boundary_edges
             
         return None
     
