@@ -123,7 +123,7 @@ def calc_gradient(wflow, inputs, outputs):
             for item in outputs:
                 k1, k2 = wflow.get_bounds(item)
                 if isinstance(k1, list):
-                    J[i:i+(len(k1)), j] = eval('dx[%s]') % k1
+                    J[i:i+(len(k1)), j] = dx[k1]
                 else:
                     J[i:i+(k2-k1), j] = dx[k1:k2]
                 i += k2-k1
