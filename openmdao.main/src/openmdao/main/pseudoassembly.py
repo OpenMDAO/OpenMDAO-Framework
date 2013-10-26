@@ -95,9 +95,9 @@ class PseudoAssembly(object):
         """Jacobian for this block"""
         return self.mapped_inputs, self.mapped_outputs, self.J
 
-    # TODO: Maybe this is never used.
     def get(self, varname):
-        """ Return the value of a variable in the Pseudoassembly"""
+        """ Return the value of a variable in the Pseudoassembly. Used
+        when sizing variables in the Jacobian."""
 
         return self.wflow.scope.get(from_PA_var(self.name+'.'+varname))
 

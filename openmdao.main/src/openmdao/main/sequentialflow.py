@@ -9,18 +9,16 @@ import sys
 from openmdao.main.array_helpers import flattened_size, flattened_value, \
                                         flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, recursive_components, \
-                                      applyMinvT, applyMinv, edge_dict_to_comp_list
+                                      applyJ, applyJT, edge_dict_to_comp_list, \
+                                      applyMinvT, applyMinv
                                       
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
-from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import find_related_pseudos, is_input_node, \
-                                    get_inner_edges, is_basevar_node, \
-                                    base_var
+from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
+                                    get_inner_edges, is_basevar_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -672,7 +670,7 @@ class SequentialWorkflow(Workflow):
         
         if self._edges == None:
             
-            dgraph = self._derivative_graph
+            dgraph = self.derivative_graph()
             if 'mapped_inputs' in dgraph.graph:
                 inputs = 'mapped_inputs'
                 outputs = 'mapped_outputs'
@@ -692,7 +690,7 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self._edges)
+        comps = edge_dict_to_comp_list(self.edge_list())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
