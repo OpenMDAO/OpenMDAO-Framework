@@ -2,6 +2,7 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
+import copy
 import networkx as nx
 import sys
 
@@ -10,8 +11,9 @@ from openmdao.main.array_helpers import flattened_size, flattened_value, \
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
                                       applyMinvT, applyMinv, edge_dict_to_comp_list
+                                      
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.pseudoassembly import PseudoAssembly
+from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
 
@@ -31,7 +33,6 @@ except ImportError as err:
 
 __all__ = ['SequentialWorkflow']
 
-
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
@@ -46,6 +47,7 @@ class SequentialWorkflow(Workflow):
         self._edges = None
         self._derivative_graph = None
         self.res = None
+        self._upscoped = False
         
         self._severed_edges = []
         self._interior_edges = None
@@ -82,6 +84,7 @@ class SequentialWorkflow(Workflow):
         self._edges = None
         self._derivative_graph = None
         self.res = None
+        self._upscoped = False
         
         self._severed_edges = []
         self._names = None
@@ -229,7 +232,7 @@ class SequentialWorkflow(Workflow):
                 bound = (istring, ix)
                 print bound
             else:
-                val = self.scope.get(src)
+                val = self.scope.get(from_PA_var(src))
                 width = flattened_size(src, val, self.scope)
                 bound = (nEdge, nEdge+width)
                 
@@ -484,107 +487,6 @@ class SequentialWorkflow(Workflow):
         #print arg, result
         return result
         
-    def _group_nondifferentiables(self, fd=False):
-        """Method to find all non-differentiable blocks. These blocks
-        will be replaced in the differentiation workflow by a pseudo-
-        assembly, which can provide its own Jacobian via finite difference.
-        """
-        
-        dgraph = self._derivative_graph
-        cgraph = dgraph.component_graph()
-
-        nondiff = []
-        comps = nx.topological_sort(cgraph)
-        
-        # Full model finite-difference, so all components go in the PA
-        if 'fd' == True:
-            nondiff_groups = [comps]
-            
-        # Find the non-differentiable componentns
-        else:
-            for name in nx.topological_sort(cgraph):
-                comp = self.scope.get(name)
-                if not hasattr(comp, 'apply_deriv') and \
-                   not hasattr(comp, 'apply_derivT') and \
-                   not hasattr(comp, 'provideJ'):
-                    nondiff.append(comp.name)
-                
-            if len(nondiff) == 0:
-                return
-            
-            # Groups any connected non-differentiable blocks. Each block is a set
-            # of component names.
-            nondiff_groups = []
-            sub = cgraph.subgraph(nondiff)
-            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-            for item in nd_graphs:
-                nondiff_groups.append(item.nodes())
-                
-        # for cyclic workflows, remove cut edges.
-        #for edge in self._severed_edges:
-        #    comp1, _, _ = edge[0].partition('.')
-        #    comp2, _, _ = edge[1].partition('.')
-        #    cgraph.remove_edge(comp1, comp2)
-        
-        for j, group in enumerate(nondiff_groups):
-            pa_name = '~~%d' % j
-            
-            # First, find our group boundary
-            allnodes = dgraph.find_prefixed_nodes(group)
-            out_edges = nx.edge_boundary(dgraph, allnodes)
-            in_edges = nx.edge_boundary(dgraph, 
-                                        set(dgraph.nodes()).difference(allnodes))
-            
-            pa_inputs = [b for a, b in in_edges]
-            pa_outputs = [a for a, b in out_edges]
-            
-            # Add requested params
-            meta_inputs = self._derivative_graph.graph['inputs']
-            for i, varpath in enumerate(meta_inputs):
-                compname, _, varname = varpath.partition('.')
-                if varname and (compname in group):
-                    pa_inputs.append(varpath)
-                    meta_inputs[i] = meta_inputs[i].replace(compname, 
-                                                            pa_name, 1)
-                
-            # Add requested outputs
-            meta_outputs = self._derivative_graph.graph['outputs']
-            for i, varpath in enumerate(meta_outputs):
-                compname, _, varname = varpath.partition('.')
-                if varname and (compname in group):
-                    pa_outputs.append(varpath)
-                    meta_outputs[i] = meta_outputs[i].replace(compname, 
-                                                              pa_name, 1)
-                        
-            # Create the pseudoassy
-            pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
-            
-            # for full-model fd, turn off fake finite difference
-            if fd==True:
-                pseudo.ffd_order = 0
-            
-            # Clean up the old stuff in the graph
-            dgraph.remove_nodes_from(allnodes)
-            
-            # Add pseudoassys to graph
-            dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
-                            pseudo='assembly', valid=True)
-            
-            # Hook up the pseudoassemblies
-            for src, dst in in_edges:
-                compname, _, varname = dst.partition('.')
-                dst = dst.replace(compname, pa_name, 1)
-                dgraph.add_edge(src, dst, conn=True)
-                
-            for src, dst in out_edges:
-                compname, _, varname = src.partition('.')
-                src = src.replace(compname, pa_name, 1)
-                dgraph.add_edge(src, dst, conn=True)
-            
-            print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
-            
-        return None
-
     def derivative_graph(self, inputs=None, outputs=None, fd=False):
         """Returns the local graph that we use for derivatives.
         """
@@ -631,21 +533,155 @@ class SequentialWorkflow(Workflow):
             edges = get_inner_edges(graph, inputs, outputs)
             comps = edge_dict_to_comp_list(edges)
             
-            self._derivative_graph = graph.full_subgraph(comps.keys())
-            self._derivative_graph.graph['inputs'] = inputs
-            self._derivative_graph.graph['outputs'] = outputs
-            
+            dgraph = graph.full_subgraph(comps.keys())
+            dgraph.graph['inputs'] = inputs
+            dgraph.graph['outputs'] = outputs
+            if 'mapped_inputs' in dgraph.graph:
+                dgraph.graph.pop('mapped_inputs', None)
+                dgraph.graph.pop('mapped_outputs', None)
+                
+            self._derivative_graph = dgraph
             self._group_nondifferentiables(fd)
             
         return self._derivative_graph
     
+    def _group_nondifferentiables(self, fd=False):
+        """Method to find all non-differentiable blocks. These blocks
+        will be replaced in the differentiation workflow by a pseudo-
+        assembly, which can provide its own Jacobian via finite difference.
+        """
+        
+        dgraph = self._derivative_graph
+        cgraph = dgraph.component_graph()
+
+        nondiff = []
+        comps = nx.topological_sort(cgraph)
+        
+        # Full model finite-difference, so all components go in the PA
+        if fd == True:
+            nondiff_groups = [comps]
+            
+        # Find the non-differentiable componentns
+        else:
+            for name in comps:
+                comp = self.scope.get(name)
+                if not hasattr(comp, 'apply_deriv') and \
+                   not hasattr(comp, 'apply_derivT') and \
+                   not hasattr(comp, 'provideJ'):
+                    nondiff.append(comp.name)
+                
+            if len(nondiff) == 0:
+                return
+            
+            # Groups any connected non-differentiable blocks. Each block is a set
+            # of component names.
+            nondiff_groups = []
+            sub = cgraph.subgraph(nondiff)
+            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
+            for item in nd_graphs:
+                nondiff_groups.append(item.nodes())
+                
+        # for cyclic workflows, remove cut edges.
+        #for edge in self._severed_edges:
+        #    comp1, _, _ = edge[0].partition('.')
+        #    comp2, _, _ = edge[1].partition('.')
+        #    cgraph.remove_edge(comp1, comp2)
+        
+        dgraph.graph['mapped_inputs'] = copy.copy(dgraph.graph['inputs'])
+        dgraph.graph['mapped_outputs'] = copy.copy(dgraph.graph['outputs'])
+        meta_inputs = dgraph.graph['inputs']
+        meta_outputs = dgraph.graph['outputs']
+        map_inputs = dgraph.graph['mapped_inputs']
+        map_outputs = dgraph.graph['mapped_outputs']
+        
+        for j, group in enumerate(nondiff_groups):
+            pa_name = '~~%d' % j
+            
+            # First, find our group boundary
+            allnodes = dgraph.find_prefixed_nodes(group)
+            out_edges = nx.edge_boundary(dgraph, allnodes)
+            in_edges = nx.edge_boundary(dgraph, 
+                                        set(dgraph.nodes()).difference(allnodes))
+            
+            pa_inputs = [b for a, b in in_edges]
+            pa_outputs = [a for a, b in out_edges]
+            
+            # Add requested params
+            for i, varpath in enumerate(meta_inputs):
+                if not isinstance(varpath, tuple):
+                    varpath = [varpath]
+                    
+                mapped = []
+                for path in varpath:
+                    compname, _, varname = path.partition('.')
+                    if varname and (compname in group):
+                        pa_inputs.append(path)
+                        mapped.append(to_PA_var(path, pa_name))
+                
+                if mapped:                      
+                    map_inputs[i] = tuple(mapped)
+                
+            # Add requested outputs
+            for i, varpath in enumerate(meta_outputs):
+                compname, _, varname = varpath.partition('.')
+                if varname and (compname in group):
+                    pa_outputs.append(varpath)
+                    map_outputs[i] = to_PA_var(varpath, pa_name)
+                        
+            # Create the pseudoassy
+            pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
+            
+            # for full-model fd, turn off fake finite difference
+            if fd==True:
+                pseudo.ffd_order = 0
+            
+            # Clean up the old stuff in the graph
+            dgraph.remove_nodes_from(allnodes)
+            
+            # Add pseudoassys to graph
+            dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
+                            pseudo='assembly', valid=True)
+            
+            # Add pseudoassy inputs
+            for varpath in pa_inputs:
+                varname = to_PA_var(varpath, pa_name)
+                dgraph.add_node(varname, var=True, iotype='in', valid=True)
+                dgraph.add_edge(varname, pa_name)
+                
+            # Add pseudoassy outputs
+            for varpath in pa_outputs:
+                varname = to_PA_var(varpath, pa_name)
+                dgraph.add_node(varname, var=True, iotype='out', valid=True)
+                dgraph.add_edge(pa_name, varname)
+            
+            # Hook up the pseudoassemblies
+            for src, dst in in_edges:
+                dst = to_PA_var(dst, pa_name)
+                dgraph.add_edge(src, dst, conn=True)
+                
+            for src, dst in out_edges:
+                src = to_PA_var(src, pa_name)
+                dgraph.add_edge(src, dst, conn=True)
+            
+            print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
+        
+        return None
+
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
         
         if self._edges == None:
+            
             dgraph = self._derivative_graph
-            self._edges = get_inner_edges(dgraph, dgraph.graph['inputs'],
-                                          dgraph.graph['outputs'])
+            if 'mapped_inputs' in dgraph.graph:
+                inputs = 'mapped_inputs'
+                outputs = 'mapped_outputs'
+            else:
+                inputs = 'inputs'
+                outputs = 'outputs'
+                
+            self._edges = get_inner_edges(dgraph, dgraph.graph[inputs],
+                                          dgraph.graph[outputs])
             
         return self._edges
         
@@ -658,7 +694,11 @@ class SequentialWorkflow(Workflow):
         
         comps = edge_dict_to_comp_list(self._edges)
         for compname, data in comps.iteritems():
-            node = self.scope.get(compname)
+            if '~' in compname:
+                node = self._derivative_graph.node[compname]['pa_object']
+            else:
+                node = self.scope.get(compname)
+
             inputs = data['inputs']
             outputs = data['outputs']
             node.calc_derivatives(first, second, savebase, inputs, outputs)
@@ -671,11 +711,26 @@ class SequentialWorkflow(Workflow):
         all passed inputs.
         """
         
-        # TODO: add upscope
+        # This function can be called from a parent driver's workflow for
+        # assembly recursion. We have to clear our cache if that happens.
+        # We also have to clear it next time we arrive back in our workflow.
+        if upscope:
+            self._derivative_graph = None
+            self._edges = None
+            self._upscoped = True
+        elif self._upscoped:
+            self._derivative_graph = None
+            self._edges = None
+            self._upscoped = False
         
         dgraph = self.derivative_graph(inputs, outputs, fd=fd)
-        inputs = dgraph.graph['inputs']
-        outputs = dgraph.graph['outputs']
+        
+        if 'mapped_inputs' in dgraph.graph:
+            inputs = dgraph.graph['mapped_inputs']
+            outputs = dgraph.graph['mapped_outputs']
+        else:
+            inputs = dgraph.graph['inputs']
+            outputs = dgraph.graph['outputs']
         
         n_edge = self.initialize_residual()
         

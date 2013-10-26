@@ -3,6 +3,7 @@ Basic unit testing of OpenMDAO's derivative capability.
 """
 
 from cStringIO import StringIO
+import networkx as nx
 import re
 import unittest
 
@@ -1193,9 +1194,6 @@ class Testcase_derivatives(unittest.TestCase):
     
         # Case 1 - differentiable (comp4)
         
-        #iterlist = self.top.driver.workflow.group_nondifferentiables()
-        #self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
-        
         self.top.comp1.x1 = 2.0
         self.top.run()
         
@@ -1210,15 +1208,19 @@ class Testcase_derivatives(unittest.TestCase):
                                                    mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        self.top.driver.workflow._derivative_graph._component_graph = None
+        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
+        iterlist = nx.topological_sort(cgraph)
+        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
         
         # Case 2 - differentiable (none)
         
         self.top.replace('comp4', ExecComp(exp4))
-        iterlist = self.top.driver.workflow.group_nondifferentiables()
-        self.assertTrue(['~~0'] == iterlist)
         
         self.top.comp1.x1 = 2.0
         self.top.run()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='forward')
@@ -1230,20 +1232,19 @@ class Testcase_derivatives(unittest.TestCase):
                                                    mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        self.top.driver.workflow._derivative_graph._component_graph = None
+        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
+        iterlist = nx.topological_sort(cgraph)
+        self.assertTrue(['~~0'] == iterlist)
         
         # Case 3 - differentiable (comp5)
         
         self.top.replace('comp5', ExecCompWithDerivatives(exp5, deriv5))
-        iterlist = self.top.driver.workflow.group_nondifferentiables()
-        self.assertTrue(['~~0', 'comp5'] == iterlist)
-        removed = set([('comp1', 'comp2'),
-                       ('comp1', 'comp3'),
-                       ('comp2', 'comp4'),
-                       ('comp3', 'comp4')])
-        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
         
         self.top.comp1.x1 = 2.0
         self.top.run()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='forward')
@@ -1255,18 +1256,20 @@ class Testcase_derivatives(unittest.TestCase):
                                                    mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        self.top.driver.workflow._derivative_graph._component_graph = None
+        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
+        iterlist = nx.topological_sort(cgraph)
+        self.assertTrue(['~~0', 'comp5'] == iterlist)
         
         # Case 4 - differentiable (comp1, comp3, comp5)
         
         self.top.replace('comp1', ExecCompWithDerivatives(exp1, deriv1))
         self.top.replace('comp3', ExecCompWithDerivatives(exp3, deriv3))
-        iterlist = self.top.driver.workflow.group_nondifferentiables()
-        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
-        removed = set([('comp3', 'comp4')])
-        self.assertTrue(removed, self.top.driver.workflow._hidden_edges)
         
         self.top.comp1.x1 = 2.0
         self.top.run()
+        self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='forward')
@@ -1279,6 +1282,11 @@ class Testcase_derivatives(unittest.TestCase):
                                                    mode='adjoint')
         
         assert_rel_error(self, J[0, 0], 313.0, .001)
+        
+        self.top.driver.workflow._derivative_graph._component_graph = None
+        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
+        iterlist = nx.topological_sort(cgraph)
+        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
         
         # Put everything in a single pseudo-assy, and run fd with no fake.
         self.top.driver.workflow.config_changed()

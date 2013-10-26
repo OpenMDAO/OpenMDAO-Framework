@@ -3,6 +3,19 @@ provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
 
+def to_PA_var(name, pa_name):
+    ''' Converts an input to a unique input name on a pseudoassembly.'''
+    
+    return pa_name + '.' + name.replace('.', '|')
+        
+def from_PA_var(name):
+    ''' Converts a pseudoassembly input name back to the real input.'''
+    
+    if '~' in name:
+        name = name.partition('.')[2].replace('|', '.')
+        
+    return name
+        
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
     provide derivatives, and thus must be finite differenced. It is not a real
@@ -19,6 +32,10 @@ class PseudoAssembly(object):
         self.wflow = wflow
         self.inputs = list(inputs)
         self.outputs = list(outputs)
+        self.mapped_inputs = [to_PA_var(varpath, name).partition('.')[2] \
+                              for varpath in self.inputs]
+        self.mapped_outputs = [to_PA_var(varpath, name).partition('.')[2] \
+                               for varpath in self.outputs]
         self.itername = ''
 
         self.fd = None
@@ -44,7 +61,8 @@ class PseudoAssembly(object):
         if self.ffd_order == 0:
             ffd_order = 0
 
-        for comp in self.comps:
+        for name in self.comps:
+            comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
             comp.run(ffd_order=ffd_order, case_id=case_id)
 
@@ -65,7 +83,8 @@ class PseudoAssembly(object):
             # with Fake Finite Difference.
             # Don't do this for full-model finite difference.
             if first and self.ffd_order>0:
-                for comp in self.comps:
+                for name in self.comps:
+                    comp = self.wflow.scope.get(name)
                     comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
@@ -74,11 +93,11 @@ class PseudoAssembly(object):
         
     def provideJ(self):
         """Jacobian for this block"""
-        return self.inputs, self.outputs, self.J
+        return self.mapped_inputs, self.mapped_outputs, self.J
 
     # TODO: Maybe this is never used.
     def get(self, varname):
         """ Return the value of a variable in the Pseudoassembly"""
 
-        return self.wflow.scope.get(varname)
+        return self.wflow.scope.get(from_PA_var(self.name+'.'+varname))
 
