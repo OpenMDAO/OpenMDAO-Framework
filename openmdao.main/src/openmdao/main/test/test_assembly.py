@@ -411,13 +411,7 @@ class AssemblyTestCase(unittest.TestCase):
                              str(err))
         else:
             self.fail('exception expected')
-        #try:
-            #self.asm.connect('comp1.r', 'comp2.rout')
-        #except RuntimeError, err:
-            #self.assertEqual(": Can't connect 'comp1.r' to 'comp2.rout': 'comp1.r' must be an output variable",
-                             #str(err))
-        #else:
-            #self.fail('RuntimeError expected')
+
 
     def test_self_connect(self):
         try:

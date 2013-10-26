@@ -31,7 +31,7 @@ from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
-from openmdao.main.ndepgraph import DependencyGraph
+from openmdao.main.ndepgraph import DependencyGraph, is_output_node, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
@@ -151,6 +151,7 @@ class Component(Container):
         super(Component, self).__init__()
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
+        self._invalidation_type = 'full'
 
         # dependency graph between us and our boundaries
         # (bookkeeps connections between our variables and external ones).
@@ -166,8 +167,8 @@ class Component(Container):
 
         # contains validity flag for each io Trait (inputs are valid since
         # they're not connected yet, and outputs are invalid)
-        self._valid_dict = dict([(name, t.iotype == 'in')
-            for name, t in self.class_traits().items() if t.iotype])
+        #self._valid_dict = dict([(name, t.iotype == 'in')
+        #    for name, t in self.class_traits().items() if t.iotype])
 
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -212,6 +213,10 @@ class Component(Container):
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
 
     @rbac(('owner', 'user'))
+    def get_invalidation_type(self):
+        return self._invalidation_type
+
+    @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
         return self.itername
@@ -231,7 +236,7 @@ class Component(Container):
 
         if name.endswith('_items'):
             n = name[:-6]
-            if n in self._valid_dict:
+            if hasattr(self, n): #if n in self._valid_dict:
                 name = n
 
         self._input_check(name, old)
@@ -239,11 +244,9 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        if self._valid_dict[name.split('[', 1)[0]]:  # if var is not already invalid
-            outs = self.invalidate_deps(varnames=[name])
-            if (outs is None) or outs:
-                if self.parent:
-                    self.parent.child_invalidated(self.name, outs)
+        self._set_exec_state("INVALID")
+        if self.parent and hasattr(self.parent, 'child_invalidated'):
+            self.parent.child_invalidated(self.name, vnames=[name])
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -397,20 +400,8 @@ class Component(Container):
         if self.parent is None:  # if parent is None, we're not part of an Assembly
                                  # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
-            valids = self._valid_dict
-            for name in self.list_inputs():
-                valids[name.split('[', 1)[0]] = True
         else:
-            valids = self._valid_dict
-            invalid_ins = [inp for inp in self._depgraph.get_connected_inputs()
-                                    if valids.get(inp.split('[', 1)[0]) is False]
-            if invalid_ins:
-                self._call_execute = True
-                self.parent.update_inputs(self.name, invalid_ins)
-                for name in invalid_ins:
-                    valids[name.split('[', 1)[0]] = True
-            elif self._call_execute is False and len(self.list_outputs(valid=False)):
-                self._call_execute = True
+            self.parent.update_inputs(self.name)
 
         self.check_configuration()
 
@@ -505,15 +496,10 @@ class Component(Container):
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
-        # make our output Variables valid again
-        valids = self._valid_dict
-        for name in self.list_outputs(valid=False):
-            valids[name.split('[', 1)[0]] = True
-        ## make sure our inputs are valid too
-        for name in self.list_inputs(valid=False):
-            valids[name.split('[', 1)[0]] = True
-        self._call_execute = False
-        self._set_exec_state('VALID')
+        self._validate()
+
+        if self.parent:
+            self.parent.child_run_finished(self.name, self._outputs_to_validate())
         self.publish_vars()
 
     def _post_run(self):
@@ -571,6 +557,7 @@ class Component(Container):
                    hasattr(self, 'calculate_second_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
+                    #print "FFD pass. doing nothing for %s" % self.get_pathname()
                     pass
 
                 else:
@@ -636,9 +623,9 @@ class Component(Container):
         finally:
             self.config_changed()
 
-        trait = self.trait(name)
-        if trait.iotype == 'out':
-            self._valid_dict[name] = False
+        #trait = self.trait(name)
+        #if trait.iotype == 'out':
+        #    self._valid_dict[name] = False
 
         return obj
 
@@ -680,11 +667,13 @@ class Component(Container):
             self._set_input_callback(name)
 
         self.config_changed()
-        if name not in self._valid_dict:
-            if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
-                self._num_input_caseiters += 1
+        #if name not in self._valid_dict:
+        # TODO: revisit this...
+        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            self._num_input_caseiters += 1
+
         if trait.iotype:
-            self._valid_dict[name] = trait.iotype == 'in'
+            #self._valid_dict[name] = trait.iotype == 'in'
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
@@ -718,10 +707,10 @@ class Component(Container):
         super(Component, self).remove_trait(name)
         self.config_changed()
 
-        try:
-            del self._valid_dict[name]
-        except KeyError:
-            pass
+        # try:
+        #     del self._valid_dict[name]
+        # except KeyError:
+        #     pass
 
         if trait and trait.iotype == 'in' and trait.trait_type \
            and trait.trait_type.klass is ICaseIterator:
@@ -730,12 +719,20 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def is_valid(self):
         """Return False if any of our variables is invalid."""
-        if self._call_execute:
+        if self._call_execute or self._exec_state == 'INVALID':
             return False
-        if False in self._valid_dict.values():
-            self._call_execute = True
-            return False
-        # if self.parent is not None:
+        return True
+    
+        #    return False
+        # if False in self._valid_dict.values():
+        #     self._call_execute = True
+        #     return False
+        # for node, data in self._depgraph.nodes_iter(data=True):
+        #     if not node.startswith('parent.') and data['valid'] is False:
+        #         return False
+
+        #if self.parent is not None:
+        #    return self.parent._depgraph.node[self.name]['valid']
         #     srccomps = [n for n, v in self.get_expr_sources()]
         #     if srccomps:
         #         counts = self.parent.exec_counts(srccomps)
@@ -746,7 +743,7 @@ class Component(Container):
         #                 for i, tup in enumerate(self._expr_sources):
         #                     self._expr_sources[i] = (tup[0], count)
         #                 return False
-        return True
+        #return True
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
@@ -765,81 +762,46 @@ class Component(Container):
         self._call_execute = True
 
     @rbac(('owner', 'user'))
-    def list_inputs(self, valid=None, connected=None):
+    def list_inputs(self, connected=None):
         """Return a list of names of input values.
-
-        valid: bool (optional)
-            If valid is not None, the list will contain names
-            of inputs with matching validity.
 
         connected: bool (optional)
             If connected is not None, the list will contain names
             of inputs with matching *external* connectivity status.
         """
         if self._connected_inputs is None:
-            nset = set([k for k, v in self.items(iotype='in')])
-            self._connected_inputs = self._depgraph.get_connected_inputs(nset)
-            self._input_names = list(nset)
+            self._connected_inputs = \
+                       self._depgraph.get_boundary_inputs(connected=True)
+            self._input_names = [k for k, v in self.items(iotype='in')]
 
-        if valid is None:
-            if connected is None:
-                return self._input_names
-            elif connected is True:
-                return self._connected_inputs
-            else:  # connected is False
-                return [n for n in self._input_names
-                                if n not in self._connected_inputs]
-
-        valids = self._valid_dict
-        ret = self._input_names
-        ret = [n for n in ret if valids[n.split('[', 1)[0]] == valid]
-
-        if connected is True:
-            return [n for n in ret if n in self._connected_inputs]
-        elif connected is False:
-            return [n for n in ret if n not in self._connected_inputs]
-
-        return ret  # connected is None, valid is not None
+        if connected is None:
+            return self._input_names[:]
+        elif connected is True:
+            return self._connected_inputs[:]
+        else:  # connected is False
+            return [n for n in self._input_names
+                            if n not in self._connected_inputs]
 
     @rbac(('owner', 'user'))
-    def list_outputs(self, valid=None, connected=None):
+    def list_outputs(self, connected=None):
         """Return a list of names of output values.
-
-        valid: bool (optional)
-            If valid is not None, the list will contain names
-            of outputs with matching validity.
 
         connected: bool (optional)
             If connected is not None, the list will contain names
             of outputs with matching *external* connectivity status.
         """
         if self._connected_outputs is None:
-            nset = set([k for k, v in self.items(iotype='out')])
-            self._connected_outputs = self._depgraph.get_connected_outputs()
-            nset.update(self._connected_outputs)
-            self._output_names = list(nset)
-        self._output_names = [name_ for name_ in self._output_names
-                                              if "[" not in name_]
+            self._connected_outputs = \
+                       self._depgraph.get_boundary_outputs(connected=True)
+            self._output_names = [k for k, v in self.items(iotype='out')]
 
-        if valid is None:
-            if connected is None:
-                return self._output_names
-            elif connected is True:
-                return self._connected_outputs
-            else:  # connected is False
-                return [n for n in self._output_names
-                                if n not in self._connected_outputs]
-
-        valids = self._valid_dict
-        ret = self._output_names
-        ret = [n for n in ret if valids[n.split('[', 1)[0]] == valid]
-
-        if connected is True:
-            return [n for n in ret if n in self._connected_outputs]
-        elif connected is False:
-            return [n for n in ret if n not in self._connected_outputs]
-
-        return ret  # connected is None, valid is not None
+        if connected is None:
+            return self._output_names[:]
+        elif connected is True:
+            return self._connected_outputs[:]
+        else:  # connected is False
+            return [n for n in self._output_names
+                            if n not in self._connected_outputs]
 
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -875,21 +837,12 @@ class Component(Container):
 
         destpath = destexpr.text
 
-        valid_updates = []
         if not srcexpr.refs_parent():
-            if srcexpr.text.split('[', 1)[0] not in self._valid_dict:
-                valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'):
-            valid_updates.append((destpath, False))
             self.config_changed(update_parent=False)
 
         super(Component, self).connect(srcexpr, destexpr)
-
-        # this is after the super connect call so if there's a
-        # problem we don't have to undo it
-        for valids_update in valid_updates:
-            self._valid_dict[valids_update[0].split('[', 1)[0]] = valids_update[1]
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -897,11 +850,6 @@ class Component(Container):
         destination variable.
         """
         super(Component, self).disconnect(srcpath, destpath)
-        if destpath.split('[', 1)[0] in self._valid_dict:
-            if '.' in destpath:
-                del self._valid_dict[destpath.split('[', 1)[0]]
-            else:
-                self._valid_dict[destpath.split('[', 1)[0]] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -1377,6 +1325,12 @@ class Component(Container):
                 if name and not glob.glob(join(name, '*')):
                     # Cleanup unused directory.
                     os.rmdir(name)
+                    # setting the directory attribute below was causing an
+                    # exception because the parent was unaware of the 'top' object.
+                    # It doesn't seem valid that a newly loaded object would ever have
+                    # a parent, but setting the parent to None up above breaks things...
+                    if getattr(top.parent, name, None) is not top:
+                        top.parent = None  # our parent doesn't know us, so why do we have a parent?
                     top.directory = ''
 
         if call_post_load:
@@ -1530,25 +1484,13 @@ class Component(Container):
         """Stop this component."""
         self._stop = True
 
-    @rbac(('owner', 'user'))
-    def get_valid(self, names):
-        """Get the value of the validity flag for the specified variables.
-        Returns a list of bools.
-
-        names: iterator of str
-            Names of variables whose validity is requested.
-        """
-        valids = self._valid_dict
-        return [valids[n.split('[', 1)[0]] for n in names]
-
-    def set_valid(self, names, valid):
-        """Mark the io traits with the given names as valid or invalid."""
-        valids = self._valid_dict
-        for name in names:
-            valids[name.split('[', 1)[0]] = valid
+    def _validate(self):
+        """Mark self as valid."""
+        self._call_execute = False
+        self._set_exec_state('VALID')
 
     @rbac(('owner', 'user'))
-    def invalidate_deps(self, varnames=None, force=False):
+    def invalidate_deps(self, varnames=None):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
         there will never be partial validation of outputs.
@@ -1559,34 +1501,12 @@ class Component(Container):
         Returns None, indicating that all outputs are newly invalidated, or [],
         indicating that no outputs are newly invalidated.
         """
-        outs = self.list_outputs()
-        valids = self._valid_dict
-
         self._call_execute = True
         self._set_exec_state('INVALID')
+        return None
 
-        # only invalidate connected inputs. inputs that are not connected
-        # should never be invalidated
-        if varnames is None:
-            for var in self.list_inputs(connected=True):
-                valids[var.split('[', 1)[0]] = False
-        else:
-            conn = self.list_inputs(connected=True)
-            if conn:
-                conn = [c.split('[', 1)[0] for c in conn]
-                for var in varnames:
-                    if var in conn:
-                        valids[var.split('[', 1)[0]] = False
-
-        # this assumes that all outputs are either valid or invalid
-        if not force and outs and (valids[outs[0].split('[', 1)[0]] is False):
-            # nothing to do because our outputs are already invalid
-            return []
-
-        for out in outs:
-            valids[out.split('[', 1)[0]] = False
-
-        return None  # None indicates that all of our outputs are invalid.
+    def _outputs_to_validate(self):
+        return None  # indicates that all outputs should be validated
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
@@ -1672,8 +1592,8 @@ class Component(Container):
             connected_inputs = []
             connected_outputs = []
         else:
-            connected_inputs = self._depgraph.get_connected_inputs()
-            connected_outputs = self._depgraph.get_connected_outputs()
+            connected_inputs = self._depgraph.get_boundary_inputs(connected=True)
+            connected_outputs = self._depgraph.get_boundary_outputs(connected=True)
 
         # Additionally, we need to know if anything is connected to a
         # param, objective, or constraint.
@@ -1980,28 +1900,29 @@ class Component(Container):
 
         return attrs
 
+    @rbac(('owner', 'user'))
+    def get_valid(self, names):
+        """Get the value of the validity flag for the specified variables.
+        Returns a list of bools.
 
-def _show_validity(comp, recurse=True, exclude=None, valid=None):  # pragma no cover
-    """Prints out validity status of all input and output traits
-    for the given object, optionally recursing down to all of its
-    Component children as well.
-    """
-    exclude = exclude or set()
-
-    def _show_validity_(comp, recurse, exclude, valid, result):
-        pname = comp.get_pathname()
-        for name, val in comp._valid_dict.items():
-            if name not in exclude and (valid is None or val is valid):
-                if '.' in name:  # mark as fake boundary var
-                    result['.'.join([pname, '*%s*' % name])] = val
+        names: iterator of str
+            Names of variables whose validity is requested.
+        """
+        if self.parent and has_interface(self.parent, IAssembly):
+            return self.parent.get_valid(
+                ['.'.join([self.name,n]) for n in names])
+        else:
+            valids = []
+            if self._exec_state == 'INVALID':
+                isvalid = False
+            else:
+                isvalid = True
+            for name in names:
+                if is_input_node(self._depgraph, name):
+                    valids.append(True)
+                elif isvalid:
+                    valids.append(True)
                 else:
-                    result['.'.join([pname, name])] = val
-        if recurse:
-            for name in comp.list_containers():
-                obj = getattr(comp, name)
-                if is_instance(obj, Component):
-                    _show_validity_(obj, recurse, exclude, valid, result)
-    result = {}
-    _show_validity_(comp, recurse, exclude, valid, result)
-    for name, val in sorted([(n, v) for n, v in result.items()], key=lambda v: v[0]):
-        print '%s: %s' % (name, val)
+                    valids.append(False)
+            return valids
+

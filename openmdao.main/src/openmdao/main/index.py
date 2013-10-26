@@ -58,7 +58,6 @@ def process_index_entry(obj, idx):
     
     raise ValueError("invalid index: %s" % idx)
 
-
 def index_retains_metadata(index):
     fails = (CALL, ATTR)
     for idx in index:
@@ -66,7 +65,6 @@ def index_retains_metadata(index):
             return False
     return True
         
-
 def get_indexed_value(obj, name, index=None):
     if name:
         obj = getattr(obj, name)

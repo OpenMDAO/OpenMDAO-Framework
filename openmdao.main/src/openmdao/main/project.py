@@ -16,23 +16,26 @@ from ConfigParser import SafeConfigParser
 
 #from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import set_as_top
+from openmdao.main.assembly import set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.publisher import publish
-from openmdao.util.fileutil import get_module_path, expand_path, file_md5
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5, \
+                                   find_in_path
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
+from openmdao.util.astutil import parse_ast, text_to_node
 
 # extension for project files and directories
 PROJ_FILE_EXT = '.proj'
 PROJ_DIR_EXT = '.projdir'
+PROJ_HOME = os.path.expanduser('~/.openmdao/gui/projects')
 
 # use this to keep track of project classes that have been instantiated
 # so we can determine if we need to force a Project save & reload. This
 # is the reason for the existence of the custom import hook classes ProjFinder
-# and ProjLoader, as well as the CtorInstrumenter ast node transformer.
+# and ProjLoader, as well as the _CtorInstrumenter ast node transformer.
 #
 # FIXME: This doesn't keep track of when instances are deleted, so
 # it's possible that the _instantiated_classes set will contain names
@@ -57,44 +60,13 @@ def _match_insts(classes):
     return _instantiated_classes.intersection(classes)
 
 
-def parse(contents, fname, mode='exec'):
-    """Wrapper for ast.parse() that cleans the contents of CRs and ensures
-    it ends with a newline."""
-    contents = contents.replace('\r', '')  # py26 barfs on CRs
-    if not contents.endswith('\n'):
-        contents += '\n'  # to make ast.parse happy :(
-    return ast.parse(contents, filename=fname, mode=mode)
-
-
-def text_to_node(text, lineno=None):
-    """Given a Python source string, return the corresponding AST node.
-    The outer Module node is removed so that the node corresponding to the
-    given text can be added to an existing AST.
-    """
-    modnode = ast.parse(text, 'exec')
-    if len(modnode.body) == 1:
-        node = modnode.body[0]
-    else:
-        node = modnode.body
-
-    # If specified, fixup line numbers.
-    if lineno is not None:
-        node.lineno = lineno
-        node.col_offset = 0
-        for child in ast.iter_child_nodes(node):
-            child.lineno = lineno
-            child.col_offset = 0
-
-    return node
-
-
-class CtorInstrumenter(ast.NodeTransformer):
+class _CtorInstrumenter(ast.NodeTransformer):
     """All __init__ calls will be replaced with a call to a wrapper function
     that records the call by calling _register_inst(typename) before creating
     the instance.
     """
     def __init__(self):
-        super(CtorInstrumenter, self).__init__()
+        super(_CtorInstrumenter, self).__init__()
 
     def visit_ClassDef(self, node):
         text = None
@@ -113,11 +85,11 @@ def __init__(self, *args, **kwargs):
         return node
 
 
-def add_init_monitors(node):
+def _add_init_monitors(node):
     """Take the specified AST and translate it into the instrumented version,
     which will record all instances.
     """
-    node = CtorInstrumenter().visit(node)
+    node = _CtorInstrumenter().visit(node)
     node.body = [
         ast.copy_location(
             text_to_node('from openmdao.main.project import _register_inst'), node)
@@ -186,8 +158,8 @@ class ProjLoader(object):
         """
         contents = self.get_source(modpath)
         fname = self._get_filename(modpath)
-        root = parse(contents, fname, mode='exec')
-        return compile(add_init_monitors(root), fname, 'exec')
+        root = parse_ast(contents, fname, mode='exec')
+        return compile(_add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
         """Creates a new module if one doesn't exist already and then updates
@@ -303,20 +275,20 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None,
 _excluded_calls = set(['run', 'execute'])
 
 
-def _check_hierarchy(pathname, objs):
-    # any operation we apply to a given object will be cancelled
-    # out if that object or any of its parents are overwritten
-    # later. Returns True if the command applying to the object
-    # indicated by the given pathname should be filtered out.
-    if pathname in objs:
-        return True
-    for name in objs:
-        if pathname.startswith(name + '.'):
-            return True
-    return False
+# def _check_hierarchy(pathname, objs):
+#     # any operation we apply to a given object will be cancelled
+#     # out if that object or any of its parents are overwritten
+#     # later. Returns True if the command applying to the object
+#     # indicated by the given pathname should be filtered out.
+#     if pathname in objs:
+#         return True
+#     for name in objs:
+#         if pathname.startswith(name + '.'):
+#             return True
+#     return False
 
 
-def filter_macro(lines):
+def _filter_macro(lines):
     """Removes commands from a macro that are overridden by later commands."""
     # FIXME: this needs a lot of work. Things get a little messy when you have
     # rename and move calls mixed in and I didn't have time to sort out those issues yet,
@@ -372,43 +344,44 @@ def filter_macro(lines):
     return filt_lines[::-1]  # reverse the result
 
 
-def add_proj_to_path(path):
-    """Puts this project's directory on sys.path so that imports from it
-    will be processed by our special loader.
-    """
-    modeldir = path + PROJ_DIR_EXT
-    if modeldir not in sys.path:
-        sys.path = [modeldir] + sys.path
-
-
 class Project(object):
-    def __init__(self, projpath):
+    def __init__(self, projpath, gui=True, globals_dict=None):
         """Initializes a Project containing the project found in the
-        specified directory or creates a new project if one doesn't exist.
+        specified directory or creates a new project if 'create' is True
+        and one doesn't exist.
 
         projpath: str
             Path to the project's directory.
+
+        gui: bool (optional) (default=True)
+            GUI is running. This determines how the project is loaded.
+
+        globals_dict: dict (optional)
+            If this is not None, it will be populated with the objects
+            from the project model. Otherwise the Project will use its
+            own internal dict.
         """
         self._recorded_cmds = []
         self._cmds_to_save = []
         self.path = expand_path(projpath)
-        self._model_globals = {}
+        self._model_globals = globals_dict if globals_dict is not None else {}
+        self._gui = gui
 
         self.macrodir = os.path.join(self.path, '_macros')
         self.macro = 'default'
 
-        if not os.path.isdir(self.macrodir):
+        if gui and not os.path.isdir(self.macrodir):
             os.makedirs(self.macrodir)
 
         settings = os.path.join(self.path, '_settings.cfg')
-        if not os.path.isfile(settings):
+        if gui and not os.path.isfile(settings):
             self._create_config()
 
         self.config = SafeConfigParser()
         self.config.optionxform = str  # Preserve case.
         files = self.config.read(settings)
         if not files:
-            logger.error("Failed to read project config file")
+            self._error("Failed to read project config file")
 
     def _create_config(self):
         """Create the initial _settings.cfg file for the project."""
@@ -456,6 +429,12 @@ description =
     def items(self):
         return self._model_globals.items()
 
+    def _error(self, msg, errclass=RuntimeError):
+        if self._gui:
+            logger.error(msg)
+        else:
+            raise errclass(msg)
+
     def execfile(self, fname, digest=None):
         # first, make sure file has been imported
         __import__(get_module_path(fname))
@@ -465,7 +444,7 @@ description =
                            " it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
-        node = add_init_monitors(parse(contents, fname, mode='exec'))
+        node = _add_init_monitors(parse_ast(contents, fname, mode='exec'))
         exec compile(node, fname, 'exec') in self._model_globals
 
         # make the recorded execfile command use the current md5 hash
@@ -500,12 +479,15 @@ description =
                 self.command(line, save=False)
             except Exception as err:
                 msg = str(err)
-                logger.error("%s",
-                             ''.join(traceback.format_tb(sys.exc_info()[2])))
-                try:
-                    publish('console_errors', msg)
-                except:
-                    logger.error("publishing of error failed")
+                if self._gui:
+                    logger.error("%s",
+                                 ''.join(traceback.format_tb(sys.exc_info()[2])))
+                    try:
+                        publish('console_errors', msg)
+                    except:
+                        logger.error("publishing of error failed")
+                else:
+                    raise RuntimeError(msg)
 
     def _save_command(self, save):
         """Save the current command(s) to the macro file."""
@@ -556,27 +538,46 @@ description =
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
         self._model_globals['set_as_top'] = set_as_top
+        if self._gui:
+            self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
 
     def activate(self):
         """Make this project active by putting its directory on sys.path and
         executing its macro.
         """
-        # set SimulationRoot and put our path on sys.path
-        SimulationRoot.chroot(self.path)
-        add_proj_to_path(self.path)
+        if self._gui:
+            # set SimulationRoot and put our path on sys.path
+            SimulationRoot.chroot(self.path)
+        self.add_to_path()
 
         # set up the model
         self._init_globals()
         self._initialize()
 
+    def add_to_path(self):
+        """Puts this project's directory on sys.path so that imports from it
+        will be processed by our special loader.
+        """
+        if self._gui:
+            # this weird extension is needed in order for our import hook
+            # to fire
+            modeldir = self.path + PROJ_DIR_EXT
+            if modeldir not in sys.path:
+                sys.path = [modeldir] + sys.path
+        else:
+            if self.path not in sys.path:
+                sys.path = [self.path] + sys.path
+
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir + PROJ_DIR_EXT)
+            if self._gui:
+                sys.path.remove(modeldir + PROJ_DIR_EXT)
+            else:
+                sys.path.remove(self.path)
         except:
             pass
 
@@ -621,3 +622,35 @@ description =
         finally:
             os.chdir(startdir)
         return fname
+
+
+def load_project(pname, globals_dict=None):
+    """Load the model from the named project into the current
+    globals dict so that the model can be used as part of a 
+    python script outside of the GUI.  pname can either be an
+    absolute or relative path to a project directory, or just
+    a project name.  If it's a project name, the project directory
+    will be searched for in PATH, and if not found there will be
+    searched for in $HOME/.openmdao/gui/projects.
+    """
+
+    abspname = os.path.abspath(pname)
+    if os.path.isdir(abspname):
+        ppath = abspname
+    else:
+        ppath = find_in_path(pname)
+        hpath = os.path.join(PROJ_HOME, pname)
+        if ppath is None and os.path.isdir(hpath):
+            ppath = hpath
+
+    if ppath is None:
+        raise RuntimeError("can't locate project '%s'" % pname)
+
+    proj = Project(ppath, gui=False, globals_dict=globals_dict)
+    proj.activate()
+
+    return proj
+
+def list_projects():
+    """Return a list of available projects."""
+    return sorted(os.listdir(PROJ_HOME))

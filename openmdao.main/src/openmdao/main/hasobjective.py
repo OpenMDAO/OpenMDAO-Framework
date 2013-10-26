@@ -102,7 +102,7 @@ class HasObjectives(object):
                                          AttributeError)
             
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope, getter='get_wrapped_attr')
+        expreval = Objective(expr, scope, getter='get_attr')
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)

@@ -714,16 +714,16 @@ class ExprEvaluator(object):
     #             compset.update(diff)
     #     return visited
     
-    def refs_valid(self):
-        """Return True if all variables referenced by our expression
-        are valid.
-        """
-        if self.scope:
-            if self._code is None:
-                self._parse()
-            if not all(self.scope.get_valid(self.var_names)):
-                return False
-        return True
+    # def refs_valid(self):
+    #     """Return True if all variables referenced by our expression
+    #     are valid.
+    #     """
+    #     if self.scope:
+    #         if self._code is None:
+    #             self._parse()
+    #         if not all(self.scope.get_valid(self.var_names)):
+    #             return False
+    #     return True
     
     def refs_parent(self):
         """Return True if this expression references a variable in parent."""
@@ -734,12 +734,12 @@ class ExprEvaluator(object):
                 return True
         return False
 
-    def invalid_refs(self):
-        """Return a list of invalid variables referenced by this expression."""
-        if self._code is None:
-            self._parse()
-        valids = self.scope.get_valid(self.var_names)
-        return [n for n,v in zip(self.var_names, valids) if v is False]
+    # def invalid_refs(self):
+    #     """Return a list of invalid variables referenced by this expression."""
+    #     if self._code is None:
+    #         self._parse()
+    #     valids = self.scope.get_valid(self.var_names)
+    #     return [n for n,v in zip(self.var_names, valids) if v is False]
     
     def check_resolve(self):
         """Return True if all variables referenced by our expression can

@@ -7,7 +7,8 @@ import shutil
 from openmdao.util.fileutil import build_directory, onerror
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
-                                  filter_macro, ProjFinder, _match_insts
+                                  _filter_macro, ProjFinder, _match_insts, \
+                                  load_project
 from openmdao.main.factorymanager import get_signature
 from openmdao.lib.datatypes.api import Float
 
@@ -142,7 +143,7 @@ class ProjectTestCase(unittest.TestCase):
             #"top.add('foo', create('SomeClass'))",
             #"top.foo.gg = 53",
             #]
-        filtered = filter_macro(lines)
+        filtered = _filter_macro(lines)
         self.assertEqual(filtered, expected)
 
 
@@ -212,6 +213,32 @@ p = PkgClass2()
 
         finally:
             sys.path = sys.path[1:]
+
+
+class LoadProjectTestCase(unittest.TestCase):
+    def test_load_project_globals(self):
+        pdir = os.path.join(os.path.dirname(__file__), 'load_test')
+        self.assertFalse('top' in globals())
+        load_project(pdir, globals())
+        self.assertTrue('top' in globals())
+        top.c1.a = 5
+        top.c1.b = 7
+        top.run()
+        self.assertEqual(top.c3.c, 24)
+        self.assertEqual(top.c3.d, -4)
+        
+    def test_load_project_get(self):
+        pdir = os.path.join(os.path.dirname(__file__), 'load_test')
+        self.assertFalse('top' in globals())
+        proj = load_project(pdir)
+        self.assertFalse('top' in globals())
+        top = proj.get('top')
+        top.c1.a = 5
+        top.c1.b = 7
+        top.run()
+        self.assertEqual(top.c3.c, 24)
+        self.assertEqual(top.c3.d, -4)
+
 
 if __name__ == "__main__":
     unittest.main()

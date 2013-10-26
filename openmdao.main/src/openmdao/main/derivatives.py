@@ -1,16 +1,16 @@
-""" Class definition for Derivatives.
-This object is used by Component to store derivative information and to
-perform calculations during a Fake Finite Difference.
+""" Some functions and objects that provide the backbone to OpenMDAO's
+differentiation capability.
 """
-import itertools
 
-from openmdao.main.vartree import VariableTree
+from openmdao.main.array_helpers import flatten_slice, flattened_size, \
+                                        flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
+from openmdao.main.ndepgraph import base_var
 
 try:
-    from numpy import array, ndarray, zeros, inner, ones, unravel_index, \
-         ravel_multi_index, arange, prod, vstack, hstack
+    from numpy import array, ndarray, zeros, ones, unravel_index, \
+         arange, vstack, hstack
 
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
@@ -18,75 +18,8 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros, inner, \
+    from openmdao.main.numpy_fallback import array, ndarray, zeros, \
                                              ones
-
-
-def flattened_size(name, val, scope=None):
-    """ Return size of `val` flattened to a 1D float array. """
-    
-    # Floats
-    if isinstance(val, float):
-        return 1
-    
-    # Numpy arrays
-    elif isinstance(val, ndarray):
-        return val.size
-    
-    # Variable Trees
-    elif isinstance(val, VariableTree):
-        size = 0
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            size += flattened_size('.'.join((name, key)), value)
-        return size
-    
-    else:
-        meta = scope.get_metadata(name)
-        
-        # Custom data objects with data_shape in the metadata
-        if 'data_shape' in meta:
-            return prod(meta['data_shape'])
-            
-        #Nothing else is differentiable
-        else:
-            raise TypeError('Variable %s is of type %s which is not convertable'
-                            ' to a 1D float array.' % (name, type(val)))
-
-def flattened_value(name, val):
-    """ Return `val` as a 1D float array. """
-    if isinstance(val, float):
-        return array([val])
-    elif isinstance(val, ndarray):
-        return val.flatten()
-    elif isinstance(val, VariableTree):
-        vals = []
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            vals.extend(flattened_value('.'.join((name, key)), value))
-        return array(vals)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-
-def flattened_names(name, val, names=None):
-    """ Return list of names for values in `val`. """
-    if names is None:
-        names = []
-    if isinstance(val, float):
-        names.append(name)
-    elif isinstance(val, ndarray):
-        for i in range(len(val)):
-            value = val[i]
-            flattened_names('%s[%s]' % (name, i), value, names)
-    elif isinstance(val, VariableTree):
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            flattened_names('.'.join((name, key)), value, names)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-    return names
 
 
 def calc_gradient(wflow, inputs, outputs):
@@ -564,7 +497,7 @@ def get_bounds(obj, input_keys, output_keys):
     return ibounds, obounds
 
 def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
-    """ Return the subportion of the Jacobian that is valid for a particular\
+    """ Return the subportion of the Jacobian that is valid for a particular
     input and output slice.
     
     J: 2D ndarray
@@ -591,91 +524,30 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
     ish, osh: tuples
         Shapes of the original input and output variables before being 
         flattened.
-        
     """
     
     # J inputs
     if idx:
+        istring, ix = flatten_slice(idx, ish, offset=i1, name='ix')
         
-        # Handle complicated slices that may have : or -1 in them
-        # We just use numpy index math to convert unravelable indices into
-        # index arrays so that we can ravel them to find the set of indices
-        # that we need to grab from J.
-        idx = idx.replace(' ', '').replace('][', ',').strip(']')
-        if '-' in idx or ':' in idx:
-            
-            idx_list = idx.split(',')
-            indices = []
-            for index, size in zip(idx_list, ish):
-                temp = eval('arange(size)[%s]' % index)
-                if not isinstance(temp, ndarray):
-                    temp = array([temp]) 
-                indices.append(temp)
-                
-            if len(indices) > 1:
-                indices = zip(*itertools.product(*indices))
-            i_rav_ind = ravel_multi_index(indices, dims=osh) + i1
-            istring = 'i_rav_ind'
-                
-        # Single index into a multi-D array
-        elif ',' in idx:
-            idx = eval(idx)
-            ix = ravel_multi_index(idx, ish) + i1
-            istring = 'ix:ix+1'
-            
-        # Single index into a 1D array
-        else:
-            ix = int(idx) + i1
-            istring = 'ix:ix+1'
-            
     # The entire array, already flat
     else:
         istring = 'i1:i2'
         
     # J Outputs
     if odx:
+        ostring, ox = flatten_slice(odx, osh, offset=o1, name='ox')
         
-        # Handle complicated slices that may have : or -1 in them
-        # We just use numpy index math to convert unravelable indices into
-        # index arrays so that we can ravel them to find the set of indices
-        # that we need to grab from J.
-        odx = odx.replace(' ', '').replace('][', ',').strip(']')
-        if '-' in odx or ':' in odx:
-            
-            idx_list = odx.split(',')
-            indices = []
-            for index, size in zip(idx_list, osh):
-                temp = eval('arange(size)[%s]' % index)
-                if not isinstance(temp, ndarray):
-                    temp = array([temp]) 
-                indices.append(temp)
-                    
-            if len(indices) > 1:
-                indices = zip(*itertools.product(*indices))
-                
-            o_rav_ind = ravel_multi_index(indices, dims=osh) + o1
-            ostring = 'o_rav_ind'
-            
-        # Single index into a multi-D array
-        elif ',' in odx:
-            odx = eval(odx)
-            ox = ravel_multi_index(odx, ish) + o1
-            ostring = 'ox:ox+1'
-            
-        # Single index into a 1D array
-        else:
-            ox = int(odx) + o1
-            ostring = 'ox:ox+1'
-            
     # The entire array, already flat
     else:
         ostring = 'o1:o2'
     
-    if ostring == 'o_rav_ind' and istring == 'i_rav_ind':
-        Jsub = eval('J[vstack(%s), hstack(%s)]' % (ostring, istring))
-    else:        
-        Jsub = eval('J[%s, %s]' % (ostring, istring))
-    return Jsub
+    if ':' not in ostring:
+        ostring = 'vstack(%s)' % ostring
+    if ':' not in istring:
+        istring = 'hstack(%s)' % istring
+        
+    return eval('J[%s, %s]' % (ostring, istring))
     
     
 class FiniteDifference(object):
@@ -907,18 +779,18 @@ class FiniteDifference(object):
                 if var_name:
                     comp._input_updated(var_name.split('[', 1)[0])
                 else:
-                    self.scope._input_updated(comp_name)
+                    self.scope._input_updated(comp_name.split('[')[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                comp._valid_dict[var_name.split('[', 1)[0]] = True
+                self.scope.set_valid([base_var(self.scope._depgraph, src)], True)
                 
                 # Make sure we execute!
                 comp._call_execute = True
                 
             else:
-                self.scope._valid_dict[comp_name.split('[', 1)[0]] = True
+                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
 
 def apply_linear_model(self, comp, ffd_order):

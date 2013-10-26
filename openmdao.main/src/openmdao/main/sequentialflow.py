@@ -5,17 +5,18 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 import sys
 
-from openmdao.main.derivatives import flattened_size, flattened_value, \
-                                      flattened_names, \
-                                      calc_gradient, calc_gradient_adjoint, \
+from openmdao.main.array_helpers import flattened_size, flattened_value, \
+                                        flattened_names
+from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, recursive_components, \
                                       applyMinvT, applyMinv
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.vartree import VariableTree
+
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import find_related_pseudos
+from openmdao.main.ndepgraph import find_related_pseudos, is_input_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -52,6 +53,7 @@ class SequentialWorkflow(Workflow):
         self._topsort = None
         self._find_nondiff_blocks = True
         self._input_outputs = []
+        self._interior_edges = None
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -91,6 +93,7 @@ class SequentialWorkflow(Workflow):
         self._topsort = None
         self._input_outputs = []
         self._names = None
+        self._interior_edges = None
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -99,7 +102,7 @@ class SequentialWorkflow(Workflow):
         self.scope._depgraph.sever_edges(edges)
 
     def unsever_edges(self):
-        self.scope._depgraph.unsever_edges()
+        self.scope._depgraph.unsever_edges(self._parent.get_expr_scope())
         
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
@@ -216,44 +219,32 @@ class SequentialWorkflow(Workflow):
         included. If there are non-differentiable blocks grouped in
         pseudo-assemblies, then those interior edges are excluded.
         """
-        
-        #required_floating_vars = []
-        #for src, target in self._additional_edges:
-            #if src=='@in' and '.' not in target:
-                #required_floating_vars.append(target)
-                
-            #elif target=='@out' and '.' not in src:
-                #required_floating_vars.append(src)
-               
-        graph = self._parent.workflow_graph()
-        comps = [comp.name for comp in self.__iter__()]# + \
-                #required_floating_vars
-        edges = set(graph.get_interior_connections(comps))
-        edges.update(self.get_driver_edges())
-        edges.update(self._additional_edges)
-        edges = edges - self._hidden_edges
-                
-        # Sometimes we connect an input to an input (particularly with
-        # constraints). These need to be rehooked to corresponding source
-        # edges.
-        
-        self._input_outputs = set()
-        for src, target in edges:
-            if src == '@in' or target == '@out' or '_pseudo_' in src:
-                continue
-            compname, _, var = src.partition('.')
-            if var:
-                var = var.split('[')[0]
-                comp = self.scope.get(compname)
-                if var in comp.list_inputs():
+        if self._interior_edges is None:
+                   
+            graph = self._parent.workflow_graph()
+            comps = [comp.name for comp in self.__iter__()]# + \
+                    #required_floating_vars
+            edges = set(graph.get_interior_connections(comps))
+            edges.update(self.get_driver_edges())
+            edges.update(self._additional_edges)
+            edges = edges - self._hidden_edges
+                    
+            # Sometimes we connect an input to an input (particularly with
+            # constraints). These need to be rehooked to corresponding source
+            # edges.
+            
+            self._input_outputs = set()
+            for src, target in edges:
+                if src == '@in' or target == '@out' or '_pseudo_' in src:
+                    continue
+                if is_input_node(graph, src):
                     self._input_outputs.add(src)
-            else:
-                # Free-floating var in assembly.
-                self._input_outputs.add(src)
-                
-        self._input_outputs = list(self._input_outputs)
-                
-        return sorted(list(edges))
+                    
+            self._input_outputs = list(self._input_outputs)
+                    
+            self._interior_edges = sorted(list(edges))
+            
+        return self._interior_edges
 
     def get_driver_edges(self):
         '''Return all edges where our driver connects to any component that
@@ -312,6 +303,9 @@ class SequentialWorkflow(Workflow):
                 for src in edge[1]:
                     src_name = (edge[0], src)
                     self.bounds[src_name] = (nEdge, nEdge+width)
+                    self.set_bounds(src, (nEdge, nEdge+width))
+            else:
+                self.set_bounds(src, (nEdge, nEdge+width))
                     
             nEdge += width
 
@@ -322,6 +316,25 @@ class SequentialWorkflow(Workflow):
 
         return nEdge
 
+    def get_bounds(self, node):
+        """ Return a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        
+        return self.scope._depgraph.node[node][self._parent.itername]
+        
+    def set_bounds(self, node, bounds):
+        """ Set a tuple containing the start and end indices into the
+        residual vector that correspond to a given variable name in this
+        workflow."""
+        try:
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+            
+        # Array indexed parameter nodes are not in the graph, so add them.
+        except KeyError:
+            self.scope._depgraph.add_subvar_input(node)
+            self.scope._depgraph.node[node][self._parent.itername] = bounds
+        
     def calculate_residuals(self):
         """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
@@ -369,9 +382,7 @@ class SequentialWorkflow(Workflow):
             self.scope.set(target, new_val, force=True)
 
             # Prevent OpenMDAO from stomping on our poked input.
-            comp_name, _, var_name = target.partition('.')
-            comp = self.scope.get(comp_name)
-            comp._valid_dict[var_name.split('[',1)[0]] = True
+            self.scope.set_valid([target.split('[',1)[0]], True)
 
             #(An alternative way to prevent the stomping. This is more
             #concise, but setting an output and allowing OpenMDAO to pull it
@@ -421,7 +432,7 @@ class SequentialWorkflow(Workflow):
         inputs['parent'] = {}
         outputs['parent'] = {}
 
-        # Start with zero-valued dictionaries cotaining keys for all inputs
+        # Start with zero-valued dictionaries containing keys for all inputs
         pa_ref = {}
         for comp in self.derivative_iter():
             name = comp.name
@@ -803,7 +814,7 @@ class SequentialWorkflow(Workflow):
                 
                 if edge[0] in group and edge[1] in group:
                     graph.remove_edge(edge[0], edge[1])
-                    var_edge = dgraph.get_interior_connections(edge)
+                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
                     self._hidden_edges.update(var_edge)
                     
                 elif edge[0] in group:
@@ -963,27 +974,25 @@ class SequentialWorkflow(Workflow):
             # Finite difference the whole thing by putting the whole workflow in a
             # pseudo-assembly. This requires being a little creative.
             comps = [comp for comp in self]
-            comp_names = self.get_names(full=True)
+            comp_names = [comp.name for comp in comps]
             rcomps = recursive_components(self.scope, comp_names)            
             pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
                                     self, recursed_components=rcomps)
             pseudo.ffd_order = 0
             graph = self._parent.workflow_graph()
-            self._hidden_edges = set(graph.get_interior_connections(self.get_names(full=True)))
+            self._hidden_edges = set(graph.get_interior_connections(comp_names))
             
             # Hack: subdriver edges aren't in the assy depgraph, so we 
             # have to manually find and remove them.
             for dr_edge in self.get_driver_edges():
-                dr_src = dr_edge[0].split('.')[0]
-                dr_targ = dr_edge[1].split('.')[0]
+                dr_src = dr_edge[0].split('.',1)[0]
+                dr_targ = dr_edge[1].split('.',1)[0]
                 if '%s.in0' % dr_src in inputs:
                     pcomp = getattr(self.scope, dr_src)
-                    pset = set(pcomp.list_connections())
-                    self._hidden_edges = pset.union(self._hidden_edges)
-                if '%s.out0' % dr_targ in outputs:
+                    self._hidden_edges.update(pcomp.list_connections())
+                elif '%s.out0' % dr_targ in outputs:
                     pcomp = getattr(self.scope, dr_targ)
-                    pset = set(pcomp.list_connections())
-                    self._hidden_edges = pset.union(self._hidden_edges)
+                    self._hidden_edges.update(pcomp.list_connections())
             
             self.derivative_iterset = [pseudo]
 

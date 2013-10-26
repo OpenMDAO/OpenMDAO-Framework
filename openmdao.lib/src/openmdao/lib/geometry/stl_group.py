@@ -30,7 +30,6 @@ class STLGroup(object):
 
         self._needs_linerize = True
 
-
     def add(self, comp ,name=None): 
         """ addes a new component to the geometry""" 
 

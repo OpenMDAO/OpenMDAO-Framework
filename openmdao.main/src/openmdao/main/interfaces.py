@@ -99,16 +99,16 @@ class IContainer(Interface):
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
 
-    def get_wrapped_attr(name, index=None):
-        """If the named Variable can return an AttrWrapper, then this
-        function will return that, with the value set to the current value of
-        the variable. Otherwise, it functions like *getattr*, just
-        returning the value of the variable. Raises an exception if the
-        variable cannot be found. The value will be copied if the variable has
-        a 'copy' metadata attribute that is not None. Possible values for
-        'copy' are 'shallow' and 'deep'.  index, if not None, should be of
-        the same form as described in the get() function.
-        """
+    # def get_wrapped_attr(name, index=None):
+    #     """If the named Variable can return an AttrWrapper, then this
+    #     function will return that, with the value set to the current value of
+    #     the variable. Otherwise, it functions like *getattr*, just
+    #     returning the value of the variable. Raises an exception if the
+    #     variable cannot be found. The value will be copied if the variable has
+    #     a 'copy' metadata attribute that is not None. Possible values for
+    #     'copy' are 'shallow' and 'deep'.  index, if not None, should be of
+    #     the same form as described in the get() function.
+    #     """
 
     def items(recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
