@@ -1165,7 +1165,6 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-
         try:
             eq = all(eq)
         except TypeError:

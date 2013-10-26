@@ -8,8 +8,7 @@ class PseudoAssembly(object):
     provide derivatives, and thus must be finite differenced. It is not a real
     assembly, and should never be used in an OpenMDAO model."""
 
-    def __init__(self, name, comps, inputs, outputs, wflow,
-                 recursed_components=None):
+    def __init__(self, name, comps, inputs, outputs, wflow):
         """Initialized with list of components, and the parent workflow."""
 
         if '~' not in name:
@@ -21,10 +20,6 @@ class PseudoAssembly(object):
         self.inputs = list(inputs)
         self.outputs = list(outputs)
         self.itername = ''
-
-        self.recursed_comp_names = []
-        if recursed_components is not None:
-            self.recursed_comp_names = recursed_components[:]
 
         self.fd = None
         self.J = None
@@ -54,7 +49,7 @@ class PseudoAssembly(object):
             comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
         # We don't do this in __init__ because some inputs and outputs
@@ -81,14 +76,9 @@ class PseudoAssembly(object):
         """Jacobian for this block"""
         return self.inputs, self.outputs, self.J
 
+    # TODO: Maybe this is never used.
     def get(self, varname):
         """ Return the value of a variable in the Pseudoassembly"""
 
         return self.wflow.scope.get(varname)
-
-    def list_all_comps(self):
-        """list all components, including any sub-driver components that
-        interact with the outer driver"""
-        return [item.name for item in self.comps] + \
-               self.recursed_comp_names
 

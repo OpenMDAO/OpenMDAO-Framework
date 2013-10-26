@@ -1,6 +1,7 @@
 from collections import deque
 import pprint
 
+from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
@@ -71,6 +72,11 @@ def _sub_or_super(s1, s2):
 #   driver  means it's a Driver node
 #   iotype  is present in var and subvar nodes and indicates i/o direction
 #   boundary means it's a boundary variable node
+#   valid   indicates validity of the node. can be True or False
+#   invalidate  indicates whether a comp node has partial or full invalidation. allowed
+#               values are ['partial', 'full']
+#   fake    used to designate subvar nodes that are essentially metadata placeholders and
+#           are not really part of the dataflow
 #
 # EDGES:
 #   conn    means that the edge is a connection that was specified
@@ -103,6 +109,12 @@ def is_output_base_node(graph, node):
 def is_boundary_node(graph, node):
     return 'boundary' in graph.node[node]
 
+def is_boundary_input_node(graph, node):
+    return is_boundary_node(graph, node) and is_input_node(graph, node)
+
+def is_boundary_output_node(graph, node):
+    return is_boundary_node(graph, node) and is_output_node(graph, node)
+
 def is_comp_node(graph, node):
     """Returns True for Component or PseudoComponent nodes."""
     return 'comp' in graph.node.get(node, '')
@@ -129,6 +141,9 @@ def is_subvar_node(graph, node):
     e.g., an array index -   comp_1.x[2]
     """
     return 'basevar' in graph.node.get(node, '')
+
+def is_fake_node(graph, node):
+    return 'fake' in graph.node.get(node, '')
 
 def is_var_node_with_solution_bounds(graph, node):
     """Returns True if this variable node stores metadata
@@ -387,9 +402,9 @@ class DependencyGraph(nx.DiGraph):
             raise RuntimeError("'%s' is already connected to '%s'" %
                                   (conns[0][1], conns[0][0]))
 
-    def connect(self, scope, srcpath, destpath, config_change=True):
+    def connect(self, scope, srcpath, destpath, config_change=True, check=True):
         """Create a connection between srcpath and destpath,
-        and create any necessary additional connections to base
+        and create any necessary additional subvars with connections to base
         variable nodes.  For example, connecting A.b[3] to
         B.c.x will create an edge between A.b[3] and B.c.x, and
         will also add an edge from base variable A.b to A.b[3],
@@ -400,27 +415,43 @@ class DependencyGraph(nx.DiGraph):
         base_dest = base_var(self, destpath)
 
         for v in [base_src, base_dest]:
-            if not v.startswith('parent.') and v not in self:
-                raise RuntimeError("Can't find variable '%s' in graph." % v)
+            if not v.startswith('parent.'):
+                if v not in self:
+                    raise RuntimeError("Can't find variable '%s' in graph." % v)
+                elif not is_var_node(self, v):
+                    raise RuntimeError("'%s' is not a variable node" % v)
 
+        # path is a list of tuples of the form (var, basevar)
         path = [(base_src, base_src)]
 
-        if srcpath != base_src:
-            path.append((srcpath, base_src))#, src_validity))
+        if srcpath != base_src:  # srcpath is a subvar
+            if (is_input_node(self, base_src) and not is_boundary_node(self, base_src)) or \
+               (is_boundary_output_node(self, base_src) and not destpath.startswith('parent.')):
+                if srcpath not in self:
+                    raise RuntimeError("subvar node '%s' doesn't exist" % srcpath)
+            path.append((srcpath, base_src))
 
-        if destpath != base_dest:
-            path.append((destpath, base_dest))#, True))
+        if destpath != base_dest:  # destpath is a subvar
+            path.append((destpath, base_dest))
 
-        path.append((base_dest, base_dest))#, True))
+        path.append((base_dest, base_dest))
 
-        self.check_connect(srcpath, destpath)
+        if check:
+            self.check_connect(srcpath, destpath)
 
         for i in range(len(path)):
-            var, base = path[i]#, valid = path[i]
-            if var not in self:
-                self.add_node(var, basevar=base, valid=True)#valid=valid) # subvar
+            dest, base = path[i]
+            if dest not in self:  # create a new subvar if it's not already there
+                self.add_node(dest, basevar=base, valid=True)
             if i > 0:
-                self.add_edge(path[i-1][0], var)
+                src = path[i-1][0]
+                # if an edge alreay exists from dest to src, then the edge
+                # from src to dest is going in an invalid dataflow direction,
+                # so skip it
+                if src in self[dest]:
+                    continue
+
+                self.add_edge(src, dest)
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -436,15 +467,27 @@ class DependencyGraph(nx.DiGraph):
         if config_change:
             self.config_changed()
 
-    def add_subvar_input(self, subvar):
+    def add_subvar(self, subvar):
         """ Adds a subvar node for a model input. This node is used to
-        represent parameters that are array slices, mainly for metadat
+        represent parameters that are array slices, mainly for metadata
         storage and for defining edge iterators, but not for workflow
-        execution.
+        execution. Subvars created using this function will be labeled
+        as 'fake' in their metadata.
         """
-        base = subvar.split('[')[0]
-        self.add_node(subvar, basevar=base, valid=True)
-        self.add_edge(subvar, base)
+        base = base_var(self, subvar)
+        if base not in self:
+            raise RuntimeError("can't find basevar '%s' in graph" % base)
+        self.add_node(subvar, basevar=base, valid=True, fake=True)
+        if is_boundary_node(self, base):
+            if is_input_node(self, base):
+                self.add_edge(base, subvar)
+            else:
+                self.add_edge(subvar, base)
+        else:  # it's a var of a child component
+            if is_input_node(self, base):
+                self.add_edge(subvar, base)
+            else:
+                self.add_edge(base, subvar)
     
     def disconnect(self, srcpath, destpath=None, config_change=True):
 
@@ -491,7 +534,7 @@ class DependencyGraph(nx.DiGraph):
         # now clean up dangling subvars
         for edge in edges:
             for node in edge:
-                if is_subvar_node(self, node):
+                if is_subvar_node(self, node) and not is_fake_node(self, node):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
@@ -703,7 +746,7 @@ class DependencyGraph(nx.DiGraph):
 
     def get_boundary_inputs(self, connected=False):
         """Returns inputs that are on the component boundary.
-        If connected is True, return a list of those nodes
+        If connected is True, return a list of only those nodes
         that are connected externally.
         """
         ins = []
@@ -719,7 +762,7 @@ class DependencyGraph(nx.DiGraph):
 
     def get_boundary_outputs(self, connected=False):
         """Returns outputs that are on the component boundary.
-        If connected is True, return a list of those nodes
+        If connected is True, return a list of only those nodes
         that are connected externally.
         """
         outs = []
@@ -749,7 +792,8 @@ class DependencyGraph(nx.DiGraph):
 
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
-        If connected is True, return only connected inputs.
+        If connected is True, return only connected inputs.  If
+        invalid is True, return only invalid inputs.
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
@@ -912,7 +956,6 @@ class DependencyGraph(nx.DiGraph):
             for var in self._all_child_vars(childname, direction='out'):
                 data[var]['valid'] = True
 
-
     def update_boundary_outputs(self, scope):
         """Update destination vars on our boundary."""
         for out in self.get_boundary_outputs():
@@ -1015,79 +1058,204 @@ def find_all_connecting(graph, start, end):
 
     return fwdset.intersection(backset)
 
+def _get_inner_edges(G, srcs, dests):
+    """Return a set of connection edges between the
+    given sources and destinations.
+
+    srcs: iter of (str or tuple of str)
+        Starting var or subvar nodes
+
+    dests: iter of str
+        Ending var or subvar nodes
+
+    """
+    # Based on dfs_edges from networkx
+
+    nodes=srcs
+    cstack = []  # stack of candidate edges
+    edges = set()
+    marked = set(dests)
+
+    visited=set()
+    for start in nodes:
+        if start in visited:
+            continue
+        visited.add(start)
+        stack = [(start, iter(G[start]))]
+        while stack:
+            parent,children = stack[-1]
+            try:
+                child = next(children)
+                if is_connection(G, parent, child):
+                    cstack.append((parent, child))
+                if child in marked:
+                    edges.update(cstack)
+                    if parent not in marked:
+                        marked.update([p for p,c in stack])
+                elif child not in visited:
+                    visited.add(child)
+                    stack.append((child, iter(G[child])))
+            except StopIteration:
+                if cstack and cstack[-1][1] == parent:
+                    cstack.pop()
+                stack.pop()
+
+    # order the edges so that basevar sources come first
+    subs = []
+    final = []
+    for edge in edges:
+        if is_basevar_node(G, edge[0]):
+            final.append(edge)
+        else:
+            subs.append(edge)
+    
+    final.extend(subs)
+    
+    return final
+
+def get_inner_edges(graph, srcs, dests):
+    """Return a dict containing all connections in the graph
+    between the sources and the destinations, in the following
+    form:
+
+        {src1: [dest1], src2: [dest2,dest3], ...}
+
+    For sources that are actually inputs, the source will be replaced
+    with the source of the input. 
+
+    """
+
+    newsrcs = []
+    for s in srcs:
+        if isinstance(s, basestring):
+            newsrcs.append(s)
+        else:
+            newsrcs.extend(iter(s))
+
+    edges = edges_to_dict(_get_inner_edges(graph, newsrcs, dests))
+
+    new_edges = []
+    new_sub_edges = []
+
+    # replace inputs-as-outputs with their sources (if any)
+    inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
+    for inp in inpsrcs:
+        old_dests = edges[inp]
+
+        # if we have an input source basevar that has multiple inputs (subvars)
+        # then we have to create fake subvars at the destination to store
+        # derivative related metadata
+        if is_basevar_node(graph, inp):
+            subs = graph._all_child_vars(inp, direction='in')
+            if not subs:  # basevar with no input connections
+                continue
+        else:
+            subs = [inp]
+
+        del edges[inp] # remove the old input-as-output edge(s)
+        
+        for sub in subs:
+            newsrc = graph.predecessors(sub)[0]
+            for dest in old_dests:
+                if is_basevar_node(graph, newsrc):
+                    new_edges.append((newsrc, sub.replace(inp, dest, 1)))
+                else:
+                    new_sub_edges.append((newsrc, sub.replace(inp, dest, 1)))
+
+    new_edges.extend(new_sub_edges)  # make sure that all subvars are after their basevars
+
+    edges = edges_to_dict(new_edges, edges)
+
+    # return fake edges for parameters
+    for i,src in enumerate(srcs):
+        if isinstance(src, basestring): 
+            edges['@in%d' % i] = [src]
+        else:  # param group  
+            newlst = []
+            for s in src:
+                if s in edges:
+                    newlst.extend(list(edges[s]))
+                    del edges[s]
+            if newlst:
+                edges[src] = newlst
+            edges['@in%d' % i] = list(src)
+            
+        if src in edges:
+            edges['@in%d' % i].extend(edges[src])
+            del edges[src]
+
+    # return fake edges for destination vars referenced by 
+    # objectives and constraints
+    for i, dest in enumerate(dests):
+        if isinstance(dest, basestring):
+            edges[dest] = ['@out%d' % i]
+        else:
+            edges[dest[0]] = ['@out%d' % i]
+
+    return edges
 
 # utility/debugging functions
 
+def edges_to_dict(edges, dct=None):
+    """Take an iterator of edges and return an ordered dict (depth first)
+    of sources mapped to lists of destinations.
+    """
+    if dct is None:
+        dct = OrderedDict()
+    for u, v in edges:
+        dct.setdefault(u, []).append(v)
+    return dct
+
 def nodes_matching_all(graph, **kwargs):
-    """Return nodes matching all kwargs names and values. For
-    example, nodes_matching_all(G, valid=True, boundary=True) would
+    """Return an iterator over nodes matching all kwargs names and values. 
+    For example, nodes_matching_all(G, valid=True, boundary=True) would
     return a list of all nodes that are marked as valid that
     are also boundary nodes.
     """
-    nodes = []
-    for n,d in graph.node.items():
+    for n,data in graph.node.iteritems():
         for arg,val in kwargs.items():
-            try:
-                if d[arg] != val:
-                    break
-            except KeyError:
+            if data.get(arg, _missing) != val:
                 break
         else:
-            nodes.append(n)
-    return nodes
+            yield n
 
 def nodes_matching_some(graph, **kwargs):
-    """Return nodes matching at least one of the kwargs names 
-    and values. For
+    """Return an iterator over nodes matching at least one of 
+    the kwargs names and values. For
     example, nodes_matching_some(G, valid=True, boundary=True) would
     return a list of all nodes that either are marked as valid or nodes
     that are boundary nodes, or nodes that are both.
     """
-    nodes = []
-    for n,d in graph.node.items():
+    for n,data in graph.node.iteritems():
         for arg,val in kwargs.items():
-            try:
-                if d[arg] == val:
-                    nodes.append(n)
-                    break
-            except KeyError:
-                pass
-    return nodes
+            if data.get(arg, _missing) == val:
+                yield n
+                break
 
 def edges_matching_all(graph, **kwargs):
-    """Return edges matching all kwargs names and values. For
-    example, edges_matching_all(G, foo=True, bar=True) would
+    """Return an iterator over edges matching all kwargs names and 
+    values. For example, edges_matching_all(G, foo=True, bar=True) would
     return a list of all edges that are marked with True
     values of both foo and bar.
     """
-    edges = []
     for u,v,d in graph.edges(data=True):
         for arg,val in kwargs.items():
-            try:
-                if d[arg] != val:
-                    break
-            except KeyError:
+            if d.get(arg, _missing) != val:
                 break
         else:
-            edges.append((u,v))
-    return edges
+            yield (u,v)
 
 def edges_matching_some(graph, **kwargs):
-    """Return edges matching some kwargs names and values. For
-    example, edges_matching_some(G, foo=True, bar=True) would
-    return a list of all edges that are marked with True
+    """Return an iterator over edges matching some kwargs names 
+    and values. For example, edges_matching_some(G, foo=True, bar=True) 
+    would return a list of all edges that are marked with True
     values of either foo or bar or both.
     """
-    edges = []
     for u,v,d in graph.edges(data=True):
         for arg,val in kwargs.items():
-            try:
-                if d[arg] == val:
-                    edges.append((u,v))
-                    break
-            except KeyError:
-                pass
-    return edges
+            if d.get(arg, _missing) == val:
+                yield (u,v)
+                break
 
 def get_valids(graph, val, prefix=None):
     """Returns all nodes with validity matching the
@@ -1097,7 +1265,6 @@ def get_valids(graph, val, prefix=None):
         return [n for n in nodes_matching_all(graph, valid=val)
                     if n.startswith(prefix)]
     return sorted(nodes_matching_all(graph, valid=val))
-
 
 def dump_valid(graph, filter=None, stream=None):
     dct = {}

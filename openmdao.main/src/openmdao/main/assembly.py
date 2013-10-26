@@ -113,8 +113,6 @@ class Assembly(Component):
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
 
-        # TODO: depending on internal depgraph, this value could be
-        # set to full to speed up invalidate_deps
         self._invalidation_type = 'partial' # parent depgraph may have to invalidate us
                                             # multiple times per pass
 
@@ -500,10 +498,10 @@ class Assembly(Component):
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
 
-                outs = self._depgraph.invalidate_deps(self, [dest])#, force=True)
+                outs = self._depgraph.invalidate_deps(self, [dest])
                 if (outs is None) or outs:
                     for cname, vnames in partition_names_by_comp(outs).items():
-                        self.child_invalidated(cname, vnames) #, force=True)
+                        self.child_invalidated(cname, vnames)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -727,46 +725,10 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def linearize(self, extra_in=None, extra_out=None):
+    def linearize(self, required_inputs=None, required_outputs=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
-
-        # Only calc derivatives for inputs we need
-        required_inputs = []
-        if extra_in:
-            for varpaths in extra_in:
-
-                if not isinstance(varpaths, tuple):
-                    varpaths = [varpaths]
-
-                for varpath in varpaths:
-                    compname, _, var = varpath.partition('.')
-                    if compname == self.name:
-                        required_inputs.append(var)
-
-        for src, target in self.parent.list_connections():
-            compname, _, var = target.partition('.')
-            if compname == self.name:
-                required_inputs.append(var.replace('(', '').replace(')', ''))
-
-        # Only calc derivatives for outputs we need
-        required_outputs = []
-        if extra_out:
-            for varpaths in extra_out:
-
-                if not isinstance(varpaths, tuple):
-                    varpaths = [varpaths]
-
-                for varpath in varpaths:
-                    compname, _, var = varpath.partition('.')
-                    if compname == self.name:
-                        required_outputs.append(var)
-
-        for src, target in self.parent.list_connections():
-            compname, _, var = src.partition('.')
-            if compname == self.name:
-                required_outputs.append(var.replace('(', '').replace(')', ''))
 
         # Sub-assembly sourced
         input_keys = []
@@ -811,7 +773,6 @@ class Assembly(Component):
             self.J_output_keys.append(target)
 
         self.J = self.driver.calc_gradient(input_keys, output_keys)
-        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
 
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''

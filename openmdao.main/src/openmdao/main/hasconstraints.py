@@ -147,7 +147,7 @@ class Constraint(object):
         return pcomp.out0
 
     def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
-        """Returns the gradient of the constraint eq/inep as a tuple of the
+        """Returns the gradient of the constraint eq/ineq as a tuple of the
         form (lhs, rhs, comparator, is_violated)."""
 
         lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
@@ -254,7 +254,7 @@ class _HasConstraintsBase(object):
         return dct
 
     def list_pseudocomps(self):
-        """Returns a list of pseudocompont names associcated with our
+        """Returns a list of pseudocomponent names associated with our
         parameters.
         """
         return [c.pcomp_name for c in self._constraints.values()
@@ -403,6 +403,10 @@ class HasEqConstraints(_HasConstraintsBase):
         """
         return [c.evaluate(_get_scope(self, scope)) for c in self._constraints.values()]
 
+    def list_eq_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
+
 
 class HasIneqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports inequality
@@ -491,6 +495,10 @@ class HasIneqConstraints(_HasConstraintsBase):
     def eval_ineq_constraints(self, scope=None):
         """Returns a list of constraint values"""
         return [c.evaluate(_get_scope(self, scope)) for c in self._constraints.values()]
+
+    def list_ineq_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
 
 
 class HasConstraints(object):
@@ -628,9 +636,9 @@ class HasConstraints(object):
         return self._ineq.get_ineq_constraints()
 
     def get_constraints(self):
-        """Return a list of constraint objects"""
-
-        return dict(self._eq.get_eq_constraints().items()+self._ineq.get_ineq_constraints().items())
+        """Returns an ordered dict of constraint objects"""
+        return ordereddict.OrderedDict(self._eq.get_eq_constraints().items() +
+                                       self._ineq.get_ineq_constraints().items())
 
     def eval_eq_constraints(self, scope=None):
         """Returns a list of constraint values.
@@ -642,6 +650,12 @@ class HasConstraints(object):
         """
         return self._ineq.eval_ineq_constraints(scope)
 
+    def eval_constraints(self, scope=None):
+        """Returns a list of constraint values.
+        """
+        return self._eq.eval_eq_constraints(scope) + \
+               self._ineq.eval_ineq_constraints(scope)
+
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
         lst = self._ineq.list_constraints()
@@ -649,10 +663,23 @@ class HasConstraints(object):
         return lst
 
     def list_pseudocomps(self):
-        """Returns a list of pseudocompont names associcated with our
+        """Returns a list of pseudocomponent names associated with our
         parameters.
         """
         return self._eq.list_pseudocomps() + self._ineq.list_pseudocomps()
+
+    def list_eq_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return self._eq.list_eq_constraint_targets()
+
+    def list_ineq_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return self._ineq.list_ineq_constraint_targets()
+
+    def list_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return self._eq.list_eq_constraint_targets() + \
+               self._ineq.list_ineq_constraint_targets()
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)

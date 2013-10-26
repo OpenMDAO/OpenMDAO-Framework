@@ -435,7 +435,7 @@ class Component(Container):
                 self.set(out_name, y, force=True)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
-                         extra_in=None, extra_out=None):
+                         required_inputs=None, required_outputs=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
         requested. The user must supply *linearize* in the component.
@@ -452,10 +452,10 @@ class Component(Container):
             If set to true, then we save our baseline state for fake finite
             difference.
 
-        extra_in:
+        required_inputs:
             Not needed by Component
 
-        extra_out
+        required_outputs
             Not needed by Component
         """
 
@@ -466,11 +466,12 @@ class Component(Container):
             # difference on their contained components.
             if savebase and has_interface(self, IAssembly):
                 self.driver.calc_derivatives(first, second, savebase,
-                                             extra_in, extra_out)
+                                             required_inputs, required_outputs)
                 return
 
             if has_interface(self, IAssembly):
-                self.linearize(extra_in=extra_in, extra_out=extra_out)
+                self.linearize(required_inputs=required_inputs, 
+                               required_outputs=required_outputs)
             else:
                 self.linearize()
 
