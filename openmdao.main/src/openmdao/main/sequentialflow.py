@@ -46,9 +46,6 @@ class SequentialWorkflow(Workflow):
         self.res = None
         self._upscoped = False
         
-        self._severed_edges = []
-        self._interior_edges = None
-        
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter(self.get_components(full=True))
@@ -82,10 +79,7 @@ class SequentialWorkflow(Workflow):
         self._derivative_graph = None
         self.res = None
         self._upscoped = False
-        
-        self._severed_edges = []
         self._names = None
-        self._interior_edges = None
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -433,6 +427,27 @@ class SequentialWorkflow(Workflow):
     def derivative_graph(self, inputs=None, outputs=None, fd=False, 
                          severed=None):
         """Returns the local graph that we use for derivatives.
+        
+        inputs: list of strings or tuples of strings
+            List of input variables that we are taking derivatives with respect
+            to. They must be within this workflow's scope. If no inputs are 
+            given, the parent driver's parameters are used. A tuple can be used
+            to link inputs together.
+            
+        outputs: list of strings
+            List of output variables that we are taking derivatives of.
+            They must be within this workflow's scope. If no outputs are 
+            given, the parent driver's objectives and constraints are used.
+        
+        fd: boolean
+            set to True to finite difference the whole model together with
+            fake finite difference turned off. This is mainly for checking
+            your model's analytic derivatives.
+            
+        severed: list
+            If a workflow has a cylic connection, some edges must be severed.
+            When a cyclic workflow calls this function, it passes a list of
+            edges so that they can be severed prior to the topological sort.
         """
         
         if self._derivative_graph is None:
@@ -492,9 +507,19 @@ class SequentialWorkflow(Workflow):
         return self._derivative_graph
     
     def _group_nondifferentiables(self, fd=False, severed=None):
-        """Method to find all non-differentiable blocks. These blocks
-        will be replaced in the differentiation workflow by a pseudo-
-        assembly, which can provide its own Jacobian via finite difference.
+        """Method to find all non-differentiable blocks, and group them
+        together, replacing them in the derivative graph with pseudo-
+        assemblies that can finite difference their components together.
+        
+        fd: boolean
+            set to True to finite difference the whole model together with
+            fake finite difference turned off. This is mainly for checking
+            your model's analytic derivatives.
+            
+        severed: list
+            If a workflow has a cylic connection, some edges must be severed.
+            When a cyclic workflow calls this function, it passes a list of
+            edges so that they can be severed prior to the topological sort.
         """
         
         dgraph = self._derivative_graph
@@ -753,6 +778,11 @@ class SequentialWorkflow(Workflow):
         stream: file-like object or string
             Where to write to, default stdout. If a string is supplied,
             that is used as a filename.
+            
+        adjoint: boolean
+            Set to True to check the adjoint solution. Leave it as False to
+            check the forward solution. Note, the finite difference baseline
+            is always solved in forward mode.
         """
         stream = stream or sys.stdout
         if isinstance(stream, basestring):
