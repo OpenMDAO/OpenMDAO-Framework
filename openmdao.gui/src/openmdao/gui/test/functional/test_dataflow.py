@@ -992,6 +992,7 @@ def _test_column_picking(browser):
     workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page()
+    editor.move(-100, 0)
 
     expected_column_names = ["", "Name", "Value", "Units", "Description"]
     editor.show_inputs()
