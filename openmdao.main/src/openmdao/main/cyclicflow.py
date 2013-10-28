@@ -209,6 +209,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     for sev_src, sev_target in self._mapped_severed_edges:
                         if sev_src == src:
                             target = sev_target
+                            break
                 
                 target = from_PA_var(target)
                 old_val = self.scope.get(target)
@@ -236,6 +237,9 @@ class CyclicWorkflow(SequentialWorkflow):
                 # Prevent OpenMDAO from stomping on our poked input.
                 self.scope.set_valid([target.split('[',1)[0]], True)
     
+                # Array inputs aren't triggering invalidation
+                self.scope._input_updated(target.split('[')[0])
+                    
                 #(An alternative way to prevent the stomping. This is more
                 #concise, but setting an output and allowing OpenMDAO to pull it
                 #felt hackish.)
@@ -248,6 +252,7 @@ class CyclicWorkflow(SequentialWorkflow):
         for src, targets in self._edges.iteritems():
             
             if '@in' in src:
+                # This residual will always be zero
                 continue
             
             i1, i2 = self.get_bounds(src)
@@ -263,6 +268,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     for sev_src, sev_target in self._mapped_severed_edges:
                         if sev_src == src:
                             target = sev_target
+                            break
                 
                 target_val = self.scope.get(from_PA_var(target))
                 target_val = flattened_value(target, target_val).reshape(-1, 1)
