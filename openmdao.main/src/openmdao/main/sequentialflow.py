@@ -92,10 +92,10 @@ class SequentialWorkflow(Workflow):
         """Temporarily remove the specified edges but save
         them and their metadata for later restoration. 
         """
-        self.scope._depgraph.sever_edges(edges)
+        self._derivative_graph.sever_edges(edges)
 
     def unsever_edges(self):
-        self.scope._depgraph.unsever_edges(self._parent.get_expr_scope())
+        self._derivative_graph.unsever_edges(self._parent.get_expr_scope())
         
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
@@ -222,13 +222,11 @@ class SequentialWorkflow(Workflow):
                     src = src[0]
                 
             if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
-                print "Found a basevar", src
                 base, _, idx = src.partition('[')
                 offset, _ = self.get_bounds(base)
                 shape = self.scope.get(base).shape
                 istring, ix = flatten_slice(idx, shape, offset=offset, name='ix')
                 bound = (istring, ix)
-                print bound
             else:
                 val = self.scope.get(from_PA_var(src))
                 width = flattened_size(src, val, self.scope)
@@ -252,8 +250,6 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
-        print 'iterator:  ', self._edges
-        print edge_dict_to_comp_list(self._edges)
         return nEdge
 
     def get_bounds(self, node):
@@ -291,60 +287,6 @@ class SequentialWorkflow(Workflow):
             
         meta['bounds'][itername] = bounds
         
-    def calculate_residuals(self):
-        """Calculate and return the vector of residuals based on the current
-        state of the system in our workflow."""
-        for edge in self.get_interior_edges():
-            src, target = edge
-            src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
-            target_val = self.scope.get(target)
-            target_val = flattened_value(target, target_val).reshape(-1, 1)
-            i1, i2 = self.get_bounds(src)
-            self.res[i1:i2] = src_val - target_val
-
-        return self.res
-
-    def set_new_state(self, dv):
-        """Adds a vector of new values to the current model state at the
-        input edges.
-
-        dv: ndarray (nEdge, 1)
-            Array of values to add to the model inputs.
-        """
-        for edge in self._severed_edges:
-            src, target = edge
-            i1, i2 = self.get_bounds(src)
-            old_val = self.scope.get(target)
-
-            if isinstance(old_val, float):
-                new_val = old_val + float(dv[i1:i2])
-            elif isinstance(old_val, ndarray):
-                shape = old_val.shape
-                if len(shape) > 1:
-                    new_val = old_val.flatten() + dv[i1:i2]
-                    new_val = new_val.reshape(shape)
-                else:
-                    new_val = old_val + dv[i1:i2]
-            elif isinstance(old_val, VariableTree):
-                new_val = old_val.copy()
-                self._update(target, new_val, dv[i1:i2])
-            else:
-                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
-
-            # Poke new value into the input end of the edge.
-            self.scope.set(target, new_val, force=True)
-
-            # Prevent OpenMDAO from stomping on our poked input.
-            self.scope.set_valid([target.split('[',1)[0]], True)
-
-            #(An alternative way to prevent the stomping. This is more
-            #concise, but setting an output and allowing OpenMDAO to pull it
-            #felt hackish.)
-            #self.scope.set(src, new_val, force=True)
-
     def _update(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """
         for key in sorted(vtree.list_vars()):  # Force repeatable order.
@@ -548,7 +490,7 @@ class SequentialWorkflow(Workflow):
             
         return self._derivative_graph
     
-    def _group_nondifferentiables(self, fd=False):
+    def _group_nondifferentiables(self, fd=False, comps = None):
         """Method to find all non-differentiable blocks. These blocks
         will be replaced in the differentiation workflow by a pseudo-
         assembly, which can provide its own Jacobian via finite difference.
@@ -666,7 +608,7 @@ class SequentialWorkflow(Workflow):
                 src = to_PA_var(src, pa_name)
                 dgraph.add_edge(src, dst, conn=True)
             
-            print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
+            #print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
         
         return None
 
