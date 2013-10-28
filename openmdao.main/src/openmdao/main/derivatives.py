@@ -755,17 +755,3 @@ def apply_linear_model(self, comp, ffd_order):
         raise NotImplementedError(msg)
 
     return y
-
-
-def recursive_components(scope, comps):
-    # Recursively find all components contained in subdrivers.
-
-    recursed_comps = []
-    for name in comps:
-        recursed_comps.append(name)
-        comp = scope.get(name)
-        if has_interface(comp, IDriver):
-            sub_comps = comp.workflow.get_names(full=True)
-            recursed_comps.extend(recursive_components(scope, sub_comps))
-
-    return recursed_comps
