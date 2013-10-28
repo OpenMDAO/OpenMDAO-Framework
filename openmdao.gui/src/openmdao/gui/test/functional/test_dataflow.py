@@ -883,6 +883,7 @@ def _test_column_sorting(browser):
     workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(version=Version.NEW)
+    editor.move(-100, 0)
 
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
@@ -964,7 +965,6 @@ def _test_column_sorting(browser):
 
 
 def _test_taborder(browser):
-    # Replaces various connected components.
     project_dict, workspace_page = startup(browser)
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
@@ -972,7 +972,9 @@ def _test_taborder(browser):
     workspace_page.replace_driver('top', 'SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
 
+    # verify that expected tabs appear in expected order
     eq(editor.get_tab_labels(),
        ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
         'Triggers', 'Workflow', 'Slots'])
