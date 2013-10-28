@@ -66,7 +66,6 @@ def edge_dict_to_comp_list(edges):
     return comps
 
 def calc_gradient(wflow, inputs, outputs, n_edge, shape):
->>>>>>> 822433f966215fae5e4b5f9b84f672fce6f0d77b
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
     """
