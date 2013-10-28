@@ -666,6 +666,8 @@ def _test_parameter_autocomplete(browser):
 
     driver = workspace_page.get_dataflow_figure('driver', 'vartree')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
+
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
 
@@ -708,6 +710,9 @@ def _test_io_filter_without_vartree(browser):
     workspace_page.replace_driver('top', 'CONMINdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page()
+    editor.move(-100, 0)
+
+    editor.show_inputs()
 
     #Test filtering inputs
 
@@ -793,8 +798,9 @@ def _test_io_filter_with_vartree(browser):
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
     editor = comp.editor_page()
-    inputs = editor.get_inputs()
-    #editor.move(-100, 0)
+    editor.move(-100, 0)
+
+    editor.show_inputs()
 
     #filter when tree is expanded, filter on name="b"
     editor.filter_inputs("b")
