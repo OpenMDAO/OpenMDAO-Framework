@@ -755,11 +755,45 @@ class SequentialWorkflow(Workflow):
         print >> stream, 24*'-'
         print >> stream, Jbase
 
-        dgraph = self.derivative_graph()
-        input_refs = dgraph.graph['inputs']
-        output_refs = dgraph.graph['outputs']
-
+        # This code duplication is needed so that we print readable names for the
+        # constraints and objectives.
+        
+        if inputs is None:
+            if hasattr(self._parent, 'get_parameters'):
+                inputs = []
+                input_refs = []
+                for key, param in self._parent.get_parameters().items():
+                    inputs.extend(param.targets)
+                    input_refs.extend([key for t in param.targets])
+            # Should be caught in calc_gradient()
+            else:  # pragma no cover
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+        else:
+            input_refs = inputs
+                    
+        if outputs is None:
+            outputs = []
+            output_refs = []
+            if hasattr(self._parent, 'get_objectives'):
+                obj = ["%s.out0" % item.pcomp_name for item in \
+                        self._parent.get_objectives().values()]
+                outputs.extend(obj)
+                output_refs.extend(self._parent.get_objectives().keys())
+            if hasattr(self._parent, 'get_constraints'):
+                con = ["%s.out0" % item.pcomp_name for item in \
+                               self._parent.get_constraints().values()]
+                outputs.extend(con)
+                output_refs.extend(self._parent.get_constraints().keys())
+                
+            if len(outputs) == 0:  # pragma no cover
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+        else:
+            output_refs = outputs
+            
         out_width = 0
+                
         for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
             out_names = flattened_names(oref, out_val)
