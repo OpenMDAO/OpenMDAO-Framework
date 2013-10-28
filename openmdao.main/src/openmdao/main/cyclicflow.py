@@ -4,8 +4,10 @@ required to converge this workflow in order to execute it. """
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 
+from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
+from openmdao.main.pseudoassembly import from_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
 
 __all__ = ['CyclicWorkflow']
@@ -26,11 +28,11 @@ class CyclicWorkflow(SequentialWorkflow):
         """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
+        super(CyclicWorkflow, self).config_changed()
         self._workflow_graph = None
         self._topsort = None
         self._severed_edges = []
-        self._hidden_edges = set()
-        self.res = None
+        self._mapped_severed_edges = []
         
     def check_config(self):
         """Any checks we need. For now, drivers are not allowed. You can get
@@ -124,3 +126,79 @@ class CyclicWorkflow(SequentialWorkflow):
        
         return self._workflow_graph
     
+    def derivative_graph(self, inputs=None, outputs=None, fd=False):
+        """Returns the local graph that we use for derivatives. For cyclic flows,
+        we need to sever edges and use them as inputs/outputs.
+        """
+    
+        if self._derivative_graph is None:
+            
+            # Cyclic flows need to be severed before derivatives are calculated.
+            self._get_topsort()
+            
+            inputs = []
+            outputs = []
+            for src, target in self._severed_edges:
+                inputs.append(target)
+                outputs.append(src)
+                
+            super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
+                                                         self._severed_edges)
+            
+        return self._derivative_graph
+
+    def set_new_state(self, dv):
+        """Adds a vector of new values to the current model state at the
+        input edges.
+
+        dv: ndarray (nEdge, 1)
+            Array of values to add to the model inputs.
+        """
+        for edge in self._severed_edges:
+            src, target = edge
+            i1, i2 = self.get_bounds(src)
+            old_val = self.scope.get(target)
+
+            if isinstance(old_val, float):
+                new_val = old_val + float(dv[i1:i2])
+            elif isinstance(old_val, ndarray):
+                shape = old_val.shape
+                if len(shape) > 1:
+                    new_val = old_val.flatten() + dv[i1:i2]
+                    new_val = new_val.reshape(shape)
+                else:
+                    new_val = old_val + dv[i1:i2]
+            elif isinstance(old_val, VariableTree):
+                new_val = old_val.copy()
+                self._update(target, new_val, dv[i1:i2])
+            else:
+                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+
+            # Poke new value into the input end of the edge.
+            self.scope.set(target, new_val, force=True)
+
+            # Prevent OpenMDAO from stomping on our poked input.
+            self.scope.set_valid([target.split('[',1)[0]], True)
+
+            #(An alternative way to prevent the stomping. This is more
+            #concise, but setting an output and allowing OpenMDAO to pull it
+            #felt hackish.)
+            #self.scope.set(src, new_val, force=True)
+
+    def calculate_residuals(self):
+        """Calculate and return the vector of residuals based on the current
+        state of the system in our workflow."""
+        for src, target in self._severed_edges:
+            src_val = self.scope.get(src)
+            src_val = flattened_value(src, src_val).reshape(-1, 1)
+                
+            target_val = self.scope.get(target)
+            target_val = flattened_value(target, target_val).reshape(-1, 1)
+            
+            i1, i2 = self.get_bounds(src)
+            self.res[i1:i2] = src_val - target_val
+
+        return self.res
+
