@@ -1194,6 +1194,40 @@ def get_inner_edges(graph, srcs, dests):
 
     return edges
 
+def get_replacement_edges(graph, src, dest, idx=0):
+    """If the src of an edge is an input var or input subvar, that
+    edge needs to be replaced in the derivative graph by by an edge
+    with the input's src as the new src. If the original src has
+    multiple subvars then multiple new edges must be added. Also,
+    if the new src is a boundary node then it must be replaced by
+    '@in?', where ? is an integer indicating a particular input
+    src external to the current Assembly.
+
+    Returns a list of edges to add
+    """
+
+    to_add = []
+
+    if not is_input_node(src):
+        return to_add, to_remove
+
+    if is_subvar_node(graph, src): # it's a subvar so can only have one predecessor
+        srcs = [src]
+    else:  # it's a basevar. See if it has subvars
+        srcs = graph._all_child_vars(src, direction='in')
+        if not srcs:
+            srcs = [src]
+
+    # Each src in srcs will have 0 or 1 predecessors
+    for i, s in enumerate(srcs):
+        preds = graph.predecessors(s)
+        if preds:
+            to_add.append((preds[0], s))
+        else: # return an external src indicator
+            to_add.append(('@in%s' % i+1+idx, s))
+
+    pass
+
 # utility/debugging functions
 
 def edges_to_dict(edges, dct=None):
