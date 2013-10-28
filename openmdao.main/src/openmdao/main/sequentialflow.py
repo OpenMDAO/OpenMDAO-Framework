@@ -2,7 +2,7 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
-from openmdao.main.api import VariableTree
+from openmdao.main.vartree import VariableTree
 from openmdao.main.derivatives import flattened_size, flattened_value
 from openmdao.main.workflow import Workflow
 

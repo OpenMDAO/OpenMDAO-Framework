@@ -895,6 +895,7 @@ def _test_libsearch(browser):
         'FullFactorial',
         'NeighborhoodDOEdriver',
         'OptLatinHypercube',
+        'PlugNozzleGeometry',
         'Uniform'])
     doe_searches = workspace_page.get_library_searches()
     eq(doe_searches, def_searches + ['doe'])

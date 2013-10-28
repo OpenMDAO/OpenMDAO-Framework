@@ -16,14 +16,11 @@ from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder, ICaseFilter
+from openmdao.main.interfaces import ICaseIterator, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.util.filexfer import filexfer
-
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasparameters import HasParameters
 
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 
@@ -449,6 +446,7 @@ class CaseIterDriverBase(Driver):
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
+                case.exc = exc
 
             if case.msg is not None and self.error_policy == 'ABORT':
                 if self._abort_exc is None:
@@ -510,6 +508,7 @@ class CaseIterDriverBase(Driver):
 
     def _start_next_case(self, server, stepping=False):
         """ Look for the next case and start it. """
+
         if self._todo:
             self._logger.debug('    run startup case')
             case, seqno = self._todo.pop(0)

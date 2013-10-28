@@ -33,6 +33,8 @@ from traits.trait_base import not_none
 
 from multiprocessing import connection
 
+#import openmdao.main.component
+
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
@@ -50,6 +52,8 @@ from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
+
+
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -1178,12 +1182,23 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
+
         if not isinstance(eq, bool):  # FIXME: probably a numpy sub-array. assume value has changed for now...
             eq = False
         if not eq:
-            self._call_execute = True
-            if name in self._valid_dict:
-                self._input_updated(name)
+            # need to find first item going up the parent tree that is a Component
+            item = self
+            while item:
+                # This is the test we are using to detect if this is a Component
+                # If you use a more explicit way, like is_instance(item, Component ) you run
+                #  into problems with importing Component and having circular import issues
+                if hasattr( item, '_call_execute' ): 
+                    # This is a Component so do Component things
+                    item._call_execute = True
+                    if name in item._valid_dict:
+                        item._input_updated(name)
+                    break 
+                item = item.parent
 
     def _input_check(self, name, old):
         """This raises an exception if the specified input is attached

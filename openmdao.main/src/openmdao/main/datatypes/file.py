@@ -18,6 +18,12 @@ class File(Variable):
     """
     A trait wrapper for a :class:`FileRef` object.
 
+    If `default_value` is a string, then a :class:`FileRef` will be created
+    using that for the path.
+
+    If `default_value` is a file object, then a :class:`FileRef` will be
+    created for the file's name, if the named file exists.
+
     For input files :attr:`legal_types` may be set to a list of expected
     'content_type' strings. Then upon assignment the actual 'content_type'
     must match one of the :attr:`legal_types` strings.  Also, if
@@ -28,7 +34,15 @@ class File(Variable):
     def __init__(self, default_value=None, iotype=None, **metadata):
         
         if default_value is not None:
-            if not isinstance(default_value, FileRef):
+            if isinstance(default_value, FileRef):
+                pass
+            elif isinstance(default_value, basestring):
+                default_value = FileRef(default_value)
+            elif isinstance(default_value, file) and \
+                 hasattr(default_value, 'name') and \
+                 os.path.exists(default_value.name):
+                default_value = FileRef(default_value.name)
+            else:
                 raise TypeError('File default value must be a FileRef.')
             
         if iotype is not None:
@@ -61,7 +75,14 @@ class File(Variable):
         """ Verify that `value` is a FileRef of a legal type. """
         if value is None:
             return value
-        elif isinstance(value, FileRef):
+
+        if isinstance(value, basestring):
+            value = FileRef(value)
+        elif isinstance(value, file) and hasattr(value, 'name') and \
+             os.path.exists(value.name):
+            value = FileRef(value.name)
+
+        if isinstance(value, FileRef):
             legal_types = self._metadata.get('legal_types', None)
             if legal_types:
                 if value.content_type not in legal_types:

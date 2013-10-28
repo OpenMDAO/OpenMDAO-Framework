@@ -883,6 +883,9 @@ class Assembly(Component):
 
         outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
 
+# FIXME: Set all connected outputs invalid as well -- fixes NREL bug.
+#        But, returning all these outs causes some test errors.
+#        outs |= set(self.list_outputs(connected=True))
         if outs:
             self.set_valid(outs, False)
 

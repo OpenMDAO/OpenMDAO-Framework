@@ -655,6 +655,7 @@ def _test_ordering(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+
 def _test_parameter_autocomplete(browser):
     project_dict, workspace_page = startup(browser)
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -677,8 +678,8 @@ def _test_parameter_autocomplete(browser):
         'p1.cont_in.vt2.vt3.b',
         'p1.directory',
         'p1.force_execute',
-        ])
-    
+    ])
+
     autocomplete_targets = [element.text for element in dialog.get_autocomplete_targets('p1')]
 
     #For p1 (simplecomp) there should only be
@@ -698,7 +699,7 @@ def _test_parameter_autocomplete(browser):
 
     editor.close()
     closeout(project_dict, workspace_page)
-    
+
 
 def _test_io_filter_without_vartree(browser):
 

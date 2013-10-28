@@ -36,7 +36,7 @@ information on this topic can be found in :ref:`Creating-an-Extension-with-F2PY`
 extensive details can be found in the `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
 
 The shared object can be generated using the existing signature file and C code by issuing the
-following command:
+following command at the command prompt:
 
 ::
 
