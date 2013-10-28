@@ -3,13 +3,25 @@ provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
 
+def to_PA_var(name, pa_name):
+    ''' Converts an input to a unique input name on a pseudoassembly.'''
+    
+    return pa_name + '.' + name.replace('.', '|')
+        
+def from_PA_var(name):
+    ''' Converts a pseudoassembly input name back to the real input.'''
+    
+    if '~' in name:
+        name = name.partition('.')[2].replace('|', '.')
+        
+    return name
+        
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
     provide derivatives, and thus must be finite differenced. It is not a real
     assembly, and should never be used in an OpenMDAO model."""
 
-    def __init__(self, name, comps, inputs, outputs, wflow,
-                 recursed_components=None):
+    def __init__(self, name, comps, inputs, outputs, wflow):
         """Initialized with list of components, and the parent workflow."""
 
         if '~' not in name:
@@ -20,11 +32,11 @@ class PseudoAssembly(object):
         self.wflow = wflow
         self.inputs = list(inputs)
         self.outputs = list(outputs)
+        self.mapped_inputs = [to_PA_var(varpath, name).partition('.')[2] \
+                              for varpath in self.inputs]
+        self.mapped_outputs = [to_PA_var(varpath, name).partition('.')[2] \
+                               for varpath in self.outputs]
         self.itername = ''
-
-        self.recursed_comp_names = []
-        if recursed_components is not None:
-            self.recursed_comp_names = recursed_components[:]
 
         self.fd = None
         self.J = None
@@ -49,7 +61,8 @@ class PseudoAssembly(object):
         if self.ffd_order == 0:
             ffd_order = 0
 
-        for comp in self.comps:
+        for name in self.comps:
+            comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
             comp.run(ffd_order=ffd_order, case_id=case_id)
 
@@ -70,7 +83,8 @@ class PseudoAssembly(object):
             # with Fake Finite Difference.
             # Don't do this for full-model finite difference.
             if first and self.ffd_order>0:
-                for comp in self.comps:
+                for name in self.comps:
+                    comp = self.wflow.scope.get(name)
                     comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
@@ -79,16 +93,11 @@ class PseudoAssembly(object):
         
     def provideJ(self):
         """Jacobian for this block"""
-        return self.inputs, self.outputs, self.J
+        return self.mapped_inputs, self.mapped_outputs, self.J
 
     def get(self, varname):
-        """ Return the value of a variable in the Pseudoassembly"""
+        """ Return the value of a variable in the Pseudoassembly. Used
+        when sizing variables in the Jacobian."""
 
-        return self.wflow.scope.get(varname)
-
-    def list_all_comps(self):
-        """list all components, including any sub-driver components that
-        interact with the outer driver"""
-        return [item.name for item in self.comps] + \
-               self.recursed_comp_names
+        return self.wflow.scope.get(from_PA_var(self.name+'.'+varname))
 

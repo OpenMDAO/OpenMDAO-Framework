@@ -20,37 +20,63 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import array, ndarray, zeros, \
                                              ones
-def calc_gradient(wflow, inputs, outputs):
+
+
+def edge_dict_to_comp_list(edges):
+    """Converts inner edge dict into an ordered dict whose keys are component
+    names, and whose values are lists of relevant (in the graph) inputs and
+    outputs.
+    """
+    
+    # remove when i move to ndepgraph
+    import ordereddict
+    
+    comps = ordereddict.OrderedDict()
+    basevars = []
+    for src, targets in edges.iteritems():
+        
+        if '@in' not in src:
+            comp, _, var = src.partition('.')
+            if comp not in comps:
+                comps[comp] = {'inputs': [],
+                               'outputs': []}
+            
+            basevar = src.split('[')[0]
+            if basevar not in basevars:
+                comps[comp]['outputs'].append(var)
+                if '[' not in src:
+                    basevars.append(basevar)
+
+        if not isinstance(targets, list):
+            targets = [targets]
+            
+        for target in targets:
+            if '@out' not in target:
+                comp, _, var = target.partition('.')
+                if comp not in comps:
+                    comps[comp] = {'inputs': [],
+                                   'outputs': []}
+                
+                basevar = target.split('[')[0]
+                if basevar not in basevars:
+                    comps[comp]['inputs'].append(var)
+                    if '[' not in target:
+                        basevars.append(basevar)
+                
+    return comps
+
+def calc_gradient(wflow, inputs, outputs, n_edge, shape):
+>>>>>>> 822433f966215fae5e4b5f9b84f672fce6f0d77b
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual(inputs, outputs)
-    A = LinearOperator((nEdge, nEdge),
+    A = LinearOperator((n_edge, n_edge),
                        matvec=wflow.matvecFWD,
                        dtype=float)
 
-    num_in = 0
-    for item in inputs:
-        
-        # For parameter groups, only size the first
-        if isinstance(item, tuple):
-            item = item[0]
-            
-        i1, i2 = wflow.get_bounds(item)
-        num_in += i2-i1
-
-
-    num_out = 0
-    for item in outputs:
-        i1, i2 = wflow.get_bounds(item)
-        if isinstance(i1, list):
-            num_out += len(i1)
-        else:
-            num_out += i2-i1
-
-    J = zeros((num_out, num_in))
+    J = zeros(shape)
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
@@ -66,7 +92,7 @@ def calc_gradient(wflow, inputs, outputs):
         i1, i2 = wflow.get_bounds(param)
         for irhs in range(i1, i2):
 
-            RHS = zeros((nEdge, 1))
+            RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
 
             # Call GMRES to solve the linear system
@@ -78,7 +104,7 @@ def calc_gradient(wflow, inputs, outputs):
             for item in outputs:
                 k1, k2 = wflow.get_bounds(item)
                 if isinstance(k1, list):
-                    J[i:i+(len(k1)), j] = eval('dx[%s]') % k1
+                    J[i:i+(len(k1)), j] = dx[k1]
                 else:
                     J[i:i+(k2-k1), j] = dx[k1:k2]
                 i += k2-k1
@@ -88,32 +114,16 @@ def calc_gradient(wflow, inputs, outputs):
     #print inputs, '\n', outputs, '\n', J
     return J
 
-def calc_gradient_adjoint(wflow, inputs, outputs):
+def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs. Calculation is done in adjoint mode.
     """
 
     # Size the problem
-    nEdge = wflow.initialize_residual(inputs, outputs)
-    A = LinearOperator((nEdge, nEdge),
+    A = LinearOperator((n_edge, n_edge),
                        matvec=wflow.matvecREV,
                        dtype=float)
-    num_in = 0
-    for item in inputs:
-        
-        # For parameter groups, only size the first
-        if isinstance(item, tuple):
-            item = item[0]
-            
-        i1, i2 = wflow.get_bounds(item)
-        num_in += i2-i1
-
-    num_out = 0
-    for item in outputs:
-        i1, i2 = wflow.get_bounds(item)
-        num_out += i2-i1
-
-    J = zeros((num_out, num_in))
+    J = zeros(shape)
    
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
@@ -129,7 +139,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs):
         i1, i2 = wflow.get_bounds(output)
         for irhs in range(i1, i2):
 
-            RHS = zeros((nEdge, 1))
+            RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
 
             # Call GMRES to solve the linear system

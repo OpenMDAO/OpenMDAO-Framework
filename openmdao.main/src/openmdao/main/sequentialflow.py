@@ -2,22 +2,23 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
+import copy
 import networkx as nx
 import sys
 
 from openmdao.main.array_helpers import flattened_size, flattened_value, \
                                         flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, recursive_components, \
+                                      applyJ, applyJT, edge_dict_to_comp_list, \
                                       applyMinvT, applyMinv
+                                      
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.pseudoassembly import PseudoAssembly
-from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import find_related_pseudos, is_input_node, \
-                                    get_inner_edges, edge_dict_to_comp_list
+from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
+                                    get_inner_edges, is_basevar_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -30,7 +31,6 @@ except ImportError as err:
 
 __all__ = ['SequentialWorkflow']
 
-
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
@@ -41,19 +41,13 @@ class SequentialWorkflow(Workflow):
                             # for params, objectives, and constraints
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
-        # Bookkeeping for calculating the residual.
+        # Bookkeeping
         self._edges = None
-        self._severed_edges = []
-        self._additional_edges = []
-        self._hidden_edges = set()
-        self._driver_edges = None
+        self._derivative_graph = None
         self.res = None
+        self._upscoped = False
         
-        self.derivative_iterset = None
-        self._collapsed_graph = None
-        self._topsort = None
-        self._find_nondiff_blocks = True
-        self._input_outputs = []
+        self._severed_edges = []
         self._interior_edges = None
         
     def __iter__(self):
@@ -84,15 +78,13 @@ class SequentialWorkflow(Workflow):
         has changed.
         """
         super(SequentialWorkflow, self).config_changed()
+        
+        self._edges = None
+        self._derivative_graph = None
+        self.res = None
+        self._upscoped = False
+        
         self._severed_edges = []
-        self._additional_edges = []
-        self._hidden_edges = set()
-        self._driver_edges = None
-        self._find_nondiff_blocks = True
-        self.derivative_iterset = None
-        self._collapsed_graph = None
-        self._topsort = None
-        self._input_outputs = []
         self._names = None
         self._interior_edges = None
 
@@ -212,91 +204,15 @@ class SequentialWorkflow(Workflow):
         self._explicit_names = []
         self.config_changed()
 
-    def get_interior_edges(self):
-        """ Returns an alphabetical list of all output edges that are
-        interior to the set of components supplied. When used for derivative
-        calculation, the parameter inputs and response outputs are also
-        included. If there are non-differentiable blocks grouped in
-        pseudo-assemblies, then those interior edges are excluded.
-        """
-        if self._interior_edges is None:
-                   
-            graph = self._parent.workflow_graph()
-            comps = [comp.name for comp in self.__iter__()]# + \
-                    #required_floating_vars
-            edges = set(graph.get_interior_connections(comps))
-            edges.update(self.get_driver_edges())
-            edges.update(self._additional_edges)
-            edges = edges - self._hidden_edges
-                    
-            # Sometimes we connect an input to an input (particularly with
-            # constraints). These need to be rehooked to corresponding source
-            # edges.
-            
-            self._input_outputs = set()
-            for src, target in edges:
-                if src == '@in' or target == '@out' or '_pseudo_' in src:
-                    continue
-                if is_input_node(graph, src):
-                    self._input_outputs.add(src)
-                    
-            self._input_outputs = list(self._input_outputs)
-                    
-            self._interior_edges = sorted(list(edges))
-            
-        return self._interior_edges
-
-    def get_driver_edges(self):
-        '''Return all edges where our driver connects to any component that
-        is owned by a subdriver's workflow. Also, include the extra parameter
-        edges that don't show up in the parent assembly depgraph.
-        '''
-        
-        # Cache it
-        if self._driver_edges is not None:
-            return self._driver_edges
-        
-        comps = self.get_names(full=True)
-        rcomps = recursive_components(self.scope, comps)
-        
-        sub_edge = set()
-        outcomps = [item[0].split('.')[0] for item in self._additional_edges]
-        loose_vars = self._parent.parent.list_inputs()
-        
-        for comp in comps:
-            
-            pcomp = self.scope.get(comp)
-            
-            # Output edges
-            if comp in outcomps and isinstance(pcomp, PseudoComponent) and \
-                   pcomp._pseudo_type in ['objective','constraint']:
-                for pcomp_edge in pcomp.list_connections():
-                    src_edge = pcomp_edge[0].split('.')[0]
-                    if src_edge	in rcomps or src_edge in loose_vars \
-                        or src_edge.split('[')[0] in loose_vars:
-                        sub_edge.add(pcomp_edge)
-
-        self._driver_edges = sub_edge
-        return self._driver_edges
-        
-    def initialize_residual(self, inputs, outputs):
+    def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
         nEdge = 0
+        dgraph = self.derivative_graph()
         
-        for varnames in inputs+outputs:
-            if isinstance(varnames, basestring):
-                varnames = [varnames]
-            else:
-                varnames = list(varnames)
-            for varname in varnames:
-                if varname not in self.scope._depgraph.node:
-                    self.scope._depgraph.add_subvar(varname)
-                
-        self._edges = get_inner_edges(self.scope._depgraph, inputs, outputs)
-        basevars = []
-        for src, targets in self._edges.iteritems():
+        basevars = set()
+        for src, targets in self.edge_list().iteritems():
             
             # Only need to grab the source (or first target for param) to
             # figure out the size for the residual vector
@@ -305,7 +221,7 @@ class SequentialWorkflow(Workflow):
                 if isinstance(src, list):
                     src = src[0]
                 
-            if '[' in src and src.split('[')[0] in basevars:
+            if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
                 print "Found a basevar", src
                 base, _, idx = src.partition('[')
                 offset, _ = self.get_bounds(base)
@@ -314,12 +230,12 @@ class SequentialWorkflow(Workflow):
                 bound = (istring, ix)
                 print bound
             else:
-                val = self.scope.get(src)
+                val = self.scope.get(from_PA_var(src))
                 width = flattened_size(src, val, self.scope)
                 bound = (nEdge, nEdge+width)
                 
             self.set_bounds(src, bound)
-            basevars.append(src)
+            basevars.add(src)
             
             if not isinstance(targets, list):
                 targets = [targets]
@@ -336,9 +252,8 @@ class SequentialWorkflow(Workflow):
         if self.res is None or nEdge != self.res.shape[0]:
             self.res = zeros((nEdge, 1))
 
-        print 'old iter:  ', self.get_interior_edges()
-        print 'iterator:  ', get_inner_edges(self.scope._depgraph, inputs, outputs)
-        print edge_dict_to_comp_list(self.scope._depgraph, self._edges)
+        print 'iterator:  ', self._edges
+        print edge_dict_to_comp_list(self._edges)
         return nEdge
 
     def get_bounds(self, node):
@@ -346,14 +261,13 @@ class SequentialWorkflow(Workflow):
         residual vector that correspond to a given variable name in this
         workflow."""
         itername = 'top.'+self._parent.itername
-        i1, i2 = self.scope._depgraph.node[node]['bounds'][itername]
+        dgraph = self._derivative_graph
+        i1, i2 = dgraph.node[node]['bounds'][itername]
         
         # Handle index slices
         if isinstance(i1, str):
-            if ':' in i1:
-                return i2, i2+1
-            else:
-                return i2, 0
+            i3 = i2+1 if ':' in i1 else 0
+            return i2, i3
             
         return i1, i2
         
@@ -362,14 +276,15 @@ class SequentialWorkflow(Workflow):
         residual vector that correspond to a given variable name in this
         workflow."""
         itername = 'top.'+self._parent.itername
+        dgraph = self._derivative_graph
         
         try:
-            meta = self.scope._depgraph.node[node]
+            meta = dgraph.node[node]
             
         # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
-            self.scope._depgraph.add_subvar(node)
-            meta = self.scope._depgraph.node[node]
+            dgraph.add_subvar(node)
+            meta = dgraph.node[node]
         
         if 'bounds' not in meta:
             meta['bounds'] = {}
@@ -485,7 +400,10 @@ class SequentialWorkflow(Workflow):
                 # applyJ needs to know what derivatives are needed
                 outputs[varname] = arg[i1:i2].copy()
                 
-            comp = self.scope.get(compname)
+                if '~' in compname:
+                    comp = self._derivative_graph.node[compname]['pa_object']
+                else:
+                    comp = self.scope.get(compname)
             
             # Preconditioning
             #if hasattr(comp, 'applyMinv'):
@@ -508,531 +426,263 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
                 
-        print arg, result
+        #print arg, result
         return result
         
-    def matvecFWD_old(self, arg):
+    def matvecREV(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
-        #print arg.max()
-        #import sys
-        #sys.stdout.flush()
-
-        # Bookkeeping dictionaries
-        inputs = {}
-        outputs = {}
-
-        # Variables owned by containing assembly can be in our graph.
-        # The will be stored in 'parent'
-        inputs['parent'] = {}
-        outputs['parent'] = {}
-
-        # Start with zero-valued dictionaries containing keys for all inputs
-        pa_ref = {}
-        for comp in self.derivative_iter():
-            name = comp.name
-            inputs[name] = {}
-            outputs[name] = {}
-            
-            # Interior Edges use original names, so we need to know
-            # what comps are in a pseudo-assy.
-            if '~' in name:
-                for item in comp.list_all_comps():
-                    pa_ref[item] = name
-                    
-                # If our whole model is in a finite difference, then
-                # assembly variables should also be contained
-                if len(self.derivative_iterset) == 1:
-                    pa_ref['parent'] = name
-                    
-        # Fill input dictionaries with values from input arg.
-        edges = self.get_interior_edges()
-        for edge in edges:
-            src, targets = edge
-            
-            if src != '@in' and src not in self._input_outputs:
-                comp_name, dot, var_name = src.partition('.')
-                
-                i1, i2 = self.get_bounds(src)
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                    
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                    
-                if var_name not in outputs:
-                    outputs[comp_name][var_name] = arg[i1:i2].copy()
-                else:
-                    outputs[comp_name][var_name] += arg[i1:i2].copy()
-                    
-                if var_name not in inputs:
-                    inputs[comp_name][var_name] = arg[i1:i2].copy()
-                else:
-                    inputs[comp_name][var_name] += arg[i1:i2].copy()
-                    
-            if targets != '@out':
-                
-                # Parameter group support
-                if not isinstance(targets, tuple):
-                    targets = [targets]
-                    
-                for target in targets:
-                    
-                    i1, i2 = self.get_bounds(target)
-                    comp_name, dot, var_name = target.partition('.')
-                    
-                    # Free-floating variables
-                    if not var_name:
-                        var_name = comp_name
-                        if 'parent' in pa_ref:
-                            comp_name = pa_ref['parent']
-                        else:
-                            comp_name = 'parent'
-                    
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    inputs[comp_name][var_name] = arg[i1:i2]
-            #print i1, i2, edge, '\n', inputs, '\n', outputs
-            
-        # Call ApplyMinv on each component (preconditioner)
-        #for comp in self.derivative_iter():
-            #name = comp.name
-            #if hasattr(comp, 'applyMinv'):
-                #inputs[name] = applyMinv(comp, inputs[name])
-            
-        # Call ApplyJ on each component
-        for comp in self.derivative_iter():
-            name = comp.name
-            applyJ(comp, inputs[name], outputs[name])
-            
-        # Each parameter adds an equation
-        for edge in self._additional_edges:
-            if edge[0] == '@in':
-                
-                # Parameter group support
-                p_edges = edge[1]
-                if not isinstance(p_edges, tuple):
-                    p_edges = [p_edges]
-                    
-                for p_edge in p_edges:
-                    i1, i2 = self.get_bounds(p_edge)
-                    comp_name, dot, var_name = p_edge.partition('.')
-                    
-                    # Free-floating variables
-                    if not var_name:
-                        var_name = comp_name
-                        if 'parent' in pa_ref:
-                            comp_name = pa_ref['parent']
-                        else:
-                            comp_name = 'parent'
-                        
-                    if comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                    outputs[comp_name][var_name] = arg[i1:i2]
-
+        
+        comps = edge_dict_to_comp_list(self._edges)
         result = zeros(len(arg))
         
-        # Reference back to the source for input-input connections.
-        input_input_xref = {}
-        edge_outs = [a for a, b in edges]
-        for edge in edges:
-            targ = edge[1]
-            if not isinstance(targ, tuple):
-                targ = [targ]
-            for target in targ:
-                if target in self._input_outputs:
-                    input_input_xref[target] = edge
-        
-        # Poke results into the return vector
-        #print inputs, '\n', outputs
-        for edge in edges:
-            src, target = edge
-            if '@in' not in src:
-                i1, i2 = self.get_bounds(src)
+        # We can call applyJ on each component one-at-a-time, and poke the
+        # results into the result vector.
+        for compname, data in comps.iteritems():
+            
+            comp_inputs = data['inputs']
+            comp_outputs = data['outputs']
+            inputs = {}
+            outputs = {}
+            
+            for varname in comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                inputs[varname] = arg[i1:i2].copy()
+                outputs[varname] = arg[i1:i2].copy()*0
+            
+            for varname in comp_inputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                outputs[varname] = arg[i1:i2].copy()*0
+                
+            if '~' in compname:
+                comp = self._derivative_graph.node[compname]['pa_object']
             else:
-                if isinstance(target, tuple):
-                    i1, i2 = self.get_bounds(target[0])
-                else:
-                    i1, i2 = self.get_bounds(target)
+                comp = self.scope.get(compname)
             
-            if src == '@in':
-                # Extra eqs for parameters contribute a 1.0 on diag
-                result[i1:i2] = arg[i1:i2]
-                continue
-            else:
-                result[i1:i2] = -arg[i1:i2]
-                
-            # Input-input connections are not in the jacobians. We need
-            # to add the derivative using our cross reference.
-            if src in self._input_outputs:
-                if src in input_input_xref:
-                    ref_edge = input_input_xref[src]
-                    i3, i4 = self.get_bounds(ref_edge[0])
-                    result[i1:i2] += arg[i3:i4]
-                continue
-                
-            # Parameter group support
-            if not isinstance(src, tuple):
-                src = [src]
-            
-            for item in src:
-                comp_name, dot, var_name = item.partition('.')
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                result[i1:i2] += outputs[comp_name][var_name]
-                #print i1, i2, edge, comp_name, var_name, outputs[comp_name][var_name]
-            
-        #print arg, result
-        return result
-    
-    def matvecREV(self, arg):
-        '''Callback function for performing the transpose matrix vector
-        product of the workflow's full Jacobian with an incoming vector
-        arg.'''
-        #print arg.max()
-        #import sys
-        #sys.stdout.flush()
-        
-        # Bookkeeping dictionaries
-        inputs = {}
-        outputs = {}
-        edges = self.get_interior_edges()
-
-        # Variables owned by containing assembly can be in our graph.
-        # The will be stored in 'parent'
-        inputs['parent'] = {}
-        outputs['parent'] = {}
-
-        # Reference back to the source for input-input connections.
-        input_input_xref = {}
-        edge_outs = [a for a, b in edges]
-        for edge in edges:
-            targ = edge[1]
-            if not isinstance(targ, tuple):
-                targ = [targ]
-            for target in targ:
-                if target in self._input_outputs:
-                    input_input_xref[target] = edge
-            
-        # Start with zero-valued dictionaries cotaining keys for all inputs
-        pa_ref = {}
-        for comp in self.derivative_iter():
-            name = comp.name
-            inputs[name] = {}
-            outputs[name] = {}
-            
-            # Interior Edges use original names, so we need to know
-            # what comps are in a pseudo-assy.
-            if '~' in name:
-                for item in comp.list_all_comps():
-                    pa_ref[item] = name
-                    
-        deriv_iter_comps = [comp.name for comp in self.derivative_iter()]
-
-        # Fill input dictionaries with values from input arg.
-        for edge in edges:
-            src, targets = edge
-            
-            if src != '@in' and src not in self._input_outputs:
-                comp_name, dot, var_name = src.partition('.')
-                
-                i1, i2 = self.get_bounds(src)
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                
-                elif comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                
-                if var_name in inputs[comp_name]: 
-                    inputs[comp_name][var_name] += arg[i1:i2]
-                    outputs[comp_name][var_name] += arg[i1:i2]
-                else:
-                    inputs[comp_name][var_name] = arg[i1:i2].copy()
-                    outputs[comp_name][var_name] = arg[i1:i2].copy()
-
-            # Parameter group support
-            if not isinstance(targets, tuple):
-                targets = [targets]
-                   
-            for target in targets:
-                if target != '@out':
-                    i1, i2 = self.get_bounds(target)
-                    comp_name, dot, var_name = target.partition('.')
-                    
-                    # Free-floating variables
-                    if not var_name:
-                        var_name = comp_name
-                        if 'parent' in pa_ref:
-                            comp_name = pa_ref['parent']
-                        else:
-                            comp_name = 'parent'
-                    
-                    elif comp_name in pa_ref:
-                        var_name = '%s.%s' % (comp_name, var_name)
-                        comp_name = pa_ref[comp_name]
-                        
-                    if edge[0] == '@in':
-                        # Extra eqs for parameters contribute a 1.0 on diag
-                        outputs[comp_name][var_name] = arg[i1:i2].copy()
-                    else:
-                        # Interior comp edges contribute a -1.0 on diag
-                        outputs[comp_name][var_name] = -arg[i1:i2].copy()
-                            
-        # Call ApplyMinvT on each component (preconditioner)
-        #for comp in self.derivative_iter():
-            #name = comp.name
+            # Preconditioning
             #if hasattr(comp, 'applyMinvT'):
-                #inputs[name] = applyMinvT(comp, inputs[name])
+                #inputs = applyMinvT(comp, inputs)
             
-        # Call ApplyJT on each component
-        for comp in self.derivative_iter():
-            name = comp.name
-            applyJT(comp, inputs[name], outputs[name])
-
-        # Poke results into the return vector
-        #print inputs, outputs
-        result = zeros(len(arg))
-        
-        for edge in edges:
-            src, target = edge
-            if '@in' not in src:
-                i1, i2 = self.get_bounds(src)
+            applyJT(comp, inputs, outputs)
+            #print inputs, outputs
             
-            # Input-input connections are not in the jacobians. We need
-            # to add the contribution.
-            if src in self._input_outputs:
+            for varname in comp_inputs+comp_outputs:
+                node = '%s.%s' % (compname, varname)
+                i1, i2 = self.get_bounds(node)
+                result[i1:i2] += outputs[varname]
                 
-                if src in input_input_xref:
-                    ref_edge = input_input_xref[src]
-                    i3, i4 = self.get_bounds(ref_edge[0])
-                    result[i1:i2] = -arg[i1:i2]
-                    result[i3:i4] = result[i3:i4] + arg[i1:i2]
+        # Each parameter adds an equation
+        for src, target in self._edges.iteritems():
+            if '@in' in src:
+                if isinstance(target, list):
+                    target = target[0]
                     
-                    # This entry shouldn't have anything else in it.
-                    if arg[i1:i2] != 0.0:
-                        continue
-            
-            if target == '@out':
-                target = src
-                    
-            # Parameter group support
-            if not isinstance(target, tuple):
-                target = [target]
-            
-            for item in target:
-                i1, i2 = self.get_bounds(item)
-                comp_name, dot, var_name = item.partition('.')
-                
-                # Free-floating variables
-                if not var_name:
-                    var_name = comp_name
-                    if 'parent' in pa_ref:
-                        comp_name = pa_ref['parent']
-                    else:
-                        comp_name = 'parent'
-                
-                if comp_name in pa_ref:
-                    var_name = '%s.%s' % (comp_name, var_name)
-                    comp_name = pa_ref[comp_name]
-                result[i1:i2] = result[i1:i2] + outputs[comp_name][var_name]
-                
+                i1, i2 = self.get_bounds(target)
+                result[i1:i2] += arg[i1:i2]
+                        
         #print arg, result
         return result
+        
+    def derivative_graph(self, inputs=None, outputs=None, fd=False):
+        """Returns the local graph that we use for derivatives.
+        """
+        
+        if self._derivative_graph is None:
+        
+            # If inputs aren't specified, use the parameters
+            if inputs is None:
+                if hasattr(self._parent, 'list_param_group_targets'):
+                    inputs = self._parent.list_param_group_targets()
+                else:
+                    msg = "No inputs given for derivatives."
+                    self.scope.raise_exception(msg, RuntimeError)
+        
+            # If outputs aren't specified, use the objectives and constraints
+            if outputs is None:
+                outputs = []
+                if hasattr(self._parent, 'get_objectives'):
+                    obj = ["%s.out0" % item.pcomp_name for item in \
+                            self._parent.get_objectives().values()]
+                    outputs.extend(obj)
+                if hasattr(self._parent, 'get_constraints'):
+                    con = ["%s.out0" % item.pcomp_name for item in \
+                                   self._parent.get_constraints().values()]
+                    outputs.extend(con)
+                    
+                if len(outputs) == 0:
+                    msg = "No outputs given for derivatives."
+                    self.scope.raise_exception(msg, RuntimeError)
     
-    def group_nondifferentiables(self):
+            graph = self.scope._depgraph
+            
+            # Inputs and outputs introduce subvars that aren't in the
+            # parent graph, so they need to be added.
+            for varnames in inputs+outputs:
+                if isinstance(varnames, basestring):
+                    varnames = [varnames]
+                else:
+                    varnames = list(varnames)
+                for varname in varnames:
+                    if varname not in self.scope._depgraph.node:
+                        graph.add_subvar(varname)
+            
+            edges = get_inner_edges(graph, inputs, outputs)
+            comps = edge_dict_to_comp_list(edges)
+            
+            dgraph = graph.full_subgraph(comps.keys())
+            dgraph.graph['inputs'] = inputs
+            dgraph.graph['outputs'] = outputs
+            if 'mapped_inputs' in dgraph.graph:
+                dgraph.graph.pop('mapped_inputs', None)
+                dgraph.graph.pop('mapped_outputs', None)
+                
+            self._derivative_graph = dgraph
+            self._group_nondifferentiables(fd)
+            
+        return self._derivative_graph
+    
+    def _group_nondifferentiables(self, fd=False):
         """Method to find all non-differentiable blocks. These blocks
         will be replaced in the differentiation workflow by a pseudo-
         assembly, which can provide its own Jacobian via finite difference.
         """
         
-        nondiff = []
-        for comp in self.get_components():
-            if not hasattr(comp, 'apply_deriv') and \
-               not hasattr(comp, 'apply_derivT') and \
-               not hasattr(comp, 'provideJ'):
-                nondiff.append(comp.name)
-                
-        if len(nondiff) == 0:
-            return
-        
-        collapsed = self._get_collapsed_graph()
+        dgraph = self._derivative_graph
+        cgraph = dgraph.component_graph()
 
-        # Groups any connected non-differentiable blocks. Each block is a set
-        # of component names.
-        nondiff_groups = []
-        sub = collapsed.subgraph(nondiff)
-        nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-        for item in nd_graphs:
-            nondiff_groups.append(item.nodes())
-                
-        # We need to copy our graph, and put pseudoasemblies in place
-        # of the nondifferentiable components.
+        nondiff = []
+        comps = nx.topological_sort(cgraph)
         
-        graph = nx.DiGraph(collapsed)
-        dgraph = self.scope._depgraph
-        pseudo_assemblies = {}
-        
-        # for cyclic workflows, remove cut edges.
-        for edge in self._severed_edges:
-            comp1, _, _ = edge[0].partition('.')
-            comp2, _, _ = edge[1].partition('.')
+        # Full model finite-difference, so all components go in the PA
+        if fd == True:
+            nondiff_groups = [comps]
             
-            graph.remove_edge(comp1, comp2)
+        # Find the non-differentiable componentns
+        else:
+            for name in comps:
+                comp = self.scope.get(name)
+                if not hasattr(comp, 'apply_deriv') and \
+                   not hasattr(comp, 'apply_derivT') and \
+                   not hasattr(comp, 'provideJ'):
+                    nondiff.append(comp.name)
+                
+            if len(nondiff) == 0:
+                return
+            
+            # Groups any connected non-differentiable blocks. Each block is a set
+            # of component names.
+            nondiff_groups = []
+            sub = cgraph.subgraph(nondiff)
+            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
+            for item in nd_graphs:
+                nondiff_groups.append(item.nodes())
+                
+        # for cyclic workflows, remove cut edges.
+        #for edge in self._severed_edges:
+        #    comp1, _, _ = edge[0].partition('.')
+        #    comp2, _, _ = edge[1].partition('.')
+        #    cgraph.remove_edge(comp1, comp2)
+        
+        dgraph.graph['mapped_inputs'] = copy.copy(dgraph.graph['inputs'])
+        dgraph.graph['mapped_outputs'] = copy.copy(dgraph.graph['outputs'])
+        meta_inputs = dgraph.graph['inputs']
+        meta_outputs = dgraph.graph['outputs']
+        map_inputs = dgraph.graph['mapped_inputs']
+        map_outputs = dgraph.graph['mapped_outputs']
         
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
             
-            # Add the pseudo_assemblies:
-            graph.add_node(pa_name)
+            # First, find our group boundary
+            allnodes = dgraph.find_prefixed_nodes(group)
+            out_edges = nx.edge_boundary(dgraph, allnodes)
+            in_edges = nx.edge_boundary(dgraph, 
+                                        set(dgraph.nodes()).difference(allnodes))
             
-            # Carefully replace edges
-            inputs = set()
-            outputs = set()
-            all_edges = graph.edges()
-            recursed_components = recursive_components(self.scope, group)
+            pa_inputs = [b for a, b in in_edges]
+            pa_outputs = [a for a, b in out_edges]
             
-            for edge in all_edges:
+            # Add requested params
+            for i, varpath in enumerate(meta_inputs):
+                if not isinstance(varpath, tuple):
+                    varpath = [varpath]
+                    
+                mapped = []
+                for path in varpath:
+                    compname, _, varname = path.partition('.')
+                    if varname and (compname in group):
+                        pa_inputs.append(path)
+                        mapped.append(to_PA_var(path, pa_name))
                 
-                if edge[0] in group and edge[1] in group:
-                    graph.remove_edge(edge[0], edge[1])
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    self._hidden_edges.update(var_edge)
-                    
-                elif edge[0] in group:
-                    graph.remove_edge(edge[0], edge[1])
-                    graph.add_edge(pa_name, edge[1])
-                    
-                    # Hack: deal with driver connections that connect to
-                    # a component in a subdriver's workflow.
-                    pcomp = getattr(self.scope, edge[1])
-                    if isinstance(pcomp, PseudoComponent) and \
-                       pcomp._pseudo_type in ['objective', 'constraint']:
-                        var_edge = set()
-                        for pcomp_edge in pcomp.list_connections():
-                            src_edge = pcomp_edge[0].split('.')[0]
-                            if src_edge in recursed_components:
-                                var_edge.add(pcomp_edge)
-                    else:
-                        var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    outputs.update(var_edge)
-                    
-                elif edge[1] in group:
-                    graph.remove_edge(edge[0], edge[1])
-                    graph.add_edge(edge[0], pa_name)
-                    
-                    var_edge = dgraph.get_directional_interior_edges(edge[0], edge[1])
-                    inputs.update(var_edge)
-                    
-            # Input and outputs that crossed the cut line should be included
-            # for the pseudo-assembly.
-            for edge in self._severed_edges:
-                comp1, _, _ = edge[0].partition('.')
-                comp2, _, _ = edge[1].partition('.')
+                if mapped:                      
+                    map_inputs[i] = tuple(mapped)
                 
-                if comp1 in group:
-                    outputs.add(edge)
-                if comp2 in group:
-                    inputs.add(edge)
-                    
-                if edge in self._hidden_edges:
-                    self._hidden_edges.remove(edge)
-            
-            # Remove old nodes
-            graph.remove_nodes_from(group)
-
-            # You don't need the whole edge.
-            inputs  = [b for a, b in inputs]
-            outputs = list(set([a for a, b in outputs]))
-                
-            # Boundary edges must be added to inputs and outputs
-            for edge in list(self._additional_edges):
-                src, targets = edge
-                
-                comp_name, dot, var_name = src.partition('.')
-                
-                if comp_name in group or comp_name in recursed_components:
-                    outputs.append(src)
-                 
-                # Parameter-groups are tuples
-                if not isinstance(targets, tuple):
-                    targets = [targets]
-                
-                target_group = []    
-                for target in targets:
-                    comp_name, dot, var_name = target.partition('.')
-                    
-                    # Edges in the assembly
-                    if not var_name and target != '@out':
-                        target_group.append(target)
+            # Add requested outputs
+            for i, varpath in enumerate(meta_outputs):
+                compname, _, varname = varpath.partition('.')
+                if varname and (compname in group):
+                    pa_outputs.append(varpath)
+                    map_outputs[i] = to_PA_var(varpath, pa_name)
                         
-                    elif comp_name in group or comp_name in recursed_components:
-                        target_group.append(target)
-                        
-                if len(target_group) > 1:
-                    inputs.append(tuple(target_group))
-                elif len(target_group) > 0:
-                    inputs.append(target_group[0])
+            # Create the pseudoassy
+            pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
+            
+            # for full-model fd, turn off fake finite difference
+            if fd==True:
+                pseudo.ffd_order = 0
+            
+            # Clean up the old stuff in the graph
+            dgraph.remove_nodes_from(allnodes)
+            
+            # Add pseudoassys to graph
+            dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
+                            pseudo='assembly', valid=True)
+            
+            # Add pseudoassy inputs
+            for varpath in pa_inputs:
+                varname = to_PA_var(varpath, pa_name)
+                dgraph.add_node(varname, var=True, iotype='in', valid=True)
+                dgraph.add_edge(varname, pa_name)
                 
-            # Input to input connections lead to extra outputs.
-            for item in self._input_outputs:
-                if item in outputs:
-                    outputs.remove(item)
+            # Add pseudoassy outputs
+            for varpath in pa_outputs:
+                varname = to_PA_var(varpath, pa_name)
+                dgraph.add_node(varname, var=True, iotype='out', valid=True)
+                dgraph.add_edge(pa_name, varname)
             
-            # Create pseudo_assy
-            comps = [getattr(self.scope, name) for name in group]
-            pseudo_assemblies[pa_name] = \
-                PseudoAssembly(pa_name, comps, inputs, outputs, self,
-                               recursed_components = recursed_components)
+            # Hook up the pseudoassemblies
+            for src, dst in in_edges:
+                dst = to_PA_var(dst, pa_name)
+                dgraph.add_edge(src, dst, conn=True)
+                
+            for src, dst in out_edges:
+                src = to_PA_var(src, pa_name)
+                dgraph.add_edge(src, dst, conn=True)
             
-        # Execution order may be different after grouping, so topsort
-        iterset = nx.topological_sort(graph)
+            print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
         
-        # Save off list containing comps and pseudo-assemblies
-        self.derivative_iterset = []
-        scope = self.scope
-        for name in iterset:
-            if '~' in name:
-                self.derivative_iterset.append(pseudo_assemblies[name])
+        return None
+
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        if self._edges == None:
+            
+            dgraph = self.derivative_graph()
+            if 'mapped_inputs' in dgraph.graph:
+                inputs = 'mapped_inputs'
+                outputs = 'mapped_outputs'
             else:
-                self.derivative_iterset.append(getattr(scope, name))
+                inputs = 'inputs'
+                outputs = 'outputs'
                 
-        # Basically only returning the text list to make the test easy.
-        return iterset
-
-    def derivative_iter(self):
-        """Return the iterator for differentiating this workflow. All
-        non-differential groups are found in pseudo-assemblies.
-        """
-        if self.derivative_iterset is None:
-            return [getattr(self.scope, n) for n in self.get_names(full=True)]
-        return self.derivative_iterset
-
+            self._edges = get_inner_edges(dgraph, dgraph.graph[inputs],
+                                          dgraph.graph[outputs])
+            
+        return self._edges
+        
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
         """ Calculate derivatives and save baseline states for all components
@@ -1040,9 +690,13 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self.scope._depgraph, self._edges)
+        comps = edge_dict_to_comp_list(self.edge_list())
         for compname, data in comps.iteritems():
-            node = self.scope.get(compname)
+            if '~' in compname:
+                node = self._derivative_graph.node[compname]['pa_object']
+            else:
+                node = self.scope.get(compname)
+
             inputs = data['inputs']
             outputs = data['outputs']
             node.calc_derivatives(first, second, savebase, inputs, outputs)
@@ -1055,148 +709,64 @@ class SequentialWorkflow(Workflow):
         all passed inputs.
         """
         
-        if inputs is None:
-            if hasattr(self._parent, 'list_param_group_targets'):
-                inputs = self._parent.list_param_group_targets()
-            else:
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-            
-        if outputs is None:
-            outputs = []
-            if hasattr(self._parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in \
-                        self._parent.get_objectives().values()]
-                outputs.extend(obj)
-            if hasattr(self._parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in \
-                               self._parent.get_constraints().values()]
-                outputs.extend(con)
-                
-            if len(outputs) == 0:
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        # Override to do straight finite-difference of the whole model, with
-        # no fake fd.
-        if fd is True:
-            
-            mode = 'forward'
-            
-            # Finite difference the whole thing by putting the whole workflow in a
-            # pseudo-assembly. This requires being a little creative.
-            comps = [comp for comp in self]
-            comp_names = [comp.name for comp in comps]
-            rcomps = recursive_components(self.scope, comp_names)            
-            pseudo = PseudoAssembly('~Check_Gradient', comps, inputs, outputs, 
-                                    self, recursed_components=rcomps)
-            pseudo.ffd_order = 0
-            graph = self._parent.workflow_graph()
-            self._hidden_edges = set(graph.get_interior_connections(comp_names))
-            
-            # Hack: subdriver edges aren't in the assy depgraph, so we 
-            # have to manually find and remove them.
-            for dr_edge in self.get_driver_edges():
-                dr_src = dr_edge[0].split('.',1)[0]
-                dr_targ = dr_edge[1].split('.',1)[0]
-                if '%s.in0' % dr_src in inputs:
-                    pcomp = getattr(self.scope, dr_src)
-                    self._hidden_edges.update(pcomp.list_connections())
-                elif '%s.out0' % dr_targ in outputs:
-                    pcomp = getattr(self.scope, dr_targ)
-                    self._hidden_edges.update(pcomp.list_connections())
-            
-            self.derivative_iterset = [pseudo]
-
-            # Allow for the rare case the user runs this manually, first, in
-            # which case the in/out edges haven't been defined yet.
-            if len(self._additional_edges) == 0:
-                
-                # New edges for all requested inputs and outputs
-                input_edges = [('@in', a) for a in inputs]
-                output_edges = [(a, '@out') for a in outputs]
-                additional_edges = set(input_edges + output_edges)
-                self._additional_edges = additional_edges
-
-            # Make sure to undo our big pseudo-assembly next time we calculate the
-            # gradient.
-            self._find_nondiff_blocks = True
-            
-        # Only do this once: find additional edges and figure out our
-        # non-differentiable blocks.
-        elif self._find_nondiff_blocks:
-            
-            self._severed_edges = []
-            self._additional_edges = set()
-            self._hidden_edges = set()
-            
-            # New edges for all requested inputs and outputs
-            
-            input_edges = [('@in', a) for a in inputs]
-            output_edges = [(a, '@out') for a in outputs]
-            additional_edges = set(input_edges + output_edges)
-            self._additional_edges = additional_edges
-            
-            self.group_nondifferentiables()
-            
-            self._find_nondiff_blocks = False
-            
-        # Some reorganization to add additional edges when scoped outside
-        # the driver that owns this workflow.
-        elif upscope:
-            
-            # New edges for parameters
-            input_edges = [('@in', a) for a in inputs]
-            additional_edges = set(input_edges)
-            
-            # New edges for responses
-            out_edges = [a[0] for a in self.get_interior_edges()]
-            for item in outputs:
-                if item not in out_edges:
-                    additional_edges.add((item, '@out'))
-            
-            newset = self._additional_edges.union(additional_edges)
-            if len(newset) > len(self._additional_edges):
-                self._additional_edges = newset
-                self._hidden_edges = set()
-                self.group_nondifferentiables()
-            
-            self._find_nondiff_blocks = False
+        # This function can be called from a parent driver's workflow for
+        # assembly recursion. We have to clear our cache if that happens.
+        # We also have to clear it next time we arrive back in our workflow.
+        if upscope:
+            self._derivative_graph = None
+            self._edges = None
+            self._upscoped = True
+        elif self._upscoped:
+            self._derivative_graph = None
+            self._edges = None
+            self._upscoped = False
         
-        # Auto-determine which mode to use.
+        dgraph = self.derivative_graph(inputs, outputs, fd=fd)
+        
+        if 'mapped_inputs' in dgraph.graph:
+            inputs = dgraph.graph['mapped_inputs']
+            outputs = dgraph.graph['mapped_outputs']
+        else:
+            inputs = dgraph.graph['inputs']
+            outputs = dgraph.graph['outputs']
+        
+        n_edge = self.initialize_residual()
+        
+        # Size our Jacobian
+        num_in = 0
+        for item in inputs:
+            
+            # For parameter groups, only size the first
+            if isinstance(item, tuple):
+                item = item[0]
+                
+            i1, i2 = self.get_bounds(item)
+            num_in += i2-i1
+    
+        num_out = 0
+        for item in outputs:
+            i1, i2 = self.get_bounds(item)
+            if isinstance(i1, list):
+                num_out += len(i1)
+            else:
+                num_out += i2-i1
+                
+        shape = (num_out, num_in)
+            
+        # Auto-determine which mode to use based on Jacobian shape.
         if mode == 'auto' and fd is False:
             # TODO - additional determination based on presence of
             # apply_derivT
             
-            # TODO: This is repeated in derivatives.calc_gradient for sizing.
-            # We should cache it and only do it once.
-            
-            num_in = 0
-            for item in inputs:
-                
-                # For parameter groups, only size the first
-                if isinstance(item, tuple):
-                    item = item[0]
-                    
-                val = self.scope.get(item)
-                width = flattened_size(item, val)
-                num_in += width
-        
-            num_out = 0
-            for item in outputs:
-                val = self.scope.get(item)
-                width = flattened_size(item, val)
-                num_out += width
-                
             if num_in > num_out:
                 mode = 'adjoint'
             else:
                 mode = 'forward'
             
         if mode == 'adjoint':
-            return calc_gradient_adjoint(self, inputs, outputs)
+            return calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         else:
-            return calc_gradient(self, inputs, outputs)
+            return calc_gradient(self, inputs, outputs, n_edge, shape)
     
     def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -1234,39 +804,9 @@ class SequentialWorkflow(Workflow):
         print >> stream, 24*'-'
         print >> stream, Jbase
 
-        if inputs is None:
-            if hasattr(self._parent, 'get_parameters'):
-                inputs = []
-                input_refs = []
-                for key, param in self._parent.get_parameters().items():
-                    inputs.extend(param.targets)
-                    input_refs.extend([key for t in param.targets])
-            # Should be caught in calc_gradient()
-            else:  # pragma no cover
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            input_refs = inputs
-            
-        if outputs is None:
-            outputs = []
-            output_refs = []
-            if hasattr(self._parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in \
-                        self._parent.get_objectives().values()]
-                outputs.extend(obj)
-                output_refs.extend(self._parent.get_objectives().keys())
-            if hasattr(self._parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in \
-                               self._parent.get_constraints().values()]
-                outputs.extend(con)
-                output_refs.extend(self._parent.get_constraints().keys())
-                
-            if len(outputs) == 0:  # pragma no cover
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            output_refs = outputs
+        dgraph = self.derivative_graph()
+        input_refs = dgraph.graph['inputs']
+        output_refs = dgraph.graph['outputs']
 
         out_width = 0
         for output, oref in zip(outputs, output_refs):
