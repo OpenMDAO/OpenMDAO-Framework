@@ -111,7 +111,7 @@ class TestDerivativeVarTree(unittest.TestCase):
                top.driver.get_constraints().values()]
 
         
-        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, fd=True)
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         

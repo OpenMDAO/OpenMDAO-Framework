@@ -164,7 +164,7 @@ class TestcaseDerivObj(unittest.TestCase):
         outputs = self.outputs 
         top = self.top
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, fd=True)
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
         
         top.driver.workflow.config_changed()

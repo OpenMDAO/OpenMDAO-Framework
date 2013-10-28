@@ -195,7 +195,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         self.top.run()
         J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
                                                    outputs=outputs,
-                                                   fd=True)
+                                                   mode='fd')
         
         J = (J1 - J2)
         print J.max()

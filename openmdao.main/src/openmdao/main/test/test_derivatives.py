@@ -455,7 +455,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], 
                                               outputs=[obj], 
-                                              fd=True)
+                                              mode='fd')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
         top.driver.run()
@@ -518,7 +518,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], 
                                               outputs=[obj], 
-                                              fd=True)
+                                              mode='fd')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
         top.driver.run()
@@ -741,7 +741,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
-                                              fd=True)
+                                              mode='fd')
         assert_rel_error(self, J[0, 0], 39.0, .001)
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
@@ -835,7 +835,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 1]',],
                                               outputs=['nest.y[1, 0]'],
-                                              fd=True)
+                                              mode='fd')
         
         diff = J - top.nest.comp.J[1, 2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
@@ -879,7 +879,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         #top.nest.driver.workflow.config_changed()
         #J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
                                               #outputs=['nest.y[1][:]'],
-                                              #fd=True)
+                                              #mode='fd')
         #print J
         #assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
         
@@ -912,7 +912,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
@@ -947,7 +947,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
@@ -980,7 +980,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
@@ -1015,7 +1015,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
     
@@ -1059,7 +1059,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[2, 1], 9.0, .000001)
     
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
         assert_rel_error(self, J[2, 0], 6.0, .000001)
@@ -1170,7 +1170,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], -8.0, .001) 
         
         self.top.driver.workflow.config_changed()
-        J = self.top.driver.workflow.calc_gradient(fd=True)
+        J = self.top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], -8.0, .001) 
         
     def test_nondifferentiable_blocks(self):
@@ -1319,7 +1319,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'], 
-                                                   fd=True)
+                                                   mode='fd')
         assert_rel_error(self, J[0, 0], 313.0, .001)
         
         
@@ -1347,7 +1347,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], -4.5, .001)
         
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
         assert_rel_error(self, J[1, 0], 1.0, .001)
@@ -1462,7 +1462,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2')],
                                               outputs=['comp1.y1'],
-                                              fd=True)
+                                              mode='fd')
         assert_rel_error(self, J[0, 0], 12.0, .001)
         
         top.driver.workflow.config_changed()
