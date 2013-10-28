@@ -189,6 +189,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         
         inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
         outputs = ['d1.y1', 'd2.y2']
+        self.top.driver.workflow.config_changed()
         J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
                                                    outputs=outputs)
         self.top.run()
@@ -211,7 +212,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 6)
+        self.assertTrue(self.top.d1.exec_count < 8)
         
     def test_newton_mixed(self):
         

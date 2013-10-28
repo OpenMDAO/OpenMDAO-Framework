@@ -494,9 +494,15 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
-        cgraph = dgraph.component_graph()
 
         nondiff = []
+        
+        # If we have a cyclic workflow, derivative graph should be severed.
+        if severed is not None:
+            for edge in severed:
+                dgraph.remove_edge(edge[0], edge[1])
+            
+        cgraph = dgraph.component_graph()
         comps = nx.topological_sort(cgraph)
         
         # Full model finite-difference, so all components go in the PA

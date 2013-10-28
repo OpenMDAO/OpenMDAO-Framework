@@ -4,11 +4,21 @@ required to converge this workflow in order to execute it. """
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
 
+try:
+    from numpy import ndarray
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import ndarray
+    
+    
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.main.pseudoassembly import from_PA_var
+from openmdao.main.ndepgraph import edge_dict_to_comp_list
+from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
+from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
 
@@ -145,6 +155,35 @@ class CyclicWorkflow(SequentialWorkflow):
             super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
                                                          self._severed_edges)
             
+            # Finally, we need to map any of our edges if they are in a
+            # pseudo-assy
+            dgraph = self._derivative_graph
+            comps = edge_dict_to_comp_list(dgraph, self.edge_list())
+            pa_keys = [name for name in comps if '~' in name]
+            
+            if len(pa_keys) == 0:
+                self._mapped_severed_edges = self._severed_edges
+            else:
+                self._mapped_severed_edges = []
+                for src, target in self._severed_edges:
+                    
+                    compname, _, varname = src.partition('.')
+                    for pa_key in pa_keys:
+                        pseudo = dgraph.node[pa_key]['pa_object']
+                        if src in pseudo.outputs:
+                            src = to_PA_var(src, pseudo.name)
+                            break
+                
+                    compname, _, varname = target.partition('.')
+                    for pa_key in pa_keys:
+                        pseudo = dgraph.node[pa_key]['pa_object']
+                        if target in pseudo.inputs:
+                            target = to_PA_var(target, pseudo.name)
+                            break
+                            
+                    self._mapped_severed_edges.append((src, target))
+                
+            
         return self._derivative_graph
 
     def set_new_state(self, dv):
@@ -154,51 +193,89 @@ class CyclicWorkflow(SequentialWorkflow):
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        for edge in self._severed_edges:
-            src, target = edge
+        for src, targets in self._edges.iteritems():
+            
+            if '@in' in src:
+                continue
+            
             i1, i2 = self.get_bounds(src)
-            old_val = self.scope.get(target)
-
-            if isinstance(old_val, float):
-                new_val = old_val + float(dv[i1:i2])
-            elif isinstance(old_val, ndarray):
-                shape = old_val.shape
-                if len(shape) > 1:
-                    new_val = old_val.flatten() + dv[i1:i2]
-                    new_val = new_val.reshape(shape)
+            
+            if isinstance(targets, str):
+                targets = [targets]
+                
+            for target in targets:
+                
+                if '@out' in target:
+                    for sev_src, sev_target in self._mapped_severed_edges:
+                        if sev_src == src:
+                            target = sev_target
+                
+                target = from_PA_var(target)
+                old_val = self.scope.get(target)
+    
+                if isinstance(old_val, float):
+                    new_val = old_val + float(dv[i1:i2])
+                elif isinstance(old_val, ndarray):
+                    shape = old_val.shape
+                    if len(shape) > 1:
+                        new_val = old_val.flatten() + dv[i1:i2]
+                        new_val = new_val.reshape(shape)
+                    else:
+                        new_val = old_val + dv[i1:i2]
+                elif isinstance(old_val, VariableTree):
+                    new_val = old_val.copy()
+                    self._update(target, new_val, dv[i1:i2])
                 else:
-                    new_val = old_val + dv[i1:i2]
-            elif isinstance(old_val, VariableTree):
-                new_val = old_val.copy()
-                self._update(target, new_val, dv[i1:i2])
-            else:
-                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
-
-            # Poke new value into the input end of the edge.
-            self.scope.set(target, new_val, force=True)
-
-            # Prevent OpenMDAO from stomping on our poked input.
-            self.scope.set_valid([target.split('[',1)[0]], True)
-
-            #(An alternative way to prevent the stomping. This is more
-            #concise, but setting an output and allowing OpenMDAO to pull it
-            #felt hackish.)
-            #self.scope.set(src, new_val, force=True)
+                    msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                          " This type is not supported by the MDA Solver."
+                    self.scope.raise_exception(msg, RuntimeError)
+    
+                # Poke new value into the input end of the edge.
+                self.scope.set(target, new_val, force=True)
+    
+                # Prevent OpenMDAO from stomping on our poked input.
+                self.scope.set_valid([target.split('[',1)[0]], True)
+    
+                #(An alternative way to prevent the stomping. This is more
+                #concise, but setting an output and allowing OpenMDAO to pull it
+                #felt hackish.)
+                #self.scope.set(src, new_val, force=True)
 
     def calculate_residuals(self):
         """Calculate and return the vector of residuals based on the current
         state of the system in our workflow."""
-        for src, target in self._severed_edges:
-            src_val = self.scope.get(src)
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
-                
-            target_val = self.scope.get(target)
-            target_val = flattened_value(target, target_val).reshape(-1, 1)
+        
+        for src, targets in self._edges.iteritems():
+            
+            if '@in' in src:
+                continue
             
             i1, i2 = self.get_bounds(src)
-            self.res[i1:i2] = src_val - target_val
+            src_val = self.scope.get(from_PA_var(src))
+            src_val = flattened_value(src, src_val).reshape(-1, 1)
+                
+            if isinstance(targets, str):
+                targets = [targets]
+                
+            for target in targets:
+                
+                if '@out' in target:
+                    for sev_src, sev_target in self._mapped_severed_edges:
+                        if sev_src == src:
+                            target = sev_target
+                
+                target_val = self.scope.get(from_PA_var(target))
+                target_val = flattened_value(target, target_val).reshape(-1, 1)
+            
+                self.res[i1:i2] = src_val - target_val
 
         return self.res
 
+    def calc_gradient(self, inputs=None, outputs=None, fd=False, 
+                      upscope=False, mode='auto'):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs.
+        """
+        print "yeeed"
+        super(CyclicWorkflow, self).calc_gradient(inputs, outputs, fd,
+                                                  upscope, mode)
