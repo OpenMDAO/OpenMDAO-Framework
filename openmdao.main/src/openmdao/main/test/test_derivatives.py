@@ -1740,8 +1740,6 @@ class PreCompArray(Component):
 class Testcase_preconditioning(unittest.TestCase):
     """ Unit test for applyMinv and applyMinvT """
 
-    # TODO -- Preconditioning support in OpenMDAO during refactor
-    
     def test_simple(self):
         
         top = set_as_top(Assembly())
