@@ -9,8 +9,7 @@ import sys
 from openmdao.main.array_helpers import flattened_size, flattened_value, \
                                         flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, edge_dict_to_comp_list, \
-                                      applyMinvT, applyMinv
+                                      applyJ, applyJT, applyMinvT, applyMinv
                                       
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
@@ -18,7 +17,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
-                                    get_inner_edges, is_basevar_node
+                                    get_inner_edges, is_basevar_node, edge_dict_to_comp_list
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -318,7 +317,7 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._edges)
+        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -375,7 +374,7 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._edges)
+        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -472,19 +471,16 @@ class SequentialWorkflow(Workflow):
                         graph.add_subvar(varname)
             
             edges = get_inner_edges(graph, inputs, outputs)
-            comps = edge_dict_to_comp_list(edges)
+            comps = edge_dict_to_comp_list(graph, edges)
             
             dgraph = graph.full_subgraph(comps.keys())
             
-            # We want our graph metadata to be stored in the copy, not in the
-            # parent.
+            # We want our graph metadata to be stored in the copy, but not in the
+            # parent, so make our own copy of the metadata dict for dgraph.
             dgraph.graph = {}
             
             dgraph.graph['inputs'] = inputs
             dgraph.graph['outputs'] = outputs
-            if 'mapped_inputs' in dgraph.graph:
-                dgraph.graph.pop('mapped_inputs', None)
-                dgraph.graph.pop('mapped_outputs', None)
                 
             self._derivative_graph = dgraph
             self._group_nondifferentiables(fd, severed)
@@ -498,9 +494,15 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
-        cgraph = dgraph.component_graph()
 
         nondiff = []
+        
+        # If we have a cyclic workflow, derivative graph should be severed.
+        if severed is not None:
+            for edge in severed:
+                dgraph.remove_edge(edge[0], edge[1])
+            
+        cgraph = dgraph.component_graph()
         comps = nx.topological_sort(cgraph)
         
         # Full model finite-difference, so all components go in the PA
@@ -638,7 +640,8 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self.edge_list())
+        comps = edge_dict_to_comp_list(self.derivative_graph(required_inputs, required_outputs), 
+                                       self.edge_list())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
