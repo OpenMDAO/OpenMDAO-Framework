@@ -142,7 +142,8 @@ class CyclicWorkflow(SequentialWorkflow):
                 inputs.append(target)
                 outputs.append(src)
                 
-            super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd)
+            super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
+                                                         self._severed_edges)
             
         return self._derivative_graph
 

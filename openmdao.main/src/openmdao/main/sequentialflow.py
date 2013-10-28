@@ -427,7 +427,8 @@ class SequentialWorkflow(Workflow):
         #print arg, result
         return result
         
-    def derivative_graph(self, inputs=None, outputs=None, fd=False):
+    def derivative_graph(self, inputs=None, outputs=None, fd=False, 
+                         severed=None):
         """Returns the local graph that we use for derivatives.
         """
         
@@ -486,11 +487,11 @@ class SequentialWorkflow(Workflow):
                 dgraph.graph.pop('mapped_outputs', None)
                 
             self._derivative_graph = dgraph
-            self._group_nondifferentiables(fd)
+            self._group_nondifferentiables(fd, severed)
             
         return self._derivative_graph
     
-    def _group_nondifferentiables(self, fd=False, comps = None):
+    def _group_nondifferentiables(self, fd=False, severed = None):
         """Method to find all non-differentiable blocks. These blocks
         will be replaced in the differentiation workflow by a pseudo-
         assembly, which can provide its own Jacobian via finite difference.
