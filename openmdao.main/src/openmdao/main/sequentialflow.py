@@ -532,6 +532,11 @@ class SequentialWorkflow(Workflow):
             comps = edge_dict_to_comp_list(edges)
             
             dgraph = graph.full_subgraph(comps.keys())
+            
+            # We want our graph metadata to be stored in the copy, not in the
+            # parent.
+            dgraph.graph = {}
+            
             dgraph.graph['inputs'] = inputs
             dgraph.graph['outputs'] = outputs
             if 'mapped_inputs' in dgraph.graph:
