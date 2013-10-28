@@ -251,12 +251,6 @@ def applyJ(obj, arg, result):
                 basekey, _, idx = ikey.partition('[')
                 i1, i2, ish = ibounds[basekey]
 
-            # Param groups make it tricky. We only want to add the
-            # piece of J once for the whole group.
-            if i1 in used:
-                continue
-            used.append(i1)
-            
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             

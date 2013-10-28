@@ -351,6 +351,7 @@ class SequentialWorkflow(Workflow):
                 #inputs = applyMinv(comp, inputs)
             
             applyJ(comp, inputs, outputs)
+            #print inputs, outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
@@ -403,8 +404,8 @@ class SequentialWorkflow(Workflow):
                 comp = self.scope.get(compname)
             
             # Preconditioning
-            #if hasattr(comp, 'applyMinvT'):
-                #inputs = applyMinvT(comp, inputs)
+            if hasattr(comp, 'applyMinvT'):
+                inputs = applyMinvT(comp, inputs)
             
             applyJT(comp, inputs, outputs)
             #print inputs, outputs

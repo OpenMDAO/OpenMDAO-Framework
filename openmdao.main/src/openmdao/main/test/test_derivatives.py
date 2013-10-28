@@ -1763,11 +1763,10 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'],
                                               mode='adjoint')
         
-        print J
-        #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
-        #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
-        #assert_rel_error(self, J[1, 0], 13.0, 0.0001)
-        #assert_rel_error(self, J[1, 1], -3.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 7.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 13.0, 0.0001)
+        assert_rel_error(self, J[1, 1], -3.0, 0.0001)
 
     def test_two_comp(self):
         
@@ -1783,7 +1782,6 @@ class Testcase_preconditioning(unittest.TestCase):
         top.driver.add_parameter('comp1.x1', low=-10, high=10)
         top.driver.add_parameter('comp1.x2', low=-10, high=10)
         top.driver.add_objective('comp2.y1 + comp2.y2')
-        #top.driver.add_constraint('nest.yyy[0] + nest.yyy[1] < 0')
         
         top.run()
         
@@ -1792,12 +1790,9 @@ class Testcase_preconditioning(unittest.TestCase):
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
-        
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
-        print J
-        
+        assert_rel_error(self, J[0, 0], 82.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 93.0, 0.0001)
+
     def test_two_comp_array(self):
         
         top = set_as_top(Assembly())
@@ -1811,7 +1806,6 @@ class Testcase_preconditioning(unittest.TestCase):
         top.driver.add_parameter('comp1.x[0]', low=-10, high=10)
         top.driver.add_parameter('comp1.x[1]', low=-10, high=10)
         top.driver.add_objective('comp2.y[0]')
-        #top.driver.add_constraint('nest.yyy[0] + nest.yyy[1] < 0')
         
         top.run()
         
@@ -1820,11 +1814,8 @@ class Testcase_preconditioning(unittest.TestCase):
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
-        
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
-        print J
+        assert_rel_error(self, J[0, 0], 95.0, 0.0001)
+        assert_rel_error(self, J[0, 1], -7.0, 0.0001)
         
     def test_nested_array_element(self):
         
@@ -1859,11 +1850,14 @@ class Testcase_preconditioning(unittest.TestCase):
         
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
-        
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
-        print J
+        assert_rel_error(self, J[0, 0], 95.0, 0.0001)
+        assert_rel_error(self, J[0, 1], -7.0, 0.0001)
+        assert_rel_error(self, J[0, 2], 0.0, 0.0001)
+        assert_rel_error(self, J[0, 3], 0.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 15.0, 0.0001)
+        assert_rel_error(self, J[1, 1], 4.0, 0.0001)
+        assert_rel_error(self, J[1, 2], 0.0, 0.0001)
+        assert_rel_error(self, J[1, 3], 0.0, 0.0001)
         
 if __name__ == '__main__':
     import nose
