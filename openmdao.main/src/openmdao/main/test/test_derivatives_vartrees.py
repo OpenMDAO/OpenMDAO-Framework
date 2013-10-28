@@ -140,7 +140,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.comp.ins.y = 5
         top.comp.run()
 
-        #this is throwing an error but should not be!
+        # Not sure the point of this test, unless the output will be verified.
         top.driver.workflow.check_gradient(outputs=["comp.outs.z"])
 
     def test_varTree_connections_whole_tree(self): 

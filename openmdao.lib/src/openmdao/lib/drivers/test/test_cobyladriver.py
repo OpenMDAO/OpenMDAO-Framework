@@ -118,8 +118,6 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.driver.error_code, 1)
 
     def test_array_parameter(self):
-        import nose
-        raise nose.SkipTest('OpenMDAO gradients not handling ArrayParameter')
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x')
 

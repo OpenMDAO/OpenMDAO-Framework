@@ -363,7 +363,6 @@ class TestCase1D(unittest.TestCase):
 
     def test_openmdao_gradient(self):
         # Run with 1D parameter and OpenMDAO gradient.
-        raise nose.SkipTest('OpenMDAO gradients not handling ArrayParameter')
         self.top.driver.conmin_diff = False
         self.top.run()
 
@@ -419,7 +418,6 @@ class TestCase2D(unittest.TestCase):
 
     def test_openmdao_gradient(self):
         # Run with 2D parameter and OpenMDAO gradient.
-        raise nose.SkipTest('OpenMDAO gradients not handling ArrayParameter')
         self.top.driver.conmin_diff = False
         self.top.run()
 
@@ -475,7 +473,6 @@ class TestCaseMixed(unittest.TestCase):
 
     def test_openmdao_gradient(self):
         # Run with mixed parameters and OpenMDAO gradient.
-        raise nose.SkipTest('OpenMDAO gradients not handling ArrayParameter')
         self.top.driver.conmin_diff = False
         self.top.run()
 
