@@ -709,6 +709,7 @@ class DependsTestCase2(unittest.TestCase):
 class DependsTestCase3(unittest.TestCase):
 
     def test_input_pseudocomp(self):
+        pcompmod._count = 0  # keeps names of pseudocomps consistent
         top = set_as_top(Assembly())
         top.add('comp', ArrayComp())
         top.add('driver', DumbDriver())

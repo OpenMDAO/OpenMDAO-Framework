@@ -436,6 +436,7 @@ class DependencyGraph(nx.DiGraph):
                     # connection to its basevar.
                     self.add_node(subnode, basevar=base_src, valid=True)
                     self.add_edge(subnode, base_src)
+
             path.append((srcpath, base_src))
 
         if destpath != base_dest:  # destpath is a subvar
@@ -1133,111 +1134,90 @@ def get_inner_edges(graph, srcs, dests):
     """
 
     flat_srcs = []
+    at_map = {}
+    bndry_fakes = {}
+    idx = 0
     for s in srcs:
         if isinstance(s, basestring):
-            flat_srcs.append(s)
+            if s not in graph:
+                bvar = base_var(graph, s)
+                if bvar in graph and is_boundary_input_node(graph, bvar):
+                    flat_srcs.append(bvar)
+                    bndry_fakes.setdefault(bvar, []).append(s)
+            else:
+                flat_srcs.append(s)
+            at_map[s] = idx
         else:
-            flat_srcs.extend(iter(s))
+            for ss in s:
+                if ss not in graph:
+                    bvar = base_var(graph, ss)
+                    if bvar in graph and is_boundary_input_node(graph, bvar):
+                        flat_srcs.append(bvar)
+                        bndry_fakes.setdefault(bvar, []).append(ss)
+                else:
+                    flat_srcs.append(ss)
+                at_map[ss] = idx
+        idx += 1
 
-    edges = edges_to_dict(_get_inner_edges(graph, flat_srcs, dests))
-
+    edges = _get_inner_edges(graph, flat_srcs, dests)
     new_edges = []
     new_sub_edges = []
 
-    # replace inputs-as-outputs with their sources (if any)
-    inpsrcs = [s for s in edges.keys() if is_input_node(graph, s)]
-    for inp in inpsrcs:
-        old_dests = edges[inp]
-
-        # if we have an input source basevar that has multiple inputs (subvars)
-        # then we have to create fake subvars at the destination to store
-        # derivative related metadata
-        if is_basevar_node(graph, inp):
-            subs = graph._all_child_vars(inp, direction='in')
-            if not subs:  # basevar with no input connections
-                continue
-        else:
-            subs = [inp]
-
-        del edges[inp] # remove the old input-as-output edge(s)
-        
-        for sub in subs:
-            preds = graph.predecessors(sub)
-            if preds:
-                newsrc = preds[0]
-            else:
-                continue
-            for dest in old_dests:
-                if is_basevar_node(graph, newsrc):
-                    new_edges.append((newsrc, sub.replace(inp, dest, 1)))
+    for src, dest in edges:
+        if is_input_node(graph, src):
+            if src in bndry_fakes:
+                for fake in bndry_fakes[src]:
+                    idx = at_map[fake]
+                    new_sub_edges.append(('@in%d' % idx, 
+                                          fake.replace(src, dest, 1)))
+            elif src not in at_map:
+                # if we have an input source basevar that has multiple inputs (subvars)
+                # then we have to create fake subvars at the destination to store
+                # derivative related metadata
+                if is_basevar_node(graph, src):
+                    subs = graph._all_child_vars(src, direction='in')
+                    if not subs:
+                        preds = graph.predecessors(src)
+                        if not preds:
+                            continue  #????
+                        newsrc = preds[0]
+                        if is_basevar_node(graph, newsrc):
+                            new_edges.append((newsrc, dest))
+                        else:
+                            new_sub_edges.append((newsrc, dest))
                 else:
-                    new_sub_edges.append((newsrc, sub.replace(inp, dest, 1)))
+                    subs = [src]
+                
+                for sub in subs:
+                    preds = graph.predecessors(sub)
+                    if not preds:
+                        continue
+                    newsrc = preds[0]
+                    if is_basevar_node(graph, newsrc):
+                        new_edges.append((newsrc, sub.replace(src, dest, 1)))
+                    else:
+                        new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
+        else:
+            if is_basevar_node(graph, src):
+                new_edges.append((src, dest))
+            else:
+                new_sub_edges.append((src, dest))
 
-    new_edges.extend(new_sub_edges)  # make sure that all subvars are after their basevars
+    edges = new_edges + new_sub_edges
+    edges = edges + [('@in%d' % at_map[s], s) for s in flat_srcs 
+                           if s not in bndry_fakes]
 
-    edges = edges_to_dict(new_edges, edges)
-
-    # return fake edges for parameters
-    for i,src in enumerate(srcs):
-        if isinstance(src, basestring): 
-            edges['@in%d' % i] = [src]
-        else:  # param group  
-            newlst = []
-            for s in src:
-                if s in edges:
-                    newlst.extend(list(edges[s]))
-                    del edges[s]
-            if newlst:
-                edges[src] = newlst
-            edges['@in%d' % i] = list(src)
-            
-        if src in edges:
-            edges['@in%d' % i].extend(edges[src])
-            del edges[src]
+    edge_dct = edges_to_dict(edges)
 
     # return fake edges for destination vars referenced by 
     # objectives and constraints
     for i, dest in enumerate(dests):
         if isinstance(dest, basestring):
-            edges[dest] = ['@out%d' % i]
+            edge_dct[dest] = ['@out%d' % i]
         else:
-            edges[dest[0]] = ['@out%d' % i]
+            edge_dct[dest[0]] = ['@out%d' % i]
 
-    return edges
-
-# def get_replacement_edges(graph, src, dest, idx=0):
-#     """If the src of an edge is an input var or input subvar, that
-#     edge needs to be replaced in the derivative graph by by an edge
-#     with the input's src as the new src. If the original src has
-#     multiple subvars then multiple new edges must be added. Also,
-#     if the new src is a boundary node then it must be replaced by
-#     '@in?', where ? is an integer indicating a particular input
-#     src external to the current Assembly.
-
-#     Returns a list of edges to add
-#     """
-
-#     to_add = []
-
-#     if not is_input_node(src):
-#         return to_add, to_remove
-
-#     if is_subvar_node(graph, src): # it's a subvar so can only have one predecessor
-#         srcs = [src]
-#     else:  # it's a basevar. See if it has subvars
-#         srcs = graph._all_child_vars(src, direction='in')
-#         if not srcs:
-#             srcs = [src]
-
-#     # Each src in srcs will have 0 or 1 predecessors
-#     for i, s in enumerate(srcs):
-#         preds = graph.predecessors(s)
-#         if preds:
-#             to_add.append((preds[0], s))
-#         else: # return an external src indicator
-#             to_add.append(('@in%s' % i+1+idx, s))
-
-#     pass
+    return edge_dct
 
 # utility/debugging functions
 

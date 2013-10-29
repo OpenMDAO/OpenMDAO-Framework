@@ -25,10 +25,7 @@ def _get_new_name():
     return name
 
 def _get_varname(name):
-    idx = name.find('[')
-    if idx == -1:
-        return name
-    return name[:idx]
+    return name.split('[', 1)[0]
 
 def do_nothing_xform(node):
     return node
@@ -98,11 +95,13 @@ class PseudoComponent(object):
             self._outdests = []
 
         varmap = {}
+        rvarmap = {}
         for i,ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
             self._inmap[ref] = in_name
-            varmap[_get_varname(ref)] = in_name
+            varmap[ref] = in_name
+            rvarmap.setdefault(_get_varname(ref), set()).add(ref)
             setattr(self, in_name, None)
 
         refs = list(destexpr.refs())
@@ -111,13 +110,16 @@ class PseudoComponent(object):
                 setattr(self, 'out0', None)
             else:
                 raise RuntimeError("output of PseudoComponent must reference only one variable")
-        varmap[_get_varname(refs[0])] = 'out0'
+        varmap[refs[0]] = 'out0'
+        rvarmap.setdefault(_get_varname(refs[0]), set()).add(refs[0])
         
         for name, meta in srcexpr.get_metadata():
-            self._meta[varmap[name]] = meta
+            for rname in rvarmap[name]:
+                self._meta[varmap[rname]] = meta
 
         for name, meta in destexpr.get_metadata():
-            self._meta[varmap[name]] = meta
+            for rname in rvarmap[name]:
+                self._meta[varmap[rname]] = meta
             
         if translate:
             xformed_src = transform_expression(srcexpr.text, self._inmap)
@@ -268,8 +270,8 @@ class PseudoComponent(object):
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
-            return {}
-        return None
+            return self._meta[traitpath]
+        return self._meta[traitpath].get(metaname)
 
     def is_valid(self):
         return self._valid

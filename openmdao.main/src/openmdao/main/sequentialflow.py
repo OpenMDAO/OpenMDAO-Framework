@@ -222,7 +222,7 @@ class SequentialWorkflow(Workflow):
                 bound = (istring, ix)
             else:
                 val = self.scope.get(from_PA_var(src))
-                width = flattened_size(src, val, self.scope)
+                width = flattened_size(from_PA_var(src), val, self.scope)
                 bound = (nEdge, nEdge+width)
                 
             self.set_bounds(src, bound)
