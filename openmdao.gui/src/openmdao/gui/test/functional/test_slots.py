@@ -264,7 +264,7 @@ def _test_dict_slot(browser):
     mm_figure = workspace_page.get_dataflow_figure('mm', 'top')
     mm_editor = mm_figure.editor_page()
     mm_editor.show_slots()
-    mm_editor.move(-150, 0)
+    mm_editor.move(-500, 0)  # need clear LOS to the library
 
     # Should not be any surrogates slots without a model in the slot
     surrogates = browser.find_elements_by_xpath(
