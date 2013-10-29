@@ -706,7 +706,28 @@ class DependsTestCase2(unittest.TestCase):
         #comp.run()
         #self.assertEqual(comp.is_valid(), True)
         
+class DependsTestCase3(unittest.TestCase):
 
+    def test_input_pseudocomp(self):
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp())
+        top.add('driver', DumbDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.a[0]', low=-100, high=100)
+        top.driver.add_constraint('comp.a[0] < 100')
+
+        # The first time it runs, the pcomp inputs update
+        top.run()
+        print top.comp.a
+        print top._pseudo_0.in0
+        self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
+        
+        # The second time it runs, the pcomp inputs no longer update
+        top.run()
+        print top.comp.a
+        print top._pseudo_0.in0
+        self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
+        
 class ArrayComp(Component):
     a = Array([1,2,3,4,5], iotype="in")
     b = Array([1,2,3,4,5], iotype='in')
