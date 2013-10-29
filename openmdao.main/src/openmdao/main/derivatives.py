@@ -619,7 +619,7 @@ class FiniteDifference(object):
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = '[' + idx
-                print idx
+                
                 old_val = self.scope.get(src)
                 exec('old_val%s = new_val' % idx)
                 self.scope.set(src, old_val, force=True)
@@ -673,7 +673,7 @@ class FiniteDifference(object):
                     idx = '[' + idx
                     old_val = self.scope.get(src)
                     exec('old_val%s += val' % idx)
-    
+                    
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
                     if var_name:
@@ -688,9 +688,22 @@ class FiniteDifference(object):
             # Full vector
             else:
                 index = index - i1
-                unravelled = unravel_index(index, old_val.shape)
-                old_val[unravelled] += val
-    
+                
+                # Indexed array
+                if '[' in src:
+                    src, _, idx = src.partition('[')
+                    old_val = self.scope.get(src)
+                    shape = old_val.shape
+                    istring, ix = flatten_slice(idx, shape, name='ix')
+                    print istring, ix, index
+                    if ':' not in istring:
+                        old_val[ix[index]] += val
+                    print "setting", src, istring, ix
+                else:
+                    unravelled = unravel_index(index, old_val.shape)
+                    old_val[unravelled] += val
+                    print "setting", src, old_val, index, unravelled, val
+                    
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:

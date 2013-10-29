@@ -1027,7 +1027,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = J - top.nest.comp.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
-        # TODO: Support array slices.
         top.driver.workflow.config_changed()
         top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, 0]',],
@@ -1106,15 +1105,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='adjoint')
         
         assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        print J
         
-        # TODO - make a finite-difference increment a slice.
-        #top.driver.workflow.config_changed()
-        #top.nest.driver.workflow.config_changed()
-        #J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
-                                              #outputs=['nest.y[1][:]'],
-                                              #mode='fd')
-        #print J
-        #assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        # TODO - finite difference a slice across an assy bdry.
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
+                                              outputs=['nest.y[1][:]'],
+                                              mode='fd')
+        print J
+        assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
         
     def test_nested_2Darray_simul_element_and_full_connection(self):
         
