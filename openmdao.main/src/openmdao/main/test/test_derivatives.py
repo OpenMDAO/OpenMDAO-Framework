@@ -1857,6 +1857,40 @@ class Testcase_preconditioning(unittest.TestCase):
         assert_rel_error(self, J[1, 2], 0.0, 0.0001)
         assert_rel_error(self, J[1, 3], 0.0, 0.0001)
         
+    def test_two_comp_bifurcation(self):
+        
+        top = set_as_top(Assembly())
+        
+        top.add('comp1', PreComp())
+        top.add('comp2', PreComp())
+        top.add('comp3', PreComp())
+        top.add('comp4', PreComp())
+        top.connect('comp1.y1', 'comp2.x1')
+        top.connect('comp1.y2', 'comp2.x2')
+        top.connect('comp1.y1', 'comp3.x1')
+        top.connect('comp1.y2', 'comp3.x2')
+        top.connect('comp2.y1 + comp3.y1', 'comp4.x1')
+        top.connect('comp2.y2 - comp3.y2', 'comp4.x2')
+        
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4'])
+        top.driver.add_parameter('comp1.x1', low=-10, high=10)
+        top.driver.add_parameter('comp1.x2', low=-10, high=10)
+        top.driver.add_objective('comp4.y1 + comp2.y1')
+        top.driver.add_constraint('comp4.y2 + comp3.y2 < 0')
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        print J
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        assert_rel_error(self, J[0, 0], 475.0, 0.0001)
+        assert_rel_error(self, J[0, 1], -35.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 2457.0, 0.0001)
+        assert_rel_error(self, J[1, 1], -82.0, 0.0001)
+
 if __name__ == '__main__':
     import nose
     import sys

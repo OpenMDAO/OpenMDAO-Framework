@@ -276,12 +276,3 @@ class CyclicWorkflow(SequentialWorkflow):
                 self.res[i1:i2] = src_val - target_val
 
         return self.res
-
-    def calc_gradient(self, inputs=None, outputs=None, fd=False, 
-                      upscope=False, mode='auto'):
-        """Returns the gradient of the passed outputs with respect to
-        all passed inputs.
-        """
-        print "yeeed"
-        super(CyclicWorkflow, self).calc_gradient(inputs, outputs, fd,
-                                                  upscope, mode)
