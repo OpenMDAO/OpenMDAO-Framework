@@ -427,8 +427,15 @@ class DependencyGraph(nx.DiGraph):
         if srcpath != base_src:  # srcpath is a subvar
             if (is_input_node(self, base_src) and not is_boundary_node(self, base_src)) or \
                (is_boundary_output_node(self, base_src) and not destpath.startswith('parent.')):
-                if srcpath not in self:
-                    raise RuntimeError("subvar node '%s' doesn't exist" % srcpath)
+                chkpath = srcpath.split('.')
+                subnode = '.'.join(chkpath[:2])
+                if subnode not in self:
+                    # we're connecting a new subvar that doesn't exist yet, and this new subvar
+                    # is either a component input used as a src or a boundary output used
+                    # as a src. In either case we need to create the subvar along with a 
+                    # connection to its basevar.
+                    self.add_node(subnode, basevar=base_src, valid=True)
+                    self.add_edge(subnode, base_src)
             path.append((srcpath, base_src))
 
         if destpath != base_dest:  # destpath is a subvar
@@ -1155,7 +1162,11 @@ def get_inner_edges(graph, srcs, dests):
         del edges[inp] # remove the old input-as-output edge(s)
         
         for sub in subs:
-            newsrc = graph.predecessors(sub)[0]
+            preds = graph.predecessors(sub)
+            if preds:
+                newsrc = preds[0]
+            else:
+                continue
             for dest in old_dests:
                 if is_basevar_node(graph, newsrc):
                     new_edges.append((newsrc, sub.replace(inp, dest, 1)))
