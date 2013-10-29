@@ -1170,33 +1170,35 @@ def get_inner_edges(graph, srcs, dests):
                     idx = at_map[fake]
                     new_sub_edges.append(('@in%d' % idx, 
                                           fake.replace(src, dest, 1)))
-            elif src not in at_map:
-                # if we have an input source basevar that has multiple inputs (subvars)
-                # then we have to create fake subvars at the destination to store
-                # derivative related metadata
-                if is_basevar_node(graph, src):
-                    subs = graph._all_child_vars(src, direction='in')
-                    if not subs:
-                        preds = graph.predecessors(src)
-                        if not preds:
-                            continue  #????
-                        newsrc = preds[0]
-                        if is_basevar_node(graph, newsrc):
-                            new_edges.append((newsrc, dest))
-                        else:
-                            new_sub_edges.append((newsrc, dest))
-                else:
-                    subs = [src]
-                
-                for sub in subs:
-                    preds = graph.predecessors(sub)
+                continue
+            
+            # if we have an input source basevar that has multiple inputs (subvars)
+            # then we have to create fake subvars at the destination to store
+            # derivative related metadata
+            if is_basevar_node(graph, src):
+                subs = graph._all_child_vars(src, direction='in')
+                if not subs:
+                    preds = graph.predecessors(src)
                     if not preds:
+                        new_edges.append(('@in%d' % at_map[src], dest))
                         continue
                     newsrc = preds[0]
                     if is_basevar_node(graph, newsrc):
-                        new_edges.append((newsrc, sub.replace(src, dest, 1)))
+                        new_edges.append((newsrc, dest))
                     else:
-                        new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
+                        new_sub_edges.append((newsrc, dest))
+            else:
+                subs = [src]
+            
+            for sub in subs:
+                preds = graph.predecessors(sub)
+                if not preds:
+                    continue
+                newsrc = preds[0]
+                if is_basevar_node(graph, newsrc):
+                    new_edges.append((newsrc, sub.replace(src, dest, 1)))
+                else:
+                    new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
         else:
             if is_basevar_node(graph, src):
                 new_edges.append((src, dest))
