@@ -46,6 +46,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             param = param[0]
             
         i1, i2 = wflow.get_bounds(param)
+        
         for irhs in range(i1, i2):
 
             RHS = zeros((n_edge, 1))
@@ -397,7 +398,11 @@ def get_bounds(obj, input_keys, output_keys):
     
     ibounds = {}
     nvar = 0
-    scope=None
+    if hasattr(obj, 'parent'):
+        scope = obj.parent
+    else:
+        scope = None  # Pseudoassys
+        
     for key in input_keys:
         
         # For parameter group, all should be equal so just get first.
@@ -405,8 +410,6 @@ def get_bounds(obj, input_keys, output_keys):
             key = [key]
             
         val = obj.get(key[0])
-        if hasattr(obj, 'parent'):
-            scope = obj.parent
             
         width = flattened_size('.'.join((obj.name, key[0])), val, 
                                scope=scope)
@@ -651,7 +654,7 @@ class FiniteDifference(object):
 
     def set_value(self, srcs, val, i1, i2, index):
         """Set a value in the model"""
-
+        print srcs, val, i1, i2, index
         # Support for Parameter Groups:
         if not isinstance(srcs, tuple):
             srcs = [srcs]

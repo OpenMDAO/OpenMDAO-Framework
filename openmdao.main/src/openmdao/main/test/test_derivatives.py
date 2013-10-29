@@ -333,6 +333,41 @@ class ArrayComp2D(Component):
         return input_keys, output_keys, self.J
     
 
+class Array_Slice_1D(Component):
+    '''1D Array with wide arrays for slicing tests'''
+    
+    x = Array(zeros((4)), iotype='in')
+    y = Array(zeros((4)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0] = 2.0*self.x[0] + 1.0*self.x[1] + \
+                    3.0*self.x[2] + 7.0*self.x[3]
+        
+        self.y[1] = 4.0*self.x[0] + 2.0*self.x[1] + \
+                    6.0*self.x[2] + 5.0*self.x[3]
+        
+        self.y[2] = 3.0*self.x[0] + 6.0*self.x[1] + \
+                    9.0*self.x[2] + 8.0*self.x[3]
+        
+        self.y[3] = 1.0*self.x[0] + 3.0*self.x[1] + \
+                    2.0*self.x[2] + 4.0*self.x[3]
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = array([[2.0, 1.0, 3.0, 7.0],
+                        [4.0, 2.0, 6.0, 5.0],
+                        [3.0, 6.0, 9.0, 8.0],
+                        [1.0, 3.0, 2.0, 4.0]])
+
+    def provideJ(self):
+        
+        input_keys = ('x', )
+        output_keys = ('y', )
+        return input_keys, output_keys, self.J
+    
 class ArrayComp2D_der(Component):
     '''2D Array component'''
     
@@ -460,9 +495,18 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.comp1.x = 1.0
         top.run()
         
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], 
                                               outputs=[obj], 
                                               mode='forward')
+        
+        edges = top.driver.workflow._edges
+        self.assertEqual(set(edges['comp1.y']), set(['_pseudo_0.in0', 'comp2.x']))
+        self.assertEqual(set(edges['comp2.y']), set(['_pseudo_0.in2']))
+        self.assertEqual(set(edges['@in0']), set(['comp1.x', '_pseudo_0.in1']))
+        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
+        self.assertEqual(len(edges), 4)
+        
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
         top.driver.workflow.config_changed()
@@ -906,6 +950,43 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               outputs=['comp1.y'],
                                               mode='adjoint')
         diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y'],
+                                              mode='fd')
+        diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+    def test_array_slice_1D(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', Array_Slice_1D())
+        top.driver.workflow.add(['comp1'])
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
+                                              outputs=['comp1.y[0::2]'],
+                                              mode='forward')
+
+        diff = J - top.comp1.J[0::2, 0::2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
+                                              outputs=['comp1.y[0::2]'],
+                                              mode='adjoint')
+
+        diff = J - top.comp1.J[0::2, 0::2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0::2]'],
+                                              outputs=['comp1.y[0::2]'],
+                                              mode='fd')
+
+        diff = J - top.comp1.J[0::2, 0::2]
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
     def test_nested_2Darray(self):
