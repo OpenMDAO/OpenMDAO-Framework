@@ -46,9 +46,6 @@ class SequentialWorkflow(Workflow):
         self.res = None
         self._upscoped = False
         
-        self._severed_edges = []
-        self._interior_edges = None
-        
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter(self.get_components(full=True))
@@ -82,10 +79,7 @@ class SequentialWorkflow(Workflow):
         self._derivative_graph = None
         self.res = None
         self._upscoped = False
-        
-        self._severed_edges = []
         self._names = None
-        self._interior_edges = None
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -347,10 +341,14 @@ class SequentialWorkflow(Workflow):
                     comp = self.scope.get(compname)
             
             # Preconditioning
+            # Currently not implemented in forward mode, mostly because this
+            # mode requires post multiplication of the result by the M after
+            # you have the final gradient.
             #if hasattr(comp, 'applyMinv'):
                 #inputs = applyMinv(comp, inputs)
             
             applyJ(comp, inputs, outputs)
+            #print inputs, outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
@@ -403,8 +401,8 @@ class SequentialWorkflow(Workflow):
                 comp = self.scope.get(compname)
             
             # Preconditioning
-            #if hasattr(comp, 'applyMinvT'):
-                #inputs = applyMinvT(comp, inputs)
+            if hasattr(comp, 'applyMinvT'):
+                inputs = applyMinvT(comp, inputs)
             
             applyJT(comp, inputs, outputs)
             #print inputs, outputs
@@ -429,6 +427,27 @@ class SequentialWorkflow(Workflow):
     def derivative_graph(self, inputs=None, outputs=None, fd=False, 
                          severed=None):
         """Returns the local graph that we use for derivatives.
+        
+        inputs: list of strings or tuples of strings
+            List of input variables that we are taking derivatives with respect
+            to. They must be within this workflow's scope. If no inputs are 
+            given, the parent driver's parameters are used. A tuple can be used
+            to link inputs together.
+            
+        outputs: list of strings
+            List of output variables that we are taking derivatives of.
+            They must be within this workflow's scope. If no outputs are 
+            given, the parent driver's objectives and constraints are used.
+        
+        fd: boolean
+            set to True to finite difference the whole model together with
+            fake finite difference turned off. This is mainly for checking
+            your model's analytic derivatives.
+            
+        severed: list
+            If a workflow has a cylic connection, some edges must be severed.
+            When a cyclic workflow calls this function, it passes a list of
+            edges so that they can be severed prior to the topological sort.
         """
         
         if self._derivative_graph is None:
@@ -487,17 +506,27 @@ class SequentialWorkflow(Workflow):
             
         return self._derivative_graph
     
-    def _group_nondifferentiables(self, fd=False, severed = None):
-        """Method to find all non-differentiable blocks. These blocks
-        will be replaced in the differentiation workflow by a pseudo-
-        assembly, which can provide its own Jacobian via finite difference.
+    def _group_nondifferentiables(self, fd=False, severed=None):
+        """Method to find all non-differentiable blocks, and group them
+        together, replacing them in the derivative graph with pseudo-
+        assemblies that can finite difference their components together.
+        
+        fd: boolean
+            set to True to finite difference the whole model together with
+            fake finite difference turned off. This is mainly for checking
+            your model's analytic derivatives.
+            
+        severed: list
+            If a workflow has a cylic connection, some edges must be severed.
+            When a cyclic workflow calls this function, it passes a list of
+            edges so that they can be severed prior to the topological sort.
         """
         
         dgraph = self._derivative_graph
-
         nondiff = []
         
-        # If we have a cyclic workflow, derivative graph should be severed.
+        # If we have a cyclic workflow, we need to remove severed edges from
+        # the derivatives graph.
         if severed is not None:
             for edge in severed:
                 dgraph.remove_edge(edge[0], edge[1])
@@ -509,7 +538,7 @@ class SequentialWorkflow(Workflow):
         if fd == True:
             nondiff_groups = [comps]
             
-        # Find the non-differentiable componentns
+        # Find the non-differentiable components
         else:
             for name in comps:
                 comp = self.scope.get(name)
@@ -529,12 +558,6 @@ class SequentialWorkflow(Workflow):
             for item in nd_graphs:
                 nondiff_groups.append(item.nodes())
                 
-        # for cyclic workflows, remove cut edges.
-        #for edge in self._severed_edges:
-        #    comp1, _, _ = edge[0].partition('.')
-        #    comp2, _, _ = edge[1].partition('.')
-        #    cgraph.remove_edge(comp1, comp2)
-        
         dgraph.graph['mapped_inputs'] = copy.copy(dgraph.graph['inputs'])
         dgraph.graph['mapped_outputs'] = copy.copy(dgraph.graph['outputs'])
         meta_inputs = dgraph.graph['inputs']
@@ -583,7 +606,7 @@ class SequentialWorkflow(Workflow):
             if fd==True:
                 pseudo.ffd_order = 0
             
-            # Clean up the old stuff in the graph
+            # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
             
             # Add pseudoassys to graph
@@ -654,10 +677,31 @@ class SequentialWorkflow(Workflow):
             if self._stop:
                 raise RunStopped('Stop requested')
 
-    def calc_gradient(self, inputs=None, outputs=None, fd=False, 
-                      upscope=False, mode='auto'):
+    def calc_gradient(self, inputs=None, outputs=None, upscope=False, mode='auto'):
         """Returns the gradient of the passed outputs with respect to
         all passed inputs.
+        
+        inputs: list of strings or tuples of strings
+            List of input variables that we are taking derivatives with respect
+            to. They must be within this workflow's scope. If no inputs are 
+            given, the parent driver's parameters are used. A tuple can be used
+            to link inputs together.
+            
+        outputs: list of strings
+            List of output variables that we are taking derivatives of.
+            They must be within this workflow's scope. If no outputs are 
+            given, the parent driver's objectives and constraints are used.
+            
+        upscope: boolean
+            This is set to True when our workflow is part of a subassembly that
+            lies in a workflow that needs a gradient with respect to variables
+            outside of this workflow, so that the caches can be reset.
+            
+        mode: string
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
+            'fd' for full-model finite difference (with fake finite 
+            difference disabled), or 'auto' to let OpenMDAO determine the
+            correct mode.
         """
         
         # This function can be called from a parent driver's workflow for
@@ -671,8 +715,8 @@ class SequentialWorkflow(Workflow):
             self._derivative_graph = None
             self._edges = None
             self._upscoped = False
-        
-        dgraph = self.derivative_graph(inputs, outputs, fd=fd)
+            
+        dgraph = self.derivative_graph(inputs, outputs, mode=='fd')
         
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
@@ -705,7 +749,7 @@ class SequentialWorkflow(Workflow):
         shape = (num_out, num_in)
             
         # Auto-determine which mode to use based on Jacobian shape.
-        if mode == 'auto' and fd is False:
+        if mode == 'auto':
             # TODO - additional determination based on presence of
             # apply_derivT
             
@@ -716,8 +760,13 @@ class SequentialWorkflow(Workflow):
             
         if mode == 'adjoint':
             return calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
-        else:
+        elif mode in ['forward', 'fd']:
             return calc_gradient(self, inputs, outputs, n_edge, shape)
+        else:
+            msg = "In calc_gradient, mode must be 'forward', 'adjoint', " + \
+                  "'auto', or 'fd', but a value of %s was given." % mode
+            self.scope.raise_exception(msg, RuntimeError)
+            
     
     def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -729,6 +778,11 @@ class SequentialWorkflow(Workflow):
         stream: file-like object or string
             Where to write to, default stdout. If a string is supplied,
             that is used as a filename.
+            
+        adjoint: boolean
+            Set to True to check the adjoint solution. Leave it as False to
+            check the forward solution. Note, the finite difference baseline
+            is always solved in forward mode.
         """
         stream = stream or sys.stdout
         if isinstance(stream, basestring):
@@ -744,7 +798,7 @@ class SequentialWorkflow(Workflow):
             J = self.calc_gradient(inputs, outputs)
         
         self.config_changed()
-        Jbase = self.calc_gradient(inputs, outputs, fd=True)
+        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
 
         print >> stream, 24*'-'
         print >> stream, 'Calculated Gradient'

@@ -251,12 +251,6 @@ def applyJ(obj, arg, result):
                 basekey, _, idx = ikey.partition('[')
                 i1, i2, ish = ibounds[basekey]
 
-            # Param groups make it tricky. We only want to add the
-            # piece of J once for the whole group.
-            if i1 in used:
-                continue
-            used.append(i1)
-            
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             
@@ -550,10 +544,7 @@ class FiniteDifference(object):
                 if self.form == 'forward':
 
                     # Step
-                    if i2-i1 == 1:
-                        self.set_value(src, fd_step)
-                    else:
-                        self.set_value(src, fd_step, i-i1)
+                    self.set_value(src, fd_step,  i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
@@ -562,10 +553,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y_base)/fd_step
 
                     # Undo step
-                    if i2-i1 == 1:
-                        self.set_value(src, -fd_step)
-                    else:
-                        self.set_value(src, -fd_step, i-i1)
+                    self.set_value(src, -fd_step,  i1, i2, i)
 
                 #--------------------
                 # Backward difference
@@ -573,10 +561,7 @@ class FiniteDifference(object):
                 elif self.form == 'backward':
 
                     # Step
-                    if i2-i1 == 1:
-                        self.set_value(src, -fd_step)
-                    else:
-                        self.set_value(src, -fd_step, i-i1)
+                    self.set_value(src, -fd_step,  i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
@@ -585,10 +570,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y_base - self.y)/fd_step
 
                     # Undo step
-                    if i2-i1 == 1:
-                        self.set_value(src, fd_step)
-                    else:
-                        self.set_value(src, fd_step, i-i1)
+                    self.set_value(src, fd_step,  i1, i2, i)
 
                 #--------------------
                 # Central difference
@@ -596,19 +578,13 @@ class FiniteDifference(object):
                 elif self.form == 'central':
 
                     # Forward Step
-                    if i2-i1 == 1:
-                        self.set_value(src, fd_step)
-                    else:
-                        self.set_value(src, fd_step, i-i1)
+                    self.set_value(src, fd_step,  i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
 
                     # Backward Step
-                    if i2-i1 == 1:
-                        self.set_value(src, -2.0*fd_step)
-                    else:
-                        self.set_value(src, -2.0*fd_step, i-i1)
+                    self.set_value(src, -2.0*fd_step,  i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y2)
@@ -617,10 +593,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
 
                     # Undo step
-                    if i2-i1 == 1:
-                        self.set_value(src, fd_step)
-                    else:
-                        self.set_value(src, fd_step, i-i1)
+                    self.set_value(src, fd_step,  i1, i2, i)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -676,7 +649,7 @@ class FiniteDifference(object):
             i1, i2 = self.out_bounds[src]
             x[i1:i2] = src_val
 
-    def set_value(self, srcs, val, index=None):
+    def set_value(self, srcs, val, i1, i2, index):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -684,12 +657,13 @@ class FiniteDifference(object):
             srcs = [srcs]
             
         for src in srcs:    
-            i1, i2 = self.in_bounds[src]
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
             old_val = self.scope.get(src)
     
-            if index is None:
+            if i2-i1 == 1:
+                
+                # Indexed array
                 if '[' in src:
                     src, _, idx = src.partition('[')
                     idx = '[' + idx
@@ -703,10 +677,13 @@ class FiniteDifference(object):
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
     
+                # Scalar
                 else:
                     self.scope.set(src, old_val+val, force=True)
     
+            # Full vector
             else:
+                index = index - i1
                 unravelled = unravel_index(index, old_val.shape)
                 old_val[unravelled] += val
     
@@ -761,17 +738,3 @@ def apply_linear_model(self, comp, ffd_order):
         raise NotImplementedError(msg)
 
     return y
-
-
-def recursive_components(scope, comps):
-    # Recursively find all components contained in subdrivers.
-
-    recursed_comps = []
-    for name in comps:
-        recursed_comps.append(name)
-        comp = scope.get(name)
-        if has_interface(comp, IDriver):
-            sub_comps = comp.workflow.get_names(full=True)
-            recursed_comps.extend(recursive_components(scope, sub_comps))
-
-    return recursed_comps

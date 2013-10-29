@@ -407,8 +407,6 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
                                #self.top.comp.x[1], places=2)
 
     def test_array_parameter(self):
-        import nose
-        raise nose.SkipTest('Not handling ArrayParameter yet')
 
         self.top.driver.add_objective( 'comp.result' )
 
