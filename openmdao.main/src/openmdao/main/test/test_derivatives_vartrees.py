@@ -151,18 +151,30 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.add('comp2', CompWithVarTree2())
         top.driver.workflow.add(['comp1', 'comp2'])
 
+        inputs = ['comp1.ins.x.x1', 'comp1.ins.x.x2', 'comp1.ins.y']
+        outputs = ['comp2.z', 'comp1.outs.z', 'comp1.ins.x.x1']
+        
         top.driver.add_parameter('comp1.ins.x.x1', low=-1000, high=1000)
         top.driver.add_parameter('comp1.ins.x.x2', low=-1000, high=1000)
         top.driver.add_parameter('comp1.ins.y', low=-1000, high=1000)
 
-        top.driver.connect('comp1.outs', 'comp2.ins')
+        top.connect('comp1.outs', 'comp2.ins')
 
         top.driver.add_objective('comp2.z')
-        top.driver.add_constraint('comp1.outs.z+comp1.ins.x1 < 0')
+        top.driver.add_constraint('comp1.outs.z+comp1.ins.x.x1 < 0')
 
         J_true = array([[8., 12., 16.],  #obj
                         [2., 0., 4.]]) #c1 
                        
+        obj = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_constraints().values()]
+
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, fd=True)
+        J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+        
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)

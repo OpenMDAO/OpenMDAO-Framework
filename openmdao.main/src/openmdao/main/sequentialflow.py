@@ -222,7 +222,7 @@ class SequentialWorkflow(Workflow):
                 bound = (istring, ix)
             else:
                 val = self.scope.get(from_PA_var(src))
-                width = flattened_size(src, val, self.scope)
+                width = flattened_size(from_PA_var(src), val, self.scope)
                 bound = (nEdge, nEdge+width)
                 
             self.set_bounds(src, bound)
@@ -606,9 +606,6 @@ class SequentialWorkflow(Workflow):
             if fd==True:
                 pseudo.ffd_order = 0
             
-            # Clean up the old nodes in the graph
-            dgraph.remove_nodes_from(allnodes)
-            
             # Add pseudoassys to graph
             dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
                             pseudo='assembly', valid=True)
@@ -622,9 +619,18 @@ class SequentialWorkflow(Workflow):
             # Add pseudoassy outputs
             for varpath in pa_outputs:
                 varname = to_PA_var(varpath, pa_name)
-                dgraph.add_node(varname, var=True, iotype='out', valid=True)
-                dgraph.add_edge(pa_name, varname)
+                if is_basevar_node(dgraph, varpath):
+                    iotype = dgraph.node[varpath]['iotype']
+                else: # subvar
+                    base = base_var(dgraph, varpath)
+                    iotype = dgraph.node[base]['iotype']
+                dgraph.add_node(varname, var=True, iotype=iotype, valid=True)
+                if iotype == 'out':
+                    dgraph.add_edge(pa_name, varname)
             
+            # Clean up the old nodes in the graph
+            dgraph.remove_nodes_from(allnodes)
+                
             # Hook up the pseudoassemblies
             for src, dst in in_edges:
                 dst = to_PA_var(dst, pa_name)

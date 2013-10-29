@@ -298,13 +298,6 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a','b'],
                                  outputs=['c','d'])
 
-        try:
-            dep.connect(scope, 'B.b[1]', 'P1.a')
-        except Exception as err:
-            self.assertEqual(str(err), "subvar node 'B.b[1]' doesn't exist")
-        else:
-            self.fail("Exception expected")
-
         edict = get_inner_edges(dep, ['A.a'], ['P0.b', 'P1.b'])
         self.assertEqual(len(edict), 5)
         self.assertEqual(edict['A.d'], ['B.a[2]', 'P1.b[2]'])
@@ -596,6 +589,47 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(dep.list_input_outputs('A'), [])
         dep.connect(scope, 'A.a','C.a')
         self.assertEqual(dep.list_input_outputs('A'), ['A.a'])
+
+    def test_rewiring1(self):
+      # param specified for a subvar of a boundary input that's
+      # connected basevar to basevar to a comp input
+        dep, scope = _make_graph(comps=['C1'],
+                                 variables=[('a','in')],
+                                 connections=[('a', 'C1.a')],
+                                 inputs=['a'],
+                                 outputs=['c'])
+        edict = get_inner_edges(dep, ['a[2]'], ['C1.c'])
+        self.assertEqual(edict['@in0'], ['C1.a[2]'])
+
+    def test_rewiring2(self):
+      # objective referring to an input basevar that has subvars
+        dep, scope = _make_graph(comps=['C1', 'C2', 'P0'],
+                                 variables=[],
+                                 connections=[('C1.c', 'C2.a[1]'),
+                                              ('C1.d', 'C2.a[2]'),
+                                              ('C2.a', 'P0.a')],
+                                 inputs=['a'],
+                                 outputs=['c', 'd'])
+        edict = get_inner_edges(dep, ['C1.a'], ['P0.d'])
+        self.assertEqual(edict['@in0'], ['C1.a'])
+        self.assertEqual(set(edict['C1.c']), set(['P0.a[1]', 'C2.a[1]']))
+        self.assertEqual(set(edict['C1.d']), set(['P0.a[2]', 'C2.a[2]']))
+        self.assertEqual(set(edict['P0.d']), set(['@out0']))
+        self.assertEqual(len(edict), 4)
+
+    def test_rewiring3(self):
+      # param specified for a subvar of a boundary input that's
+      # connected basevar to basevar to a comp input
+        dep, scope = _make_graph(comps=['C1', 'P0'],
+                                 variables=[],
+                                 connections=[('C1.a', 'P0.a')],
+                                 inputs=['a'],
+                                 outputs=['c', 'd'])
+        dep.add_subvar('C1.a[2]')
+        edict = get_inner_edges(dep, ['C1.a[2]'], ['P0.d'])
+        self.assertEqual(edict['@in0'], ['C1.a[2]'])
+        self.assertEqual(set(edict['P0.d']), set(['@out0']))
+        self.assertEqual(len(edict), 2)
 
     def test_add_subvar(self):
         
