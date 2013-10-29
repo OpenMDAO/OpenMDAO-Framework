@@ -19,6 +19,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
+import openmdao.main.pseudocomp as pcompmod
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -428,6 +429,9 @@ class GComp_noD(Component):
 
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
+    
+    def setUp(self):
+        pcompmod._count = 0
 
     def test_first_derivative(self):
         
