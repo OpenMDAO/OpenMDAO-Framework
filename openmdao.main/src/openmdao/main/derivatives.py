@@ -619,6 +619,7 @@ class FiniteDifference(object):
             if '[' in src:
                 src, _, idx = src.partition('[')
                 idx = '[' + idx
+                print idx
                 old_val = self.scope.get(src)
                 exec('old_val%s = new_val' % idx)
                 self.scope.set(src, old_val, force=True)
@@ -654,7 +655,7 @@ class FiniteDifference(object):
 
     def set_value(self, srcs, val, i1, i2, index):
         """Set a value in the model"""
-        print srcs, val, i1, i2, index
+        
         # Support for Parameter Groups:
         if not isinstance(srcs, tuple):
             srcs = [srcs]
