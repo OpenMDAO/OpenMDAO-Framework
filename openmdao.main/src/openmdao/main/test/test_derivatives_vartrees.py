@@ -110,14 +110,14 @@ class TestDerivativeVarTree(unittest.TestCase):
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
 
-        
+        top.run()
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         
         J_true = array([[2., 3., 4.], #obj
                         [2., 3., 4.], #c1 
-                        [2., 3., 0.]]) #c2
+                        [1., 1., 0.]]) #c2
 
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
@@ -138,10 +138,18 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.comp.ins.x.x1 = 3
         top.comp.ins.x.x2 = 3
         top.comp.ins.y = 5
-        top.comp.run()
+        top.run()
 
         # Not sure the point of this test, unless the output will be verified.
-        top.driver.workflow.check_gradient(outputs=["comp.outs.z"])
+        J_forward = top.driver.workflow.calc_gradient(mode="forward")
+        J_reverse = top.driver.workflow.calc_gradient(mode="adjoint")
+        J_fd = top.driver.workflow.calc_gradient(mode='fd')
+        
+        J_true = array([[2, 3, 4]])
+        
+        assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
     def test_varTree_connections_whole_tree(self): 
 
@@ -163,30 +171,22 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.driver.add_objective('comp2.z')
         top.driver.add_constraint('comp1.outs.z+comp1.ins.x.x1 < 0')
 
+        top.run()
         J_true = array([[8., 12., 16.],  #obj
-                        [2., 0., 4.]]) #c1 
+                        [3., 3., 4.]]) #c1 
                        
         obj = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_objectives().values()]
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
 
-        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, fd=True)
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
-
-
-
-
-
-
-
- 
-
 
 if __name__ == "__main__": 
     unittest.main()

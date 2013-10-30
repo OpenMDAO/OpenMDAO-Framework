@@ -231,7 +231,6 @@ class GeometryHandler(ReqHandler):
     @web.authenticated
     def get(self):
         path = self.get_argument('path')
-        #self.render('workspace/o3dviewer.html', filename=path)
         if path.startswith('file/'):
             path = path[4:]  # leave the '/' at the beginning of filename
         self.render('workspace/wvclient.html', geom_name=path)
@@ -245,8 +244,11 @@ class ImagesHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        path = self.get_argument('path')
-        self.render('workspace/imageviewer.html', filename=path)
+        if not 'path' in self.request.arguments.keys():
+            self.render('workspace/imageviewer.html')
+        else:
+            path = self.get_argument('path')
+            self.render('workspace/imageviewer.html', filename=path)
 
 
 class ObjectHandler(ReqHandler):
