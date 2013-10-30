@@ -183,8 +183,33 @@ class CyclicWorkflow(SequentialWorkflow):
                             
                     self._mapped_severed_edges.append((src, target))
                 
-            
         return self._derivative_graph
+            
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        if self._edges == None:
+            
+            super(CyclicWorkflow, self).edge_list()
+            
+            cyclic_edges = {edge[0]:edge[1] for edge in \
+                            self._severed_edges}
+            for src, targets in self._edges.iteritems():
+                if '@in' not in src:
+                    if isinstance(targets, str):
+                        targets = [targets]
+                        
+                    newtargets = []
+                    for target in targets:
+                        if '@out' not in target:
+                            newtargets.append(target)
+                    
+                    if len(newtargets) > 0:
+                        cyclic_edges[src] = newtargets
+                    
+            self._edges = cyclic_edges
+                
+        return self._edges
 
     def set_new_state(self, dv):
         """Adds a vector of new values to the current model state at the
