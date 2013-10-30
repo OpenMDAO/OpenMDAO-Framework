@@ -709,11 +709,11 @@ openmdao.Project=function(listeners_ready) {
         }
     };
 
-    /** view geometry associated with this project */
+    /** view geometry with specified pathname, prompt if not specified */
     this.viewGeometry = function(pathname) {
         function popupGeom(pathname) {
-            w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,
-                                          'Geometry of '+pathname);
+            var w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,
+                                              'Geometry of '+pathname);
             _self.addWindow(w);
         }
         if (typeof pathname === "undefined" || !pathname) {
@@ -725,9 +725,15 @@ openmdao.Project=function(listeners_ready) {
         }
     };
 
-    /** view images associated with this project */
+    /** view image with specified pathname, or all images if not specified */
     this.viewImages = function(pathname) {
-        w = openmdao.Util.popupWindow('tools/images?path='+pathname, 'Images');
+        var w;
+        if (pathname) {
+            w = openmdao.Util.popupWindow('tools/images?path='+pathname, 'Images');
+        }
+        else {
+            w = openmdao.Util.popupWindow('tools/images', 'Images');
+        }
         _self.addWindow(w);
     };
 

@@ -61,9 +61,11 @@
                             }
                             else if (openmdao.Util.hasImageExtension(file)) {
                                 file = file.replace(/\\/g,'/');
-                                if (file === "{{ filename }}") {
-                                    show_index = index;
-                                }
+                                {% if 'filename' in globals() %}
+                                    if (file === "{{ filename }}") {
+                                        show_index = index;
+                                    }
+                                {% end %}
                                 images.push({
                                     title: file,
                                     image: '/workspace/file'+file

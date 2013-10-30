@@ -407,7 +407,8 @@ def plugin_quickstart(parser, options, args=None):
                         '__init__.py': '',  # 'from %s import %s\n' % (name,classname),
                         '%s.py' % name: class_templates[options.group] % template_options,
                         'test': {
-                                'test_%s.py' % name: test_template % template_options
+                                'test_%s.py' % name: test_template % template_options,
+                                '__init__.py': """ """
                         },
                     },
                 },
@@ -417,7 +418,9 @@ def plugin_quickstart(parser, options, args=None):
                     'srcdocs.rst': _get_srcdocs(options.dest, name),
                     'pkgdocs.rst': _get_pkgdocs(cfg),
                     'usage.rst': templates['usage.rst'] % template_options,
+                    '_static': {},
                 },
+
             },
         }
 
@@ -783,10 +786,8 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
             raise RuntimeError("after untarring, found multiple directories: %s"
                                % files)
 
-        # build sphinx docs
         os.chdir(files[0])  # should be in distrib directory now
-        check_call(['plugin', 'build_docs', files[0]])
-
+        
         # create an sdist so we can query metadata for distrib dependencies
         check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
 
@@ -821,6 +822,10 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
                     dct = get_metadata(dist.egg_name().split('-')[0])
                     for new_r in dct.get('requires', []):
                         reqs.append(new_r)
+
+        # build sphinx docs
+        check_call(['plugin', 'build_docs', files[0]])
+
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir, ignore_errors=True)

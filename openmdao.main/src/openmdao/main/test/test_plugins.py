@@ -50,7 +50,7 @@ class PluginsTestCase(unittest.TestCase):
                                   'MANIFEST.in', '__init__.py', 'conf.py',
                                   'usage.rst', 'index.rst',
                                   'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
-                                  'README.txt',
+                                  'README.txt', '_static',
                                   'test', 'test_foobar.py']))
         finally:
             os.chdir(orig_dir)
@@ -239,7 +239,7 @@ class PluginsTestCase(unittest.TestCase):
                               'MANIFEST.in', '__init__.py', 'conf.py',
                               'usage.rst', 'index.rst',
                               'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
-                              'README.txt',
+                              'README.txt', '_static',
                               'test', 'test_foobar.py']))
 
         # Errors.
