@@ -532,7 +532,7 @@ class SequentialWorkflow(Workflow):
                 dgraph.remove_edge(edge[0], edge[1])
             
         cgraph = dgraph.component_graph()
-        comps = nx.topological_sort(cgraph)
+        comps = cgraph.nodes()
         
         # Full model finite-difference, so all components go in the PA
         if fd == True:

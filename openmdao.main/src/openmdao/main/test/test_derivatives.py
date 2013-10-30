@@ -288,7 +288,7 @@ class ArrayComp1(Component):
 class ArrayComp1_noderiv(Component):
     '''Array component'''
     
-    x = Array(zeros([2]), iotype='in')
+    x = Array(zeros([2]), iotype='in', low=-100, high=100)
     y = Array(zeros([2]), iotype='out')
 
     def execute(self):
@@ -625,6 +625,29 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
+        
+    def test_input_as_output_nondiff_array(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp1_noderiv())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x')
+        top.driver.add_objective('comp.y[0]')
+        top.driver.add_constraint('comp.x[0] < 1')
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        print J
+        
+        edges = top.driver.workflow._edges
+        print edges
+        self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
+        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x[0], _pseudo_1.in0[0]']))
+        self.assertEqual(set(edges['@in1']), set(['~~0.comp|x[1], _pseudo_1.in0[1]']))
+        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
+        self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
+        self.assertEqual(len(edges), 5)
         
     def test_nested(self):
         
