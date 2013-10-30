@@ -124,6 +124,7 @@ class MDASolver(Driver):
                              maxiter=100)
             
             # Increment the model input edges by dv
+            print 'dv', dv
             self.workflow.set_new_state(dv)
             
             # Run all components
