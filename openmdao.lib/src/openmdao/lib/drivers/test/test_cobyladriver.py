@@ -146,7 +146,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
         end_case = cases[-1]
 
         self.assertEqual(self.top.comp.x[1],
-                         end_case.get_input('comp.x[1]'))
+                         end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
 
