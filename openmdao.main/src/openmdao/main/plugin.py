@@ -407,7 +407,8 @@ def plugin_quickstart(parser, options, args=None):
                         '__init__.py': '',  # 'from %s import %s\n' % (name,classname),
                         '%s.py' % name: class_templates[options.group] % template_options,
                         'test': {
-                                'test_%s.py' % name: test_template % template_options
+                                'test_%s.py' % name: test_template % template_options,
+                                '__init__.py': """ """
                         },
                     },
                 },
@@ -417,7 +418,9 @@ def plugin_quickstart(parser, options, args=None):
                     'srcdocs.rst': _get_srcdocs(options.dest, name),
                     'pkgdocs.rst': _get_pkgdocs(cfg),
                     'usage.rst': templates['usage.rst'] % template_options,
+                    '_static': {},
                 },
+
             },
         }
 
