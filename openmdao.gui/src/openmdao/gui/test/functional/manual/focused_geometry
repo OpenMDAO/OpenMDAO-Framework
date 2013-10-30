@@ -1,0 +1,14 @@
+1. Add a GeomComponent to the dataflow
+2. Upload simple_nozzle.py to the project (located at examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/simple_nozzle.py)  
+2. Double-click the object to bring up its Properties Pane
+3. Click on its "Slots" tab.
+4. Drag a "PlugNozzleGeometry" to fill the ParametricGeometry slot.
+5. Click on the "Outputs" tab.
+6. In the "value" column of "geom_out", click "View Geom."
+7. Verify that a separate window
+	a. A red STL model was loaded (should be a combination of cowl.stl and plug.stl)
+	b. That the model is centered
+	c. That the model isn't strecthed
+	d. That the model rotates in place
+	e. That the entire model is viewable
+8. Choose Project->Exit, and verify that leaving the GUI kills the Geometry window.
