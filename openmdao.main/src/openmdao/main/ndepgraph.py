@@ -973,7 +973,7 @@ class DependencyGraph(nx.DiGraph):
         """Update the value of the given variable in the 
         given scope using upstream variables.
         """
-        valid_set = set([vname])
+        valid_set = set(self.find_prefixed_nodes([vname]))
         for u,v,data in self.in_edges_iter(vname, data=True):
             if 'conn' in data:
                 try:

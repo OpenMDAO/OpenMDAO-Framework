@@ -246,7 +246,9 @@ class Component(Container):
         self._call_execute = True
         self._set_exec_state("INVALID")
         if self.parent and hasattr(self.parent, 'child_invalidated'):
-            self.parent.child_invalidated(self.name, vnames=[name])
+            self.parent.child_invalidated(self.name, 
+                                          vnames=[name],
+                                          iotype='in')
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback

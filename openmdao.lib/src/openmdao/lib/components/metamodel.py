@@ -426,7 +426,7 @@ class MetaModel(Component):
 
         self.config_changed()
 
-    def child_invalidated(self, childname, vnames):
+    def child_invalidated(self, childname, vnames=None, iotype='out'):
         pass
 
     def update_inputs(self, compname):

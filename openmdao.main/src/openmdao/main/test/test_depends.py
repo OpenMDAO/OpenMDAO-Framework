@@ -13,25 +13,20 @@ from openmdao.util.testutil import assert_rel_error
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 from openmdao.main.ndepgraph import dump_valid, get_valids
 
-import random
-
 exec_order = []
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class DumbDriver(Driver):
     def __init__(self):
-        self.oldval = None
+        self.oldval = 11
         super(DumbDriver, self).__init__()
         
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        newval = self.oldval
-        while newval == self.oldval:
-            newval = random.randint(0,999)
-        self.oldval = newval
+        self.oldval += 1
         
-        self.set_parameters([newval]*len(self.get_parameters()))
+        self.set_parameters([self.oldval]*len(self.get_parameters()))
         super(DumbDriver, self).execute()
 
 

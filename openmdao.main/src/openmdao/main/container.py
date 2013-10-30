@@ -1165,10 +1165,11 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-        try:
-            eq = all(eq)
-        except TypeError:
-            pass
+        if not isinstance(eq, bool):
+            try:
+                eq = all(eq)
+            except TypeError:
+                pass
 
         if not eq:
             # need to find first item going up the parent tree that is a Component

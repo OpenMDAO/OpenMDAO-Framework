@@ -659,14 +659,18 @@ class Assembly(Component):
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
 
-    def child_invalidated(self, childname, vnames=None):
-        """Invalidate all variables that depend on the variable provided
-        by the child that has been invalidated.
+    def child_invalidated(self, childname, vnames=None, iotype='out'):
+        """Invalidate all variables that depend on the variable 
+        provided by the child that has been invalidated.
         """
         if vnames is None:
             vnames = [childname]
         elif childname:
             vnames = ['.'.join([childname, n]) for n in vnames]
+            if iotype == 'in':
+                for name in vnames[:]:
+                    vnames.extend(self._depgraph._all_child_vars(name,
+                                                                 direction='in'))
             
         bouts = self.invalidate_deps(vnames)
         if bouts and self.parent:
