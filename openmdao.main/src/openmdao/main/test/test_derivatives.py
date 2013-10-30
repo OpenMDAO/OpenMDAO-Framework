@@ -950,6 +950,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['comp1'])
         
         top.run()
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp1.y'],
                                               mode='forward')
@@ -969,6 +970,30 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               outputs=['comp1.y'],
                                               mode='fd')
         diff = J - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.run()
+        Jsub = top.comp1.J[2:3, 2:3]
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
+                                              outputs=['comp1.y[1][:]'],
+                                              mode='forward')
+
+        diff = J - Jsub
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
+                                              outputs=['comp1.y[1][:]'],
+                                              mode='adjoint')
+        diff = J - Jsub
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
+                                              outputs=['comp1.y[1][:]'],
+                                              mode='fd')
+        diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
         
     def test_array_slice_1D(self):
@@ -1092,29 +1117,37 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         top.driver.workflow.config_changed()
         top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
-                                              outputs=['nest.y[1][:]'],
-                                              mode='forward')
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[0, -1]',],
+                                              outputs=['nest.y[-1, 0]'],
+                                              mode='fd')
         
-        assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        diff = J - top.nest.comp.J[1, 2]
+        assert_rel_error(self, diff.max(), 0.0, .000001)
         
         top.driver.workflow.config_changed()
         top.nest.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
+        Jsub = top.nest.comp.J[2:3, 2:3]
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
+                                              outputs=['nest.y[1][:]'],
+                                              mode='forward')
+        
+        diff = J - Jsub
+        
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
                                               outputs=['nest.y[1][:]'],
                                               mode='adjoint')
         
-        assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
-        print J
+        diff = J - Jsub
         
-        # TODO - finite difference a slice across an assy bdry.
-        #top.driver.workflow.config_changed()
-        #top.nest.driver.workflow.config_changed()
-        #J = top.driver.workflow.calc_gradient(inputs=['nest.x[:][1]',],
-                                              #outputs=['nest.y[1][:]'],
-                                              #mode='fd')
-        #print J
-        #assert_rel_error(self, J[0, 0], top.nest.comp.J[2, 1], .000001)
+        top.run()
+        top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x[1][:]',],
+                                              outputs=['nest.y[1][:]'],
+                                              mode='fd')
+        diff = J - Jsub
         
     def test_nested_2Darray_simul_element_and_full_connection(self):
         

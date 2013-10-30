@@ -691,18 +691,16 @@ class FiniteDifference(object):
                 
                 # Indexed array
                 if '[' in src:
-                    src, _, idx = src.partition('[')
-                    old_val = self.scope.get(src)
-                    shape = old_val.shape
-                    istring, ix = flatten_slice(idx, shape, name='ix')
-                    print istring, ix, index
-                    if ':' not in istring:
-                        old_val[ix[index]] += val
-                    print "setting", src, istring, ix
+                    sliced_src = self.scope.get(src)
+                    sliced_shape = sliced_src.shape
+                    flattened_src = sliced_src.flatten()
+                    flattened_src[index] +=val
+                    sliced_src = flattened_src.reshape(sliced_shape)
+                    exec('self.scope.%s = sliced_src') % src
+                    
                 else:
                     unravelled = unravel_index(index, old_val.shape)
                     old_val[unravelled] += val
-                    print "setting", src, old_val, index, unravelled, val
                     
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
