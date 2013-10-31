@@ -75,7 +75,7 @@ class PseudoAssembly(object):
         if self.fd is None:
             self.fd = FiniteDifference(self)
 
-        if '_severed_edges' in self.wflow:
+        if hasattr(self.wflow, '_severed_edges'):
             self.wflow.sever_edges(self.wflow._severed_edges)
 
         try:
@@ -90,7 +90,7 @@ class PseudoAssembly(object):
 
             self.J = self.fd.calculate()
         finally:
-            if '_severed_edges' in self.wflow:
+            if hasattr(self.wflow, '_severed_edges'):
                 self.wflow.unsever_edges()
             pass
         

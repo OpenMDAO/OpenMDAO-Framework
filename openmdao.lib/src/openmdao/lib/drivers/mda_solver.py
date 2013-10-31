@@ -124,17 +124,13 @@ class MDASolver(Driver):
                              maxiter=100)
             
             # Increment the model input edges by dv
-            print 'dv', dv
-            print "res before", self.workflow.calculate_residuals()
             self.workflow.set_new_state(dv)
-            print "res after", self.workflow.calculate_residuals()
             
             # Run all components
             self.run_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()       
