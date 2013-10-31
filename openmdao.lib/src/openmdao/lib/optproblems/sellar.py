@@ -130,7 +130,7 @@ class Discipline2_WithDerivatives(Component):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2         
-        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
+        print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
         
     def linearize(self):
         """ Calculate the Jacobian """

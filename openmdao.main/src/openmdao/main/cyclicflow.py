@@ -221,7 +221,7 @@ class CyclicWorkflow(SequentialWorkflow):
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        for src, targets in self._edges.iteritems():
+        for src, targets in self._severed_edges:
             
             i1, i2 = self.get_bounds(src)
             
