@@ -488,7 +488,7 @@ class SequentialWorkflow(Workflow):
             edges = get_inner_edges(graph, inames, onames)
             comps = edge_dict_to_comp_list(graph, edges)
             
-            dgraph = graph.full_subgraph(comps.keys())
+            dgraph = graph.full_subgraph(comps.keys()+inames+onames)
             
             # We want our graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.
