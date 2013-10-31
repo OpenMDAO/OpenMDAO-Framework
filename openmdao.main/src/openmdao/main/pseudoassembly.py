@@ -75,7 +75,8 @@ class PseudoAssembly(object):
         if self.fd is None:
             self.fd = FiniteDifference(self)
 
-        #self.wflow.sever_edges(self.wflow._severed_edges)
+        if hasattr(self.wflow, '_severed_edges'):
+            self.wflow.sever_edges(self.wflow._severed_edges)
 
         try:
             # First, linearize about operating point.
@@ -89,7 +90,8 @@ class PseudoAssembly(object):
 
             self.J = self.fd.calculate()
         finally:
-            #self.wflow.unsever_edges()
+            if hasattr(self.wflow, '_severed_edges'):
+                self.wflow.unsever_edges()
             pass
         
     def provideJ(self):

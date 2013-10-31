@@ -707,7 +707,7 @@ class FiniteDifference(object):
                 if var_name:
                     comp._input_updated(var_name.split('[', 1)[0])
                 else:
-                    self.scope._input_updated(comp_name.split('[')[0])
+                    self.scope._input_updated(comp_name.split('[', 1)[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             

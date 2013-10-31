@@ -58,6 +58,7 @@ class Discipline(Component):
         y = matrix(self.y_in)
         
         self.y_out = array(-1/self.c_y_out*(Cz*z+Cx*x-Cy*y)) 
+        #print "running", self.name, self.y_in, self.y_out
         
     def linearize(self):
         """ Calculate the Jacobian """

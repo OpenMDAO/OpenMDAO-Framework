@@ -131,7 +131,6 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()       

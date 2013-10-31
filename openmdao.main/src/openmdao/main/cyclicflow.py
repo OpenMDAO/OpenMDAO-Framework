@@ -2,6 +2,7 @@
 required to converge this workflow in order to execute it. """
 
 import networkx as nx
+from ordereddict import OrderedDict
 from networkx.algorithms.components import strongly_connected_components
 
 try:
@@ -155,7 +156,7 @@ class CyclicWorkflow(SequentialWorkflow):
             super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
                                                          self._severed_edges)
             
-            # Finally, we need to map any of our edges if they are in a
+            # We need to map any of our edges if they are in a
             # pseudo-assy
             dgraph = self._derivative_graph
             comps = edge_dict_to_comp_list(dgraph, self.edge_list())
@@ -182,9 +183,38 @@ class CyclicWorkflow(SequentialWorkflow):
                             break
                             
                     self._mapped_severed_edges.append((src, target))
+                    
+            cyclic_edges = OrderedDict()
+            for edge in self._mapped_severed_edges:
+                cyclic_edges[edge[0]] = edge[1]
                 
+            # Finally, modify our edge list to include the severed edges, and exclude
+            # the boundary edges.
+            for src, targets in self._edges.iteritems():
+                if '@in' not in src:
+                    if isinstance(targets, str):
+                        targets = [targets]
+                        
+                    newtargets = []
+                    for target in targets:
+                        if '@out' not in target:
+                            newtargets.append(target)
+                    
+                    if len(newtargets) > 0:
+                        cyclic_edges[src] = newtargets
             
+            self._edges = cyclic_edges
+                
         return self._derivative_graph
+            
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        if self._edges == None:
+            
+            super(CyclicWorkflow, self).edge_list()
+            
+        return self._edges
 
     def set_new_state(self, dv):
         """Adds a vector of new values to the current model state at the
@@ -193,10 +223,7 @@ class CyclicWorkflow(SequentialWorkflow):
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        for src, targets in self._edges.iteritems():
-            
-            if '@in' in src:
-                continue
+        for src, targets in self._mapped_severed_edges:
             
             i1, i2 = self.get_bounds(src)
             
@@ -204,12 +231,6 @@ class CyclicWorkflow(SequentialWorkflow):
                 targets = [targets]
                 
             for target in targets:
-                
-                if '@out' in target:
-                    for sev_src, sev_target in self._mapped_severed_edges:
-                        if sev_src == src:
-                            target = sev_target
-                            break
                 
                 target = from_PA_var(target)
                 old_val = self.scope.get(target)
@@ -237,9 +258,6 @@ class CyclicWorkflow(SequentialWorkflow):
                 # Prevent OpenMDAO from stomping on our poked input.
                 self.scope.set_valid([target.split('[',1)[0]], True)
     
-                # Array inputs aren't triggering invalidation
-                self.scope._input_updated(target.split('[')[0])
-                    
                 #(An alternative way to prevent the stomping. This is more
                 #concise, but setting an output and allowing OpenMDAO to pull it
                 #felt hackish.)
@@ -251,10 +269,6 @@ class CyclicWorkflow(SequentialWorkflow):
         
         for src, targets in self._edges.iteritems():
             
-            if '@in' in src:
-                # This residual will always be zero
-                continue
-            
             i1, i2 = self.get_bounds(src)
             src_val = self.scope.get(from_PA_var(src))
             src_val = flattened_value(src, src_val).reshape(-1, 1)
@@ -263,12 +277,6 @@ class CyclicWorkflow(SequentialWorkflow):
                 targets = [targets]
                 
             for target in targets:
-                
-                if '@out' in target:
-                    for sev_src, sev_target in self._mapped_severed_edges:
-                        if sev_src == src:
-                            target = sev_target
-                            break
                 
                 target_val = self.scope.get(from_PA_var(target))
                 target_val = flattened_value(target, target_val).reshape(-1, 1)
