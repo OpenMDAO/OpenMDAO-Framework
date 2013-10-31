@@ -255,8 +255,14 @@ class SequentialWorkflow(Workflow):
         
         # Handle index slices
         if isinstance(i1, str):
-            i3 = i2+1 if ':' in i1 else 0
+            if ':' in i1:
+                i3 = i2 + 1
+            else:
+                i2 = i2.tolist()
+                i3 = 0
             return i2, i3
+        else:
+            i2 = i2
             
         return i1, i2
         
