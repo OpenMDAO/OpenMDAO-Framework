@@ -85,10 +85,10 @@ class SequentialWorkflow(Workflow):
         """Temporarily remove the specified edges but save
         them and their metadata for later restoration. 
         """
-        self._derivative_graph.sever_edges(edges)
+        self._parent.parent._depgraph.sever_edges(edges)
 
     def unsever_edges(self):
-        self._derivative_graph.unsever_edges(self._parent.get_expr_scope())
+        self._parent.parent._depgraph.unsever_edges(self._parent.get_expr_scope())
         
     def get_names(self, full=False):
         """Return a list of component names in this workflow.  
