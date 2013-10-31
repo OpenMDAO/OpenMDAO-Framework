@@ -156,7 +156,7 @@ class CyclicWorkflow(SequentialWorkflow):
             super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
                                                          self._severed_edges)
             
-            # Finally, we need to map any of our edges if they are in a
+            # We need to map any of our edges if they are in a
             # pseudo-assy
             dgraph = self._derivative_graph
             comps = edge_dict_to_comp_list(dgraph, self.edge_list())
@@ -183,20 +183,13 @@ class CyclicWorkflow(SequentialWorkflow):
                             break
                             
                     self._mapped_severed_edges.append((src, target))
-                
-        return self._derivative_graph
-            
-    def edge_list(self):
-        """ Return the list of edges for the derivatives of this workflow. """
-        
-        if self._edges == None:
-            
-            super(CyclicWorkflow, self).edge_list()
-            
+                    
             cyclic_edges = OrderedDict()
-            for edge in self._severed_edges:
+            for edge in self._mapped_severed_edges:
                 cyclic_edges[edge[0]] = edge[1]
                 
+            # Finally, modify our edge list to include the severed edges, and exclude
+            # the boundary edges.
             for src, targets in self._edges.iteritems():
                 if '@in' not in src:
                     if isinstance(targets, str):
@@ -212,6 +205,15 @@ class CyclicWorkflow(SequentialWorkflow):
             
             self._edges = cyclic_edges
                 
+        return self._derivative_graph
+            
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        if self._edges == None:
+            
+            super(CyclicWorkflow, self).edge_list()
+            
         return self._edges
 
     def set_new_state(self, dv):
@@ -221,7 +223,7 @@ class CyclicWorkflow(SequentialWorkflow):
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        for src, targets in self._severed_edges:
+        for src, targets in self._mapped_severed_edges:
             
             i1, i2 = self.get_bounds(src)
             
@@ -256,9 +258,6 @@ class CyclicWorkflow(SequentialWorkflow):
                 # Prevent OpenMDAO from stomping on our poked input.
                 self.scope.set_valid([target.split('[',1)[0]], True)
     
-                # Array inputs aren't triggering invalidation
-                self.scope._input_updated(target.split('[')[0])
-                    
                 #(An alternative way to prevent the stomping. This is more
                 #concise, but setting an output and allowing OpenMDAO to pull it
                 #felt hackish.)
