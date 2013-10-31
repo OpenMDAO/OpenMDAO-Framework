@@ -402,7 +402,8 @@ class DependencyGraph(nx.DiGraph):
             raise RuntimeError("'%s' is already connected to '%s'" %
                                   (conns[0][1], conns[0][0]))
 
-    def connect(self, scope, srcpath, destpath, config_change=True, check=True):
+    def connect(self, scope, srcpath, destpath, 
+                config_change=True, check=True, invalidate=True):
         """Create a connection between srcpath and destpath,
         and create any necessary additional subvars with connections to base
         variable nodes.  For example, connecting A.b[3] to
@@ -425,17 +426,6 @@ class DependencyGraph(nx.DiGraph):
         path = [(base_src, base_src)]
 
         if srcpath != base_src:  # srcpath is a subvar
-            if (is_input_node(self, base_src) and not is_boundary_node(self, base_src)) or \
-               (is_boundary_output_node(self, base_src) and not destpath.startswith('parent.')):
-                chkpath = srcpath.split('.')
-                subnode = '.'.join(chkpath[:2])
-                if subnode not in self:
-                    # we're connecting a new subvar that doesn't exist yet, and this new subvar
-                    # is either a component input used as a src or a boundary output used
-                    # as a src. In either case we need to create the subvar along with a 
-                    # connection to its basevar.
-                    self.add_node(subnode, basevar=base_src, valid=True)
-                    self.add_edge(subnode, base_src)
 
             path.append((srcpath, base_src))
 
@@ -453,12 +443,6 @@ class DependencyGraph(nx.DiGraph):
                 self.add_node(dest, basevar=base, valid=True)
             if i > 0:
                 src = path[i-1][0]
-                # if an edge alreay exists from dest to src, then the edge
-                # from src to dest is going in an invalid dataflow direction,
-                # so skip it
-                if src in self[dest]:
-                    continue
-
                 self.add_edge(src, dest)
 
         # mark the actual connection edge to distinguish it
@@ -470,7 +454,8 @@ class DependencyGraph(nx.DiGraph):
         self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath, getter='get_attr')
         self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath, getter='get_attr')
 
-        self.invalidate_deps(scope, [srcpath])
+        if invalidate:
+            self.invalidate_deps(scope, [srcpath])
         
         if config_change:
             self.config_changed()
@@ -659,6 +644,15 @@ class DependencyGraph(nx.DiGraph):
         nbrack = node+'['
         return [n for n in bunch if n.startswith(ndot)
                                  or n.startswith(nbrack)]
+
+    def subvars(self, node):
+        if is_basevar_node(self, node):
+            if self.node[node]['iotype'] == 'in':
+                return self._all_child_vars(node, direction='in')
+            else:
+                return self._all_child_vars(node, direction='out')
+        else:
+            return []
 
     def all_comps(self):
         """Returns a list of all component and PseudoComponent
@@ -1066,6 +1060,34 @@ def find_all_connecting(graph, start, end):
 
     return fwdset.intersection(backset)
 
+def _dfs_connections(G, source, reverse=False):
+    """Produce connections in a depth-first-search starting at source."""
+    # Slightly modified version of the networkx function dfs_edges
+
+    if reverse:
+        neighbors = G.predecessors_iter
+    else:
+        neighbors = G.successors_iter
+
+    visited=set()
+
+    stack = [(source, neighbors(source))]
+    while stack:
+        parent, children = stack[-1]
+        try:
+            child = next(children)
+            if reverse:
+                tup = (child, parent)
+            else:
+                tup = (parent, child)
+            if tup not in visited:
+                if 'conn' in G.edge[tup[0]][tup[1]]:
+                    yield tup
+                visited.add(tup)
+                stack.append((child, neighbors(child)))
+        except StopIteration:
+            stack.pop()
+
 def _get_inner_edges(G, srcs, dests):
     """Return a set of connection edges between the
     given sources and destinations.
@@ -1077,49 +1099,17 @@ def _get_inner_edges(G, srcs, dests):
         Ending var or subvar nodes
 
     """
-    # Based on dfs_edges from networkx
-
-    nodes=srcs
-    cstack = []  # stack of candidate edges
-    edges = set()
-    marked = set(dests)
-
-    visited=set()
-    for start in nodes:
-        if start in visited:
-            continue
-        visited.add(start)
-        stack = [(start, iter(G[start]))]
-        while stack:
-            parent,children = stack[-1]
-            try:
-                child = next(children)
-                if is_connection(G, parent, child):
-                    cstack.append((parent, child))
-                if child in marked:
-                    edges.update(cstack)
-                    if parent not in marked:
-                        marked.update([p for p,c in stack])
-                elif child not in visited:
-                    visited.add(child)
-                    stack.append((child, iter(G[child])))
-            except StopIteration:
-                if cstack and cstack[-1][1] == parent:
-                    cstack.pop()
-                stack.pop()
-
-    # order the edges so that basevar sources come first
-    subs = []
-    final = []
-    for edge in edges:
-        if is_basevar_node(G, edge[0]):
-            final.append(edge)
-        else:
-            subs.append(edge)
+    # TODO: this can be optimized a bit...
     
-    final.extend(subs)
-    
-    return final
+    fwdset = set()
+    backset = set()
+    for node in dests:
+        backset.update(_dfs_connections(G, node, reverse=True))
+
+    for node in srcs:
+        fwdset.update(_dfs_connections(G, node))
+
+    return fwdset.intersection(backset)
 
 def get_inner_edges(graph, srcs, dests):
     """Return a dict containing all connections in the graph
@@ -1134,97 +1124,117 @@ def get_inner_edges(graph, srcs, dests):
     """
 
     flat_srcs = []
-    at_map = {}
-    bndry_fakes = {}
-    idx = 0
     for s in srcs:
         if isinstance(s, basestring):
-            if s not in graph:
-                bvar = base_var(graph, s)
-                if bvar in graph and is_boundary_input_node(graph, bvar):
-                    flat_srcs.append(bvar)
-                    bndry_fakes.setdefault(bvar, []).append(s)
-            else:
-                flat_srcs.append(s)
-            at_map[s] = idx
+            flat_srcs.append(s)
         else:
             for ss in s:
-                if ss not in graph:
-                    bvar = base_var(graph, ss)
-                    if bvar in graph and is_boundary_input_node(graph, bvar):
-                        flat_srcs.append(bvar)
-                        bndry_fakes.setdefault(bvar, []).append(ss)
-                else:
-                    flat_srcs.append(ss)
-                at_map[ss] = idx
-        idx += 1
+                flat_srcs.append(ss)
 
     edges = _get_inner_edges(graph, flat_srcs, dests)
     new_edges = []
     new_sub_edges = []
 
     for src, dest in edges:
-        if is_input_node(graph, src):
-            if src in bndry_fakes:
-                for fake in bndry_fakes[src]:
-                    idx = at_map[fake]
-                    new_sub_edges.append(('@in%d' % idx, 
-                                          fake.replace(src, dest, 1)))
+        if is_input_node(graph, src):            
+            if src[0] == '@':
+                if not is_boundary_node(graph, base_var(graph, dest)):
+                    new_edges.append((src, dest))
                 continue
+            
+            if is_basevar_node(graph, src):
+                subs = graph._all_child_vars(src, direction='in')
+                if not subs:
+                    newsrc = graph.predecessors(src)[0] # must be (only) one predecessor in this case
+                    if is_basevar_node(graph, newsrc):
+                        new_edges.append((newsrc, dest))
+                    else:
+                        new_sub_edges.append((newsrc, dest))      
+            else:
+                subs = [src]
             
             # if we have an input source basevar that has multiple inputs (subvars)
             # then we have to create fake subvars at the destination to store
             # derivative related metadata
-            if is_basevar_node(graph, src):
-                subs = graph._all_child_vars(src, direction='in')
-                if not subs:
-                    preds = graph.predecessors(src)
-                    if not preds:
-                        new_edges.append(('@in%d' % at_map[src], dest))
-                        continue
-                    newsrc = preds[0]
-                    if is_basevar_node(graph, newsrc):
-                        new_edges.append((newsrc, dest))
-                    else:
-                        new_sub_edges.append((newsrc, dest))
-            else:
-                subs = [src]
-            
             for sub in subs:
                 preds = graph.predecessors(sub)
-                if not preds:
+                newsrc = None
+                for p in preds:
+                    if base_var(graph, sub) != p:
+                        newsrc = p
+                        break
+                if newsrc is None:
                     continue
-                newsrc = preds[0]
                 if is_basevar_node(graph, newsrc):
                     new_edges.append((newsrc, sub.replace(src, dest, 1)))
                 else:
                     new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
         else:
-            if is_basevar_node(graph, src):
-                new_edges.append((src, dest))
-            else:
+            if is_subvar_node(graph, src):
                 new_sub_edges.append((src, dest))
+            else:
+                new_edges.append((src, dest))
 
     edges = new_edges + new_sub_edges
-    edges = edges + [('@in%d' % at_map[s], s) for s in flat_srcs 
-                           if s not in bndry_fakes]
-
     edge_dct = edges_to_dict(edges)
-
-    # return fake edges for destination vars referenced by 
-    # objectives and constraints
-    for i, dest in enumerate(dests):
-        if isinstance(dest, basestring):
-            edge_dct[dest] = ['@out%d' % i]
-        else:
-            edge_dct[dest[0]] = ['@out%d' % i]
 
     return edge_dct
 
+def mod_for_derivs(graph, inputs, outputs):
+    # Inputs and outputs introduce subvars that aren't in the
+    # parent graph, so they need to be added.
+    indct = {}
+    inames = []
+    onames = []
+    for i, varnames in enumerate(inputs):
+        iname = '@in%d' % i
+        inames.append(iname)
+        graph.add_node(iname, var=True, iotype='in', valid=True)
+        if isinstance(varnames, basestring):
+            varnames = [varnames]
+        else:
+            varnames = list(varnames)
+        for varname in varnames:
+            if varname not in graph:  # must be a subvar
+                graph.add_node(varname, base=base_var(graph, varname), iotype='in', valid=True)
+            graph.connect(None, iname, varname,
+                          check=False, invalidate=False)
+            indct[varname] = iname
+
+    for i, varnames in enumerate(outputs):
+        oname = '@out%d' % i
+        onames.append(oname)
+        graph.add_node(oname, var=True, iotype='out', valid=False)
+        if isinstance(varnames, basestring):
+            varnames = [varnames]
+        else:
+            varnames = list(varnames)
+        for varname in varnames:
+            if varname not in graph:
+                graph.add_node(varname, base_var(graph, varname), base=base_var(graph, varname), iotype='out', valid=False)
+            graph.connect(None, varname, oname, 
+                          check=False, invalidate=False)
+
+    # if we have destinations connected to subvars of a basevar
+    # that's a destination of a parameter, then we have to 
+    # create a new edge from a new subvar of the parameter to
+    # the original destination
+    for vname, iname in indct.items():
+        if is_basevar_node(graph, vname):
+            for sub in graph.subvars(vname):
+                for src, dest in graph._var_connections(sub, 
+                                                        direction='out'):
+                    newsub = sub.replace(vname, iname, 1)
+                    graph.add_subvar(newsub)
+                    graph.add_edge(newsub, dest, conn=True)
+                    graph.remove_edge(src, dest)
+
+    return graph
+    
 # utility/debugging functions
 
 def edges_to_dict(edges, dct=None):
-    """Take an iterator of edges and return an ordered dict (depth first)
+    """Take an iterator of edges and return an ordered dict
     of sources mapped to lists of destinations.
     """
     if dct is None:

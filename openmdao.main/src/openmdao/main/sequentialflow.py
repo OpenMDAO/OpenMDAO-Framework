@@ -17,7 +17,8 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
-                                    get_inner_edges, is_basevar_node, edge_dict_to_comp_list
+                                    get_inner_edges, is_basevar_node, \
+                                    edge_dict_to_comp_list, mod_for_derivs
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -477,19 +478,14 @@ class SequentialWorkflow(Workflow):
                     self.scope.raise_exception(msg, RuntimeError)
     
             graph = self.scope._depgraph
+            graph = graph.subgraph(graph.nodes_iter()) # copy the graph, sharing metadata
+
+            mod_for_derivs(graph, inputs, outputs)
+
+            inames = ['@in%d' % i for i in range(len(inputs))]
+            onames = ['@out%d' % i for i in range(len(outputs))]
             
-            # Inputs and outputs introduce subvars that aren't in the
-            # parent graph, so they need to be added.
-            for varnames in inputs+outputs:
-                if isinstance(varnames, basestring):
-                    varnames = [varnames]
-                else:
-                    varnames = list(varnames)
-                for varname in varnames:
-                    if varname not in self.scope._depgraph.node:
-                        graph.add_subvar(varname)
-            
-            edges = get_inner_edges(graph, inputs, outputs)
+            edges = get_inner_edges(graph, inames, onames)
             comps = edge_dict_to_comp_list(graph, edges)
             
             dgraph = graph.full_subgraph(comps.keys())
