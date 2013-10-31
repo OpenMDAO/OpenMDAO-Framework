@@ -53,6 +53,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      comp1.x: 8',
             '      comp1.y: 16',
@@ -67,6 +68,8 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             for i in range(len(expected)):
                 if expected[i].startswith('   uuid:'):
                     self.assertTrue(lines[index+i].startswith('   uuid:'))
+                elif expected[i].startswith('   timestamp:'):
+                    self.assertTrue(lines[index+i].startswith('   timestamp:'))
                 else:
                     self.assertEqual(lines[index+i], expected[i])
         

@@ -105,7 +105,7 @@ class DBCaseIterator(object):
                                               % (vname, cname, str(err)))
                 if sense == 'i':
                     inputs.append((vname, value))
-                else:
+                elif sense == 'o':
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
                 yield Case(inputs=inputs, outputs=outputs,
@@ -213,6 +213,10 @@ class DBCaseRecorder(object):
         # insert the inputs and outputs into the vars table.  Pickle them if
         # they're not one of the built-in types int, float, or str.
         
+        v = (None, 'timestamp', case_id, None, case.timestamp )
+        cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
+                    v)
+
         for name, value in case.items(iotype='in'):
             if isinstance(value, (float, int, str)):
                 v = (None, name, case_id, 'i', value)

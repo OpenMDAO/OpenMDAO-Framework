@@ -48,6 +48,14 @@ class CaseTestCase(unittest.TestCase):
         self.top.run()
         case.update_outputs(self.top)
     
+    def test_subcase(self):
+        subcase = self.case.subcase( ['comp1.b', 'comp2.d'] )
+        self.assertEqual(self.case.timestamp, subcase.timestamp )
+        self.assertEqual(len(subcase.get_inputs()),1)
+        self.assertEqual(subcase['comp1.b'], 4)
+        self.assertEqual(len(subcase.get_outputs()),1)
+        self.assertEqual(subcase.get_outputs()[0][0], 'comp2.d')
+        
     def test_case_access(self):
         self.assertEqual(self.case['comp1.a'], 2)
         self.assertEqual(self.case['comp2.c_lst[2]'], 24)
@@ -66,6 +74,7 @@ class CaseTestCase(unittest.TestCase):
     def test_str(self):
         expected = ["Case: blah blah",
                     "   uuid: sdfsfdasfdasdf",
+                    '   timestamp: 1383239074.309192',
                     "   inputs:",
                     "      comp1.a: 2",
                     "      comp1.a_lst: [4, 5, 6]",
@@ -79,6 +88,8 @@ class CaseTestCase(unittest.TestCase):
         for i,line in enumerate(str(self.case).split('\n')):
             if expected[i].startswith('   uuid:'):
                 self.assertTrue(line.startswith('   uuid:'))
+            elif expected[i].startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
             else:
                 self.assertEqual(line, expected[i])
                 
@@ -88,6 +99,7 @@ class CaseTestCase(unittest.TestCase):
                     msg='failed')
         expected = ["Case: foo",
                     "   uuid: abcd-efg",
+                    '   timestamp: 1383239074.309192',
                     "   parent_uuid: abc-xyz-pdq",
                     "   inputs:",
                     "      comp1.a: 4",
@@ -98,7 +110,12 @@ class CaseTestCase(unittest.TestCase):
                     "",
                ]
         for i,line in enumerate(str(case).split('\n')):
-            self.assertEqual(line, expected[i])
+            if expected[i].startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
+            else:
+                self.assertEqual(line, expected[i])
+
+
                 
         self.assertFalse(case == self.case)
         self.assertTrue(case == case)
