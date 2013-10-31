@@ -2,6 +2,7 @@
 required to converge this workflow in order to execute it. """
 
 import networkx as nx
+from ordereddict import OrderedDict
 from networkx.algorithms.components import strongly_connected_components
 
 try:
@@ -192,8 +193,10 @@ class CyclicWorkflow(SequentialWorkflow):
             
             super(CyclicWorkflow, self).edge_list()
             
-            cyclic_edges = {edge[0]:edge[1] for edge in \
-                            self._severed_edges}
+            cyclic_edges = OrderedDict()
+            for edge in self._severed_edges:
+                cyclic_edges[edge[0]] = edge[1]
+                
             for src, targets in self._edges.iteritems():
                 if '@in' not in src:
                     if isinstance(targets, str):
@@ -206,7 +209,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     
                     if len(newtargets) > 0:
                         cyclic_edges[src] = newtargets
-                    
+            
             self._edges = cyclic_edges
                 
         return self._edges
