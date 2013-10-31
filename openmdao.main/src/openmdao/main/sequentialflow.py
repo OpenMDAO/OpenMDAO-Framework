@@ -249,9 +249,8 @@ class SequentialWorkflow(Workflow):
         """ Return a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        itername = 'top.'+self._parent.itername
         dgraph = self._derivative_graph
-        i1, i2 = dgraph.node[node]['bounds'][itername]
+        i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
         
         # Handle index slices
         if isinstance(i1, str):
@@ -270,7 +269,6 @@ class SequentialWorkflow(Workflow):
         """ Set a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        itername = 'top.'+self._parent.itername
         dgraph = self._derivative_graph
         
         try:
@@ -284,7 +282,7 @@ class SequentialWorkflow(Workflow):
         if 'bounds' not in meta:
             meta['bounds'] = {}
             
-        meta['bounds'][itername] = bounds
+        meta['bounds'][self._parent.name] = bounds
         
     def _update(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """
@@ -332,14 +330,20 @@ class SequentialWorkflow(Workflow):
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                inputs[varname] = arg[i1:i2].copy()
+                if isinstance(i1, list):
+                    inputs[varname] = arg[i1].copy()
+                else:
+                    inputs[varname] = arg[i1:i2].copy()
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                inputs[varname] = arg[i1:i2].copy()
-                # applyJ needs to know what derivatives are needed
-                outputs[varname] = arg[i1:i2].copy()
+                if isinstance(i1, list):
+                    inputs[varname] = arg[i1].copy()
+                    outputs[varname] = arg[i1].copy()
+                else:
+                    inputs[varname] = arg[i1:i2].copy()
+                    outputs[varname] = arg[i1:i2].copy()
                 
                 if '~' in compname:
                     comp = self._derivative_graph.node[compname]['pa_object']
@@ -359,7 +363,10 @@ class SequentialWorkflow(Workflow):
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                result[i1:i2] = outputs[varname]
+                if isinstance(i1, list):
+                    result[i1] = outputs[varname]
+                else:
+                    result[i1:i2] = outputs[varname]
                 
         # Each parameter adds an equation
         for src, targets in self._edges.iteritems():
@@ -393,13 +400,20 @@ class SequentialWorkflow(Workflow):
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                inputs[varname] = arg[i1:i2].copy()
-                outputs[varname] = arg[i1:i2].copy()*0
+                if isinstance(i1, list):
+                    inputs[varname] = arg[i1].copy()
+                    outputs[varname] = zeros(len(i1))
+                else:
+                    inputs[varname] = arg[i1:i2].copy()
+                    outputs[varname] = zeros(i2-i1)
             
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                outputs[varname] = arg[i1:i2].copy()*0
+                if isinstance(i1, list):
+                    outputs[varname] = zeros(len(i1))
+                else:
+                    outputs[varname] = zeros(i2-i1)
                 
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -416,7 +430,10 @@ class SequentialWorkflow(Workflow):
             for varname in comp_inputs+comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                result[i1:i2] += outputs[varname]
+                if isinstance(i1, list):
+                    result[i1] += outputs[varname]
+                else:
+                    result[i1:i2] += outputs[varname]
                 
         # Each parameter adds an equation
         for src, target in self._edges.iteritems():
@@ -748,7 +765,10 @@ class SequentialWorkflow(Workflow):
                 item = item[0]
                 
             i1, i2 = self.get_bounds(item)
-            num_in += i2-i1
+            if isinstance(i1, list):
+                num_in += len(i1)
+            else:
+                num_in += i2-i1
     
         num_out = 0
         for item in outputs:
