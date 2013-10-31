@@ -223,21 +223,12 @@ class CyclicWorkflow(SequentialWorkflow):
         """
         for src, targets in self._edges.iteritems():
             
-            if '@in' in src:
-                continue
-            
             i1, i2 = self.get_bounds(src)
             
             if isinstance(targets, str):
                 targets = [targets]
                 
             for target in targets:
-                
-                if '@out' in target:
-                    for sev_src, sev_target in self._mapped_severed_edges:
-                        if sev_src == src:
-                            target = sev_target
-                            break
                 
                 target = from_PA_var(target)
                 old_val = self.scope.get(target)
@@ -279,10 +270,6 @@ class CyclicWorkflow(SequentialWorkflow):
         
         for src, targets in self._edges.iteritems():
             
-            if '@in' in src:
-                # This residual will always be zero
-                continue
-            
             i1, i2 = self.get_bounds(src)
             src_val = self.scope.get(from_PA_var(src))
             src_val = flattened_value(src, src_val).reshape(-1, 1)
@@ -291,12 +278,6 @@ class CyclicWorkflow(SequentialWorkflow):
                 targets = [targets]
                 
             for target in targets:
-                
-                if '@out' in target:
-                    for sev_src, sev_target in self._mapped_severed_edges:
-                        if sev_src == src:
-                            target = sev_target
-                            break
                 
                 target_val = self.scope.get(from_PA_var(target))
                 target_val = flattened_value(target, target_val).reshape(-1, 1)

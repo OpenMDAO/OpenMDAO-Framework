@@ -125,7 +125,9 @@ class MDASolver(Driver):
             
             # Increment the model input edges by dv
             print 'dv', dv
+            print "res before", self.workflow.calculate_residuals()
             self.workflow.set_new_state(dv)
+            print "res after", self.workflow.calculate_residuals()
             
             # Run all components
             self.run_iteration()
