@@ -47,7 +47,12 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             
         i1, i2 = wflow.get_bounds(param)
         
-        for irhs in range(i1, i2):
+        if isinstance(i1, list):
+            in_range = i1
+        else:
+            in_range = range(i1, i2)
+        
+        for irhs in in_range:
 
             RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
@@ -62,9 +67,10 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                 k1, k2 = wflow.get_bounds(item)
                 if isinstance(k1, list):
                     J[i:i+(len(k1)), j] = dx[k1]
+                    i += len(k1)
                 else:
                     J[i:i+(k2-k1), j] = dx[k1:k2]
-                i += k2-k1
+                    i += k2-k1
 
             j += 1
     
@@ -94,7 +100,13 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             output = output[0]
             
         i1, i2 = wflow.get_bounds(output)
-        for irhs in range(i1, i2):
+        
+        if isinstance(i1, list):
+            out_range = i1
+        else:
+            out_range = range(i1, i2)
+            
+        for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
@@ -111,8 +123,12 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                     param = param[0]
                     
                 k1, k2 = wflow.get_bounds(param)
-                J[j, i:i+(k2-k1)] = dx[k1:k2]
-                i += k2-k1
+                if isinstance(k1, list):
+                    J[j, i:i+(len(k1))] = dx[k1:k2]
+                    i += len(k1)
+                else:
+                    J[j, i:i+(k2-k1)] = dx[k1:k2]
+                    i += k2-k1
 
             j += 1
     
