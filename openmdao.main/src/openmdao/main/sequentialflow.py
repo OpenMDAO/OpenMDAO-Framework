@@ -643,24 +643,8 @@ class SequentialWorkflow(Workflow):
             in_edges = nx.edge_boundary(dgraph, 
                                         set(dgraph.nodes()).difference(allnodes))
             
-            pa_inputs = [b for a, b in in_edges]
-            pa_outputs = [a for a, b in out_edges]
-            
-            # Add any pa inputs from params
-            for varpath in meta_inputs:
-                if not isinstance(varpath, tuple):
-                    varpath = [varpath]
-                    
-                for path in varpath:
-                    compname, _, varname = path.partition('.')
-                    if varname and nondiff_map.get(compname, -1) == j:
-                        pa_inputs.append(path)
-                                
-            # Add requested pa outputs
-            for varpath in meta_outputs:
-                compname, _, varname = varpath.partition('.')
-                if varname and nondiff_map.get(compname, -1) == j:
-                    pa_outputs.append(varpath)
+            pa_inputs = edges_to_dict(in_edges).values()
+            pa_outputs = set([a for a, b in out_edges])
                         
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
@@ -675,32 +659,13 @@ class SequentialWorkflow(Workflow):
             
             renames = {}
             # Add pseudoassy inputs
-            for varpath in pa_inputs+pa_outputs:
+            for varpath in list(flatten_list_of_tups(pa_inputs)) + list(pa_outputs):
                 varname = to_PA_var(varpath, pa_name)
                 if varpath in dgraph:
                     renames[varpath] = varname
                     if is_subvar_node(dgraph, varpath):
                         renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
                                                                        pa_name)
-                #dgraph.add_node(varname, var=True, iotype='in', valid=True)
-                
-            # Add pseudoassy outputs
-            # for varpath in pa_outputs:
-            #     varname = to_PA_var(varpath, pa_name)
-            #     renames[varpath] = varname
-            #     if is_subvar_node(dgraph, varpath):
-            #         renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
-            #                                                       pa_name)
-                #if is_basevar_node(dgraph, varpath):
-                    #iotype = dgraph.node[varpath]['iotype']
-                #else: # subvar
-                    #base = base_var(dgraph, varpath)
-                    #iotype = dgraph.node[base]['iotype']
-                #dgraph.add_node(varname, var=True, iotype=iotype, valid=True)
-                #if iotype == 'out':
-                    #dgraph.add_edge(pa_name, varname)
-                #else:
-                    #dgraph.add_edge(varname, pa_name)
 
             nx.relabel_nodes(dgraph, renames, copy=False)
             
@@ -715,17 +680,6 @@ class SequentialWorkflow(Workflow):
             
             # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
-                
-            ## Hook up the pseudoassemblies
-            #for src, dst in in_edges:
-                #dst = to_PA_var(dst, pa_name)
-                #dgraph.add_edge(src, dst, conn=True)
-                
-            #for src, dst in out_edges:
-                #src = to_PA_var(src, pa_name)
-                #dgraph.add_edge(src, dst, conn=True)
-            
-            #print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
         
         return None
 
@@ -733,19 +687,7 @@ class SequentialWorkflow(Workflow):
         """ Return the list of edges for the derivatives of this workflow. """
         
         if self._edges == None:
-            
-            dgraph = self.derivative_graph()
-            if 'mapped_inputs' in dgraph.graph:
-                inputs = 'mapped_inputs'
-                outputs = 'mapped_outputs'
-            else:
-                inputs = 'inputs'
-                outputs = 'outputs'
-                
-            #self._edges = get_inner_edges(dgraph, 
-                                          #dgraph.graph[inputs],
-                                          #dgraph.graph[outputs])
-            self._edges = edges_to_dict(dgraph.list_connections())
+            self._edges = edges_to_dict(self.derivative_graph().list_connections())
             
         return self._edges
         

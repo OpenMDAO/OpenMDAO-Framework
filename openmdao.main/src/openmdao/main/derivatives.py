@@ -521,7 +521,7 @@ class FiniteDifference(object):
         for srcs in self.inputs:
             
             # Support for paramters groups
-            if not isinstance(srcs, tuple):
+            if isinstance(srcs, basestring):
                 srcs = [srcs]
                 
             val = self.scope.get(srcs[0])
@@ -550,10 +550,10 @@ class FiniteDifference(object):
 
         for src, fd_step in zip(self.inputs, self.fd_step):
             
-            if isinstance(src, tuple):
-                i1, i2 = self.in_bounds[src[0]]
-            else:
+            if isinstance(src, basestring):
                 i1, i2 = self.in_bounds[src]
+            else:
+                i1, i2 = self.in_bounds[src[0]]
             
             for i in range(i1, i2):
 
@@ -651,7 +651,7 @@ class FiniteDifference(object):
         for srcs in self.inputs:
             
             # Support for paramters groups
-            if not isinstance(srcs, tuple):
+            if isinstance(srcs, basestring):
                 srcs = [srcs]
                 
             for src in srcs:
@@ -673,7 +673,7 @@ class FiniteDifference(object):
         """Set a value in the model"""
         
         # Support for Parameter Groups:
-        if not isinstance(srcs, tuple):
+        if isinstance(srcs, basestring):
             srcs = [srcs]
             
         for src in srcs:    
