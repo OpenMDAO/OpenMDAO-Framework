@@ -2,7 +2,6 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
-import copy
 import networkx as nx
 import sys
 
@@ -17,7 +16,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
-                                    get_inner_edges, is_basevar_node, is_boundary_node, \
+                                    get_inner_edges, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_tups, \
                                     is_input_base_node, is_output_base_node, \
                                     is_subvar_node, edges_to_dict
@@ -672,6 +671,10 @@ class SequentialWorkflow(Workflow):
             
             for oldname,newname in renames.items():
                 if is_subvar_node(dgraph, newname):
+                    # since we're changing basevar, we need to make our
+                    # own copy of the metadata dict for this node to
+                    # avoid messing up the top level depgraph
+                    dgraph.node[newname] = dict(dgraph.node[newname].items())
                     dgraph.node[newname]['basevar'] = to_PA_var(dgraph.node[newname]['basevar'], pa_name)
                 if is_input_base_node(dgraph, newname):
                     dgraph.add_edge(newname, pa_name)
