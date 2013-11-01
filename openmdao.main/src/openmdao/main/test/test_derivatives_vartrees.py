@@ -183,7 +183,9 @@ class TestDerivativeVarTree(unittest.TestCase):
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
-        
+        print J_fd
+        print J_forward
+        print J_reverse
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
