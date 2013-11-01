@@ -33,14 +33,16 @@ class PseudoAssembly(object):
         self.wflow = wflow
         self.inputs = list(inputs)
         self.outputs = list(outputs)
-        self.mapped_inputs = []
-        for varpath in self.inputs:
-            if isinstance(varpath, basestring):
-                val = to_PA_var(varpath, name).partition('.')[2]
-            else:
-                val = tuple([to_PA_var(vp, name).partition('.')[2]
-                              for vp in varpath])
-            self.mapped_inputs.append(val)
+        #self.mapped_inputs = []
+        #for varpath in self.inputs:
+            #if isinstance(varpath, basestring):
+            #     val = to_PA_var(varpath, name).partition('.')[2]
+            # else:
+            #     val = tuple([to_PA_var(vp, name).partition('.')[2]
+            #                   for vp in varpath])
+            #self.mapped_inputs.append(val)
+        self.mapped_inputs = [to_PA_var(varpath, name).partition('.')[2]
+                               for varpath in self.inputs]
         self.mapped_outputs = [to_PA_var(varpath, name).partition('.')[2]
                                for varpath in self.outputs]
         self.itername = ''

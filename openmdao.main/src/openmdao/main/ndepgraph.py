@@ -655,10 +655,7 @@ class DependencyGraph(nx.DiGraph):
 
     def subvars(self, node):
         if is_basevar_node(self, node):
-            if self.node[node]['iotype'] == 'in':
-                return self._all_child_vars(node, direction='in')
-            else:
-                return self._all_child_vars(node, direction='out')
+            return self._all_child_vars(node)
         else:
             return []
 

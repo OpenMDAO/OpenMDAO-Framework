@@ -256,7 +256,7 @@ def applyJ(obj, arg, result):
         else:
             oshape = result[okey].shape
             
-        used = set()
+        #used = set()
         for ikey in arg:
             if ikey in result:
                 continue
@@ -269,8 +269,8 @@ def applyJ(obj, arg, result):
                 i1, i2, ish = ibounds[basekey]
 
             # A parameter group should only be added once.
-            if (i1, i2) in used:
-                continue
+            # if (i1, i2) in used:
+            #     continue
             
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
@@ -278,7 +278,7 @@ def applyJ(obj, arg, result):
             tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
-            used.add((i1, i2))
+            #used.add((i1, i2))
                         
     #print 'applyJ', arg, result
 
@@ -330,7 +330,7 @@ def applyJT(obj, arg, result):
     # need to find the start and end index of each input and output. 
     obounds, ibounds = get_bounds(obj, input_keys, output_keys)
     
-    used = set()
+    #used = set()
     for okey in result:
         if okey in arg:
             continue
@@ -343,15 +343,15 @@ def applyJT(obj, arg, result):
             o1, o2, osh = obounds[basekey]
             
         # A parameter group should only be added once.
-        if (o1, o2) in used:
-            continue
+        # if (o1, o2) in used:
+        #     continue
         
         if o2 - o1 == 1:
             oshape = 1
         else:
             oshape = result[okey].shape
             
-        used.add((o1, o2))
+        #used.add((o1, o2))
         for ikey in arg:
             
             idx = None

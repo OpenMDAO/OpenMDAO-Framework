@@ -643,7 +643,8 @@ class SequentialWorkflow(Workflow):
             in_edges = nx.edge_boundary(dgraph, 
                                         set(dgraph.nodes()).difference(allnodes))
             
-            pa_inputs = edges_to_dict(in_edges).values()
+            #pa_inputs = edges_to_dict(in_edges).values()
+            pa_inputs = set([b for a, b in in_edges])
             pa_outputs = set([a for a, b in out_edges])
                         
             # Create the pseudoassy
@@ -686,8 +687,9 @@ class SequentialWorkflow(Workflow):
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
         
-        if self._edges == None:
-            self._edges = edges_to_dict(self.derivative_graph().list_connections())
+        #if self._edges == None:
+        self._edges = None
+        self._edges = edges_to_dict(self.derivative_graph().list_connections())
             
         return self._edges
         
