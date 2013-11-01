@@ -646,7 +646,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x[0]']))
+        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x']))
         self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
         self.assertEqual(len(edges), 5)
         
