@@ -643,10 +643,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         edges = top.driver.workflow._edges
         print edges
         self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x[0]']))
-        self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
+        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x[0]']))
+        self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
         self.assertEqual(len(edges), 5)
         
     def test_nested(self):
@@ -1673,7 +1673,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], -4.5, .001)
         
         top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(fd=True)
+        J = top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
         assert_rel_error(self, J[1, 0], 1.0, .001)

@@ -5,7 +5,7 @@ from openmdao.main.ndepgraph import DependencyGraph, is_nested_node, base_var, \
                                     find_all_connecting, nodes_matching_all, \
                                     nodes_matching_some, edges_matching_all, \
                                     edges_matching_some, get_inner_edges, \
-                                    _get_inner_edges, edges_to_dict, mod_for_derivs, \
+                                    _get_inner_edges, edges_to_dict, \
                                     _dfs_connections
 
 def fullpaths(cname, names):
@@ -277,8 +277,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
         self.assertEqual(edict['B.d'], ['C.a'])
         
-        mod_for_derivs(dep, ['A.a'], ['C.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['C.c'])
         self.assertEqual(set(edict['A.d']), set(['B.a','B.b']))
         self.assertEqual(edict['B.d'], ['C.a'])
         self.assertEqual(edict['@in0'], ['A.a'])
@@ -300,8 +299,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a','b'],
                                  outputs=['c','d'])
 
-        mod_for_derivs(dep,  ['A.a'], ['P0.c', 'P1.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0', '@out1'])
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c', 'P1.c'])
         self.assertEqual(set(edict['A.d']), set(['B.a[2]', 'P1.b[2]']))
         self.assertEqual(set(edict['A.c']), set(['B.a[1]', 'P1.b[1]', 'P0.b']))
         self.assertEqual(edict['@in0'], ['A.a'])
@@ -599,8 +597,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['A.a'], ['B.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['B.c'])
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['A.c'], ['B.a'])
         self.assertEqual(edict['B.c'], ['@out0'])
@@ -612,8 +609,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['A.a'], ['B.a'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['B.a'])
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(set(edict['A.c']), set(['@out0', 'B.a']))
         self.assertEqual(len(edict), 2)
@@ -624,8 +620,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a'), ('B.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['A.a'], ['P0.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'])
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(set(edict['A.c']), set(['P0.a', 'B.a']))
         self.assertEqual(edict['P0.c'], ['@out0'])
@@ -637,8 +632,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['A.a'], ['P0.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'])
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['P0.c'], ['@out0'])
         self.assertEqual(set(edict['A.c[1]']), set(['P0.a[1]', 'B.a[1]']))
@@ -651,8 +645,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a[2]', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['A.a'], ['P0.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'])
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['P0.c'], ['@out0'])
         self.assertEqual(set(edict['A.c[1]']), set(['B.a[1]']))
@@ -667,8 +660,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('a', 'C1.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        mod_for_derivs(dep, ['a[2]'], ['C1.c'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['a[2]'], ['C1.c'])
         self.assertEqual(edict['@in0'], ['C1.a[2]'])
         self.assertEqual(edict['C1.c'], ['@out0'])
         self.assertEqual(len(edict), 2)
@@ -682,8 +674,7 @@ class DepGraphTestCase(unittest.TestCase):
                                               ('C2.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c', 'd'])
-        mod_for_derivs(dep,['C1.a'], ['P0.d'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['C1.a'], ['P0.d'])
         self.assertEqual(edict['@in0'], ['C1.a'])
         self.assertEqual(set(edict['C1.c']), set(['P0.a[1]', 'C2.a[1]']))
         self.assertEqual(set(edict['C1.d']), set(['P0.a[2]', 'C2.a[2]']))
@@ -699,8 +690,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a'],
                                  outputs=['c', 'd'])
         dep.add_subvar('C1.a[2]')
-        mod_for_derivs(dep,['C1.a[2]'], ['P0.d'])
-        edict = get_inner_edges(dep, ['@in0'], ['@out0'])
+        edict = get_inner_edges(dep, ['C1.a[2]'], ['P0.d'])
         self.assertEqual(edict['@in0'], ['P0.a[2]', 'C1.a[2]'])
         self.assertEqual(set(edict['P0.d']), set(['@out0']))
         self.assertEqual(len(edict), 2)

@@ -18,7 +18,7 @@ try:
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, zeros, \
+    from openmdao.main.numpy_fallback import ndarray, zeros, \
                                              ones
 
 

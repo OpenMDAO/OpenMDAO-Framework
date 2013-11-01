@@ -630,18 +630,26 @@ class DependencyGraph(nx.DiGraph):
         nodes associated with the starting node.
         """
         bunch = []
+        ndot = node+'.'
+        nbrack = node+'['
+        
         if direction != 'in':
             succ = self.successors(node)
             bunch.extend(succ)
             for s in succ:
                 bunch.extend(self.successors_iter(s))
+                
         if direction != 'out':
             pred = self.predecessors(node)
             bunch.extend(pred)
             for p in pred:
                 bunch.extend(self.predecessors_iter(p))
-        ndot = node+'.'
-        nbrack = node+'['
+                # it's possible for some input basevars to have subvars thar are
+                # sucessors instead of predecessors
+                for succ in self.successors_iter(p):
+                    if succ not in bunch:
+                        bunch.append(succ)
+                
         return [n for n in bunch if n.startswith(ndot)
                                  or n.startswith(nbrack)]
 
@@ -1111,7 +1119,7 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_inner_edges(graph, srcs, dests):
+def get_inner_edges(graph, srcs, dests, copy=True):
     """Return a dict containing all connections in the graph
     between the sources and the destinations, in the following
     form:
@@ -1121,17 +1129,24 @@ def get_inner_edges(graph, srcs, dests):
     For sources that are actually inputs, the source will be replaced
     with the source of the input. 
 
+    if copy is True, an internal copy of the graph will be
+    modified and used to determine the edges. If False,
+    the specified graph will be modified in place.
+
     """
 
-    flat_srcs = []
-    for s in srcs:
-        if isinstance(s, basestring):
-            flat_srcs.append(s)
-        else:
-            for ss in s:
-                flat_srcs.append(ss)
+    if copy:
+        # make a copy of the graph with special input and output
+        # edges added for derivative calcs
+        graph = graph.subgraph(graph.nodes())
 
-    edges = _get_inner_edges(graph, flat_srcs, dests)
+    # add @in and @out nodes, rewire input srcs, etc.
+    mod_for_derivs(graph, srcs, dests)
+
+    #edges = _get_inner_edges(graph, flatten_list_of_tups(srcs), dests)
+    edges = _get_inner_edges(graph, 
+                             ['@in%d' % i for i in range(len(srcs))],
+                             ['@out%d' % i for i in range(len(dests))])
     new_edges = []
     new_sub_edges = []
 
@@ -1196,7 +1211,7 @@ def mod_for_derivs(graph, inputs, outputs):
             varnames = list(varnames)
         for varname in varnames:
             if varname not in graph:  # must be a subvar
-                graph.add_node(varname, base=base_var(graph, varname), iotype='in', valid=True)
+                graph.add_node(varname, basevar=base_var(graph, varname), iotype='in', valid=True)
             graph.connect(None, iname, varname,
                           check=False, invalidate=False)
             indct[varname] = iname
@@ -1211,7 +1226,7 @@ def mod_for_derivs(graph, inputs, outputs):
             varnames = list(varnames)
         for varname in varnames:
             if varname not in graph:
-                graph.add_node(varname, base_var(graph, varname), base=base_var(graph, varname), iotype='out', valid=False)
+                graph.add_node(varname, basevar=base_var(graph, varname), iotype='out', valid=False)
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
@@ -1350,3 +1365,12 @@ def dump_valid(graph, filter=None, stream=None):
             continue
         dct[node] = graph.node[node]['valid']
     pprint.pprint(dct, stream=stream)
+
+
+def flatten_list_of_tups(lst):
+    for entry in lst:
+        if isinstance(entry, basestring):
+            yield entry
+        else:
+            for n in entry:
+                yield n

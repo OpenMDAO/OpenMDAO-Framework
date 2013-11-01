@@ -17,8 +17,10 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
-                                    get_inner_edges, is_basevar_node, \
-                                    edge_dict_to_comp_list, mod_for_derivs
+                                    get_inner_edges, is_basevar_node, is_boundary_node, \
+                                    edge_dict_to_comp_list, flatten_list_of_tups, \
+                                    is_input_base_node, is_output_base_node, \
+                                    is_subvar_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -204,16 +206,28 @@ class SequentialWorkflow(Workflow):
         """
         nEdge = 0
         dgraph = self.derivative_graph()
-        
+        if 'mapped_inputs' in dgraph.graph:
+            inputs = dgraph.graph['mapped_inputs']
+            outputs = dgraph.graph['mapped_outputs']
+        else:
+            inputs = dgraph.graph['inputs']
+            outputs = dgraph.graph['outputs']
+            
         basevars = set()
         for src, targets in self.edge_list().iteritems():
             
+            if not isinstance(targets, list):
+                targets = [targets]
+                
             # Only need to grab the source (or first target for param) to
             # figure out the size for the residual vector
             if '@in' in src:
-                src = targets
-                if isinstance(src, list):
-                    src = src[0]
+                # idx = int(src[3:])
+                # if inputs[idx][0] in dgraph:
+                #     src = inputs[idx][0]
+                # else:
+                src = targets[0]
+                targets = targets[1:]
                 
             if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
                 base, _, idx = src.partition('[')
@@ -229,9 +243,6 @@ class SequentialWorkflow(Workflow):
             self.set_bounds(src, bound)
             basevars.add(src)
             
-            if not isinstance(targets, list):
-                targets = [targets]
-                
             # Putting the metadata in the targets makes life easier later on
             for target in targets:
                 if '@out' not in target:
@@ -478,24 +489,36 @@ class SequentialWorkflow(Workflow):
                     self.scope.raise_exception(msg, RuntimeError)
     
             graph = self.scope._depgraph
-            graph = graph.subgraph(graph.nodes_iter()) # copy the graph, sharing metadata
 
-            mod_for_derivs(graph, inputs, outputs)
+            # make a copy of the graph because it will be
+            # modified by get_inner_edges
+            graph = graph.subgraph(graph.nodes())
 
-            inames = ['@in%d' % i for i in range(len(inputs))]
-            onames = ['@out%d' % i for i in range(len(outputs))]
+            edges = get_inner_edges(graph, inputs, outputs, copy=False)
+            #comps = edge_dict_to_comp_list(graph, edges)
             
-            edges = get_inner_edges(graph, inames, onames)
-            comps = edge_dict_to_comp_list(graph, edges)
+            # make sure we get any boundary vars involved in
+            # the derivatives in addition to all of the comps
+            nodes = set()
+            for src,dests in edges.items():
+                #if src[0] != '@':
+                nodes.add(src.split('.', 1)[0].split('[',1)[0])
+                nodes.update([dest.split('.', 1)[0].split('[',1)[0] 
+                                    for dest in dests if dest[0] != '@'])
+
+            nodes.update([i.split('.',1)[0].split('[',1)[0] 
+                                 for i in flatten_list_of_tups(inputs)])
+            nodes.update([o.split('.',1)[0].split('[',1)[0] 
+                                 for o in flatten_list_of_tups(outputs)])
             
-            dgraph = graph.full_subgraph(comps.keys()+inames+onames)
+            dgraph = graph.full_subgraph(nodes)
             
-            # We want our graph metadata to be stored in the copy, but not in the
+            # We want our top level graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.
             dgraph.graph = {}
             
-            dgraph.graph['inputs'] = inputs
-            dgraph.graph['outputs'] = outputs
+            dgraph.graph['inputs'] = inputs[:]
+            dgraph.graph['outputs'] = outputs[:]
                 
             self._derivative_graph = dgraph
             self._group_nondifferentiables(fd, severed)
@@ -529,11 +552,14 @@ class SequentialWorkflow(Workflow):
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
+        nondiff_map = {}
         
         # Full model finite-difference, so all components go in the PA
         if fd == True:
             nondiff_groups = [comps]
-            
+            for c in comps:
+                nondiff_map[c] = 0
+
         # Find the non-differentiable components
         else:
             for name in comps:
@@ -551,16 +577,40 @@ class SequentialWorkflow(Workflow):
             nondiff_groups = []
             sub = cgraph.subgraph(nondiff)
             nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-            for item in nd_graphs:
-                nondiff_groups.append(item.nodes())
+            for i, item in enumerate(nd_graphs):
+                inodes = item.nodes()
+                nondiff_groups.append(inodes)
+                nondiff_map.update([(n,i) for n in inodes])
                 
-        dgraph.graph['mapped_inputs'] = copy.copy(dgraph.graph['inputs'])
-        dgraph.graph['mapped_outputs'] = copy.copy(dgraph.graph['outputs'])
         meta_inputs = dgraph.graph['inputs']
         meta_outputs = dgraph.graph['outputs']
-        map_inputs = dgraph.graph['mapped_inputs']
-        map_outputs = dgraph.graph['mapped_outputs']
+        map_inputs = meta_inputs[:]
+        map_outputs = meta_outputs[:]
+        dgraph.graph['mapped_inputs'] = map_inputs
+        dgraph.graph['mapped_outputs'] = map_outputs
         
+        
+       # Add requested params that point to boundary vars
+        for i, varpath in enumerate(meta_inputs):
+            if not isinstance(varpath, tuple):
+                varpath = [varpath]
+                
+            mapped = []
+            for path in varpath:
+                compname, _, varname = path.partition('.')
+                if varname and (compname in nondiff_map):
+                    mapped.append(to_PA_var(path, '~~%d' % nondiff_map[compname]))
+                else:
+                    mapped.append(path)  # keep old value in that spot
+            
+            map_inputs[i] = tuple(mapped)
+            
+        # Add requested outputs
+        for i, varpath in enumerate(meta_outputs):
+            compname, _, varname = varpath.partition('.')
+            if varname and (compname in nondiff_map):
+                map_outputs[i] = to_PA_var(varpath, '~~%d' % nondiff_map[compname])
+
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
             
@@ -573,27 +623,21 @@ class SequentialWorkflow(Workflow):
             pa_inputs = [b for a, b in in_edges]
             pa_outputs = [a for a, b in out_edges]
             
-            # Add requested params
-            for i, varpath in enumerate(meta_inputs):
+            # Add any pa inputs from params
+            for varpath in meta_inputs:
                 if not isinstance(varpath, tuple):
                     varpath = [varpath]
                     
-                mapped = []
                 for path in varpath:
                     compname, _, varname = path.partition('.')
-                    if varname and (compname in group):
+                    if varname and nondiff_map.get(compname, -1) == j:
                         pa_inputs.append(path)
-                        mapped.append(to_PA_var(path, pa_name))
-                
-                if mapped:                      
-                    map_inputs[i] = tuple(mapped)
-                
-            # Add requested outputs
-            for i, varpath in enumerate(meta_outputs):
+                                
+            # Add requested pa outputs
+            for varpath in meta_outputs:
                 compname, _, varname = varpath.partition('.')
-                if varname and (compname in group):
+                if varname and nondiff_map.get(compname, -1) == j:
                     pa_outputs.append(varpath)
-                    map_outputs[i] = to_PA_var(varpath, pa_name)
                         
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
@@ -606,35 +650,57 @@ class SequentialWorkflow(Workflow):
             dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
                             pseudo='assembly', valid=True)
             
+            renames = {}
             # Add pseudoassy inputs
-            for varpath in pa_inputs:
+            for varpath in pa_inputs+pa_outputs:
                 varname = to_PA_var(varpath, pa_name)
-                dgraph.add_node(varname, var=True, iotype='in', valid=True)
-                dgraph.add_edge(varname, pa_name)
+                if varpath in dgraph:
+                    renames[varpath] = varname
+                    if is_subvar_node(dgraph, varpath):
+                        renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
+                                                                       pa_name)
+                #dgraph.add_node(varname, var=True, iotype='in', valid=True)
                 
             # Add pseudoassy outputs
-            for varpath in pa_outputs:
-                varname = to_PA_var(varpath, pa_name)
-                if is_basevar_node(dgraph, varpath):
-                    iotype = dgraph.node[varpath]['iotype']
-                else: # subvar
-                    base = base_var(dgraph, varpath)
-                    iotype = dgraph.node[base]['iotype']
-                dgraph.add_node(varname, var=True, iotype=iotype, valid=True)
-                if iotype == 'out':
-                    dgraph.add_edge(pa_name, varname)
+            # for varpath in pa_outputs:
+            #     varname = to_PA_var(varpath, pa_name)
+            #     renames[varpath] = varname
+            #     if is_subvar_node(dgraph, varpath):
+            #         renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
+            #                                                       pa_name)
+                #if is_basevar_node(dgraph, varpath):
+                    #iotype = dgraph.node[varpath]['iotype']
+                #else: # subvar
+                    #base = base_var(dgraph, varpath)
+                    #iotype = dgraph.node[base]['iotype']
+                #dgraph.add_node(varname, var=True, iotype=iotype, valid=True)
+                #if iotype == 'out':
+                    #dgraph.add_edge(pa_name, varname)
+                #else:
+                    #dgraph.add_edge(varname, pa_name)
+
+            nx.relabel_nodes(dgraph, renames, copy=False)
+            
+            for oldname,newname in renames.items():
+                if is_subvar_node(dgraph, newname):
+                    dgraph.node[newname]['basevar'] = to_PA_var(dgraph.node[newname]['basevar'], pa_name)
+                if is_input_base_node(dgraph, newname):
+                    dgraph.add_edge(newname, pa_name)
+                elif is_output_base_node(dgraph, newname):
+                    dgraph.add_edge(pa_name, newname)
+                        
             
             # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
                 
-            # Hook up the pseudoassemblies
-            for src, dst in in_edges:
-                dst = to_PA_var(dst, pa_name)
-                dgraph.add_edge(src, dst, conn=True)
+            ## Hook up the pseudoassemblies
+            #for src, dst in in_edges:
+                #dst = to_PA_var(dst, pa_name)
+                #dgraph.add_edge(src, dst, conn=True)
                 
-            for src, dst in out_edges:
-                src = to_PA_var(src, pa_name)
-                dgraph.add_edge(src, dst, conn=True)
+            #for src, dst in out_edges:
+                #src = to_PA_var(src, pa_name)
+                #dgraph.add_edge(src, dst, conn=True)
             
             #print pseudo.name, pseudo.comps, pseudo.inputs, pseudo.outputs
         
@@ -653,7 +719,8 @@ class SequentialWorkflow(Workflow):
                 inputs = 'inputs'
                 outputs = 'outputs'
                 
-            self._edges = get_inner_edges(dgraph, dgraph.graph[inputs],
+            self._edges = get_inner_edges(dgraph, 
+                                          dgraph.graph[inputs],
                                           dgraph.graph[outputs])
             
         return self._edges
@@ -718,7 +785,7 @@ class SequentialWorkflow(Workflow):
             self._edges = None
             self._upscoped = False
             
-        dgraph = self.derivative_graph(inputs, outputs, mode=='fd')
+        dgraph = self.derivative_graph(inputs, outputs, fd=(mode=='fd'))
         
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
@@ -910,4 +977,5 @@ class SequentialWorkflow(Workflow):
 
         if close_stream:
             stream.close()
+
 
