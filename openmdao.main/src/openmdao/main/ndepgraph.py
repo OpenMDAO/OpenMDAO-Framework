@@ -1143,54 +1143,8 @@ def get_inner_edges(graph, srcs, dests, copy=True):
     # add @in and @out nodes, rewire input srcs, etc.
     mod_for_derivs(graph, srcs, dests)
 
-    #edges = _get_inner_edges(graph, flatten_list_of_tups(srcs), dests)
-    edges = _get_inner_edges(graph, 
-                             ['@in%d' % i for i in range(len(srcs))],
-                             ['@out%d' % i for i in range(len(dests))])
-    new_edges = []
-    new_sub_edges = []
-
-    for src, dest in edges:
-        if is_input_node(graph, src):            
-            if src[0] == '@':
-                if not is_boundary_node(graph, base_var(graph, dest)):
-                    new_edges.append((src, dest))
-                continue
-            
-            if is_basevar_node(graph, src):
-                subs = graph._all_child_vars(src, direction='in')
-                if not subs:
-                    newsrc = graph.predecessors(src)[0] # must be (only) one predecessor in this case
-                    if is_basevar_node(graph, newsrc):
-                        new_edges.append((newsrc, dest))
-                    else:
-                        new_sub_edges.append((newsrc, dest))      
-            else:
-                subs = [src]
-            
-            # if we have an input source basevar that has multiple inputs (subvars)
-            # then we have to create fake subvars at the destination to store
-            # derivative related metadata
-            for sub in subs:
-                preds = graph.predecessors(sub)
-                newsrc = None
-                for p in preds:
-                    if base_var(graph, sub) != p:
-                        newsrc = p
-                        break
-                if newsrc is None:
-                    continue
-                if is_basevar_node(graph, newsrc):
-                    new_edges.append((newsrc, sub.replace(src, dest, 1)))
-                else:
-                    new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
-        else:
-            if is_subvar_node(graph, src):
-                new_sub_edges.append((src, dest))
-            else:
-                new_edges.append((src, dest))
-
-    edges = new_edges + new_sub_edges
+    # sort edges by src so that basevars occur before subvars
+    edges = sorted(graph.list_connections(), key=lambda e: e[0])
     edge_dct = edges_to_dict(edges)
 
     return edge_dct
@@ -1243,6 +1197,87 @@ def mod_for_derivs(graph, inputs, outputs):
                     graph.add_subvar(newsub)
                     graph.add_edge(newsub, dest, conn=True)
                     graph.remove_edge(src, dest)
+
+    edges = _get_inner_edges(graph, 
+                             ['@in%d' % i for i in range(len(inputs))],
+                             ['@out%d' % i for i in range(len(outputs))])
+
+    to_remove = set()
+    for src, dest in edges:
+        if src[0] == '@':
+            # move edges from input boundary nodes if they're
+            # connected to an @in node
+            base_dest = base_var(graph, dest)
+            if is_boundary_node(graph, base_dest):
+                if base_dest == dest: # dest is a basevar
+                    newsrc = src
+                else: # dest is a subvar
+                    newsrc = dest.replace(base_dest, src)
+                for s, d in graph.edges(dest):
+                    graph.add_edge(newsrc, d, attr_dict=graph.edge[s][d])
+                    to_remove.add((s,d))
+                to_remove.add((src, dest))
+                #new_edges.append((src, dest))
+            continue
+
+        if is_input_node(graph, src):            
+            
+            if is_basevar_node(graph, src):
+                subs = graph._all_child_vars(src, direction='in')
+                if not subs:
+                    preds = graph.predecessors(src)
+                    if preds:
+                        newsrc = preds[0]
+                        graph.add_edge(newsrc, dest, attr_dict=graph.edge[src][dest])
+                        to_remove.add((src, dest))
+                    # if is_basevar_node(graph, newsrc):
+                    #     new_edges.append((newsrc, dest))
+                    # else:
+                    #     new_sub_edges.append((newsrc, dest))  
+                    continue    
+            else:
+                subs = [src]
+            
+            # if we have an input source basevar that has multiple inputs (subvars)
+            # then we have to create fake subvars at the destination to store
+            # derivative related metadata
+            for sub in subs:
+                preds = graph.predecessors(sub)
+                newsrc = None
+                for p in preds:
+                    if base_var(graph, sub) != p:
+                        newsrc = p
+                        break
+                if newsrc is None:
+                    continue
+                graph.add_edge(newsrc, sub.replace(src, dest, 1), 
+                               attr_dict=graph.edge[src][dest])
+
+            to_remove.add((src, dest))
+
+                # if is_basevar_node(graph, newsrc):
+                #     new_edges.append((newsrc, sub.replace(src, dest, 1)))
+                # else:
+                #     new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
+        else:
+            base = base_var(graph, src)
+            if is_boundary_node(graph, base):
+                to_remove.add(src, dest)
+        #     if is_subvar_node(graph, src):
+        #         new_sub_edges.append((src, dest))
+        #     else:
+        #         new_edges.append((src, dest))
+
+    #edges = new_edges + new_sub_edges
+    
+    # get rid of any left over boundary connections
+    for s, d in graph.list_connections():
+        sbase = base_var(graph, s)
+        dbase = base_var(graph, d)
+        if is_boundary_node(graph, sbase) or is_boundary_node(graph, dbase):
+            to_remove.add((s,d))
+
+    graph.remove_edges_from(to_remove)
 
     return graph
     

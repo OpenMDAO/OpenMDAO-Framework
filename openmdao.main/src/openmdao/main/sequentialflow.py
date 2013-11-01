@@ -20,7 +20,7 @@ from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
                                     get_inner_edges, is_basevar_node, is_boundary_node, \
                                     edge_dict_to_comp_list, flatten_list_of_tups, \
                                     is_input_base_node, is_output_base_node, \
-                                    is_subvar_node
+                                    is_subvar_node, edges_to_dict
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -222,12 +222,12 @@ class SequentialWorkflow(Workflow):
             # Only need to grab the source (or first target for param) to
             # figure out the size for the residual vector
             if '@in' in src:
-                # idx = int(src[3:])
-                # if inputs[idx][0] in dgraph:
-                #     src = inputs[idx][0]
-                # else:
-                src = targets[0]
-                targets = targets[1:]
+                idx = int(src[3:])
+                if inputs[idx][0] in dgraph:
+                    src = inputs[idx][0]
+                else:
+                    src = targets[0]
+                    targets = targets[1:]
                 
             if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
                 base, _, idx = src.partition('[')
@@ -504,7 +504,7 @@ class SequentialWorkflow(Workflow):
                 #if src[0] != '@':
                 nodes.add(src.split('.', 1)[0].split('[',1)[0])
                 nodes.update([dest.split('.', 1)[0].split('[',1)[0] 
-                                    for dest in dests if dest[0] != '@'])
+                                    for dest in dests]) # if dest[0] != '@'])
 
             nodes.update([i.split('.',1)[0].split('[',1)[0] 
                                  for i in flatten_list_of_tups(inputs)])
@@ -719,9 +719,10 @@ class SequentialWorkflow(Workflow):
                 inputs = 'inputs'
                 outputs = 'outputs'
                 
-            self._edges = get_inner_edges(dgraph, 
-                                          dgraph.graph[inputs],
-                                          dgraph.graph[outputs])
+            #self._edges = get_inner_edges(dgraph, 
+                                          #dgraph.graph[inputs],
+                                          #dgraph.graph[outputs])
+            self._edges = edges_to_dict(dgraph.list_connections())
             
         return self._edges
         
