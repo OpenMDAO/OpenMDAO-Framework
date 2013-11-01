@@ -615,7 +615,7 @@ class SequentialWorkflow(Workflow):
         
        # Add requested params that point to boundary vars
         for i, varpath in enumerate(meta_inputs):
-            if not isinstance(varpath, tuple):
+            if isinstance(varpath, basestring):
                 varpath = [varpath]
                 
             mapped = []
@@ -767,7 +767,7 @@ class SequentialWorkflow(Workflow):
         for item in inputs:
             
             # For parameter groups, only size the first
-            if isinstance(item, tuple):
+            if not isinstance(item, basestring):
                 item = item[0]
                 
             i1, i2 = self.get_bounds(item)
