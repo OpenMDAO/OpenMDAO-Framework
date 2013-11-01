@@ -518,6 +518,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'], 
                                               outputs=[obj], 
                                               mode='fd')
+        graph = top.driver.workflow._derivative_graph
+        pseudo = graph.node['~~0']['pa_object']
+        self.assertTrue( isinstance(pseudo.inputs, tuple) )
+        self.assertEqual(set(pseudo.inputs[0]), set(['comp1.x', 'pseudo_0.in1']))
+        self.assertEqual(set(pseudo.outputs), set(['pseudo_0.out0']))
+        
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         
         top.driver.run()
