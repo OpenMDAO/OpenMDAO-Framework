@@ -370,7 +370,7 @@ class SequentialWorkflow(Workflow):
                 #inputs = applyMinv(comp, inputs)
             
             applyJ(comp, inputs, outputs)
-            #print inputs, outputs
+            print inputs, outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
@@ -437,7 +437,7 @@ class SequentialWorkflow(Workflow):
                 inputs = applyMinvT(comp, inputs)
             
             applyJT(comp, inputs, outputs)
-            #print inputs, outputs
+            print inputs, outputs
             
             for varname in comp_inputs+comp_outputs:
                 node = '%s.%s' % (compname, varname)
