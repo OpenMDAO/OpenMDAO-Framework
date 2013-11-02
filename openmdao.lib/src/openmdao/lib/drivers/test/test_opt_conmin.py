@@ -147,12 +147,12 @@ class CONMINdriverTestCase(unittest.TestCase):
                          self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
-                         self.top.comp.x[2], 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
         cases = self.top.driver.recorders[0].get_iterator()
         end_case = cases[-1]
@@ -180,16 +180,16 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[2], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
     def test_opt1_flippedconstraints(self):
         self.top.driver.add_objective('10*comp.result')
@@ -350,16 +350,16 @@ class TestCase1D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[2], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
     def test_openmdao_gradient(self):
         # Run with 1D parameter and OpenMDAO gradient.
@@ -367,16 +367,16 @@ class TestCase1D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[2], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
 
 class TestCase2D(unittest.TestCase):
@@ -422,16 +422,16 @@ class TestCase2D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x[0][0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[0][1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[1][0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[1][1], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[0][1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[1][0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[1][1], 0.05)
 
 
 class TestCaseMixed(unittest.TestCase):
@@ -477,16 +477,16 @@ class TestCaseMixed(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
                                self.top.comp.x0, places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x12[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x12[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x3, places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x12[0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x12[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x3, 0.05)
 
 
 if __name__ == "__main__":

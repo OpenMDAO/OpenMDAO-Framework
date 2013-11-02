@@ -2204,7 +2204,9 @@ class Testcase_preconditioning(unittest.TestCase):
         print J
         
         top.driver.workflow.config_changed()
+        top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
+        print J
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
         assert_rel_error(self, J[0, 1], -7.0, 0.0001)
         assert_rel_error(self, J[0, 2], 0.0, 0.0001)

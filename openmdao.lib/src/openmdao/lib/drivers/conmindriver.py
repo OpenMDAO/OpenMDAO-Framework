@@ -395,7 +395,7 @@ class CONMINdriver(Driver):
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
-
+                
                 # Run the model for this step
                 super(CONMINdriver, self).run_iteration()
 
@@ -409,16 +409,20 @@ class CONMINdriver(Driver):
             #self._logger.debug('constraints = %s' % self.constraint_vals)
 
         # calculate gradient of constraints and gradient of objective
-        # We also have to determine which constrints are active/violated, and
+        # We also have to determine which constraints are active/violated, and
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
 
+            # Sometimes, CONMIN wants the derivatives at a different point.
+            self.set_parameters(self.design_vals[:-2])
+            super(CONMINdriver, self).run_iteration()
+            
             inputs = self.list_param_group_targets()
             obj = self.list_objective_targets()
             con = self.list_ineq_constraint_targets()
 
             J = self.workflow.calc_gradient(inputs, obj + con)
-
+            
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].ravel()
 

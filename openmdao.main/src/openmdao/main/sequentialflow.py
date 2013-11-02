@@ -19,7 +19,7 @@ from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
                                     get_inner_edges, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_tups, \
                                     is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict
+                                    is_subvar_node, edges_to_dict, is_boundary_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -215,40 +215,61 @@ class SequentialWorkflow(Workflow):
         basevars = set()
         for src, targets in self.edge_list().iteritems():
             
-            if not isinstance(targets, list):
+            if isinstance(targets, str):
                 targets = [targets]
                 
             # Only need to grab the source (or first target for param) to
             # figure out the size for the residual vector
+            measure_src = src
             if '@in' in src:
-                idx = int(src[3:])
+                idx = int(src[3:].split('[')[0])
                 if inputs[idx][0] in dgraph:
-                    src = inputs[idx][0]
+                    measure_src = inputs[idx][0]
                 else:
-                    src = targets[0]
-                    targets = targets[1:]
+                    measure_src = targets[0]
                 
+            # Find out our width, etc
+            unmap_src = from_PA_var(measure_src)
+            val = self.scope.get(unmap_src)
+            width = flattened_size(unmap_src, val, self.scope)            
+            if isinstance(val, ndarray):
+                shape = val.shape
+            else:
+                shape = 1
+        
+            # Special poke for boundary node
+            if is_boundary_node(dgraph, measure_src) or \
+               is_boundary_node(dgraph, base_var(dgraph, measure_src)):
+                bound = (nEdge, nEdge+width)
+                self.set_bounds(measure_src, bound)
+                 
+            # Poke our source data
             if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
-                base, _, idx = src.partition('[')
-                offset, _ = self.get_bounds(base)
-                shape = self.scope.get(base).shape
+                basevar = base_var(dgraph, src)
+                _, _, idx = src.partition('[')
+                basebound = self.get_bounds(basevar)
+                if not '@in' in basevar:
+                    unmap_src = from_PA_var(basevar)
+                    val = self.scope.get(unmap_src)
+                    shape = val.shape
+                offset = basebound[0]
                 istring, ix = flatten_slice(idx, shape, offset=offset, name='ix')
                 bound = (istring, ix)
+                # Already allocated
+                width = 0
             else:
-                val = self.scope.get(from_PA_var(src))
-                width = flattened_size(from_PA_var(src), val, self.scope)
                 bound = (nEdge, nEdge+width)
                 
             self.set_bounds(src, bound)
             basevars.add(src)
             
-            # Putting the metadata in the targets makes life easier later on
+            # Poke our target data
             for target in targets:
-                if '@out' not in target:
-                    self.set_bounds(target, bound)
-                    
+                self.set_bounds(target, bound)
+            
+            ##print input_src, src, target, bound,      
             nEdge += width
-
+                
         # Initialize the residual vector on the first time through, and also
         # if for some reason the number of edges has changed.
         if self.res is None or nEdge != self.res.shape[0]:
@@ -369,7 +390,7 @@ class SequentialWorkflow(Workflow):
                 #inputs = applyMinv(comp, inputs)
             
             applyJ(comp, inputs, outputs)
-            print inputs, outputs
+            #print inputs, outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
@@ -432,11 +453,13 @@ class SequentialWorkflow(Workflow):
                 comp = self.scope.get(compname)
             
             # Preconditioning
+            print inputs
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
+            print inputs
             
             applyJT(comp, inputs, outputs)
-            print inputs, outputs
+            #print inputs, outputs
             
             for varname in comp_inputs+comp_outputs:
                 node = '%s.%s' % (compname, varname)
@@ -643,8 +666,10 @@ class SequentialWorkflow(Workflow):
                                         set(dgraph.nodes()).difference(allnodes))
             
             #pa_inputs = edges_to_dict(in_edges).values()
-            pa_inputs = set([b for a, b in in_edges])
-            pa_outputs = set([a for a, b in out_edges])
+            #pa_inputs = set([b for a, b in in_edges])
+            #pa_outputs = set([a for a, b in out_edges])
+            pa_inputs = edges_to_dict(in_edges).values()
+            pa_outputs = set([a for a, b in out_edges])            
                         
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)

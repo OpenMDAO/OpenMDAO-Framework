@@ -137,6 +137,49 @@ class CyclicWorkflow(SequentialWorkflow):
        
         return self._workflow_graph
     
+    def initialize_residual(self):
+        """Creates the array that stores the residual. Also returns the
+        number of edges.
+        """
+        
+        dgraph = self.derivative_graph()
+        
+        # We need to map any of our edges if they are in a
+        # pseudo-assy
+        comps = edge_dict_to_comp_list(dgraph, self.edge_list())
+        pa_keys = [name for name in comps if '~' in name]
+        
+        if len(pa_keys) == 0:
+            self._mapped_severed_edges = self._severed_edges
+        else:
+            self._mapped_severed_edges = []
+            for src, target in self._severed_edges:
+                
+                compname, _, varname = src.partition('.')
+                for pa_key in pa_keys:
+                    pseudo = dgraph.node[pa_key]['pa_object']
+                    if src in pseudo.outputs:
+                        src = to_PA_var(src, pseudo.name)
+                        break
+            
+                compname, _, varname = target.partition('.')
+                for pa_key in pa_keys:
+                    pseudo = dgraph.node[pa_key]['pa_object']
+                    flat_inputs = set()
+                    for item in pseudo.inputs:
+                        subset = set(item)
+                        flat_inputs = flat_inputs.union(subset)
+                    
+                    if target in flat_inputs:
+                        target = to_PA_var(target, pseudo.name)
+                        break
+                        
+                self._mapped_severed_edges.append((src, target))
+                
+        return super(CyclicWorkflow, self).initialize_residual()
+                
+        
+        
     def derivative_graph(self, inputs=None, outputs=None, fd=False):
         """Returns the local graph that we use for derivatives. For cyclic flows,
         we need to sever edges and use them as inputs/outputs.
@@ -156,34 +199,16 @@ class CyclicWorkflow(SequentialWorkflow):
             super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
                                                          self._severed_edges)
             
-            # We need to map any of our edges if they are in a
-            # pseudo-assy
-            dgraph = self._derivative_graph
-            comps = edge_dict_to_comp_list(dgraph, self.edge_list())
-            pa_keys = [name for name in comps if '~' in name]
+        return self._derivative_graph
             
-            if len(pa_keys) == 0:
-                self._mapped_severed_edges = self._severed_edges
-            else:
-                self._mapped_severed_edges = []
-                for src, target in self._severed_edges:
-                    
-                    compname, _, varname = src.partition('.')
-                    for pa_key in pa_keys:
-                        pseudo = dgraph.node[pa_key]['pa_object']
-                        if src in pseudo.outputs:
-                            src = to_PA_var(src, pseudo.name)
-                            break
-                
-                    compname, _, varname = target.partition('.')
-                    for pa_key in pa_keys:
-                        pseudo = dgraph.node[pa_key]['pa_object']
-                        if target in pseudo.inputs:
-                            target = to_PA_var(target, pseudo.name)
-                            break
-                            
-                    self._mapped_severed_edges.append((src, target))
-                    
+    def edge_list(self):
+        """ Return the list of edges for the derivatives of this workflow. """
+        
+        self._edges = super(CyclicWorkflow, self).edge_list()
+        
+        # TODO: Shouldn't have to do this everytime.
+        if len(self._mapped_severed_edges) > 0:
+            
             cyclic_edges = OrderedDict()
             for edge in self._mapped_severed_edges:
                 cyclic_edges[edge[0]] = edge[1]
@@ -202,17 +227,8 @@ class CyclicWorkflow(SequentialWorkflow):
                     
                     if len(newtargets) > 0:
                         cyclic_edges[src] = newtargets
-            
-            self._edges = cyclic_edges
-                
-        return self._derivative_graph
-            
-    def edge_list(self):
-        """ Return the list of edges for the derivatives of this workflow. """
         
-        if self._edges == None:
-            
-            super(CyclicWorkflow, self).edge_list()
+            self._edges = cyclic_edges
             
         return self._edges
 

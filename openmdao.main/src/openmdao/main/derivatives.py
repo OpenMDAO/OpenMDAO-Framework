@@ -256,7 +256,7 @@ def applyJ(obj, arg, result):
         else:
             oshape = result[okey].shape
             
-        #used = set()
+        used = set()
         for ikey in arg:
             if ikey in result:
                 continue
@@ -264,21 +264,22 @@ def applyJ(obj, arg, result):
             idx = None
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
+                if (i1, i2) in used:
+                    continue
+                used.add((i1, i2))
             else:
                 basekey, _, idx = ikey.partition('[')
                 i1, i2, ish = ibounds[basekey]
+                if (i1, i2, idx) in used or (i1, i2) in used:
+                    continue
+                used.add((i1, i2, idx))
 
-            # A parameter group should only be added once.
-            # if (i1, i2) in used:
-            #     continue
-            
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             
             tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
-            #used.add((i1, i2))
                         
     #print 'applyJ', arg, result
 
@@ -330,7 +331,7 @@ def applyJT(obj, arg, result):
     # need to find the start and end index of each input and output. 
     obounds, ibounds = get_bounds(obj, input_keys, output_keys)
     
-    #used = set()
+    used = set()
     for okey in result:
         if okey in arg:
             continue
@@ -338,20 +339,21 @@ def applyJT(obj, arg, result):
         odx = None
         if okey in obounds:
             o1, o2, osh = obounds[okey]
+            if (o1, o2) in used:
+                continue
+            used.add((o1, o2))
         else:
             basekey, _, odx = okey.partition('[')
             o1, o2, osh = obounds[basekey]
-            
-        # A parameter group should only be added once.
-        # if (o1, o2) in used:
-        #     continue
+            if (o1, o2, odx) in used or (o1, o2) in used:
+                continue
+            used.add((o1, o2, odx))
         
         if o2 - o1 == 1:
             oshape = 1
         else:
             oshape = result[okey].shape
             
-        #used.add((o1, o2))
         for ikey in arg:
             
             idx = None
@@ -653,7 +655,7 @@ class FiniteDifference(object):
             else:
                 self.scope.set(src, new_val, force=True)
                 
-        print self.J
+        #print self.J
         return self.J
 
     def get_inputs(self, x):
