@@ -213,7 +213,11 @@ class SequentialWorkflow(Workflow):
             outputs = dgraph.graph['outputs']
             
         basevars = set()
-        for src, targets in self.edge_list().iteritems():
+        edges = self.edge_list()
+        # TODO = these are not sorted right
+        sortedkeys = sorted(self.edge_list().keys())
+        for src in sortedkeys:
+            targets = edges[src]
             
             if isinstance(targets, str):
                 targets = [targets]
@@ -417,7 +421,8 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
+        dgraph = self._derivative_graph
+        comps = edge_dict_to_comp_list(dgraph, self._edges)
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -430,7 +435,14 @@ class SequentialWorkflow(Workflow):
             outputs = {}
             
             for varname in comp_outputs:
+                
                 node = '%s.%s' % (compname, varname)
+                
+                if is_subvar_node(dgraph, node):
+                    if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
+                        print node, comp_outputs
+                        continue
+                    
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
@@ -438,14 +450,17 @@ class SequentialWorkflow(Workflow):
                 else:
                     inputs[varname] = arg[i1:i2].copy()
                     outputs[varname] = zeros(i2-i1)
-            
+                    
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
+                
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
                     outputs[varname] = zeros(len(i1))
                 else:
                     outputs[varname] = zeros(i2-i1)
+                
+            allvars = outputs.keys()
                 
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -453,15 +468,13 @@ class SequentialWorkflow(Workflow):
                 comp = self.scope.get(compname)
             
             # Preconditioning
-            print inputs
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
-            print inputs
             
             applyJT(comp, inputs, outputs)
             #print inputs, outputs
             
-            for varname in comp_inputs+comp_outputs:
+            for varname in allvars:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
