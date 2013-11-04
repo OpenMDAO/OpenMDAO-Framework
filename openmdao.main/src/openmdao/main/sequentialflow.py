@@ -441,7 +441,6 @@ class SequentialWorkflow(Workflow):
                 # Ouputs define unique edges, so don't duplicate anything
                 if is_subvar_node(dgraph, node):
                     if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
-                        print node, comp_outputs
                         continue
                     
                 i1, i2 = self.get_bounds(node)
