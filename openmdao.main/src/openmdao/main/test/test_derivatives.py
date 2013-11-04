@@ -2250,6 +2250,36 @@ class Testcase_preconditioning(unittest.TestCase):
         assert_rel_error(self, J[1, 0], 2457.0, 0.0001)
         assert_rel_error(self, J[1, 1], -82.0, 0.0001)
 
+
+class TestMultiDriver(unittest.TestCase): 
+
+    def test_nested_driver(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', SimpleComp())
+        top.add('driver', SimpleDriver())
+        top.add('inner_driver', SimpleDriver())
+        top.add('target', Float(3.0, iotype='in'))
+        
+        top.driver.workflow.add('inner_driver')
+        top.driver.add_parameter('target', low=-100, high=100)
+        top.driver.add_objective('target + comp.x + comp.y')
+        
+        top.inner_driver.workflow.add('comp')
+        top.inner_driver.add_parameter('comp.x', low=-100, high=100)
+        top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
+        
+        top.run()
+        top.inner_driver.workflow.initialize_residual()
+        #J = top.inner_driver.workflow.calc_gradient()
+        edges = top.inner_driver.workflow._edges
+        print edges
+        print top.inner_driver.list_objective_targets()
+        self.assertEqual(set(edges['comp.y']), set(['_pseudo_1.in0']))
+        self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
+        self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
+        self.assertEqual(len(edges), 3)
+
 if __name__ == '__main__':
     import nose
     import sys

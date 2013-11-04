@@ -190,5 +190,13 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
+
+class TestMultiDriver(unittest.TestCase): 
+
+    def test_nested_driver(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp', S
+        
 if __name__ == "__main__": 
     unittest.main()
