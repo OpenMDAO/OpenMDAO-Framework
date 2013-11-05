@@ -303,6 +303,9 @@ class Case(object):
                             self.msg = str(err)
                         else:
                             self.msg = self.msg + " %s" % err
+
+        case.timestamp = time.time()
+
         if last_excpt is not None:
             raise last_excpt
             
