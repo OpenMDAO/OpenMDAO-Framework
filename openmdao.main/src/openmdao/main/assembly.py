@@ -734,6 +734,10 @@ class Assembly(Component):
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
 
+        #self.J_input_keys = required_inputs[:]
+        #self.J_output_keys = required_outputs[:]
+        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
+    
         # Sub-assembly sourced
         input_keys = []
         output_keys = []
@@ -741,7 +745,7 @@ class Assembly(Component):
         # Parent-assembly sourced
         self.J_input_keys = []
         self.J_output_keys = []
-        
+       
         for src in required_inputs:
             varname, _, tail = src.partition('[')
             target = self._depgraph.successors(varname)
@@ -749,15 +753,15 @@ class Assembly(Component):
                 target = self._depgraph.successors(src)
                 if len(target) == 0:
                     continue
-                
+               
             # If array slice, only ask the assembly to calculate the
             # elements we need.
             if '[' in src and '[' not in target[0]:
                 target = ['%s[%s' % (targ, tail) for targ in target]
-                
+               
             input_keys.append(tuple(target))
             self.J_input_keys.append(src)
-                
+               
         for target in required_outputs:
             varname, _, tail = target.partition('[')
             src = self._depgraph.predecessors(varname)
@@ -765,14 +769,14 @@ class Assembly(Component):
                 src = self._depgraph.get_sources(target)
                 if len(src) == 0:
                     continue
-                
+               
             src = src[0]
-            
+           
             # If array slice, only ask the assembly to calculate the
             # elements we need.
             if '[' in target and '[' not in src:
                 src = '%s[%s' % (src, tail)
-                
+               
             output_keys.append(src)
             self.J_output_keys.append(target)
 

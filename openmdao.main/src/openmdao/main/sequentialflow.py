@@ -428,6 +428,8 @@ class SequentialWorkflow(Workflow):
         # We can call applyJ on each component one-at-a-time, and poke the
         # results into the result vector.
         for compname, data in comps.iteritems():
+            if compname == '@sink':
+                continue
             
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
@@ -441,7 +443,7 @@ class SequentialWorkflow(Workflow):
                 # Ouputs define unique edges, so don't duplicate anything
                 if is_subvar_node(dgraph, node):
                     if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
-                        print node, comp_outputs
+                        #print node, comp_outputs
                         continue
                     
                 i1, i2 = self.get_bounds(node)
@@ -556,21 +558,22 @@ class SequentialWorkflow(Workflow):
             edges = get_inner_edges(graph, inputs, outputs, copy=False)
             #comps = edge_dict_to_comp_list(graph, edges)
             
-            # make sure we get any boundary vars involved in
-            # the derivatives in addition to all of the comps
-            nodes = set()
-            for src,dests in edges.items():
-                #if src[0] != '@':
-                nodes.add(src.split('.', 1)[0].split('[',1)[0])
-                nodes.update([dest.split('.', 1)[0].split('[',1)[0] 
-                                    for dest in dests]) # if dest[0] != '@'])
+            ## make sure we get any boundary vars involved in
+            ## the derivatives in addition to all of the comps
+            #nodes = set()
+            #for src,dests in edges.items():
+                ##if src[0] != '@':
+                #nodes.add(src.split('.', 1)[0].split('[',1)[0])
+                #nodes.update([dest.split('.', 1)[0].split('[',1)[0] 
+                                    #for dest in dests]) # if dest[0] != '@'])
 
-            nodes.update([i.split('.',1)[0].split('[',1)[0] 
-                                 for i in flatten_list_of_tups(inputs)])
-            nodes.update([o.split('.',1)[0].split('[',1)[0] 
-                                 for o in flatten_list_of_tups(outputs)])
+            #nodes.update([i.split('.',1)[0].split('[',1)[0] 
+                                 #for i in flatten_list_of_tups(inputs)])
+            #nodes.update([o.split('.',1)[0].split('[',1)[0] 
+                                 #for o in flatten_list_of_tups(outputs)])
             
-            dgraph = graph.full_subgraph(nodes)
+            #dgraph = graph.full_subgraph(nodes)
+            dgraph = graph
             
             # We want our top level graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.
@@ -747,6 +750,8 @@ class SequentialWorkflow(Workflow):
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
+            elif compname == '@sink':
+                continue
             else:
                 node = self.scope.get(compname)
 
