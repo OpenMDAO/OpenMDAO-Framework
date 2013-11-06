@@ -1435,9 +1435,12 @@ def flatten_list_of_iters(lst):
     any sub-lists or sub-tuples.  NOTE: this only
     goes down one level.
     """
-    for entry in lst:
-        if isinstance(entry, basestring):
-            yield entry
-        else:
-            for n in entry:
-                yield n
+    if isinstance(lst, basestring):
+        yield lst
+    else:
+        for entry in lst:
+            if isinstance(entry, basestring):
+                yield entry
+            else:
+                for n in entry:
+                    yield n
