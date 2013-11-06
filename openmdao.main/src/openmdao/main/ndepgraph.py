@@ -7,6 +7,7 @@ import networkx as nx
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.util.nameutil import partition_names_by_comp
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -107,7 +108,7 @@ def is_output_base_node(graph, node):
     return graph.node[node].get('iotype') == 'out'
 
 def is_boundary_node(graph, node):
-    return 'boundary' in graph.node[node]
+    return 'boundary' in graph.node.get(node, '')
 
 def is_boundary_input_node(graph, node):
     return is_boundary_node(graph, node) and is_input_node(graph, node)
@@ -1147,8 +1148,9 @@ def get_inner_edges(graph, srcs, dests, copy=True):
     return edge_dct
 
 def mod_for_derivs(graph, inputs, outputs):
-    # Inputs and outputs introduce subvars that aren't in the
-    # parent graph, so they need to be added.
+    """Adds needed nodes and connections to the given graph
+    for use in derivative calculations.
+    """
     indct = {}
     inames = []
     onames = []
@@ -1181,6 +1183,23 @@ def mod_for_derivs(graph, inputs, outputs):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
+    edges = _get_inner_edges(graph, 
+                             ['@in%d' % i for i in range(len(inputs))],
+                             ['@out%d' % i for i in range(len(outputs))])
+    
+    comps = partition_names_by_comp([e[0] for e in edges])
+    comps = partition_names_by_comp([e[1] for e in edges], compmap=comps)
+    
+    full = [k for k in comps.keys() if k]
+    if None in comps:
+        full.extend([v.split('[')[0] for v in comps[None]])
+        
+    subgraph = graph.full_subgraph(full)
+    
+    to_remove = [n for n in graph.nodes_iter() if n not in subgraph]
+            
+    graph.remove_nodes_from(to_remove)
+
     # if we have destinations connected to subvars of a basevar
     # that's a destination of a parameter, then we have to 
     # create a new edge from a new subvar of the parameter to
@@ -1195,13 +1214,9 @@ def mod_for_derivs(graph, inputs, outputs):
                     graph.add_edge(newsub, dest, conn=True)
                     graph.remove_edge(src, dest)
 
-    edges = _get_inner_edges(graph, 
-                             ['@in%d' % i for i in range(len(inputs))],
-                             ['@out%d' % i for i in range(len(outputs))])
-
     to_remove = set()
     for src, dest in edges:
-        if src[0] == '@':
+        if src.startswith('@in'):
             # move edges from input boundary nodes if they're
             # connected to an @in node
             base_dest = base_var(graph, dest)
@@ -1209,12 +1224,41 @@ def mod_for_derivs(graph, inputs, outputs):
                 if base_dest == dest: # dest is a basevar
                     newsrc = src
                 else: # dest is a subvar
-                    newsrc = dest.replace(base_dest, src)
+                    if graph.out_degree(base_dest) > 0:
+                        for s in graph.successors(base_dest):
+                            if base_var(graph, s) != base_dest:
+                                newdest = dest.replace(base_dest, s, 1)
+                                if newdest not in graph:
+                                    graph.add_subvar(newdest)
+                                graph.add_edge(src, newdest, conn=1)
+                        newsrc = src
+                    else:
+                        newsrc = dest.replace(base_dest, base_var(graph, src), 1)
+                    if newsrc not in graph:
+                        graph.add_subvar(newsrc)
                 for s, d in graph.edges(dest):
                     graph.add_edge(newsrc, d, attr_dict=graph.edge[s][d])
                     to_remove.add((s,d))
                 to_remove.add((src, dest))
-                #new_edges.append((src, dest))
+            continue
+        elif dest.startswith('@out') and not is_input_node(graph, src):
+            # move edges from output boundary nodes if they're
+            # connected to an @out node
+            base_src = base_var(graph, src)
+            if is_boundary_node(graph, base_src):
+                for pred in graph.predecessors(base_src):
+                    if not base_src == base_var(graph, pred): # it's not one of our subvars
+                        break
+                else:
+                    continue  # FIXME: not sure what to really do here.
+                if base_src == src: # src is a basevar
+                    newsrc = pred
+                else: # src is a subvar
+                    newsrc = src.replace(base_src, base_var(graph, pred), 1)
+                    if newsrc not in graph:
+                        graph.add_subvar(newsrc)
+                graph.add_edge(newsrc, dest, conn=True)
+                to_remove.add((src, dest))
             continue
 
         if is_input_node(graph, src):            
@@ -1227,10 +1271,6 @@ def mod_for_derivs(graph, inputs, outputs):
                         newsrc = preds[0]
                         graph.add_edge(newsrc, dest, attr_dict=graph.edge[src][dest])
                         to_remove.add((src, dest))
-                    # if is_basevar_node(graph, newsrc):
-                    #     new_edges.append((newsrc, dest))
-                    # else:
-                    #     new_sub_edges.append((newsrc, dest))  
                     continue    
             else:
                 subs = [src]
@@ -1252,20 +1292,10 @@ def mod_for_derivs(graph, inputs, outputs):
 
             to_remove.add((src, dest))
 
-                # if is_basevar_node(graph, newsrc):
-                #     new_edges.append((newsrc, sub.replace(src, dest, 1)))
-                # else:
-                #     new_sub_edges.append((newsrc, sub.replace(src, dest, 1)))
         else:
             base = base_var(graph, src)
             if is_boundary_node(graph, base):
-                to_remove.add(src, dest)
-        #     if is_subvar_node(graph, src):
-        #         new_sub_edges.append((src, dest))
-        #     else:
-        #         new_edges.append((src, dest))
-
-    #edges = new_edges + new_sub_edges
+                to_remove.add((src, dest))
     
     # get rid of any left over boundary connections
     for s, d in graph.list_connections():
@@ -1275,6 +1305,15 @@ def mod_for_derivs(graph, inputs, outputs):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
+    
+    # disconnected boundary vars that are explicitly specified as inputs
+    # need to be added back so that bounds data can be kept for them
+    for inp in flatten_list_of_tups(inputs):
+        if inp not in graph:
+            if '@sink' not in graph:
+                graph.add_node('@sink')
+            graph.add_node(inp)
+            graph.add_edge(inp, '@sink', conn=True)
 
     return graph
     

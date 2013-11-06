@@ -80,7 +80,7 @@ class Testcase_provideJ(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test. """
-        pass
+        pcompmod._count = 0
 
     def tearDown(self):
         """ Called after each test. """
@@ -422,7 +422,7 @@ class GComp_noD(Component):
     x2 = Float(1.0, iotype='in')
     x3 = Float(1.0, iotype='in')
     
-    y1 = Float(1.0, iotype='in')
+    y1 = Float(1.0, iotype='out')
     
     def execute(self):
         
@@ -432,7 +432,7 @@ class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
     
     def setUp(self):
-        pcompmod._count = 0
+        pcompmod._count = 0 # keep pseudocomp names consistent
 
     def test_first_derivative(self):
         
@@ -1696,7 +1696,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.add_constraint('target + 2.0*comp.f_xy - 4.5*atarget[1] < 0')
         
         top.run()
-        
+                
         J = top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 7.0, .001)
         assert_rel_error(self, J[0, 1], -3.5, .001)
@@ -1902,6 +1902,9 @@ class Comp2_array(Component):
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
+    def setUp(self):
+        pcompmod._count = 0
+        
     def test_applyJ_and_applyJT(self):
         
         comp = Comp2()
@@ -2097,6 +2100,9 @@ class PreCompArray(Component):
 class Testcase_preconditioning(unittest.TestCase):
     """ Unit test for applyMinv and applyMinvT """
 
+    def setUp(self):
+        pcompmod._count = 0
+        
     def test_simple(self):
         
         top = set_as_top(Assembly())
@@ -2253,6 +2259,9 @@ class Testcase_preconditioning(unittest.TestCase):
 
 class TestMultiDriver(unittest.TestCase): 
 
+    def setUp(self):
+        pcompmod._count = 0
+        
     def test_nested_driver(self):
         
         top = set_as_top(Assembly())
