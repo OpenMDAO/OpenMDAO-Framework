@@ -15,7 +15,6 @@ from pkg_resources import resource_stream
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver, convert_units
 from openmdao.main.datatypes.api import Float, Str
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IHasParameters, IHasObjectives, \
