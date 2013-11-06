@@ -875,13 +875,13 @@ class SequentialWorkflow(Workflow):
         if inputs is None:
             if hasattr(self._parent, 'list_param_group_targets'):
                 inputs = self._parent.list_param_group_targets()
-		input_refs = []
-		for item in inputs:
-		    if len(item) < 2:
-			input_refs.append(item[0])
-		    else:
-			input_refs.append(item)
-	    # Should be caught in calc_gradient()
+                input_refs = []
+                for item in inputs:
+                    if len(item) < 2:
+                        input_refs.append(item[0])
+                    else:
+                        input_refs.append(item)
+            # Should be caught in calc_gradient()
             else:  # pragma no cover
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
