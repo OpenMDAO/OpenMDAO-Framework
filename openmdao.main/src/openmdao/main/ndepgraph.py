@@ -82,6 +82,7 @@ def _sub_or_super(s1, s2):
 # EDGES:
 #   conn    means that the edge is a connection that was specified
 #           by calling connect()
+#   fake    edge is artificial and doesn't represent a real data connection
 
 
 # NODE selectors
@@ -1144,6 +1145,14 @@ def mod_for_derivs(graph, inputs, outputs, scope):
                 graph.add_node(varname, basevar=base_var(graph, varname), iotype='out', valid=False)
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
+
+    ## add fake edges between workflow comps and their driver
+    #for node in graph.nodes_iter():
+    #    if is_driver_node(graph, node):
+     #       drv = getattr(scope, node)
+     #       for comp in drv.workflow.get_names(full=False):
+     #           graph.add_edge(comp, node, fake=True)
+     #           #graph.add_edge(node, comp.name, fake=True)
 
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))],

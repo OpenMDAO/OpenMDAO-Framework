@@ -4,8 +4,6 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.interfaces import IDriver
-from openmdao.main.mp_support import has_interface
 from openmdao.main.ndepgraph import base_var
 
 try:

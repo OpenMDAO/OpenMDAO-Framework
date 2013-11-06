@@ -35,7 +35,7 @@ class PseudoAssembly(object):
         self.mapped_inputs = []
         for varpath in self.inputs:
             if isinstance(varpath, basestring):
-                 val = to_PA_var(varpath, name).partition('.')[2]
+                val = to_PA_var(varpath, name).partition('.')[2]
             else:
                 val = tuple([to_PA_var(vp, name).partition('.')[2]
                              for vp in varpath])

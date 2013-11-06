@@ -2282,8 +2282,8 @@ class TestMultiDriver(unittest.TestCase):
         top.inner_driver.workflow.initialize_residual()
         #J = top.inner_driver.workflow.calc_gradient()
         edges = top.inner_driver.workflow._edges
-        print edges
-        print top.inner_driver.list_objective_targets()
+        #print edges
+        #print top.inner_driver.list_objective_targets()
         self.assertEqual(set(edges['comp.y']), set(['_pseudo_1.in0']))
         self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))

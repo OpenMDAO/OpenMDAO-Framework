@@ -710,8 +710,6 @@ class SequentialWorkflow(Workflow):
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
         
-        #if self._edges == None:
-        self._edges = None
         self._edges = edges_to_dict(self.derivative_graph().list_connections())
             
         return self._edges
