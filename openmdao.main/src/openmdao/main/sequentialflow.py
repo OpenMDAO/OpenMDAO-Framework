@@ -849,7 +849,7 @@ class SequentialWorkflow(Workflow):
             self.scope.raise_exception(msg, RuntimeError)
             
     
-    def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
+    def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (ApplyDer and ProvideJ.)
@@ -873,10 +873,7 @@ class SequentialWorkflow(Workflow):
             close_stream = False
     
         self.config_changed()
-        if adjoint:
-            J = self.calc_gradient(inputs, outputs, mode='adjoint')
-        else:
-            J = self.calc_gradient(inputs, outputs)
+        J = self.calc_gradient(inputs, outputs, mode=mode)
         
         self.config_changed()
         Jbase = self.calc_gradient(inputs, outputs, mode='fd')
@@ -896,8 +893,13 @@ class SequentialWorkflow(Workflow):
         if inputs is None:
             if hasattr(self._parent, 'list_param_group_targets'):
                 inputs = self._parent.list_param_group_targets()
-                input_refs = inputs
-            # Should be caught in calc_gradient()
+		input_refs = []
+		for item in inputs:
+		    if len(item) < 2:
+			input_refs.append(item[0])
+		    else:
+			input_refs.append(item)
+	    # Should be caught in calc_gradient()
             else:  # pragma no cover
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
