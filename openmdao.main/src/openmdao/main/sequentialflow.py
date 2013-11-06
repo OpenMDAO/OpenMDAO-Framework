@@ -726,7 +726,7 @@ class SequentialWorkflow(Workflow):
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
-            elif compname == '@sink':
+            elif compname.startswith('@'):
                 continue
             else:
                 node = self.scope.get(compname)

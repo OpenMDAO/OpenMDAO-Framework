@@ -1287,12 +1287,12 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.add_node(inp)
             graph.add_edge(inp, '@sink', conn=True)
 
-    for out in flatten_list_of_iters(outputs):
-        if out not in graph:
-            if '@src' not in graph:
-                graph.add_node('@src')
-            graph.add_node(out)
-            graph.add_edge('@src', out, conn=True)
+    # for out in flatten_list_of_iters(outputs):
+    #     if out not in graph:
+    #         if '@src' not in graph:
+    #             graph.add_node('@src')
+    #         graph.add_node(out)
+    #         graph.add_edge('@src', out, conn=True)
 
     return graph
     
