@@ -272,8 +272,8 @@ class DependencyGraph(nx.DiGraph):
         self._saved_comp_graph = None
 
     def child_config_changed(self, child):
-        """A child has changed its input or output lists, so
-        we need to update the graph.
+        """A child has changed its input lists and/or output lists, 
+        so we need to update the graph.
         """
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
@@ -1158,11 +1158,7 @@ def mod_for_derivs(graph, inputs, outputs):
         iname = '@in%d' % i
         inames.append(iname)
         graph.add_node(iname, var=True, iotype='in', valid=True)
-        if isinstance(varnames, basestring):
-            varnames = [varnames]
-        else:
-            varnames = list(varnames)
-        for varname in varnames:
+        for varname in flatten_list_of_iters(varnames):
             if varname not in graph:  # must be a subvar
                 graph.add_node(varname, basevar=base_var(graph, varname), iotype='in', valid=True)
             graph.connect(None, iname, varname,
@@ -1173,11 +1169,7 @@ def mod_for_derivs(graph, inputs, outputs):
         oname = '@out%d' % i
         onames.append(oname)
         graph.add_node(oname, var=True, iotype='out', valid=False)
-        if isinstance(varnames, basestring):
-            varnames = [varnames]
-        else:
-            varnames = list(varnames)
-        for varname in varnames:
+        for varname in flatten_list_of_iters(varnames):
             if varname not in graph:
                 graph.add_node(varname, basevar=base_var(graph, varname), iotype='out', valid=False)
             graph.connect(None, varname, oname, 
@@ -1308,7 +1300,7 @@ def mod_for_derivs(graph, inputs, outputs):
     
     # disconnected boundary vars that are explicitly specified as inputs
     # need to be added back so that bounds data can be kept for them
-    for inp in flatten_list_of_tups(inputs):
+    for inp in flatten_list_of_iters(inputs):
         if inp not in graph:
             if '@sink' not in graph:
                 graph.add_node('@sink')
@@ -1438,7 +1430,11 @@ def dump_valid(graph, filter=None, stream=None):
     pprint.pprint(dct, stream=stream)
 
 
-def flatten_list_of_tups(lst):
+def flatten_list_of_iters(lst):
+    """Returns an iterator over a list, flattening
+    any sub-lists or sub-tuples.  NOTE: this only
+    goes down one level.
+    """
     for entry in lst:
         if isinstance(entry, basestring):
             yield entry

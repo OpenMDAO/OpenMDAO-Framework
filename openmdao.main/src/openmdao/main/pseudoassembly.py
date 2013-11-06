@@ -2,7 +2,6 @@
 provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
-from openmdao.main.ndepgraph import flatten_list_of_tups
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''

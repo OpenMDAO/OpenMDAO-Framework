@@ -17,7 +17,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
                                     get_inner_edges, is_basevar_node, \
-                                    edge_dict_to_comp_list, flatten_list_of_tups, \
+                                    edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
                                     is_subvar_node, edges_to_dict, is_boundary_node
 from openmdao.main.interfaces import IDriver
@@ -568,9 +568,9 @@ class SequentialWorkflow(Workflow):
                                     #for dest in dests]) # if dest[0] != '@'])
 
             #nodes.update([i.split('.',1)[0].split('[',1)[0] 
-                                 #for i in flatten_list_of_tups(inputs)])
+                                 #for i in flatten_list_of_iters(inputs)])
             #nodes.update([o.split('.',1)[0].split('[',1)[0] 
-                                 #for o in flatten_list_of_tups(outputs)])
+                                 #for o in flatten_list_of_iters(outputs)])
             
             #dgraph = graph.full_subgraph(nodes)
             dgraph = graph
@@ -701,7 +701,7 @@ class SequentialWorkflow(Workflow):
             
             renames = {}
             # Add pseudoassy inputs
-            for varpath in list(flatten_list_of_tups(pa_inputs)) + list(pa_outputs):
+            for varpath in list(flatten_list_of_iters(pa_inputs)) + list(pa_outputs):
                 varname = to_PA_var(varpath, pa_name)
                 if varpath in dgraph:
                     renames[varpath] = varname
