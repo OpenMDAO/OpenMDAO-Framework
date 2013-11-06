@@ -381,11 +381,11 @@ class SequentialWorkflow(Workflow):
                     inputs[varname] = arg[i1:i2].copy()
                     outputs[varname] = arg[i1:i2].copy()
                 
-                if '~' in compname:
-                    comp = self._derivative_graph.node[compname]['pa_object']
-                else:
-                    comp = self.scope.get(compname)
-            
+            if '~' in compname:
+                comp = self._derivative_graph.node[compname]['pa_object']
+            else:
+                comp = self.scope.get(compname)
+        
             # Preconditioning
             # Currently not implemented in forward mode, mostly because this
             # mode requires post multiplication of the result by the M after
@@ -443,7 +443,6 @@ class SequentialWorkflow(Workflow):
                 # Ouputs define unique edges, so don't duplicate anything
                 if is_subvar_node(dgraph, node):
                     if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
-                        #print node, comp_outputs
                         continue
                     
                 i1, i2 = self.get_bounds(node)
@@ -855,7 +854,7 @@ class SequentialWorkflow(Workflow):
             self.scope.raise_exception(msg, RuntimeError)
             
     
-    def check_gradient(self, inputs=None, outputs=None, stream=None, adjoint=False):
+    def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (ApplyDer and ProvideJ.)
@@ -879,10 +878,7 @@ class SequentialWorkflow(Workflow):
             close_stream = False
     
         self.config_changed()
-        if adjoint:
-            J = self.calc_gradient(inputs, outputs, mode='adjoint')
-        else:
-            J = self.calc_gradient(inputs, outputs)
+        J = self.calc_gradient(inputs, outputs, mode=mode)
         
         self.config_changed()
         Jbase = self.calc_gradient(inputs, outputs, mode='fd')
@@ -900,13 +896,15 @@ class SequentialWorkflow(Workflow):
         # constraints and objectives.
         
         if inputs is None:
-            if hasattr(self._parent, 'get_parameters'):
-                inputs = []
-                input_refs = []
-                for key, param in self._parent.get_parameters().items():
-                    inputs.extend(param.targets)
-                    input_refs.extend([key for t in param.targets])
-            # Should be caught in calc_gradient()
+            if hasattr(self._parent, 'list_param_group_targets'):
+                inputs = self._parent.list_param_group_targets()
+		input_refs = []
+		for item in inputs:
+		    if len(item) < 2:
+			input_refs.append(item[0])
+		    else:
+			input_refs.append(item)
+	    # Should be caught in calc_gradient()
             else:  # pragma no cover
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
@@ -941,8 +939,10 @@ class SequentialWorkflow(Workflow):
             out_width = max(out_width, max([len(out) for out in out_names]))
 
         inp_width = 0
-        for input, iref in zip(inputs, input_refs):
-            inp_val = self.scope.get(input)
+        for input_tup, iref in zip(inputs, input_refs):
+            if isinstance(input_tup, str):
+                input_tup = [input_tup]
+            inp_val = self.scope.get(input_tup[0])
             inp_names = flattened_names(str(iref), inp_val)
             inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
 
@@ -963,8 +963,11 @@ class SequentialWorkflow(Workflow):
             for out_name in flattened_names(oref, out_val):
                 i += 1
                 j = -1
-                for input, iref in zip(inputs, input_refs):
-                    inp_val = self.scope.get(input)
+                for input_tup, iref in zip(inputs, input_refs):
+                    if isinstance(input_tup, str):
+                        input_tup = [input_tup]
+                        
+                    inp_val = self.scope.get(input_tup[0])
                     for inp_name in flattened_names(iref, inp_val):
                         j += 1
                         calc = J[i, j]
