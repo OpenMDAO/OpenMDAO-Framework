@@ -1117,36 +1117,6 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_inner_edges(graph, srcs, dests, copy=True):
-    """Return a dict containing all connections in the graph
-    between the sources and the destinations, in the following
-    form:
-
-        {src1: [dest1], src2: [dest2,dest3], ...}
-
-    For sources that are actually inputs, the source will be replaced
-    with the source of the input. 
-
-    if copy is True, an internal copy of the graph will be
-    modified and used to determine the edges. If False,
-    the specified graph will be modified in place.
-
-    """
-
-    if copy:
-        # make a copy of the graph with special input and output
-        # edges added for derivative calcs
-        graph = graph.subgraph(graph.nodes())
-
-    # add @in and @out nodes, rewire input srcs, etc.
-    mod_for_derivs(graph, srcs, dests)
-
-    # sort edges by src so that basevars occur before subvars
-    edges = sorted(graph.list_connections(), key=lambda e: e[0])
-    edge_dct = edges_to_dict(edges)
-
-    return edge_dct
-
 def mod_for_derivs(graph, inputs, outputs):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.

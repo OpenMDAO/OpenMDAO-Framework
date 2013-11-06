@@ -16,7 +16,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
-                                    get_inner_edges, is_basevar_node, \
+                                    mod_for_derivs, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
                                     is_subvar_node, edges_to_dict, is_boundary_node
@@ -207,10 +207,8 @@ class SequentialWorkflow(Workflow):
         dgraph = self.derivative_graph()
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
-            outputs = dgraph.graph['mapped_outputs']
         else:
             inputs = dgraph.graph['inputs']
-            outputs = dgraph.graph['outputs']
             
         basevars = set()
         edges = self.edge_list()
@@ -551,28 +549,9 @@ class SequentialWorkflow(Workflow):
             graph = self.scope._depgraph
 
             # make a copy of the graph because it will be
-            # modified by get_inner_edges
-            graph = graph.subgraph(graph.nodes())
-
-            edges = get_inner_edges(graph, inputs, outputs, copy=False)
-            #comps = edge_dict_to_comp_list(graph, edges)
-            
-            ## make sure we get any boundary vars involved in
-            ## the derivatives in addition to all of the comps
-            #nodes = set()
-            #for src,dests in edges.items():
-                ##if src[0] != '@':
-                #nodes.add(src.split('.', 1)[0].split('[',1)[0])
-                #nodes.update([dest.split('.', 1)[0].split('[',1)[0] 
-                                    #for dest in dests]) # if dest[0] != '@'])
-
-            #nodes.update([i.split('.',1)[0].split('[',1)[0] 
-                                 #for i in flatten_list_of_iters(inputs)])
-            #nodes.update([o.split('.',1)[0].split('[',1)[0] 
-                                 #for o in flatten_list_of_iters(outputs)])
-            
-            #dgraph = graph.full_subgraph(nodes)
-            dgraph = graph
+            # modified by mod_for_derivs
+            dgraph = graph.subgraph(graph.nodes())
+            mod_for_derivs(dgraph, inputs, outputs)
             
             # We want our top level graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.
