@@ -1117,7 +1117,7 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def mod_for_derivs(graph, inputs, outputs):
+def mod_for_derivs(graph, inputs, outputs, scope):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
@@ -1269,13 +1269,21 @@ def mod_for_derivs(graph, inputs, outputs):
     graph.remove_edges_from(to_remove)
     
     # disconnected boundary vars that are explicitly specified as inputs
-    # need to be added back so that bounds data can be kept for them
+    # or outputs need to be added back so that bounds data can be kept 
+    # for them
     for inp in flatten_list_of_iters(inputs):
         if inp not in graph:
             if '@sink' not in graph:
                 graph.add_node('@sink')
             graph.add_node(inp)
             graph.add_edge(inp, '@sink', conn=True)
+
+    for out in flatten_list_of_iters(outputs):
+        if out not in graph:
+            if '@src' not in graph:
+                graph.add_node('@src')
+            graph.add_node(out)
+            graph.add_edge('@src', out, conn=True)
 
     return graph
     

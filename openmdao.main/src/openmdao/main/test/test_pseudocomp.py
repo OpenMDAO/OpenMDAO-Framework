@@ -72,7 +72,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top = _simple_model(units=False)
         self.assertEqual(set(top._depgraph.component_graph().nodes()),
                          set(['comp1','comp2', 'driver']))
-        self.assertEqual(set(top.driver.workflow_graph().list_connections()),
+        self.assertEqual(set(top._depgraph.list_connections()),
                          set([('comp1.c', 'comp2.a')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
                          set([('comp1.c', 'comp2.a')]))
@@ -83,15 +83,10 @@ class PseudoCompTestCase(unittest.TestCase):
         top = _simple_model()
         self.assertEqual(set(top._depgraph.component_graph().nodes()),
                          set(['comp1','comp2','_pseudo_0', 'driver']))
-        self.assertEqual(set(top.driver.workflow_graph().list_connections()),
+        self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), 
                               ('comp1.c', '_pseudo_0.in0')]))
-        #self.assertEqual(set(top._exprmapper.list_connections()),
-                         #set([('_pseudo_0.out0', 'comp2.a'), 
-                              #('comp1.c', '_pseudo_0.in0'),
-                              #('comp1.c', 'comp2.a')]))
-        #self.assertEqual(set(top._exprmapper.list_connections(visible_only=True)),
-                         #set([('comp1.c', 'comp2.a')]))
+
         self.assertEqual(top._pseudo_0._expr_conn, ('comp1.c*12.0', 'comp2.a'))
         top.comp1.a = 12.
         top.comp1.b = 24.

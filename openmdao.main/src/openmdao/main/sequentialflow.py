@@ -551,7 +551,7 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            mod_for_derivs(dgraph, inputs, outputs)
+            mod_for_derivs(dgraph, inputs, outputs, self.scope)
             
             # We want our top level graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.

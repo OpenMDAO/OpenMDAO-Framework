@@ -52,8 +52,6 @@ class Driver(Component):
         self.workflow = Dataflow(self)
         self.force_execute = True
 
-        # a subgraph of the Assembly's dependency graph
-        self._graph = None
         self._required_compnames = None
 
         # This flag is triggered by adding or removing any parameters,
@@ -370,16 +368,10 @@ class Driver(Component):
         changed.
         """
         super(Driver, self).config_changed(update_parent)
-        self._graph = None  # force later rebuild of dependency graph
         self._required_compnames = None
         self._invalidate()
         if self.workflow is not None:
             self.workflow.config_changed()
-
-    def workflow_graph(self):
-        """Return the dependency graph for the scope of this Driver.
-        """
-        return self.parent._depgraph
 
     def record_case(self):
         """ A driver can call this function to record the current state of the

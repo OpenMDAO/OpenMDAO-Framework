@@ -710,11 +710,6 @@ class Component(Container):
         super(Component, self).remove_trait(name)
         self.config_changed()
 
-        # try:
-        #     del self._valid_dict[name]
-        # except KeyError:
-        #     pass
-
         if trait and trait.iotype == 'in' and trait.trait_type \
            and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
@@ -725,28 +720,6 @@ class Component(Container):
         if self._call_execute or self._exec_state == 'INVALID':
             return False
         return True
-    
-        #    return False
-        # if False in self._valid_dict.values():
-        #     self._call_execute = True
-        #     return False
-        # for node, data in self._depgraph.nodes_iter(data=True):
-        #     if not node.startswith('parent.') and data['valid'] is False:
-        #         return False
-
-        #if self.parent is not None:
-        #    return self.parent._depgraph.node[self.name]['valid']
-        #     srccomps = [n for n, v in self.get_expr_sources()]
-        #     if srccomps:
-        #         counts = self.parent.exec_counts(srccomps)
-        #         for count, tup in zip(counts, self._expr_sources):
-        #             if count != tup[1]:
-        #                 self._call_execute = True  # to avoid making this same check unnecessarily later
-        #                 # update the count information since we've got it, to avoid making another call
-        #                 for i, tup in enumerate(self._expr_sources):
-        #                     self._expr_sources[i] = (tup[0], count)
-        #                 return False
-        #return True
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
