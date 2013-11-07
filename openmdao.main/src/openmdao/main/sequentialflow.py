@@ -627,23 +627,26 @@ class SequentialWorkflow(Workflow):
                                      dgraph.graph['outputs'])
                 
             for edge in inner:
-                for node in edge:
-                    if '.' not in node or node in nondiff:
-                        continue
-                    
-                    # Default differentiable connections
-                    val = self.scope.get(node)
-                    if isinstance (val, (float, ndarray, VariableTree)):
-                        continue
-                    
-                    # Custom differentiable connections
-                    meta = self.scope.get_metadata(node)
-                    if 'data_shape' in meta:
-                        continue
-                    
-                    #Nothing else is differentiable
-                    else:
-                        nondiff.add(node.split('.')[0])
+                src = edge[0]
+                target = edge[1]
+                
+                if '.' not in src:
+                    continue
+                
+                # Default differentiable connections
+                val = self.scope.get(src)
+                if isinstance (val, (float, ndarray, VariableTree)):
+                    continue
+                
+                # Custom differentiable connections
+                meta = self.scope.get_metadata(src)
+                if 'data_shape' in meta:
+                    continue
+                
+                #Nothing else is differentiable
+                else:
+                    nondiff.add(src.split('.')[0])
+                    nondiff.add(target.split('.')[0])
                         
             # Everything is differentiable, so return
             if len(nondiff) == 0:
