@@ -40,6 +40,9 @@ def _test_partial_array_connections(browser):
 
     #array 1d editor - check that implicitly connected elements are disabled
     inputs = props.inputs
+    
+    # Can't single click on an entry you are focused on, so focus on next line, then come back.
+    inputs.rows[1].cells[1].click()
     inputs.rows[0].cells[1].click()
     array_inputs_path = '//*[@id="inArray-editor"]/input'
     cancel_path = '//*[@id="array-edit-inArray-cancel"]'
@@ -65,7 +68,7 @@ def _test_partial_array_connections(browser):
     for array_input in array_inputs:
         eq(array_input.is_enabled(), False)
 
-    browser.find_element_by_xpath(cancel_path).click()
+    #browser.find_element_by_xpath(cancel_path).click()
     props.close()
 
     #array 2d editor - check that implicitly connected elements are disabled
@@ -94,6 +97,8 @@ def _test_partial_array_connections(browser):
     props = paraboloid.properties_page()
 
     inputs = props.inputs
+    # Can't single click on an entry you are focused on, so focus on next line, then come back.
+    inputs.rows[1].cells[1].click()
     inputs.rows[0].cells[1].click()
 
     array_inputs = browser.find_elements_by_xpath(array_inputs_path)
@@ -104,7 +109,7 @@ def _test_partial_array_connections(browser):
         else:
             eq(array_input.is_enabled(), False)
 
-    browser.find_element_by_xpath(cancel_path).click()
+    #browser.find_element_by_xpath(cancel_path).click()
     props.close()
 
     # Clean up.
@@ -129,6 +134,8 @@ def _test_value_editors(browser):
     #edit dictionary - remove 'e', add 'phi', round down 'pi'
     #action_chain = ActionChains(browser)
     #action_chain.double_click(inputs.rows[0].cells[1]).perform()
+    # Can't single click on an entry you are focused on, so focus on next line, then come back.
+    inputs.rows[1].cells[1].click()
     inputs.rows[0].cells[1].click()
 
     pi_value_path = '//*[@id="d-editor"]/input[2]'
