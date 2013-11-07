@@ -1146,13 +1146,22 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    ## add fake edges between workflow comps and their driver
-    #for node in graph.nodes_iter():
+    # # predicate for searching for connections between driver
+    # # outputs and @outs
+    # is_at_out = lambda g,n: n.startswith('@out')
+
+    # # add fake edges between workflow comps and their driver
+    # for node in graph.nodes_iter():
     #    if is_driver_node(graph, node):
-     #       drv = getattr(scope, node)
-     #       for comp in drv.workflow.get_names(full=False):
-     #           graph.add_edge(comp, node, fake=True)
-     #           #graph.add_edge(node, comp.name, fake=True)
+    #        drv = getattr(scope, node)
+    #        # for each connected output of the driver, see if
+    #        # it connects to an @out node downstream
+    #        for dout in drv.list_outputs(connected=True):
+    #             dout = '.'.join([node, dout])
+    #             if bfs_find(graph, dout, is_at_out): # found an @out
+    #                 for comp in drv.workflow.get_names(full=False):
+    #                    graph.add_edge(comp, node, fake=True)
+    #                    #graph.add_edge(node, comp.name, fake=True)
 
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))],
@@ -1431,3 +1440,13 @@ def flatten_list_of_iters(lst):
             else:
                 for n in entry:
                     yield n
+
+def bfs_find(G, source, pred):
+    """Return the first target in BFS order that satisfies 
+    pred(graph, target), or None if no target satisfying 
+    pred is found.
+    """
+    for u, v in bfs_edges(G, source):
+        if pred(G, target):
+            return True
+    return None
