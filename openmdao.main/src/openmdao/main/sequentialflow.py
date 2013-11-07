@@ -614,23 +614,13 @@ class SequentialWorkflow(Workflow):
                     
             # If a connection is non-differentiable, so are its src and 
             # target components.
-            inputs = dgraph.graph['inputs']
-            flat_inputs = []
-            for item in inputs:
-                if isinstance(item, str):
-                    item = [item]
-                for src in item:
-                    flat_inputs.append(src)
-                    
-            inner = _get_inner_edges(dgraph, 
-                                     flat_inputs, 
-                                     dgraph.graph['outputs'])
+            conns = dgraph.list_connections()
                 
-            for edge in inner:
+            for edge in conns:
                 src = edge[0]
                 target = edge[1]
                 
-                if '.' not in src:
+                if '@' in src or '@' in target or '.' not in src:
                     continue
                 
                 # Default differentiable connections
