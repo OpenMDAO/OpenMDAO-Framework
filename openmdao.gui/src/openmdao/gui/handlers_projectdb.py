@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 import cStringIO as StringIO
 import os.path
 import shutil
@@ -255,7 +258,7 @@ class ImportHandler(ReqHandler):
         if not 'projectname' in self.request.arguments:
             # First upload
             sourcefile = self.request.files['projectfile'][0]
-            if sourcefile:
+            try:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
                     unique = _get_unique_name(self.get_project_dir(),
@@ -276,6 +279,11 @@ class ImportHandler(ReqHandler):
                                 projectname=parse_archive_name(unique),
                                 description=project_info['description'],
                                 version=project_info['version'])
+            except Exception as err:
+                print 'ERROR: could not get metadata from', sourcefile
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                self.redirect('/')
         else:
             # second upload
             forms = {}
@@ -284,7 +292,7 @@ class ImportHandler(ReqHandler):
                     forms[field] = self.request.arguments[field][0]
 
             sourcefile = self.request.files['projectfile'][0]
-            if sourcefile:
+            try:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
 
@@ -326,8 +334,11 @@ class ImportHandler(ReqHandler):
                     pdb.new(project)
 
                     self.redirect("/workspace/project?projpath=" + quote_plus(project['projpath']))
-
-        self.redirect("/")
+            except Exception as err:
+                print 'ERROR: could not get import project from', sourcefile
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                self.redirect('/')
 
 
 handlers = [

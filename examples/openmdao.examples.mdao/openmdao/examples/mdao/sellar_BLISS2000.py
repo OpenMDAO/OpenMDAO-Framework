@@ -10,7 +10,6 @@
 
 from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 

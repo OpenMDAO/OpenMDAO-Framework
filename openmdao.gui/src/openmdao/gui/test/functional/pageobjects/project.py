@@ -131,6 +131,23 @@ class ProjectsPage(BasePageObject):
             # there may be more that were previously hidden due to the row limit
             elements = self.browser.find_elements_by_partial_link_text(project_filter)
 
+    def get_project_metadata(self, project_name):
+        self.search_input = project_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_link_text(project_name))
+
+        elements = element.find_elements_by_xpath('../../td')
+
+        metadata = {
+            "name":        elements[0].text,
+            "description": elements[1].text,
+            "version":     elements[2].text,
+            "created":     elements[3].text,
+            "last_saved":  elements[4].text,
+        }
+
+        return metadata
+
 
 class MetadataModal(BootstrapModal):
 

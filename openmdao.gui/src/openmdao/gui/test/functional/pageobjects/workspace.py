@@ -1,6 +1,7 @@
 import logging
 import os.path
 import time
+import sys
 
 from nose.tools import eq_ as eq
 
@@ -411,8 +412,11 @@ class WorkspacePage(BasePageObject):
         for filename in file_paths:
             element = self.find_file(filename)
             chain = ActionChains(self.browser)
-            #FIXME: Mac OSX does not use CONTROL key
-            chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
+            #Mac OSX does not use CONTROL key
+            if sys.platform == 'darwin':
+                chain.key_down(Keys.SHIFT).click(element).key_up(Keys.SHIFT).perform()
+            else:
+                chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         self('files_tab').click()
         self('file_menu').click()
@@ -455,6 +459,14 @@ class WorkspacePage(BasePageObject):
         page = ValuePrompt(self.browser, self.port)
         page.set_value(comment)
         NotifierPage.wait(self)
+
+    def revert_project(self):
+        """ Revert current project. """
+        self('project_menu').click()
+        self('revert_button').click()
+        page = ConfirmationPage(self)
+        page.click_ok()
+        return WorkspacePage.verify(self.browser, self.port)
 
     def reload_project(self):
         """ Reload current project. """

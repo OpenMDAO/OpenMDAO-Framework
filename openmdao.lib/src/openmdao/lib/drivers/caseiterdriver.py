@@ -16,14 +16,11 @@ from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder, ICaseFilter
+from openmdao.main.interfaces import ICaseIterator, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.util.filexfer import filexfer
-
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasparameters import HasParameters
 
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 
@@ -93,6 +90,8 @@ class CaseIterDriverBase(Driver):
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
+
+        self.error_policy = 'ABORT' # var wasn't showing up in parent depgraph without this
 
     def execute(self):
         """
@@ -202,7 +201,7 @@ class CaseIterDriverBase(Driver):
                     egg_info = self.parent.save_to_egg(self.name, version,
                                                     need_requirements=need_reqs)
                 finally:
-                    self.parent.driver = driver
+                    self.parent.add('driver', driver) # need to do add here in order to update parent depgraph
 
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
@@ -449,6 +448,7 @@ class CaseIterDriverBase(Driver):
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
+                case.exc = exc
 
             if case.msg is not None and self.error_policy == 'ABORT':
                 if self._abort_exc is None:
@@ -510,6 +510,7 @@ class CaseIterDriverBase(Driver):
 
     def _start_next_case(self, server, stepping=False):
         """ Look for the next case and start it. """
+
         if self._todo:
             self._logger.debug('    run startup case')
             case, seqno = self._todo.pop(0)
@@ -696,6 +697,7 @@ class CaseIterDriverBase(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
+                self.workflow._parent.update_parameters()
                 self.workflow.run(case_id=self._server_cases[server][0].uuid)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())

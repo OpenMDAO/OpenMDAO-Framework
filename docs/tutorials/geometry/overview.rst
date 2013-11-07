@@ -33,6 +33,7 @@ This will filter down the whole library so you can find things easier. Drag the
 
 .. figure:: library_assembly.png
    :align: center
+   :alt: GUI workspace with top assembly that contains a driver; Library tab on right panel lists two objects
 
    Creating the initial assembly
 
@@ -55,6 +56,7 @@ done, it should look like this:
 
 .. figure:: box_geom.png
    :align: center
+   :alt: GUI workspace with top assembly containing GeomComponent & Run_once driver. Library tab lists 5 objects. A window overlaps workspace and shows a BoxParameterGeometry being dropped into slot.
 
    Dropping BoxParametricGeometry into the slot
    
@@ -66,6 +68,7 @@ window.
 
 .. figure:: box_viewer_1.png
    :align: center
+   :alt: Geometry viewer shows a square box with 3 visible sides, each a different color
 
    Initial box geometry
 
@@ -79,6 +82,7 @@ will  update with the new geometry, and you can see how it got much taller.
 
 .. figure:: box_viewer_2.png
    :align: center
+   :alt: square box from previous figure is now rectangular with much taller (longer) sides
 
    Box with height=10
 

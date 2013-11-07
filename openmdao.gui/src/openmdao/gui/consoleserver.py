@@ -5,6 +5,7 @@ except ImportError:
     import json
 import logging
 import os.path
+from os import utime
 import sys
 import traceback
 
@@ -35,16 +36,38 @@ from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 
-def modifies_model(target):
-    ''' Decorator for methods that may have modified the model;
-        performs maintenance on root level containers/assemblies and
+def modifies_project(target):
+    ''' Decorator for methods that update the project (or might do so)
+        via adding, removing or updating files in the project. This includes
+        the issuing of commands that end up in the default macro file.
+        (TODO: should be able to due this directly through the FileManager)
+
+        Updates the timestamp of the project _settings.cfg file so that
+        it can be used to determine when the project was 'last saved'.
+    '''
+
+    def wrapper(self, *args, **kargs):
+        result = target(self, *args, **kargs)
+        settings_path = self.files._get_abs_path("_settings.cfg")
+
+        with file(settings_path, 'a'):
+            utime(settings_path, None)
+
+        return result
+
+    return wrapper
+
+
+def modifies_state(target):
+    ''' Decorator for methods that modify the session state (or might do so).
+        Performs maintenance on root level containers/assemblies and
         publishes the potentially updated components.
     '''
 
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
-        self._update_workflows()
+        # self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
@@ -52,8 +75,8 @@ def modifies_model(target):
 
 
 class ConsoleServer(cmd.Cmd):
-    ''' Object which knows how to load a model and provides a command line
-        interface and various methods to access and modify that model.
+    ''' Object which knows how to load an OpenMDAO project and provides a
+        command line interface and methods to interact with that project.
     '''
 
     def __init__(self, name='', host='', publish_updates=True):
@@ -96,14 +119,14 @@ class ConsoleServer(cmd.Cmd):
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
-            their own name and that all root assemblies are set as top.
+            their own name and are set as top.
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
-            if is_instance(v, Assembly) and v._call_cpath_updated:
-                set_as_top(v)
+                if v._call_cpath_updated:
+                    set_as_top(v)
 
     def _update_workflows(self):
         ''' Call :meth:`_update_workflow` on drivers to capture any workflow
@@ -173,7 +196,8 @@ class ConsoleServer(cmd.Cmd):
         #self._hist += [line.strip()]
         return line
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def onecmd(self, line):
         self._hist.append(line)
         try:
@@ -230,9 +254,11 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def run(self, pathname, *args, **kwargs):
-        ''' Run `pathname` or the model (i.e., the top assembly).
+        ''' Run the component `pathname`.
+            If no pathname is specified, use `top`.
         '''
         pathname = pathname or 'top'
         if pathname in self.proj:
@@ -247,7 +273,8 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("Execution failed: No %r component was found." %
                               pathname)
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def execfile(self, filename):
         ''' Execfile in server's globals.
         '''
@@ -263,7 +290,7 @@ class ConsoleServer(cmd.Cmd):
         return os.getpid()
 
     def get_project(self):
-        ''' Return the current model as a project archive.
+        ''' Return the current project.
         '''
         return self.proj
 
@@ -312,12 +339,11 @@ class ConsoleServer(cmd.Cmd):
         for k, v in cont.items():
             if is_instance(v, Component):
                 comp = {}
-                if cont is self.proj._model_globals:
+                if cont is self.proj._project_globals:
                     comp['pathname'] = k
-                    children = self._get_components(v, k)
                 else:
                     comp['pathname'] = '.'.join([pathname, k]) if pathname else k
-                    children = self._get_components(v, comp['pathname'])
+                children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
                 comp['type'] = str(v.__class__.__name__)
@@ -331,7 +357,7 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return json.dumps(self._get_components(self.proj._model_globals),
+        return json.dumps(self._get_components(self.proj._project_globals),
                           default=json_default)
 
     def get_connections(self, pathname, src_name, dst_name):
@@ -458,7 +484,7 @@ class ConsoleServer(cmd.Cmd):
         groups = list(keyset - exclset)
         return packagedict(get_available_types(groups))
 
-    @modifies_model
+    @modifies_state
     def load_project(self, projdir):
         ''' Activate the project in the specified directory;
             instantiate a file manager and projdirfactory.
@@ -485,6 +511,7 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
+    @modifies_project
     def commit_project(self, comment=''):
         ''' Save the current project macro and commit to the project repo.
         '''
@@ -498,7 +525,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             self._print_error('No Project to commit')
 
-    @modifies_model
+    @modifies_project
     def revert_project(self, commit_id=None):
         ''' Revert to the most recent commit of the project.
         '''
@@ -537,7 +564,8 @@ class ConsoleServer(cmd.Cmd):
         else:
             self.add_object(pathname, classname, args)
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def add_object(self, pathname, classname, args):
         ''' Add a new object of the given type to the specified parent.
         '''
@@ -559,7 +587,8 @@ class ConsoleServer(cmd.Cmd):
             self._print_error('Error adding object:'
                               ' "%s" is not a valid identifier' % name)
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def replace_object(self, pathname, classname, args=None):
         ''' Replace existing object with object of the given type.
         '''
@@ -601,12 +630,14 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self.files.get_file(filename)
 
+    @modifies_project
     def ensure_dir(self, dirname):
         ''' Create directory
             (does nothing if directory already exists).
         '''
         return self.files.ensure_dir(dirname)
 
+    @modifies_project
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
@@ -614,17 +645,20 @@ class ConsoleServer(cmd.Cmd):
         if not ret is True:
             return ret
 
+    @modifies_project
     def add_file(self, filename, contents):
         ''' Add file.
         '''
         return self.files.add_file(filename, contents)
 
+    @modifies_project
     def delete_file(self, filename):
         ''' Delete file from project.
             Returns False if file was not found; otherwise returns True.
         '''
         return self.files.delete_file(filename)
 
+    @modifies_project
     def rename_file(self, oldpath, newname):
         ''' Rename file.
         '''

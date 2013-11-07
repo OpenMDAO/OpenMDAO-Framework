@@ -40,6 +40,7 @@ class EngineOptimization(Assembly):
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30
+        self.driver.conmin_diff = True
         
         # CONMIN Objective 
         self.driver.add_objective('sim_acc.accel_time')

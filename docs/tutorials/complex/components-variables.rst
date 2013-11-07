@@ -15,12 +15,8 @@ here:
 
 ::
 
-  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign
-
-``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
-contains the Python version and the operating system description. This path will 
-vary depending on your system and version, but there will be only one
-*enginedesign* egg.
+  openmdao-0.8.1\lib\site-packages\openmdao.examples.enginedesign-0.8.1-py2.7-win-32.egg\openmdao\examples\enginedesign
+  
 
 If you are a developer and have a branch from the source repository, the files you need will be
 here:

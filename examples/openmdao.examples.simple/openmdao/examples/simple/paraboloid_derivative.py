@@ -2,6 +2,8 @@
     paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
 """
 
+from numpy import array
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
@@ -17,18 +19,6 @@ class ParaboloidDerivative(Component):
     f_xy = Float(iotype='out', desc='F(x,y)')        
 
         
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
-        
-        super(ParaboloidDerivative, self).__init__()
-
-        self.derivatives.declare_first_derivative('f_xy', 'x')
-        self.derivatives.declare_first_derivative('f_xy', 'y')
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
-
-        
     def execute(self):
         """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
         Optimal solution (minimum): x = 6.6667; y = -7.3333
@@ -38,26 +28,22 @@ class ParaboloidDerivative(Component):
         y = self.y
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
+        
+    def linearize(self):
+        """Caculate the Jacobian"""
         
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
     
-        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        self.J = array([[df_dx, df_dy]])
         
-    def calculate_second_derivatives(self):
-        """Analytical second derivatives"""
+    def provideJ(self):
+        """Provide full Jacobian."""
         
-        df_dxdx = 2.0
-        df_dxdy = 1.0
-        df_dydy = 2.0
+        input_keys = ('x', 'y')
+        output_keys = ('f_xy',)
         
-        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
-        
+        return input_keys, output_keys, self.J
+    
 
 # End paraboloid_derivative.py

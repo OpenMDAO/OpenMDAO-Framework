@@ -150,8 +150,8 @@ tolerance.
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
-        self.solver.max_iteration = 1000
-        self.solver.tolerance = .0001     
+        self.solver.max_iteration = 100
+        self.solver.tolerance = .00001     
 
 Finally, the optimization is set up. We add the objective function as well as the 
 constraints, from the problem formulation, to the driver. The objective function includes 
@@ -224,8 +224,8 @@ Finally, putting it all together gives:
                 # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
                 
                 #Driver settings
-                self.solver.max_iteration = 1000
-                self.solver.tolerance = .0001
+                self.solver.max_iteration = 100
+                self.solver.tolerance = .00001
                 
                 # Optimization parameters
                 self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')

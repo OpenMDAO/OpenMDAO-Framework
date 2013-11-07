@@ -54,21 +54,6 @@ class ArrayTestCase(unittest.TestCase):
         self.assertAlmostEqual(12., self.hobj.arr2[0], 5)
         self.assertAlmostEqual(24., self.hobj.arr2[1], 5)
         self.assertAlmostEqual(36., self.hobj.arr2[2], 5)
-
-    def test_unit_conversion(self):
-        self.hobj.arr1 = [1.,2.,3.]
-        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr1')
-        self.assertAlmostEqual(12., self.hobj.arr2[0])
-        self.assertAlmostEqual(24., self.hobj.arr2[1])
-        self.assertAlmostEqual(36., self.hobj.arr2[2])
-        
-        # unit to unitless
-        self.hobj.add('arr5', Array(iotype='in'))
-        self.hobj.arr5 = [1., 2., 4.]
-        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr5')
-        self.assertAlmostEqual(1., self.hobj.arr2[0])
-        self.assertAlmostEqual(2., self.hobj.arr2[1])
-        self.assertAlmostEqual(4., self.hobj.arr2[2])
         
     def test_bogus_units(self):
         try:
@@ -91,17 +76,6 @@ class ArrayTestCase(unittest.TestCase):
         f1 = Array([3.])
         d1 = f1.default_value/2
         self.assertAlmostEqual(d1[0], 1.5, places=4)
-        
-    def test_bad_connection(self):
-        srcwrapper = self.hobj.get_wrapped_attr('arr2')
-        self.hobj.arr1 = srcwrapper
-        try:
-            self.hobj.arr3 = srcwrapper
-        except Exception, err:
-            self.assertEqual(str(err), 
-                "arr3: units 'inch' are incompatible with assigning units of 'kg'")
-        else:
-            self.fail('Exception expected')
 
     def test_constructor_defaults(self):
         
@@ -169,7 +143,7 @@ class ArrayTestCase(unittest.TestCase):
         
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
-        print input_attrs
+
         self.assertEqual(len(input_attrs), 6)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
@@ -178,7 +152,7 @@ class ArrayTestCase(unittest.TestCase):
                          'value': '[1.0, 2.0, 3.0]',
                          'implicit': '',
                          'connected': '',
-			 'connection_types' : 0,
+                         'connection_types' : 0,
                          'valid': True,
                          'units': 'ft',
                          'array': True,
@@ -191,7 +165,7 @@ class ArrayTestCase(unittest.TestCase):
                          'value': arr3,
                          'implicit': '',
                          'connected': '',
-			 'connection_types' : 0,
+                         'connection_types' : 0,
                          'valid': True,
                          'units': 'kg',
                          'array': True,
@@ -202,7 +176,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr99',
                          'dim': '2, 4',
                          'comparison_mode': 1,
-			 'connection_types' : 0,
+                         'connection_types' : 0,
                          'value': arr99,
                          'implicit': '',
                          'connected': '',
@@ -214,7 +188,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr98',
                          'dim': '2, 4',
                          'comparison_mode': 1,
-			 'connection_types' : 0,
+                         'connection_types' : 0,
                          'value': arr98,
                          'implicit': '',
                          'connected': '',
@@ -229,7 +203,7 @@ class ArrayTestCase(unittest.TestCase):
                          'id': 'arr2',
                          'dim': '2, 2',
                          'comparison_mode': 1,
-			 'connection_types' : 0,
+                         'connection_types' : 0,
                          'value': '[[1.0, 2.0], [3.0, 4.0]]',
                          'implicit': '',
                          'connected': '',

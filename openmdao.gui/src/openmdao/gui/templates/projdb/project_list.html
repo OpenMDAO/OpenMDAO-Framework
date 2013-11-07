@@ -310,8 +310,8 @@
             </td>
             <td>{{ project['description'] }}</td>
             <td>{{ project['version'] }}</td>
-            <td style="white-space:nowrap;">{{ project['created'][:-10] }}</td>
-            <td style="white-space:nowrap;">{{ project['file_modified'][:-3] }}</td>
+            <td style="white-space:nowrap;">{{ project['created'][:-7] }}</td>
+            <td style="white-space:nowrap;">{{ project['file_modified'] }}</td>
             <td style="white-space:nowrap;" width="140" style="padding-right: 0px;">
                 <!-- Button to trigger edit modal -->
                 <a href="/projects/{{ project['id'] }}" role="button" class="btn btn-link" data-toggle="modal"

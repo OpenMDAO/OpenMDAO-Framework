@@ -12,7 +12,6 @@ application.
 import fnmatch
 import os.path
 import string
-import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer

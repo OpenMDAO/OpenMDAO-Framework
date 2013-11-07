@@ -53,12 +53,15 @@ _display = None
 
 _chrome_version = None
 
+
 def check_for_chrome():
     return bool(find_chrome())
+
 
 def broken_chrome():
     """ Some tests are broken with chrome 29. """
     return _chrome_version > 28
+
 
 def setup_chrome():
     """ Initialize the Chrome browser. """
@@ -451,8 +454,8 @@ def startup(browser):
     browser.set_window_position(0, 0)
     browser.set_window_size(1280, 1024)
     projects_page = begin(browser)
-    workspace_page, project_dict = new_project(projects_page.new_project(),
-                                               load_workspace=True)
+    workspace_page, project_dict = random_project(projects_page.new_project(),
+                                                  load_workspace=True)
     return project_dict, workspace_page
 
 
@@ -506,7 +509,7 @@ def submit_metadata(metadata_modal, name, description=None, version=None,
     return workspace_page
 
 
-def new_project(new_project_modal, verify=False, load_workspace=False):
+def random_project(new_project_modal, verify=False, load_workspace=False):
     """
     Creates a randomly-named new project.
     Returns ``(projects_page, info_dict)``

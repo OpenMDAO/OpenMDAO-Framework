@@ -4,7 +4,7 @@ import traceback
 import subprocess
 
 from optparse import OptionParser
-    
+
 import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
@@ -13,6 +13,7 @@ from tornado import httpserver, web, websocket
 
 debug = True
 NAME_SIZE = 256  # this must agree with NAME_SIZE in Model.js
+
 
 def DEBUG(msg):
     if debug:
@@ -35,9 +36,10 @@ def make_unicode(content):
 class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' A handler that forwards output from a ZMQStream to a WebSocket.
     '''
-    
+
     def initialize(self, addr):
         self.addr = addr
+        self.websocket_closed = False
 
     def open(self):
         stream = None
@@ -84,13 +86,19 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 return
 
         # write message to websocket
-        self.write_message(message, binary=binary)
+        if self.websocket_closed:
+            print 'ZMQStreamHandler message received after websocket closed:', message
+        else:
+            try:
+                self.write_message(message, binary=binary)
+            except Exception as err:
+                print 'ZMQStreamHandler ERROR writing message to websocket:', err
 
     def on_message(self, message):
         pass
 
     def on_close(self):
-        pass
+        self.websocket_closed = True
 
 
 class ZMQStreamApp(web.Application):

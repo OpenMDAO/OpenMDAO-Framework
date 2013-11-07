@@ -1,12 +1,50 @@
 
-import weakref
 import ordereddict
 
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
+class Objective(ConnectedExprEvaluator):
+    def __init__(self, *args, **kwargs):
+        super(Objective, self).__init__(*args, **kwargs)
+        self.pcomp_name = None
 
-def _remove_spaces(s):
-    return s.translate(None, ' \n\t\r')
+    def activate(self):
+        """Make this constraint active by creating the appropriate
+        connections in the dependency graph.
+        """
+        if self.pcomp_name is None:
+            pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
+            self.pcomp_name = pseudo.name
+            self.scope.add(pseudo.name, pseudo)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+
+    def deactivate(self):
+        """Remove this objective from the dependency graph and remove
+        its pseudocomp from the scoping object.
+        """
+        if self.pcomp_name:
+            scope = self.scope
+            try:
+                pcomp = getattr(scope, self.pcomp_name)
+            except AttributeError:
+                pass
+            else:
+                pcomp.remove_connections(scope)
+                
+                #KTM1 - So, pcomp has already been deleted from the scope, so
+                #can't getattr it anymore. We still have the obj, so let's
+                #manually finish this up.
+                
+                name = pcomp.name
+                scope.disconnect(name)
+                for obj in scope.__dict__.values():
+                    if obj is not pcomp and hasattr(obj, 'workflow'):
+                        obj.workflow.remove(name)
+                        obj.remove_references(name)
+                            
+            self.pcomp_name = None
+
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
@@ -35,8 +73,6 @@ class HasObjectives(object):
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr, scope=scope)
-            
-        self._parent._invalidate()
 
     def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver. 
@@ -65,27 +101,30 @@ class HasObjectives(object):
                                          "'%s' to driver using name '%s', but name is already used" % (expr,name),
                                          AttributeError)
             
-        expreval = ExprEvaluator(expr, self._get_scope(scope))
-        
+        scope = self._get_scope(scope)
+        expreval = Objective(expr, scope, getter='get_attr')
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
+
+        name = expr if name is None else name
+
+        expreval.activate()
+      
+        self._objectives[name] = expreval
             
-        if name is None:
-            self._objectives[expr] = expreval
-        else:
-            self._objectives[name] = expreval
-            
-        self._parent._invalidate()
+        self._parent.config_changed()
             
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
         the expression are ignored.
         """
         expr = _remove_spaces(expr)
-        try:
+        obj = self._objectives.get(expr)
+        if obj:
+            obj.deactivate()
             del self._objectives[expr]
-        except KeyError:
+        else:
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
@@ -98,8 +137,11 @@ class HasObjectives(object):
         name: string
             Name of component being removed.
         """
-        # Just returning everything for now.
-        return self._objectives.copy()
+        refs = ordereddict.OrderedDict()
+        for oname, obj in self._objectives.items():
+            if name in obj.get_referenced_compnames():
+                refs[oname] = obj
+        return refs
 
     def remove_references(self, name):
         """Remove references to component `name`.
@@ -111,21 +153,14 @@ class HasObjectives(object):
             if name in obj.get_referenced_compnames():
                 self.remove_objective(oname)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
         """
-        # Not exactly safe here...
-        if isinstance(refs, ordereddict.OrderedDict):
-            self._objectives = refs
-        else:
-            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
-                            % refs)
+        for name, obj in self._objectives.items():
+            self.add_objective(str(obj), name, obj.scope)
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
@@ -133,12 +168,30 @@ class HasObjectives(object):
     
     def clear_objectives(self):
         """Removes all objectives."""
-        self._objectives = ordereddict.OrderedDict()
-        self._parent._invalidate()
+        for name in self._objectives.keys():
+            self.remove_objective(name)
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
-        return [obj.evaluate(self._get_scope()) for obj in self._objectives.values()]
+        scope = self._get_scope()
+        objs = []
+        for obj in self._objectives.values():
+            pcomp = getattr(scope, obj.pcomp_name)
+            if not pcomp.is_valid():
+                pcomp.update_outputs(['out0'])
+            objs.append(pcomp.out0)
+        return objs
+
+    def list_pseudocomps(self):
+        """Returns a list of pseudocomponent names associated with our
+        parameters.
+        """
+        return [obj.pcomp_name for obj in self._objectives.values() 
+                      if obj.pcomp_name]
+
+    def list_objective_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+        return ["%s.out0" % obj.pcomp_name for obj in self._objectives.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
@@ -147,7 +200,7 @@ class HasObjectives(object):
         pname = self._parent.name
         conn_list = []
         for obj in self._objectives.values():
-            conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
+            conn_list.extend([(c,pname) for c in obj.get_referenced_compnames()])
         return conn_list
     
     def get_referenced_compnames(self):
@@ -178,15 +231,11 @@ class HasObjectives(object):
             self._parent.raise_exception("This driver allows a maximum of %d objectives, but the driver being replaced has %d" %
                                          (self._max_objectives, len(target._objectives)),
                                          RuntimeError)
-        old_obj = self._objectives
         self.clear_objectives()
-        try:
-            for name,obj in target._objectives.items():
-                self.add_objective(obj.text, name=name, scope=obj.scope)
-        except Exception:
-            self._objectives = old_obj
-            raise
-        
+        for name,obj in target._objectives.items():
+            self.add_objective(obj.text, name=name, scope=obj.scope)
+
+
 class HasObjective(HasObjectives):
     def __init__(self, parent):
         super(HasObjective, self).__init__(parent, max_objectives=1)
