@@ -230,7 +230,14 @@ class SequentialWorkflow(Workflow):
                     measure_src = inputs[idx][0]
                 else:
                     measure_src = targets[0]
-                
+            elif src == '@fake':
+                for t in targets:
+                    if not t.startswith('@'):
+                        measure_src = t
+                        break
+                else:
+                    raise RuntimeError("malformed graph!")
+
             # Find out our width, etc
             unmap_src = from_PA_var(measure_src)
             val = self.scope.get(unmap_src)
@@ -268,7 +275,8 @@ class SequentialWorkflow(Workflow):
             
             # Poke our target data
             for target in targets:
-                self.set_bounds(target, bound)
+                if not target.startswith('@'):
+                    self.set_bounds(target, bound)
             
             ##print input_src, src, target, bound,      
             nEdge += width
@@ -351,6 +359,8 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
         
         comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
+        if '@fake' in comps:
+            del comps['@fake']
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -427,7 +437,7 @@ class SequentialWorkflow(Workflow):
         # We can call applyJ on each component one-at-a-time, and poke the
         # results into the result vector.
         for compname, data in comps.iteritems():
-            if compname == '@sink':
+            if compname == '@fake':
                 continue
             
             comp_inputs = data['inputs']
