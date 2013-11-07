@@ -155,7 +155,15 @@ def _test_view_geometry(browser):
     closeout(project_dict, workspace_page)
 
 
+# TODO: this test should probably be moved over into the pygem_diamond
+# distrib, or maybe we could replace the openCSM box with an STL box
+# since the STL viewer comes with pyV3D
 def _test_view_csm(browser):
+    try:
+        from pygem_diamond import gem
+    except ImportError:
+        raise SkipTest('pygem_diamond is not installed.')
+
     # FIXME: test fails consistently on the Pangolin EC2 image
     if 'Ubuntu-12.04' in platform.platform():
         raise SkipTest('Test broken for Pangolin EC2 image')
