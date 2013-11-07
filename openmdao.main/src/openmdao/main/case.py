@@ -11,8 +11,7 @@ from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
-class _Missing(object):
-    pass
+_Missing = object()
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -133,13 +132,14 @@ class Case(object):
                 return False
             if len(self) != len(other):
                 return False
-            for selftup, othertup in zip(self.items(), other.items()):
+            for selftup, othertup in zip(self.items(flatten=True), 
+                                         other.items(flatten=True)):
                 if selftup[0] != othertup[0] or selftup[1] != othertup[1]:
                     return False
         except:
             return False
         return True
-    
+
     def __getitem__(self, name):
         val = self._inputs.get(name, _Missing)
         if val is not _Missing:

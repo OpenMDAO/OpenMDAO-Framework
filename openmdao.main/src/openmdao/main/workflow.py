@@ -2,6 +2,10 @@
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver
+from openmdao.main.ndepgraph import get_valids  # for debugging only. remove later
 
 __all__ = ['Workflow']
 
@@ -48,7 +52,7 @@ class Workflow(object):
         this Workflow.
         """
         if self._scope is None and self._parent is not None:
-            self._scope = self._parent.parent
+            self._scope = self._parent.get_expr_scope()
         if self._scope is None:
             raise RuntimeError("workflow has no scope!")
         return self._scope
@@ -89,12 +93,14 @@ class Workflow(object):
         self._exec_count += 1
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
+                
         for comp in self._iterator:
-            self._comp_count += 1
-            comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-
-            comp.run(ffd_order=ffd_order, case_id=case_id)
-
+            if isinstance(comp, PseudoComponent):
+                comp.run(ffd_order=ffd_order, case_id=case_id)
+            else:
+                self._comp_count += 1
+                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+                comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
@@ -129,36 +135,12 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
-    def get_interior_edges(self):
-        """ Returns an alphabetical list of all output edges that are
-        interior to the set of components supplied."""
-        
-        names = self.get_names()
-        edge_list = self.scope._depgraph.get_interior_edges(names)
-        return sorted(list(edge_list))
-    
-    def calc_derivatives(self, first=False, second=False, savebase=False):
-        """ Calculate derivatives and save baseline states for all components
-        in this workflow."""
-
-        self._stop = False
-        for node in self.__iter__():
-            node.calc_derivatives(first, second, savebase)
-            if self._stop:
-                raise RunStopped('Stop requested')
-
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Run check_derivatives on all components in workflow."""
-
-        for node in self.__iter__():
-            node.check_derivatives(order, driver_inputs, driver_outputs)
-
     def stop(self):
         """
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.get_components():
+        for comp in self.get_components(full=True):
             comp.stop()
         self._stop = True
 
@@ -167,8 +149,8 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
-        has changed.
+        """Notifies the Workflow that workflow configuration 
+        (dependencies, etc.) has changed.
         """
         pass
 
@@ -176,16 +158,16 @@ class Workflow(object):
         """Remove a component from this Workflow by name."""
         raise NotImplementedError("This Workflow has no 'remove' function")
 
-    def get_names(self):
+    def get_names(self, full=False):
         """Return a list of component names in this workflow."""
         raise NotImplementedError("This Workflow has no 'get_names' function")
 
-    def get_components(self):
+    def get_components(self, full=False):
         """Returns a list of all component objects in the workflow. No ordering
         is assumed.
         """
         scope = self.scope
-        return [getattr(scope, name) for name in self.get_names()]
+        return [getattr(scope, name) for name in self.get_names(full)]
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
@@ -195,3 +177,4 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
+

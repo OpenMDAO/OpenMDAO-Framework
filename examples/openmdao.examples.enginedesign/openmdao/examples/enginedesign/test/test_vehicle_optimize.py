@@ -6,12 +6,14 @@ import unittest
 
 from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
 from openmdao.main.api import set_as_top
+import openmdao.main.pseudocomp as pcompmod
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
         self.model = set_as_top(EngineOptimization())
+        pcompmod._count = 0
 
     def tearDown(self):
         self.model.pre_delete()
@@ -28,6 +30,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model.driver.itmax = 1
         
         self.model.run()
+        
         
         self.assertAlmostEqual(self.model.sim_acc.accel_time, 
                                5.5999999999999961, places=6)

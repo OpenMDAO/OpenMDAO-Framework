@@ -2,8 +2,6 @@
 Exception classes for OpenMDAO.
 """
 
-import traceback
-
 class ConstraintError(ValueError):
     """Raised when a constraint is violated."""
     pass

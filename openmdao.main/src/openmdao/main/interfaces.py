@@ -99,16 +99,16 @@ class IContainer(Interface):
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
 
-    def get_wrapped_attr(name, index=None):
-        """If the named Variable can return an AttrWrapper, then this
-        function will return that, with the value set to the current value of
-        the variable. Otherwise, it functions like *getattr*, just
-        returning the value of the variable. Raises an exception if the
-        variable cannot be found. The value will be copied if the variable has
-        a 'copy' metadata attribute that is not None. Possible values for
-        'copy' are 'shallow' and 'deep'.  index, if not None, should be of
-        the same form as described in the get() function.
-        """
+    # def get_wrapped_attr(name, index=None):
+    #     """If the named Variable can return an AttrWrapper, then this
+    #     function will return that, with the value set to the current value of
+    #     the variable. Otherwise, it functions like *getattr*, just
+    #     returning the value of the variable. Raises an exception if the
+    #     variable cannot be found. The value will be copied if the variable has
+    #     a 'copy' metadata attribute that is not None. Possible values for
+    #     'copy' are 'shallow' and 'deep'.  index, if not None, should be of
+    #     the same form as described in the get() function.
+    #     """
 
     def items(recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
@@ -450,17 +450,6 @@ class IDOEgenerator(Interface):
         """
 
 
-class IDifferentiator(Interface):
-    """A plugin to driver that can determine derivatives between a driver's
-    parameters and its objectives and constraints."""
-
-    def calc_gradient():
-        """Returns the gradient vectors for this Driver's workflow"""
-
-    def calc_hessian():
-        """Returns the Hessian matrix for this Driver's workflow"""
-
-
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
     def getvalue():
@@ -605,6 +594,41 @@ class IHasParameters(Interface):
              the len() function.
         """
 
+    def total_parameters(self):
+        """Returns the total number of values to be set."""
+
+    def eval_parameters(self, scope=None, dtype='d'):
+        """Return evaluated parameter values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_lower_bounds(self, dtype='d'):
+        """Return lower bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_upper_bounds(self, dtype='d'):
+        """Return upper bound values.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if parameters may be of different types).
+        """
+
+    def get_fd_steps(self, dtype='d'):
+        """Return fd_step values, they may include None.
+
+        dtype: string or None
+            If not None, return an array of this dtype. Otherwise just return
+            a list (useful if it's valid to have None for a step size).
+        """
+
 
 class IHasEvents(Interface):
     def add_event(name):
@@ -655,14 +679,11 @@ class IHasEqConstraints(Interface):
     def get_eq_constraints():
         """Returns an ordered dictionary of equality constraint objects."""
 
-    def eval_eq_constraints():
-        """Evaluates the constraint expressions and returns a list of tuples of the
-        form (lhs, rhs, operator, is_violated), where rhs is the right-hand side
-        of the equality, lhs is the left-hand side of the equality, operator is
-        the string '=', and is_violated is a boolean which is True if the constraint
-        is currently violated.  The operator entry in the tuple is always the same
-        for an equality constraint, but is included for consistency with the
-        eval_ineq_constraints function used for inequality constraints.
+    def eval_eq_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values.
+        The form of the constraint is transformed if necessary such that the 
+        right-hand-side is 0.0.  The values returned are the evaluation of the
+        left-hand-side.
         """
 
 
@@ -683,9 +704,10 @@ class IHasIneqConstraints(Interface):
     def get_ineq_constraints():
         """Returns an ordered dict of inequality constraint objects."""
 
-    def eval_ineq_constraints():
-        """Evaluates the constraint expressions and returns a list of tuples of the
-        form (lhs, rhs, relation, is_violated).
+    def eval_ineq_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values. Constraints
+        are coerced into a form where the right-hand-side is 0., and the value returned
+        is the evaluation of the left-hand-side.
         """
 
 
@@ -697,6 +719,11 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
+    def get_constraints():
+        """Returns an ordered dict of constraint objects."""
+
+    def eval_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values."""
 
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""

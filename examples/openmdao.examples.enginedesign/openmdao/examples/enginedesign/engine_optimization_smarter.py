@@ -44,6 +44,7 @@ class EngineOptimization(Assembly):
         # CONMIN Flags
         self.optimizer.iprint = 0
         self.optimizer.itmax = 30
+        self.optimizer.conmin_diff = True
         
         # CONMIN Objective 
         self.optimizer.add_objective('sim_acc.accel_time')

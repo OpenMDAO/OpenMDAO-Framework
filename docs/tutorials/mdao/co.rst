@@ -50,7 +50,7 @@ in the lower level optimization objectives. Hence, no iotype is set.
         
 .. testcode:: CO_parts
 
-        from openmdao.lib.datatypes.api import Float, Array
+        from openmdao.lib.datatypes.api import Array
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import SLSQPdriver
         from openmdao.lib.optproblems import sellar
@@ -60,9 +60,9 @@ in the lower level optimization objectives. Hence, no iotype is set.
             """Solution of the sellar analytical problem using CO.
             """
             
-            global_des_var_targets = Array([5.0,2.0])
-            local_des_var_targets = Array([1.0,])
-            coupling_var_targets = Array([3.16,0])
+            global_des_var_targets = Array([5.0,2.0], iotype='in')
+            local_des_var_targets = Array([1.0,], iotype='in')
+            coupling_var_targets = Array([3.16,0], iotype='in')
         
             def configure(self):
                 

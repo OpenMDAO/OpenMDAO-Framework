@@ -1,3 +1,6 @@
+import cPickle
+import os.path
+
 from numpy import linspace, hstack, dstack, less ,less_equal, logical_and, \
     array, empty, matrix, dot
     
@@ -5,9 +8,8 @@ from scipy.optimize import fsolve, newton
 from scipy.sparse import csr_matrix
 
 class Bspline(object): 
-    """A bspline interpolant""" 
-    
-    def __init__(self,controls,points,order=3): #controls and points are 2-d arrays of points  
+    def __init__(self,controls,points,order=3): #controls and points are 2-d arrays of points 
+
         self.controls = controls
         self.order = order
         self.degree = order-1
@@ -17,7 +19,21 @@ class Bspline(object):
                              ))
         self.__b_cache = {} #uses for memoizing the b_jn function
         self.max_x = max(points[:,0]) 
-        self.B = self._calc_jacobian(points)
+
+        #see if we can 
+        h1 = str(hash(tuple(points.flatten()))).replace("-","n")
+        h2 = str(hash(tuple(controls.flatten()))).replace("-","n")
+        pkl_file_name = "%s__%s.bspline_pkl"%(h1,h2)
+        pkl_folder = "pyBspline_pkl"
+        pkl_file_name = os.path.join(pkl_folder,pkl_file_name)
+        if not os.path.exists(pkl_folder): 
+            os.mkdir(pkl_folder)
+        if os.path.exists(pkl_file_name): 
+
+            self.B = cPickle.load(open(pkl_file_name))
+        else: 
+            self.B = self._calc_jacobian(points)
+            cPickle.dump(self.B,open(pkl_file_name,'w'))
 
    
     def _calc_jacobian(self,points):                       

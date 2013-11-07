@@ -1,9 +1,8 @@
 import unittest
-import StringIO
 
 from openmdao.main.assembly import ExprMapper, Assembly, set_as_top
 from openmdao.main.component import Component
-from openmdao.main.datatypes.api import Int
+from openmdao.main.datatypes.int import Int
 from openmdao.main.expreval import ExprEvaluator
 
 _fakes = ['@xin', '@bin', '@bout', '@xout']

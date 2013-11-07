@@ -404,26 +404,26 @@ class ProjectHandler(ReqHandler):
                 the server is initialized and the workspace is loaded.
                 After the workspace is loaded and websockets are connected, the next step
                 should be a POST to project/load that will actually load the project
-		into the server.)
+                into the server.)
 
         POST:   Perform the specified action on the current project; arguments are:
 
                 action: One of the following (required)
 
-                	load:   Load project into the current server;
+                        load:   Load project into the current server;
                                 if no project path is given, get from session cookie.
 
                                 additional args: projpath (optional)
 
-                    	commit: Commit the current project.
+                        commit: Commit the current project.
 
                                 additional args: comment (optional)
 
-                    	revert: Revert back to the most recent commit of the project.
+                        revert: Revert back to the most recent commit of the project.
 
                                 additional args: commit_id (optional)
 
-                    	close:  Close the current project
+                        close:  Close the current project
     '''
 
     @web.authenticated

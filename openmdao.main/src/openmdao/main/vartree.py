@@ -135,8 +135,10 @@ class VariableTree(Container):
                     # we need to pass the full pathname of the child that was
                     # actually modified up to the parent component, and we can't
                     # modify the arglist of _input_trait_modified, so instead
-                    # call _input_check and _input_updated explicitly
-                    p._input_check(vt.name, vt)
+                    # call _input_check (assuming source checking hasn't been
+                    # turned off at the calling level) and _input_updated explicitly
+                    if self._input_check != self._input_nocheck:
+                        p._input_check(vt.name, vt)
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
     def get_iotype(self, name):
@@ -208,9 +210,9 @@ class VariableTree(Container):
         else:
             graph = self.parent._parent._depgraph
             if self_io == 'in':
-                connected = graph.get_connected_inputs()
+                connected = graph.get_boundary_inputs(connected=True)
             else:
-                connected = graph.get_connected_outputs()
+                connected = graph.get_boundary_outputs(connected=True)
 
         variables = []
         for name in self.list_vars():
@@ -243,10 +245,10 @@ class VariableTree(Container):
                 if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
-                                            connections]).replace('@xin.', '')
+                                            connections])#.replace('@xin.', '')
                 else:
                     attr['connected'] = str([dst for src, dst in
-                                            connections]).replace('@xout.', '')
+                                            connections])#.replace('@xout.', '')
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs

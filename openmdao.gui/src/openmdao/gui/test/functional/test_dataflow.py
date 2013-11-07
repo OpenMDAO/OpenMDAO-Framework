@@ -14,7 +14,6 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 from pageobjects.util import NotifierPage
 from pageobjects.component import ComponentPage
-from pageobjects.slot import find_slot_figure
 
 
 @with_setup(setup_server, teardown_server)
@@ -450,7 +449,7 @@ def _test_driverflows(browser):
     expected = [
         ['',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
-         '-10', '99', '', '', '',
+         '-10', '99', '1', '0', '',
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
     for i, row in enumerate(outputs.value):
@@ -558,8 +557,8 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['', 'cons_is_linear', '[]', '',
-        'Array designating whether each constraint is linear.'])
+       ['', 'conmin_diff', 'False', '',
+        'Set to True to let CONMINcalculate the gradient.'])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
@@ -590,10 +589,9 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    expected = "RuntimeError: top: Can't connect 'comp.result' to" \
-               " 'postproc.result_in': top: Can't find 'comp.result'"
+    expected = "Can't connect 'comp.result' to 'postproc.result_in'"
     time.sleep(0.5)
-    assert workspace_page.history.endswith(expected)
+    assert workspace_page.history.find(expected) >= 0
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
@@ -632,9 +630,6 @@ def _test_ordering(browser):
               'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt',
               prefix='top')
 
-    # Check that ExternalCode is before SLSQP.
-    assert ext.coords[0] < opt.coords[0]
-
     # Add parameter to SLSQP.
     editor = opt.editor_page(base_type='Driver')
     editor('parameters_tab').click()
@@ -646,10 +641,11 @@ def _test_ordering(browser):
     dialog.name = 'tmo'
     dialog('ok').click()
 
-    # Check that SLSQP is now ahead of ExternalCode.
+    # Check that SLSQP is above and to the left of ExternalCode
     ext = workspace_page.get_dataflow_figure('ext', 'top')
     opt = workspace_page.get_dataflow_figure('opt', 'top')
     assert ext.coords[0] > opt.coords[0]
+    assert ext.coords[1] > opt.coords[1]
 
     # Clean up.
     editor.close()
@@ -1120,41 +1116,6 @@ def _test_remove_tla(browser):
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
     # clean up
-    closeout(project_dict, workspace_page)
-
-
-def _test_display_differentiator(browser):
-    # Verify that we can display a differentiator (based on Container).
-    project_dict, workspace_page = startup(browser)
-    eq(len(workspace_page.get_dataflow_figures()), 1)
-
-    # Create assembly with an SLSQPdriver.
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.main.assembly.Assembly', 'top')
-    workspace_page.show_dataflow('top')
-    workspace_page.replace_driver('top', 'SLSQPdriver')
-    driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page(base_type='Driver')
-    editor.move(-400, 0)
-
-    # Display & verify differentiator.
-    editor.show_slots()
-    diff = find_slot_figure(workspace_page, 'differentiator',
-                            prefix='top.driver')
-    diff_editor = diff.edit()
-    inputs = diff_editor.get_inputs()
-    expected = [
-        ['', 'default_stepsize', '0.000001', '',
-         'Default finite difference step size.'],
-        ['', 'form', 'central', '',
-         'Finite difference form (central, forward, backward).'],
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-
-    # Clean up.
-    diff_editor.close()
-    editor.close()
     closeout(project_dict, workspace_page)
 
 
