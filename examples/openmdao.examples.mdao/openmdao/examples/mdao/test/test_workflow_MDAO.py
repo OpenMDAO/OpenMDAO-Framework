@@ -289,7 +289,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(set(edges['_pseudo_5.out0']), set(['@out1']))
         #self.assertEqual(set(edges['@source0']), set(['@out1']))
         self.assertEqual(set(edges['_pseudo_7.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 5)
+        self.assertEqual(len(edges), 6)
     
         prob.run()
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)

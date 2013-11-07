@@ -536,18 +536,6 @@ class DependencyGraph(nx.DiGraph):
         if config_change:
             self.config_changed()
 
-    def get_interior_connections(self, comps=None):
-        """ Returns all interior connections between the given comps.
-        """
-        if comps is None:
-            compset = set([n for n in self.nodes_iter() if is_comp_node(self, n)])
-        else:
-            compset = set(comps)
-        return [(u,v) for u, v in self.edges_iter()
-                   if is_connection(self, u, v) and
-                      u.split('.', 1)[0] in compset and
-                      v.split('.', 1)[0] in compset]
-
     def get_directional_interior_edges(self, comp1, comp2):
         """ Behaves like get_ineterior_edges, except that it only
         returns interior edges that originate in comp1 and and end in comp2.
@@ -1291,17 +1279,17 @@ def mod_for_derivs(graph, inputs, outputs, scope):
     # for them
     for inp in flatten_list_of_iters(inputs):
         if inp not in graph:
-            if '@sink' not in graph:
-                graph.add_node('@sink')
+            if '@fake' not in graph:
+                graph.add_node('@fake')
             graph.add_node(inp)
-            graph.add_edge(inp, '@sink', conn=True)
+            graph.add_edge(inp, '@fake', conn=True)
 
-    # for out in flatten_list_of_iters(outputs):
-    #     if out not in graph:
-    #         if '@src' not in graph:
-    #             graph.add_node('@src')
-    #         graph.add_node(out)
-    #         graph.add_edge('@src', out, conn=True)
+    for out in flatten_list_of_iters(outputs):
+        if out not in graph:
+            if '@fake' not in graph:
+                graph.add_node('@fake')
+            graph.add_node(out)
+            graph.add_edge('@fake', out, conn=True)
 
     return graph
     
@@ -1324,36 +1312,38 @@ def edge_dict_to_comp_list(graph, edges):
     outputs.
     """
     comps = OrderedDict()
-    basevars = []
+    basevars = set()
     for src, targets in edges.iteritems():
         
-        if '@in' not in src:
+        if not src.startswith('@'):
             comp, _, var = src.partition('.')
-            if comp not in comps:
-                comps[comp] = {'inputs': [],
-                               'outputs': []}
-            
-            basevar = base_var(graph, src)
-            if basevar not in basevars:
-                comps[comp]['outputs'].append(var)
-                if src == basevar:
-                    basevars.append(src)
+            if var:
+                if comp not in comps:
+                    comps[comp] = {'inputs': [],
+                                   'outputs': []}
+                
+                basevar = base_var(graph, src)
+                if basevar not in basevars:
+                    comps[comp]['outputs'].append(var)
+                    if src == basevar:
+                        basevars.add(src)
 
         if not isinstance(targets, list):
             targets = [targets]
             
         for target in targets:
-            if '@out' not in target:
+            if  not target.startswith('@'):
                 comp, _, var = target.partition('.')
-                if comp not in comps:
-                    comps[comp] = {'inputs': [],
-                                   'outputs': []}
-                
-                basevar = base_var(graph, target)
-                if basevar not in basevars:
-                    comps[comp]['inputs'].append(var)
-                    if target == basevar:
-                        basevars.append(target)
+                if var:
+                    if comp not in comps:
+                        comps[comp] = {'inputs': [],
+                                       'outputs': []}
+                    
+                    basevar = base_var(graph, target)
+                    if basevar not in basevars:
+                        comps[comp]['inputs'].append(var)
+                        if target == basevar:
+                            basevars.add(target)
                 
     return comps
 
@@ -1427,26 +1417,28 @@ def dump_valid(graph, filter=None, stream=None):
 
 
 def flatten_list_of_iters(lst):
-    """Returns an iterator over a list, flattening
-    any sub-lists or sub-tuples.  NOTE: this only
+    """Returns a list of simple values, flattening
+    any sub-lists or sub-tuples, or if the input is a 
+    string it just returns that string.  NOTE: this only
     goes down one level.
     """
     if isinstance(lst, basestring):
-        yield lst
+        return [lst]
     else:
+        ret = []
         for entry in lst:
             if isinstance(entry, basestring):
-                yield entry
+                ret.append(entry)
             else:
-                for n in entry:
-                    yield n
+                ret.extend(entry)
+        return ret
 
 def bfs_find(G, source, pred):
     """Return the first target in BFS order that satisfies 
     pred(graph, target), or None if no target satisfying 
     pred is found.
     """
-    for u, v in bfs_edges(G, source):
-        if pred(G, target):
+    for u, v in nx.bfs_edges(G, source):
+        if pred(G, v):
             return True
     return None
