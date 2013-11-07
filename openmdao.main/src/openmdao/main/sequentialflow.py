@@ -19,7 +19,8 @@ from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
                                     mod_for_derivs, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict, is_boundary_node
+                                    is_subvar_node, edges_to_dict, is_boundary_node, \
+                                    _get_inner_edges, partition_names_by_comp
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -582,7 +583,6 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
-        nondiff = []
         
         # If we have a cyclic workflow, we need to remove severed edges from
         # the derivatives graph.
@@ -602,13 +602,50 @@ class SequentialWorkflow(Workflow):
 
         # Find the non-differentiable components
         else:
+            
+            # A component with no derivatives is non-differentiable
+            nondiff = set()
             for name in comps:
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
-                    nondiff.append(comp.name)
+                    nondiff.add(comp.name)
+                    
+            # If a connection is non-differentiable, so are its src and 
+            # target components.
+            inputs = dgraph.graph['inputs']
+            flat_inputs = []
+            for item in inputs:
+                if isinstance(item, str):
+                    item = [item]
+                for src in item:
+                    flat_inputs.append(src)
+                    
+            inner = _get_inner_edges(dgraph, 
+                                     flat_inputs, 
+                                     dgraph.graph['outputs'])
                 
+            for edge in inner:
+                for node in edge:
+                    if '.' not in node or node in nondiff:
+                        continue
+                    
+                    # Default differentiable connections
+                    val = self.scope.get(node)
+                    if isinstance (val, (float, ndarray, VariableTree)):
+                        continue
+                    
+                    # Custom differentiable connections
+                    meta = self.scope.get_metadata(node)
+                    if 'data_shape' in meta:
+                        continue
+                    
+                    #Nothing else is differentiable
+                    else:
+                        nondiff.add(node.split('.')[0])
+                        
+            # Everything is differentiable, so return
             if len(nondiff) == 0:
                 return
             

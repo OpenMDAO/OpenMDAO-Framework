@@ -531,7 +531,7 @@ class FiniteDifference(object):
         in_size = 0
         for srcs in self.inputs:
             
-            # Support for paramters groups
+            # Support for parameter groups
             if isinstance(srcs, basestring):
                 srcs = [srcs]
                 
