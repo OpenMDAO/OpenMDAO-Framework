@@ -19,7 +19,8 @@ from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
                                     mod_for_derivs, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict, is_boundary_node
+                                    is_subvar_node, edges_to_dict, is_boundary_node, \
+                                    _get_inner_edges, partition_names_by_comp
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -592,7 +593,6 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
-        nondiff = []
         
         # If we have a cyclic workflow, we need to remove severed edges from
         # the derivatives graph.
@@ -612,13 +612,43 @@ class SequentialWorkflow(Workflow):
 
         # Find the non-differentiable components
         else:
+            
+            # A component with no derivatives is non-differentiable
+            nondiff = set()
             for name in comps:
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
-                    nondiff.append(comp.name)
+                    nondiff.add(comp.name)
+                    
+            # If a connection is non-differentiable, so are its src and 
+            # target components.
+            conns = dgraph.list_connections()
                 
+            for edge in conns:
+                src = edge[0]
+                target = edge[1]
+                
+                if '@' in src or '@' in target or '.' not in src:
+                    continue
+                
+                # Default differentiable connections
+                val = self.scope.get(src)
+                if isinstance (val, (float, ndarray, VariableTree)):
+                    continue
+                
+                # Custom differentiable connections
+                meta = self.scope.get_metadata(src)
+                if 'data_shape' in meta:
+                    continue
+                
+                #Nothing else is differentiable
+                else:
+                    nondiff.add(src.split('.')[0])
+                    nondiff.add(target.split('.')[0])
+                        
+            # Everything is differentiable, so return
             if len(nondiff) == 0:
                 return
             

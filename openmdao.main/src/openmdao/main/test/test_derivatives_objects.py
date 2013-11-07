@@ -10,7 +10,7 @@ import numpy as np
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Str
 from openmdao.main.interfaces import IParametricGeometry, implements, \
                                      IStaticGeometry
 from openmdao.main.variable import Variable
@@ -174,6 +174,9 @@ class TestcaseDerivObj(unittest.TestCase):
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
+        
+        edges = top.driver.workflow._edges
+        self.assertTrue(edges['c1.data'] == ['c2.data'])
 
     def _check_J(self, J): 
         assert_rel_error(self, J[0, 0], -6.0, .00001)
@@ -215,7 +218,7 @@ class GeoWithDerivatives(BoxParametricGeometry):
         pass
         
 class Testcase_geom_deriv(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
+    """ Test a simple object that passes a geometry. """
 
     def setUp(self):
         """ Called before each test. """
@@ -244,6 +247,68 @@ class Testcase_geom_deriv(unittest.TestCase):
         self.assertTrue(hasattr(top.geo, 'apply_derivT'))
         self.assertTrue(hasattr(top.geo, 'provideJ'))
         
+
+
+class ND_Send(Component):
+    '''Passes a data object as output.'''
+    
+    p1 = Float(5.0, iotype='in')
+    
+    data = Str("Try to differentiate this!", iotype='out')
+    
+    def execute(self):
+        ''' Load computation result into self.data.'''
+        self.data = str(self.p1)
+        
+    def linearize(self):
+        ''' Jacobian'''
+        pass
+        
+    def apply_deriv(self, arg, result):
+        pass
+    
+    def apply_derivT(self, arg, result):
+        pass
+    
+class ND_Receive(Component):
+    '''Passes a data object as output.'''
+    
+    data = Str("Try to differentiate this!", iotype='in')
+    
+    p1 = Float(0.0, iotype='out')
+    
+    def execute(self):
+        ''' Load computation result into self.data.'''
+        self.p1 = 2.0*float(self.data)
+        
+    def linearize(self):
+        ''' Jacobian'''
+        pass
+        
+    def apply_deriv(self, arg, result):
+        pass
+    
+    def apply_derivT(self, arg, result):
+        pass
+    
+class TestcaseNonDiff(unittest.TestCase):
+    """ Test grouping comps with non-differentiable connections. """
+    
+    def test_non_diff(self):
+        model = set_as_top(Assembly())
+        model.add('comp1', ND_Send())
+        model.add('comp2', ND_Receive())
+        model.connect('comp1.data', 'comp2.data')
+        model.driver.workflow.add(['comp1', 'comp2'])
+        model.run()
+        
+        inputs = ['comp1.p1']
+        outputs = ['comp2.p1']
+        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        self.assertAlmostEqual(J[0, 0], 2.0)
+        
+        edges = model.driver.workflow._edges
+        self.assertTrue('c1.data' not in edges)
         
 if __name__ == '__main__':
     import nose
