@@ -47,20 +47,33 @@ def _clean_graph(graph):
         if name in _excluded_nodes:
             nodes_to_remove.append(node)
         else: # update node metadata
+            newdata = data
             for meta in _excluded_node_data:
-                try:
-                    del data[meta]
-                except KeyError:
-                    pass
+                if meta in newdata:
+                    if newdata is data:
+                        newdata = dict(data) # make a copy of metadata since we're changing it
+                        graph.node[node] = newdata
+                    del newdata[meta]
 
     graph.remove_nodes_from(nodes_to_remove)
 
     for u,v,data in graph.edges_iter(data=True):
+        newdata = data
         for meta in _excluded_link_data:
-            if meta in data:
-                del data[meta]
+            if meta in newdata:
+                if newdata is data:
+                    newdata = dict(data)
+                    graph.edge[u][v] = newdata
+                del newdata[meta]
 
     return graph
+
+def set_link_weights(graph):
+    """Set the weight attribute of links between comps and their
+    variable nodes, and var nodes to subvar nodes, to be higher
+    than connection nodes.
+    """
+    pass
 
 def plot_graph(graph):
     """Open up a display of the graph in a browser window."""
@@ -89,9 +102,11 @@ def plot_graph(graph):
         wb.open('file://'+os.path.join(tmpdir,'forcegraph.html'))
     finally:
         os.chdir(startdir)
-        time.sleep(5) # sleep 10 seconds to give browser time
-                      # to read files before we remove them
-        #shutil.rmtree(tmpdir)
+        print "\nwaiting to remove temp directory '%s'... " % tmpdir
+        time.sleep(10) # sleep to give browser time
+                       # to read files before we remove them
+        shutil.rmtree(tmpdir)
+        print "temp directory removed"
 
 
 
