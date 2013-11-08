@@ -75,7 +75,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
 
-- `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+- `Matplotlib <http://matplotlib.org/downloads.html>`_
 
 
 .. note:: 
@@ -108,7 +108,7 @@ public/private key pairs to be stored securely.
   fix.
 - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
-- `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
+- `Matplotlib <http://matplotlib.org/downloads.html>`_
 
 .. note:: 
 
