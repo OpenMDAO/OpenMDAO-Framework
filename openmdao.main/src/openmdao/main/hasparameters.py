@@ -308,8 +308,7 @@ class ParameterGroup(object):
     def __init__(self, params):
         for param in params:
             # prevent multiply nested ParameterGroups
-            # Also, no support for ArrayParameters yet.
-            if not isinstance(param, Parameter):
+            if not isinstance(param, (Parameter, ArrayParameter)):
                 raise ValueError("tried to add a non-Parameter object to a"
                                  " ParameterGroup")
         self._params = params[:]
@@ -341,7 +340,7 @@ class ParameterGroup(object):
     @property
     def names(self):
         """A one element list containing the name of this parameter."""
-        return [self.name]
+        return self._params[0].names
 
     @property
     def size(self):
@@ -360,15 +359,15 @@ class ParameterGroup(object):
 
     def get_high(self):
         """Returns upper limits as a sequence."""
-        return [self.high]
+        return self._params[0].get_high()
 
     def get_low(self):
         """Returns lower limits as a sequence."""
-        return [self.low]
+        return self._params[0].get_low()
 
     def get_fd_step(self):
         """Returns finite difference step size as a sequence."""
-        return [self.fd_step]
+        return self._params[0].get_fd_step()
 
     def set(self, value, scope=None):
         """Set all targets to the given value."""
@@ -612,7 +611,7 @@ class ArrayParameter(ParameterBase):
         names = []
         for index in ndindex(*self.shape):
             index = ''.join(['[%s]' % i for i in index])
-            names.append("'%s%s'" % (self.name, index))
+            names.append('%s%s' % (self.name, index))
         return names
 
     @property
@@ -638,15 +637,22 @@ class ArrayParameter(ParameterBase):
 
     def evaluate(self, scope=None):
         """Returns the value of this parameter as a sequence."""
-        return self._untransform(self._expreval.evaluate(scope)).flat
+        # Use .flatten() rather than .flat to force a copy.
+        # Forcing a copy to isolate data ownership.
+        return self._untransform(self._expreval.evaluate(scope)).flatten()
 
     def set(self, value, scope=None):
         """Assigns the given value to the array referenced by this parameter."""
+        copied = False
         if isinstance(value, (list, tuple)):
             value = self._convert_sequence(value, self.dtype)
+            copied = True
         if isinstance(value, ndarray):
             if value.size == self._size:
                 value = value.reshape(self.shape)
+                if not copied:
+                    # Forcing a copy to isolate data ownership.
+                    value = value.copy()
             else:
                 raise ValueError('value size is %s but parameter size is %s'
                                  % (value.size, self._size))
@@ -806,36 +812,11 @@ class HasParameters(object):
             try:
                 _scope = self._get_scope(scope)
                 if len(names) == 1:
-                    try:
-                        expreval = ExprEvaluator(target, _scope)
-                    except Exception as err:
-                        raise err.__class__("Can't add parameter: %s" % err)
-                    if not expreval.is_valid_assignee():
-                        raise ValueError("Can't add parameter: '%s' is not a"
-                                         " valid parameter expression"
-                                         % expreval.text)
-                    try:
-                        val = expreval.evaluate()
-                    except Exception as err:
-                        val = None  # Let Parameter code sort out why.
-
-                    if isinstance(val, ndarray):
-                        target = ArrayParameter(names[0], low=low, high=high,
-                                                scaler=scaler, adder=adder,
-                                                start=start, fd_step=fd_step,
-                                                name=key, scope=_scope,
-                                                _expreval=expreval, _val=val)
-                    else:
-                        target = Parameter(names[0], low=low, high=high,
-                                           scaler=scaler, adder=adder,
-                                           start=start, fd_step=fd_step,
-                                           name=key, scope=_scope,
-                                           _expreval=expreval, _val=val)
+                    target = self._create(names[0], low, high, scaler, adder,
+                                          start, fd_step, key, _scope)
                 else:  # defining a ParameterGroup
-                    parameters = [Parameter(n, low=low, high=high,
-                                            scaler=scaler, adder=adder,
-                                            start=start, fd_step=fd_step,
-                                            name=key, scope=_scope)
+                    parameters = [self._create(n, low, high, scaler, adder,
+                                               start, fd_step, key, _scope)
                                   for n in names]
                     types = set([p.valtypename for p in parameters])
                     if len(types) > 1:
@@ -848,6 +829,37 @@ class HasParameters(object):
                 self._parent.reraise_exception()
 
         self._parent.config_changed()
+
+    def _create(self, target, low, high, scaler, adder, start, fd_step,
+                key, scope):
+        """ Create one Parameter or ArrayParameter. """
+        try:
+            expreval = ExprEvaluator(target, scope)
+        except Exception as err:
+            raise err.__class__("Can't add parameter: %s" % err)
+        if not expreval.is_valid_assignee():
+            raise ValueError("Can't add parameter: '%s' is not a"
+                             " valid parameter expression"
+                             % expreval.text)
+        try:
+            val = expreval.evaluate()
+        except Exception as err:
+            val = None  # Let Parameter code sort out why.
+
+        name = key[0] if isinstance(key, tuple) else key
+
+        if isinstance(val, ndarray):
+            return ArrayParameter(target, low=low, high=high,
+                                  scaler=scaler, adder=adder,
+                                  start=start, fd_step=fd_step,
+                                  name=name, scope=scope,
+                                  _expreval=expreval, _val=val)
+        else:
+            return Parameter(target, low=low, high=high, 
+                             scaler=scaler, adder=adder,
+                             start=start, fd_step=fd_step, 
+                             name=name, scope=scope,
+                             _expreval=expreval, _val=val)
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
