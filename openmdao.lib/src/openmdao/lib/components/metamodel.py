@@ -164,6 +164,9 @@ class MetaModel(Component):
 
         self._new_train_data = True
 
+    def child_run_finished(self, childname, outs=None):
+        pass
+
     def check_config(self):
         '''Called as part of pre_execute.'''
 
@@ -335,9 +338,6 @@ class MetaModel(Component):
             return
         super(MetaModel, self).invalidate_deps(varnames=varnames)
 
-    def child_invalidated(self, childname, outs=None, force=False):
-        pass
-
     def exec_counts(self, compnames):
         # we force the run on our model, so it doesn't matter what we tell it the exec counts are
         return [0 for n in compnames]
@@ -426,11 +426,11 @@ class MetaModel(Component):
 
         self.config_changed()
 
-    def update_inputs(self, compname, varnames):
-        if compname != 'model':
-            self.raise_exception("cannot update inputs for child named '%s'"
-                                 % compname)
-        self.model.set_valid(varnames, True)
+    def child_invalidated(self, childname, vnames=None, iotype='out'):
+        pass
+
+    def update_inputs(self, compname):
+        pass
 
     def update_model_inputs(self):
         """Copy the values of the MetaModel's inputs into the inputs of the

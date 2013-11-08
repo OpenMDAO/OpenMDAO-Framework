@@ -12,7 +12,6 @@ from openmdao.main.api import Driver, Architecture, SequentialWorkflow, \
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      IterateUntil, FixedPointIterator, \
                                      NeighborhoodDOEdriver, SLSQPdriver
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, \
                                            OptLatinHypercube, LatinHypercube
@@ -237,7 +236,6 @@ class BLISS2000(Architecture):
         sysopt=self.parent.add('sysopt', SLSQPdriver())   
         sysopt.recorders = self.data_recorders
         sysopt.iprint = 0
-        sysopt.differentiator = FiniteDifference()
         
         obj2= objective[1].text
         #for comp in objective[1].get_referenced_compnames():            

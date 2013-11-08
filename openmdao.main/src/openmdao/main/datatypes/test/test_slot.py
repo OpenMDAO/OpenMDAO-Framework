@@ -250,7 +250,8 @@ class SlotTestCase2(unittest.TestCase):
         try:
             self.hobj.class_sock = 3.14
         except TypeError as err:
-            self.assertEqual(str(err), ": class_sock must be an instance of class 'MyClass'")
+            self.assertEqual(str(err), ": class_sock must be an instance of"
+                             " class 'MyClass', got <type 'float'>")
 
 
 class SlotComp5(Assembly):

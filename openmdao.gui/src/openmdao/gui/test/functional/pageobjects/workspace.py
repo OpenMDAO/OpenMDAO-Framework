@@ -1,6 +1,7 @@
 import logging
 import os.path
 import time
+import sys
 
 from nose.tools import eq_ as eq
 
@@ -411,8 +412,11 @@ class WorkspacePage(BasePageObject):
         for filename in file_paths:
             element = self.find_file(filename)
             chain = ActionChains(self.browser)
-            #FIXME: Mac OSX does not use CONTROL key
-            chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
+            #Mac OSX does not use CONTROL key
+            if sys.platform == 'darwin':
+                chain.key_down(Keys.SHIFT).click(element).key_up(Keys.SHIFT).perform()
+            else:
+                chain.key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         self('files_tab').click()
         self('file_menu').click()

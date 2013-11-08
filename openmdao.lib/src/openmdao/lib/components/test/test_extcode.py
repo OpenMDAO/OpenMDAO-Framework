@@ -415,9 +415,11 @@ class TestCase(unittest.TestCase):
             creds.client_creds = Credentials()
             logging.debug('    using %s', creds)
             try:
-                code = "exec_comp.set('command', ['this-should-fail'])"
-                assert_raises(self, code, globals(), locals(), RuntimeError,
-                              ": 'command' may not be set() remotely")
+                exec_comp.set('command', ['this-should-fail'])
+            except RemoteError as exc:
+                fragment = ": 'command' may not be set() remotely"
+                if fragment not in str(exc):
+                    self.fail('%s not in %s' % (fragment, exc))
             finally:
                 creds.client_creds = None
 

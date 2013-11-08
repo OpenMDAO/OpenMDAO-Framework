@@ -407,7 +407,8 @@ def plugin_quickstart(parser, options, args=None):
                         '__init__.py': '',  # 'from %s import %s\n' % (name,classname),
                         '%s.py' % name: class_templates[options.group] % template_options,
                         'test': {
-                                'test_%s.py' % name: test_template % template_options
+                                'test_%s.py' % name: test_template % template_options,
+                                '__init__.py': """ """
                         },
                     },
                 },
@@ -417,7 +418,9 @@ def plugin_quickstart(parser, options, args=None):
                     'srcdocs.rst': _get_srcdocs(options.dest, name),
                     'pkgdocs.rst': _get_pkgdocs(cfg),
                     'usage.rst': templates['usage.rst'] % template_options,
+                    '_static': {},
                 },
+
             },
         }
 
@@ -763,92 +766,6 @@ def _github_install(dist_name, findLinks):
     print url
     build_docs_and_install(name, version, findLinks)
 
-_lpdict = {
-    'linux2': 'LD_LIBRARY_PATH',
-    'linux': 'LD_LIBRARY_PATH',
-    'darwin': 'DYLD_LIBRARY_PATH',
-    'win32': 'PATH',
-}
-
-
-def get_full_libpath():
-    """Find all of the shared libraries in the current virtual environment and
-    print the required LD_LIBRARY_PATH string (or equivalent) necessary
-    to find them.
-    """
-    libpathvname = _lpdict.get(sys.platform)
-
-    if libpathvname:
-        lpcontents = os.environ.get(libpathvname) or ''
-        libpaths = [lib for lib in lpcontents.split(os.pathsep) if lib.strip()]
-        topdir = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable)))
-        cachefile = os.path.join(topdir, '_libpath_cache')
-
-        libfiles = []
-
-        if os.path.isfile(cachefile):
-            with open(cachefile, "rb") as f:
-                cache = pickle.load(f)
-        else:
-            cache = {}
-
-        if sys.platform.startswith('win'):
-            pkgdir = os.path.join(topdir, 'Lib',
-                                  'site-packages')
-            checker = '*.dll'
-        else:
-            pkgdir = os.path.join(topdir, 'lib',
-                                  'python%s.%s' % sys.version_info[:2],
-                                  'site-packages')
-            if sys.platform == 'darwin':
-                checker = lambda n: n.endswith('.so') or n.endswith('.dylib')
-            else:
-                checker = "*.so"
-
-        for d in os.listdir(pkgdir):
-            d = os.path.join(pkgdir, d)
-            if os.path.isdir(d):
-                if d in cache:
-                    libfiles.extend(cache[d])
-                else: # find any shared libs that don't have a matching .py bootstrapper
-                    newlibs = [x for x in find_files(d, checker) 
-                                     if not os.path.isfile(os.path.splitext(x)[0]+'.py')]
-                    cache[d] = newlibs
-                    libfiles.extend(newlibs)
-
-        with open(cachefile, "wb") as f:
-            pickle.dump(cache, f, pickle.HIGHEST_PROTOCOL)
-
-        # if the same library appears multiple times under the same subdir parent, remove
-        # it from the libpath.
-        # Better to fail due to missing lib than to use one with the wrong bitsize...
-        # TODO: add some smarts to figure out desired bitsize and keep the correct lib
-        #       in the libpath
-        bases = {}
-        for fname in libfiles:
-            bases.setdefault(os.path.basename(fname), []).append(fname)
-
-        if len(bases) != len(libfiles):
-            for base, paths in bases.items():
-                if len(paths) > 1:
-                    for p in paths:
-                        d = os.path.dirname(p)
-                        while d:
-                            if d in cache:
-                                libfiles.remove(p)
-                                break
-                            d = os.path.dirname(d)
-
-        added = [os.path.dirname(n) for n in libfiles]
-        final = []
-        seen = set()
-        for p in added + libpaths:
-            if p not in seen:
-                seen.add(p)
-                final.append(p)
-
-        print os.pathsep.join(final)
-
 
 # This requires Internet connectivity to github.
 def build_docs_and_install(name, version, findlinks):  # pragma no cover
@@ -869,10 +786,8 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
             raise RuntimeError("after untarring, found multiple directories: %s"
                                % files)
 
-        # build sphinx docs
         os.chdir(files[0])  # should be in distrib directory now
-        check_call(['plugin', 'build_docs', files[0]])
-
+        
         # create an sdist so we can query metadata for distrib dependencies
         check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
 
@@ -907,6 +822,10 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
                     dct = get_metadata(dist.egg_name().split('-')[0])
                     for new_r in dct.get('requires', []):
                         reqs.append(new_r)
+
+        # build sphinx docs
+        check_call(['plugin', 'build_docs', files[0]])
+
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir, ignore_errors=True)

@@ -1,0 +1,11 @@
+# Auto-generated file - MODIFY AT YOUR OWN RISK
+top = set_as_top(create("openmdao.main.assembly.Assembly"))
+top.add("c1", create("simple.Simple"))
+top.add("c2", create("simple.Simple"))
+top.add("c3", create("simple.Simple"))
+top.connect("c1.c","c2.a")
+top.connect("c1.d","c2.b")
+top.connect("c2.c","c3.a")
+top.connect("c2.d","c3.b")
+top.driver.workflow.add(["c1","c2","c3"])
+

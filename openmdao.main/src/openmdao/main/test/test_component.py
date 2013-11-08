@@ -50,49 +50,20 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.comp = MyComponent()
 
-    def test_get_valid(self):
-        comp = MyComponent()
-        valids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(valids, [True, False])
-        try:
-            comp.get_valid(['x', 'foobar'])
-        except KeyError as err:
-            self.assertEqual(str(err), "'foobar'")
-        else:
-            self.fail("Expected KeyError")
-
-    def test_set_valid(self):
-        comp = self.comp
-        valids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(valids, [True, False])
-        comp.set_valid(['x', 'xout'], True)
-        newvalids = comp.get_valid(['x', 'xout'])
-        self.assertEqual(newvalids, [True, True])
-
     def test_connect(self):
         comp = self.comp
 
-        self.assertEqual(comp._depgraph.get_source('x'), None)
-        vset = set(comp._valid_dict.keys())
+        self.assertEqual(comp._depgraph.get_sources('x'), [])
 
         comp.connect('parent.foo', 'x')
-        self.assertEqual(comp._depgraph.get_source('x'), 'parent.foo')
+        self.assertEqual(comp._depgraph.get_sources('x'), ['parent.foo'])
 
         comp.connect('xout', 'parent.bar')
-        self.assertEqual(comp._depgraph.get_source('xout'), None)
-        self.assertEqual(vset, set(comp._valid_dict.keys()))
-
-        comp.connect('parent.blah', 'cont.dyntrait')
-        # _valid_dict should have a new entry
-        self.assertEqual(set(comp._valid_dict.keys())-vset, set(['cont.dyntrait']))
-
-        # _valid_dict entry should go away
-        comp.disconnect('parent.blah', 'cont.dyntrait')
-        self.assertEqual(vset, set(comp._valid_dict.keys()))
+        self.assertEqual(comp._depgraph.get_sources('xout'), [])
 
     def test_illegal_directory(self):
         logging.debug('')
-        logging.debug('test_bad_directory')
+        logging.debug('test_illegal_directory')
 
         try:
             # Set an illegal execution directory, verify error.
@@ -200,13 +171,13 @@ class TestCase(unittest.TestCase):
         # i.e., comp should not need to re-run if you set an input to the same value.
 
         self.comp.set('x', 45.5)
-        self.assertEqual(self.comp._valid_dict['xout'], False)
+        self.assertEqual(self.comp.get_valid(['xout']), [False])
         self.comp.run()
-        self.assertEqual(self.comp._valid_dict['xout'], True)
+        self.assertEqual(self.comp.get_valid(['xout']), [True])
         self.comp.set('x', 45.5)
-        self.assertEqual(self.comp._valid_dict['xout'], True)
+        self.assertEqual(self.comp.get_valid(['xout']), [True])
         self.comp.set('x', 99.999)
-        self.assertEqual(self.comp._valid_dict['xout'], False)
+        self.assertEqual(self.comp.get_valid(['xout']), [False])
 
     def test_override(self):
         code = """\
