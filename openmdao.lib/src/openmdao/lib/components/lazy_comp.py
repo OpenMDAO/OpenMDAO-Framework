@@ -19,18 +19,32 @@ class LazyComponent(Component):
     should only use it in the case where you have outputs that are computationally expensive 
     and you wish to only calculate them when they are relevant to the current simulation. 
     """
-    
+    def __init__(self):
+        super(LazyComponent, self).__init__()
+        self._invalidation_type = 'partial'
+
     def _pre_execute(self, force=False): 
         super(LazyComponent, self)._pre_execute()
         self._connected_outputs = self.list_outputs(connected=True)
-        
-    def _post_execute(self): 
-        super(LazyComponent, self)._post_execute()
 
-        valids = self._valid_dict
-        for name in self.list_outputs(): 
-            if name in self._connected_outputs:
-                valids[name] = True
-            else:
-                valids[name] = False    
+    def _input_updated(self, name, fullpath=None):
+        self._call_execute = True
+        outs = self.invalidate_deps([name])
+        if outs and self.parent:
+            self.parent.child_invalidated(self.name, outs)
 
+    def _outputs_to_validate(self):
+        return self._connected_outputs
+
+    def connect(self, srcexpr, destexpr):
+        super(LazyComponent, self).connect(srcexpr, destexpr)
+
+        if str(destexpr).startswith('parent.'): # our output is being used externally
+            self._call_execute = True
+
+    def disconnect(self, srcpath, destpath):
+        super(LazyComponent, self).disconnect(srcpath, destpath)
+        # invalidate our disconnected output in the parent depgraph
+        if destpath.startswith('parent.'): 
+            self.parent._depgraph.node['.'.join([self.name,
+                                                 srcpath])]['valid'] = False

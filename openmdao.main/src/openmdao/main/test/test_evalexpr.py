@@ -5,7 +5,7 @@ import ast
 from openmdao.main.numpy_fallback import array
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprExaminer
-from openmdao.main.printexpr import ExprPrinter, transform_expression
+from openmdao.main.printexpr import ExprPrinter, transform_expression, print_node
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
@@ -55,7 +55,7 @@ class Comp(Component):
     def get_cont(self, i):
         return self.contlist[i]
     
-    def get_attr(self, name):
+    def get_attrib(self, name):
         return getattr(self, name)
     
 
@@ -85,7 +85,21 @@ def new_text(expr):
     ep.visit(expr._parse_get()[0])
     return ep.get_text()
         
-
+class ExprPrinterTestCase(unittest.TestCase):
+    def test_print_node(self):
+        checks = [
+            'a',
+            'a+b',
+            'a-b',
+            'a*b',
+            'a/b',
+            'a-(b-c)',
+            'a+b*c',
+            ]
+        for check in checks:
+            node = ast.parse(check, mode='eval')
+            self.assertEqual(check, print_node(node))
+        
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -237,7 +251,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
         self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
-        ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
+        ex = ExprEvaluator("comp.get_attrib('get_cont')(1).a1d", self.top)
         self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
         
@@ -442,22 +456,22 @@ class ExprEvalTestCase(unittest.TestCase):
         top.connect('comp6.c','comp7.b')
         top.connect('comp8.c','comp9.b')
         
-        exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
-        self.assertEqual(exp.get_required_compnames(top),
-                         set(['comp1','comp2','comp3','comp5','comp8','comp9']))
-        exp = ExprEvaluator('comp7.a', top.driver)
-        self.assertEqual(exp.get_required_compnames(top),
-                         set(['comp1','comp2','comp3','comp4','comp6','comp7']))
-        exp = ExprEvaluator('comp8.a', top.driver)
-        self.assertEqual(exp.get_required_compnames(top),
-                         set(['comp8']))
-        exp = ExprEvaluator('comp9.c+comp7.d', top.driver)
-        self.assertEqual(exp.get_required_compnames(top),
-                         set(['comp1','comp2','comp3','comp4','comp6',
-                              'comp7','comp8','comp9']))
-        exp = ExprEvaluator('sin(0.3)', top.driver)
-        self.assertEqual(exp.get_required_compnames(top),
-                         set())
+        # exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
+        # self.assertEqual(exp.get_required_compnames(top),
+        #                  set(['comp1','comp2','comp3','comp5','comp8','comp9']))
+        # exp = ExprEvaluator('comp7.a', top.driver)
+        # self.assertEqual(exp.get_required_compnames(top),
+        #                  set(['comp1','comp2','comp3','comp4','comp6','comp7']))
+        # exp = ExprEvaluator('comp8.a', top.driver)
+        # self.assertEqual(exp.get_required_compnames(top),
+        #                  set(['comp8']))
+        # exp = ExprEvaluator('comp9.c+comp7.d', top.driver)
+        # self.assertEqual(exp.get_required_compnames(top),
+        #                  set(['comp1','comp2','comp3','comp4','comp6',
+        #                       'comp7','comp8','comp9']))
+        # exp = ExprEvaluator('sin(0.3)', top.driver)
+        # self.assertEqual(exp.get_required_compnames(top),
+        #                  set())
         
     def test_eval_gradient(self):
         top = set_as_top(Assembly())
@@ -539,13 +553,6 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
     def test_connected_expr(self):
-        try:
-            ConnectedExprEvaluator("var1+var2", self.top)._parse()
-        except Exception as err:
-            self.assertEqual(str(err), "bad connected expression 'var1+var2' must reference exactly one variable")
-        else:
-            self.fail("Exception expected")
-            
         ConnectedExprEvaluator("var1[x]", self.top)._parse()
         try:
             ConnectedExprEvaluator("var1[x]", self.top, is_dest=True)._parse()

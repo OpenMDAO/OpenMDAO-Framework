@@ -41,7 +41,6 @@ import hashlib
 import inspect
 import logging
 import os
-import signal
 import socket
 import sys
 import threading
@@ -483,7 +482,7 @@ class OpenMDAO_Server(Server):
                 except Exception as exc:
                     self._logger.exception('%s %s %s failed:',
                                            methodname, role, credentials)
-                    msg = ('#ERROR', exc)
+                    msg = ('#TRACEBACK', traceback.format_exc())
                 else:
                     msg = self._form_reply(res, ident, methodname, function,
                                            args, access_controller, conn)

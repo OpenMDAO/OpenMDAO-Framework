@@ -106,7 +106,6 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
     }
 
     function findComps(wjson, callback) {
-        debug.info('findComps', wjson, callback);
         var candidates = [];
         var limits = {};
 

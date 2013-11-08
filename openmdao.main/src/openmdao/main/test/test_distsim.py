@@ -254,10 +254,10 @@ class ProtectedBox(Box):
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name, index=None):
+    def get_attr(self, name, index=None):
         if self.protector.user_attribute(self, name):
-            return super(ProtectedBox, self).get_wrapped_attr(name)
-        raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
+            return super(ProtectedBox, self).get_attr(name)
+        raise RoleError("No get_attr access to '%s' by role '%s'"
                         % (attr, role))
 
     @rbac(('owner', 'user'))
@@ -393,9 +393,14 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, obj.get('solid_volume'), 2.5766295747, 0.000001)
         assert_rel_error(self, obj.get('surface_area'), 50.265482457, 0.000001)
 
-        msg = ": Variable 'radius' must be a float in the range (0.0, "
-        assert_raises(self, "obj.set('radius', -1)", globals(), locals(),
-                      ValueError, msg)
+        try:
+            obj.set('radius', -1)
+        except RemoteError as exc:
+            fragment = ": Variable 'radius' must be a float in the range (0.0, "
+            if fragment not in str(exc):
+                self.fail('%s not found in %s' % (fragment, exc))
+        else:
+            self.fail('Expected RemoteError')
 
         # Now a Box, accessed via attribute methods.
         obj = factory.create(_MODULE+'.Box')
@@ -474,7 +479,7 @@ class TestCase(unittest.TestCase):
         try:
             box.cause_parent_error1()
         except RemoteError as exc:
-            msg = "AttributeError: attribute 'no_such_variable' of"
+            msg = "AttributeError: 'Model' object has no attribute 'no_such_variable'"
             logging.debug('msg: %s', msg)
             logging.debug('exc: %s', exc)
             self.assertTrue(msg in str(exc))
@@ -706,7 +711,8 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
-    unittest.main()
+    #unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

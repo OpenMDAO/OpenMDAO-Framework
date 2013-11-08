@@ -12,9 +12,6 @@ This requires finding the real module name and munging references to
 correctly.
 """
 
-#Also note that YAML format doesn't handle more than one layer of back-pointers,
-#so it's only suitable for very flat object networks.
-
 # Note that handling __main__ module references is exercised during testing by
 # running in separate process, so no coverage will be reported by this process.
 # Consequently, there are a lot of '#pragma no cover' annotations where
@@ -22,14 +19,6 @@ correctly.
 
 import pickle
 import cPickle
-#import yaml
-#try:
-    #from yaml import CDumper as Dumper
-    #_libyaml = True
-## Test machines have libyaml.
-#except ImportError:  #pragma no cover
-    #from yaml import Dumper
-    #_libyaml = False
 
 import copy
 import copy_reg
@@ -51,8 +40,6 @@ from openmdao.util import eggobserver, eggwriter
 from openmdao.util.fileutil import onerror
 
 # Save formats.
-#SAVE_YAML    = 1
-#SAVE_LIBYAML = 2
 SAVE_PICKLE  = 3
 SAVE_CPICKLE = 4
 
@@ -174,16 +161,16 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
 
+    # Clone __main__ as a 'real' module and have classes reference that.
+    _fix_main(logger)
+
     # Get a list of all objects we'll be saving.
     objs = _get_objects(root, logger)
 
     # Check that each object can be pickled.
     _check_objects(objs, logger, observer)
 
-    # Fixup objects, classes, & sys.modules for __main__ imports.
-    fixup = _fix_objects(objs, observer)
-
-    # Verify that the fixups are retained.
+    # Verify that no __main__ references are still around.
     _verify_objects(root, logger, observer)
 
     tmp_dir = None
@@ -207,13 +194,13 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                     if path.endswith('.py'):
                         local_modules.add(os.path.join(dirpath, path))
 
-        # Ensure module corresponding to __main__ is local if it was used.
-        # (Test script embedded in egg is an example of how this might occur)
-        fixup_objects, fixup_classes, fixup_modules = fixup
-        if fixup_objects:  #pragma no cover
-            # Something references __main__.
-            main_mod = sys.modules['__main__'].__file__
-            local_modules.add(os.path.abspath(main_mod))
+        # Ensure module defining root is local. Saving a root which is defined
+        # in a package can be hidden if the package was installed.
+        root_mod = root.__class__.__module__
+        root_mod = sys.modules[root_mod].__file__
+        if root_mod.endswith('.pyc') or root_mod.endswith('.pyo'):
+            root_mod = root_mod[:-1]
+        local_modules.add(os.path.abspath(root_mod))
 
         logger.log(LOG_DEBUG2, '    py_dir: %s', py_dir)
         logger.log(LOG_DEBUG2, '    src_dir: %s', src_dir)
@@ -298,9 +285,23 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         os.chdir(orig_dir)
         if tmp_dir:
             shutil.rmtree(tmp_dir, onerror=onerror)
-        _restore_objects(fixup)
 
     return (egg_name, required_distributions, orphan_modules)
+
+
+def _fix_main(logger):
+    """ Clone __main__ as a 'real' module and have classes reference that. """
+    mod = sys.modules['__main__']
+    mod_name, dot, ext = os.path.basename(mod.__file__).rpartition('.')
+    if mod_name not in sys.modules:
+        logger.info('Cloning __main__ as %s (file %s)', mod_name, mod.__file__)
+        sys.modules[mod_name] = mod
+        for name, value in inspect.getmembers(mod):
+            if inspect.isclass(value) and value.__module__ == '__main__':
+                value.__module__ = mod_name
+            if inspect.isfunction(value) and \
+               hasattr(value, '__module__') and value.__module__ == '__main__':
+                value.__module__ = mod_name
 
 
 def _get_objects(root, logger):
@@ -400,125 +401,6 @@ def _verify_objects(root, logger, observer):
                   " obj %r, container %r index %s" % (obj, container, index)
             observer.exception(msg)
             raise RuntimeError(msg)
-
-
-def _fix_objects(objs, observer):
-    """ Fixup objects, classes, & sys.modules for __main__ imports. """
-    fixup_objects = []
-    fixup_classes = {}
-    fixup_modules = set()
-
-    for obj, container, index in objs:
-        try:
-            if obj.__class__.__name__ == 'instancemethod':
-                continue  # Handled by _pickle_method() above.
-            try:
-                mod = obj.__module__
-            except AttributeError:
-                continue  # No module entry to fix.
-
-            if inspect.isclass(obj):
-                cls = obj
-            else:
-                cls = obj.__class__
-
-            if mod is None:
-                # Needed after switching to Traits for some reason.
-                mod = cls.__module__
-
-            if mod == '__main__':  #pragma no cover
-                _fix_object(obj, container, index, cls, observer,
-                            fixup_classes, fixup_modules)
-                fixup_objects.append((obj, container, index))
-        except Exception:
-            _restore_objects((fixup_objects, fixup_classes, fixup_modules))
-            raise
-
-    return (fixup_objects, fixup_classes, fixup_modules)
-
-
-def _fix_object(obj, container, index, cls, observer,
-                fixup_classes, fixup_modules):  #pragma no cover
-    """ Fixup one object related to __main__. """
-    classname = cls.__name__
-    if classname in ('function', 'type'):
-        msg = "Can't save: reference to %s defined in main module %r" \
-              % (classname, obj)
-        observer.exception(msg)
-        raise RuntimeError(msg)
-
-    mod = cls.__module__
-    if mod == '__main__' and (classname not in fixup_classes):
-        mod, module = _find_in_main(classname)
-        if mod:
-            new = getattr(module, classname)
-            fixup_classes[classname] = (cls, new)
-            fixup_modules.add(mod)
-        else:
-            msg = "Can't find module for '%s'" % classname
-            observer.exception(msg)
-            raise RuntimeError(msg)
-
-    if inspect.isclass(obj):
-        if isinstance(container, tuple):
-            msg = "Can't save: reference to class %s defined in main" \
-                  " module is contained in a tuple." % classname
-            observer.exception(msg)
-            raise RuntimeError(msg)
-        else:
-            container[index] = fixup_classes[classname][1]
-    else:
-        try:
-            obj.__class__ = fixup_classes[classname][1]
-        except KeyError:
-            msg = "Can't fix %r, classname %s, module %s" \
-                  % (obj, classname, mod)
-            observer.exception(msg)
-            raise RuntimeError(msg)
-        else:
-            obj.__module__ = obj.__class__.__module__
-
-
-def _find_in_main(classname):  #pragma no cover
-    """ Try to get 'real' module for __main__ class. """
-    try:
-        filename = sys.modules['__main__'].__file__
-    except AttributeError:
-        pass
-    else:
-        if filename.endswith('.py'):
-            if not '.' in sys.path:
-                sys.path.append('.')
-            mod = os.path.basename(filename)[:-3]
-            try:
-                module = __import__(mod, fromlist=[classname])
-            except ImportError:
-                pass
-            else:
-                return (mod, module)
-    return (None, None)
-
-
-def _restore_objects(fixup):  #pragma no cover
-    """ Restore objects, classes, & sys.modules for __main__ imports. """
-    fixup_objects, fixup_classes, fixup_modules = fixup
-
-    for obj, container, index in fixup_objects:
-        obj.__module__ = '__main__'
-        if inspect.isclass(obj):
-            classname = obj.__name__
-            container[index] = fixup_classes[classname][0]
-        else:
-            classname = obj.__class__.__name__
-            if classname != 'function':
-                obj.__class__ = fixup_classes[classname][0]
-
-    for classname in fixup_classes.keys():
-        new = fixup_classes[classname][1]
-        del new
-
-    for mod in fixup_modules:
-        del sys.modules[mod]
 
 
 def _get_distributions(objs, py_dir, logger, observer):
@@ -871,13 +753,6 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
         cPickle.dump(root, outstream, proto)
     elif fmt is SAVE_PICKLE:
         pickle.dump(root, outstream, proto)
-    #elif fmt is SAVE_YAML:
-        #yaml.dump(root, outstream)
-    #elif fmt is SAVE_LIBYAML:
-        ## Test machines have libyaml.
-        #if _libyaml is False:  #pragma no cover
-            #logger.warning('libyaml not available, using yaml instead')
-        #yaml.dump(root, outstream, Dumper=Dumper)
     else:
         raise RuntimeError("Can't save object using format '%s'" % fmt)
 

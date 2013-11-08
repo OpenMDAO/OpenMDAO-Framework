@@ -21,12 +21,16 @@ except ImportError as err:
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
 from openmdao.main.datatypes.api import Float, Int, Bool
+from openmdao.main.interfaces import ISolver, implements
 from openmdao.util.decorators import stub_if_missing_deps
 
 
 @stub_if_missing_deps('numpy', 'scipy')
 class MDASolver(Driver):
     
+    implements(ISolver)
+    
+    # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
@@ -60,11 +64,11 @@ class MDASolver(Driver):
     def execute_Gauss_Seidel(self):
         """ Solver execution loop: fixed point iteration. """
         
-        # Find dimension of our problem.
-        self.workflow.initialize_residual()
-        
         # Initial Run
         self.run_iteration()
+        
+        # Find dimension of our problem.
+        self.workflow.initialize_residual()
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
@@ -92,6 +96,9 @@ class MDASolver(Driver):
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
         
+        # Initial Run
+        self.run_iteration()
+        
         # Find dimension of our problem.
         nEdge = self.workflow.initialize_residual()
         
@@ -99,9 +106,6 @@ class MDASolver(Driver):
                            matvec=self.workflow.matvecFWD,
                            dtype=float)
             
-        # Initial Run
-        self.run_iteration()
-        
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
         print "Residual vector norm:\n", norm
@@ -127,10 +131,6 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
             
             iter_num += 1
-            self.record_case()
-            
-            
-            
+            self.record_case()       

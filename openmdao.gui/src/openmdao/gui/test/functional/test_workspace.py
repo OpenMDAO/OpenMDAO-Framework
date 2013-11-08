@@ -564,7 +564,7 @@ def _test_console_errors(browser):
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."
     time.sleep(0.5)
-    eq(workspace_page.history, expected)
+    assert workspace_page.history.endswith(expected)
     editor.close()
 
     # Attempt to save file with syntax error.
@@ -640,7 +640,7 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['', 'mm.force_execute', '0', '1', '', '', '', 'nonsense']]
+    expected = [['', 'mm.force_execute', '0', '1', '1', '0', '', 'nonsense']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
@@ -688,7 +688,7 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['', 'mm.force_execute > 0', '1', '0', 'nonsense']]
+    expected = [['', 'mm.force_execute > 0', 'nonsense']]
     eq(len(constraints.value), len(expected))
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
@@ -888,13 +888,14 @@ def _test_libsearch(browser):
     # Get 'doe' search results.
     workspace_page.set_library_filter('doe')
     objects = workspace_page.get_object_types()
-    eq(objects,
-       ['CentralComposite',
+    eq(objects, [
+        'CentralComposite',
         'CSVFile',
         'DOEdriver',
         'FullFactorial',
         'NeighborhoodDOEdriver',
         'OptLatinHypercube',
+        'PlugNozzleGeometry',
         'Uniform'])
     doe_searches = workspace_page.get_library_searches()
     eq(doe_searches, def_searches + ['doe'])

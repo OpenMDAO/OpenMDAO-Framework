@@ -6,6 +6,7 @@ import unittest
 
 from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.main.api import Assembly, set_as_top
+from openmdao.util.testutil import assert_rel_error
 
 
 class execCompTest(unittest.TestCase):
@@ -36,16 +37,18 @@ class execCompTest(unittest.TestCase):
                   'dy2_dx2 = 3.0*x1']
                   
         self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.driver.workflow.add('comp1')
     
         self.top.comp1.x1 = 3.0
         self.top.comp1.x2 = 5.0
         self.top.comp1.run()
-        self.top.comp1.calc_derivatives(first=True, second=False)
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2'],
+                                                   outputs=['comp1.y1', 'comp1.y2'])
         
-        self.assertEqual(self.top.comp1.derivatives.first_derivatives['y1']['x1'], 2.0)
-        self.assertEqual(self.top.comp1.derivatives.first_derivatives['y1']['x2'], 10.0)
-        self.assertEqual(self.top.comp1.derivatives.first_derivatives['y2']['x1'], 15.0)
-        self.assertEqual(self.top.comp1.derivatives.first_derivatives['y2']['x2'], 9.0)
+        assert_rel_error(self, J[0, 0], 2.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 10.0, 0.0001)
+        assert_rel_error(self, J[1, 0], 15.0, 0.0001)
+        assert_rel_error(self, J[1, 1], 9.0, 0.0001)
         self.assertEqual(self.top.comp1.y2, 45.0)
 
         

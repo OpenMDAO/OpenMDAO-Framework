@@ -50,7 +50,7 @@ class PluginsTestCase(unittest.TestCase):
                                   'MANIFEST.in', '__init__.py', 'conf.py',
                                   'usage.rst', 'index.rst',
                                   'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
-                                  'README.txt',
+                                  'README.txt', '_static',
                                   'test', 'test_foobar.py']))
         finally:
             os.chdir(orig_dir)
@@ -239,7 +239,7 @@ class PluginsTestCase(unittest.TestCase):
                               'MANIFEST.in', '__init__.py', 'conf.py',
                               'usage.rst', 'index.rst',
                               'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
-                              'README.txt',
+                              'README.txt', '_static',
                               'test', 'test_foobar.py']))
 
         # Errors.
@@ -298,7 +298,6 @@ class PluginsTestCase(unittest.TestCase):
                     'openmdao.lib.casehandlers.caseset.CaseArray',
                     'openmdao.lib.components.broadcaster.Broadcaster',
                     'openmdao.lib.datatypes.array.Array',
-                    'openmdao.lib.differentiators.finite_difference.FiniteDifference',
                     'openmdao.lib.doegenerators.central_composite.CentralComposite',
                     'openmdao.lib.drivers.broydensolver.BroydenSolver',
                     'openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate',

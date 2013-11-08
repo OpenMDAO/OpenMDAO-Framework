@@ -13,13 +13,13 @@ import sys
 import unittest
 import nose
 
-from openmdao.main.api import Assembly, Component, Container, set_as_top
+from openmdao.main.api import Assembly, Component, Container, VariableTree, set_as_top
 from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef
+from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef, VarTree
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 from openmdao.util.fileutil import onerror
@@ -53,6 +53,13 @@ def next_egg():
     return str(EGG_VERSION)
 
 
+class Subcontainer(VariableTree):
+    """ Just a subcontainer for Source. """
+
+    binary_data = Array(dtype='d', iotype='in')
+    binary_file = File(iotype='out')
+
+
 class Source(Component):
     """
     Produces files. A fair amount of stuff happens in Component.save_to_egg()
@@ -62,6 +69,7 @@ class Source(Component):
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
     text_file = File(iotype='out')
+    sub = VarTree(Subcontainer(), iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -130,12 +138,6 @@ class Source(Component):
                 cPickle.dump(self.sub.binary_data, out, 2)
             self.sub.binary_file = FileRef(path, binary=True)
 
-
-class Subcontainer(Container):
-    """ Just a subcontainer for Source. """
-
-    binary_data = Array(dtype='d', iotype='in')
-    binary_file = File(iotype='out')
 
 
 class DataObj(object):
@@ -243,6 +245,11 @@ class OddballContainer(Container):
         super(OddballContainer, self).__init__()
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
+
+
+def local_getpid():
+    """ Example of function defined in __main__. """
+    return os.getpid()
 
 
 def observer(state, string, file_fraction, byte_fraction):
@@ -608,21 +615,13 @@ class TestCase(unittest.TestCase):
         msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
         assert_raises(self, code, globals(), locals(), ValueError, msg)
 
-    def test_save_bad_function(self):
+    def test_save_function(self):
         logging.debug('')
-        logging.debug('test_save_bad_function')
+        logging.debug('test_save_function')
 
-        # Set reference to unpickleable function.
-        self.model.Oddball.function_socket = observer
-        try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except RuntimeError, exc:
-            msg = "Egg_TestModel: Can't save: reference to function defined" \
-                  " in main module"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            if MODULE_NAME == '__main__':
-                self.fail('Expected RuntimeError')
+        # Set reference to function defined in __main__.
+        self.model.Oddball.function_socket = local_getpid 
+        self.save_load()
 
     def test_save_bad_method(self):
         logging.debug('')

@@ -21,7 +21,7 @@ class Discipline(Component):
         super(Discipline,self).__init__()        
 
         self.add_trait("z",Array(zeros((prob_size,1)),iotype="in",
-                                 desc="global varaibles",
+                                 desc="global variables",
                                  shape=(prob_size,1)))
         
         self.add_trait("C_z",Array(ones((prob_size,prob_size)), iotype="in", 
@@ -58,6 +58,7 @@ class Discipline(Component):
         y = matrix(self.y_in)
         
         self.y_out = array(-1/self.c_y_out*(Cz*z+Cx*x-Cy*y)) 
+        #print "running", self.name, self.y_in, self.y_out
         
     def linearize(self):
         """ Calculate the Jacobian """

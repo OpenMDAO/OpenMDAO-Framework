@@ -22,7 +22,8 @@ class GeomCompTestCase(unittest.TestCase):
         self.geomcomp = GeomComponent()
         self.tdir = tempfile.mkdtemp()
         self.base_inputs = set(self.geomcomp.list_inputs())
-        self.base_outputs = set(self.geomcomp.list_outputs())
+        #need to manually add geom_out here, since it's a special case
+        self.base_outputs = set(self.geomcomp.list_outputs()+['geom_out']) 
 
     def tearDown(self):
         shutil.rmtree(self.tdir, onerror=onerror)
@@ -66,12 +67,12 @@ class GeomCompTestCase(unittest.TestCase):
             raise SkipTest("pygem_diamond is not installed")
         self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
         base_ins = set(self.geomcomp.list_inputs())
-        base_outs = set(self.geomcomp.list_outputs())
+        base_outs = set(self.geomcomp.list_outputs()+['geom_out'])
 
         gem_outs = ['zcg', 'zmax', 'xcg', 'zmin', 'Ixz',
-            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody',
+            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody1', 'ibody2',
             'ymax', 'nnode', 'ycg', 'nface', 'volume', 'Iyy', 'Iyx', 'Iyz',
-            'area', 'nedge', 'xmax']
+            'area', 'nedge', 'xmax', 'iedge', 'length', 'iface', 'inode', 'nbody']
 
         csm_input = """
 # bottle2 (from OpenCASCADE tutorial)
@@ -180,6 +181,7 @@ end
                           BoxParametricGeometry())
         ins = set(self.geomcomp.list_inputs()) - self.base_inputs
         outs = set(self.geomcomp.list_outputs()) - self.base_outputs
+        print self.base_outputs, self.geomcomp.list_outputs(), outs
         self.assertEqual(ins, set(['height']))
         self.assertEqual(outs, set(['volume']))
         height = self.geomcomp.height
