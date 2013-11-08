@@ -320,7 +320,7 @@ def _get_mingw_dlls():
 
     def _get_mingw_dlls_from_site():
         import zipfile
-        dest = os.path.join(os.getcwd(), "scripts")
+        dest = os.path.join(os.getcwd(), "devenv", "scripts")
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
         zipped = zipfile.ZipFile(zippath, 'r')
         zipped.extractall(dest)
