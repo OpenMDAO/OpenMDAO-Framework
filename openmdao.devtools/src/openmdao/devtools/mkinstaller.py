@@ -309,10 +309,11 @@ def download(url, dest='.'):
 
 def _get_mingw_dlls():
     # first, check if MinGW/bin is already in PATH
-    for entry in os.environ['PATH'].split(os.pathsep):
-        if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
-            print 'MinGW is already installed, skipping download.'
-            break
+    if 'path' in os.environ:
+        for entry in os.environ['PATH'].split(os.pathsep):
+            if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+                print 'MinGW is already installed, skipping download.'
+                break
     else:
         import zipfile
         dest = os.path.dirname(sys.executable)
