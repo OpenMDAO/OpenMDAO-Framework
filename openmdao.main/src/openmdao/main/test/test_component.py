@@ -63,7 +63,7 @@ class TestCase(unittest.TestCase):
 
     def test_illegal_directory(self):
         logging.debug('')
-        logging.debug('test_bad_directory')
+        logging.debug('test_illegal_directory')
 
         try:
             # Set an illegal execution directory, verify error.
