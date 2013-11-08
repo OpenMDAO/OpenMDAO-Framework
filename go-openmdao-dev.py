@@ -2103,6 +2103,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     except OSError:
         failures.append(req)
 
+
 def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
     # fail when built in a virtualenv
@@ -2323,12 +2324,12 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
-    
-    
+        
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
     if not is_win and ' ' in abs_bin:
+        import stat
         shebang = '#!"%s"\n' % os.path.join(abs_bin, 'python')
         print '\nFixing scripts for spaces in install path'
         for path in sorted(glob.glob(os.path.join(bin_dir, '*'))):
