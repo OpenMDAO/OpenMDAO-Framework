@@ -308,13 +308,17 @@ def download(url, dest='.'):
     return outpath
 
 def _get_mingw_dlls():
-    # first, check if MinGW/bin is already in PATH
-    if 'path' in os.environ:
-        for entry in os.environ['PATH'].split(os.pathsep):
-            if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
-                print 'MinGW is already installed, skipping download.'
-                break
-    else:
+    def _mingw_dlls_in_path():
+        # first, check if MinGW/bin is already in PATH
+        if 'path' in os.environ:
+            for entry in os.environ['PATH'].split(os.pathsep):
+                if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+                    print 'MinGW is already installed, skipping download.'
+                    return True
+
+        return False
+
+    def _get_mingw_dlls_from_site():
         import zipfile
         dest = os.path.dirname(sys.executable)
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
@@ -322,6 +326,8 @@ def _get_mingw_dlls():
         zipped.extractall(dest)
         zipped.close()
         os.remove(zippath)
+
+    _mingw_dlls_in_path() or _get_mingw_dlls_from_site()
 
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
