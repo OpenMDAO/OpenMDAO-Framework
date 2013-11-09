@@ -383,8 +383,9 @@ class TestCase(unittest.TestCase):
         ]
 
         # Add our file if we're not considered part of an egg.
-        if sys.modules[self.__module__].__file__.find('.egg') < 0:
-            expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
+        #Commenting out this if as a proposed fix from SET for our release testing problems.
+	#if sys.modules[self.__module__].__file__.find('.egg') < 0:
+        expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
         expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         if len(OBSERVATIONS) != len(expected):
