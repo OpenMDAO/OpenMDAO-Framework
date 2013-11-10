@@ -142,7 +142,6 @@ class STLGroup(object):
 
 
     #end methods for IStaticGeometry
->>>>>>> a68753dd1fa57e885bbbe392f33593d751064aea
 
     def add(self, comp ,name=None): 
         """ addes a new component to the geometry""" 
