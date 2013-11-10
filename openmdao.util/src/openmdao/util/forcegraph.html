@@ -46,8 +46,19 @@
                 return 40;
             }
         })
+        .linkStrength(function(lnk, idx) {
+            var sparts = lnk.source.id.split(".");
+            var tparts = lnk.target.id.split(".");
+            // make var comp and var to subvar connections shorter
+            if (sparts[0] === tparts[0]) {
+                return 1.0;
+            }
+            else {
+                return 0.2;
+            }
+        })
 	    .gravity(.05)
-	    .charge(-80)
+	    .charge(-100)
 	    .size([width, height]);
 
 	var graph = __mygraph__json;
