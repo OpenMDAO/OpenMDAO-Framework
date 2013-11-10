@@ -1,4 +1,5 @@
 
+import time
 from uuid import uuid1
 from array import array
 import traceback
@@ -88,6 +89,8 @@ class Case(object):
             self.uuid = str(uuid1())  # unique identifier
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
+        self.timestamp = time.time()
+
         if inputs: 
             self.add_inputs(inputs)
         if outputs:
@@ -104,8 +107,10 @@ class Case(object):
         stream = StringIO()
         stream.write("Case: %s\n" % self.label)
         stream.write("   uuid: %s\n" % self.uuid)
+        stream.write("   timestamp: %15f\n" % self.timestamp)
         if self.parent_uuid:
             stream.write("   parent_uuid: %s\n" % self.parent_uuid)
+
         if ins:
             stream.write("   inputs:\n")
             for name,val in ins:
@@ -298,6 +303,9 @@ class Case(object):
                             self.msg = str(err)
                         else:
                             self.msg = self.msg + " %s" % err
+
+        case.timestamp = time.time()
+
         if last_excpt is not None:
             raise last_excpt
             
@@ -361,8 +369,10 @@ class Case(object):
                 outs.append((name,self._outputs[name]))
             else:
                 raise KeyError("'%s' is not part of this Case" % name)
-        return Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
+        sc =  Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
                     max_retries=self.max_retries)
+        sc.timestamp = self.timestamp
+        return sc
 
         
     def _register_expr(self, s):

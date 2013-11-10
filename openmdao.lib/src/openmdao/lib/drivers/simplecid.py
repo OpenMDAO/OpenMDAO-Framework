@@ -53,5 +53,8 @@ class SimpleCaseIterDriver(Driver):
         try:
             case.update_outputs(self.parent, msg)
         except Exception as err:
-            case.msg = msg + " : " + str(err)
+            if msg is None:
+                case.msg = str(err)
+            else:
+                case.msg = msg + ":" + str(err)
 
