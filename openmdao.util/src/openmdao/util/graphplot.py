@@ -167,7 +167,7 @@ def set_layout(graph, xmax=960., ymax=500.):
     comp_dx = float(xmax) / (len(cgraph)+1)
 
     x = 0
-    for comp in cgraph.nodes_iter():
+    for comp in csort:
         x += comp_dx
         graph.node[comp]['x'] = x
         graph.node[comp]['y'] = ymid
