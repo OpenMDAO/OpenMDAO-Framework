@@ -34,6 +34,11 @@ _excluded_link_data = set([
     'dexpr',
 ])
 
+def _to_id(name):
+    """Convert a given name to a valid html id, replacing
+    dots with hyphens."""
+    return name.replace('.', '-')
+
 def _clean_graph(graph):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
@@ -86,6 +91,16 @@ def _clean_graph(graph):
             data['short'] = node
         else:
             data['short'] = parts[1]
+        # set valid html id
+        data['hid'] = _to_id(node)
+        if 'comp' in data:
+            data['inputs'] = []
+            data['outputs'] = []
+            for name in graph._all_child_vars(node):
+                if is_input_node(graph, name):
+                    data['inputs'].append(_to_id(name))
+                else:
+                    data['outputs'].append(_to_id(name))
 
     return graph
 
@@ -190,35 +205,35 @@ def set_layout(graph, xmax=960., ymax=500.):
     cvar_dx = cradius/2. + 5 # x distance between comps and their vars
     cvar_dy = cradius/2. + 5 # y distance between comp vars on same side of a comp
 
-    for node in bin_vars+bout_vars:
-        x = graph.node[node]['x']
-        y = graph.node[node]['y']
-        children = graph._all_child_vars(node)
-        child_y = y - (len(children) * cvar_dy) / 2.
-        for v in children:
-            if is_input_node(graph, node):
-                graph.node[v]['x'] = x + cvar_dx
-                graph.node[v]['y'] = child_y
-                child_y += cvar_dy
+    # for node in bin_vars+bout_vars:
+    #     x = graph.node[node]['x']
+    #     y = graph.node[node]['y']
+    #     children = graph._all_child_vars(node)
+    #     child_y = y - (len(children) * cvar_dy) / 2.
+    #     for v in children:
+    #         if is_input_node(graph, node):
+    #             graph.node[v]['x'] = x + cvar_dx
+    #             graph.node[v]['y'] = child_y
+    #             child_y += cvar_dy
 
-    for node in csort:
-        x = graph.node[node]['x']
-        y = graph.node[node]['y']
+    # for node in csort:
+    #     x = graph.node[node]['x']
+    #     y = graph.node[node]['y']
 
-        children = graph._all_child_vars(node)
-        invars = [v for v in children if is_input_node(graph,v)]
-        outvars = [v for v in children if v not in invars]
-        ichild_y = y - (len(invars) * cvar_dy) / 2.
-        ochild_y = y - (len(outvars) * cvar_dy) / 2.
-        for v in invars:
-            graph.node[v]['x'] = x - cvar_dx
-            graph.node[v]['y'] = ichild_y
-            ichild_y += cvar_dy
+    #     children = graph._all_child_vars(node)
+    #     invars = [v for v in children if is_input_node(graph,v)]
+    #     outvars = [v for v in children if v not in invars]
+    #     ichild_y = y - (len(invars) * cvar_dy) / 2.
+    #     ochild_y = y - (len(outvars) * cvar_dy) / 2.
+    #     for v in invars:
+    #         graph.node[v]['x'] = x - cvar_dx
+    #         graph.node[v]['y'] = ichild_y
+    #         ichild_y += cvar_dy
 
-        for v in outvars:
-            graph.node[v]['x'] = x + cvar_dx
-            graph.node[v]['y'] = ochild_y
-            ochild_y += cvar_dy
+    #     for v in outvars:
+    #         graph.node[v]['x'] = x + cvar_dx
+    #         graph.node[v]['y'] = ochild_y
+    #         ochild_y += cvar_dy
 
     # # check that all x,y values are set
     # for node, data in graph.nodes_iter(data=True):
@@ -226,6 +241,21 @@ def set_layout(graph, xmax=960., ymax=500.):
     #         print "x missing for node %s" % node
     #     if 'y' not in data:
     #         print "y missing for node %s" % node
+
+    for u,v,data in graph.edges(data=True):
+        if v.startswith(u+'.') or u.startswith(v+'.'):
+            data['weight'] = 100
+        else:
+            data['weight'] = 5
+
+    import pprint
+    from networkx import spring_layout
+    layout = spring_layout(graph)
+    pprint.pprint(layout)
+
+    for node, data in graph.nodes_iter(data=True):
+        data['x'] = layout[node][0] * 960.
+        data['y'] = layout[node][1] * 500.
 
     return graph
 
@@ -240,6 +270,9 @@ def plot_graph(graph, d3page='static_graph.html'):
     graph = _clean_graph(graph)
     graph = set_layout(graph)
     data = node_link_data(graph)
+
+    import pprint
+    pprint.pprint(data)
 
     startdir = os.getcwd()
     os.chdir(tmpdir)
