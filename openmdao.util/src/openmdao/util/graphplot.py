@@ -10,7 +10,8 @@ from networkx.algorithms.components import strongly_connected_components
 from networkx.algorithms.dag import is_directed_acyclic_graph
 import networkx as nx 
 
-from openmdao.main.ndepgraph import is_boundary_node, is_input_node
+from openmdao.main.ndepgraph import is_boundary_node, is_input_node, \
+                                    base_var
 
 _excluded_nodes = set([
     'force_execute',
@@ -148,19 +149,25 @@ def set_layout(graph, xmax=960., ymax=500.):
 
     # set positions for the outgoing boundary vars
     y = 0
-    xout = float(xmax) * 0.91
+    xout = xmax - xmax * 0.91
     for bout in bout_vars:
         y += outbound_dy
         graph.node[bout]['x'] = xout
         graph.node[bout]['y'] = y
 
     conns = graph.list_connections()
-    tmp_g = nx.DiGraph()
-    tmp_g.add_edges_from(conns)
-    tmp_g.add_edges_from([(u.split('.',1)[0], u) for u,v in conns])
-    tmp_g.add_edges_from([(v, v.split('.',1)[0]) for u,v in conns])
+    nodes = set([u for u,v in conns])
+    nodes.update([v for u,v in conns])
+    bvars = set([base_var(graph, n) for n in nodes])
+    nodes.update([n.split('.',1)[0] for n in nodes])
+    nodes.update(bvars)
 
     cgraph = graph.component_graph()
+    nodes.update(cgraph.nodes_iter())
+
+    # this graph now has only nodes involved in connections
+    graph = graph.subgraph(nodes)
+
     csort = approx_topo_sort(cgraph)
 
     ymid = float(ymax) / 2
@@ -179,8 +186,9 @@ def set_layout(graph, xmax=960., ymax=500.):
             for i,s in enumerate(succ):
                 graph.node[s]['y'] = i * dy
 
-    cvar_dx = 5 # x distance between comps and their vars
-    cvar_dy = 5 # y distance between comp vars on same side of a comp
+    cradius = 25
+    cvar_dx = cradius/2. + 5 # x distance between comps and their vars
+    cvar_dy = cradius/2. + 5 # y distance between comp vars on same side of a comp
 
     for node in bin_vars+bout_vars:
         x = graph.node[node]['x']
@@ -196,13 +204,28 @@ def set_layout(graph, xmax=960., ymax=500.):
     for node in csort:
         x = graph.node[node]['x']
         y = graph.node[node]['y']
+
         children = graph._all_child_vars(node)
-        child_y = y - (len(children) * cvar_dy) / 2.
-        for v in children:
-            if is_input_node(graph, node):
-                graph.node[v]['x'] = x + cvar_dx
-                graph.node[v]['y'] = child_y
-                child_y += cvar_dy
+        invars = [v for v in children if is_input_node(graph,v)]
+        outvars = [v for v in children if v not in invars]
+        ichild_y = y - (len(invars) * cvar_dy) / 2.
+        ochild_y = y - (len(outvars) * cvar_dy) / 2.
+        for v in invars:
+            graph.node[v]['x'] = x - cvar_dx
+            graph.node[v]['y'] = ichild_y
+            ichild_y += cvar_dy
+
+        for v in outvars:
+            graph.node[v]['x'] = x + cvar_dx
+            graph.node[v]['y'] = ochild_y
+            ochild_y += cvar_dy
+
+    # # check that all x,y values are set
+    # for node, data in graph.nodes_iter(data=True):
+    #     if 'x' not in data:
+    #         print "x missing for node %s" % node
+    #     if 'y' not in data:
+    #         print "y missing for node %s" % node
 
     return graph
 

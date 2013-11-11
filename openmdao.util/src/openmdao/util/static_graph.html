@@ -8,9 +8,19 @@
           stroke-width: 4px;
         }
 
-		.comp2var {
+    .comp2var {
           stroke: #999;
           stroke-width: 2px;
+        }
+    .compnode {
+          stroke: #000;
+          stroke-width: 2px;
+          fill: none;
+        }
+    .varnode {
+          stroke: #999;
+          stroke-width: 2px;
+          fill: none;
         }
 
 		.nodegroup text {
@@ -59,25 +69,51 @@ var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
     .append("g")
-    .call(d3.behavior.zoom().x(x).y(y).scaleExtent([1, 8]).on("zoom", zoom));
+    .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
+    .append("g");
 
 svg.append("rect")
     .attr("class", "overlay")
     .attr("width", width)
     .attr("height", height);
 
-var circle = svg.selectAll("circle")
-    .data(graph.nodes)
-  .enter().append("circle")
-    .attr("r", 12.)
-    .attr("transform", transform);
+var labelednodes = svg.selectAll(".labelednode")
+        .data(graph.nodes)
+        .enter()
+        .append("g")
+        .attr("class", "labelednode")
+        .attr("transform", transform);
 
-function zoom() {
-  circle.attr("transform", transform);
-}
+var circles = labelednodes.append("circle") 
+    .attr("class", function(node) {
+        // determine the node type and apply the appropriate class
+        if (node.comp) {
+            return "compnode";
+        }
+        else {
+            return "varnode";
+        }
+    })
+    .attr("r", function(node) {
+      if (node.comp) {
+        return 25.;
+      }
+      else {
+        return 5.;
+      }
+    });
+
+var labels = labelednodes.append("text")
+      .attr("dx", 12)
+      .attr("dy", ".35em")
+      .text(function(d) { return d.id; });
 
 function transform(d) {
   return "translate(" + x(d.x) + "," + y(d.y) + ")";
+}
+
+function zoom() {
+  svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 }
 
 </script>
