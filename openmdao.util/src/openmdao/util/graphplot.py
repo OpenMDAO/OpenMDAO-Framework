@@ -8,7 +8,7 @@ import webbrowser
 from networkx.readwrite.json_graph import node_link_data
 from networkx.algorithms.components import strongly_connected_components
 from networkx.algorithms.dag import is_directed_acyclic_graph
-import newtworkx as nx 
+import networkx as nx 
 
 from openmdao.main.ndepgraph import is_boundary_node, is_input_node
 
@@ -171,43 +171,48 @@ def set_layout(graph, xmax=960., ymax=500.):
         x += comp_dx
         graph.node[comp]['x'] = x
         graph.node[comp]['y'] = ymid
-        
-    visited = set()
-    x = xin
-    ylevel = 0
-    for bin in bin_vars:
-        for u,v in bfs_edges(tmp_g, bin):
-            if out_degree(graph, u) > 1:
 
-            parts = v.split('.',1)
-            if is_comp_node(graph, parts[0]):
-
-
-    # this is the sorted list of all var and comp nodes in
-    # topological order
-    esort = approx_topo_sort(tmp_g)
+    for comp in csort:
+        succ = cgraph.successors(comp)
+        if len(succ) > 1:
+            dy = float(ymax) / (len(succ)+1)
+            for i,s in enumerate(succ):
+                graph.node[s]['y'] = i * dy
 
     cvar_dx = 5 # x distance between comps and their vars
-    cvar_dy = 5  # y distance between comp vars on same side of a comp
+    cvar_dy = 5 # y distance between comp vars on same side of a comp
 
+    for node in bin_vars+bout_vars:
+        x = graph.node[node]['x']
+        y = graph.node[node]['y']
+        children = graph._all_child_vars(node)
+        child_y = y - (len(children) * cvar_dy) / 2.
+        for v in children:
+            if is_input_node(graph, node):
+                graph.node[v]['x'] = x + cvar_dx
+                graph.node[v]['y'] = child_y
+                child_y += cvar_dy
 
-    x = x_start
-    y = y_start
-    for bin in bin_vars:
-        graph.node[bin].update({ 'x': x, 'y': y })
-        for subvar in graph._all_child_vars(bin):
-            x += cvar_dx
-
+    for node in csort:
+        x = graph.node[node]['x']
+        y = graph.node[node]['y']
+        children = graph._all_child_vars(node)
+        child_y = y - (len(children) * cvar_dy) / 2.
+        for v in children:
+            if is_input_node(graph, node):
+                graph.node[v]['x'] = x + cvar_dx
+                graph.node[v]['y'] = child_y
+                child_y += cvar_dy
 
     return graph
 
-def plot_graph(graph):
+def plot_graph(graph, d3page='static_graph.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
     fdir = os.path.dirname(os.path.abspath(__file__))
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
-    shutil.copy(os.path.join(fdir, 'forcegraph.html'), tmpdir)
+    shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
     graph = _clean_graph(graph)
     graph = set_layout(graph)
@@ -226,13 +231,13 @@ def plot_graph(graph):
 
         # open URL in web browser
         wb = webbrowser.get()
-        wb.open('file://'+os.path.join(tmpdir,'forcegraph.html'))
+        wb.open('file://'+os.path.join(tmpdir, d3page))
     finally:
         os.chdir(startdir)
         print "\nwaiting to remove temp directory '%s'... " % tmpdir
         time.sleep(10) # sleep to give browser time
                        # to read files before we remove them
-        shutil.rmtree(tmpdir)
+        #shutil.rmtree(tmpdir)
         print "temp directory removed"
 
 
