@@ -34,7 +34,7 @@ class Pub_WV_Wrapper(WV_Wrapper):
 
     def send(self, first=False):
         self.prepare_for_sends()
-
+        
         if first:
             self.send_GPrim(self,  1, self.send_binary_data)  # send init packet
             self.send_GPrim(self, -1, self.send_binary_data)  # send initial suite of GPrims
