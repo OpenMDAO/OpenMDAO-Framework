@@ -7,7 +7,7 @@ Design Optimization Specialist Conference, 2007. """
 from openmdao.main.api import Component
 from openmdao.main.problem_formulation import OptProblem
 
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 
 from numpy import array, matrix, identity, zeros, ones
 

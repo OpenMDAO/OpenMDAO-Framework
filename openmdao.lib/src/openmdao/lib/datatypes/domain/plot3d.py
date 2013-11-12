@@ -42,9 +42,9 @@ import numpy
 from openmdao.util.log import NullLogger
 from openmdao.util.stream import Stream
 
-from openmdao.lib.datatypes.domain.domain import DomainObj
-from openmdao.lib.datatypes.domain.zone import Zone
-from openmdao.lib.datatypes.domain.vector import Vector
+from openmdao.main.datatypes.domain.domain import DomainObj
+from openmdao.main.datatypes.domain.zone import Zone
+from openmdao.main.datatypes.domain.vector import Vector
 
 
 def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,

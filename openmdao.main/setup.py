@@ -92,6 +92,7 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
       openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
+      openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
       
       """,
       )

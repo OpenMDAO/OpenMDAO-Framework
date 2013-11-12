@@ -1,6 +1,6 @@
 from openmdao.main.api import Component, Assembly, VariableTree
 
-from openmdao.lib.datatypes.api import Float, Slot
+from openmdao.main.datatypes.api import Float, Slot
 
 
 class Something(VariableTree):

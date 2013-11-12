@@ -1,7 +1,7 @@
 import numpy
 
 from openmdao.units import PhysicalQuantity
-from openmdao.lib.datatypes.domain import DomainObj, Vector, Zone, \
+from openmdao.main.datatypes.domain import DomainObj, Vector, Zone, \
                                           write_plot3d_q
 
 

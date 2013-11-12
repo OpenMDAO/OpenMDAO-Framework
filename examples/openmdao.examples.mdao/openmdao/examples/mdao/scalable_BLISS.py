@@ -1,6 +1,6 @@
 from openmdao.lib.optproblems.scalable import UnitScalableProblem
 
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.main.datatypes.api import Array, Float
 
 from openmdao.lib.drivers.api import BroydenSolver, SensitivityDriver, CONMINdriver, FixedPointIterator
 

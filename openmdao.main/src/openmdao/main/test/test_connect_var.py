@@ -6,7 +6,7 @@
 
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Array, Float, Int, Str, Bool, Enum
+from openmdao.main.datatypes.api import Array, Float, Int, Str, Bool, Enum
 
 class Oneout(Component):
     """ A simple output component    """

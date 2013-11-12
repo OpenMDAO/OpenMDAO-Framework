@@ -2,12 +2,9 @@
     ACDgen.py - Creates ACD Table inputs for ANOPP for the 3 certification points
 """
 
-from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Int, Array, Enum
-from numpy import array, zeros, linalg, shape, around
-from openmdao.main.api import Slot
+from openmdao.main.api import Component, Slot
+from numpy import around
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.util.filewrap import InputFileGenerator, FileParser
 
 class ACDgen(Component):
     

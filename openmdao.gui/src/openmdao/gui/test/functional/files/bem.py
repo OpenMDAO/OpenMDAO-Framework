@@ -11,7 +11,7 @@ from scipy.optimize import fsolve
 from scipy.interpolate import interp1d
 
 from openmdao.main.api import Component, Assembly, VariableTree
-from openmdao.lib.datatypes.api import Float, Int, Array, VarTree
+from openmdao.main.datatypes.api import Float, Int, Array, VarTree
 
 
 class ActuatorDisk(Component):

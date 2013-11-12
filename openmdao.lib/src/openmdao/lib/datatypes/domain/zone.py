@@ -1,7 +1,7 @@
 import copy
 
-from openmdao.lib.datatypes.domain.flow import FlowSolution
-from openmdao.lib.datatypes.domain.grid import GridCoordinates
+from openmdao.main.datatypes.domain.flow import FlowSolution
+from openmdao.main.datatypes.domain.grid import GridCoordinates
 
 CARTESIAN = 'Cartesian'
 CYLINDRICAL = 'Cylindrical'

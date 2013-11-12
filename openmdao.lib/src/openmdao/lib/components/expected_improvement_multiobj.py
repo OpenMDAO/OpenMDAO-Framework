@@ -17,7 +17,7 @@ except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
 
-from openmdao.lib.datatypes.api import Slot, Enum, Float, Array, Event, Int
+from openmdao.main.datatypes.api import Slot, Enum, Float, Array, Event, Int
 
 from openmdao.main.component import Component
 from openmdao.util.decorators import stub_if_missing_deps

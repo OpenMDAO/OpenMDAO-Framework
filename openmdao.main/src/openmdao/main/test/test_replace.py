@@ -5,7 +5,7 @@ import math
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, VariableTree, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Float, Int, Array, Slot
+from openmdao.main.datatypes.api import Float, Int, Array, Slot
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasparameters import HasParameters

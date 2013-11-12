@@ -9,7 +9,7 @@ import unittest
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           ListCaseIterator, ListCaseRecorder, \
                                           DumpCaseRecorder
-from openmdao.lib.datatypes.api import Array, Str, Bool, VarTree
+from openmdao.main.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array

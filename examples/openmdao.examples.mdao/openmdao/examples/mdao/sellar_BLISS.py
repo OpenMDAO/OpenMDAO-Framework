@@ -9,7 +9,7 @@
 """
 
 from openmdao.main.api import Assembly, SequentialWorkflow
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 

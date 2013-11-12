@@ -1,5 +1,5 @@
 from openmdao.main.api import VariableTree
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Stream(VariableTree):
     """Container of variables defining the properties of a single stream"""

@@ -5,9 +5,9 @@ regions in a domain.
 
 from math import cos, sin, sqrt
 
-from openmdao.lib.datatypes.domain.flow import CELL_CENTER
-from openmdao.lib.datatypes.domain.zone import CYLINDRICAL
-from openmdao.lib.datatypes.domain.metrics import get_metric, list_metrics, \
+from openmdao.main.datatypes.domain.flow import CELL_CENTER
+from openmdao.main.datatypes.domain.zone import CYLINDRICAL
+from openmdao.main.datatypes.domain.metrics import get_metric, list_metrics, \
                                                   create_scalar_metric
 _SCHEMES = ('area', 'mass')
 

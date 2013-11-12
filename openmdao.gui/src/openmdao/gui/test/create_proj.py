@@ -1,10 +1,10 @@
 from openmdao.main.component import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.main.project import *
 
 multiplier_def = """
 from openmdao.main.component import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')

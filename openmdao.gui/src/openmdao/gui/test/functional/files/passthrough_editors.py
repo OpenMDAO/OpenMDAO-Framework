@@ -1,5 +1,5 @@
 from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class Paraboloid(Component):

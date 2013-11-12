@@ -9,7 +9,7 @@ import sys
 import unittest
 import random
 
-from openmdao.lib.datatypes.api import Float, Array, Enum, Int, Str
+from openmdao.main.datatypes.api import Float, Array, Enum, Int, Str
 from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top

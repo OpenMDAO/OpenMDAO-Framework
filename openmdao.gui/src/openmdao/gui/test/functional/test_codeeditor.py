@@ -185,7 +185,7 @@ def _test_newfile(browser):
     # Create the file (code editor automatically indents).
     editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 # lines will be auto-indented by ace editor
 class Plane(Component):

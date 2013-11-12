@@ -3,7 +3,7 @@
 """
 
 from openmdao.main.api import Component, Slot
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 from MEflows import MEflows
 

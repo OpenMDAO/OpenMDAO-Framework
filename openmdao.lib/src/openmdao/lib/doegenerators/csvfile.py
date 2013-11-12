@@ -1,6 +1,6 @@
 import csv
 
-from openmdao.lib.datatypes.api import Int, Str
+from openmdao.main.datatypes.api import Int, Str
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.main.api import Container
 
