@@ -30,6 +30,119 @@ class STLGroup(object):
 
         self._needs_linerize = True
 
+
+    #begin methods for IParametricGeometry
+    def list_parameters(self): 
+        """ returns a dictionary of parameters sets key'd to component names"""
+
+        self.param_name_map = {}
+        params = []
+        for comp in self._comps: 
+            name = comp.name
+            if isinstance(comp, Body): 
+                val = comp.delta_C[1:,0]
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                'desc':"axial location of control points for the ffd"}
+                tup = ('%s.X'%name, meta)
+                params.append(tup)
+                self.param_name_map[tup[0]] = val
+
+                val = comp.delta_C[:-1,1]
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                'desc':"radial location of control points for the ffd"}
+                tup = ('%s.R'%name, meta)
+                params.append(tup)
+                self.param_name_map[tup[0]] = val
+
+
+            else: 
+                val = comp.delta_Cc[1:,0]
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                'desc':'axial location of the control points for the centerline of the shell'}
+                tup = ('%s.X'%name, meta) 
+                params.append(tup)
+                self.param_name_map[tup[0]] = val
+
+                val = comp.delta_Cc[:-1,1]
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                'desc':'radial location of the control points for the centerline of the shell'}
+                tup = ('%s.R'%name, meta) 
+                params.append(tup)
+                self.param_name_map[tup[0]] = val
+
+                val = comp.delta_Ct[:-1,1]
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                'desc':'thickness of the shell at each axial station'}
+                tup = ('%s.thickness'%name, meta) 
+                params.append(tup)
+                self.param_name_map[tup[0]] = val
+
+
+        return params
+
+    def set_parameter(self, name, val): 
+        self.param_name_map[name] = val
+
+    def get_parameters(self, names): 
+        return [self.param_name_map[n] for n in names]
+
+    def regen_model(self): 
+        for comp in self._comps: 
+
+            #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
+            
+            #del_C = np.ones((10,2)) * 123.0
+            if isinstance(comp, Body): 
+                delta_C_shape = comp.delta_C.shape
+                del_C = np.zeros( delta_C_shape )
+                del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_C[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+                comp.deform(delta_C=del_C)
+            else:
+                delta_Cc_shape = comp.delta_Cc.shape
+                del_Cc = np.zeros( delta_Cc_shape )
+                del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Cc[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+
+                delta_Ct_shape = comp.delta_Ct.shape
+                del_Ct = np.zeros( delta_Ct_shape )
+                del_Ct[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Ct[:-1,1] = self.param_name_map[ '%s.thickness' % comp.name ]
+                # need both delta_Cc and delta_Ct for shells
+                comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
+
+
+    def get_static_geometry(self): 
+        return self
+
+    def register_param_list_changedCB(self, callback):
+        self._callbacks.append(callback)
+
+    def _invoke_callbacks(self): 
+        for cb in self._callbacks: 
+            cb()
+    #end methods for IParametricGeometry
+
+    #methods for IStaticGeometry
+    def get_visualization_data(self, wv):
+        self.linearize()
+
+        xyzs = np.array(self.points).flatten().astype(np.float32)
+        tris = np.array(self.triangles).flatten().astype(np.int32)
+        mins = np.min(xyzs.reshape((-1,3)), axis=0)
+        maxs = np.max(xyzs.reshape((-1,3)), axis=0)
+
+        box = [mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]]
+
+        #print box
+
+        wv.set_face_data(xyzs, tris, name="surface")
+
+        #wv.focus_vertices()
+
+
+    #end methods for IStaticGeometry
+
     def add(self, comp ,name=None): 
         """ addes a new component to the geometry""" 
 
@@ -478,17 +591,9 @@ class STLGroup(object):
 
 
 class STLGroupSender(STLSender):
-
-    def initialize(self, **kwargs):
-        eye    = np.array([5.0, 0.0, 70.0], dtype=np.float32)
-        center = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        up     = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        fov   = 30.0
-        zNear = 1.0
-        zFar  = 100
-
-        bias  = 0
-        self.wv.createContext(bias, fov, zNear, zFar, eye, center, up)
+    def __init__(self, *args, **kargs):
+        super(STLGroupSender, self).__init__(*args, **kargs)
+        self.wv.set_context_bias(0)
 
     @staticmethod
     def supports(obj):
