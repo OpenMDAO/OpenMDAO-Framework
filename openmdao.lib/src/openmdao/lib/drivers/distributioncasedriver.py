@@ -13,7 +13,7 @@ from zope.interface import Interface
 # E1101 - Used when a variable is accessed for an unexistent member
 from openmdao.main.numpy_fallback import zeros
 
-from openmdao.lib.datatypes.api import List, Str, Slot, Int, Enum, Bool
+from openmdao.main.datatypes.api import List, Str, Slot, Int, Enum, Bool
 from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.main.api import Container
 from openmdao.main.case import Case

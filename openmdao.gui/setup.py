@@ -67,6 +67,7 @@ setup(name='openmdao.gui',
           'pyzmq>=13.0.1',
           'tornado>=2.2',
           'watchdog',
+          'pyV3D',
       ],
       extras_require = {
           'jsTest': [

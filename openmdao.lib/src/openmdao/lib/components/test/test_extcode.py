@@ -20,7 +20,7 @@ from openmdao.main.objserverfactory import ObjServerFactory
 from openmdao.main.rbac import Credentials, get_credentials
 
 from openmdao.lib.components.external_code import ExternalCode
-from openmdao.lib.datatypes.api import Int, File, FileRef, Str
+from openmdao.main.datatypes.api import Int, File, FileRef, Str
 
 from openmdao.test.cluster import init_cluster
 

@@ -4,7 +4,7 @@ import unittest
 import math
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Dict
+from openmdao.main.datatypes.api import Float, Array, List, Dict
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters

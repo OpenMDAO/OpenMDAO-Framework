@@ -9,7 +9,7 @@ from math import pi
 from numpy import zeros, sqrt, cos, sin, radians, log10
 from numpy import float as numpy_float
 
-from openmdao.lib.datatypes.api import Int, Float, Array, Enum, VarTree
+from openmdao.main.datatypes.api import Int, Float, Array, Enum, VarTree
 from openmdao.lib.components.api import ExternalCode
 
 from openmdao.units import add_unit

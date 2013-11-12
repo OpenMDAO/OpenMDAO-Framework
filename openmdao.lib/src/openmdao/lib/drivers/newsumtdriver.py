@@ -30,7 +30,7 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     numpy_int = int
 
-from openmdao.lib.datatypes.api import Array, Float, Int, Bool
+from openmdao.main.datatypes.api import Array, Float, Int, Bool
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints

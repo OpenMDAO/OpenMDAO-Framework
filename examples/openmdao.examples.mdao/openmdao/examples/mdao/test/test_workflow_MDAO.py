@@ -13,7 +13,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
 from openmdao.lib.drivers.api import CONMINdriver
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
 from openmdao.util.testutil import assert_rel_error

@@ -2,7 +2,7 @@ import unittest
 
 from openmdao.main.api import Component, Assembly
 from openmdao.lib.components.api import LazyComponent
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class SinkComp(Component):         

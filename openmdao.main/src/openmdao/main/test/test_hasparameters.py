@@ -11,7 +11,7 @@ except ImportError as err:
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
-from openmdao.lib.datatypes.api import Array, Int, Float, List, Enum, Str
+from openmdao.main.datatypes.api import Array, Int, Float, List, Enum, Str
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.log import logger

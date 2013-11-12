@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.lib.datatypes.api import Int, List
+from openmdao.main.datatypes.api import Int, List
 
 from openmdao.lib.components.mux import Mux,DeMux
     

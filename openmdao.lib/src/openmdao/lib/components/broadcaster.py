@@ -1,4 +1,4 @@
-from openmdao.lib.datatypes.api import List, Str, Float, Dict
+from openmdao.main.datatypes.api import List, Str, Float, Dict
 
 from openmdao.main.api import Component
 

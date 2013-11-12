@@ -12,7 +12,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
 
-from openmdao.lib.datatypes.api import Float, Int, Bool, Enum
+from openmdao.main.datatypes.api import Float, Int, Bool, Enum
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.hasstopcond import HasStopConditions

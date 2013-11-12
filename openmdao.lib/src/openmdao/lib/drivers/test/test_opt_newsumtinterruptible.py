@@ -44,7 +44,7 @@ import numpy
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 

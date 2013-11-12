@@ -4,7 +4,7 @@ Trivial model for testing connect/disconnect.
 
 from openmdao.main.api import Assembly, Component
 from openmdao.lib.drivers.api import CONMINdriver
-from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
+from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Str
 
 
 class Connectable(Component):

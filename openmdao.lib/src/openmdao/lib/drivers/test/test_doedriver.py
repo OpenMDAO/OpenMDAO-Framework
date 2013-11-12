@@ -10,10 +10,10 @@ import re
 import sys
 import unittest
 
-from openmdao.lib.datatypes.api import Event
+from openmdao.main.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.main.datatypes.api import Float, Bool, Array
 from openmdao.lib.casehandlers.api import SequenceCaseFilter
 from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder

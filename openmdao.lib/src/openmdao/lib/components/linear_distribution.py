@@ -1,7 +1,7 @@
 import numpy as np
 
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 
 
 class LinearDistribution(Component): 

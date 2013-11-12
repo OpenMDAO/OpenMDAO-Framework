@@ -6,7 +6,7 @@ import StringIO
 import unittest
 
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
-from openmdao.lib.datatypes.api import Float, List, Str
+from openmdao.main.datatypes.api import Float, List, Str
 from openmdao.main.api import Component, Assembly, Driver, Run_Once, Case, set_as_top
 
 class Basic_Component(Component):
