@@ -307,7 +307,7 @@ def download(url, dest='.'):
             out.write(block)
     return outpath
 
-def _get_mingw_dlls():
+def _get_mingw_dlls(bin_dir):
     def _mingw_dlls_in_path():
         # first, check if MinGW/bin is already in PATH
         if 'path' in os.environ:
@@ -318,16 +318,16 @@ def _get_mingw_dlls():
 
         return False
 
-    def _get_mingw_dlls_from_site():
+    def _get_mingw_dlls_from_site(bin_dir):
         import zipfile
-        dest = os.path.join(os.getcwd(), "devenv", "scripts")
+        dest = os.path.join(os.getcwd(), bin_dir)
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
         zipped = zipfile.ZipFile(zippath, 'r')
         zipped.extractall(dest)
         zipped.close()
         os.remove(zippath)
 
-    _mingw_dlls_in_path() or _get_mingw_dlls_from_site()
+    _mingw_dlls_in_path() or _get_mingw_dlls_from_site(bin_dir)
 
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
@@ -520,7 +520,7 @@ def after_install(options, home_dir, activated=False):
 %(make_docs)s
         if is_win: # retrieve MinGW DLLs from server
             try:
-                _get_mingw_dlls()
+                _get_mingw_dlls(bin_dir)
             except Exception as err:
                 print str(err)
                 print "\\n\\n**** Failed to download MinGW DLLs, so OpenMDAO extension packages may fail to load."
