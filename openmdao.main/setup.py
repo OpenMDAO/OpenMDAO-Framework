@@ -37,7 +37,10 @@ setup(name='openmdao.main',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'openmdao.main.test': ['src/doubler.py'],
+          'openmdao.main.test': ['src/doubler.py', 
+                                 'load_test/_macros/default', 
+                                 'load_test/_settings.cfg', 
+                                 'load_test/simple.py'],
           'openmdao.main': ['src/openmdao/main/docs/*'] 
       },
       test_suite='nose.collector',

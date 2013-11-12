@@ -1,4 +1,5 @@
 recursive-include src/openmdao/main/test/src *.py
+recursive-include src/openmdao/main/test/load_test *.py *.cfg defaul*
 recursive-include src/openmdao/main/plugin_templates *
 graft src/openmdao/main/docs
 
