@@ -8,7 +8,7 @@ import unittest
 
 from openmdao.lib.datatypes.domain import read_plot3d_q, write_plot3d_q, \
                                           read_plot3d_f, write_plot3d_f, \
-                                          read_plot3d_shape
+                                          read_plot3d_shape, write_plot3d_grid
 
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_2d, \
                                                      create_wedge_3d

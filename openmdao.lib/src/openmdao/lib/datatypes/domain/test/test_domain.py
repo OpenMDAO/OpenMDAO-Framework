@@ -6,6 +6,8 @@ import logging
 import os.path
 import unittest
 
+import numpy  # don't remove, this is needed in globals
+
 from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
                                           GridCoordinates, Vector, Zone, \
                                           read_plot3d_q, write_plot3d_q
