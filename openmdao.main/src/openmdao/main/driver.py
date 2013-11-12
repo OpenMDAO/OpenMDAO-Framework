@@ -24,6 +24,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.ndepgraph import find_all_connecting
 
 
 @add_delegate(HasEvents)
@@ -50,6 +51,8 @@ class Driver(Component):
         super(Driver, self).__init__()
         self.workflow = Dataflow(self)
         self.force_execute = True
+
+        self._required_compnames = None
 
         # This flag is triggered by adding or removing any parameters,
         # constraints, or objectives.
@@ -94,40 +97,40 @@ class Driver(Component):
 
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
-        self._update_workflow()
+        #self._update_workflow()
 
         self.workflow.check_config()
 
-    def _update_workflow(self):
-        """Updates workflow contents based on driver dependencies."""
-        # if workflow is not defined, or if it contains only Drivers, try to
-        # use parameters, objectives and/or constraint expressions to
-        # determine the necessary workflow members
-        try:
-            iterset = set(c.name for c in self.iteration_set())
-            alldrivers = all([isinstance(c, Driver)
-                                for c in self.workflow.get_components()])
-            if len(self.workflow) == 0:
-                pass
-            elif alldrivers is True:
-                reqcomps = self._get_required_compnames()
-                self.workflow.add([name for name in reqcomps
-                                        if name not in iterset])
-            # calling get_components() here just makes sure that all of the
-            # components can be resolved
-            comps = self.workflow.get_components()
-        except Exception as err:
-            self.raise_exception(str(err), type(err))
+    #def _update_workflow(self):
+        #"""Updates workflow contents based on driver dependencies."""
+        ## if workflow contains only Drivers, try to
+        ## use parameters, objectives and/or constraint expressions to
+        ## determine the necessary workflow members
+        #try:
+            #iterset = set([c.name for c in self.iteration_set()])
+            #alldrivers = all([isinstance(c, Driver)
+                                #for c in self.workflow.get_components()])
+            #if len(self.workflow) == 0: # otherwise, all([]) returns True
+                #pass
+            #elif alldrivers is True:
+                #reqcomps = self._get_required_compnames()
+                #self.workflow.add([name for name in reqcomps
+                                        #if name not in iterset])
+                ## calling get_components() here just makes sure that all of the
+                ## components can be resolved
+                #self.workflow.get_components()
+        #except Exception as err:
+            #self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow(s) and
-        recursively in any workflow in any Driver in our workflow(s).
+        """Return a set of all Components in our workflow and
+        recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
-        if len(self.workflow) == 0:
-            for compname in self._get_required_compnames():
-                self.workflow.add(compname)
-        for child in self.workflow.get_components():
+        # if len(self.workflow) == 0:
+        #     for compname in self._get_required_compnames():
+        #         self.workflow.add(compname)
+        for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
@@ -155,33 +158,42 @@ class Driver(Component):
         components in the data flow between components referenced by
         parameters and those referenced by objectives and/or constraints.
         """
-        setcomps = set()
-        getcomps = set()
+        if self._required_compnames is None:
+            conns = super(Driver, self).get_expr_depends()
+            getcomps = set([u for u, v in conns if u != self.name])
+            setcomps = set([v for u, v in conns if v != self.name])
 
-        if hasattr(self, '_delegates_'):
-            for name, dclass in self._delegates_.items():
-                inst = getattr(self, name)
-                if isinstance(inst, HasParameters):
-                    setcomps = inst.get_referenced_compnames()
-                elif isinstance(inst, (HasConstraints, HasEqConstraints,
-                                       HasIneqConstraints, HasObjective, HasObjectives)):
-                    getcomps.update(inst.get_referenced_compnames())
+            full = set(setcomps)
 
-        full = set(setcomps)
+            compgraph = self.parent._depgraph.component_graph()
 
-        if self.parent:
-            graph = self.parent._depgraph
             for end in getcomps:
                 for start in setcomps:
-                    full.update(graph.find_all_connecting(start, end))
-        return full
+                    full.update(find_all_connecting(compgraph, start, end))
+
+            self._required_compnames = full
+
+        return self._required_compnames
+
+    @rbac(('owner', 'user'))
+    def list_pseudocomps(self):
+        """Return a list of names of pseudocomps resulting from
+        our parameters, objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
 
     def get_references(self, name):
         """Return parameter, constraint, and objective references to component
         `name` in preparation for subsequent :meth:`restore_references` call.
 
         name: string
-            Name of component being removed.
+            Name of component being referenced.
         """
         refs = {}
         if hasattr(self, '_delegates_'):
@@ -208,12 +220,9 @@ class Driver(Component):
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
 
-    def restore_references(self, refs, name):
+    def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component
         `name` from `refs`.
-
-        name: string
-            Name of component being removed.
 
         refs: object
             Value returned by :meth:`get_references`.
@@ -224,7 +233,7 @@ class Driver(Component):
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
-                    inst.restore_references(refs[inst], name)
+                    inst.restore_references(refs[inst])
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
@@ -249,10 +258,19 @@ class Driver(Component):
         for recorder in self.recorders:
             recorder.startup()
 
+        # force param pseudocomps to get updated values to start
+        # KTM1 - probably don't need this anymore
+        self.update_parameters()
+
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
         self._invalidated = False
+
+    def update_parameters(self):
+        if hasattr(self, 'get_parameters'):
+            for param in self.get_parameters().values():
+                param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -325,14 +343,20 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False):
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         required_inputs=None, required_outputs=None):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase)
+        self.workflow.calc_derivatives(first, second, savebase,
+                                       required_inputs, required_outputs)
 
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Check derivatives for all components in this workflow."""
-        self.workflow.check_derivatives(order, driver_inputs, driver_outputs)
+    def calc_gradient(self, inputs=None, outputs=None):
+        """Returns the gradient of the passed outputs with respect to
+        all passed inputs. The basic driver behavior is to call calc_gradient
+        on its workflow. However, some driver (optimizers in particular) may
+        want to define their own behavior.
+        """
+        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -344,6 +368,8 @@ class Driver(Component):
         changed.
         """
         super(Driver, self).config_changed(update_parent)
+        self._required_compnames = None
+        self._invalidate()
         if self.workflow is not None:
             self.workflow.config_changed()
 
@@ -380,17 +406,12 @@ class Driver(Component):
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                if '>' in val[2]:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[0] - val[1]])
-                else:
-                    case_output.append(["Constraint ( %s )" % name,
-                                                              val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
+                case_output.append(["Constraint ( %s )" % name, val])
 
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)
@@ -428,7 +449,8 @@ class Driver(Component):
         ''' Return a list of all varpaths in the driver's workflow that
         match the specified pattern.
 
-        Used by record_case.'''
+        Used by record_case.
+        '''
 
         # assume we don't want this in driver's imports
         from openmdao.main.assembly import Assembly
@@ -470,7 +492,13 @@ class Driver(Component):
         ret['type'] = type(self).__module__ + '.' + type(self).__name__
         ret['workflow'] = []
         ret['valid'] = self.is_valid()
-        for comp in self.workflow:
+        comps = [comp for comp in self.workflow]
+        for comp in comps:
+            
+            # Skip pseudo-comps
+            if hasattr(comp, '_pseudo_type'):
+                continue
+                
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
                 ret['workflow'].append({
@@ -478,7 +506,7 @@ class Driver(Component):
                     'type':     type(comp).__module__ + '.' + type(comp).__name__,
                     'driver':   comp.driver.get_workflow(),
                     'valid':    comp.is_valid()
-                  })
+                })
             elif is_instance(comp, Driver):
                 ret['workflow'].append(comp.get_workflow())
             else:
@@ -486,7 +514,7 @@ class Driver(Component):
                     'pathname': pathname,
                     'type':     type(comp).__module__ + '.' + type(comp).__name__,
                     'valid':    comp.is_valid()
-                  })
+                })
         return ret
 
 

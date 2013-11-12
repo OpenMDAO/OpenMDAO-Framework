@@ -68,9 +68,9 @@ class TestCase(unittest.TestCase):
         self.model.driver.workflow.add('foobar')
         try:
             self.model.run()
-        except AttributeError as err:
+        except Exception as err:
             self.assertEqual(str(err), 
-                "driver: 'Model' object has no attribute 'foobar'")
+                "'Model' object has no attribute 'foobar'")
 
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)

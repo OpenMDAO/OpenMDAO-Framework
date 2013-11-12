@@ -1,17 +1,48 @@
+import ast
 
-from sympy import Symbol, diff
+from sympy import Symbol, diff, sympify
 from sympy.core.function import Derivative
 from sympy.functions import *
+
+from openmdao.main.printexpr import print_node
+from openmdao.main.expreval import _get_long_name
 
 class SymbolicDerivativeError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
 
-def SymGrad(ex,vars):
+#class SymTransformer(ast.NodeTransformer):
+    #"""Transforms an expression into a sympy'd version.
+    #It requires Symbol and sympify from sympy to be defined
+    #in globals() in order to evaluate the transformed expression.
+    #"""
+    #def visit_Name(self, node):
+        #name = node.id
+        #args = [ast.Str(s=name)]
+        #called_obj = ast.Name(id='Symbol', ctx=ast.Load())
+
+        #return ast.copy_location(ast.Call(func=called_obj, args=args,
+                                          #ctx=node.ctx, keywords=[]), node)
+
+    #def visit_Num(self, node):
+        #args = [node]
+        #called_obj = ast.Name(id='sympify', ctx=ast.Load())
+
+        #return ast.copy_location(ast.Call(func=called_obj, args=args,
+                                          #ctx=ast.Load(), keywords=[]), node)
+
+def SymGrad(ex, vars):
     """Symbolic gradient."""
+    #node = ast.parse(ex, mode='eval')
+    #xformed = SymTransformer().visit(node)
+    #ast.fix_missing_locations(xformed)
+    #code = compile(xformed, '<string>', 'eval')
+    #newex = eval(code)
+
     s=[]
     for var in vars:
         s.append(Symbol(var))
@@ -19,12 +50,13 @@ def SymGrad(ex,vars):
     newex=ex
     for i in xrange(len(vars)):
         newex = newex.replace(vars[i],"s["+str(i)+"]") 
-    exec "newex="+newex
+    exec "newex="+newex.replace('math.', '')
     grad=[]
     for i in xrange(len(vars)):
-        d = diff(newex,s[i]).evalf()
+        d = diff(newex, Symbol(vars[i])).evalf()
         diff_str=d.__str__()
-        if isinstance(d, Derivative) or 'Derivative' in diff_str:
+        if isinstance(d, Derivative) or 'Derivative' in diff_str \
+                                     or 'im(' in diff_str:
             raise SymbolicDerivativeError('Could not symbolically differentiate expression')
         grad.append(diff_str)
     return grad

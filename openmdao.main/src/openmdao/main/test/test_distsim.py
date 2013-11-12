@@ -254,10 +254,10 @@ class ProtectedBox(Box):
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name, index=None):
+    def get_attr(self, name, index=None):
         if self.protector.user_attribute(self, name):
-            return super(ProtectedBox, self).get_wrapped_attr(name)
-        raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
+            return super(ProtectedBox, self).get_attr(name)
+        raise RoleError("No get_attr access to '%s' by role '%s'"
                         % (attr, role))
 
     @rbac(('owner', 'user'))

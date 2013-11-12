@@ -13,13 +13,13 @@ import sys
 import unittest
 import nose
 
-from openmdao.main.api import Assembly, Component, Container, set_as_top
+from openmdao.main.api import Assembly, Component, Container, VariableTree, set_as_top
 from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef
+from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef, VarTree
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 from openmdao.util.fileutil import onerror
@@ -53,6 +53,13 @@ def next_egg():
     return str(EGG_VERSION)
 
 
+class Subcontainer(VariableTree):
+    """ Just a subcontainer for Source. """
+
+    binary_data = Array(dtype='d', iotype='in')
+    binary_file = File(iotype='out')
+
+
 class Source(Component):
     """
     Produces files. A fair amount of stuff happens in Component.save_to_egg()
@@ -62,6 +69,7 @@ class Source(Component):
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
     text_file = File(iotype='out')
+    sub = VarTree(Subcontainer(), iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -130,12 +138,6 @@ class Source(Component):
                 cPickle.dump(self.sub.binary_data, out, 2)
             self.sub.binary_file = FileRef(path, binary=True)
 
-
-class Subcontainer(Container):
-    """ Just a subcontainer for Source. """
-
-    binary_data = Array(dtype='d', iotype='in')
-    binary_file = File(iotype='out')
 
 
 class DataObj(object):

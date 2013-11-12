@@ -67,7 +67,7 @@ def modifies_state(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
-        self._update_workflows()
+        # self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
@@ -341,10 +341,9 @@ class ConsoleServer(cmd.Cmd):
                 comp = {}
                 if cont is self.proj._project_globals:
                     comp['pathname'] = k
-                    children = self._get_components(v, k)
                 else:
                     comp['pathname'] = '.'.join([pathname, k]) if pathname else k
-                    children = self._get_components(v, comp['pathname'])
+                children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
                 comp['type'] = str(v.__class__.__name__)

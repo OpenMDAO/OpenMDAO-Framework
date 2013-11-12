@@ -9,7 +9,8 @@ import numpy
 from openmdao.lib.drivers.mda_solver import MDASolver
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
-                                            Discipline2_WithDerivatives
+                                            Discipline2_WithDerivatives, \
+                                            Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.util.testutil import assert_rel_error
@@ -39,6 +40,102 @@ class Sellar_MDA(Assembly):
         self.driver.workflow.add(['d1', 'd2'])
         
         
+class Sellar_MDA_subbed(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('subdriver', MDASolver())
+        self.driver.workflow.add(['subdriver'])
+        self.subdriver.workflow.add(['d1', 'd2'])
+        
+        
+class Sellar_MDA_Mixed(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('driver', MDASolver())
+        self.driver.workflow.add(['d1', 'd2'])
+        
+class Sellar_MDA_Mixed_Flipped(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('driver', MDASolver())
+        self.driver.workflow.add(['d1', 'd2'])
+        
+class Sellar_MDA_None(Assembly):
+    
+    def configure(self):
+        
+        self.add('d1', Discipline1())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+        
+        self.add('d2', Discipline2())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+        
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+        
+        self.add('driver', MDASolver())
+        self.driver.workflow.add(['d1', 'd2'])
+        
+        
+        
 class Scalable_MDA(Assembly):
     
     def configure(self):
@@ -54,8 +151,8 @@ class Scalable_MDA(Assembly):
         self.driver.newton = True
         
 
-class SLSPQdriverTestCase(unittest.TestCase):
-    """test SLSQP optimizer component"""
+class MDA_SolverTestCase(unittest.TestCase):
+    """test the MDA Solver component"""
 
     def setUp(self):
         self.top = set_as_top(Sellar_MDA())
@@ -75,6 +172,35 @@ class SLSPQdriverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 10)
         
+        
+    def test_gauss_seidel_sub(self):
+        # Note, Fake Finite Difference is active in this test.
+        
+        self.top = set_as_top(Sellar_MDA_subbed())
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
+        
+        inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
+        outputs = ['d1.y1', 'd2.y2']
+        self.top.driver.workflow.config_changed()
+        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs)
+        self.top.run()
+        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs,
+                                                   mode='fd')
+        
+        J = (J1 - J2)
+        print J.max()
+        self.assertTrue(J.max() < 1.0e-3)
+        
     def test_newton(self):
         
         self.top.driver.newton = True
@@ -86,8 +212,49 @@ class SLSPQdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        print self.top.d1.exec_count
-        self.assertTrue(self.top.d1.exec_count < 6)
+        self.assertTrue(self.top.d1.exec_count < 5)
+        
+    def test_newton_mixed(self):
+        
+        self.top = set_as_top(Sellar_MDA_Mixed())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        
+    def test_newton_mixed_flipped(self):
+        
+        self.top = set_as_top(Sellar_MDA_Mixed_Flipped())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        
+    def test_newton_none(self):
+        
+        self.top = set_as_top(Sellar_MDA_None())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
         
     def test_scalable_newton(self):
         
@@ -114,7 +281,6 @@ class SLSPQdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d2.y_out[1],
                                self.top.d1.y_in[1],
                                1.0e-4)
-        print self.top.d1.exec_count
         self.assertTrue(self.top.d1.exec_count < 4)
         
         

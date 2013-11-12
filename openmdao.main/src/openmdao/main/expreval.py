@@ -6,12 +6,10 @@ __all__ = ["ExprEvaluator"]
 import weakref
 import math
 import ast
-import copy
-import re
 import __builtin__
 
-from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
-from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
+                                    transform_expression, ExprPrinter, print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
@@ -85,13 +83,8 @@ class ExprTransformer(ast.NodeTransformer):
         if self.expreval.is_local(name):
             return node
         
-        #scope = self.expreval.scope
-        #if scope:
-        parts = name.split('.',1)
         names = ['scope']
         self.expreval.var_names.add(name)
-        #else:
-            #raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
@@ -470,21 +463,24 @@ class ExprEvaluator(object):
                 raise KeyError("Can't find '%s' in current scope" % name)
         return True
         
-    def _pre_parse(self):
-        try:
-            root = ast.parse(self.text, mode='eval')
-            if not isinstance(root.body, (ast.Attribute, ast.Name, ast.Subscript)):
+    def _pre_parse(self, root=None):
+        if root is None:
+            try:
+                root = ast.parse(self.text, mode='eval')
+            except SyntaxError:
+                # might be an assignment, try mode='exec'
+                root = ast.parse(self.text, mode='exec')
                 self._allow_set = False
-            else:
-                self._allow_set = True
-        except SyntaxError:
-            # might be an assignment, try mode='exec'
-            root = ast.parse(self.text, mode='exec')
+                return root
+        if not isinstance(root.body, 
+                          (ast.Attribute, ast.Name, ast.Subscript)):
             self._allow_set = False
+        else:
+            self._allow_set = True
         return root
         
-    def _parse_get(self):
-        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse())
+    def _parse_get(self, root=None):
+        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse(root))
         
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
@@ -499,10 +495,12 @@ class ExprEvaluator(object):
         code = compile(assign_ast,'<string>','exec')
         return (assign_ast, code)
     
-    def _parse(self):
+    def _parse(self, root=None):
         self.var_names = set()
+        if root is not None:
+            self.text = print_node(root)
         try:
-            new_ast, self._code = self._parse_get()
+            new_ast, self._code = self._parse_get(root)
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s" % (self.text, str(err)))
         
@@ -543,8 +541,8 @@ class ExprEvaluator(object):
     
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect to 
-        each of the referenced varpaths. The gradient is calculated by 1st order central
-        difference for now. 
+        each of the referenced varpaths. The gradient is calculated by 1st order 
+        central difference for now. 
         
         stepsize: float
             Step size for finite difference.
@@ -557,7 +555,7 @@ class ExprEvaluator(object):
         scope = self._get_updated_scope(scope)
         inputs = list(self.refs(copy=False))
 
-        if wrt==None:
+        if wrt is None:
             wrt = inputs
         elif isinstance(wrt, str):
             wrt = [wrt]
@@ -701,31 +699,31 @@ class ExprEvaluator(object):
                 nameset.add(parts[0])
         return nameset
     
-    def get_required_compnames(self, assembly):
-        """Return the set of all names of Components that evaluation
-        of our expression string depends on, either directly or indirectly.
-        """
-        compset = self.get_referenced_compnames()
-        graph = assembly._depgraph.copy_graph()
-        visited = set()
-        while compset:
-            comp = compset.pop()
-            if comp not in visited:
-                visited.add(comp)
-                diff = set(graph.predecessors(comp)).difference(visited)
-                compset.update(diff)
-        return visited
+    # def get_required_compnames(self, assembly):
+    #     """Return the set of all names of Components that evaluation
+    #     of our expression string depends on, either directly or indirectly.
+    #     """
+    #     compset = self.get_referenced_compnames()
+    #     graph = assembly._depgraph.copy_graph()
+    #     visited = set()
+    #     while compset:
+    #         comp = compset.pop()
+    #         if comp not in visited:
+    #             visited.add(comp)
+    #             diff = set(graph.predecessors(comp)).difference(visited)
+    #             compset.update(diff)
+    #     return visited
     
-    def refs_valid(self):
-        """Return True if all variables referenced by our expression
-        are valid.
-        """
-        if self.scope:
-            if self._code is None:
-                self._parse()
-            if not all(self.scope.get_valid(self.var_names)):
-                return False
-        return True
+    # def refs_valid(self):
+    #     """Return True if all variables referenced by our expression
+    #     are valid.
+    #     """
+    #     if self.scope:
+    #         if self._code is None:
+    #             self._parse()
+    #         if not all(self.scope.get_valid(self.var_names)):
+    #             return False
+    #     return True
     
     def refs_parent(self):
         """Return True if this expression references a variable in parent."""
@@ -736,12 +734,12 @@ class ExprEvaluator(object):
                 return True
         return False
 
-    def invalid_refs(self):
-        """Return a list of invalid variables referenced by this expression."""
-        if self._code is None:
-            self._parse()
-        valids = self.scope.get_valid(self.var_names)
-        return [n for n,v in zip(self.var_names, valids) if v is False]
+    # def invalid_refs(self):
+    #     """Return a list of invalid variables referenced by this expression."""
+    #     if self._code is None:
+    #         self._parse()
+    #     valids = self.scope.get_valid(self.var_names)
+    #     return [n for n,v in zip(self.var_names, valids) if v is False]
     
     def check_resolve(self):
         """Return True if all variables referenced by our expression can
@@ -812,10 +810,10 @@ class ConnectedExprEvaluator(ExprEvaluator):
     def _parse(self):
         super(ConnectedExprEvaluator, self)._parse()
         self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'), self)
-        if len(self._examiner.refs) != 1:
-            raise RuntimeError("bad connected expression '%s' must reference exactly one variable" %
-                               self.text)
         if self._is_dest:
+            if len(self._examiner.refs) != 1:
+                raise RuntimeError("bad connected expression '%s' must reference exactly one variable" %
+                                   self.text)
             if not self._examiner.const_indices:
                 raise RuntimeError("bad destination expression '%s': only constant indices are allowed for arrays and slices" %
                                    self.text)

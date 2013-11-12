@@ -91,6 +91,8 @@ class CaseIterDriverBase(Driver):
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
 
+        self.error_policy = 'ABORT' # var wasn't showing up in parent depgraph without this
+
     def execute(self):
         """
         Runs all cases and records results in `recorder`.
@@ -199,7 +201,7 @@ class CaseIterDriverBase(Driver):
                     egg_info = self.parent.save_to_egg(self.name, version,
                                                     need_requirements=need_reqs)
                 finally:
-                    self.parent.driver = driver
+                    self.parent.add('driver', driver) # need to do add here in order to update parent depgraph
 
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
@@ -695,6 +697,7 @@ class CaseIterDriverBase(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
+                self.workflow._parent.update_parameters()
                 self.workflow.run(case_id=self._server_cases[server][0].uuid)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())

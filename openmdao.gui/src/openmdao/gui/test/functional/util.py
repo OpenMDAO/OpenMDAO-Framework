@@ -72,7 +72,11 @@ def setup_chrome():
                                                   reverse=True)[0])
     else:
         _chrome_version = subprocess.check_output([find_chrome(), '--version'])
-        _chrome_version = _chrome_version.strip().split()[-1]
+        _chrome_version = _chrome_version.strip().split()
+        if _chrome_version[0] == 'Chromium':
+            _chrome_version = _chrome_version[1]
+        else:
+            _chrome_version = _chrome_version[-1]
     _chrome_version = int(_chrome_version.split('.')[0])
 
     exe = 'chromedriver'

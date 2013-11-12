@@ -554,4 +554,3 @@ class _LogHandler(SocketServer.StreamRequestHandler):
         conn.close()
         if peer is not None:
             logging.info('Logging connection from %s closed', peer)
-

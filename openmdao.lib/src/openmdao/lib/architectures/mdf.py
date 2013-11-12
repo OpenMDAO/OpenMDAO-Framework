@@ -1,8 +1,6 @@
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver#, COBYLAdriver as SLSQPdriver
 
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
-
 class MDF(Architecture):
     
     def __init__(self, *args, **kwargs):
@@ -20,7 +18,6 @@ class MDF(Architecture):
         """
         #create the top level optimizer
         self.parent.add("driver",SLSQPdriver())
-        self.parent.driver.differentiator = FiniteDifference()
         self.parent.driver.iprint = 0
         self.parent.driver.recorders = self.data_recorders
         

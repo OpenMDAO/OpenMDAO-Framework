@@ -1,7 +1,8 @@
 
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -40,12 +41,15 @@ setup(name='openmdao.util',
           'Traits==4.3.0',
           #'PyYAML==3.09',
       ],
-      entry_points = """
+      entry_points="""
       [console_scripts]
       xyplot=openmdao.util.casedb:cmdlineXYplot
       add_reqs=openmdao.util.addreqs:add_reqs
       mkpseudo=openmdao.util.mkpseudo:mkpseudo
       envdump=openmdao.util.envirodump:envdump
       pstadump=openmdao.util.dep:main
+      update_libpath=openmdao.util.lib:update_libpath
+      combine_paths=openmdao.util.lib:combine_paths
       """
-    )
+      )
+

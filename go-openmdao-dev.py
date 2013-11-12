@@ -2103,33 +2103,6 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     except OSError:
         failures.append(req)
 
-def _update_activate(bindir):
-    _lpdict = {
-        'linux2': 'LD_LIBRARY_PATH',
-        'linux': 'LD_LIBRARY_PATH',
-        'darwin': 'DYLD_LIBRARY_PATH',
-        'win32': 'PATH',
-    }
-    libpathvname = _lpdict.get(sys.platform)
-    if libpathvname:
-        if is_win:
-            activate_base = 'activate.bat'
-        else:
-            activate_base = 'activate'
-
-        absbin = os.path.abspath(bindir)
-        activate_fname = os.path.join(absbin, activate_base)
-        with open(activate_fname, 'r') as inp:
-            content = inp.read()
-
-        if 'get_full_libpath' not in content:
-            if is_win:
-                content += '''\nfor /f "delims=" %%A in ('get_full_libpath') do @set PATH=%%A\n\n'''
-            else:
-                content += "\n%s=$(get_full_libpath)\nexport %s\n\n" % (libpathvname, libpathvname)
-
-        with open(activate_fname, 'w') as out:
-            out.write(content)
 
 def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
@@ -2351,9 +2324,7 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
-
-    _update_activate(bin_dir)
-
+        
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
