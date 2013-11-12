@@ -14,7 +14,7 @@ from math import sqrt
 
 from openmdao.units.units import PhysicalQuantity
 
-from openmdao.main.datatypes.domain.zone import CYLINDRICAL
+from openmdao.lib.datatypes.domain.zone import CYLINDRICAL
 
 # Dictionary for metric information.
 # Populated as metric classes are registered.

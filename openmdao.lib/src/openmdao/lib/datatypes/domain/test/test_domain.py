@@ -6,13 +6,11 @@ import logging
 import os.path
 import unittest
 
-import numpy
-
-from openmdao.main.datatypes.domain import DomainObj, FlowSolution, \
+from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
                                           GridCoordinates, Vector, Zone, \
                                           read_plot3d_q, write_plot3d_q
 
-from openmdao.main.datatypes.domain.test.wedge import create_wedge_3d, \
+from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d, \
                                                      create_wedge_2d, \
                                                      create_curve_2d
 

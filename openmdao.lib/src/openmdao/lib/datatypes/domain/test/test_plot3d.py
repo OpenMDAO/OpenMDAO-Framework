@@ -6,11 +6,11 @@ import logging
 import os.path
 import unittest
 
-from openmdao.main.datatypes.domain import read_plot3d_q, write_plot3d_q, \
+from openmdao.lib.datatypes.domain import read_plot3d_q, write_plot3d_q, \
                                           read_plot3d_f, write_plot3d_f, \
-                                          read_plot3d_shape, write_plot3d_grid
+                                          read_plot3d_shape
 
-from openmdao.main.datatypes.domain.test.wedge import create_wedge_2d, \
+from openmdao.lib.datatypes.domain.test.wedge import create_wedge_2d, \
                                                      create_wedge_3d
 
 from openmdao.util.testutil import assert_raises
@@ -200,7 +200,7 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao.main.datatypes.domain')
+    sys.argv.append('--cover-package=openmdao.lib.datatypes.domain')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 
