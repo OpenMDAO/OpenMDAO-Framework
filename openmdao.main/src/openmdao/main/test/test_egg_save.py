@@ -476,8 +476,8 @@ class TestCase(unittest.TestCase):
             ]
 
             # Add our file if we're not considered part of an egg.
-            if sys.modules[self.__module__].__file__.find('.egg') < 0:
-                expected.append(('extract', 'Egg_TestModel/test_egg_save.py'))
+            #if sys.modules[self.__module__].__file__.find('.egg') < 0:
+	    expected.append(('extract', 'Egg_TestModel/test_egg_save.py'))
             expected.append(('complete', None))
 
             self.assertEqual(len(OBSERVATIONS), len(expected))
