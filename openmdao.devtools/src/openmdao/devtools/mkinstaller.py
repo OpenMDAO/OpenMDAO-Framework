@@ -321,7 +321,7 @@ def _get_mingw_dlls(bin_dir):
 
     def _get_mingw_dlls_from_site(bin_dir):
         import zipfile
-        dest = os.path.join(os.path.abspath(bin_dir))
+        dest = os.path.abspath(bin_dir)
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
         zipped = zipfile.ZipFile(zippath, 'r')
         zipped.extractall(dest)
