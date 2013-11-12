@@ -8,7 +8,7 @@
 
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Array
+from openmdao.main.datatypes.api import Float, Int, Str, Bool, Array
 
 
 class Oneout(Component):

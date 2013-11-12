@@ -1,5 +1,5 @@
 from openmdao.main.api import VariableTree
-from openmdao.lib.datatypes.api import Float, VarTree
+from openmdao.main.datatypes.api import Float, VarTree
 from stream import Stream
 
 class MEflows(VariableTree):

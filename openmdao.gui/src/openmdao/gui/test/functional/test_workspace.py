@@ -285,7 +285,7 @@ def _test_macro(browser):
     # Create a file (code editor automatically indents).
     editor_page.new_file('foo.py', """
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Foo(Component):
 

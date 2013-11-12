@@ -1,7 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class Simple(Component):

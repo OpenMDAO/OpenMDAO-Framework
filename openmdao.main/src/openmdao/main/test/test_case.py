@@ -3,7 +3,7 @@ import copy
 import array
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
-from openmdao.lib.datatypes.api import Int, List
+from openmdao.main.datatypes.api import Int, List
 from openmdao.main.numpy_fallback import array as nparray
 
 from openmdao.main.test.test_vartree import DumbVT

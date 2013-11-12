@@ -2,19 +2,14 @@ import os.path
 import sys
 import unittest
 
-import pkg_resources
-
 if '.' not in sys.path:
     sys.path.append('.')
 
 from openmdao.util.testutil import assert_rel_error
 from openmdao.main.api import Assembly, set_as_top,  Component
-from openmdao.lib.datatypes.api import Str, Bool, Int, Array, Enum, Float, File
+from openmdao.main.datatypes.api import Float
 
 from axod_compn import AxodCompn
-
-#from readclas  import readfile
-import shutil
 
 
 

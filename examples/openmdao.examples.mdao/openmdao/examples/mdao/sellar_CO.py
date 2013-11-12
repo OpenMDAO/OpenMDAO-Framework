@@ -2,7 +2,7 @@
     Solution of the sellar analytical problem using Collaborative Optimization.
 """
 
-from openmdao.lib.datatypes.api import Array
+from openmdao.main.datatypes.api import Array
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar

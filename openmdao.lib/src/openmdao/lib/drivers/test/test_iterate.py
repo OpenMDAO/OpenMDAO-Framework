@@ -6,7 +6,7 @@ import unittest
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.main.datatypes.api import Array, Float
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.util.testutil import assert_rel_error
 

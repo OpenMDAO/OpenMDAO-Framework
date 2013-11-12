@@ -6,7 +6,7 @@ import logging
 import os.path
 import unittest
 
-import numpy
+import numpy  # don't remove, this is needed in globals
 
 from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
                                           GridCoordinates, Vector, Zone, \
@@ -879,7 +879,7 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao.lib.datatypes.domain')
+    sys.argv.append('--cover-package=openmdao.main.datatypes.domain')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

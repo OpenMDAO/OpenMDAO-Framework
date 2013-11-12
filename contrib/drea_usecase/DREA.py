@@ -7,7 +7,7 @@ import os
 from numpy import array
 from numpy import float as numpy_float
 
-from openmdao.lib.datatypes.api import Int, Float, Array, Enum, VarTree
+from openmdao.main.datatypes.api import Int, Float, Array, Enum, VarTree
 from openmdao.lib.components.api import ExternalCode
 
 from openmdao.util.namelist_util import Namelist

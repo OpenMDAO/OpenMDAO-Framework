@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 
 
 class Simple(Component):

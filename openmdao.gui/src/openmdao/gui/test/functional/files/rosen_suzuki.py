@@ -4,7 +4,7 @@ Model based on CONMIN test.
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.main.datatypes.api import Array, Float
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 
