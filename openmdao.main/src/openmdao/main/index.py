@@ -35,7 +35,8 @@ def process_index_entry(obj, idx):
                    (2,[('foo',1)]) is not.
           SLICE:   (3, lower, upper, step) All members must be present and should have a
                    value of None if not set.
-          EXTSLICE:  (4, ???)
+          EXTSLICE:  (4, plus a combination of (lower,upper,step) tuples and indexes)
+                     For example, (4, (None,None,None), 2)
     """
     if not isinstance(idx, tuple):
         print obj, type(obj)
