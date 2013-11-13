@@ -29,7 +29,7 @@ from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
-from openmdao.lib.datatypes.api import Float, Int
+from openmdao.main.datatypes.api import Float, Int
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp

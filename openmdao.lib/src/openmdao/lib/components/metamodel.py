@@ -30,7 +30,7 @@ from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
 
-from openmdao.lib.datatypes.api import Slot, List, Str, Float, Int, Event, \
+from openmdao.main.datatypes.api import Slot, List, Str, Float, Int, Event, \
      Dict, Bool
 
 from openmdao.util.typegroups import int_types, real_types

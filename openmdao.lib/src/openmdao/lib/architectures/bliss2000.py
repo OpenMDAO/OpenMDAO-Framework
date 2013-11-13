@@ -16,7 +16,7 @@ from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, \
                                            OptLatinHypercube, LatinHypercube
 from openmdao.lib.components.api import MetaModel
-from openmdao.lib.datatypes.api import Float, Array, Slot
+from openmdao.main.datatypes.api import Float, Array, Slot
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 class SubSystemObj(Component): 

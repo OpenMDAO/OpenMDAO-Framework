@@ -15,7 +15,7 @@ from numpy import float32, zeros
 import axod as axod
 
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Array, Str
+from openmdao.main.datatypes.api import Float, Array, Str
 
 __all__ = ('AxodComp',)
 

@@ -1,6 +1,6 @@
 from openmdao.main.api import Assembly, Component
 
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.main.datatypes.api import Array, Float
 from openmdao.lib.drivers.api import SLSQPdriver
 
 class ArrayParaboloid(Component):

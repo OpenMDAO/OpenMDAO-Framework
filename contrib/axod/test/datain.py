@@ -10,8 +10,6 @@
 
 """
 
-import os.path
-import shutil
 import sys
 
 if '.' not in sys.path:
@@ -21,8 +19,8 @@ if '.' not in sys.path:
 from numpy import float32, zeros, ndarray
 
 
-from openmdao.main.api import Component, Container
-from openmdao.lib.datatypes.api import Float, Array, Str, Int
+from openmdao.main.api import Container
+from openmdao.main.datatypes.api import Float, Array, Int
 
 __all__ = ('AxodCompn',)
 

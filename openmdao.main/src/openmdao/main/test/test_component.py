@@ -12,7 +12,7 @@ from nose import SkipTest
 
 from openmdao.main.api import Assembly, Component, Container, Driver
 from openmdao.main.interfaces import ICaseRecorder, implements
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.main.container import _get_entry_group
 from openmdao.util.testutil import assert_raises
 

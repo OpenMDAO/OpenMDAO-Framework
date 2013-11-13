@@ -12,7 +12,7 @@ the gradient typically involves one or more executions of the objective
 function depending on the finite difference method that is used. This, of
 course, means that your model is executed additional times each iteration.
 
-Sometimes, the solution process can be sped up by having a component supply
+Sometimes the solution process can be sped up by having a component supply
 its own derivatives. These derivatives may be analytical (as you will see in
 this example), or they might be estimated by some other means. Additionally,
 these derivatives can be more accurate than those estimated by finite
@@ -32,7 +32,7 @@ these two steps:
       list of inputs and outputs.
 
 
-Lets look at an example, using the Paraboloid component, to see how this would work in 
+Let's look at an example, using the Paraboloid component, to see how this would work in 
 practice. Starting with the original code, but calling our new
 class ``ParaboloidDerivative``, we have:
 
@@ -59,33 +59,31 @@ component's outputs with respect to its inputs, evaluated at the current
 state of the model. The paraboloid model has one input and two outputs, so
 the Jacobian is a 1 by 2 numpy array. This also requires the numpy import
 seen in the code above. The ``linearize`` function doesn't return the
-Jacobian, but instead stores it in our Component. 
+Jacobian but instead stores it in our component. 
 
 
 .. testcode:: Paraboloid_derivative
 
     def linearize(self):
-        """Caculate the Jacobian"""
+        """Calculate the Jacobian"""
         
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
     
         self.J = array([[df_dx, df_dy]])
 
-So `self.J` is our stored Jacobian that we will use later. The ``linearize``
-function is called once when an optimizer asks for a gradient of its
-workflow. When this component is part of a much larger model, it only
-contributes a small portion of the full Jacobian. OpenMDAO uses a numerical
-method, developed by `Martins and Hwang <martins_citation>`_ 
-to solve for the gradient of the full problem. For large problems, the Jacobian could grow 
-to be very large and it would become impractical to construct the entire thing. 
-Instead the scheme used here represents the Jacobian as a linear operator
-or a function that returns a product of the Jacobian with an input vector. 
-In this way, the full Jacobian never needs to be stored. However, since the solution is 
-iterative, a component's Jacobian needs to be queried multiple times after it is 
-calculated. So, we need a method to provide the Jacobian and its ordering:
-
-.. _martins_citation: http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary
+So ``self.J`` is the stored Jacobian that we will use later. The ``linearize``
+function is called once when an optimizer asks for a gradient of its workflow. When
+this component is part of a much larger model, it only contributes a small portion of
+the full Jacobian. OpenMDAO uses a numerical method developed by `Martins and Hwang
+<http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary>`_ [1]
+to solve for the gradient of the full problem. For large problems the Jacobian could
+grow to be very large, and it would become impractical to construct the entire thing. 
+Instead, the scheme used here represents the Jacobian as a linear operator or a
+function that returns a product of the Jacobian with an input vector.  In this way,
+the full Jacobian never needs to be stored. However, since the solution is  iterative,
+a component's Jacobian needs to be queried multiple times after it is  calculated. So,
+we need a method to provide the Jacobian and its ordering:
 
 .. testcode:: Paraboloid_derivative
 
@@ -98,20 +96,20 @@ calculated. So, we need a method to provide the Jacobian and its ordering:
         return input_keys, output_keys, self.J
 
 
-Here, ``input_keys`` and ``output_keys`` provide an index into the Jacobian
+Here ``input_keys`` and ``output_keys`` provide an index into the Jacobian
 so OpenMDAO knows which columns correspond to each input and which rows to 
 each output. For our paraboloid example, if you linearized around the point (0,0)
 then the Jacobian would look like: 
 
-+--------+-------+-------+
-|        | **x** | **y** |
-+========+=======+=======+
-|**f_xy**| -6.0  |  8.0  |
-+--------+-------+-------+
++--------+--------+-------+
+|        |  **x** | **y** |
++========+========+=======+
+|**f_xy**| -6.0   |  8.0  |
++--------+--------+-------+
 
 Note that you don't have to include all of the inputs and
 outputs in the Jacobian. There is certainly no reason to provide the
-derivative of inputs that are are never hooked up to other
+derivative of inputs that are never hooked up to other
 outputs or irrelevant to the gradient for some other reason. 
 
 The ParaboloidDerivative component can be placed into a model, and the
@@ -125,7 +123,8 @@ the new component with derivatives. We put this model in a file called
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
 
-.. [#1] J. R. R. A. Martins and J. T. Hwang, "Review and Unification of Methods for Computing Derivatives of Multidisciplinary Computational Models", AIAA Journal, 2013.
+.. [#] Martins, J. R. R. A., and Hwang, J. T., "Review and Unification of Methods for
+       Computing Derivatives of Multidisciplinary Computational Models," `AIAA Journal,` 2013.
 
 *Benchmarking*
 ~~~~~~~~~~~~~~
@@ -159,7 +158,7 @@ example shows how they can be accessed and used.
         >>> print model.paraboloid.derivative_exec_count
         3
 
-Here, we've printed out the number of function and derivative executions for
+Here we've printed out the number of function and derivative executions for
 the paraboloid examples, both without and with analytical derivatives.
 Because this model is a simple equation, the advantage of using the
 analytical derivative isn't evident in a comparison of the clock time, but

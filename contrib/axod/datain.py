@@ -22,7 +22,7 @@ from numpy import float32, zeros, ndarray
 
 
 from openmdao.main.api import Component, Container
-from openmdao.lib.datatypes.api import Float, Array, Str, Int
+from openmdao.main.datatypes.api import Float, Array, Str, Int
 
 __all__ = ('AxodCompn',)
 
