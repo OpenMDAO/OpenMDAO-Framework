@@ -153,6 +153,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('+a.a1d', "+scope.get('a.a1d')"),
             ('a.a1d[0]', "scope.get('a.a1d',[(0,0)])"),
             ('a.a2d[0][0]', "scope.get('a.a2d',[(0,0),(0,0)])"),
+            ('a.a2d[:,0]', "scope.get('a.a2d',[(4,(None,None,None),0)])"),
             ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
             ('a.a2d[-a.a1d[2]][foo.bar]', 
              "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
@@ -359,6 +360,14 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.text = 'a1d[::-1]'
         self.assertTrue(all(array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
         ex.text = 'a1d[:2]'
+        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
+        ex.text = 'a2d[:,0]'
+        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
+        ex.text = 'a2d[:,1]'
+        self.assertTrue(all(array([1.,3.]) == ex.evaluate()))
+        ex.text = 'a2d[:,-1]'
+        self.assertTrue(all(array([1.,3.]) == ex.evaluate()))
+        ex.text = 'a2d[:,-2]'
         self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
 
     def test_boolean(self):
