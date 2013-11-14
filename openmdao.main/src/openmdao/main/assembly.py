@@ -729,6 +729,76 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
+    def check_gradient(self, name=None, inputs=None, outputs=None, 
+                       stream=None, mode='auto'):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (apply_deriv and provideJ.)
+        Note that fake finite difference is turned off so that we are
+        doing a straight comparison.
+
+        name: (optional) str
+            If provided, specifies the name of a Driver or Component to
+            calculate the gradient for.  If name specifies a Driver,
+            the inputs used to calculate the gradient will be generated
+            from the parameters of the Driver, and the outputs will be
+            generated from the constraints and objectives of the Driver.
+            If name specifies a Component, the inputs and outputs of that
+            Component will be used to calculate the gradient.
+
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the 'name' argument.
+            If the inputs are not specified and name is not specified,
+            then they will be generated from the parameters of
+            the object named 'driver'.
+            
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the 'name' argument.
+            If the outputs are not specified and name is not specified,
+            then they will be generated from the objectives and constraints
+            of the object named 'driver'.
+            
+        stream: (optional) file-like object, str, or None
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename.
+            
+        mode: (optional) str or None
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
+        """
+        
+        if inputs and outputs:
+            if name:
+                logger.warning("The 'inputs' and 'outputs' args were specified to "
+                    "check_gradient, so the 'name' arg (%s) is ignored" % name)
+        elif not name: # we're missing either inputs or outputs, so we need a name
+            name = 'driver'
+            obj = getattr(self, name, None)
+            if obj is None:
+                raise RuntimeError("Can't find object named '%s'" % name)
+            
+
+        # fill in any missing inputs or outputs using the object specified by 'name'
+        if not inputs:
+            pass
+        elif not outputs:
+            pass
+
+
+
+        return self.driver.workflow.check_gradient(inputs=inputs, 
+                                                   outputs=outputs,
+                                                   stream=stream,
+                                                   mode=mode)
+            
+
     def linearize(self, required_inputs=None, required_outputs=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for

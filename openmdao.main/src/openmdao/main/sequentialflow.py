@@ -15,7 +15,7 @@ from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.ndepgraph import find_related_pseudos, base_var, \
+from openmdao.main.depgraph import find_related_pseudos, base_var, \
                                     mod_for_derivs, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
@@ -874,18 +874,32 @@ class SequentialWorkflow(Workflow):
     def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
-        to validate his derivative functions (ApplyDer and ProvideJ.)
+        to validate his derivative functions (apply_deriv and provideJ.)
         Note that fake finite difference is turned off so that we are
         doing a straight comparison.
 
-        stream: file-like object or string
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the parameters of
+            the Driver corresponding to this workflow.
+            
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the objectives and constraints
+            of the Driver corresponding to this workflow.
+            
+        stream: (optional) file-like object or str
             Where to write to, default stdout. If a string is supplied,
             that is used as a filename.
             
-        adjoint: boolean
-            Set to True to check the adjoint solution. Leave it as False to
-            check the forward solution. Note, the finite difference baseline
-            is always solved in forward mode.
+        mode: (optional) str
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
         """
         stream = stream or sys.stdout
         if isinstance(stream, basestring):
