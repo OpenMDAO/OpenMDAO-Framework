@@ -332,15 +332,6 @@ class Driver(Component):
         """
         return self.workflow.calc_gradient(inputs, outputs, upscope=True)
 
-    def check_gradient(self, mode='auto', stream=None):
-        """Compare the OpenMDAO-calculated gradient with one calculated
-        by straight finite-difference. This provides the user with a way
-        to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
-        """
-        return self.workflow.check_gradient(mode=mode, stream=stream)
-
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration

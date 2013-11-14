@@ -29,7 +29,9 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
+from openmdao.main.array_helpers import flattened_size, is_differentiable_var
 from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.util.log import logger
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -773,30 +775,47 @@ class Assembly(Component):
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
         """
-        
+        driver = self.driver
+        obj = None
+
         if inputs and outputs:
             if name:
                 logger.warning("The 'inputs' and 'outputs' args were specified to "
-                    "check_gradient, so the 'name' arg (%s) is ignored" % name)
+                    "check_gradient, so the 'name' arg (%s) is ignored." % name)
         elif not name: # we're missing either inputs or outputs, so we need a name
             name = 'driver'
+
+        if name:
             obj = getattr(self, name, None)
             if obj is None:
-                raise RuntimeError("Can't find object named '%s'" % name)
-            
+                self.raise_exception("Can't find object named '%s'." % name)
+            if has_interface(obj, IDriver):
+                driver = obj
 
         # fill in any missing inputs or outputs using the object specified by 'name'
         if not inputs:
-            pass
-        elif not outputs:
-            pass
+            if has_interface(obj, IDriver):
+                pass  # workflow.check_gradient can pull inputs from driver
+            elif has_interface(obj, IComponent):
+                inputs = ['.'.join([obj.name, inp]) 
+                            for inp in obj.list_inputs() if is_differentiable_var(inp,obj)]
+                inputs = sorted(inputs)
+            else:
+                self.raise_exception("Can't find any inputs for generating gradient.")
+        if not outputs:
+            if has_interface(obj, IDriver):
+                pass # workflow.check_gradient can pull outputs from driver
+            elif has_interface(obj, IComponent):
+                outputs = ['.'.join([obj.name, out]) 
+                              for out in obj.list_outputs() if is_differentiable_var(out,obj)]
+                outputs = sorted(outputs)
+            else:
+                self.raise_exception("Can't find any outputs for generating gradient.")
 
-
-
-        return self.driver.workflow.check_gradient(inputs=inputs, 
-                                                   outputs=outputs,
-                                                   stream=stream,
-                                                   mode=mode)
+        return driver.workflow.check_gradient(inputs=inputs, 
+                                              outputs=outputs,
+                                              stream=stream,
+                                              mode=mode)
             
 
     def linearize(self, required_inputs=None, required_outputs=None):
