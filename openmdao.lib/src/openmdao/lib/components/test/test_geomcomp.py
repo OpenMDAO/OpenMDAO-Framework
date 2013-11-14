@@ -253,6 +253,12 @@ end
         self.assertEqual(ins, set(["height", "myvt"]))
         self.assertEqual(outs, set(["volume", "fproduct", "concat", "bogus"]))
 
+        # make sure our VT works
+        topvars = set(self.geomcomp.myvt.list_vars())
+        self.assertEqual(topvars, set(["f", "subvt"]))
+        topvars = set(self.geomcomp.myvt.subvt.list_vars())
+        self.assertEqual(topvars, set(["arr", "en", 'i', 'f', 's']))
+        
         # check types of stuff
         self.assertTrue(isinstance(self.geomcomp.myvt, VariableTree))
         self.assertTrue(isinstance(self.geomcomp.myvt.subvt, VariableTree))
