@@ -182,7 +182,7 @@ in with the nondifferentiables.
 At present, the user doesn't have much direct control over the finite difference,
 but a stepsize can be assigned to any Float or Array input as a variable attribute:
 
-.. testcode:: FD1
+.. testcode:: Paraboloid_derivative
 
         x = Float(0.0, iotype='in', desc='The variable x', fd_step=0.01)
         
