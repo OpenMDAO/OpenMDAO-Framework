@@ -529,12 +529,18 @@ class FiniteDifference(object):
         self.form = 'forward'
 
         in_size = 0
-        for srcs in self.inputs:
+        for j, srcs in enumerate(self.inputs):
             
             # Support for parameter groups
             if isinstance(srcs, basestring):
                 srcs = [srcs]
                 
+            # Local stepsize support
+            meta = self.scope.get_metadata(base_var(self.scope._depgraph, 
+                                                    srcs[0]))
+            if 'fd_step' in meta:
+                self.fd_step[j] = meta['fd_step']
+            
             val = self.scope.get(srcs[0])
             width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
