@@ -398,6 +398,10 @@ class HasEqConstraints(_HasConstraintsBase):
         """Returns an ordered dict of constraint objects."""
         return self._constraints
 
+    def get_constraints(self):
+        """Returns an ordered dict of constraint objects"""
+        return self._constraints
+
     def eval_eq_constraints(self, scope=None):
         """Returns a list of constraint values.
         """
@@ -490,6 +494,10 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
+        return self._constraints
+
+    def get_constraints(self):
+        """Returns an ordered dict of constraint objects"""
         return self._constraints
 
     def eval_ineq_constraints(self, scope=None):

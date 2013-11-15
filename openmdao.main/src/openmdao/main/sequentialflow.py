@@ -545,13 +545,11 @@ class SequentialWorkflow(Workflow):
             if outputs is None:
                 outputs = []
                 if hasattr(self._parent, 'get_objectives'):
-                    obj = ["%s.out0" % item.pcomp_name for item in \
-                            self._parent.get_objectives().values()]
-                    outputs.extend(obj)
+                    outputs.extend(["%s.out0" % item.pcomp_name for item in \
+                            self._parent.get_objectives().values()])
                 if hasattr(self._parent, 'get_constraints'):
-                    con = ["%s.out0" % item.pcomp_name for item in \
-                                   self._parent.get_constraints().values()]
-                    outputs.extend(con)
+                    outputs.extend(["%s.out0" % item.pcomp_name for item in \
+                                   self._parent.get_constraints().values()])
                     
                 if len(outputs) == 0:
                     msg = "No outputs given for derivatives."
