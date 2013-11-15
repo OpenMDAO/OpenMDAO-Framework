@@ -217,10 +217,6 @@ class GeomComponent(Component):
                         val = meta['value']
                         setattr(self, name, val)
 
-        if self._call_cpath_updated:
-            # Vartree needs to be in a valid state.
-            self.cpath_updated()
-
     def _remove_var(self, name):
         """Removes the specified variable."""
         if self.parent:
