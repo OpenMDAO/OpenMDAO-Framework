@@ -78,8 +78,6 @@ def _create_trait(parent, name, meta):
                 parent.add(part, VarTree(VariableTree(), iotype=iotype))
             parent = getattr(parent, part)
         parent.add(parts[-1], _get_trait_from_meta(name, meta))
-        # Vartree needs to be in a valid state.
-        parent.cpath_updated()
     else:  # just a simple variable
         parent.add(name, _get_trait_from_meta(name, meta))
 
@@ -218,6 +216,10 @@ class GeomComponent(Component):
                     if meta['iotype'] == 'in':
                         val = meta['value']
                         setattr(self, name, val)
+
+        if self._call_cpath_updated:
+            # Vartree needs to be in a valid state.
+            self.cpath_updated()
 
     def _remove_var(self, name):
         """Removes the specified variable."""
