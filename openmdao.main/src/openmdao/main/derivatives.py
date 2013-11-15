@@ -57,7 +57,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-6,
+                             tol=1.0e-9,
                              maxiter=100)
 
             i = 0
@@ -111,7 +111,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-6,
+                             tol=1.0e-9,
                              maxiter=100)
             
             i = 0
