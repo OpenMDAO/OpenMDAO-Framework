@@ -8,7 +8,7 @@
 import csv
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, List, Slot, Float, Str
+from openmdao.main.datatypes.api import Bool, List, Slot, Float, Str
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator, ICaseFilter, implements, \

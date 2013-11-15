@@ -20,7 +20,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 
-from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Slot, Str
+from openmdao.main.datatypes.api import Float, Bool, Array, Int, Slot, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \

@@ -8,7 +8,7 @@ from openmdao.main.case import Case
 from openmdao.main.datatypes.slot import Slot 
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 
 
 class PGrafObject(object):

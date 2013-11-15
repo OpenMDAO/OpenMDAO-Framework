@@ -6,7 +6,7 @@ import StringIO
 import unittest
 
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
-from openmdao.lib.datatypes.api import Float, List, Str
+from openmdao.main.datatypes.api import Float, List, Str
 from openmdao.main.api import Component, Assembly, Driver, Run_Once, Case, set_as_top
 
 class Basic_Component(Component):
@@ -93,6 +93,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      driver.directory: ',
             '      driver.force_execute: True',
@@ -160,6 +161,8 @@ class Data_Dump_TestCase(unittest.TestCase):
         for line, template in zip(lines, expected):
             if template.startswith('   uuid:'):
                 self.assertTrue(line.startswith('   uuid:'))
+            elif template.startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
             else:
                 self.assertEqual(line, template)
         
@@ -178,6 +181,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      nested.comp1.directory: ',
             '      nested.comp1.force_execute: False',
@@ -201,6 +205,8 @@ class Data_Dump_TestCase(unittest.TestCase):
         for line, template in zip(lines, expected):
             if template.startswith('   uuid:'):
                 self.assertTrue(line.startswith('   uuid:'))
+            elif template.startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
             else:
                 self.assertEqual(line, template)
 
@@ -216,6 +222,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      comp1.directory: ',
             '      comp1.force_execute: False',
@@ -238,6 +245,8 @@ class Data_Dump_TestCase(unittest.TestCase):
         for line, template in zip(lines, expected):
             if template.startswith('   uuid:'):
                 self.assertTrue(line.startswith('   uuid:'))
+            elif template.startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
             else:
                 self.assertEqual(line, template)
                 

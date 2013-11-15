@@ -2070,20 +2070,27 @@ def download(url, dest='.'):
             out.write(block)
     return outpath
 
-def _get_mingw_dlls():
-    # first, check if MinGW/bin is already in PATH
-    for entry in os.environ['PATH'].split(os.pathsep):
-        if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
-            print 'MinGW is already installed, skipping download.'
-            break
-    else:
+def _get_mingw_dlls(bin_dir):
+    def _mingw_dlls_in_path():
+        # first, check if MinGW/bin is already in PATH
+        if 'path' in os.environ:
+            for entry in os.environ['PATH'].split(os.pathsep):
+                if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+                    print 'MinGW is already installed, skipping download.'
+                    return True
+
+        return False
+
+    def _get_mingw_dlls_from_site(bin_dir):
         import zipfile
-        dest = os.path.dirname(sys.executable)
+        dest = os.path.abspath(bin_dir)
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
         zipped = zipfile.ZipFile(zippath, 'r')
         zipped.extractall(dest)
         zipped.close()
         os.remove(zippath)
+
+    _mingw_dlls_in_path() or _get_mingw_dlls_from_site(bin_dir)
 
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
@@ -2102,6 +2109,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
     except OSError:
         failures.append(req)
+
 
 def _copy_winlibs(home_dir, activated):
     # On windows, builds using numpy.distutils.Configuration will
@@ -2314,7 +2322,7 @@ def after_install(options, home_dir, activated=False):
         
         if is_win: # retrieve MinGW DLLs from server
             try:
-                _get_mingw_dlls()
+                _get_mingw_dlls(bin_dir)
             except Exception as err:
                 print str(err)
                 print "\n\n**** Failed to download MinGW DLLs, so OpenMDAO extension packages may fail to load."
@@ -2323,12 +2331,12 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
-    
-    
+        
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
     if not is_win and ' ' in abs_bin:
+        import stat
         shebang = '#!"%s"\n' % os.path.join(abs_bin, 'python')
         print '\nFixing scripts for spaces in install path'
         for path in sorted(glob.glob(os.path.join(bin_dir, '*'))):

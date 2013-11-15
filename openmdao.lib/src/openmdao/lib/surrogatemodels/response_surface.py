@@ -4,7 +4,7 @@ from numpy import matrix, linalg, power, multiply, concatenate, ones
 
 from openmdao.main.api import Container
 from openmdao.main.interfaces import implements,ISurrogate
-from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.main.datatypes.api import Float, Bool
 
 class ResponseSurface(Container): 
     implements(ISurrogate) 

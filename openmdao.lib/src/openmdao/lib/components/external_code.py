@@ -11,7 +11,7 @@ import sys
 import time
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, Dict, Str, FileRef, Float, Int, List
+from openmdao.main.datatypes.api import Bool, Dict, Str, FileRef, Float, Int, List
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped

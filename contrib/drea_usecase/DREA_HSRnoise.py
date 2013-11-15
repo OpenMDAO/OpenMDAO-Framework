@@ -3,7 +3,7 @@
 """
 
 from openmdao.main.api import Assembly, Slot, Case
-from openmdao.lib.datatypes.api import Float, Enum, Str
+from openmdao.main.datatypes.api import Float, Enum
 from openmdao.lib.casehandlers.api import ListCaseIterator, DBCaseRecorder
 from openmdao.lib.drivers.api import CaseIteratorDriver
 #from openmdao.lib.drivers.api import DOEdriver

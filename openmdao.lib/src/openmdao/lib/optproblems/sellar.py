@@ -11,7 +11,7 @@ import numpy
 
 from openmdao.main.api import Component
 from openmdao.main.problem_formulation import OptProblem
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Discipline1(Component):
     """Component containing Discipline 1."""

@@ -27,7 +27,7 @@ import axod as axod
 #from  readclas  import readfile
 
 from openmdao.main.api import Component, Container
-from openmdao.lib.datatypes.api import Float, Array, Str, Int
+from openmdao.main.datatypes.api import Float, Array, Str
 from datain import Datain
 
 __all__ = ('AxodCompn',)

@@ -3,7 +3,7 @@ into the DOEgenerator socket on a DOEdriver."""
 
 # pylint: disable-msg=E0611,F0401
 from numpy import linspace,random
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.main.api import Container

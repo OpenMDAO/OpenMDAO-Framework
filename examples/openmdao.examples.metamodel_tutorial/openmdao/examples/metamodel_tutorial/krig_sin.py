@@ -3,7 +3,7 @@ import sys
 from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
 from math import sin
 
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial, Uniform
 from openmdao.lib.components.api import MetaModel

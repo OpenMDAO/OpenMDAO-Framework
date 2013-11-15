@@ -8,7 +8,7 @@ is directly calculated.
 """
 
 from openmdao.main.api import Assembly
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 

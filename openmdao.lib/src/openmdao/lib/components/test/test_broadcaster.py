@@ -1,7 +1,7 @@
 import unittest
 from openmdao.main.api import Assembly, Component
 from openmdao.lib.components.broadcaster import Broadcaster
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class Dummy(Component): 

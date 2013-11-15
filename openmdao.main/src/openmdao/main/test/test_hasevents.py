@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int, Event
+from openmdao.main.datatypes.api import Int, Event
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasevents import HasEvents
 

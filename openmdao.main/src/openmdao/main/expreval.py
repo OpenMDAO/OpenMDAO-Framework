@@ -10,7 +10,7 @@ import __builtin__
 
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     transform_expression, ExprPrinter, print_node
-from openmdao.main.index import INDEX, ATTR, CALL, SLICE
+from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 
@@ -138,6 +138,14 @@ class ExprTransformer(ast.NodeTransformer):
         elif isinstance(node.slice, ast.Slice):
             subs[0:0] = [ast.Tuple(elts=[ast.Num(n=SLICE),self._get_slice_vals(node.slice)], 
                                    ctx=ast.Load())]
+        elif isinstance(node.slice, ast.ExtSlice):
+            elts = [ast.Num(n=EXTSLICE)]
+            for val in node.slice.dims:
+                if isinstance(val, ast.Slice):
+                    elts.append(self._get_slice_vals(val))
+                else:
+                    elts.append(self.visit(val.value))
+            subs[0:0] = [ast.Tuple(elts=elts,  ctx=ast.Load())]
         else:
             raise ValueError("unknown Subscript child node: %s" % node.slice.__class__.__name__)
 
@@ -278,6 +286,11 @@ class ExprExaminer(ast.NodeVisitor):
                 if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
                     self.const_indices = False
             self.visit(node.step)
+
+    def visit_ExtSlice(self, node):
+        self.simplevar = self.const = False
+        for d in node.dims:
+            self.visit(d)
 
     def visit_Name(self, node):
         self.const = False

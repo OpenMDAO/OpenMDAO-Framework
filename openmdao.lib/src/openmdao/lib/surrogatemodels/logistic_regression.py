@@ -11,7 +11,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.main.datatypes.api import Float, Bool
 from openmdao.main.api import Container
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.util.decorators import stub_if_missing_deps

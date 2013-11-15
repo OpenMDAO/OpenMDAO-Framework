@@ -6,7 +6,7 @@ from math import sqrt  # so expr can find it
 from openmdao.main.api import Assembly, Component, Driver, \
                               SequentialWorkflow, set_as_top, \
                               dump_iteration_tree
-from openmdao.lib.datatypes.api import Float, Int, Str
+from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
