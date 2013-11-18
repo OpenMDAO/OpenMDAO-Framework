@@ -1282,14 +1282,16 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(inp)
-            graph.add_edge(inp, '@fake', conn=True)
+            #graph.add_edge(inp, '@fake', conn=True)
+            graph.add_edge('@fake', inp, conn=True)
 
     for out in flatten_list_of_iters(outputs):
         if out not in graph:
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(out)
-            graph.add_edge('@fake', out, conn=True)
+            #graph.add_edge('@fake', out, conn=True)
+            graph.add_edge(out, '@fake', conn=True)
 
     return graph
     
@@ -1315,6 +1317,31 @@ def edge_dict_to_comp_list(graph, edges):
     basevars = set()
     for src, targets in edges.iteritems():
         
+        if src == '@fake':
+            continue
+        
+        if not isinstance(targets, list):
+            targets = [targets]
+            
+        numfakes = 0
+        for target in targets:
+            if target.startswith('@fake'):
+                numfakes += 1
+            if  not target.startswith('@'):
+                comp, _, var = target.partition('.')
+                if var:
+                    if comp not in comps:
+                        comps[comp] = {'inputs': [],
+                                       'outputs': []}
+                    
+                    basevar = base_var(graph, target)
+                    if basevar not in basevars:
+                        comps[comp]['inputs'].append(var)
+                        if target == basevar:
+                            basevars.add(target)
+        if len(targets) == numfakes:
+            continue
+        
         if not src.startswith('@'):
             comp, _, var = src.partition('.')
             if var:
@@ -1328,23 +1355,6 @@ def edge_dict_to_comp_list(graph, edges):
                     if src == basevar:
                         basevars.add(src)
 
-        if not isinstance(targets, list):
-            targets = [targets]
-            
-        for target in targets:
-            if  not target.startswith('@'):
-                comp, _, var = target.partition('.')
-                if var:
-                    if comp not in comps:
-                        comps[comp] = {'inputs': [],
-                                       'outputs': []}
-                    
-                    basevar = base_var(graph, target)
-                    if basevar not in basevars:
-                        comps[comp]['inputs'].append(var)
-                        if target == basevar:
-                            basevars.add(target)
-                
     return comps
 
 def nodes_matching_all(graph, **kwargs):

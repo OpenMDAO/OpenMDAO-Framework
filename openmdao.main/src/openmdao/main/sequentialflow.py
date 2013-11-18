@@ -1027,5 +1027,7 @@ class SequentialWorkflow(Workflow):
 
         if close_stream:
             stream.close()
+            
+        return suspects  # return suspects to make it easier to check from a test
 
 
