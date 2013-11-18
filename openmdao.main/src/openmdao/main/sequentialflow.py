@@ -415,7 +415,7 @@ class SequentialWorkflow(Workflow):
                 
         # Each parameter adds an equation
         for src, targets in self._edges.iteritems():
-            if '@in' in src:
+            if '@in' in src or '@fake' in src:
                 if not isinstance(targets, list):
                     targets = [targets]
                     
