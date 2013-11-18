@@ -541,6 +541,8 @@ class Container(SafeHasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
 
+        getattr(self, name)
+
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
