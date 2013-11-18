@@ -4,7 +4,7 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.ndepgraph import base_var
+from openmdao.main.depgraph import base_var
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \

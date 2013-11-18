@@ -3,9 +3,6 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
-from openmdao.main.ndepgraph import get_valids  # for debugging only. remove later
 
 __all__ = ['Workflow']
 

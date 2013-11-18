@@ -296,6 +296,10 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
+        self.assertEqual(prob.check_gradient(), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0']), [])
+        
 
 if __name__ == '__main__':
     import nose
