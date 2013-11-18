@@ -169,5 +169,22 @@ This concludes an introduction to OpenMDAO using a simple problem of
 component creation and execution. The next tutorial introduces a problem with
 more complexity and presents additional features of the framework.
 
+*Finite Difference*
+~~~~~~~~~~~~~~~~~~~
 
+If you don't specify a ``provideJ`` function for you component, then OpenMDAO
+will finite difference it during the calculation of the full model gradient. OpenMDAO
+can identify groups of nondifferentiable components to finite difference as a block.
+Also, OpenMDAO can detect a non-differentiable connection between two differentiable
+components (e.g, components passing a file or string) and will include both components
+in with the nondifferentiables.
 
+At present, the user doesn't have much direct control over the finite difference,
+but a stepsize can be assigned to any Float or Array input as a variable attribute:
+
+.. testcode:: Paraboloid_derivative
+
+        x = Float(0.0, iotype='in', desc='The variable x', fd_step=0.01)
+        
+The default stepsize is 1.0e-6, which will not be adequate for your problem if your
+variable is very large or small, so it is essential to choose this value carefully.

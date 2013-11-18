@@ -30,7 +30,6 @@ import logging
 try:
     from numpy import zeros, ones
     from numpy import int as numpy_int
-    import conmin.conmin as conmin
 except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     # to keep class decl from barfing before being stubbed out
@@ -46,6 +45,8 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+
+import conmin.conmin as conmin
 
 
 class _cnmn1(object):

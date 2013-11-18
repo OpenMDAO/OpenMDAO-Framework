@@ -459,6 +459,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def test_iterate_twice(self):
 
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         data = self.top.driver.recorders[0].get_iterator()

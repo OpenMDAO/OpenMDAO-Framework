@@ -278,7 +278,7 @@ class SequentialWorkflow(Workflow):
                 if not target.startswith('@'):
                     self.set_bounds(target, bound)
             
-            ##print input_src, src, target, bound,      
+            #print input_src, src, target, bound,      
             nEdge += width
                 
         # Initialize the residual vector on the first time through, and also
