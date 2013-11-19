@@ -86,13 +86,13 @@ class ReplaceTestCase(unittest.TestCase):
 
     def test_replace_parameter_objective(self): 
 
-        top = set_as_top(Assembly)
+        top = set_as_top(Assembly())
         top.add('driver', EqInEqdriver())
         top.add('comp1', Simple())
         top.add('comp2', Simple())
 
         top.connect('comp1.c','comp2.a')
-        top.driver.add_parameter('comp1.a')
+        top.driver.add_parameter('comp1.a', low=-10, high=10)
         top.driver.add_objective('comp2.d')
 
         top.comp1.a = 10.
