@@ -5,7 +5,7 @@ from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IContainer
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -1134,23 +1134,6 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    # # predicate for searching for connections between driver
-    # # outputs and @outs
-    # is_at_out = lambda g,n: n.startswith('@out')
-
-    # # add fake edges between workflow comps and their driver
-    # for node in graph.nodes_iter():
-    #    if is_driver_node(graph, node):
-    #        drv = getattr(scope, node)
-    #        # for each connected output of the driver, see if
-    #        # it connects to an @out node downstream
-    #        for dout in drv.list_outputs(connected=True):
-    #             dout = '.'.join([node, dout])
-    #             if bfs_find(graph, dout, is_at_out): # found an @out
-    #                 for comp in drv.workflow.get_names(full=False):
-    #                    graph.add_edge(comp, node, fake=True)
-    #                    #graph.add_edge(node, comp.name, fake=True)
-
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))],
                              ['@out%d' % i for i in range(len(outputs))])
@@ -1273,6 +1256,16 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
+
+    # if full vartrees are connected, create subvar nodes for all of their
+    # internal variables
+    visited = set()
+    for src, dest in graph.list_connections():
+        if '[' not in src and src not in visited:
+            visited.add(src)
+            obj = scope.get(src)
+            if hasattr(obj, 'get_deriv_names'):
+                names = obj.get_deriv_names()
     
     # disconnected boundary vars that are explicitly specified as inputs
     # or outputs need to be added back so that bounds data can be kept 
