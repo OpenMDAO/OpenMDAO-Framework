@@ -21,14 +21,18 @@ except ImportError as err:
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
 from openmdao.main.datatypes.api import Float, Int, Bool
-from openmdao.main.interfaces import ISolver, implements
-from openmdao.util.decorators import stub_if_missing_deps
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasEqConstraints
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
+                                     ISolver, implements
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 @stub_if_missing_deps('numpy', 'scipy')
+@add_delegate(HasParameters, HasEqConstraints)
 class MDASolver(Driver):
     
-    implements(ISolver)
+    implements(IHasParameters, IHasEqConstraints, ISolver)
     
     # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')

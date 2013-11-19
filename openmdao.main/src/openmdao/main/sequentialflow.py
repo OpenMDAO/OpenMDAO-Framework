@@ -596,7 +596,8 @@ class SequentialWorkflow(Workflow):
         # the derivatives graph.
         if severed is not None:
             for edge in severed:
-                dgraph.remove_edge(edge[0], edge[1])
+                if edge in dgraph.edges():
+                    dgraph.remove_edge(edge[0], edge[1])
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
