@@ -463,7 +463,7 @@ description =
     def load_macro(self, macro_name):
         fpath = os.path.join(self.macrodir, macro_name)
         self._recorded_cmds = []
-        with open(fpath, 'r') as f:
+        with open(fpath, 'rU') as f:
             content = f.read()
 
         # fix missing newline at end of file to avoid issues later when
@@ -475,13 +475,13 @@ description =
         lines = content.split('\n')
 
         for i, line in enumerate(lines):
+            logger.debug(line)
             try:
                 self.command(line, save=False)
             except Exception as err:
+                logger.error(''.join(traceback.format_tb(sys.exc_info()[2])))
                 msg = str(err)
                 if self._gui:
-                    logger.error("%s",
-                                 ''.join(traceback.format_tb(sys.exc_info()[2])))
                     try:
                         publish('console_errors', msg)
                     except:
