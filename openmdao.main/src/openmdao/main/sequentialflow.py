@@ -241,7 +241,7 @@ class SequentialWorkflow(Workflow):
             # Find out our width, etc
             unmap_src = from_PA_var(measure_src)
             val = self.scope.get(unmap_src)
-            width = flattened_size(unmap_src, val, self.scope)            
+            width = flattened_size(unmap_src, val, self.scope)
             if isinstance(val, ndarray):
                 shape = val.shape
             else:
@@ -253,13 +253,14 @@ class SequentialWorkflow(Workflow):
                 bound = (nEdge, nEdge+width)
                 self.set_bounds(measure_src, bound)
                  
+            src_noidx = src.split('[',1)[0]
+            
             # Poke our source data
-            if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
-                basevar = base_var(dgraph, src)
+            if '[' in src and src_noidx in basevars:
                 _, _, idx = src.partition('[')
-                basebound = self.get_bounds(basevar)
-                if not '@in' in basevar:
-                    unmap_src = from_PA_var(basevar)
+                basebound = self.get_bounds(src_noidx)
+                if not '@in' in src_noidx:
+                    unmap_src = from_PA_var(src_noidx)
                     val = self.scope.get(unmap_src)
                     shape = val.shape
                 offset = basebound[0]
