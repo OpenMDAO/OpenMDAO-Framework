@@ -299,6 +299,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(prob.check_gradient(), [])
         self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0']), [])
         self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], 
+                                             outputs=['_pseudo_2.out0', '_pseudo_2.out0']), [])
         
 
 if __name__ == '__main__':

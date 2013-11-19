@@ -4,8 +4,9 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 import networkx as nx
 import sys
+from math import isnan
 
-from openmdao.main.array_helpers import flattened_size, flattened_value, \
+from openmdao.main.array_helpers import flattened_size, \
                                         flattened_names, flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, applyMinvT, applyMinv
@@ -19,8 +20,7 @@ from openmdao.main.depgraph import find_related_pseudos, base_var, \
                                     mod_for_derivs, is_basevar_node, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict, is_boundary_node, \
-                                    _get_inner_edges, partition_names_by_comp
+                                    is_subvar_node, edges_to_dict, is_boundary_node
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
@@ -1010,7 +1010,7 @@ class SequentialWorkflow(Workflow):
                         if error_max is None or abs(error) > abs(error_max):
                             error_max = error
                             error_loc = (out_name, inp_name)
-                        if abs(error) > suspect_limit:
+                        if abs(error) > suspect_limit or isnan(error):
                             suspects.append((out_name, inp_name))
                         print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
                               % (out_width, out_name, inp_width, inp_name,
