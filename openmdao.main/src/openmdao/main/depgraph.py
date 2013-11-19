@@ -5,7 +5,7 @@ from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IContainer
+from openmdao.main.interfaces import IDriver, IVariableTree
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -1261,11 +1261,23 @@ def mod_for_derivs(graph, inputs, outputs, scope):
     # internal variables
     visited = set()
     for src, dest in graph.list_connections():
-        if '[' not in src and src not in visited:
+        srcnames = []
+        destnames = []
+        if '@' not in src and '[' not in src and src not in visited:
             visited.add(src)
             obj = scope.get(src)
-            if hasattr(obj, 'get_deriv_names'):
-                names = obj.get_deriv_names()
+            if has_interface(obj, IVariableTree):
+                srcnames = ['.'.join([src,n]) 
+                               for n,v in obj.items(recurse=True)]
+        if '@' not in dest and '[' not in dest and dest not in visited:
+            visited.add(dest)
+            obj = scope.get(dest)
+            if has_interface(obj, IVariableTree):
+                destnames = ['.'.join([dest,n]) 
+                               for n,v in obj.items(recurse=True)]
+        if srcnames or destnames:
+            _replace_full_vtree_conn(graph, src, srcnames, 
+                                            dest, destnames)
     
     # disconnected boundary vars that are explicitly specified as inputs
     # or outputs need to be added back so that bounds data can be kept 
@@ -1287,7 +1299,23 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.add_edge(out, '@fake', conn=True)
 
     return graph
+
+def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
+    if len(srcnames) != len(destnames):
+        raise ValueError("source attribute list does not match "
+                         "destination attribute list.")
+    for s, d in zip(srcnames, destnames):
+        if s.split('.')[-1] != d.split('.')[-1]:
+            raise ValueError("source attribute list does not "
+                             "match destination attribute list.")
+
+    graph.disconnect(src, dest)
     
+    for s, d in zip(srcnames, destnames):
+        graph.connect(None, s, d, check=False, 
+                      invalidate=False)
+
+        
 # utility/debugging functions
 
 def edges_to_dict(edges, dct=None):
