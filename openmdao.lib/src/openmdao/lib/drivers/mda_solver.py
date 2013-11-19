@@ -46,6 +46,9 @@ class MDASolver(Driver):
                     'Newton-Krylov method. Defaults to False for ' + \
                     'Gauss-Siedel.')
     
+    print_convergence = Bool(True, iotype='in', desc='Set to False to ' +\
+                             'suppress output of convergence history.')
+    
     def __init__(self):
         
         super(MDASolver, self).__init__()
@@ -79,7 +82,8 @@ class MDASolver(Driver):
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        if self.print_convergence:
+            print "Residual vector norm:\n", norm
         
         # Loop until the residuals converge
         iter_num = 0
@@ -95,7 +99,8 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
+            if self.print_convergence:
+                print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()
@@ -115,7 +120,8 @@ class MDASolver(Driver):
             
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        if self.print_convergence:
+            print "Residual vector norm:\n", norm
         
         # Loop until convergence of residuals
         iter_num = 0
@@ -138,6 +144,8 @@ class MDASolver(Driver):
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+            if self.print_convergence:
+                print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()       
