@@ -75,7 +75,9 @@ class MDASolver(Driver):
         """ Solver execution loop: fixed point iteration. """
         
         # Initial Run
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
         
         # Find dimension of our problem.
         self.workflow.initialize_residual()
@@ -95,7 +97,9 @@ class MDASolver(Driver):
                 self.parent.set(target, self.parent.get(src), force=True)
             
             # Run all components
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
@@ -109,7 +113,9 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Initial Run
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
         
         # Find dimension of our problem.
         nEdge = self.workflow.initialize_residual()
@@ -140,7 +146,9 @@ class MDASolver(Driver):
             self.workflow.set_new_state(dv)
             
             # Run all components
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())

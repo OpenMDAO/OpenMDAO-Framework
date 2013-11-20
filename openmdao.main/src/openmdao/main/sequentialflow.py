@@ -88,7 +88,11 @@ class SequentialWorkflow(Workflow):
         """Temporarily remove the specified edges but save
         them and their metadata for later restoration. 
         """
-        self.scope._depgraph.sever_edges(edges)
+        if edges:
+            params = self._parent.get_parameters()
+            non_param_edges = [(src, targ) for (src, targ) in edges \
+                               if targ not in params]
+            self.scope._depgraph.sever_edges(non_param_edges)
 
     def unsever_edges(self):
         self.scope._depgraph.unsever_edges(self._parent.get_expr_scope())

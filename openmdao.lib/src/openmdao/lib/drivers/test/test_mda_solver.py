@@ -244,23 +244,6 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 5)
         
-    def test_newton_redundant(self):
-        # In this test, we specify a redundant param+constraint on a cyclic
-        # model.
-        
-        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
-        self.top.driver.add_constraint('d1.y2 = d2.y2')
-        self.top.driver.newton = True
-        self.top.run()
-        
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 5)
-        
     def test_newton_mixed(self):
         
         self.top = set_as_top(Sellar_MDA_Mixed())
