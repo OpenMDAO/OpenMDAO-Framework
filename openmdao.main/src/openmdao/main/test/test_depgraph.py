@@ -53,6 +53,9 @@ class DumbClass(object):
         self._inputs = inputs[:]
         self._outputs = outputs[:]
 
+    def get(self, name):
+        return getattr(self, name, None)
+    
     def run(self, *args, **kwargs):
         self.dep.child_run_finished(self.name)
         

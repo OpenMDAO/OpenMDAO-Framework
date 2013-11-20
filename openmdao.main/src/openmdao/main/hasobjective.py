@@ -159,8 +159,11 @@ class HasObjectives(object):
         refs: object
             Value returned by :meth:`get_references`.
         """
-        for name, obj in self._objectives.items():
-            self.add_objective(str(obj), name, obj.scope)
+        old = self._objectives.copy()
+        self.clear_objectives()
+        for name, obj in old.items():
+            cnst = refs.get(name, old[name])
+            self.add_objective(str(cnst), name, cnst.scope)
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""

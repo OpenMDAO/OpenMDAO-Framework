@@ -503,6 +503,37 @@ class ListConnectTestCase(unittest.TestCase):
 
         self.assertEqual(100, test_asm.f_out)
 
+    def test_connect2(self):
+        class VT(VariableTree):
+        
+            x = Float(iotype='in')
+            y = Float(iotype='in')
+        
+        class C(Component):
+        
+            x = Float(iotype='in')
+            out = Float(iotype='out')
+        
+            def execute(self):
+                self.out = 2*self.x
+        
+        class A(Assembly):
 
+            vt = VarTree(VT(), iotype='in')
+        
+            def configure(self):
+                self.add('c', C())
+                self.driver.workflow.add(['c'])
+                self.connect('vt.x', 'c.x')
+                self.create_passthrough('c.out')
+        
+        a = A()
+        a.vt.x = 1.0
+        a.vt.y = 7.0
+    
+        a.run()
+
+        self.assertEqual(a.out, 2.0)
+            
 if __name__ == "__main__":
     unittest.main()

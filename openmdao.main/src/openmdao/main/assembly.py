@@ -31,7 +31,8 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
-from openmdao.main.array_helpers import flattened_size, is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.depgraph import is_comp_node
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -243,9 +244,11 @@ class Assembly(Component):
         # Save existing driver references.
         refs = {}
         if has_interface(tobj, IComponent):
-            for obj in self.__dict__.values():
-                if obj is not tobj and is_instance(obj, Driver):
+            for cname in self.list_containers():
+                obj = getattr(self, cname)
+                if obj is not tobj and has_interface(obj, IDriver):
                     refs[obj] = obj.get_references(target_name)
+                    obj.remove_references(target_name)
 
         # remove any existing connections to replacement object
         if has_interface(newobj, IComponent):
@@ -269,20 +272,16 @@ class Assembly(Component):
         for u, v in conns:
             self.connect(u, v)
 
-        # add new object (if it's a Component) to any workflows where target was
+        # add new object (if it's a Component) to any 
+        # workflows where target was
         if has_interface(newobj, IComponent):
             for wflow, idx in wflows:
                 wflow.add(target_name, idx)
 
         # Restore driver references.
-        if refs:
-            for obj in self.__dict__.values():
-                if obj is not newobj and is_instance(obj, Driver):
-                    obj.restore_references(refs[obj])
+        for drv, _refs in refs.items():
+            drv.restore_references(_refs)
 
-        # Workflows need a reference to their new parent driver
-        if is_instance(newobj, Driver):
-            newobj.workflow._parent = newobj
 
     def remove(self, name):
         """Remove the named container object from this assembly
@@ -641,7 +640,7 @@ class Assembly(Component):
             loops = graph.get_loops()
 
             for cname, vnames in partition_names_by_comp(invalids).items():
-                if cname is None:
+                if cname is None or not is_comp_node(graph, cname): # boundary var
                     if self.parent:
                         self.parent.update_inputs(self.name)
 
@@ -657,6 +656,7 @@ class Assembly(Component):
                         getattr(self, cname).update_outputs(vnames)
                 else:
                     getattr(self, cname).update_outputs(vnames)
+                        
         try:
             for inv_dest in invalid_dests:
                 self._depgraph.update_destvar(self, inv_dest)

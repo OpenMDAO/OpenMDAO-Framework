@@ -1275,7 +1275,7 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             if has_interface(obj, IVariableTree):
                 destnames = ['.'.join([dest,n]) 
                                for n,v in obj.items(recurse=True)]
-        if srcnames or destnames:
+        if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames, 
                                             dest, destnames)
     
