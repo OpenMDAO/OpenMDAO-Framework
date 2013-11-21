@@ -376,8 +376,8 @@ def is_dev_build():
 
 def file_md5(fpath):
     """Return the MD5 digest for the given file"""
+    f = open(fpath, 'rb')
     try:
-        f = open(fpath, 'rb')
         m = md5()
         while True:
             s = f.read(4096)
