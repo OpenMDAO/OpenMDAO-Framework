@@ -114,7 +114,7 @@ if __name__ == "__main__":
     tt = time.time()
     prob.run()
 
-    prob.driver.workflow.check_gradient()
+    #prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
