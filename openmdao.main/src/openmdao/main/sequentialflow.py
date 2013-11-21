@@ -54,6 +54,8 @@ class SequentialWorkflow(Workflow):
         return iter(self.get_components(full=True))
 
     def __len__(self):
+        if self._names is None:
+            self.get_names()
         if self._names:
             return len(self._names)
         else:
@@ -112,13 +114,14 @@ class SequentialWorkflow(Workflow):
                               if n not in iterset]) - set(self._names)
                 self._names.extend(added)
                           
-        if full:
-            allnames = self._names[:]
+            self._fullnames = self._names[:]
             fullset = set(self._parent.list_pseudocomps())
             fullset.update(find_related_pseudos(self.scope._depgraph.component_graph(),
                                                 self._names))
-            allnames.extend(fullset - set(self._names))
-            return allnames
+            self._fullnames.extend(fullset - set(self._names))
+
+        if full:
+            return self._fullnames[:]
         else:
             return self._names[:]
 
@@ -189,11 +192,13 @@ class SequentialWorkflow(Workflow):
         if not isinstance(compname, basestring):
             msg = "Components must be removed by name from a workflow."
             raise TypeError(msg)
+        allnames = self.get_names(full=True)
         try:
             self._explicit_names.remove(compname)
         except ValueError:
             pass
-        self.config_changed()
+        if compname in allnames:
+            self.config_changed()
 
     def clear(self):
         """Remove all components from this workflow."""

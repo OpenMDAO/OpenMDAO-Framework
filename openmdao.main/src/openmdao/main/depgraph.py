@@ -318,6 +318,10 @@ class DependencyGraph(nx.DiGraph):
             kwargs['driver'] = True
         if hasattr(obj, '_pseudo_type'):
             kwargs['pseudo'] = obj._pseudo_type
+            if obj._pseudo_type == 'multi_var_expr':
+                kwargs['srcexpr'] = obj._orig_src
+                kwargs['destexpr'] = obj._orig_dest
+
         kwargs['invalidation'] = obj.get_invalidation_type()
         kwargs['comp'] = True
         kwargs['valid'] = False

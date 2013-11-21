@@ -210,6 +210,7 @@ class Assembly(Component):
         old_autos = self._cleanup_autopassthroughs(oldname)
 
         obj = self.remove(oldname)
+        obj.name = newname
         self.add(newname, obj)
 
         # oldname has now been removed from workflows, but newname may be in the
@@ -248,11 +249,7 @@ class Assembly(Component):
                 obj = getattr(self, cname)
                 if obj is not tobj and has_interface(obj, IDriver):
                     refs[obj] = obj.get_references(target_name)
-                    obj.remove_references(target_name)
-
-        # remove any existing connections to replacement object
-        if has_interface(newobj, IComponent):
-            self.disconnect(newobj.name)
+                    #obj.remove_references(target_name)
 
         if hasattr(newobj, 'mimic'):
             try:
@@ -262,15 +259,34 @@ class Assembly(Component):
                 self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
+                
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
+        
+        # check that all connected vars exist in the new object
+        req_vars = set([u.split('.',1)[1].split('[',1)[0] for u,v in conns if u.startswith(target_name+'.')])
+        req_vars.update([v.split('.',1)[1].split('[',1)[0] for u,v in conns if v.startswith(target_name+'.')])
+        missing = [v for v in req_vars if not newobj.contains(v)]
+        if missing:
+            self.raise_exception("the following variables are connected to other components but are missing in "
+                                 "the replacement object: %s" % missing, RuntimeError)
+            
+        # remove any existing connections to replacement object
+        if has_interface(newobj, IComponent):
+            self.disconnect(newobj.name)
 
         self.add(target_name, newobj)  # this will remove the old object
                                        # and any connections to it
 
-        # recreate old connections
+        # recreate old connections, leaving out pseudocomps
         for u, v in conns:
-            self.connect(u, v)
+            if '_pseudo_' not in u and '_pseudo_' not in v:
+                self.connect(u, v)
+
+        # Restore driver references.
+        for drv, _refs in refs.items():
+            drv.remove_references(target_name)
+            drv.restore_references(_refs)
 
         # add new object (if it's a Component) to any 
         # workflows where target was
@@ -278,25 +294,22 @@ class Assembly(Component):
             for wflow, idx in wflows:
                 wflow.add(target_name, idx)
 
-        # Restore driver references.
-        for drv, _refs in refs.items():
-            drv.restore_references(_refs)
-
-
     def remove(self, name):
         """Remove the named container object from this assembly
-        and remove it from its workflow(s) if it's a Component.
+        and remove it from its workflow(s) if it's a Component
+        or pseudo component.
         """
         cont = getattr(self, name)
-        self.disconnect(name)
-        if has_interface(cont, IComponent):
-            for obj in self.__dict__.values():
-                if obj is not cont and is_instance(obj, Driver):
-                    obj.workflow.remove(name)
+        if has_interface(cont, IComponent) or \
+           isinstance(cont, PseudoComponent):
+            for cname in self.list_containers():
+                obj = getattr(self, cname)
+                if isinstance(obj, Driver):
                     obj.remove_references(name)
+            self.disconnect(name)
 
         return super(Assembly, self).remove(name)
-
+ 
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation, adds it to self, and creates a connection
@@ -530,20 +543,34 @@ class Assembly(Component):
             for u, v in graph.list_connections(show_external=True):
                 if (u, v) in to_remove:
                     super(Assembly, self).disconnect(u, v)
+                    to_remove.remove((u,v))
 
             for u, v in graph.list_autopassthroughs():
                 if (u, v) in to_remove:
                     super(Assembly, self).disconnect(u, v)
-
+                    to_remove.remove((u,v))
+                    
+        if to_remove:  # look for pseudocomp expression connections
+            for node, data in graph.nodes_iter(data=True):
+                if 'srcexpr' in data:
+                    for u,v in to_remove:
+                        if data['srcexpr'] == u or data['destexpr'] == v:
+                            pcomps.add(node)
+                    
         for name in pcomps:
-            try:
-                self.remove_trait(name)
-            except AttributeError:
-                pass
+            if '_pseudo_' not in varpath:
+                self.remove(name)
+            else:
+                try:
+                    self.remove_trait(name)
+                except:
+                    pass
             try:
                 graph.remove(name)
             except nx.exception.NetworkXError:
                 pass
+            
+        self.config_changed()
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -949,8 +976,10 @@ class Assembly(Component):
                         if isinstance(inst, HasParameters):
                             for name, param in inst.get_parameters().items():
                                 if isinstance(param, ParameterGroup):
-                                    for n, p in zip(name, tuple(param.targets)):
-                                        parameters.append([comp.name + '.' + n, p])
+                                    #for n, p in zip(name, tuple(param.targets)):
+                                        #parameters.append([comp.name + '.' + n, p])
+                                    for p in param.targets:
+                                        parameters.append([comp.name + '.' + name, p])
                                 else:
                                     parameters.append([comp.name + '.' + name,
                                                        param.target])

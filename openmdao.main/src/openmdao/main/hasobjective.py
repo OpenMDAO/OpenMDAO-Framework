@@ -30,18 +30,7 @@ class Objective(ConnectedExprEvaluator):
             except AttributeError:
                 pass
             else:
-                pcomp.remove_connections(scope)
-                
-                #KTM1 - So, pcomp has already been deleted from the scope, so
-                #can't getattr it anymore. We still have the obj, so let's
-                #manually finish this up.
-                
-                name = pcomp.name
-                scope.disconnect(name)
-                for obj in scope.__dict__.values():
-                    if obj is not pcomp and hasattr(obj, 'workflow'):
-                        obj.workflow.remove(name)
-                        obj.remove_references(name)
+                scope.remove(self.pcomp_name)
                             
             self.pcomp_name = None
 
@@ -128,7 +117,7 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
-        self._parent._invalidate()
+        self._parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -149,9 +138,13 @@ class HasObjectives(object):
         name: string
             Name of component being removed.
         """
+        to_remove = []
         for oname, obj in self._objectives.items():
             if name in obj.get_referenced_compnames():
-                self.remove_objective(oname)
+                to_remove.append(oname)
+
+        for oname in to_remove:
+            self.remove_objective(oname)
 
     def restore_references(self, refs):
         """Restore references to component `name` from `refs`.

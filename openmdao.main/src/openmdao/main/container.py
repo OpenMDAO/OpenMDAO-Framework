@@ -725,9 +725,8 @@ class Container(SafeHasTraits):
                                  name, NameError)
         try:
             obj = getattr(self, name)
-        except:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
+        except AttributeError:
+            return None
 
         trait = self.get_trait(name)
         if trait is None:

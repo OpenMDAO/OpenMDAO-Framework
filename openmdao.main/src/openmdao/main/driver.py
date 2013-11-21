@@ -181,8 +181,8 @@ class Driver(Component):
         return refs
 
     def remove_references(self, name):
-        """Remove parameter, constraint, and objective references 
-        to component `name`.
+        """Remove parameter, constraint, objective  and workflow
+        references to component `name`.
 
         name: string
             Name of component being removed.
@@ -194,6 +194,7 @@ class Driver(Component):
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
+        self.workflow.remove(name)
 
     def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component

@@ -891,9 +891,13 @@ class HasParameters(object):
         name: string
             Name of component being removed.
         """
+        to_remove = []
         for pname, param in self._parameters.items():
             if name in param.get_referenced_compnames():
-                self.remove_parameter(pname)
+                to_remove.append(pname)
+
+        for pname in to_remove:
+            self.remove_parameter(pname)
 
     def restore_references(self, refs):
         """Restore references to component `name` from `refs`.

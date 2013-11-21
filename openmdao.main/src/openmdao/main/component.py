@@ -632,11 +632,10 @@ class Component(Container):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
-        obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and name in self._depgraph:# and not is_instance(obj, Component):
+        if name in self._depgraph:
             self._depgraph.remove(name)
         self.config_changed()
-        return obj
+        return super(Component, self).remove(name)
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the replaced
@@ -1637,7 +1636,7 @@ class Component(Container):
             partially_connected_indices = []
 
             for inp in connected_inputs:
-                cname = inp.split('[')[0]  # Could be 'inp[0]'.
+                cname = inp.split('[', 1)[0]  # Could be 'inp[0]'.
 
                 if cname == name:
                     connections = self._depgraph._var_connections(inp)

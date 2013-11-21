@@ -83,11 +83,16 @@ class Constraint(object):
         """
         if self.pcomp_name:
             scope = self.lhs.scope
-            pcomp = getattr(scope, self.pcomp_name)
-            pcomp.remove_connections(scope)
-            if hasattr(scope, pcomp.name):
+            try:
+                pcomp = getattr(scope, self.pcomp_name)
+            except AttributeError:
+                pass
+            else:
+                # pcomp.remove_connections(scope)
+                # if hasattr(scope, pcomp.name):
                 scope.remove(pcomp.name)
-            self.pcomp_name = None
+            finally:  
+                self.pcomp_name = None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -194,9 +199,10 @@ class _HasConstraintsBase(object):
         key = _remove_spaces(key)
         cnst = self._constraints.get(key)
         if cnst:
-            scope = _get_scope(self)
-            if hasattr(scope, cnst.pcomp_name):
-                scope.disconnect(cnst.pcomp_name)
+            cnst.deactivate()
+            # scope = _get_scope(self)
+            # if hasattr(scope, cnst.pcomp_name):
+            #     scope.disconnect(cnst.pcomp_name)
             del self._constraints[key]
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key
@@ -223,9 +229,13 @@ class _HasConstraintsBase(object):
         name: string
             Name of component being removed.
         """
+        to_remove = []
         for cname, constraint in self._constraints.items():
             if name in constraint.get_referenced_compnames():
-                self.remove_constraint(cname)
+                to_remove.append(cname)
+
+        for cname in to_remove:
+            self.remove_constraint(cname)
 
     def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
@@ -234,6 +244,8 @@ class _HasConstraintsBase(object):
             Value returned by :meth:`get_references`.
         """
         for name, constraint in refs.items():
+            if name in self._constraints:
+                self.remove_constraint(name)
             self.add_constraint(str(constraint), name,
                                 constraint.lhs.scope)
 
