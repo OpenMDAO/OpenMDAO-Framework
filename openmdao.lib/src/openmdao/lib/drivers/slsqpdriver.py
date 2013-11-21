@@ -90,8 +90,8 @@ class SLSQPdriver(Driver):
         """Perform initial setup before iteration loop begins."""
 
         self.nparam = self.total_parameters()
-        self.ncon = len(self.get_constraints())
-        self.neqcon = len(self.get_eq_constraints())
+        self.ncon = self.total_constraints()
+        self.neqcon = self.total_eq_constraints()
 
         self.x = self.eval_parameters(self.parent)
         self.x_lower_bounds = self.get_lower_bounds()
