@@ -80,8 +80,8 @@ use it, you must have compilers (C and Fortran) on your system.
 
 .. note:: 
 
-  Numpy and SciPy have one-click installers. You should use those unless  you have a very good
-  reason not to. For Python 2.7 you want a SciPy version called
+  Numpy and SciPy have one-click installers. You should use those unless you have a very good
+  reason not to. For Python 2.7.x you want a SciPy version such as
   ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version number might be different than the
   one here, but make sure you get something with ``superpack`` and ``.exe`` in the name. 
 
@@ -99,10 +99,8 @@ public/private key pairs to be stored securely.
 
 **Mac OS X**:
 
-- Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
-  will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
-  appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
-  fix.
+- Python -- Install a new version (2.7.x) from ``python.org`` because the built-in version has a
+  distutils bug that will cause some of the OpenMDAO tests to fail.
 - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
 - `Matplotlib <http://matplotlib.org/downloads.html>`_
