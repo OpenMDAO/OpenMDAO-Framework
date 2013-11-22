@@ -21,7 +21,7 @@ from traits.api import Property
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, \
+                                     IAssembly, IComponent, IContainer, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
@@ -165,11 +165,6 @@ class Component(Container):
             if trait.iotype:  # input or output
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
 
-        # contains validity flag for each io Trait (inputs are valid since
-        # they're not connected yet, and outputs are invalid)
-        #self._valid_dict = dict([(name, t.iotype == 'in')
-        #    for name, t in self.class_traits().items() if t.iotype])
-
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
         self._num_input_caseiters = 0
@@ -245,10 +240,13 @@ class Component(Container):
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
         self._set_exec_state("INVALID")
-        if self.parent and hasattr(self.parent, 'child_invalidated'):
-            self.parent.child_invalidated(self.name, 
-                                          vnames=[name],
-                                          iotype='in')
+        if self.parent:
+            try:
+                inval = self.parent.child_invalidated
+            except AttributeError:
+                pass
+            else:
+                inval(self.name, vnames=[name], iotype='in')
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -347,6 +345,7 @@ class Component(Container):
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir
+                
             try:
                 self._restore_files(config_dir, '', [], from_egg=False)
             except Exception:
@@ -628,14 +627,31 @@ class Component(Container):
 
         return obj
 
+    def _post_container_add(self, name, obj, removed):
+        """Called after a new child Container has been
+        added to self.
+        """
+        if has_interface(obj, IContainer):
+            io = self._cached_traits_[name].iotype
+            if io:
+                if removed:
+                    # since we just removed this container and it was
+                    # being used as an io variable, we need to put
+                    # it back in the dep graph
+                    self._depgraph.add_boundary_var(name, iotype=io)
+            elif has_interface(obj, IComponent):
+                self._depgraph.add_component(name, obj)
+
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
         if name in self._depgraph:
             self._depgraph.remove(name)
-        self.config_changed()
-        return super(Component, self).remove(name)
+        try:
+            return super(Component, self).remove(name)
+        finally:
+            self.config_changed()
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the replaced

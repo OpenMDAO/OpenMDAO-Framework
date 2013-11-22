@@ -175,6 +175,9 @@ class PseudoComponent(object):
     def check_configuration(self):
         pass
 
+    def cpath_updated(self):
+        pass
+
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.

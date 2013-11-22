@@ -146,22 +146,6 @@ class Assembly(Component):
         if seqno:
             self.driver.workflow.set_initial_count(seqno)
 
-    def add(self, name, obj):
-        """Call the base class *add*.  Then,
-        if obj is a Component, add it to the component graph.
-        Returns the added object.
-        """
-        if has_interface(obj, IComponent):
-            self._depgraph.add_component(name, obj)
-        try:
-            super(Assembly, self).add(name, obj)
-        except:
-            if has_interface(obj, IComponent):
-                self._depgraph.remove(name)
-            raise
-
-        return obj
-
     def find_referring_connections(self, name):
         """Returns a list of connections where the given name is referred
         to either in the source or the destination.
@@ -263,6 +247,13 @@ class Assembly(Component):
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
         
+        # Assemblies sometimes create inputs and outputs in their configure()
+        # function, so call it early if possible
+        if self._call_cpath_updated is False and isinstance(obj, Container):
+            newobj.parent = self
+            newobj.name = target_name
+            newobj.cpath_updated()
+            
         # check that all connected vars exist in the new object
         req_vars = set([u.split('.',1)[1].split('[',1)[0] for u,v in conns if u.startswith(target_name+'.')])
         req_vars.update([v.split('.',1)[1].split('[',1)[0] for u,v in conns if v.startswith(target_name+'.')])
@@ -567,7 +558,7 @@ class Assembly(Component):
                     pass
             try:
                 graph.remove(name)
-            except nx.exception.NetworkXError:
+            except (KeyError, nx.exception.NetworkXError):
                 pass
             
         self.config_changed()
@@ -695,10 +686,14 @@ class Assembly(Component):
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
 
+    @rbac(('owner', 'user'))
     def child_invalidated(self, childname, vnames=None, iotype='out'):
         """Invalidate all variables that depend on the variable
         provided by the child that has been invalidated.
         """
+        if childname not in self._depgraph:
+            return []
+        
         if vnames is None:
             vnames = [childname]
         elif childname:
