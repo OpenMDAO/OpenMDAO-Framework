@@ -11,7 +11,8 @@ from networkx.algorithms.dag import is_directed_acyclic_graph
 import networkx as nx 
 
 from openmdao.main.ndepgraph import is_boundary_node, is_input_node, \
-                                    base_var
+                                    base_var, edges_to_dict
+from openmdao.util.nameutil import partition_names_by_comp
 
 _excluded_nodes = set([
     'force_execute',
@@ -194,72 +195,33 @@ def set_layout(graph, xmax=960., ymax=500.):
         graph.node[comp]['x'] = x
         graph.node[comp]['y'] = ymid
 
-    for comp in csort:
-        succ = cgraph.successors(comp)
-        if len(succ) > 1:
-            dy = float(ymax) / (len(succ)+1)
-            for i,s in enumerate(succ):
-                graph.node[s]['y'] = i * dy
-
     cradius = 25
-    cvar_dx = cradius/2. + 5 # x distance between comps and their vars
-    cvar_dy = cradius/2. + 5 # y distance between comp vars on same side of a comp
+    cvar_dx = cradius * 1.8 # x distance between comps and their vars
+    cvar_dy = cradius * 1.8 # y distance between comp vars on same side of a comp
 
-    # for node in bin_vars+bout_vars:
-    #     x = graph.node[node]['x']
-    #     y = graph.node[node]['y']
-    #     children = graph._all_child_vars(node)
-    #     child_y = y - (len(children) * cvar_dy) / 2.
-    #     for v in children:
-    #         if is_input_node(graph, node):
-    #             graph.node[v]['x'] = x + cvar_dx
-    #             graph.node[v]['y'] = child_y
-    #             child_y += cvar_dy
+    for node in csort:
+        data = graph.node[node]
+        x = data['x']
+        y = data['y']
 
-    # for node in csort:
-    #     x = graph.node[node]['x']
-    #     y = graph.node[node]['y']
+        inputs  = graph._all_child_vars(node, direction='in')
+        outputs = graph._all_child_vars(node, direction='out')
 
-    #     children = graph._all_child_vars(node)
-    #     invars = [v for v in children if is_input_node(graph,v)]
-    #     outvars = [v for v in children if v not in invars]
-    #     ichild_y = y - (len(invars) * cvar_dy) / 2.
-    #     ochild_y = y - (len(outvars) * cvar_dy) / 2.
-    #     for v in invars:
-    #         graph.node[v]['x'] = x - cvar_dx
-    #         graph.node[v]['y'] = ichild_y
-    #         ichild_y += cvar_dy
+        ichild_y = y + (cvar_dy - (len(inputs) * cvar_dy)) / 2.
+        ochild_y = y + (cvar_dy - (len(outputs) * cvar_dy)) / 2.
+        for v in inputs:
+            graph.node[v]['x'] = x - cvar_dx
+            graph.node[v]['y'] = ichild_y
+            ichild_y += cvar_dy
 
-    #     for v in outvars:
-    #         graph.node[v]['x'] = x + cvar_dx
-    #         graph.node[v]['y'] = ochild_y
-    #         ochild_y += cvar_dy
-
-    # # check that all x,y values are set
-    # for node, data in graph.nodes_iter(data=True):
-    #     if 'x' not in data:
-    #         print "x missing for node %s" % node
-    #     if 'y' not in data:
-    #         print "y missing for node %s" % node
-
-    for u,v,data in graph.edges(data=True):
-        if v.startswith(u+'.') or u.startswith(v+'.'):
-            data['weight'] = 100
-        else:
-            data['weight'] = 5
-
-    import pprint
-    from networkx import spring_layout
-    layout = spring_layout(graph)
-    pprint.pprint(layout)
-
-    for node, data in graph.nodes_iter(data=True):
-        data['x'] = layout[node][0] * 960.
-        data['y'] = layout[node][1] * 500.
+        for v in outputs:
+            graph.node[v]['x'] = x + cvar_dx
+            graph.node[v]['y'] = ochild_y
+            ochild_y += cvar_dy
 
     return graph
 
-def plot_graph(graph, d3page='static_graph.html'):
+def plot_graph(graph, d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -270,9 +232,6 @@ def plot_graph(graph, d3page='static_graph.html'):
     graph = _clean_graph(graph)
     graph = set_layout(graph)
     data = node_link_data(graph)
-
-    import pprint
-    pprint.pprint(data)
 
     startdir = os.getcwd()
     os.chdir(tmpdir)
@@ -291,9 +250,9 @@ def plot_graph(graph, d3page='static_graph.html'):
     finally:
         os.chdir(startdir)
         print "\nwaiting to remove temp directory '%s'... " % tmpdir
-        time.sleep(10) # sleep to give browser time
+        time.sleep(5) # sleep to give browser time
                        # to read files before we remove them
-        #shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir)
         print "temp directory removed"
 
 

@@ -3,6 +3,9 @@
 <head>
 	<meta charset="utf-8">
     <style>
+    text {
+      text-anchor: middle;
+    }
 		.var2var {
           stroke: #ccc;
           stroke-width: 4px;
@@ -71,6 +74,15 @@ svg.append("rect")
     .attr("width", width)
     .attr("height", height);
 
+var links = svg.selectAll("line")
+      .data(graph.links)
+      .enter()
+      .append("line")
+      .attr('x1',function(lnk) { return graph.nodes[lnk.source].x; })
+      .attr('y1',function(lnk) { return graph.nodes[lnk.source].y; })
+      .attr('x2',function(lnk) { return graph.nodes[lnk.target].x; })
+      .attr('y2',function(lnk) { return graph.nodes[lnk.target].y; });
+      
 var labelednodes = svg.selectAll(".labelednode")
         .data(graph.nodes)
         .enter()
@@ -91,26 +103,16 @@ var circles = labelednodes.append("circle")
     })
     .attr("r", function(node) {
       if (node.comp) {
-        return 25.;
+        return 25;
       }
       else {
-        return 5.;
+        return 10;
       }
     });
 
 var labels = labelednodes.append("text")
-      .attr("dx", 12)
       .attr("dy", ".35em")
-      .text(function(d) { return d.id; });
-
-var links = svg.selectAll("line")
-      .data(graph.links)
-      .enter()
-      .append("line")
-      .attr('x1',function(lnk) { return graph.nodes[lnk.source].x; })
-      .attr('y1',function(lnk) { return graph.nodes[lnk.source].y; })
-      .attr('x2',function(lnk) { return graph.nodes[lnk.target].x; })
-      .attr('y2',function(lnk) { return graph.nodes[lnk.target].y; });
+      .text(function(d) { return d.short; });
 
 function transform(d) {
   return "translate(" + d.x + "," + d.y + ")";
