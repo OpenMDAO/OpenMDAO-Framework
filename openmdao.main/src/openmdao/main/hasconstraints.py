@@ -200,9 +200,6 @@ class _HasConstraintsBase(object):
         cnst = self._constraints.get(key)
         if cnst:
             cnst.deactivate()
-            # scope = _get_scope(self)
-            # if hasattr(scope, cnst.pcomp_name):
-            #     scope.disconnect(cnst.pcomp_name)
             del self._constraints[key]
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key
@@ -242,12 +239,22 @@ class _HasConstraintsBase(object):
 
         refs: object
             Value returned by :meth:`get_references`.
+
+        Note: this is called from the replace() method, where
+        the replacing object may be missing variables that were 
+        found in the target object, so no restore_references
+        call should raise an exception when restoring a reference 
+        fails.
         """
         for name, constraint in refs.items():
             if name in self._constraints:
                 self.remove_constraint(name)
-            self.add_constraint(str(constraint), name,
-                                constraint.lhs.scope)
+            try:
+                self.add_constraint(str(constraint), name,
+                                    constraint.lhs.scope)
+            except Exception as err:
+                self._parent._logger.warning("Couldn't restore constraint '%s': %s" 
+                                              % (name, str(err)))
 
     def clear_constraints(self):
         """Removes all constraints."""

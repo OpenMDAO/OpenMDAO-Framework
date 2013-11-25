@@ -13,22 +13,21 @@ class Replace2TestCase(unittest.TestCase):
         top.replace('preproc', ScalingPreProc())
         top.get_attributes(False)
         top.preproc.get_attributes(False)
+        for comp in top.driver.workflow:
+            n = comp.name
         top.replace('postproc', ScalingPostProc())
         top.postproc.get_attributes(False)
         top.replace('driver', SLSQPdriver())
         top.driver.get_attributes(False)
-        try:
-            top.replace('comp', Assembly())
-        except Exception as err:
-            self.assertTrue("missing in the replacement object" in str(err))
-            self.assertTrue("'x'" in str(err))
-            self.assertTrue("'result'" in str(err))
-        else:
-            self.fail("Exception expected")
+        for comp in top.driver.workflow:
+            n = comp.name
+        top.replace('comp', Assembly())
         top.driver.get_attributes(False)
         top.comp.get_attributes(False)
         top.get_attributes(False)
         top.get_dataflow()
+        for comp in top.driver.workflow:
+            n = comp.name
 
 if __name__ == "__main__": 
 

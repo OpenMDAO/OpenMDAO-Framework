@@ -232,7 +232,7 @@ class Assembly(Component):
             for cname in self.list_containers():
                 obj = getattr(self, cname)
                 if obj is not tobj and has_interface(obj, IDriver):
-                    refs[obj] = obj.get_references(target_name)
+                    refs[cname] = obj.get_references(target_name)
                     #obj.remove_references(target_name)
 
         if hasattr(newobj, 'mimic'):
@@ -259,8 +259,14 @@ class Assembly(Component):
         req_vars.update([v.split('.',1)[1].split('[',1)[0] for u,v in conns if v.startswith(target_name+'.')])
         missing = [v for v in req_vars if not newobj.contains(v)]
         if missing:
-            self.raise_exception("the following variables are connected to other components but are missing in "
-                                 "the replacement object: %s" % missing, RuntimeError)
+            self._logger.warning("the following variables are connected to other components but are missing in "
+                                 "the replacement object: %s" % missing)
+            mconns = set()
+            for m in missing:
+                mconns.update(self.find_referring_connections(m))
+            # disconnect any vars that are missing in the replacement object
+            for u, v in mconns:
+                self.disconnect(u, v)
             
         # remove any existing connections to replacement object
         if has_interface(newobj, IComponent):
@@ -272,10 +278,15 @@ class Assembly(Component):
         # recreate old connections, leaving out pseudocomps
         for u, v in conns:
             if '_pseudo_' not in u and '_pseudo_' not in v:
-                self.connect(u, v)
+                try:
+                    self.connect(u, v)
+                except Exception as err:
+                    self._logger.warning("Couldn't connect '%s' to '%s': %s" %
+                                  (u, v, str(err)))
 
         # Restore driver references.
-        for drv, _refs in refs.items():
+        for dname, _refs in refs.items():
+            drv = getattr(self, dname)
             drv.remove_references(target_name)
             drv.restore_references(_refs)
 
@@ -460,6 +471,8 @@ class Assembly(Component):
         """
         src = eliminate_expr_ws(src)
 
+        #self.config_changed(update_parent=False)
+
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
@@ -522,46 +535,47 @@ class Assembly(Component):
         name of a Component, remove all connections from all of its inputs
         and outputs.
         """
-        if varpath2 is None and self.parent and '.' not in varpath:
-            # boundary var. make sure it's disconnected in parent
-            self.parent.disconnect('.'.join([self.name, varpath]))
+        try:
+            if varpath2 is None and self.parent and '.' not in varpath:
+                # boundary var. make sure it's disconnected in parent
+                self.parent.disconnect('.'.join([self.name, varpath]))
 
-        to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
+            to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
-        graph = self._depgraph
+            graph = self._depgraph
 
-        if to_remove:
-            for u, v in graph.list_connections(show_external=True):
-                if (u, v) in to_remove:
-                    super(Assembly, self).disconnect(u, v)
-                    to_remove.remove((u,v))
+            if to_remove:
+                for u, v in graph.list_connections(show_external=True):
+                    if (u, v) in to_remove:
+                        super(Assembly, self).disconnect(u, v)
+                        to_remove.remove((u,v))
 
-            for u, v in graph.list_autopassthroughs():
-                if (u, v) in to_remove:
-                    super(Assembly, self).disconnect(u, v)
-                    to_remove.remove((u,v))
-                    
-        if to_remove:  # look for pseudocomp expression connections
-            for node, data in graph.nodes_iter(data=True):
-                if 'srcexpr' in data:
-                    for u,v in to_remove:
-                        if data['srcexpr'] == u or data['destexpr'] == v:
-                            pcomps.add(node)
-                    
-        for name in pcomps:
-            if '_pseudo_' not in varpath:
-                self.remove(name)
-            else:
+                for u, v in graph.list_autopassthroughs():
+                    if (u, v) in to_remove:
+                        super(Assembly, self).disconnect(u, v)
+                        to_remove.remove((u,v))
+                        
+            if to_remove:  # look for pseudocomp expression connections
+                for node, data in graph.nodes_iter(data=True):
+                    if 'srcexpr' in data:
+                        for u,v in to_remove:
+                            if data['srcexpr'] == u or data['destexpr'] == v:
+                                pcomps.add(node)
+                        
+            for name in pcomps:
+                if '_pseudo_' not in varpath:
+                    self.remove(name)
+                else:
+                    try:
+                        self.remove_trait(name)
+                    except:
+                        pass
                 try:
-                    self.remove_trait(name)
-                except:
+                    graph.remove(name)
+                except (KeyError, nx.exception.NetworkXError):
                     pass
-            try:
-                graph.remove(name)
-            except (KeyError, nx.exception.NetworkXError):
-                pass
-            
-        self.config_changed()
+        finally:    
+            self.config_changed()
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -971,10 +985,8 @@ class Assembly(Component):
                         if isinstance(inst, HasParameters):
                             for name, param in inst.get_parameters().items():
                                 if isinstance(param, ParameterGroup):
-                                    #for n, p in zip(name, tuple(param.targets)):
-                                        #parameters.append([comp.name + '.' + n, p])
-                                    for p in param.targets:
-                                        parameters.append([comp.name + '.' + name, p])
+                                    for n, p in zip(name, tuple(param.targets)):
+                                        parameters.append([comp.name + '.' + n, p])
                                 else:
                                     parameters.append([comp.name + '.' + name,
                                                        param.target])

@@ -906,7 +906,11 @@ class HasParameters(object):
             Value returned by :meth:`get_references`.
         """
         for pname, param in refs.items():
-            self.add_parameter(param)
+            try:
+                self.add_parameter(param)
+            except Exception as err:
+                self._parent._logger.warning("Couldn't restore parameter '%s': %s" 
+                                              % (pname, str(err)))
 
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this

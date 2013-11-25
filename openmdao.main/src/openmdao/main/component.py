@@ -687,7 +687,6 @@ class Component(Container):
             self._num_input_caseiters += 1
 
         if trait.iotype:
-            #self._valid_dict[name] = trait.iotype == 'in'
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
@@ -718,8 +717,10 @@ class Component(Container):
         if trait and trait.iotype == 'in':
             self._set_input_callback(name, remove=True)
 
-        super(Component, self).remove_trait(name)
-        self.config_changed()
+        try:
+            super(Component, self).remove_trait(name)
+        finally:
+            self.config_changed()
 
         if trait and trait.iotype == 'in' and trait.trait_type \
            and trait.trait_type.klass is ICaseIterator:
@@ -836,8 +837,10 @@ class Component(Container):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        super(Component, self).disconnect(srcpath, destpath)
-        self.config_changed(update_parent=False)
+        try:
+            super(Component, self).disconnect(srcpath, destpath)
+        finally:        
+            self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
     def mimic(self, target):
@@ -884,26 +887,26 @@ class Component(Container):
             if hasattr(self, inp):
                 setattr(self, inp, getattr(target, inp))
 
-        # Update slots that aren't inputs.
-        target_inputs = target.list_inputs()
-        target_slots = [n for n, v in target.traits().items()
-                                   if v.is_trait_type(Slot)]
-        my_slots = [n for n, v in self.traits().items()
-                               if v.is_trait_type(Slot)]
-        for name in target_slots:
-            if name not in target_inputs and name in my_slots:
-                self.add(name, getattr(target, name))
+        # # Update slots that aren't inputs.
+        # target_inputs = target.list_inputs()
+        # target_slots = [n for n, v in target.traits().items()
+        #                            if v.is_trait_type(Slot)]
+        # my_slots = [n for n, v in self.traits().items()
+        #                        if v.is_trait_type(Slot)]
+        # for name in target_slots:
+        #     if name not in target_inputs and name in my_slots:
+        #         self.add(name, getattr(target, name))
 
-        # Update List(Slot) traits.
-        target_lists = [n for n, v in target.traits().items()
-                                   if v.is_trait_type(List) and
-                                      v.inner_traits[-1].is_trait_type(Slot)]
-        my_lists = [n for n, v in self.traits().items()
-                                   if v.is_trait_type(List) and
-                                      v.inner_traits[-1].is_trait_type(Slot)]
-        for name in target_lists:
-            if name in my_lists:
-                setattr(self, name, getattr(target, name))
+        # # Update List(Slot) traits.
+        # target_lists = [n for n, v in target.traits().items()
+        #                            if v.is_trait_type(List) and
+        #                               v.inner_traits[-1].is_trait_type(Slot)]
+        # my_lists = [n for n, v in self.traits().items()
+        #                            if v.is_trait_type(List) and
+        #                               v.inner_traits[-1].is_trait_type(Slot)]
+        # for name in target_lists:
+        #     if name in my_lists:
+        #         setattr(self, name, getattr(target, name))
 
     @rbac(('owner', 'user'))
     def get_expr_depends(self):
@@ -1709,9 +1712,10 @@ class Component(Container):
                         column_index = 0
 
                         for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
 
-                        column_index = column_index + array_indices[-1]
+                        if array_indices:
+                            column_index += array_indices[-1]
                         implicit_partial_indices.append(column_index)
 
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)

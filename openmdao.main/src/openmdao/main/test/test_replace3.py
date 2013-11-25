@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, Driver, set_as_top
 from openmdao.main.datatypes.api import Float
 
 class BaseComp(Component):
@@ -27,7 +27,7 @@ class TestComp(ExtendedComp):
   
     def execute(self):
         self.myout = self.myin + 10.0
-        self.myout2 = self.myout - 10.0
+        self.myout2 = self.myin - 10.0
 
 class BaseAsym(Assembly):
     # inputs: None
@@ -87,17 +87,21 @@ class Replace3TestCase(unittest.TestCase):
         mytest.run()
         
         self.assertEqual(mytest.myin, 2)
-        self.assertEqual(mytest.ea.myin, 2)
-        self.assertEqual(mytest.myou2, 0)
-        self.assertEqual(mytest.myou2, 0)
+        self.assertEqual(mytest.myout, 12)
+        self.assertEqual(mytest.myout2, -8)
         
         
     def test_LargeAsym(self):
         largetest = set_as_top(TestLargeAsym())
         largetest.myin = 2
         largetest.run()
-        print largetest.myout
-        print largetest.myout2
+        
+        self.assertEqual(largetest.myin, 2)
+        self.assertEqual(largetest.ea.myin, 2)
+        self.assertEqual(largetest.ea.myout, 12)
+        self.assertEqual(largetest.ea.myout2, -8)
+        self.assertEqual(largetest.myout, 12)
+        self.assertEqual(largetest.myout2,-8)
         
         
 if __name__=="__main__":

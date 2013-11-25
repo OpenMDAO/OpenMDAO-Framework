@@ -156,7 +156,11 @@ class HasObjectives(object):
         self.clear_objectives()
         for name, obj in old.items():
             cnst = refs.get(name, old[name])
-            self.add_objective(str(cnst), name, cnst.scope)
+            try:
+                self.add_objective(str(cnst), name, cnst.scope)
+            except Exception as err:
+                self._parent._logger.warning("Couldn't restore objective '%s': %s" 
+                                              % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
