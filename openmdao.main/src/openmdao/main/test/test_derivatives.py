@@ -8,9 +8,9 @@ import re
 import unittest
 
 try:
-    from numpy import zeros, array, identity
+    from numpy import zeros, array, identity, random
 except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity
+    from openmdao.main.numpy_fallback import zeros, array, identity, random
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -1930,6 +1930,37 @@ class Comp2_array(Component):
             
             result['x'] = dy.reshape((2, 2))
         
+class Comp3_array(Component):
+    """ two-input, two-output"""
+    
+    x = Array(zeros((3, 3)), iotype='in')
+    y = Array(zeros((3, 3)), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        pass
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        self.J = random.random((9, 9))
+        
+        self.JT = self.J.T
+        
+    def apply_deriv(self, arg, result):
+        
+        if 'y' in result and 'x' in arg:
+            dx = self.J.dot(arg['x'].flatten())
+            
+            result['y'] += dx.reshape((3, 3))
+        
+    def apply_derivT(self, arg, result):
+        
+        if 'y' in arg and 'x' in result:
+            dy = self.JT.dot(arg['y'].flatten())
+            
+            result['x'] += dy.reshape((3, 3))
+        
         
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
@@ -2010,6 +2041,46 @@ class Testcase_applyJT(unittest.TestCase):
         
         self.assertEqual(result['x[0, 1]'], 138.0)
         
+    def test_deriv_slices2(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', Comp3_array())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
+                                              outputs=['comp1.y[:2, 1:]'],
+                                              mode='forward')
+
+        diff = abs(J.flatten() - top.comp1.J[[1,2,4,5], 3].flatten())
+        self.assertAlmostEqual(diff.max(), 0.0, places=8)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
+                                              outputs=['comp1.y[:2, 1:]'],
+                                              mode='adjoint')
+
+        diff = abs(J.flatten() - top.comp1.J[[1,2,4,5], 3].flatten())
+        self.assertAlmostEqual(diff.max(), 0.0, places=8)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
+                                              outputs=['comp1.y[0, 2]'],
+                                              mode='forward')
+
+        diff = abs(J.flatten() - top.comp1.J[2, [3,4,6,7]].flatten())
+        self.assertAlmostEqual(diff.max(), 0.0, places=8)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
+                                              outputs=['comp1.y[0, 2]'],
+                                              mode='adjoint')
+
+        diff = abs(J.flatten() - top.comp1.J[2, [3,4,6,7]].flatten())
+        self.assertAlmostEqual(diff.max(), 0.0, places=8)
+
     def test_matvecREV2(self):
         # Larger system
         
