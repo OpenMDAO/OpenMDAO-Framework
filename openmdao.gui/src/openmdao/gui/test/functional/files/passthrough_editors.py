@@ -35,4 +35,3 @@ class Topp(Assembly):
         
         self.create_passthrough('p1.y')
         self.connect('A1.f_xy','p1.x')
-        

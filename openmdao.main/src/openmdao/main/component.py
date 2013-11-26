@@ -887,26 +887,31 @@ class Component(Container):
             if hasattr(self, inp):
                 setattr(self, inp, getattr(target, inp))
 
-        # # Update slots that aren't inputs.
-        # target_inputs = target.list_inputs()
-        # target_slots = [n for n, v in target.traits().items()
-        #                            if v.is_trait_type(Slot)]
-        # my_slots = [n for n, v in self.traits().items()
-        #                        if v.is_trait_type(Slot)]
-        # for name in target_slots:
-        #     if name not in target_inputs and name in my_slots:
-        #         self.add(name, getattr(target, name))
+        # Update slots that aren't inputs.
+        target_inputs = target.list_inputs()
+        target_slots = [n for n, v in target.traits().items()
+                                   if v.is_trait_type(Slot)]
+        my_slots = [n for n, v in self.traits().items()
+                               if v.is_trait_type(Slot)]
+        for name in target_slots:
+            if name not in target_inputs and name in my_slots:
+                if hasattr(self, name):
+                    myobj = getattr(self, name)
+                    if hasattr(myobj, 'mimic'):
+                        myobj.mimic(getattr(target, name))
+                        continue
+                self.add(name, getattr(target, name))
 
-        # # Update List(Slot) traits.
-        # target_lists = [n for n, v in target.traits().items()
-        #                            if v.is_trait_type(List) and
-        #                               v.inner_traits[-1].is_trait_type(Slot)]
-        # my_lists = [n for n, v in self.traits().items()
-        #                            if v.is_trait_type(List) and
-        #                               v.inner_traits[-1].is_trait_type(Slot)]
-        # for name in target_lists:
-        #     if name in my_lists:
-        #         setattr(self, name, getattr(target, name))
+        # Update List(Slot) traits.
+        target_lists = [n for n, v in target.traits().items()
+                                   if v.is_trait_type(List) and
+                                      v.inner_traits[-1].is_trait_type(Slot)]
+        my_lists = [n for n, v in self.traits().items()
+                                   if v.is_trait_type(List) and
+                                      v.inner_traits[-1].is_trait_type(Slot)]
+        for name in target_lists:
+            if name in my_lists:
+                setattr(self, name, getattr(target, name))
 
     @rbac(('owner', 'user'))
     def get_expr_depends(self):

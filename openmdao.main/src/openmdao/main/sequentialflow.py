@@ -360,6 +360,10 @@ class SequentialWorkflow(Workflow):
 
         return i1
 
+    def mimic(self, src):
+        self.clear()
+        self._explicit_names = src._explicit_names[:]
+
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
