@@ -91,7 +91,7 @@ class MyComp(ImplicitComponent):
         return self.J_res_state
 
     def execute(self):
-        print "executing"
+        
         if self.solve_internally == True:
             x0 = [self.x, self.y, self.z]
             sol = fsolve(self._func, x0, fprime=self._jac)
