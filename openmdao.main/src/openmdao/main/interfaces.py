@@ -291,6 +291,14 @@ class IComponent(IContainer):
         """
 
 
+class IImplicitComponent(IComponent):
+    def list_states(self):
+        """Return a list of names of state variables."""
+
+    def list_residuals(self):
+        """Return a list of names of residual variables."""
+
+
 class IDriver(IComponent):
     """An interface for objects that manage the iteration of workflows.
     """
