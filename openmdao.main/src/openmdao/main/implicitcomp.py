@@ -6,7 +6,7 @@ class ImplicitComponent(Component):
     def __init__(self):
         super(ImplicitComponent, self).__init__()
         self._state_names = None
-        self._residual_names = None
+        self._resid_names = None
 
     @rbac(('owner', 'user'))
     def list_states(self):

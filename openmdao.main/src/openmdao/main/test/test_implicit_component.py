@@ -118,6 +118,14 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(model.comp.y_out, -1.5, 1e-5)
 
+    def test_list_states(self):
+        comp = MyComp()
+        self.assertEqual(set(comp.list_states()), set(['x','y','z']))
+
+    def test_list_residuals(self):
+        comp = MyComp()
+        self.assertEqual(set(comp.list_residuals()), set(['r0','r1','r2']))
+
 if __name__ == '__main__':
     import nose
     import sys
