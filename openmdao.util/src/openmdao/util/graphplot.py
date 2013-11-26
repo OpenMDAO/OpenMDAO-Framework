@@ -104,112 +104,6 @@ def _clean_graph(graph):
 
     return graph
 
-# def approx_topo_sort(graph):
-#     """Return a topological-ish sort of the graph. if
-#     cycles are found, break them and then do the topo sort.
-#     """
-#     severed = []
-#     try:
-#         while not is_directed_acyclic_graph(graph):
-#             strong = strongly_connected_components(graph)
-#             for comps in strong:
-#                 if len(comps) > 1:
-#                     severed.append((comps[0], 
-#                                     comps[1], 
-#                                     graph.edge[comps[0]][comps[1]]))
-#                     graph.remove_edge(comps[0], comps[1])
-#         return nx.topological_sort(graph)
-#     finally:
-#         for u,v,data in severed:
-#             graph.add_edge(u, v, **data)
-
-# def set_layout(graph, xmax=960., ymax=500.):
-#     """Set the layout of the graph."""
-
-#     # find boundary vars
-#     bin_vars = []
-#     bout_vars = []
-#     for node in graph.nodes_iter():
-#         if node.startswith('@in'):
-#             bin_vars.append(node)
-#         elif node.startswith('@out'):
-#             bout_vars.append(node)
-#         elif is_boundary_node(graph, node):
-#             if is_input_node(graph, node):
-#                 bin_vars.append(node)
-#             else:
-#                 bout_vars.append(node)
-
-#     inbound_dy = float(ymax) / (len(bin_vars)+1)
-#     outbound_dy = float(ymax) / (len(bout_vars)+1)
-
-#     y = 0
-#     xin = float(xmax) * 0.09
-
-#     # set positions for the incoming boundary vars
-#     for bin in bin_vars:
-#         y += inbound_dy
-#         graph.node[bin]['x'] = xin
-#         graph.node[bin]['y'] = y
-
-#     # set positions for the outgoing boundary vars
-#     y = 0
-#     xout = xmax - xmax * 0.91
-#     for bout in bout_vars:
-#         y += outbound_dy
-#         graph.node[bout]['x'] = xout
-#         graph.node[bout]['y'] = y
-
-#     conns = graph.list_connections()
-#     nodes = set([u for u,v in conns])
-#     nodes.update([v for u,v in conns])
-#     bvars = set([base_var(graph, n) for n in nodes])
-#     nodes.update([n.split('.',1)[0] for n in nodes])
-#     nodes.update(bvars)
-
-#     cgraph = graph.component_graph()
-#     nodes.update(cgraph.nodes_iter())
-
-#     # this graph now has only nodes involved in connections
-#     graph = graph.subgraph(nodes)
-
-#     csort = approx_topo_sort(cgraph)
-
-#     ymid = float(ymax) / 2
-#     comp_dx = float(xmax) / (len(cgraph)+1)
-
-#     x = 0
-#     for comp in csort:
-#         x += comp_dx
-#         graph.node[comp]['x'] = x
-#         graph.node[comp]['y'] = ymid
-
-#     cradius = 25
-#     cvar_dx = cradius * 1.8 # x distance between comps and their vars
-#     cvar_dy = cradius * 1.8 # y distance between comp vars on same side of a comp
-
-#     for node in csort:
-#         data = graph.node[node]
-#         x = data['x']
-#         y = data['y']
-
-#         inputs  = graph._all_child_vars(node, direction='in')
-#         outputs = graph._all_child_vars(node, direction='out')
-
-#         ichild_y = y + (cvar_dy - (len(inputs) * cvar_dy)) / 2.
-#         ochild_y = y + (cvar_dy - (len(outputs) * cvar_dy)) / 2.
-#         for v in inputs:
-#             graph.node[v]['x'] = x - cvar_dx
-#             graph.node[v]['y'] = ichild_y
-#             ichild_y += cvar_dy
-
-#         for v in outputs:
-#             graph.node[v]['x'] = x + cvar_dx
-#             graph.node[v]['y'] = ochild_y
-#             ochild_y += cvar_dy
-
-#     return graph
-
 def plot_graph(graph, d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
@@ -219,7 +113,6 @@ def plot_graph(graph, d3page='fixedforce.html'):
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
     graph = _clean_graph(graph)
-    #graph = set_layout(graph)
     data = node_link_data(graph)
 
     startdir = os.getcwd()
