@@ -14,6 +14,7 @@ from openmdao.main.container import Container, get_default_name, \
                                     create_io_traits
 from openmdao.main.vartree import VariableTree
 from openmdao.main.component import Component, SimulationRoot
+from openmdao.main.implicitcomp import ImplicitComponent
 from openmdao.main.component_with_derivatives import ComponentWithDerivatives
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.assembly import Assembly, set_as_top, dump_iteration_tree
