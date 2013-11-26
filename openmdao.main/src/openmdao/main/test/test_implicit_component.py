@@ -60,16 +60,39 @@ class MyComp(ImplicitComponent):
         self.J_res_state = np.array([dx, dy, dz]).T
         self.J_res_input = np.array([dc]).T
         
-        self.J_output_state = np.array([1.0])
-        self.J_output_res = np.array([1.0, 1.0, 1.0])
-
-    def provideJ(self): 
-
-        return ('x', 'y', 'z'), ('r0', 'r1', 'r2'), self.J_res_state
+        self.J_output_input = np.array([[1.0]])
+        self.J_output_state = np.array([[1.0, 1.0, 1.0]])
 
     def apply_deriv(self, arg, result):
-        pass
+        
+        # Residual Equation derivatives
+        for j, res in enumerate(self.list_residuals()):
+            if res in result:
+                
+                # wrt States
+                for k, state in enumerate(self.list_states()):
+                    if state in arg:
+                        result[res] += self.J_res_state[j, k]*arg[state]
 
+                # wrt External inputs
+                for k, state in enumerate(['c']):
+                    if state in arg:
+                        result[res] += self.J_res_input[j, k]*arg[state]
+                        
+        # Output Equation derivatives
+        for j, res in enumerate(['y_out']):
+            if res in result:
+                
+                # wrt States
+                for k, state in enumerate(self.list_states()):
+                    if state in arg:
+                        result[res] += self.J_output_state[j, k]*arg[state]
+
+                # wrt External inputs
+                for k, state in enumerate(['c']):
+                    if state in arg:
+                        result[res] += self.J_output_input[j, k]*arg[state]
+                        
     #note, these methods should be implemented in the ImplicitComp baseclass in a more general manner
     def _func(self, X): 
         """Map the results of evaluate into something that scipy.root can use""" 
@@ -118,6 +141,14 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
+        model.comp.solve_internally = False
+        inputs=['comp.x', 'comp.y', 'comp.z', 'comp.c']
+        outputs=['comp.r0', 'comp.r1', 'comp.r2', 'comp.y_out']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        Jf = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+        print J
+        print Jf
+                                            
     def test_single_comp_external_solve(self):
         
         model = set_as_top(Assembly())
