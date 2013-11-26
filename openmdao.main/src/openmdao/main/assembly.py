@@ -301,13 +301,15 @@ class Assembly(Component):
         and remove it from its workflow(s) if it's a Component
         or pseudo component.
         """
-        cont = getattr(self, name)
-        if has_interface(cont, IComponent) or \
-           isinstance(cont, PseudoComponent):
+        obj = getattr(self, name)
+        if has_interface(obj, IComponent) or \
+           isinstance(obj, PseudoComponent):
             for cname in self.list_containers():
                 obj = getattr(self, cname)
                 if isinstance(obj, Driver):
                     obj.remove_references(name)
+            self.disconnect(name)
+        elif name in self.list_inputs() or name in self.list_outputs():
             self.disconnect(name)
 
         return super(Assembly, self).remove(name)
