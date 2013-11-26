@@ -4,26 +4,33 @@ Unit test for implicit components.
 
 import unittest
 
+from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 
 
 class MyComp(ImplicitComponent):
-    ''' Single implicit component with 3 states and residuals. '''
+    ''' Single implicit component with 3 states and residuals. 
+    
+    For c=2.0, (x,y,z) = (1.0, -2.333333, -2.1666667)
+    '''
 
     # External inputs
-    c = Float(2, iotype="in", 
+    c = Float(2.0, iotype="in", 
               desc="arbitrary constant that is not iterated on but does affect the results")
     
     # States
-    x = Float(0, iotype="state")
-    y = Float(0, iotype="state")
-    z = Float(0,  iotype="state")
+    x = Float(0.0, iotype="state")
+    y = Float(0.0, iotype="state")
+    z = Float(0.0, iotype="state")
 
     # Residuals
     r0 = Float(iotype="resid")
     r1 = Float(iotype="resid")
     r2 = Float(iotype="resid")
+    
+    # Outputs
+    y_out = Float(iotype='out')
 
     def evaluate(self): 
         """run a single step to calculate the residual 
@@ -34,6 +41,8 @@ class MyComp(ImplicitComponent):
         self.r0 = self.c*(3*x + 2*y - z) - 1
         self.r1 = 2*x - 2*y + 4*z + 2
         self.r2 = -x + y/2. - z 
+        
+        self.y_out = c + x + y + z
 
     def linearize(self): 
         #partial w.r.t c 
@@ -44,13 +53,15 @@ class MyComp(ImplicitComponent):
         dy = [2*c, -2, .5]
         dz = [-c, 4, -1]
 
-        #self.J = np.array([dc, dz, dy, dz]).T
-        self.J_state = np.array([dz, dy, dz]).T
-        self.J_input = np.array([dc]).T
+        self.J_res_state = np.array([dz, dy, dz]).T
+        self.J_res_input = np.array([dc]).T
+        
+        self.J_output_state = np.array([1.0])
+        self.J_output_res = np.array([1.0, 1.0, 1.0])
 
     def provideJ(self): 
 
-        return ('x', 'y', 'z'), ('r0', 'r1', 'r2'), self.J_state
+        return ('x', 'y', 'z'), ('r0', 'r1', 'r2'), self.J_res_state
 
     #note, these methods should be implemented in the ImplicitComp baseclass in a more general manner
     def _func(self, X): 
@@ -70,7 +81,7 @@ class MyComp(ImplicitComponent):
         """Map the analytic derivatives of evaluate into something that scipy.root can use""" 
         
         self.linearize()
-        return self.J_state
+        return self.J_res_state
 
     def execute(self): 
         x0 = [self.x, self.y, self.z]
@@ -82,7 +93,15 @@ class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
     
     def test_single_comp_self_solve(self):
-        pass
+        
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp())
+        model.add('driver', BroydenSolver())
+        model.driver.workflow.add('comp')
+        
+        model.driver.add_parameter('comp.x', low=-100, high=100)
+        model.driver.add_parameter('comp.y', low=-100, high=100)
+        model.driver.add_parameter('comp.z', low=-100, high=100)
 
 if __name__ == '__main__':
     import nose
