@@ -115,6 +115,7 @@ class DependsTestCase(unittest.TestCase):
 
         
     def setUp(self):
+        pcompmod._count = 0
         top = self.top = _nested_model()
         sub = top.sub
         sub.connect('comp1.c', 'comp4.a')
@@ -714,14 +715,10 @@ class DependsTestCase3(unittest.TestCase):
 
         # The first time it runs, the pcomp inputs update
         top.run()
-        print top.comp.a
-        print top._pseudo_0.in0
         self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
         
         # The second time it runs, the pcomp inputs no longer update
         top.run()
-        print top.comp.a
-        print top._pseudo_0.in0
         self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
         
 class ArrayComp(Component):
