@@ -4,6 +4,8 @@ Unit test for implicit components.
 
 import unittest
 
+import numpy as np
+
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
@@ -25,9 +27,9 @@ class MyComp(ImplicitComponent):
     z = Float(0.0, iotype="state")
 
     # Residuals
-    r0 = Float(iotype="resid")
-    r1 = Float(iotype="resid")
-    r2 = Float(iotype="resid")
+    r0 = Float(iotype="residual")
+    r1 = Float(iotype="residual")
+    r2 = Float(iotype="residual")
     
     # Outputs
     y_out = Float(iotype='out')
