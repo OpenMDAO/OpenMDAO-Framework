@@ -103,6 +103,7 @@ class Testcase_implicit(unittest.TestCase):
         model.add('comp', MyComp())
         model.driver.workflow.add('comp')
         
+        model.comp.solve_internally = True
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
@@ -126,6 +127,7 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_constraint('comp.r1 = 0')
         model.driver.add_constraint('comp.r2 = 0')
         
+        model.comp.solve_internally = False
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
