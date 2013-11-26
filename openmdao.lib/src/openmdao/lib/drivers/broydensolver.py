@@ -136,6 +136,7 @@ class BroydenSolver(Driver):
 
             # update the new independents in the model
             self.set_parameters(numpy.asarray(xm).flat)
+            print "set parameter"
 
             # run the model
             self.pre_iteration()
@@ -153,7 +154,7 @@ class BroydenSolver(Driver):
 
             Fxm1 = numpy.matrix(self.F).T
             deltaFxm = Fxm1 - Fxm
-
+            print deltaFxm
             if norm(deltaFxm) == 0:
                 msg = "Broyden iteration has stopped converging. Change in " \
                       "input has produced no change in output. This could " \

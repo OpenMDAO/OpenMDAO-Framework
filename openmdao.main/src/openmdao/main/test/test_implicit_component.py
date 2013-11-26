@@ -90,12 +90,14 @@ class MyComp(ImplicitComponent):
         self.linearize()
         return self.J_res_state
 
-    def execute(self): 
-        x0 = [self.x, self.y, self.z]
-        #sol = root(self._func, x0, jac=self._jac)
-        #sol = fsolve(self._func, x0)
-        sol = fsolve(self._func, x0, fprime=self._jac)
-        #TODO: use GMRES based approach with apply_deriv or apply_derivT if those are given
+    def execute(self):
+        print "executing"
+        if self.solve_internally == True:
+            x0 = [self.x, self.y, self.z]
+            sol = fsolve(self._func, x0, fprime=self._jac)
+            
+        else:
+            self.evaluate()
 
 
 class Testcase_implicit(unittest.TestCase):
