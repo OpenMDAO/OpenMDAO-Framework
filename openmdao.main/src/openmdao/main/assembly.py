@@ -31,7 +31,9 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
+from openmdao.main.array_helpers import flattened_size, is_differentiable_var
 from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.util.log import logger
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -735,6 +737,93 @@ class Assembly(Component):
 
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
+
+    def check_gradient(self, name=None, inputs=None, outputs=None, 
+                       stream=None, mode='auto'):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (apply_deriv and provideJ.)
+        Note that fake finite difference is turned off so that we are
+        doing a straight comparison.
+
+        name: (optional) str
+            If provided, specifies the name of a Driver or Component to
+            calculate the gradient for.  If name specifies a Driver,
+            the inputs used to calculate the gradient will be generated
+            from the parameters of the Driver, and the outputs will be
+            generated from the constraints and objectives of the Driver.
+            If name specifies a Component, the inputs and outputs of that
+            Component will be used to calculate the gradient.
+
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the 'name' argument.
+            If the inputs are not specified and name is not specified,
+            then they will be generated from the parameters of
+            the object named 'driver'.
+            
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the 'name' argument.
+            If the outputs are not specified and name is not specified,
+            then they will be generated from the objectives and constraints
+            of the object named 'driver'.
+            
+        stream: (optional) file-like object, str, or None
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename.
+            
+        mode: (optional) str or None
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
+        """
+        driver = self.driver
+        obj = None
+
+        if inputs and outputs:
+            if name:
+                logger.warning("The 'inputs' and 'outputs' args were specified to "
+                    "check_gradient, so the 'name' arg (%s) is ignored." % name)
+        elif not name: # we're missing either inputs or outputs, so we need a name
+            name = 'driver'
+
+        if name:
+            obj = getattr(self, name, None)
+            if obj is None:
+                self.raise_exception("Can't find object named '%s'." % name)
+            if has_interface(obj, IDriver):
+                driver = obj
+
+        # fill in any missing inputs or outputs using the object specified by 'name'
+        if not inputs:
+            if has_interface(obj, IDriver):
+                pass  # workflow.check_gradient can pull inputs from driver
+            elif has_interface(obj, IComponent):
+                inputs = ['.'.join([obj.name, inp]) 
+                            for inp in obj.list_inputs() if is_differentiable_var(inp,obj)]
+                inputs = sorted(inputs)
+            else:
+                self.raise_exception("Can't find any inputs for generating gradient.")
+        if not outputs:
+            if has_interface(obj, IDriver):
+                pass # workflow.check_gradient can pull outputs from driver
+            elif has_interface(obj, IComponent):
+                outputs = ['.'.join([obj.name, out]) 
+                              for out in obj.list_outputs() if is_differentiable_var(out,obj)]
+                outputs = sorted(outputs)
+            else:
+                self.raise_exception("Can't find any outputs for generating gradient.")
+
+        return driver.workflow.check_gradient(inputs=inputs, 
+                                              outputs=outputs,
+                                              stream=stream,
+                                              mode=mode)
+            
 
     def linearize(self, required_inputs=None, required_outputs=None):
         '''An assembly calculates its Jacobian by calling the calc_gradient

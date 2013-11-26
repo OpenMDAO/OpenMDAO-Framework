@@ -47,6 +47,8 @@ import threading
 import time
 import traceback
 
+from Crypto import Random
+
 from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
 from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
@@ -175,6 +177,8 @@ class OpenMDAO_Server(Server):
         self._logger = logging.getLogger(self.name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
                           os.getpid(), keytype(authkey))
+
+        Random.atfork()  # Get our own PRNG.
 
         self.host = socket.gethostname()
         self._allowed_users = allowed_users
@@ -1336,7 +1340,7 @@ class OpenMDAO_Proxy(BaseProxy):
                 except Exception:
                     pass
             raise RuntimeError(msg)
-        
+
         self._tls.session_key = key_pair.decrypt(server_data[1])
 
     def _incref(self):
@@ -1346,7 +1350,7 @@ class OpenMDAO_Proxy(BaseProxy):
         """
         # Hard to cause this to happen.
         if not OpenMDAO_Proxy.manager_is_alive(self._token.address):  #pragma no cover
-            raise RuntimeError('Cannot connect to manager at %r' 
+            raise RuntimeError('Cannot connect to manager at %r'
                                % (self._token.address,))
 
         conn = _get_connection(self._Client, self._token.address, self._authkey)

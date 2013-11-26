@@ -31,7 +31,7 @@ from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
-from openmdao.main.ndepgraph import DependencyGraph, is_output_node, is_input_node
+from openmdao.main.depgraph import DependencyGraph, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
@@ -626,10 +626,6 @@ class Component(Container):
         finally:
             self.config_changed()
 
-        #trait = self.trait(name)
-        #if trait.iotype == 'out':
-        #    self._valid_dict[name] = False
-
         return obj
 
     def remove(self, name):
@@ -670,7 +666,7 @@ class Component(Container):
             self._set_input_callback(name)
 
         self.config_changed()
-        #if name not in self._valid_dict:
+
         # TODO: revisit this...
         if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters += 1

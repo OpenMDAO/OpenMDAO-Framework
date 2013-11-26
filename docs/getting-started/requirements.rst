@@ -81,12 +81,9 @@ use it, you must have compilers (C and Fortran) on your system.
 .. note:: 
 
   Numpy and SciPy have one-click installers. You should use those unless  you have a very good
-  reason not to. You need to pick the proper installer for your version of Python (v2.6 or
-  v2.7). For instance, if you had Python 2.6, you want a Numpy version named something like
-  ``numpy-1.7.0-win32-superpack-python2.6.exe``. If you have Python 2.7, then you want  a
-  SciPy version called ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version numbers
-  might be different than the ones here, but make sure you get something with ``superpack`` and
-  ``.exe`` in the name. 
+  reason not to. For Python 2.7 you want a SciPy version called
+  ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version number might be different than the
+  one here, but make sure you get something with ``superpack`` and ``.exe`` in the name. 
 
   If you go to the Numpy link above, you might see: "Looking for the 
   latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one. 

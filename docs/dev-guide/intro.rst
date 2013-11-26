@@ -90,7 +90,7 @@ compilers.
       moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
       that it won't be found by ``numpy.distutils``.
 
-    .. __: http://openmdao.org/downloads-2/      
+    .. __: http://openmdao.org/downloads/recent/      
 
 .. _`Windows`:
 

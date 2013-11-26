@@ -421,6 +421,10 @@ class HasEqConstraints(_HasConstraintsBase):
         """Returns the total number of constraint values."""
         return sum([c.size for c in self._constraints.values()])
 
+    def get_constraints(self):
+        """Returns an ordered dict of constraint objects"""
+        return self._constraints
+
     def eval_eq_constraints(self, scope=None):
         """Returns a list of constraint values."""
         scope = _get_scope(self, scope)
@@ -521,6 +525,10 @@ class HasIneqConstraints(_HasConstraintsBase):
     def total_ineq_constraints(self):
         """Returns the total number of inequality constraint values."""
         return sum([c.size for c in self._constraints.values()])
+
+    def get_constraints(self):
+        """Returns an ordered dict of constraint objects"""
+        return self._constraints
 
     def eval_ineq_constraints(self, scope=None):
         """Returns a list of constraint values."""
