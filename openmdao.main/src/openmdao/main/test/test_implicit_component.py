@@ -67,6 +67,9 @@ class MyComp(ImplicitComponent):
 
         return ('x', 'y', 'z'), ('r0', 'r1', 'r2'), self.J_res_state
 
+    def apply_deriv(self, arg, result):
+        pass
+
     #note, these methods should be implemented in the ImplicitComp baseclass in a more general manner
     def _func(self, X): 
         """Map the results of evaluate into something that scipy.root can use""" 
@@ -90,7 +93,8 @@ class MyComp(ImplicitComponent):
     def execute(self): 
         x0 = [self.x, self.y, self.z]
         #sol = root(self._func, x0, jac=self._jac)
-        sol = fsolve(self._func, x0)
+        #sol = fsolve(self._func, x0)
+        sol = fsolve(self._func, x0, fprime=self._jac)
         #TODO: use GMRES based approach with apply_deriv or apply_derivT if those are given
 
 
