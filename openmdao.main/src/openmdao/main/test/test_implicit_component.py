@@ -7,6 +7,7 @@ import unittest
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
+from openmdao.util.testutil import assert_rel_error
 
 
 class MyComp(ImplicitComponent):
@@ -25,9 +26,9 @@ class MyComp(ImplicitComponent):
     z = Float(0.0, iotype="state")
 
     # Residuals
-    r0 = Float(iotype="resid")
-    r1 = Float(iotype="resid")
-    r2 = Float(iotype="resid")
+    r0 = Float(iotype="residual")
+    r1 = Float(iotype="residual")
+    r2 = Float(iotype="residual")
     
     # Outputs
     y_out = Float(iotype='out')
@@ -102,6 +103,18 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_parameter('comp.x', low=-100, high=100)
         model.driver.add_parameter('comp.y', low=-100, high=100)
         model.driver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.driver.add_constraint('comp.r0 = 0')
+        model.driver.add_constraint('comp.r1 = 0')
+        model.driver.add_constraint('comp.r2 = 0')
+        
+        model.run()
+        
+        assert_rel_error(model.comp.x, 1.0, 1e-5)
+        assert_rel_error(model.comp.y, -2.33333333, 1e-5)
+        assert_rel_error(model.comp.z, -2.16666667, 1e-5)
+        
+        assert_rel_error(model.comp.y_out, -1.5, 1e-5)
 
 if __name__ == '__main__':
     import nose
