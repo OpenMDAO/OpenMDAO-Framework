@@ -54,7 +54,7 @@ class MyComp(ImplicitComponent):
         dy = [2*c, -2, .5]
         dz = [-c, 4, -1]
 
-        self.J_res_state = np.array([dz, dy, dz]).T
+        self.J_res_state = np.array([dx, dy, dz]).T
         self.J_res_input = np.array([dc]).T
         
         self.J_output_state = np.array([1.0])
