@@ -132,12 +132,16 @@ def plot_graph(graph, d3page='fixedforce.html'):
         print "temp directory removed"
 
 
-if __name__ == '__main__':
+def main():
     parts = sys.argv[1].split(':',1)
     __import__(parts[0])
     mod = sys.modules[parts[0]]
     obj = getattr(mod, parts[1])()
     plot_graph(obj._depgraph)
+
+
+if __name__ == '__main__':
+    main()
 
 
 
