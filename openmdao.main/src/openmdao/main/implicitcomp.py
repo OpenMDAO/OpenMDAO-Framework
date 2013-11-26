@@ -1,8 +1,11 @@
 
 from openmdao.main.component import Component 
+from openmdao.main.interfaces import IImplicitComponent, implements
 from openmdao.main.rbac import rbac
 
 class ImplicitComponent(Component):
+    implements(IImplicitComponent)
+
     def __init__(self):
         super(ImplicitComponent, self).__init__()
         self._state_names = None
