@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import shutil
 import json
@@ -6,13 +7,6 @@ import tempfile
 import webbrowser
 
 from networkx.readwrite.json_graph import node_link_data
-from networkx.algorithms.components import strongly_connected_components
-from networkx.algorithms.dag import is_directed_acyclic_graph
-import networkx as nx 
-
-from openmdao.main.ndepgraph import is_boundary_node, is_input_node, \
-                                    base_var, edges_to_dict
-from openmdao.util.nameutil import partition_names_by_comp
 
 _excluded_nodes = set([
     'force_execute',
@@ -137,6 +131,13 @@ def plot_graph(graph, d3page='fixedforce.html'):
         shutil.rmtree(tmpdir)
         print "temp directory removed"
 
+
+if __name__ == '__main__':
+    parts = sys.argv[1].split(':',1)
+    __import__(parts[0])
+    mod = sys.modules[parts[0]]
+    obj = getattr(mod, parts[1])()
+    plot_graph(obj._depgraph)
 
 
 
