@@ -46,6 +46,10 @@ except ImportError:
 else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
+
+from numpy import ndarray, ndindex, zeros
+
+
 _Missing = object()
 
 class ExprTransformer(ast.NodeTransformer):
@@ -580,7 +584,7 @@ class ExprEvaluator(object):
         for var in wrt:
 
             # A "fake" boundary connection in an assembly has a special
-            # format. All expresion derivatives from inside the assembly are
+            # format. All expression derivatives from inside the assembly are
             # handled outside the assembly.
             if var[0:4] == '@bin':
                 gradient[var] = 1.0
@@ -604,7 +608,8 @@ class ExprEvaluator(object):
                     self.cached_grad_eq[var] = False
 
             # If we have a cached gradient expression:
-            if self.cached_grad_eq[var]:
+# FIXME: re-enable sympy
+            if False: #self.cached_grad_eq[var]:
                 
                 # This is not the way I wanted to do it, but I didn't want
                 # to mess with everything that's is in self._parse
@@ -644,15 +649,48 @@ class ExprEvaluator(object):
 
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
+                import sys
+                print >>sys.stderr, 'evaluate_gradient %r' % grad_text
 
                 # Finite difference (Central difference)
-                var_dict[var] += 0.5*stepsize
-                yp = eval(grad_code, _expr_dict, locals())
-                var_dict[var] -= stepsize
-                ym = eval(grad_code, _expr_dict, locals())
-                    
-                gradient[var] = (yp-ym)/stepsize
+                val = var_dict[var]
+                print >>sys.stderr, '   ', var, 'value', val
+                if isinstance(val, ndarray):
+                    yp = eval(grad_code, _expr_dict, locals())
+                    print >>sys.stderr, '    expr value', yp
+                    if isinstance(yp, ndarray):
+                        gradient[var] = zeros((yp.size, val.size))
+                    else:
+                        gradient[var] = zeros((1, val.size))
+
+                    for i, index in enumerate(ndindex(*val.shape)):
+                        save = val[index]
+                        val[index] += 0.5*stepsize
+                        yp = eval(grad_code, _expr_dict, locals())
+                        if isinstance(yp, ndarray):
+                            # Need copy in case ym is same array.
+                            yp = yp.flatten()
+                        val[index] -= stepsize
+                        ym = eval(grad_code, _expr_dict, locals())
+                        if isinstance(ym, ndarray):
+                            ym = ym.flat
+                        gradient[var][:, i] = (yp - ym) / stepsize
+                        val[index] = save
+                else:
+                    var_dict[var] += 0.5*stepsize
+                    yp = eval(grad_code, _expr_dict, locals())
+                    if isinstance(yp, ndarray):
+                        # Need copy in case ym is same array.
+                        yp = yp.flatten()
+                    var_dict[var] -= stepsize
+                    ym = eval(grad_code, _expr_dict, locals())
+                    if isinstance(ym, ndarray):
+                        ym = ym.flat
+                    gradient[var] = (yp - ym) / stepsize
+                    if isinstance(yp, ndarray):
+                        gradient[var] = gradient[var].reshape((yp.size, 1))
                 
+                print >>sys.stderr, '    gradient', gradient[var]
         return gradient
     
     def set(self, val, scope=None, src=None):

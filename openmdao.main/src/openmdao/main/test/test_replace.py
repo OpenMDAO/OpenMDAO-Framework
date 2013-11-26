@@ -1,13 +1,10 @@
 
 import unittest
-import logging
-import math
-import nose
 
-from openmdao.main.api import Assembly, Component, Driver, VariableTree, set_as_top, Dataflow
-from openmdao.main.datatypes.api import Float, Int, Array, Slot
-from openmdao.main.hasobjective import HasObjectives
-from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.datatypes.api import Float, Slot
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
+                                         HasIneqConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.util.decorators import add_delegate
@@ -18,7 +15,7 @@ class Simple(Component):
     b = Float(iotype='in', units='ft')
     c = Float(iotype='out', units='ft')
     d = Float(iotype='out', units='ft')
-    
+
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 1
@@ -29,7 +26,7 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
-        
+
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class InEqdriver(Driver):
     pass
@@ -60,8 +57,8 @@ def _nested_model():
     sub.add('comp6', Simple())
 
     top.driver.workflow.add(['comp7', 'sub', 'comp8'])
-    sub.driver.workflow.add(['comp1','comp2','comp3',
-                             'comp4','comp5','comp6'])
+    sub.driver.workflow.add(['comp1', 'comp2', 'comp3',
+                             'comp4', 'comp5', 'comp6'])
 
     sub.create_passthrough('comp1.a', 'a1')
     sub.create_passthrough('comp2.b', 'b2')
@@ -71,15 +68,15 @@ def _nested_model():
     sub.create_passthrough('comp2.c', 'c2')
     sub.create_passthrough('comp1.d', 'd1')
     sub.create_passthrough('comp5.d', 'd5')
-    
+
     sub.connect('comp1.c', 'comp4.a')
     sub.connect('comp5.c', 'comp1.b')
     sub.connect('comp2.d', 'comp5.b')
     sub.connect('comp3.c', 'comp5.a')
     sub.connect('comp4.d', 'comp6.a')
-    
+
     top.connect('sub.c4', 'comp8.a')
-    
+
     return top
 
 class ReplaceTestCase(unittest.TestCase):
@@ -94,7 +91,7 @@ class ReplaceTestCase(unittest.TestCase):
         top.replace('comp8', Simple())
         self.assertEqual(c8_a, top.comp8.a)
         self.assertEqual(c8_b, top.comp8.b)
-        
+
         top2 = _nested_model()
         top2.replace('comp8', Simple())
         conns2 = top2.list_connections()
@@ -104,115 +101,125 @@ class ReplaceTestCase(unittest.TestCase):
         top2.run()
         self.assertEqual(c8_a, top2.comp8.a)
         self.assertEqual(c8_b, top2.comp8.b)
-        
+
     def test_replace_driver(self):
         top = set_as_top(Assembly())
         top.add('driver', EqInEqdriver())
         top.add('comp1', Simple())
         top.add('comp2', Simple())
         top.driver.workflow.add(['comp1', 'comp2'])
-        top.driver.add_parameter('comp1.a', low=-100, high=100, 
+        top.driver.add_parameter('comp1.a', low=-100, high=100,
                       scaler=1.2, adder=3, start=7,
                       fd_step=0.034, name='param1', scope=top)
         top.driver.add_parameter('comp2.a', low=-50, high=50, scope=top)
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
         top.driver.add_constraint('comp1.d-comp1.c=.5')
-        
+
         old_params = top.driver.get_parameters()
         old_objectives = top.driver.get_objectives()
         old_constraints = top.driver.get_eq_constraints()
-        
+
         self.assertEqual(old_params, top.driver.get_parameters())
         self.assertEqual(old_objectives, top.driver.get_objectives())
         self.assertEqual(old_constraints, top.driver.get_eq_constraints())
-        
+
         try:
             top.replace('driver', InEqdriver())
         except Exception as err:
-            self.assertEqual(str(err), 
-                             ": Couldn't replace 'driver' of type EqInEqdriver with type InEqdriver: driver: Equality constraint 'comp1.d-comp1.c = .5' is not supported on this driver")
+            self.assertEqual(str(err),
+                             ": Couldn't replace 'driver' of type EqInEqdriver"
+                             " with type InEqdriver: driver: Equality"
+                             " constraint 'comp1.d-comp1.c = .5' is not"
+                             " supported on this driver")
         else:
             self.fail("Exception expected")
-            
+
         top.replace('driver', Eqdriver())
         self.assertEqual(old_params, top.driver.get_parameters())
         self.assertEqual(old_objectives, top.driver.get_objectives())
         self.assertEqual(old_constraints, top.driver.get_eq_constraints())
-        
+
         top.add('driver', Objectivesdriver())
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
         top.driver.add_objective('comp1.c-comp2.d*3.5', scope=top)
-        
+
         try:
             top.replace('driver', Eqdriver())
         except Exception as err:
             self.assertEqual(str(err),
-                             ": Couldn't replace 'driver' of type Objectivesdriver with type Eqdriver: driver: This driver allows a maximum of 1 objectives, but the driver being replaced has 2")
-            
+                             ": Couldn't replace 'driver' of type"
+                             " Objectivesdriver with type Eqdriver: driver:"
+                             " This driver allows a maximum of 1 objectives,"
+                             " but the driver being replaced has 2")
+
         top.add('driver', InEqdriver())
-        top.driver.add_parameter('comp1.a', low=-100, high=100, 
+        top.driver.add_parameter('comp1.a', low=-100, high=100,
                       scaler=1.2, adder=3, start=7,
                       fd_step=0.034, name='param1', scope=top)
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
-        
+
         try:
             top.replace('driver', Objectivesdriver())
         except Exception as err:
             self.assertEqual(str(err),
-                             ": Couldn't replace 'driver' of type InEqdriver with type Objectivesdriver: driver: target delegate '_hasparameters' has no match")
-        
+                             ": Couldn't replace 'driver' of type InEqdriver"
+                             " with type Objectivesdriver: driver: target"
+                             " delegate '_hasparameters' has no match")
+
         top.add('driver', InEqdriver())
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
         top.driver.add_constraint('comp1.d-comp1.c<.5')
-        
+
         try:
             top.replace('driver', Objectivesdriver())
         except Exception as err:
             self.assertEqual(str(err),
-                             ": Couldn't replace 'driver' of type InEqdriver with type Objectivesdriver: driver: target delegate '_hasineqconstraints' has no match")
-             
-             
+                             ": Couldn't replace 'driver' of type InEqdriver"
+                             " with type Objectivesdriver: driver: target"
+                             " delegate '_hasineqconstraints' has no match")
+
+
 class Replace2TestCase(unittest.TestCase):
     def test_replace(self):
-             
+
         class Dummy(Component):
             fin = Float(1.5, iotype="in")
             fout = Float(3.0, iotype='out')
-         
+
             def execute(self):
                 self.fout = self.fin * 2
-         
-         
+
+
         class Dummy2(Dummy):
             def execute(self):
                 self.fout = self.fin * 4
-         
-         
+
+
         class AutoAssemb(Assembly):
-         
+
             d2 = Slot(Dummy)
-         
+
             def configure(self):
-         
+
                 self.add('d1', Dummy())
                 self.add('d2', Dummy())
                 self.add('d3', Dummy())
-         
+
                 self.driver.workflow.add(['d1', 'd2', 'd3'])
                 self.connect('d1.fout', 'd2.fin')
                 self.connect('d2.fout', 'd3.fin')
-         
+
                 self.create_passthrough('d1.fin')
                 self.create_passthrough('d3.fout')
-                
-                
+
+
         aa = set_as_top(AutoAssemb())
         aa.fin = 10
         aa.run()
         self.assertEqual(aa.fout, 80.0)
         self.assertEqual(aa.d1.fout, 20.0)
         self.assertEqual(aa.d2.fin, 20.0)
-     
+
         aa.replace('d2', Dummy2())
         self.assertEqual(aa.d2.fin, 20.0)
         aa.run()
@@ -220,3 +227,8 @@ class Replace2TestCase(unittest.TestCase):
         self.assertEqual(aa.d2.fout, 80.0)
         self.assertEqual(aa.d3.fout, 160.0)
         self.assertEqual(aa.fout, 160.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
+

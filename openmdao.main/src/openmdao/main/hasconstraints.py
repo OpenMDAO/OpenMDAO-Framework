@@ -7,6 +7,8 @@
 import operator
 import ordereddict
 
+from numpy import ndarray
+
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
@@ -50,7 +52,7 @@ def _get_scope(obj, scope=None):
     return scope
 
 
-class _ConstraintBase(object):
+class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
@@ -58,6 +60,7 @@ class _ConstraintBase(object):
         if not self.lhs.check_resolve():
             raise ValueError("Constraint '%s' has an invalid left-hand-side."
                               % ' '.join([lhs, comparator, rhs]))
+
         self.comparator = comparator
 
         self.rhs = ExprEvaluator(rhs, scope=scope)
@@ -66,6 +69,14 @@ class _ConstraintBase(object):
                               % ' '.join([lhs, comparator, rhs]))
 
         self.pcomp_name = None
+        self._size = None
+
+    @property
+    def size(self):
+        """Total scalar items in this constraint."""
+        if self._size is None:
+            self._size = len(self.evaluate(self.lhs.scope))
+        return self._size
 
     def activate(self):
         """Make this constraint active by creating the appropriate
@@ -137,14 +148,19 @@ class _ConstraintBase(object):
         return ExprEvaluator(newexpr, scope)
 
     def copy(self):
-        raise NotImplementedError('copy')
+        return Constraint(str(self.lhs), self.comparator, str(self.rhs),
+                          scope=self.lhs.scope)
 
     def evaluate(self, scope):
-        """Returns the value of the constraint."""
+        """Returns the value of the constraint as a sequence."""
         pcomp = getattr(scope, self.pcomp_name)
         if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
-        return pcomp.out0
+        val = pcomp.out0
+        if isinstance(val, ndarray):
+            return val.flat
+        else:
+            return [val]
 
     def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
         """Returns the gradient of the constraint eq/ineq as a tuple of the
@@ -181,44 +197,11 @@ class _ConstraintBase(object):
     def __str__(self):
         return ' '.join([str(self.lhs), self.comparator, str(self.rhs)])
 
-
-class Constraint(_ConstraintBase):
-    """Scalar-valued constraint."""
-
     def __eq__(self, other):
         if not isinstance(other, Constraint):
             return False
         return (self.lhs, self.comparator, self.rhs) == \
                (other.lhs, other.comparator, other.rhs)
-
-    @property
-    def size(self):
-        """Total scalar items in this constraint."""
-        return 1
-
-    def copy(self):
-        return Constraint(str(self.lhs), self.comparator, str(self.rhs),
-                          scope=self.lhs.scope)
-
-
-class ArrayConstraint(_ConstraintBase):
-    """Array-valued constraint."""
-
-    def __eq__(self, other):
-        if not isinstance(other, ArrayConstraint):
-            return False
-        return (self.lhs, self.comparator, self.rhs) == \
-               (other.lhs, other.comparator, other.rhs)
-
-    @property
-    def size(self):
-        """Total scalar items in this constraint."""
-# FIXME
-        return 1
-
-    def copy(self):
-        return ArrayConstraint(str(self.lhs), self.comparator, str(self.rhs),
-                               scope=self.lhs.scope)
 
 
 class _HasConstraintsBase(object):
@@ -439,10 +422,12 @@ class HasEqConstraints(_HasConstraintsBase):
         return sum([c.size for c in self._constraints.values()])
 
     def eval_eq_constraints(self, scope=None):
-        """Returns a list of constraint values.
-        """
-        return [c.evaluate(_get_scope(self, scope))
-                for c in self._constraints.values()]
+        """Returns a list of constraint values."""
+        scope = _get_scope(self, scope)
+        result = []
+        for constraint in self._constraints.values():
+            result.extend(constraint.evaluate(scope))
+        return result
 
     def list_eq_constraint_targets(self):
         """Returns a list of outputs suitable for calc_gradient()."""
@@ -539,8 +524,11 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def eval_ineq_constraints(self, scope=None):
         """Returns a list of constraint values."""
-        return [c.evaluate(_get_scope(self, scope))
-                for c in self._constraints.values()]
+        scope = _get_scope(self, scope)
+        result = []
+        for constraint in self._constraints.values():
+            result.extend(constraint.evaluate(scope))
+        return result
 
     def list_ineq_constraint_targets(self):
         """Returns a list of outputs suitable for calc_gradient()."""

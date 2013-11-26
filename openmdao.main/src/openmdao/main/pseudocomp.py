@@ -290,7 +290,13 @@ class PseudoComponent(object):
     def linearize(self):
         """Calculate analytical first derivatives."""
         grad = self._srcexpr.evaluate_gradient()
-        self.J = array([[grad[n] for n in self._inputs]])
+        from numpy import ndarray, hstack
+        if isinstance(grad[self._inputs[0]], ndarray):
+            self.J = hstack([grad[n] for n in self._inputs])
+        else:
+            self.J = array([[grad[n] for n in self._inputs]])
+        import sys
+        print >>sys.stderr, 'pseudocomp.linearize', self.J
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J
