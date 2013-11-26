@@ -134,11 +134,11 @@ class Testcase_implicit(unittest.TestCase):
         model.comp.solve_internally = False
         model.run()
         
-        assert_rel_error(model.comp.x, 1.0, 1e-5)
-        assert_rel_error(model.comp.y, -2.33333333, 1e-5)
-        assert_rel_error(model.comp.z, -2.16666667, 1e-5)
+        assert_rel_error(self, model.comp.x, 1.0, 1e-5)
+        assert_rel_error(self, model.comp.y, -2.33333333, 1e-5)
+        assert_rel_error(self, model.comp.z, -2.16666667, 1e-5)
         
-        assert_rel_error(model.comp.y_out, -1.5, 1e-5)
+        assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
     def test_list_states(self):
         comp = MyComp()

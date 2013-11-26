@@ -2,12 +2,15 @@
 
 from openmdao.main.datatypes.api import Bool
 from openmdao.main.component import Component 
+from openmdao.main.interfaces import IImplicitComponent, implements
 from openmdao.main.rbac import rbac
 
 class ImplicitComponent(Component):
+    implements(IImplicitComponent)
     
     solve_internally = Bool(False, iotype='in', 
                             desc='Set to True to let this comp solve itself.')
+    
     def __init__(self):
         super(ImplicitComponent, self).__init__()
         self._state_names = None

@@ -5,7 +5,7 @@ from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IVariableTree
+from openmdao.main.interfaces import IDriver, IVariableTree, IImplicitComponent
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -330,11 +330,20 @@ class DependencyGraph(nx.DiGraph):
         outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
 
         self.add_node(cname, **kwargs)
-        self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
-        self.add_nodes_from(outputs, var=True, iotype='out', valid=False)
+        self.add_nodes_from(inputs, var=True, iotype='in', flowdir='in', valid=True)
+        self.add_nodes_from(outputs, var=True, iotype='out', flowdir='out', valid=False)
 
         self.add_edges_from([(v, cname) for v in inputs])
         self.add_edges_from([(cname, v) for v in outputs])
+
+        if has_interface(obj, IImplicitComponent):
+            states = ['.'.join([cname, v]) for v in obj.list_states()]
+            resids = ['.'.join([cname, v]) for v in obj.list_residuals()]
+            self.add_nodes_from(states, var=True, iotype='state', flowdir='in', valid=True)
+            self.add_nodes_from(resids, var=True, iotype='residual', flowdir='out', valid=True)
+
+            self.add_edges_from([(v, cname) for v in states])
+            self.add_edges_from([(cname, v) for v in resids])
 
         self.config_changed()
 
