@@ -16,6 +16,11 @@ class ImplicitComponent(Component):
         self._state_names = None
         self._resid_names = None
 
+        # register callbacks for all of our 'state' traits
+        for name, trait in self.class_traits().items():
+            if trait.iotype == 'state':
+                self._set_input_callback(name)
+
     @rbac(('owner', 'user'))
     def list_states(self):
         """Return a list of names of state variables."""
