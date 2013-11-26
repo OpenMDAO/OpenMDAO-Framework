@@ -94,7 +94,10 @@ def _clean_graph(graph):
             data['short'] = node
         else:
             data['short'] = parts[1]
-            data['color_idx'] = graph.node[parts[0]]['color_idx']
+            try:
+                data['color_idx'] = graph.node[parts[0]]['color_idx']
+            except KeyError:
+                pass
 
     return graph
 
@@ -133,11 +136,16 @@ def plot_graph(graph, d3page='fixedforce.html'):
 
 
 def main():
-    parts = sys.argv[1].split(':',1)
-    __import__(parts[0])
-    mod = sys.modules[parts[0]]
-    obj = getattr(mod, parts[1])()
-    plot_graph(obj._depgraph)
+    __import__(sys.argv[1])
+    mod = sys.modules[sys.argv[1]]
+    obj = getattr(mod, sys.argv[2])()
+
+    if len(sys.argv) > 3:
+        graph = eval('obj.'+sys.argv[3])
+    else:
+        graph = obj._depgraph
+    
+    plot_graph(graph)
 
 
 if __name__ == '__main__':
