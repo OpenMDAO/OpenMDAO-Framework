@@ -113,15 +113,12 @@ class MyComp(ImplicitComponent):
         self.linearize()
         return self.J_res_state
 
-    def execute(self):
+    def solve(self):
+        """Calculates states that satisfy residuals."""
         
-        if self.solve_internally == True:
-            x0 = [self.x, self.y, self.z]
-            sol = fsolve(self._func, x0, fprime=self._jac)
-            
-        else:
-            self.evaluate()
-
+        x0 = [self.x, self.y, self.z]
+        sol = fsolve(self._func, x0, fprime=self._jac)
+        
 
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
@@ -141,13 +138,13 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
-        model.comp.solve_internally = False
-        inputs=['comp.x', 'comp.y', 'comp.z', 'comp.c']
-        outputs=['comp.r0', 'comp.r1', 'comp.r2', 'comp.y_out']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        Jf = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
-        print J
-        print Jf
+        #model.comp.solve_internally = False
+        #inputs=['comp.x', 'comp.y', 'comp.z', 'comp.c']
+        #outputs=['comp.r0', 'comp.r1', 'comp.r2', 'comp.y_out']
+        #J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        #Jf = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+        #print J
+        #print Jf
                                             
     def test_single_comp_external_solve(self):
         

@@ -44,3 +44,13 @@ class ImplicitComponent(Component):
         super(ImplicitComponent, self).config_changed(update_parent)
         self._state_names = None
         self._resid_names = None
+
+    def execute(self):
+        """ User should not override execute for an implicit component. """
+        
+        if self.solve_internally == True:
+            self.solve()
+        else:
+            self.evaluate()
+
+        
