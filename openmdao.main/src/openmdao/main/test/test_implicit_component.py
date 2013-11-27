@@ -92,19 +92,7 @@ class MyComp(ImplicitComponent):
                     if state in arg:
                         result[res] += self.J_output_input[j, k]*arg[state]
                         
-    #note, these methods should be implemented in the ImplicitComp baseclass in a more general manner
-    def _func(self, X): 
-        """Map the results of evaluate into something that scipy.root can use""" 
 
-        self.x = X[0]
-        self.y = X[1]
-        self.z = X[2]
-        #TODO: List all the state variables and set them automatically, instead of hard coding them
-
-        self.evaluate()
-
-        #TODO: list all the residuals and return them automatically
-        return np.array([self.r0, self.r1, self.r2])
 
     def _jac(self, X):
         """Map the analytic derivatives of evaluate into something that scipy.root can use""" 
