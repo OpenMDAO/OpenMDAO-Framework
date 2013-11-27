@@ -85,9 +85,20 @@ class EarlyTestInfo(Plugin):
         if not self.enabled:
             return
 
-        failed = [k for k,v in self._tests.items() if v.status=='F']
-        errors = [k for k,v in self._tests.items() if v.status=='E']
-        skips  = [k for k,v in self._tests.items() if v.status=='S']
+        failed = []
+        errors = []
+        skips = []
+        total_time = 0.
+
+        for v in self._tests.values():
+            total_time += v.elapsed
+
+            if v.status == 'F':
+                failed.append(v.name)
+            elif v.status == 'E':
+                errors.append(v.name)
+            elif v.status == 'S':
+                skips.append(v.name)
 
         self.stream.writeln("\n\n")
         
@@ -103,6 +114,8 @@ class EarlyTestInfo(Plugin):
             stream.writeln("\nThe following tests had errors:")
             for test in errors:
                 stream.writeln(test)
+
+        stream.writeln("\n\nTotal elapsed time: %.3g sec" % total_time)
                 
         self.stream.writeln("\n")
 
@@ -125,25 +138,25 @@ class EarlyTestInfo(Plugin):
 
     def addError(self, test, err, capt=None):
         if err[0] == SkipTest:
-            self._tests[test.id()].status = 'S'
+            self._tests[id(test)].status = 'S'
         else:
-            self._tests[test.id()].status = 'E'
-        self._show_test(self._tests[test.id()])
+            self._tests[id(test)].status = 'E'
+        self._show_test(self._tests[id(test)])
         self.stream.writeln(self.formatErr(err))
 
     def addFailure(self, test, err, capt=None, tb_info=None):
         if err[0] == SkipTest:
-            self._tests[test.id()].status = 'S'
+            self._tests[id(test)].status = 'S'
         else:
-            self._tests[test.id()].status = 'F'
-        self._show_test(self._tests[test.id()])
+            self._tests[id(test)].status = 'F'
+        self._show_test(self._tests[id(test)])
         self.stream.writeln(self.formatErr(err))
 
     def addSuccess(self, test, capt=None):
-        self._show_test(self._tests[test.id()])
+        self._show_test(self._tests[id(test)])
         
     def addSkip(self, test, *args, **kwargs):
-        self._show_test(self._tests[test.id()])
+        self._show_test(self._tests[id(test)])
 
     def finalize(self, result):
         self.stream.writeln("\n\nRan %d test%s\n" %
@@ -190,7 +203,7 @@ class EarlyTestInfo(Plugin):
         self._context = None
     
     def startTest(self, test):
-        self._tests[test.id()] = TestInfo(test)
+        self._tests[id(test)] = TestInfo(test)
         
     def stopTest(self, test):
         pass
