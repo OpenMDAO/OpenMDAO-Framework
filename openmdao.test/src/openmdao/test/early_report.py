@@ -1,8 +1,8 @@
 import os
 import time
+import traceback
 
-import nose
-from nose.plugins.base import Plugin
+from nose.plugins import Plugin
 
 class TestInfo(object):
     def __init__(self, name):
@@ -10,6 +10,23 @@ class TestInfo(object):
         self.end = None
         self.name = name
         self.status = None
+
+    def end(self):
+        self.elapsed = time-time() - self.start
+
+class BroadcastStream:
+    """Sends stream output to multiple streams."""
+    def __init__(self, *streams):
+        self._streams = streams
+
+    def write(self, *arg):
+        for s in self._streams:
+            s.write(*arg)
+
+    def writeln(self, *arg):
+        for s in self._streams:
+            s.writeln(*arg)
+
 
 class EarlyTestInfo(Plugin):
     """This plugin writes test info (failures, run time) to
@@ -19,15 +36,10 @@ class EarlyTestInfo(Plugin):
     """
 
     name = 'early-report'
-    score = 1
+    score = 100
 
     def options(self, parser, env):
         """Sets additional command line options."""
-        parser.add_option(
-            '--append',
-            action='store_true',
-            dest='append',
-            help="set to append to report file instead of overwite it")
         parser.add_option("--report", action="store", type="string",
                           dest="report",
                           default="test_report.out",
@@ -41,14 +53,7 @@ class EarlyTestInfo(Plugin):
         self._all_tests = []
         self._failed_tests = []
         self._error_tests = []
-        if options.append:
-            self._append = True 
-        else:
-            self._append = False
         self._report_path = os.path.abspath(options.report)
-
-    def startTest(self, test):
-        pass
 
     def report(self, stream):
         """Report the test failures."""
@@ -63,6 +68,10 @@ class EarlyTestInfo(Plugin):
             for test in self._error_tests:
                 stream.writeln(test)
 
+    def formatErr(self, err):
+        exctype, value, tb = err
+        return ''.join(traceback.format_exception(exctype, value, tb))
+    
     def addError(self, test, err, capt=None):
         self._error_tests.append(test.id())
 
@@ -72,3 +81,50 @@ class EarlyTestInfo(Plugin):
     def addSuccess(self, test, capt=None):
         pass
 
+    def finalize(self, result):
+        self.html.append('<div>')
+        self.html.append("Ran %d test%s" %
+                         (result.testsRun, result.testsRun != 1 and "s" or ""))
+        self.html.append('</div>')
+        self.html.append('<div>')
+        if not result.wasSuccessful():
+            self.html.extend(['<span>FAILED ( ',
+                              'failures=%d ' % len(result.failures),
+                              'errors=%d' % len(result.errors),
+                              ')</span>'])                             
+        else:
+            self.html.append('OK')
+        self.html.append('</div></body></html>')
+        # print >> sys.stderr, self.html
+        for l in self.html:
+            self.stream.writeln(l)
+
+    def setOutputStream(self, stream):
+        # grab for own use
+        self.stream = stream        
+        # return dummy stream
+        class dummy:
+            def write(self, *arg):
+                pass
+            def writeln(self, *arg):
+                pass
+        d = dummy()
+        return d
+
+    def startContext(self, ctx):
+        try:
+            n = ctx.__name__
+        except AttributeError:
+            return
+        # TODO: possibly add indenting here per module and TestCase
+
+    def stopContext(self, ctx):
+        pass
+    
+    def startTest(self, test):
+        self.html.extend([ '<div><span>',
+                           test.shortDescription() or str(test),
+                           '</span>' ])
+        
+    def stopTest(self, test):
+        self.html.append('</div>')
