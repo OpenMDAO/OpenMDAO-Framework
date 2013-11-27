@@ -59,18 +59,18 @@ class OptRosenSuzukiComponent(Component):
         """calculate the new objective value"""
         x = self.x
 
-        self.result = x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] + \
-                      2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
 
         self.obj_string = "Bad"
         #print "rosen", self.x
 
-        self.g[0] = x[0]**2 + x[0] + x[1]**2 - x[1] + \
-                    x[2]**2 + x[2] + x[3]**2 - x[3] - 8
-        self.g[1] = x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 + \
-                    2*x[3]**2 - x[3] - 10
-        self.g[2] = 2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] + \
-                    x[2]**2 - x[3] - 5
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class RosenSuzuki2D(Component):
@@ -171,7 +171,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
 
-    def test_opt1_a(self):
+    def zest_opt1_a(self):
         # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.
         self.top.driver.add_objective('10*comp.result')
         # pylint: disable-msg=C0301
@@ -419,6 +419,10 @@ class TestCase1D(unittest.TestCase):
         self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = False
         self.top.run()
+        import sys
+        print >>sys.stderr, '***EDGES'
+        for src, targets in self.top.driver.workflow._edges.items():
+            print >>sys.stderr, '   ', src, '->', targets
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
@@ -432,7 +436,7 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def zest_openmdao_gradient_s(self):
+    def test_openmdao_gradient_s(self):
         # Run with 1D parameter, scalar constraints, and OpenMDAO gradient.
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
@@ -442,6 +446,10 @@ class TestCase1D(unittest.TestCase):
 
         self.top.driver.conmin_diff = False
         self.top.run()
+        import sys
+        print >>sys.stderr, '***EDGES'
+        for src, targets in self.top.driver.workflow._edges.items():
+            print >>sys.stderr, '   ', src, '->', targets
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,

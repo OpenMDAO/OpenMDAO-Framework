@@ -24,6 +24,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
     all passed inputs.
     """
+    import sys
+    print >>sys.stderr, '\ncalc_gradient', inputs, outputs, n_edge, shape
 
     # Size the problem
     A = LinearOperator((n_edge, n_edge),
@@ -39,6 +41,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     # Forward mode, solve linear system for each parameter
     j = 0
     for param in inputs:
+        print >>sys.stderr, '*   param, j', param, j
 
         if isinstance(param, tuple):
             param = param[0]
@@ -51,6 +54,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             in_range = range(i1, i2)
         
         for irhs in in_range:
+            print >>sys.stderr, '*   irhs', irhs
 
             RHS = zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
@@ -59,10 +63,12 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=1.0e-9,
                              maxiter=100)
+            print >>sys.stderr, '*   dx, info', dx, info
 
             i = 0
             for item in outputs:
                 k1, k2 = wflow.get_bounds(item)
+                print >>sys.stderr, '*   item, i, k1, k2', item, i, k1, k2
                 if isinstance(k1, list):
                     J[i:i+(len(k1)), j] = dx[k1]
                     i += len(k1)
@@ -73,6 +79,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             j += 1
     
     #print inputs, '\n', outputs, '\n', J
+    print >>sys.stderr, '    Jacobian', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):

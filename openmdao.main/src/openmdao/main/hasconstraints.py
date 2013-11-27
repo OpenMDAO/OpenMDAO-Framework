@@ -157,8 +157,10 @@ class Constraint(object):
         if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
         val = pcomp.out0
+        import sys
+        print >>sys.stderr, 'C.evaluate', val
         if isinstance(val, ndarray):
-            return val.flat
+            return val.flatten()
         else:
             return [val]
 
@@ -172,6 +174,8 @@ class Constraint(object):
         else:
             rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
 
+        import sys
+        print >>sys.stderr, 'lhs', lhs, 'rhs', rhs
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
 
     def get_referenced_compnames(self):
@@ -536,6 +540,8 @@ class HasIneqConstraints(_HasConstraintsBase):
         result = []
         for constraint in self._constraints.values():
             result.extend(constraint.evaluate(scope))
+        import sys
+        print >>sys.stderr, 'eval_ineq_constraints', result
         return result
 
     def list_ineq_constraint_targets(self):
