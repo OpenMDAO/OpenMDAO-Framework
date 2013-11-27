@@ -5,7 +5,6 @@ Unit test for implicit components.
 import unittest
 
 import numpy as np
-from scipy.optimize import fsolve
 
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
@@ -113,12 +112,6 @@ class MyComp(ImplicitComponent):
         self.linearize()
         return self.J_res_state
 
-    def solve(self):
-        """Calculates states that satisfy residuals."""
-        
-        x0 = [self.x, self.y, self.z]
-        sol = fsolve(self._func, x0, fprime=self._jac)
-        
 
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """

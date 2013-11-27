@@ -1,5 +1,7 @@
 """ Class definition for an Implicit Component. """
 
+from scipy.optimize import fsolve
+
 from openmdao.main.datatypes.api import Bool
 from openmdao.main.component import Component 
 from openmdao.main.interfaces import IImplicitComponent, implements
@@ -52,5 +54,11 @@ class ImplicitComponent(Component):
             self.solve()
         else:
             self.evaluate()
-
+        
+    def solve(self):
+        """Calculates the states that satisfy residuals using scipy.fsolve.
+        You can override this function to provide your own internal solve."""
+        
+        x0 = [self.x, self.y, self.z]
+        sol = fsolve(self._func, x0, fprime=self._jac)
         
