@@ -28,7 +28,7 @@ class ImplicitComponent(Component):
         """Return a list of names of state variables."""
 
         if self._state_names is None:
-            self._state_names = [k for k, v in self.items(iotype='state')]
+            self._state_names = sorted([k for k, v in self.items(iotype='state')])
         return self._state_names
 
     @rbac(('owner', 'user'))
@@ -36,7 +36,7 @@ class ImplicitComponent(Component):
         """Return a list of names of residual variables."""
 
         if self._resid_names is None:
-            self._resid_names = [k for k, v in self.items(iotype='residual')]
+            self._resid_names = sorted([k for k, v in self.items(iotype='residual')])
         return self._resid_names
 
     @rbac(('owner', 'user'))
