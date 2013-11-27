@@ -9,6 +9,7 @@ import numpy as np
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
+from openmdao.main.mp_support import has_interface
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -110,7 +111,6 @@ class Testcase_implicit(unittest.TestCase):
         model.add('comp', MyComp())
         model.driver.workflow.add('comp')
         
-        model.comp.solve_internally = True
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
@@ -119,7 +119,7 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
-        #model.comp.solve_internally = False
+        #model.comp.eval_only = True
         #inputs=['comp.x', 'comp.y', 'comp.z', 'comp.c']
         #outputs=['comp.r0', 'comp.r1', 'comp.r2', 'comp.y_out']
         #J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
@@ -142,7 +142,7 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_constraint('comp.r1 = 0')
         model.driver.add_constraint('comp.r2 = 0')
         
-        model.comp.solve_internally = False
+        model.comp.eval_only = True
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)

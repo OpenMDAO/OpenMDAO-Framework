@@ -5,14 +5,17 @@ import numpy as np
 
 from openmdao.main.datatypes.api import Bool
 from openmdao.main.component import Component 
-from openmdao.main.interfaces import IImplicitComponent, implements
+from openmdao.main.interfaces import IImplicitComponent, IVariableTree, implements
 from openmdao.main.rbac import rbac
+from openmdao.main.array_helpers import flattened_value
+from openmdao.main.mp_support import has_interface
 
 class ImplicitComponent(Component):
     implements(IImplicitComponent)
     
-    solve_internally = Bool(False, iotype='in', 
-                            desc='Set to True to let this comp solve itself.')
+    eval_only = Bool(False, iotype='in', 
+                     desc='Set to True to have this comp perform a single '
+                           'evaluate when execute() is called.')
     
     def __init__(self):
         super(ImplicitComponent, self).__init__()
@@ -26,7 +29,11 @@ class ImplicitComponent(Component):
 
     @rbac(('owner', 'user'))
     def list_states(self):
-        """Return a list of names of state variables."""
+        """Return a list of names of state variables in alphabetical order.
+        This specifies the order the state vector, so if you use a different
+        ordering internally, override this function to return the states in
+        the desired order.
+        """
 
         if self._state_names is None:
             self._state_names = sorted([k for k, v in self.items(iotype='state')])
@@ -34,7 +41,11 @@ class ImplicitComponent(Component):
 
     @rbac(('owner', 'user'))
     def list_residuals(self):
-        """Return a list of names of residual variables."""
+        """Return a list of names of residual variables in alphabetical 
+        order. This specifies the order the residual vector, so if you use 
+        a different order internally, override this function to return the 
+        residuals in the desired order.
+        """
 
         if self._resid_names is None:
             self._resid_names = sorted([k for k, v in self.items(iotype='residual')])
@@ -49,31 +60,72 @@ class ImplicitComponent(Component):
         self._resid_names = None
 
     def execute(self):
-        """ User should not override execute for an implicit component. """
+        """ Performs either an internal solver or a single evaluation.
+        Do not override this function.
+        """
         
-        if self.solve_internally == True:
-            self.solve()
-        else:
+        if self.eval_only:
             self.evaluate()
+        else:
+            self.solve()
         
+    def get_residuals(self):
+        """Return a vector of residual values."""
+        resids = []
+        for name in self.list_residuals():
+            resids.extend(flattened_value(name, getattr(self, name)))
+        return np.array(resids)
+
+    def get_state(self):
+        """Return the current flattened state vector."""
+        states = []
+        for name in self.list_states():
+            states.extend(flattened_value(name, getattr(self, name)))
+        return np.array(states)
+
+    def set_state(self, X):
+        """Take the given state vector and set its values into the 
+        correct state variables.
+        """
+        unused = len(X)
+        idx = 0
+
+        for name in self.list_states():
+            val = getattr(self, name)
+            flatval = flattened_value(name, val)
+            size = len(flatval)
+            newval = X[idx:idx+size]
+            unused -= size
+            idx += size
+            try:
+                iter(val)
+            except TypeError:
+                if has_interface(val, IVariableTree):
+                    raise RuntimeError("VariableTree states are not supported yet.")
+                else:
+                    if len(newval) != 1:
+                        self.raise_exception("Trying to set a scalar value '%s' with a ")
+                    setattr(self, name, newval[0])
+            else:
+                setattr(self, name, flatval)
+
+        if unused != 0:
+            self.raise_exception("State vector size does not match flattened size of state variables.",
+                                 ValueError)
+
     def solve(self):
         """Calculates the states that satisfy residuals using scipy.fsolve.
         You can override this function to provide your own internal solve."""
         
-        x0 = [self.x, self.y, self.z]
-        sol = fsolve(self._function_callback, x0, fprime=self._jac)
+        x0 = self.get_state()
+        fsolve(self._function_callback, x0, fprime=self._jac)
 
-
-    #note, these methods should be implemented in the ImplicitComp baseclass in a more general manner
     def _function_callback(self, X): 
         """This function is passed to the internal solver to set a new state, 
         evaluate the residuals, and return them.""" 
 
-        self.x = X[0]
-        self.y = X[1]
-        self.z = X[2]
-
+        self.set_state(X)
         self.evaluate()
 
-        return np.array([self.r0, self.r1, self.r2])
+        return self.get_residuals()
 
