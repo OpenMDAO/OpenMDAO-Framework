@@ -118,9 +118,9 @@ class ImplicitComponent(Component):
         You can override this function to provide your own internal solve."""
         
         x0 = self.get_state()
-        fsolve(self._function_callback, x0, fprime=self._jac)
+        fsolve(self._solve_callback, x0, fprime=self._jacobian_callback)
 
-    def _function_callback(self, X): 
+    def _solve_callback(self, X): 
         """This function is passed to the internal solver to set a new state, 
         evaluate the residuals, and return them.""" 
 
@@ -128,4 +128,11 @@ class ImplicitComponent(Component):
         self.evaluate()
 
         return self.get_residuals()
+
+    def _jacobian_callback(self, X):
+        """This function is passed to the internal solver to return the
+        jacobian of the states with respect to the residuals.""" 
+        
+        self.linearize()
+        return self.J_res_state
 

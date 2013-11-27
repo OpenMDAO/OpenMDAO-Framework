@@ -94,14 +94,6 @@ class MyComp(ImplicitComponent):
                         result[res] += self.J_output_input[j, k]*arg[state]
                         
 
-
-    def _jac(self, X):
-        """Map the analytic derivatives of evaluate into something that scipy.root can use""" 
-        
-        self.linearize()
-        return self.J_res_state
-
-
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
     
