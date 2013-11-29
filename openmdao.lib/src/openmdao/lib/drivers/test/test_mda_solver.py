@@ -13,6 +13,7 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
+from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -330,7 +331,26 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 4)
         
+    def test_general_solver(self): 
+
+        # TODO: Should MDA solver be able to solve generalized equations?
         
+        #a = set_as_top(Assembly())
+        #comp = a.add('comp', ExecComp(exprs=["f=a * x**n + b * x - c"]))
+        #comp.n = 77.0/27.0
+        #comp.a = 1.0
+        #comp.b = 1.0
+        #comp.c = 10.0
+
+        #driver = a.add('driver', MDASolver())
+        #driver.add_parameter('comp.x', 0, 100)
+        #driver.add_constraint('comp.f=0')
+        #self.top.driver.newton = True
+
+        #a.run()
+
+        #assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
+        #assert_rel_error(self, a.comp.f, 0, .0001)
             
 if __name__ == "__main__":
     unittest.main()
