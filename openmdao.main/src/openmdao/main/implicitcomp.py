@@ -139,7 +139,7 @@ class ImplicitComponent(Component):
         n_res = n_edge/2
         
         A = LinearOperator((n_edge, n_edge),
-                           matvec=self.matvecFWD,
+                           matvec=self._matvecFWD,
                            dtype=float)
         J = np.zeros((n_res, n_res))
         
@@ -159,7 +159,7 @@ class ImplicitComponent(Component):
             
         return J
 
-    def matvecFWD(self, arg):
+    def _matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         state-to-residual Jacobian with an incoming vector arg.'''
         
