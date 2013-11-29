@@ -1,14 +1,16 @@
 """ Class definition for an Implicit Component. """
 
 from scipy.optimize import fsolve
+from scipy.sparse.linalg import gmres, LinearOperator
 import numpy as np
 
-from openmdao.main.datatypes.api import Bool
-from openmdao.main.component import Component 
-from openmdao.main.interfaces import IImplicitComponent, IVariableTree, implements
-from openmdao.main.rbac import rbac
 from openmdao.main.array_helpers import flattened_value
+from openmdao.main.component import Component 
+from openmdao.main.datatypes.api import Bool
+from openmdao.main.derivatives import applyJ
+from openmdao.main.interfaces import IImplicitComponent, IVariableTree, implements
 from openmdao.main.mp_support import has_interface
+from openmdao.main.rbac import rbac
 
 class ImplicitComponent(Component):
     implements(IImplicitComponent)
@@ -131,8 +133,91 @@ class ImplicitComponent(Component):
 
     def _jacobian_callback(self, X):
         """This function is passed to the internal solver to return the
-        jacobian of the states with respect to the residuals.""" 
+        jacobian of the states with respect to the residuals."""
+        
+        n_edge = 2*len(X)
+        n_res = n_edge/2
+        
+        A = LinearOperator((n_edge, n_edge),
+                           matvec=self.matvecFWD,
+                           dtype=float)
+        J = np.zeros((n_res, n_res))
         
         self.linearize()
-        return self.J_res_state
+        
+        for irhs in np.arange(n_res):
 
+            RHS = np.zeros((n_edge, 1))
+            RHS[irhs, 0] = 1.0
+            
+            # Call GMRES to solve the linear system
+            dx, info = gmres(A, RHS,
+                             tol=1.0e-9,
+                             maxiter=100)
+        
+            J[:, irhs] = dx[n_res:]
+            
+        return J
+
+    def matvecFWD(self, arg):
+        '''Callback function for performing the matrix vector product of the
+        state-to-residual Jacobian with an incoming vector arg.'''
+        
+        result = np.zeros(len(arg))
+        
+        comp_inputs = self.list_states()
+        comp_outputs = self.list_residuals()
+        inputs = {}
+        outputs = {}
+        
+        idx = 0
+        
+        for varname in comp_inputs:
+            val = getattr(self, varname)
+            flatval = flattened_value(varname, val)
+            size = len(flatval)
+            
+            i1, i2 = idx, idx + size
+            inputs[varname] = arg[i1:i2].copy()
+            
+            idx += size
+        
+        for varname in comp_outputs:
+            val = getattr(self, varname)
+            flatval = flattened_value(varname, val)
+            size = len(flatval)
+            
+            i1, i2 = idx, idx + size
+            inputs[varname] = arg[i1:i2].copy()
+            outputs[varname] = arg[i1:i2].copy()
+            
+            idx += size
+            
+        applyJ(self, inputs, outputs)
+        #print inputs, outputs
+        
+        idx = 0
+        
+        # Each state input adds an equation
+        for varname in comp_inputs:
+            val = getattr(self, varname)
+            flatval = flattened_value(varname, val)
+            size = len(flatval)
+            
+            i1, i2 = idx, idx + size
+            result[i1:i2] = arg[i1:i2].copy()
+            
+            idx += size
+        
+        for varname in comp_outputs:
+            val = getattr(self, varname)
+            flatval = flattened_value(varname, val)
+            size = len(flatval)
+            
+            i1, i2 = idx, idx + size
+            result[i1:i2] = outputs[varname]
+            
+            idx += size
+                
+        #print arg, result
+        return result
