@@ -301,8 +301,6 @@ class PseudoComponent(object):
             self.J = hstack([grad[n] for n in self._inputs])
         else:
             self.J = array([[grad[n] for n in self._inputs]])
-        import sys
-        print >>sys.stderr, 'pseudocomp.linearize', self.J
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J

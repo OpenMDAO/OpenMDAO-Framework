@@ -367,8 +367,6 @@ class SequentialWorkflow(Workflow):
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
-        import sys
-        print >>sys.stderr, 'matvecFWD', arg
         
         comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
         if '@fake' in comps:
@@ -387,7 +385,7 @@ class SequentialWorkflow(Workflow):
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                print >>sys.stderr, '    ivar, node, i1, i2', varname, node, i1, i2
+
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
                 else:
@@ -396,7 +394,7 @@ class SequentialWorkflow(Workflow):
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                print >>sys.stderr, '    ovar, node, i1, i2', varname, node, i1, i2
+
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
                     outputs[varname] = arg[i1].copy()
@@ -417,13 +415,10 @@ class SequentialWorkflow(Workflow):
                 #inputs = applyMinv(comp, inputs)
             
             applyJ(comp, inputs, outputs)
-            #print inputs, outputs
-            print >>sys.stderr, '    after applyJ', type(comp), inputs #, outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
-                print >>sys.stderr, '    ovar, node, i1, i2', varname, node, i1, i2
                 if isinstance(i1, list):
                     result[i1] = outputs[varname]
                 else:
