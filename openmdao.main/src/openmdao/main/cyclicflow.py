@@ -85,7 +85,24 @@ class CyclicWorkflow(SequentialWorkflow):
             graph = nx.DiGraph(self._get_collapsed_graph())
             
             cyclic = True
-            self._severed_edges = []
+            self._severed_edges = set()
+            
+            if hasattr(self._parent, 'list_param_group_targets'):
+                params = [p[0] for p in self._parent.list_param_group_targets()]
+                constraints = [item.get_referenced_varpaths() for item in \
+                               self._parent.get_constraints().values()]
+                
+                for const_pair in constraints:
+                    src, targ = const_pair
+                    if src in params:
+                        self._severed_edges.add((targ, src))
+                    elif targ in params:
+                        self._severed_edges.add((src, targ))
+                    else:
+                        msg = "Something is wrong with solver" + \
+                        "Param/Constraints"
+                        self.scope.raise_exception(msg, RuntimeError)
+
             while cyclic:
                 
                 try:
@@ -111,7 +128,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     edge_set = set(depgraph.get_directional_interior_edges(strong[-1], 
                                                                             strong[0]))
                     
-                    self._severed_edges += list(edge_set)
+                    self._severed_edges = self._severed_edges.union(edge_set)
                 
         return self._topsort
     
@@ -177,8 +194,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 self._mapped_severed_edges.append((src, target))
                 
         return super(CyclicWorkflow, self).initialize_residual()
-                
-        
+       
         
     def derivative_graph(self, inputs=None, outputs=None, fd=False):
         """Returns the local graph that we use for derivatives. For cyclic flows,

@@ -303,9 +303,14 @@ class TestCase(unittest.TestCase):
         self.model = None
         for path in glob.glob('Egg_TestModel*.egg'):
             os.remove(path)
+            
         if os.path.exists('Egg'):
             # Wonderful Windows sometimes doesn't remove...
             shutil.rmtree('Egg', onerror=self.onerror)
+
+        if os.path.exists('Oddball'):
+            # Wonderful Windows sometimes doesn't remove...
+            shutil.rmtree('Oddball', onerror=self.onerror)
 
         # Not always added, but we need to ensure the egg is not in sys.path.
         if self.egg_name is not None:

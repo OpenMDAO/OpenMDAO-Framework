@@ -1,15 +1,15 @@
 """
     Solution of the sellar analytical problem using MDF.
-    Disciplines coupled using Quasi-Newton-Raphson solver
+    Disciplines coupled using Newton solver
 """
 from openmdao.main.api import Assembly
-from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver
+from openmdao.lib.drivers.api import SLSQPdriver, MDASolver
 
 from openmdao.lib.optproblems import sellar
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
-    Disciplines coupled with BroydenSolver.
+    Disciplines coupled with MDASolver.
     """
     
     def configure(self):
@@ -24,7 +24,7 @@ class SellarMDF(Assembly):
         self.add('driver', SLSQPdriver())
         
         #Outer Loop - Global Optimization
-        self.add('solver', BroydenSolver())
+        self.add('solver', MDASolver())
         self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
@@ -40,17 +40,17 @@ class SellarMDF(Assembly):
         # Make all connections
         self.connect('dis1.y1','dis2.y1')
         
-        # Iteration loop
+        # Solver Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         # equivilent form
         # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         
         #Driver Settings
-        self.solver.itmax = 10
-        self.solver.alpha = .4
-        self.solver.tol = .0000001
-        self.solver.algorithm = "broyden2"
+        self.solver.max_iteration = 100
+        self.solver.tolerance = .00001
+        self.solver.print_convergence = False
+        self.solver.newton = True
 
         # Optimization parameters
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
