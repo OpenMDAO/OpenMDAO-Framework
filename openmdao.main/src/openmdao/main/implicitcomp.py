@@ -120,7 +120,14 @@ class ImplicitComponent(Component):
         You can override this function to provide your own internal solve."""
         
         x0 = self.get_state()
-        fsolve(self._solve_callback, x0, fprime=self._jacobian_callback)
+        
+        # If our comp doesn't have derivatives, let the internal solver 
+        # calculate them however it does
+        fprime = None
+        if hasattr(self, 'linearize'):
+            fprime = self._jacobian_callback
+            
+        fsolve(self._solve_callback, x0, fprime=fprime)
 
     def _solve_callback(self, X): 
         """This function is passed to the internal solver to set a new state, 

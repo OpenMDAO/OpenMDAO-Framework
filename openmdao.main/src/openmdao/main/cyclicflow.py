@@ -87,6 +87,8 @@ class CyclicWorkflow(SequentialWorkflow):
             cyclic = True
             self._severed_edges = set()
             
+            # This section turns param/eq_constraint pairs into severed edges.
+            # TODO: get rid of this. Solvers need to be more general.
             if hasattr(self._parent, 'list_param_group_targets'):
                 params = [p[0] for p in self._parent.list_param_group_targets()]
                 constraints = [item.get_referenced_varpaths() for item in \
