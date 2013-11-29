@@ -41,6 +41,7 @@ class OptRosenSuzukiComponent(Component):
     """
 
     x = Array(iotype='in', low=-10, high=99)
+    g = Array([1., 1., 1.], iotype='out')
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
     opt_objective = Float(iotype='out')
@@ -56,12 +57,20 @@ class OptRosenSuzukiComponent(Component):
 
     def execute(self):
         """calculate the new objective value"""
-        self.result = (self.x[0]**2 - 5.*self.x[0] +
-                       self.x[1]**2 - 5.*self.x[1] +
-                       2.*self.x[2]**2 - 21.*self.x[2] +
-                       self.x[3]**2 + 7.*self.x[3] + 50)
+        x = self.x
+
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
+
         self.obj_string = "Bad"
         #print "rosen", self.x
+
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class RosenSuzuki2D(Component):
@@ -127,12 +136,12 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.iprint = 0
         self.top.driver.itmax = 30
 
-    def test_opt1(self):
+    def zest_opt1(self):
         self.top.driver.add_objective('10*comp.result')
+        # pylint: disable-msg=C0301
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
 
-        # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
@@ -162,7 +171,30 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
 
-    def test_opt1_with_CONMIN_gradient(self):
+    def zest_opt1_a(self):
+        # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.
+        self.top.driver.add_objective('10*comp.result')
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_parameter,
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+
+        self.top.driver.add_constraint('comp.g <= 0')
+        self.top.driver.iprint = 0
+        self.top.run()
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
+                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
+
+    def zest_opt1_with_CONMIN_gradient(self):
         # Note: all other tests use OpenMDAO gradient
         self.top.driver.add_objective('10*comp.result')
         self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
@@ -191,7 +223,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def test_opt1_flippedconstraints(self):
+    def zest_opt1_flippedconstraints(self):
         self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -214,7 +246,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[3], places=1)
 
-    def test_gradient_step_size_large(self):
+    def zest_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
 
         self.top.driver.add_objective('comp.result')
@@ -240,7 +272,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         if baseerror > newerror:
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
-    def test_linear_constraint_specification(self):
+    def zest_linear_constraint_specification(self):
         # Note, just testing problem specification and setup
 
         self.top.driver.add_objective('comp.result')
@@ -255,7 +287,7 @@ class CONMINdriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-    def test_max_iteration(self):
+    def zest_max_iteration(self):
 
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
@@ -270,7 +302,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         self.assertEqual(self.top.driver.iter_count, 2)
 
-    def test_remove(self):
+    def zest_remove(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -316,14 +348,14 @@ class TestAssembly(Assembly):
 
 class CONMINdriverTestCase2(unittest.TestCase):
 
-    def test_vartree_opt(self):
+    def zest_vartree_opt(self):
         blah = set_as_top(TestAssembly())
         blah.run()
         self.assertAlmostEqual(blah.comp.dummy_data.dummy1, 3.0, 1) #3.0 should be minimum
 
 
 class TestCase1D(unittest.TestCase):
-    """Test using 1D array connections."""
+    """Test using 1D array connections and 1D array constraint."""
 
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -336,14 +368,10 @@ class TestCase1D(unittest.TestCase):
         driver.add_objective('10*comp.result')
         driver.add_parameter('comp.x')
 
-        # pylint: disable-msg=C0301
-        map(driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+    def zest_conmin_gradient_a(self):
+        # Run with 1D parameter, 1D constraint, and CONMIN gradient.
 
-    def test_conmin_gradient(self):
-        # Run with 1D parameter and CONMIN gradient.
+        self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = True
         self.top.driver.fdch = .000001
         self.top.driver.fdchm = .000001
@@ -361,9 +389,17 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def test_openmdao_gradient(self):
-        # Run with 1D parameter and OpenMDAO gradient.
-        self.top.driver.conmin_diff = False
+    def zest_conmin_gradient_s(self):
+        # Run with 1D parameter, scalar constraints, and CONMIN gradient.
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+
+        self.top.driver.conmin_diff = True
+        self.top.driver.fdch = .000001
+        self.top.driver.fdchm = .000001
         self.top.run()
 
         # pylint: disable-msg=E1101
@@ -378,6 +414,54 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
+    def test_openmdao_gradient_a(self):
+        # Run with 1D parameter, 1D constraint, and OpenMDAO gradient.
+        self.top.driver.add_constraint('comp.g <= 0')
+        self.top.driver.conmin_diff = False
+        self.top.run()
+        import sys
+        print >>sys.stderr, '***EDGES'
+        for src, targets in self.top.driver.workflow._edges.items():
+            print >>sys.stderr, '   ', src, '->', targets
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
+                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
+
+    def test_openmdao_gradient_s(self):
+        # Run with 1D parameter, scalar constraints, and OpenMDAO gradient.
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+
+        self.top.driver.conmin_diff = False
+        self.top.run()
+        import sys
+        print >>sys.stderr, '***EDGES'
+        for src, targets in self.top.driver.workflow._edges.items():
+            print >>sys.stderr, '   ', src, '->', targets
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
+                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
 class TestCase2D(unittest.TestCase):
     """Test using 2D array connections."""
@@ -399,7 +483,7 @@ class TestCase2D(unittest.TestCase):
             'comp.x[0][0]**2-comp.x[0][0]+2*comp.x[0][1]**2+comp.x[1][0]**2+2*comp.x[1][1]**2-comp.x[1][1] < 10',
             '2*comp.x[0][0]**2+2*comp.x[0][0]+comp.x[0][1]**2-comp.x[0][1]+comp.x[1][0]**2-comp.x[1][1] < 5'])
 
-    def test_conmin_gradient(self):
+    def zest_conmin_gradient(self):
         # Run with 2D parameter and CONMIN gradient.
         self.top.driver.conmin_diff = True
         self.top.run()
@@ -416,7 +500,7 @@ class TestCase2D(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[1][1], places=1)
 
-    def test_openmdao_gradient(self):
+    def zest_openmdao_gradient(self):
         # Run with 2D parameter and OpenMDAO gradient.
         self.top.driver.conmin_diff = False
         self.top.run()
@@ -454,7 +538,7 @@ class TestCaseMixed(unittest.TestCase):
             'comp.x0**2-comp.x0+2*comp.x12[0]**2+comp.x12[1]**2+2*comp.x3**2-comp.x3 < 10',
             '2*comp.x0**2+2*comp.x0+comp.x12[0]**2-comp.x12[0]+comp.x12[1]**2-comp.x3 < 5'])
 
-    def test_conmin_gradient(self):
+    def zest_conmin_gradient(self):
         # Run with mixed parameters and CONMIN gradient.
         self.top.driver.conmin_diff = True
         self.top.run()
@@ -471,7 +555,7 @@ class TestCaseMixed(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x3, places=1)
 
-    def test_openmdao_gradient(self):
+    def zest_openmdao_gradient(self):
         # Run with mixed parameters and OpenMDAO gradient.
         self.top.driver.conmin_diff = False
         self.top.run()

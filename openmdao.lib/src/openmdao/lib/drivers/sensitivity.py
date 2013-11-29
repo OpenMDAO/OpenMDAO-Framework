@@ -107,7 +107,7 @@ class SensitivityDriver(Driver):
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
-        if len(self.get_objectives()) + len(self.get_constraints()) < 1:
+        if len(self.get_objectives()) + self.total_constraints() < 1:
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
