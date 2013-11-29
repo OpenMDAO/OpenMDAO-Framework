@@ -656,7 +656,11 @@ class FiniteDifference(object):
                 idx = '[' + idx
                 
                 old_val = self.scope.get(src)
-                exec('old_val%s = new_val.copy()' % idx)
+                if isinstance(new_val, ndarray):
+                    exec('old_val%s = new_val.copy()' % idx)
+                else:
+                    exec('old_val%s = new_val' % idx)
+                    
                 self.scope.set(src, old_val, force=True)
             else:
                 if isinstance(new_val, ndarray):
