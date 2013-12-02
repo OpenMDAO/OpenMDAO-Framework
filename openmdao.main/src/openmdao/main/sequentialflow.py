@@ -358,7 +358,7 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         import sys
-        print >>sys.stderr, 'matvecFWD', arg
+        print >>sys.stderr, '\nmatvecFWD', arg
         
         comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
         if '@fake' in comps:
@@ -408,16 +408,18 @@ class SequentialWorkflow(Workflow):
             
             applyJ(comp, inputs, outputs)
             #print inputs, outputs
-            print >>sys.stderr, '    after applyJ', type(comp), inputs #, outputs
+            print >>sys.stderr, '    after applyJ', type(comp)
+            print >>sys.stderr, '        inputs', inputs
+            print >>sys.stderr, '        outputs', outputs
             
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
                 print >>sys.stderr, '    ovar, node, i1, i2', varname, node, i1, i2
                 if isinstance(i1, list):
-                    result[i1] = outputs[varname]
+                    result[i1] = outputs[varname].copy()
                 else:
-                    result[i1:i2] = outputs[varname]
+                    result[i1:i2] = outputs[varname].copy()
                 
         # Each parameter adds an equation
         for src, targets in self._edges.iteritems():
