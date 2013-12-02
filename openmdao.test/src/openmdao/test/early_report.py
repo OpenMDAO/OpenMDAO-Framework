@@ -8,10 +8,6 @@ from nose import SkipTest
 class TestInfo(object):
     def __init__(self, test):
         self.start = time.time()
-        try:
-            ctxt = test.context.__name__
-        except:
-            ctxt = None
         self.name = test.shortDescription()
         if self.name is None:
             self.name = test.id()
