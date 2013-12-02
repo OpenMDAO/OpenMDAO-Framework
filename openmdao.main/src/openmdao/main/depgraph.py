@@ -277,6 +277,7 @@ class DependencyGraph(nx.DiGraph):
         so we need to update the graph.
         """
         cname = child.name
+        # these include states
         old_ins  = set(self.list_inputs(cname))
         # these include states and residuals
         old_outs = set(self.list_outputs(cname))
@@ -286,6 +287,7 @@ class DependencyGraph(nx.DiGraph):
         if hasattr(child, 'list_states'):
             states = child.list_states()
             new_outs.update(states)
+            new_ins.update(states)
         else:
             states = ()
         if hasattr(child, 'list_residuals'):
@@ -302,12 +304,14 @@ class DependencyGraph(nx.DiGraph):
 
         # for new inputs/outputs, just add them to graph
         for invar in added_ins:
-            self.add_node(invar, var=True, valid=True, iotype='in')
+            if invar in states:
+                iotype = 'state'
+            else:
+                iotype = 'in'
+            self.add_node(invar, var=True, valid=True, iotype=iotype)
 
         for out in added_outs: 
-            if out in states:
-                iotype = 'state'
-            elif out in resids:
+            if out in resids:
                 iotype = 'residual'
             else:
                 iotype = 'out'
@@ -363,6 +367,7 @@ class DependencyGraph(nx.DiGraph):
             self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
 
             self.add_edges_from([(cname, v) for v in states])
+            self.add_edges_from([(v, cname) for v in states])
             self.add_edges_from([(cname, v) for v in resids])
 
         self.config_changed()
