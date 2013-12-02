@@ -1,5 +1,5 @@
 from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Float, Enum, Array, Dict, Str, List
+from openmdao.main.datatypes.api import Float, Enum, Array, Dict, Str, List
 
 class dummy_comp(Component):
 

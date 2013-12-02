@@ -5,7 +5,7 @@ import math
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, VariableTree, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Float, Int, Array, Slot
+from openmdao.main.datatypes.api import Float, Int, Array, Slot
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -83,6 +83,26 @@ def _nested_model():
     return top
 
 class ReplaceTestCase(unittest.TestCase):
+
+    def test_replace_parameter_objective(self): 
+
+        top = set_as_top(Assembly())
+        top.add('driver', EqInEqdriver())
+        top.add('comp1', Simple())
+        top.add('comp2', Simple())
+
+        top.connect('comp1.c','comp2.a')
+        top.driver.add_parameter('comp1.a', low=-10, high=10)
+        top.driver.add_objective('comp2.d')
+
+        top.comp1.a = 10.
+        top.comp2.b = -5.
+
+        top.replace('comp1', Simple())
+        top.replace('comp2', Simple())
+
+        self.assertEqual(top.comp1.a, 10.)
+        self.assertEqual(top.comp2.b, -5.)
 
     def test_replace_comp(self):
         top = _nested_model()
@@ -220,3 +240,7 @@ class Replace2TestCase(unittest.TestCase):
         self.assertEqual(aa.d2.fout, 80.0)
         self.assertEqual(aa.d3.fout, 160.0)
         self.assertEqual(aa.fout, 160.0)
+
+if __name__ == "__main__": 
+
+    unittest.main()

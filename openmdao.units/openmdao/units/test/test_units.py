@@ -239,6 +239,9 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = units.PhysicalQuantity('12mo')
         x.convert_to_unit('yr')
         self.assertEqual(x, units.PhysicalQuantity('1yr'))
+        x = units.PhysicalQuantity('1Mibyte')
+        x.convert_to_unit('Kibyte')
+        self.assertEqual(x, units.PhysicalQuantity('1024Kibyte'))
         
     def test_prefix_plus_math(self):
         # From an issue: m**2 converts fine, but cm**2 does not.

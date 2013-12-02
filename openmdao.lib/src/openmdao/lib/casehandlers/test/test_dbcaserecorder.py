@@ -75,6 +75,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             "      comp1.a_dict: {'a': 'b'}",
             "      comp1.a_list: ['a', 'b']",
@@ -90,6 +91,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break

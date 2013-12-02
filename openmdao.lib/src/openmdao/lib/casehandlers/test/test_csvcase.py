@@ -1,6 +1,7 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
+import cPickle
 import glob, os, time
 import StringIO
 import unittest
@@ -9,7 +10,7 @@ import unittest
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           ListCaseIterator, ListCaseRecorder, \
                                           DumpCaseRecorder
-from openmdao.lib.datatypes.api import Array, Str, Bool, VarTree
+from openmdao.main.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array
@@ -70,6 +71,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      comp1.b_bool: True',
             '      comp1.x: 8.1',
@@ -88,6 +90,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
@@ -134,6 +138,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
             '   inputs:',
             '      comp1.b_bool: True',
             '      comp1.x: 8.1',
@@ -151,6 +156,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
@@ -293,6 +300,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239019.152071',
             '   outputs:',
             '      comp1.z: 0.0',
             ]
@@ -302,6 +310,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
@@ -321,13 +331,14 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         csv_data = outfile.readlines()
         outfile.close()
 
-        line = '"label","/INPUTS","comp1.x","comp1.y","comp2.x","/OUTPUTS","/METADATA","retries","max_retries","parent_uuid","msg"\r\n'
+        line = '"timestamp","label","/INPUTS","comp1.x","comp1.y","comp2.x","/OUTPUTS","/METADATA","retries","max_retries","parent_uuid","msg"\r\n'
         self.assertEqual(csv_data[0], line)
         line = '"","",2.0,4.3,1.9,"","","","","",""\r\n'
-        self.assertEqual(csv_data[1], line)
+        self.assertTrue(csv_data[1].endswith(line))
 
     def test_flatten(self):
         # create some Cases
+
         outputs = ['comp1.a_array', 'comp1.vt']
         inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
         self.top.driver.iterator = ListCaseIterator([Case(inputs=inputs, outputs=outputs, label='case1')])
@@ -344,6 +355,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         expected = [
             'Case: case1',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383238593.781986',
             '   inputs:',
             '      comp1.x_array[0]: 2.0',
             '      comp1.x_array[1]: 2.0',
@@ -365,6 +377,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
                         self.assertEqual(lines[index+i], expected[i])
                 break
@@ -446,6 +460,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def test_iterate_twice(self):
 
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         data = self.top.driver.recorders[0].get_iterator()
@@ -458,5 +473,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.assertEqual(keys1, keys2)
         
+    def test_save(self):
+        # Check that a recorder can be saved to an egg.
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
+        self.top.driver.recorders[0].startup()
+        try:
+            egg_info = self.top.save_to_egg('top', '1')
+        finally:
+            for name in glob.glob('top*.egg'):
+                os.remove(name)
+
+
 if __name__ == '__main__':
     unittest.main()

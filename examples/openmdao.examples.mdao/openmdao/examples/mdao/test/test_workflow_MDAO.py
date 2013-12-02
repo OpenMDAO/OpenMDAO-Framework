@@ -13,7 +13,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
 from openmdao.lib.drivers.api import CONMINdriver
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
 from openmdao.util.testutil import assert_rel_error
@@ -295,6 +295,12 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
+        
+        self.assertEqual(prob.check_gradient(), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], 
+                                             outputs=['_pseudo_2.out0', '_pseudo_2.out0']), [])
         
 
 if __name__ == '__main__':

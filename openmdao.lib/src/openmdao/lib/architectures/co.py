@@ -2,7 +2,7 @@
 
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 
 class CO(Architecture): 
     

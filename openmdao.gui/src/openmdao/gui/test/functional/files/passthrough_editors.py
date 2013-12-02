@@ -1,5 +1,5 @@
-from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.datatypes.api import Float
 
 
 class Paraboloid(Component):
@@ -35,4 +35,8 @@ class Topp(Assembly):
         
         self.create_passthrough('p1.y')
         self.connect('A1.f_xy','p1.x')
-        
+
+if __name__ == '__main__':
+    asm = set_as_top(Topp())
+    asm.remove('y')
+    asm.create_passthrough('p1.y')

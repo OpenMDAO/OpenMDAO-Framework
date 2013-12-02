@@ -589,9 +589,10 @@ def _test_replace(browser):
 
     # Replace comp with an Assembly.
     workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    expected = "Can't connect 'comp.result' to 'postproc.result_in'"
+    expected = "but are missing in the replacement object"
     time.sleep(0.5)
-    assert workspace_page.history.find(expected) >= 0
+    # messages go to log now, so don't show up in history
+    #assert workspace_page.history.find(expected) >= 0
 
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()

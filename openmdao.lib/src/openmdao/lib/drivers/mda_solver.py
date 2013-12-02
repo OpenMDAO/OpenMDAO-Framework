@@ -21,23 +21,33 @@ except ImportError as err:
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow   
 from openmdao.main.datatypes.api import Float, Int, Bool
-from openmdao.main.interfaces import ISolver, implements
-from openmdao.util.decorators import stub_if_missing_deps
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasEqConstraints
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
+                                     ISolver, implements
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 @stub_if_missing_deps('numpy', 'scipy')
+@add_delegate(HasParameters, HasEqConstraints)
 class MDASolver(Driver):
     
-    implements(ISolver)
+    implements(IHasParameters, IHasEqConstraints, ISolver)
     
     # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
+    
+    gmres_tolerance = Float(1.0e-9, iotype='in', 
+                            desc='GMRES tolerance for evaluating next diection')
     
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
     
     newton = Bool(False, iotype='in', desc='Set to True to use a ' + \
                     'Newton-Krylov method. Defaults to False for ' + \
                     'Gauss-Siedel.')
+    
+    print_convergence = Bool(True, iotype='in', desc='Set to False to ' +\
+                             'suppress output of convergence history.')
     
     def __init__(self):
         
@@ -65,14 +75,17 @@ class MDASolver(Driver):
         """ Solver execution loop: fixed point iteration. """
         
         # Initial Run
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
         
         # Find dimension of our problem.
         self.workflow.initialize_residual()
         
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        if self.print_convergence:
+            print "Residual vector norm:\n", norm
         
         # Loop until the residuals converge
         iter_num = 0
@@ -84,11 +97,14 @@ class MDASolver(Driver):
                 self.parent.set(target, self.parent.get(src), force=True)
             
             # Run all components
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-            print "Residual vector norm:\n", norm
+            if self.print_convergence:
+                print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()
@@ -97,7 +113,9 @@ class MDASolver(Driver):
         """ Solver execution loop: Newton-Krylov. """
         
         # Initial Run
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
         
         # Find dimension of our problem.
         nEdge = self.workflow.initialize_residual()
@@ -108,7 +126,8 @@ class MDASolver(Driver):
             
         # Initial residuals
         norm = numpy.linalg.norm(self.workflow.calculate_residuals())
-        print "Residual vector norm:\n", norm
+        if self.print_convergence:
+            print "Residual vector norm:\n", norm
         
         # Loop until convergence of residuals
         iter_num = 0
@@ -120,17 +139,21 @@ class MDASolver(Driver):
             
             # Call GMRES to solve the linear system
             dv, info = gmres(A, -self.workflow.res,
-                             tol=self.tolerance,
+                             tol=self.gmres_tolerance,
                              maxiter=100)
             
             # Increment the model input edges by dv
             self.workflow.set_new_state(dv)
             
             # Run all components
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
             
             # New residuals
             norm = numpy.linalg.norm(self.workflow.calculate_residuals())
+            if self.print_convergence:
+                print "Residual vector norm:\n", norm
             
             iter_num += 1
             self.record_case()       

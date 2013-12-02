@@ -71,7 +71,7 @@ class CompWithVarTree2(Component):
         self.J = array([[2., 6.],[4., 6.]])
 
     def provideJ(self): 
-        return ('ins.z', 'x1'), ('outs.z', 'z')
+        return ('ins.z', 'x1'), ('outs.z', 'z'), self.J
 
         
 
@@ -112,7 +112,9 @@ class TestDerivativeVarTree(unittest.TestCase):
 
         top.run()
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        top.driver.workflow.config_changed()
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         
         J_true = array([[2., 3., 4.], #obj
@@ -142,7 +144,9 @@ class TestDerivativeVarTree(unittest.TestCase):
 
         # Not sure the point of this test, unless the output will be verified.
         J_forward = top.driver.workflow.calc_gradient(mode="forward")
+        top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(mode="adjoint")
+        top.driver.workflow.config_changed()
         J_fd = top.driver.workflow.calc_gradient(mode='fd')
         
         J_true = array([[2, 3, 4]])
@@ -180,8 +184,13 @@ class TestDerivativeVarTree(unittest.TestCase):
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
 
+        # TODO - Support for vartree arrays
+        
+        top.driver.workflow.config_changed()
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        top.driver.workflow.config_changed()
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
         print J_fd
         print J_forward
@@ -191,13 +200,5 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
 
-# not sure what happened here...
-#class TestMultiDriver(unittest.TestCase): 
-
-    #def test_nested_driver(self):
-        
-        #top = set_as_top(Assembly())
-        #top.add('comp', S
-        
 if __name__ == "__main__": 
     unittest.main()

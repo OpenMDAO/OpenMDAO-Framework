@@ -19,7 +19,7 @@ from openmdao.main.file_supp import FileMetadata
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, Str, Array, File, FileRef, VarTree
+from openmdao.main.datatypes.api import Int, Bool, Str, Array, File, FileRef, VarTree
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 from openmdao.util.fileutil import onerror
@@ -303,9 +303,14 @@ class TestCase(unittest.TestCase):
         self.model = None
         for path in glob.glob('Egg_TestModel*.egg'):
             os.remove(path)
+            
         if os.path.exists('Egg'):
             # Wonderful Windows sometimes doesn't remove...
             shutil.rmtree('Egg', onerror=self.onerror)
+
+        if os.path.exists('Oddball'):
+            # Wonderful Windows sometimes doesn't remove...
+            shutil.rmtree('Oddball', onerror=self.onerror)
 
         # Not always added, but we need to ensure the egg is not in sys.path.
         if self.egg_name is not None:
@@ -383,8 +388,9 @@ class TestCase(unittest.TestCase):
         ]
 
         # Add our file if we're not considered part of an egg.
-        if sys.modules[self.__module__].__file__.find('.egg') < 0:
-            expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
+        #Commenting out this if as a proposed fix from SET for our release testing problems.
+        #if sys.modules[self.__module__].__file__.find('.egg') < 0:
+        expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
         expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         if len(OBSERVATIONS) != len(expected):
@@ -475,8 +481,8 @@ class TestCase(unittest.TestCase):
             ]
 
             # Add our file if we're not considered part of an egg.
-            if sys.modules[self.__module__].__file__.find('.egg') < 0:
-                expected.append(('extract', 'Egg_TestModel/test_egg_save.py'))
+            #if sys.modules[self.__module__].__file__.find('.egg') < 0:
+            expected.append(('extract', 'Egg_TestModel/test_egg_save.py'))
             expected.append(('complete', None))
 
             self.assertEqual(len(OBSERVATIONS), len(expected))

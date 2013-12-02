@@ -4,7 +4,7 @@
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class Paraboloid(Component):

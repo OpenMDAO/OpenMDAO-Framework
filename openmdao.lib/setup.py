@@ -70,6 +70,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
+      openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent
 
       [openmdao.component]
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
@@ -85,9 +86,6 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.lazy_comp.LazyComponent = openmdao.lib.components.lazy_comp:LazyComponent
       openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
 
-      [openmdao.variable]
-      openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate

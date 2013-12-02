@@ -22,7 +22,7 @@ from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import ResourceAllocator, LocalAllocator, \
                                    ClusterAllocator, RESOURCE_LIMITS
-from openmdao.lib.datatypes.api import Dict
+from openmdao.main.datatypes.api import Dict
 from openmdao.util.testutil import assert_raises, find_python
 from openmdao.util.fileutil import onerror
 

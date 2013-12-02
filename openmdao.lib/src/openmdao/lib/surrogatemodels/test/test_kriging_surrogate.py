@@ -46,7 +46,7 @@ class KrigingSurrogateTests(unittest.TestCase):
         self.assertAlmostEqual(-1.37201,pred.mu,places=3)
     
     def test_1d_kriging3(self):
-        """Test for least squares solver utilization when ill-conditioned"""
+        # Test for least squares solver utilization when ill-conditioned
         x = [[case] for case in linspace(0.,1.,40)]
         y = sin(x).flatten()
         krig1 = KrigingSurrogate()

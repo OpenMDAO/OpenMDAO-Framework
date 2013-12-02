@@ -34,7 +34,6 @@ from multiprocessing import connection
 
 #import openmdao.main.component
 
-from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
@@ -141,14 +140,13 @@ class _ContainerDepends(object):
         source = self.get_source(path)
         if source is not None and src != source:
             raise RuntimeError("'%s' is connected to source '%s' and cannot be "
-                "set by source '%s'" %
-                (path, source, src))
+                               "set by source '%s'" % (path, source, src))
 
 
 class _MetaSafe(MetaHasTraits):
     """ Tries to keep users from shooting themselves in the foot. """
 
-    def __new__(cls, class_name, bases, class_dict):
+    def __new__(mcs, class_name, bases, class_dict):
         # Check for overwrite of something that shouldn't be.
         for name, obj in class_dict.items():
             if isinstance(obj, Variable):
@@ -156,7 +154,7 @@ class _MetaSafe(MetaHasTraits):
                     if name in base.__dict__:
                         raise NameError('%s overrides attribute %r of %s'
                                         % (class_name, name, base.__name__))
-        return super(_MetaSafe, cls).__new__(cls, class_name, bases, class_dict)
+        return super(_MetaSafe, mcs).__new__(mcs, class_name, bases, class_dict)
 
 
 class SafeHasTraits(HasTraits):
@@ -233,7 +231,7 @@ class Container(SafeHasTraits):
     def _branch_moved(self):
         self._call_cpath_updated = True
         for n, cont in self.items():
-            if is_instance(cont, Container):
+            if is_instance(cont, Container) and cont is not self._parent:
                 cont._branch_moved()
 
     @property
@@ -338,7 +336,8 @@ class Container(SafeHasTraits):
                 for child, childsrc, childdest in child_connections:
                     child.disconnect(childsrc, childdest)
             except Exception as err:
-                self._logger.error("failed to disconnect %s from %s after failed connection of %s to %s: (%s)" %
+                self._logger.error("failed to disconnect %s from %s after"
+                                   " failed connection of %s to %s: (%s)" %
                                    (childsrc, childdest, srcpath, destpath, err))
             raise
 
@@ -383,8 +382,8 @@ class Container(SafeHasTraits):
         graph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
-    # no execute, they can have no inputs/outputs, which means that validity should have
-    # no meaning for them.
+    # no execute, they can have no inputs/outputs, which means that validity
+    # should have no meaning for them.
     def is_valid(self):
         return True
 
@@ -542,6 +541,8 @@ class Container(SafeHasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
 
+        getattr(self, name)
+
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
@@ -559,11 +560,11 @@ class Container(SafeHasTraits):
 
     @rbac(('owner', 'user'))
     def get_attr(self, name, index=None):
-        """The value will be copied if the variable has a 'copy' metadata 
-        attribute that is not None. Possible values for 'copy' are 
-        'shallow' and 'deep'. 
-        Raises an exception if the variable cannot be found. 
-        
+        """The value will be copied if the variable has a 'copy' metadata
+        attribute that is not None. Possible values for 'copy' are
+        'shallow' and 'deep'.
+        Raises an exception if the variable cannot be found.
+
         """
         scopename, _, restofpath = name.partition('.')
         if restofpath:
@@ -605,9 +606,9 @@ class Container(SafeHasTraits):
 
         return val
 
-    def add(self, name, obj):
-        """Add an object to this Container.
-        Returns the added object.
+    def _prep_for_add(self, name, obj):
+        """Check for illegal adds and update the new child
+        object in preparation for insertion into self.
         """
         if '.' in name:
             self.raise_exception(
@@ -616,42 +617,50 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
-        if is_instance(obj, Container):
+        if has_interface(obj, IContainer):
             self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
             else:
                 obj.parent = self
-            # if an old child with that name exists, remove it
-            removed = False
-            if self.contains(name) and getattr(self, name):
-                self.remove(name)
-                removed = True
             obj.name = name
-            setattr(self, name, obj)
-            if self._cached_traits_ is None:
-                self.get_trait(name)
-            else:
-                self._cached_traits_[name] = self.trait(name)
-            io = self._cached_traits_[name].iotype
-            if removed and not isinstance(self._depgraph, _ContainerDepends):
-                if io:
-                    # since we just removed this container and it was
-                    # being used as an io variable, we need to put
-                    # it back in the dep graph
-                    self._depgraph.add_boundary_var(name, iotype=io)
-                elif has_interface(obj, IComponent):
-                    self._depgraph.add_component(name, obj)
 
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
+
+    def _post_container_add(self, name, obj, removed):
+        pass
+
+    def add(self, name, obj):
+        """Add an object to this Container.
+        Returns the added object.
+        """
+        self._prep_for_add(name, obj)
+
+        if has_interface(obj, IContainer):
+            # if an old child with that name exists, remove it
+            removed = False
+            if self.contains(name) and getattr(self, name):
+                self.remove(name)
+                removed = True
+
+            setattr(self, name, obj)
+
+            if self._cached_traits_ is None:
+                self.get_trait(name)
+            else:
+                self._cached_traits_[name] = self.trait(name)
+
+            self._post_container_add(name, obj, removed)
+
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
             setattr(self, name, obj)
+
         return obj
 
     def _check_recursion(self, obj):
@@ -724,10 +733,9 @@ class Container(SafeHasTraits):
                                  name, NameError)
         try:
             obj = getattr(self, name)
-        except:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
-            
+        except AttributeError:
+            return None
+
         trait = self.get_trait(name)
         if trait is None:
             delattr(self, name)
@@ -741,7 +749,7 @@ class Container(SafeHasTraits):
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
-                
+
         return obj
 
     @rbac(('owner', 'user'))
@@ -774,7 +782,9 @@ class Container(SafeHasTraits):
         self._logger.rename(self.get_pathname().replace('.', ','))
         self._call_cpath_updated = False
         for cont in self.list_containers():
-            getattr(self, cont).cpath_updated()
+            cont = getattr(self, cont)
+            if cont is not self._parent:
+                cont.cpath_updated()
 
     def revert_to_defaults(self, recurse=True):
         """Sets the values of all of the inputs to their default values."""
@@ -1032,7 +1042,7 @@ class Container(SafeHasTraits):
             if ('[' in path or '(' in path) and index is None:
                 # caller has put indexing in the string instead of
                 # using the indexing protocol
-                # TODO: document somewhere that passing indexing 
+                # TODO: document somewhere that passing indexing
                 #       information as part of the path string has
                 #       higher overhead than constructing the index
                 #       using the indexing protocol or using ExprEvaluators
@@ -1109,7 +1119,8 @@ class Container(SafeHasTraits):
             except Exception:
                 return self._set_failed(path, value, index, src, force)
 
-            if iotype == 'in' or src is not None:  # setting an input or a boundary output, so have to check source
+            if iotype == 'in' or src is not None:
+                # setting an input or a boundary output, so have to check source
                 if not force:
                     self._check_source(path, src)
                 if index is None:
@@ -1130,8 +1141,8 @@ class Container(SafeHasTraits):
                     # callback, so it's a good test for whether the
                     # value changed.
                     if hasattr(self, "_call_execute") and self._call_execute:
-                        if iotype=='in':
-                            self._input_updated(path.split('.',1)[0])
+                        if iotype == 'in':
+                            self._input_updated(path.split('.', 1)[0])
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1176,14 +1187,15 @@ class Container(SafeHasTraits):
             item = self
             while item:
                 # This is the test we are using to detect if this is a Component
-                # If you use a more explicit way, like is_instance(item, Component ) you run
-                #  into problems with importing Component and having circular import issues
-                if hasattr( item, '_call_execute' ): 
+                # If you use a more explicit way, like is_instance(item, Component)
+                # you run into problems with importing Component and having
+                # circular import issues
+                if hasattr( item, '_call_execute' ):
                     # This is a Component so do Component things
                     item._call_execute = True
                     if hasattr(item, name):
-                        self._input_updated(name.split('.',1)[0])
-                    break 
+                        self._input_updated(name.split('.', 1)[0])
+                    break
                 item = item.parent
 
     def _input_check(self, name, old):
@@ -1448,7 +1460,8 @@ class Container(SafeHasTraits):
                         t_iotype = getattr(obj, 'iotype', None)
                     else:  # Variable
                         t_iotype = self.get_iotype(cname)
-                    if t_iotype != iotype:
+                    if (iotype == 'in' and t_iotype not in ('in','state')) or \
+                       (iotype=='out' and t_iotype not in ('out','in','state','residual')):
                         self.raise_exception('%s must be an %s variable' %
                                              (pathname, _iodict[iotype]),
                                              RuntimeError)

@@ -3,7 +3,7 @@ the object and parameter panes.
 """
 
 from openmdao.main.api import Component, Assembly, VariableTree
-from openmdao.lib.datatypes.api import Float, VarTree
+from openmdao.main.datatypes.api import Float, VarTree
 
 class DumbVT3(VariableTree):
     a = Float(1., units='ft')

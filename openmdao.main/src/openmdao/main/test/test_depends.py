@@ -4,14 +4,14 @@ import unittest
 import math
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Dict
+from openmdao.main.datatypes.api import Float, Array, List, Dict
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
-from openmdao.main.ndepgraph import dump_valid, get_valids
+from openmdao.main.depgraph import get_valids
 
 exec_order = []
 
@@ -115,6 +115,7 @@ class DependsTestCase(unittest.TestCase):
 
         
     def setUp(self):
+        pcompmod._count = 0
         top = self.top = _nested_model()
         sub = top.sub
         sub.connect('comp1.c', 'comp4.a')
@@ -714,14 +715,10 @@ class DependsTestCase3(unittest.TestCase):
 
         # The first time it runs, the pcomp inputs update
         top.run()
-        print top.comp.a
-        print top._pseudo_0.in0
         self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
         
         # The second time it runs, the pcomp inputs no longer update
         top.run()
-        print top.comp.a
-        print top._pseudo_0.in0
         self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
         
 class ArrayComp(Component):

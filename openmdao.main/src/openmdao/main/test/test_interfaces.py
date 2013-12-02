@@ -7,7 +7,7 @@ import unittest
 from traits.api import HasTraits, implements, Interface, Instance
 from traits.trait_types import validate_implements
 
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 
 class IMyMarkerInterface(Interface):
     """Just an empty marker interface"""

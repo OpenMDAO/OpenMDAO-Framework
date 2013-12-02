@@ -10,7 +10,7 @@ from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, 
                                   _filter_macro, ProjFinder, _match_insts, \
                                   load_project
 from openmdao.main.factorymanager import get_signature
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class Multiplier(Component):

@@ -183,6 +183,8 @@ class IContainer(Interface):
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
 
+class IVariableTree(IContainer):
+    """Marker interface for VariableTrees."""
 
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
@@ -287,6 +289,14 @@ class IComponent(IContainer):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
         """
+
+
+class IImplicitComponent(IComponent):
+    def list_states(self):
+        """Return a list of names of state variables."""
+
+    def list_residuals(self):
+        """Return a list of names of residual variables."""
 
 
 class IDriver(IComponent):

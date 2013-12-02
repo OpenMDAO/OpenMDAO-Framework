@@ -2,7 +2,7 @@ import unittest
 
 from openmdao.main.api import Component, Assembly
 from openmdao.lib.components.api import LazyComponent
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class SinkComp(Component):         
@@ -161,8 +161,9 @@ class TestLazyComponent(unittest.TestCase):
                          [True,True,True,False])
 
     def test_output_stays_at_default(self): 
-        """check that validity is managed properly if outputs are calcualted, 
-        but their values stay at the initial/default setting""" 
+        # check that validity is managed properly if outputs are calcualted, 
+        # but their values stay at the initial/default setting
+
         #note: this is not really necessary, unless we start testing 
         #that outputs were actually calculated
 

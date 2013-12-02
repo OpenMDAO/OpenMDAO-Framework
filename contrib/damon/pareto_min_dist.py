@@ -7,7 +7,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Str, ListStr, Enum, \
+from openmdao.main.datatypes.api import Str, ListStr, Enum, \
      Float, Array, Event, List
 
 from openmdao.main.component import Component

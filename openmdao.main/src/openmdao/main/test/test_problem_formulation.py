@@ -6,7 +6,7 @@ from openmdao.main.problem_formulation import ArchitectureAssembly, \
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjectives
 
-from openmdao.lib.datatypes.api import Float, Int, Enum, Array
+from openmdao.main.datatypes.api import Float, Int, Enum, Array
 
 from openmdao.util.decorators import add_delegate
 

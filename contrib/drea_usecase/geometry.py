@@ -1,5 +1,5 @@
 from openmdao.main.api import VariableTree
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Geometry(VariableTree):
     """Container of variables defining the mixer-ejector geometry"""

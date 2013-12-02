@@ -17,6 +17,8 @@ import unittest
 
 from Crypto.Random import get_random_bytes
 
+from traits.api import CTrait
+
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
 from openmdao.main.container import get_closest_proxy
@@ -29,7 +31,7 @@ from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
-from openmdao.lib.datatypes.api import Float, Int
+from openmdao.main.datatypes.api import Float, Int, FileRef
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp
@@ -241,31 +243,29 @@ class ProtectedBox(Box):
     def get_access_controller(self):
         return self.protector
 
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
         if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).get(path, index)
-        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
+        raise RoleError('No get access to %r' % path)
 
-    @rbac(('owner', 'user'))
-    def get_dyn_trait(self, name, iotype=None):
+    @rbac(('owner', 'user'), proxy_types=[CTrait])
+    def get_dyn_trait(self, name, iotype=None, trait=None):
         if self.protector.user_attribute(self, name):
-            return super(ProtectedBox, self).get_dyn_trait(name, iotype)
-        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
+            return super(ProtectedBox, self).get_dyn_trait(name, iotype, trait)
+        raise RoleError('No get_dyn_trait access to %r' % name)
 
     @rbac(('owner', 'user'))
     def get_attr(self, name, index=None):
         if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_attr(name)
-        raise RoleError("No get_attr access to '%s' by role '%s'"
-                        % (attr, role))
+        raise RoleError('No get_attr access to %r' % name)
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).set(path, value, index, src, force)
-        raise RoleError("No set access to '%s' by role '%s'"
-                        % (attr, role))
+        raise RoleError('No set access to %r' % path)
 
 
 class TestCase(unittest.TestCase):

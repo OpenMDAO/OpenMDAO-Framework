@@ -63,7 +63,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(result[5], 'from numpy import float32 as numpy_float32\n')
         self.assertEqual(result[6], '\n')
         self.assertEqual(result[7], 'from openmdao.main.api import Component, Container\n')
-        self.assertEqual(result[8], 'from openmdao.lib.datatypes.api import Int, Float, Str, Array, Enum, Bool, File\n')
+        self.assertEqual(result[8], 'from openmdao.main.datatypes.api import Int, Float, Str, Array, Enum, Bool, File\n')
         self.assertEqual(result[9], '\n')
         self.assertEqual(result[10], 'class TestComp_input_deep(Container):\n')
         self.assertEqual(result[11], '    """Container for input.deep"""\n')

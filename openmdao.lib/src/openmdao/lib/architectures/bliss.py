@@ -2,7 +2,7 @@ from string import Template
 
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator#, COBYLAdriver as SLSQPdriver
 
