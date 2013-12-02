@@ -9,7 +9,6 @@ from pkg_resources import working_set, to_filename
 
 import atexit
 
-
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
     with the option ``--with-fail-summary`` to activate it.

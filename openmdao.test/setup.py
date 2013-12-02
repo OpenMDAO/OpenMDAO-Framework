@@ -54,7 +54,8 @@ setup(name='openmdao.test',
           ],
       "nose.plugins.0.10": [
           'nosetimerplugin = openmdao.test.nosetimer:TestTimer',
-          'nosesummaryplugin = openmdao.test.testing:TestFailureSummary'
+          'nosesummaryplugin = openmdao.test.testing:TestFailureSummary',
+          'noseearlyplugin = openmdao.test.early_report:EarlyTestInfo'
           ],
       },
       )
