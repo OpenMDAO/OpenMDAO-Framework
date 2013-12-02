@@ -52,10 +52,10 @@ class EarlyTestInfo(Plugin):
     """This plugin writes test info (failures, run time) to
     a file as the tests are running instead of waiting until
     the end to report anything. Run nose
-    with the option ``--early-report`` to activate it.
+    with the option ``--with-early`` to activate it.
     """
 
-    name = 'early-report'
+    name = 'early'
     score = 1001 # need high score to get called before ErroClassPlugin,
                  # otherwise we lose Skips
 
@@ -111,7 +111,12 @@ class EarlyTestInfo(Plugin):
             for test in errors:
                 stream.writeln(test)
 
-        stream.writeln("\n\nTotal elapsed time: %.3g sec" % total_time)
+        hrs = int(total_time/3600)
+        total_time -= (hrs * 3600)
+        mins = int(total_time/60)
+        total_time -= (mins * 60)
+        stream.writeln("\n\nTotal elapsed time: %02d:%02d:%.2f" % 
+                         (hrs, mins, total_time))
                 
         self.stream.writeln("\n")
 
