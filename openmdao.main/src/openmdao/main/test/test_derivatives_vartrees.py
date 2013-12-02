@@ -167,9 +167,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         outputs = ['comp2.z', 'comp1.outs.z', 'comp1.ins.x.x1']
         
         top.driver.add_parameter('comp1.ins.x.x1', low=-1000, high=1000)
-        top.driver.workflow.config_changed()
         top.driver.add_parameter('comp1.ins.x.x2', low=-1000, high=1000)
-        top.driver.workflow.config_changed()
         top.driver.add_parameter('comp1.ins.y', low=-1000, high=1000)
 
         top.connect('comp1.outs', 'comp2.ins')
@@ -188,18 +186,18 @@ class TestDerivativeVarTree(unittest.TestCase):
 
         # TODO - Support for vartree arrays
         
-        #top.driver.workflow.config_changed()
-        #J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
-        #top.driver.workflow.config_changed()
-        #J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
-        #top.driver.workflow.config_changed()
-        #J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
-        #print J_fd
-        #print J_forward
-        #print J_reverse
-        #assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
-        #assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
-        #assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
+        top.driver.workflow.config_changed()
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        top.driver.workflow.config_changed()
+        J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        top.driver.workflow.config_changed()
+        J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+        print J_fd
+        print J_forward
+        print J_reverse
+        assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
 
 if __name__ == "__main__": 

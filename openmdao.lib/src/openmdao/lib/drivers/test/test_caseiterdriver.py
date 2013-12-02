@@ -22,7 +22,6 @@ from openmdao.main.exceptions import RunStopped
 
 from openmdao.main.datatypes.api import Float, Bool, Array, Int, Slot, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
                                           SequenceCaseFilter
 

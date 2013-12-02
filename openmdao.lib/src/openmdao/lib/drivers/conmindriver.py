@@ -423,8 +423,6 @@ class CONMINdriver(Driver):
             con = self.list_ineq_constraint_targets()
 
             J = self.workflow.calc_gradient(inputs, obj + con)
-            import sys
-            print >>sys.stderr, 'CONMIN J', J
 
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].ravel()

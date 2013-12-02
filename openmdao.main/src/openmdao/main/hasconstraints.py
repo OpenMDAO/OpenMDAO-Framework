@@ -95,11 +95,16 @@ class Constraint(object):
         """
         if self.pcomp_name:
             scope = self.lhs.scope
-            pcomp = getattr(scope, self.pcomp_name)
-            pcomp.remove_connections(scope)
-            if hasattr(scope, pcomp.name):
+            try:
+                pcomp = getattr(scope, self.pcomp_name)
+            except AttributeError:
+                pass
+            else:
+                # pcomp.remove_connections(scope)
+                # if hasattr(scope, pcomp.name):
                 scope.remove(pcomp.name)
-            self.pcomp_name = None
+            finally:  
+                self.pcomp_name = None
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -157,8 +162,7 @@ class Constraint(object):
         if not pcomp.is_valid():
             pcomp.update_outputs(['out0'])
         val = pcomp.out0
-        import sys
-        print >>sys.stderr, 'C.evaluate', val
+
         if isinstance(val, ndarray):
             return val.flatten()
         else:
@@ -174,8 +178,6 @@ class Constraint(object):
         else:
             rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
 
-        import sys
-        print >>sys.stderr, 'lhs', lhs, 'rhs', rhs
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
 
     def get_referenced_compnames(self):
@@ -221,9 +223,7 @@ class _HasConstraintsBase(object):
         key = _remove_spaces(key)
         cnst = self._constraints.get(key)
         if cnst:
-            scope = _get_scope(self)
-            if hasattr(scope, cnst.pcomp_name):
-                scope.disconnect(cnst.pcomp_name)
+            cnst.deactivate()
             del self._constraints[key]
         else:
             msg = "Constraint '%s' was not found. Remove failed." % key
@@ -250,19 +250,35 @@ class _HasConstraintsBase(object):
         name: string
             Name of component being removed.
         """
+        to_remove = []
         for cname, constraint in self._constraints.items():
             if name in constraint.get_referenced_compnames():
-                self.remove_constraint(cname)
+                to_remove.append(cname)
+
+        for cname in to_remove:
+            self.remove_constraint(cname)
 
     def restore_references(self, refs):
         """Restore references to component `name` from `refs`.
 
         refs: object
             Value returned by :meth:`get_references`.
+
+        Note: this is called from the replace() method, where
+        the replacing object may be missing variables that were 
+        found in the target object, so no restore_references
+        call should raise an exception when restoring a reference 
+        fails.
         """
         for name, constraint in refs.items():
-            self.add_constraint(str(constraint), name,
-                                constraint.lhs.scope)
+            if name in self._constraints:
+                self.remove_constraint(name)
+            try:
+                self.add_constraint(str(constraint), name,
+                                    constraint.lhs.scope)
+            except Exception as err:
+                self._parent._logger.warning("Couldn't restore constraint '%s': %s" 
+                                              % (name, str(err)))
 
     def clear_constraints(self):
         """Removes all constraints."""
@@ -540,8 +556,6 @@ class HasIneqConstraints(_HasConstraintsBase):
         result = []
         for constraint in self._constraints.values():
             result.extend(constraint.evaluate(scope))
-        import sys
-        print >>sys.stderr, 'eval_ineq_constraints', result
         return result
 
     def list_ineq_constraint_targets(self):

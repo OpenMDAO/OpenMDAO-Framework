@@ -419,10 +419,6 @@ class TestCase1D(unittest.TestCase):
         self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = False
         self.top.run()
-        import sys
-        print >>sys.stderr, '***EDGES'
-        for src, targets in self.top.driver.workflow._edges.items():
-            print >>sys.stderr, '   ', src, '->', targets
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
