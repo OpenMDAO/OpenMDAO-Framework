@@ -319,9 +319,9 @@ class Testcase_implicit(unittest.TestCase):
         
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
-        model.add('comp2', Coupled1())
+        model.add('comp2', Coupled2())
         model.add('driver', MDASolver())
-        model.driver.workflow.add('comp')
+        model.driver.workflow.add(['comp1', 'comp2'])
         
         model.connect('comp1.x', 'comp2.x')
         model.connect('comp1.y', 'comp2.y')
@@ -335,7 +335,8 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_constraint('comp1.r1 = 0')
         model.driver.add_constraint('comp2.r2 = 0')
         
-        model.comp.eval_only = True
+        model.comp1.eval_only = True
+        model.comp2.eval_only = True
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
