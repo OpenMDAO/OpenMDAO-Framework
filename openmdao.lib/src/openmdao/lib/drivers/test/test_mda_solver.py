@@ -331,7 +331,7 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 4)
         
-    def test_general_solver(self): 
+    #def test_general_solver(self): 
 
         # TODO: Should MDA solver be able to solve generalized equations?
         
