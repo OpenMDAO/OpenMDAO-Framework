@@ -269,14 +269,6 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
-        #model.comp.eval_only = True
-        #inputs=['comp.x', 'comp.y', 'comp.z', 'comp.c']
-        #outputs=['comp.r0', 'comp.r1', 'comp.r2', 'comp.y_out']
-        #J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        #Jf = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
-        #print J
-        #print Jf
-                                            
     def test_single_comp_self_solve_no_deriv(self):
         
         model = set_as_top(Assembly())
@@ -315,6 +307,32 @@ class Testcase_implicit(unittest.TestCase):
         
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 
+    def test_coupled_comps_internal_solve(self):
+        
+        model = set_as_top(Assembly())
+        model.add('comp1', Coupled1())
+        model.add('comp2', Coupled2())
+        model.add('driver', MDASolver())
+        model.driver.workflow.add(['comp1', 'comp2'])
+        
+        model.connect('comp1.x', 'comp2.x')
+        model.connect('comp1.y', 'comp2.y')
+        model.connect('comp2.z', 'comp1.z')
+        
+        d_edges = model._depgraph.get_directional_interior_edges('comp1', 'comp2')
+        print d_edges
+        
+        self.assertTrue( ('comp1.x', 'comp2.x') in d_edges)
+        self.assertTrue( ('comp1.y', 'comp2.y') in d_edges)
+        
+        model.run()
+        
+        assert_rel_error(self, model.comp1.x, 1.0, 1e-5)
+        assert_rel_error(self, model.comp1.y, -2.33333333, 1e-5)
+        assert_rel_error(self, model.comp2.z, -2.16666667, 1e-5)
+        
+        assert_rel_error(self, model.comp1.y_out, -1.5, 1e-5)
+
     def test_coupled_comps_external_solve(self):
         
         model = set_as_top(Assembly())
@@ -339,12 +357,26 @@ class Testcase_implicit(unittest.TestCase):
         model.comp2.eval_only = True
         model.run()
         
-        assert_rel_error(self, model.comp.x, 1.0, 1e-5)
-        assert_rel_error(self, model.comp.y, -2.33333333, 1e-5)
-        assert_rel_error(self, model.comp.z, -2.16666667, 1e-5)
+        assert_rel_error(self, model.comp1.x, 1.0, 1e-5)
+        assert_rel_error(self, model.comp1.y, -2.33333333, 1e-5)
+        assert_rel_error(self, model.comp2.z, -2.16666667, 1e-5)
         
-        assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
+        assert_rel_error(self, model.comp1.y_out, -1.5, 1e-5)
 
+    def test_derivative(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv())
+        model.driver.workflow.add('comp')
+        
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'])
+        print J
+        edges = model.driver.workflow._edges
+        print edges
+        
     def test_list_states(self):
         comp = MyComp_Deriv()
         self.assertEqual(set(comp.list_states()), set(['x','y','z']))
