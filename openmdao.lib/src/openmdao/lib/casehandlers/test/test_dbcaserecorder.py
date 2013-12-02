@@ -46,11 +46,11 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         driver.iterator = ListCaseIterator(cases)
 
     def test_inoutDB(self):
-        """This test runs some cases, puts them in a DB using a DBCaseRecorder,
-        then runs the model again using the same cases, pulled out of the DB
-        by a DBCaseIterator.  Finally the cases are dumped to a string after
-        being run for the second time.
-        """
+        # This test runs some cases, puts them in a DB using a DBCaseRecorder,
+        # then runs the model again using the same cases, pulled out of the DB
+        # by a DBCaseIterator.  Finally the cases are dumped to a string after
+        # being run for the second time.
+        
         self.top.driver.recorders = [DBCaseRecorder()]
         self.top.run()
 

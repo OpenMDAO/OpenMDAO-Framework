@@ -278,10 +278,21 @@ class DependencyGraph(nx.DiGraph):
         """
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
+        # these include states and residuals
         old_outs = set(self.list_outputs(cname))
 
         new_ins  = set(['.'.join([cname,n]) for n in child.list_inputs()])
         new_outs = set(['.'.join([cname,n]) for n in child.list_outputs()])
+        if hasattr(child, 'list_states'):
+            states = child.list_states()
+            new_outs.update(states)
+        else:
+            states = ()
+        if hasattr(child, 'list_residuals'):
+            resids = child.list_residuals()
+            new_outs.update(resids)
+        else:
+            resids = ()
 
         added_ins = new_ins - old_ins
         added_outs = new_outs - old_outs
@@ -290,8 +301,17 @@ class DependencyGraph(nx.DiGraph):
         rem_outs = old_outs - new_outs
 
         # for new inputs/outputs, just add them to graph
-        self.add_nodes_from(added_ins, var=True, iotype='in', valid=True)
-        self.add_nodes_from(added_outs, var=True, iotype='out', valid=False)
+        for invar in added_ins:
+            self.add_node(invar, var=True, valid=True, iotype='in')
+
+        for out in added_outs: 
+            if out in states:
+                iotype = 'state'
+            elif out in resids:
+                iotype = 'residual'
+            else:
+                iotype = 'out'
+            self.add_node(out, var=True, valid=False, iotype=iotype)
 
         # add edges from the variables to their parent component
         self.add_edges_from([(v,cname) for v in added_ins])
@@ -330,8 +350,8 @@ class DependencyGraph(nx.DiGraph):
         outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
 
         self.add_node(cname, **kwargs)
-        self.add_nodes_from(inputs, var=True, iotype='in', flowdir='in', valid=True)
-        self.add_nodes_from(outputs, var=True, iotype='out', flowdir='out', valid=False)
+        self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
+        self.add_nodes_from(outputs, var=True, iotype='out', valid=False)
 
         self.add_edges_from([(v, cname) for v in inputs])
         self.add_edges_from([(cname, v) for v in outputs])
@@ -339,10 +359,10 @@ class DependencyGraph(nx.DiGraph):
         if has_interface(obj, IImplicitComponent):
             states = ['.'.join([cname, v]) for v in obj.list_states()]
             resids = ['.'.join([cname, v]) for v in obj.list_residuals()]
-            self.add_nodes_from(states, var=True, iotype='state', flowdir='in', valid=True)
-            self.add_nodes_from(resids, var=True, iotype='residual', flowdir='out', valid=True)
+            self.add_nodes_from(states, var=True, iotype='state', valid=True)
+            self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
 
-            self.add_edges_from([(v, cname) for v in states])
+            self.add_edges_from([(cname, v) for v in states])
             self.add_edges_from([(cname, v) for v in resids])
 
         self.config_changed()
@@ -394,7 +414,8 @@ class DependencyGraph(nx.DiGraph):
         dpbase = base_var(self, destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
-        if dest_iotype == 'out' and not is_boundary_node(self, dpbase) and not dpbase == srcpath:
+        if dest_iotype in ('out','residual') and \
+           not is_boundary_node(self, dpbase) and not dpbase == srcpath:
             raise RuntimeError("'%s' must be an input variable" % destpath)
 
         connected = False
@@ -550,7 +571,7 @@ class DependencyGraph(nx.DiGraph):
             self.config_changed()
 
     def get_directional_interior_edges(self, comp1, comp2):
-        """ Behaves like get_ineterior_edges, except that it only
+        """ Behaves like get_interior_edges, except that it only
         returns interior edges that originate in comp1 and and end in comp2.
 
         comp1: str
@@ -564,7 +585,7 @@ class DependencyGraph(nx.DiGraph):
             in_set.update(self._var_connections(inp, 'in'))
 
         out_set = set()
-        for out in self.list_outputs(comp1)+self.list_input_outputs(comp1):
+        for out in self.list_outputs(comp1):
             out_set.update(self._var_connections(out, 'out'))
 
         return in_set.intersection(out_set)
@@ -820,9 +841,8 @@ class DependencyGraph(nx.DiGraph):
         return lst
 
     def list_input_outputs(self, cname):
-        """Return a list of names of input nodes that are used
-        as outputs. This can happen if an input is part of a
-        constraint or an objective.
+        """Return a list of names of input or state nodes that are used
+        as outputs.
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
@@ -831,8 +851,8 @@ class DependencyGraph(nx.DiGraph):
                              if self.out_degree(n)>1]
 
     def list_outputs(self, cname, connected=False):
-        """Return a list of names of output nodes for a component.
-        If connected is True, return only connected outputs.
+        """Return a list of names of output, state or residual nodes for a component.
+        If connected is True, return only connected outputs. 
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
