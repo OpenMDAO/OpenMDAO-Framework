@@ -600,7 +600,14 @@ class Container(SafeHasTraits):
                         val_copy.install_callbacks()
                     val = val_copy
                 else:
-                    val = _copydict[ttype.copy](val)
+                    try:
+                        val = _copydict[ttype.copy](val)
+                    except AttributeError:
+                        if isinstance(val, TraitListObject):
+                            # Can't deepcopy a restored TraitListObject.
+                            val = _copydict[ttype.copy](list(val))
+                        else:
+                            raise
         else: # index is not None
             val = get_indexed_value(self, name, index)
 
