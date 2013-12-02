@@ -564,7 +564,7 @@ class DependencyGraph(nx.DiGraph):
             in_set.update(self._var_connections(inp, 'in'))
 
         out_set = set()
-        for out in self.list_outputs(comp1):
+        for out in self.list_outputs(comp1)+self.list_input_outputs(comp1):
             out_set.update(self._var_connections(out, 'out'))
 
         return in_set.intersection(out_set)
@@ -807,6 +807,7 @@ class DependencyGraph(nx.DiGraph):
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
+
         if connected:
             lst = [n for n in self.pred[cname]
                                             if self.in_degree(n)>0]
@@ -825,6 +826,7 @@ class DependencyGraph(nx.DiGraph):
         """
         if not is_comp_node(self, cname):
             raise RuntimeError("'%s' is not a component node" % cname)
+
         return [n for n in self.pred[cname]
                              if self.out_degree(n)>1]
 

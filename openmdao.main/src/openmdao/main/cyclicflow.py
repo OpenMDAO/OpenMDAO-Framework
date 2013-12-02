@@ -316,5 +316,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 target_val = flattened_value(target, target_val).reshape(-1, 1)
             
                 self.res[i1:i2] = src_val - target_val
+                
+                break  # only need one target
 
         return self.res
