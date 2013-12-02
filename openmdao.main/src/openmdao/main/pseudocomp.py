@@ -89,6 +89,9 @@ class PseudoComponent(object):
         self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
                                         # this is, e.g., 'units', 'constraint', 'objective',
                                         # or 'multi_var_expr'
+        self._orig_src = srcexpr.text
+        self._orig_dest = destexpr.text
+
         if destexpr.text:
             self._outdests = [destexpr.text]
         else:
@@ -170,6 +173,9 @@ class PseudoComponent(object):
         self._expr_conn = (src, out)  # the actual expression connection
 
     def check_configuration(self):
+        pass
+
+    def cpath_updated(self):
         pass
 
     def get_pathname(self, rel_to_scope=None):
@@ -295,8 +301,6 @@ class PseudoComponent(object):
             self.J = hstack([grad[n] for n in self._inputs])
         else:
             self.J = array([[grad[n] for n in self._inputs]])
-        import sys
-        print >>sys.stderr, 'pseudocomp.linearize', self.J
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J

@@ -199,29 +199,6 @@ class BadComponent(Component):
         assert_raises(self, code, globals(), locals(), NameError,
                       "Would override attribute 'run' of Component")
 
-    def test_mimic(self):
-        # Ensure we can mimic a driver.
-        top = Assembly()
-        top.add('c1', Component())
-        top.add('c2', Component())
-        top.driver.workflow.add(('c1', 'c2'))
-        top.driver.printvars = ['c1.force_execute', 'c2.force_execute']
-
-        recorder1 = FakeRecorder()
-        recorder2 = FakeRecorder()
-        top.driver.recorders = [recorder1, recorder2]
-
-        workflow_id = id(top.driver.workflow)
-        new_driver = Driver()
-        new_id = id(new_driver)
-        self.assertNotEqual(new_id, id(top.driver))
-
-        top.replace('driver', new_driver)
-        self.assertEqual(new_id, id(top.driver))
-        self.assertEqual(workflow_id, id(top.driver.workflow))
-        self.assertEqual(top.driver.printvars,
-                         ['c1.force_execute', 'c2.force_execute'])
-        self.assertEqual(top.driver.recorders, [recorder1, recorder2])
 
     def test_replace(self):
         # Ensure we can replace a child component.

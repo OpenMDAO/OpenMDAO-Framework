@@ -649,15 +649,13 @@ class ExprEvaluator(object):
 
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
-                import sys
-                print >>sys.stderr, 'evaluate_gradient %r' % grad_text
 
                 # Finite difference (Central difference)
                 val = var_dict[var]
-                print >>sys.stderr, '   ', var, 'value', val
+
                 if isinstance(val, ndarray):
                     yp = eval(grad_code, _expr_dict, locals())
-                    print >>sys.stderr, '    expr value', yp
+
                     if isinstance(yp, ndarray):
                         gradient[var] = zeros((yp.size, val.size))
                     else:
@@ -690,7 +688,6 @@ class ExprEvaluator(object):
                     if isinstance(yp, ndarray):
                         gradient[var] = gradient[var].reshape((yp.size, 1))
                 
-                print >>sys.stderr, '    gradient', gradient[var]
         return gradient
     
     def set(self, val, scope=None, src=None):

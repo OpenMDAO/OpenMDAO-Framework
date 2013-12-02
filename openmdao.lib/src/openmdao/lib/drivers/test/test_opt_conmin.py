@@ -136,7 +136,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.iprint = 0
         self.top.driver.itmax = 30
 
-    def zest_opt1(self):
+    def test_opt1(self):
         self.top.driver.add_objective('10*comp.result')
         # pylint: disable-msg=C0301
         map(self.top.driver.add_parameter,
@@ -171,7 +171,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
 
-    def zest_opt1_a(self):
+    def test_opt1_a(self):
         # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.
         self.top.driver.add_objective('10*comp.result')
         # pylint: disable-msg=C0301
@@ -194,7 +194,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def zest_opt1_with_CONMIN_gradient(self):
+    def test_opt1_with_CONMIN_gradient(self):
         # Note: all other tests use OpenMDAO gradient
         self.top.driver.add_objective('10*comp.result')
         self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
@@ -223,7 +223,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def zest_opt1_flippedconstraints(self):
+    def test_opt1_flippedconstraints(self):
         self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -246,7 +246,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[3], places=1)
 
-    def zest_gradient_step_size_large(self):
+    def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
 
         self.top.driver.add_objective('comp.result')
@@ -272,7 +272,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         if baseerror > newerror:
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
-    def zest_linear_constraint_specification(self):
+    def test_linear_constraint_specification(self):
         # Note, just testing problem specification and setup
 
         self.top.driver.add_objective('comp.result')
@@ -287,7 +287,7 @@ class CONMINdriverTestCase(unittest.TestCase):
 
         self.top.run()
 
-    def zest_max_iteration(self):
+    def test_max_iteration(self):
 
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
@@ -302,7 +302,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         self.assertEqual(self.top.driver.iter_count, 2)
 
-    def zest_remove(self):
+    def test_remove(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -348,7 +348,7 @@ class TestAssembly(Assembly):
 
 class CONMINdriverTestCase2(unittest.TestCase):
 
-    def zest_vartree_opt(self):
+    def test_vartree_opt(self):
         blah = set_as_top(TestAssembly())
         blah.run()
         self.assertAlmostEqual(blah.comp.dummy_data.dummy1, 3.0, 1) #3.0 should be minimum
@@ -368,7 +368,7 @@ class TestCase1D(unittest.TestCase):
         driver.add_objective('10*comp.result')
         driver.add_parameter('comp.x')
 
-    def zest_conmin_gradient_a(self):
+    def test_conmin_gradient_a(self):
         # Run with 1D parameter, 1D constraint, and CONMIN gradient.
 
         self.top.driver.add_constraint('comp.g <= 0')
@@ -389,7 +389,7 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def zest_conmin_gradient_s(self):
+    def test_conmin_gradient_s(self):
         # Run with 1D parameter, scalar constraints, and CONMIN gradient.
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
@@ -419,10 +419,6 @@ class TestCase1D(unittest.TestCase):
         self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = False
         self.top.run()
-        import sys
-        print >>sys.stderr, '***EDGES'
-        for src, targets in self.top.driver.workflow._edges.items():
-            print >>sys.stderr, '   ', src, '->', targets
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
@@ -446,10 +442,6 @@ class TestCase1D(unittest.TestCase):
 
         self.top.driver.conmin_diff = False
         self.top.run()
-        import sys
-        print >>sys.stderr, '***EDGES'
-        for src, targets in self.top.driver.workflow._edges.items():
-            print >>sys.stderr, '   ', src, '->', targets
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
@@ -483,7 +475,7 @@ class TestCase2D(unittest.TestCase):
             'comp.x[0][0]**2-comp.x[0][0]+2*comp.x[0][1]**2+comp.x[1][0]**2+2*comp.x[1][1]**2-comp.x[1][1] < 10',
             '2*comp.x[0][0]**2+2*comp.x[0][0]+comp.x[0][1]**2-comp.x[0][1]+comp.x[1][0]**2-comp.x[1][1] < 5'])
 
-    def zest_conmin_gradient(self):
+    def test_conmin_gradient(self):
         # Run with 2D parameter and CONMIN gradient.
         self.top.driver.conmin_diff = True
         self.top.run()
@@ -500,7 +492,7 @@ class TestCase2D(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[1][1], places=1)
 
-    def zest_openmdao_gradient(self):
+    def test_openmdao_gradient(self):
         # Run with 2D parameter and OpenMDAO gradient.
         self.top.driver.conmin_diff = False
         self.top.run()
@@ -538,7 +530,7 @@ class TestCaseMixed(unittest.TestCase):
             'comp.x0**2-comp.x0+2*comp.x12[0]**2+comp.x12[1]**2+2*comp.x3**2-comp.x3 < 10',
             '2*comp.x0**2+2*comp.x0+comp.x12[0]**2-comp.x12[0]+comp.x12[1]**2-comp.x3 < 5'])
 
-    def zest_conmin_gradient(self):
+    def test_conmin_gradient(self):
         # Run with mixed parameters and CONMIN gradient.
         self.top.driver.conmin_diff = True
         self.top.run()
@@ -555,7 +547,7 @@ class TestCaseMixed(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x3, places=1)
 
-    def zest_openmdao_gradient(self):
+    def test_openmdao_gradient(self):
         # Run with mixed parameters and OpenMDAO gradient.
         self.top.driver.conmin_diff = False
         self.top.run()
