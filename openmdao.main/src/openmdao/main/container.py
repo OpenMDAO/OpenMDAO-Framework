@@ -26,7 +26,6 @@ from zope.interface import Interface, implements
 
 from traits.api import HasTraits, Missing, Python, \
                        push_exception_handler, TraitType, CTrait
-from traits.trait_handlers import TraitListObject
 from traits.has_traits import FunctionType, _clone_trait, MetaHasTraits
 from traits.trait_base import not_none
 
@@ -40,8 +39,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, \
-                                     IComponent
+                                     IContainer, IParametricGeometry
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
@@ -388,11 +386,11 @@ class Container(SafeHasTraits):
         return True
 
     def get_trait(self, name, copy=False):
-        """Returns the trait indicated by name, or None if not found.  No recursive
-        search is performed if name contains dots.  This is a replacement
-        for the trait() method on HasTraits objects because that method
-        can return traits that shouldn't exist. DO NOT use the trait() function
-        as a way to determine the existence of a trait.
+        """Returns the trait indicated by name, or None if not found. No
+        recursive search is performed if name contains dots. This is a
+        replacement for the trait() method on HasTraits objects because that
+        method can return traits that shouldn't exist. DO NOT use the trait()
+        function as a way to determine the existence of a trait.
         """
         if self._cached_traits_ is None:
             self._cached_traits_ = self.traits()
@@ -444,25 +442,16 @@ class Container(SafeHasTraits):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()
         dct = {}
-        list_fixups = {}
         for name, trait in state['_added_traits'].items():
             if trait.transient is not True:
                 dct[name] = trait
-                # List trait values lose their 'name' for some reason.
-                # Remember the values here so we don't need to getattr()
-                # during __setstate__().
-                if isinstance(trait, List):
-                    val = getattr(self, name)
-                    if isinstance(val, TraitListObject):
-                        list_fixups[name] = val
+
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
-        state['_list_fixups'] = list_fixups
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
-        list_fixups = state.pop('_list_fixups', {})
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
 
@@ -473,11 +462,6 @@ class Container(SafeHasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
-
-        # List trait values lose their 'name' for some reason.
-        # Restore from remembered values.
-        for name in list_fixups:
-            list_fixups[name].name = name
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
@@ -500,6 +484,12 @@ class Container(SafeHasTraits):
         for name, val in self.__dict__.items():
             if not name.startswith('__') and not self.get_trait(name):
                 setattr(self, name, val)  # force def of implicit trait
+
+        # Fix List traits so they can be deepcopied.
+        for name, trait in self._alltraits().items():
+            if isinstance(trait.trait_type, List):
+                val = getattr(self, name)
+                setattr(self, name, val)
 
         self._cached_traits_ = None
 
@@ -600,14 +590,7 @@ class Container(SafeHasTraits):
                         val_copy.install_callbacks()
                     val = val_copy
                 else:
-                    try:
-                        val = _copydict[ttype.copy](val)
-                    except AttributeError:
-                        if isinstance(val, TraitListObject):
-                            # Can't deepcopy a restored TraitListObject.
-                            val = _copydict[ttype.copy](list(val))
-                        else:
-                            raise
+                    val = _copydict[ttype.copy](val)
         else: # index is not None
             val = get_indexed_value(self, name, index)
 
@@ -1618,8 +1601,8 @@ def dump(cont, recurse=False, stream=None, **metadata):
     is not supplied, it defaults to *sys.stdout*.
     """
     pprint.pprint(dict([(n, str(v))
-                    for n, v in cont.items(recurse=recurse,
-                                           **metadata)]),
+                        for n, v in cont.items(recurse=recurse,
+                                               **metadata)]),
                   stream)
 
 
