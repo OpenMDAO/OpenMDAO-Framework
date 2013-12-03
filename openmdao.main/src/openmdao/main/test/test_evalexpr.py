@@ -535,10 +535,14 @@ class ExprEvalTestCase(unittest.TestCase):
         assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
         assert_rel_error(self, grad['comp1.c'], g3, 0.00001)
         
-        #exp = ExprEvaluator('gamma(comp2.a)', top.driver) #sympy fails; requires finite difference
-        #grad = exp.evaluate_gradient(scope=top)
-        #g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
-        #assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        exp = ExprEvaluator('gamma(comp2.a)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        from scipy.special import polygamma
+        g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
+        assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        
+        exp = ExprEvaluator('abs(comp2.a)', top.driver) 
+        grad = exp.evaluate_gradient(scope=top)
         
     def test_eval_gradient_array(self):
         top = set_as_top(Assembly())
