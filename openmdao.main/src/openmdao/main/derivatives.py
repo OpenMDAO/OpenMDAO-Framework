@@ -712,7 +712,8 @@ class FiniteDifference(object):
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
                     if var_name:
-                        comp._input_updated(var_name.split('[')[0])
+                        base = base_var(self.scope._depgraph, src)
+                        comp._input_updated(base.split('.')[-1])
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
     
@@ -740,7 +741,8 @@ class FiniteDifference(object):
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    comp._input_updated(var_name.split('[', 1)[0])
+                    base = base_var(self.scope._depgraph, src)
+                    comp._input_updated(base.split('.')[-1])
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
     
