@@ -50,17 +50,15 @@ def flattened_size(name, val, scope=None):
             size += flattened_size('.'.join((name, key)), value)
         return size
     
-    else:
+    elif '.' not in name:
         meta = scope.get_metadata(name)
         
         # Custom data objects with data_shape in the metadata
         if 'data_shape' in meta:
             return prod(meta['data_shape'])
             
-        #Nothing else is differentiable
-        else:
-            raise TypeError('Variable %s is of type %s which is not convertable'
-                            ' to a 1D float array.' % (name, type(val)))
+    raise TypeError('Variable %s is of type %s which is not convertable'
+                    ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
