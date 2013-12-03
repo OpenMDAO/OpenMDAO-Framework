@@ -1,6 +1,7 @@
 """
 Test for CSVCaseRecorder and CSVCaseIterator.
 """
+import cPickle
 import glob, os, time
 import StringIO
 import unittest
@@ -459,6 +460,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def test_iterate_twice(self):
 
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
         self.top.run()
         
         data = self.top.driver.recorders[0].get_iterator()
@@ -471,5 +473,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.assertEqual(keys1, keys2)
         
+    def test_save(self):
+        # Check that a recorder can be saved to an egg.
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.driver.recorders[0].num_backups = 0
+        self.top.driver.recorders[0].startup()
+        try:
+            egg_info = self.top.save_to_egg('top', '1')
+        finally:
+            for name in glob.glob('top*.egg'):
+                os.remove(name)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -3,6 +3,7 @@
 import itertools
 
 from openmdao.main.vartree import VariableTree
+from openmdao.util.typegroups import real_types
 
 try:
     from numpy import ndarray, ravel_multi_index, prod, arange, array
@@ -12,6 +13,23 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, arange, array
     
+def is_differentiable_var(name, scope):
+    val = getattr(scope, name)
+    if is_differentiable_val(val):
+        return True
+    meta = scope.get_metadata(name)
+    return 'data_shape' in meta
+
+def is_differentiable_val(val):
+    if isinstance(val, (bool, int)):
+        return False
+    if isinstance(val, real_types): # somehow bool is in real_types???
+        return True
+    elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
+        return True
+    elif isinstance(val, VariableTree):
+        return all([is_differentiable_val(getattr(val,k)) for k in val.list_vars()])
+    return False
 
 def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
@@ -21,7 +39,7 @@ def flattened_size(name, val, scope=None):
         return 1
     
     # Numpy arrays
-    elif isinstance(val, ndarray):
+    elif isinstance(val, ndarray): # FIXME: should check dtype
         return val.size
     
     # Variable Trees

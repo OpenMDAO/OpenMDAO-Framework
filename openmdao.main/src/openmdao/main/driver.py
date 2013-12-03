@@ -24,7 +24,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.datatypes.api import List, Slot, Str
-from openmdao.main.ndepgraph import find_all_connecting
+from openmdao.main.depgraph import find_all_connecting
 
 
 @add_delegate(HasEvents)
@@ -97,39 +97,13 @@ class Driver(Component):
 
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
-        #self._update_workflow()
-
         self.workflow.check_config()
-
-    #def _update_workflow(self):
-        #"""Updates workflow contents based on driver dependencies."""
-        ## if workflow contains only Drivers, try to
-        ## use parameters, objectives and/or constraint expressions to
-        ## determine the necessary workflow members
-        #try:
-            #iterset = set([c.name for c in self.iteration_set()])
-            #alldrivers = all([isinstance(c, Driver)
-                                #for c in self.workflow.get_components()])
-            #if len(self.workflow) == 0: # otherwise, all([]) returns True
-                #pass
-            #elif alldrivers is True:
-                #reqcomps = self._get_required_compnames()
-                #self.workflow.add([name for name in reqcomps
-                                        #if name not in iterset])
-                ## calling get_components() here just makes sure that all of the
-                ## components can be resolved
-                #self.workflow.get_components()
-        #except Exception as err:
-            #self.raise_exception(str(err), type(err))
 
     def iteration_set(self):
         """Return a set of all Components in our workflow and
         recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
-        # if len(self.workflow) == 0:
-        #     for compname in self._get_required_compnames():
-        #         self.workflow.add(compname)
         for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
@@ -189,8 +163,9 @@ class Driver(Component):
         return pcomps
 
     def get_references(self, name):
-        """Return parameter, constraint, and objective references to component
-        `name` in preparation for subsequent :meth:`restore_references` call.
+        """Return a dict of parameter, constraint, and objective 
+        references to component `name` in preparation for 
+        subsequent :meth:`restore_references` call.
 
         name: string
             Name of component being referenced.
@@ -206,8 +181,8 @@ class Driver(Component):
         return refs
 
     def remove_references(self, name):
-        """Remove parameter, constraint, and objective references to component
-        `name`.
+        """Remove parameter, constraint, objective  and workflow
+        references to component `name`.
 
         name: string
             Name of component being removed.
@@ -219,6 +194,7 @@ class Driver(Component):
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
+        self.workflow.remove(name)
 
     def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component
@@ -227,13 +203,8 @@ class Driver(Component):
         refs: object
             Value returned by :meth:`get_references`.
         """
-        if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
-                inst = getattr(self, dname)
-                if isinstance(inst, (HasParameters, HasConstraints,
-                                     HasEqConstraints, HasIneqConstraints,
-                                     HasObjective, HasObjectives)):
-                    inst.restore_references(refs[inst])
+        for inst, inst_refs in refs.items():
+            inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):

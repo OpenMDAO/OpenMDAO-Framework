@@ -33,6 +33,9 @@ class MDASolver(Driver):
     # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
     
+    gmres_tolerance = Float(1.0e-9, iotype='in', 
+                            desc='GMRES tolerance for evaluating next diection')
+    
     max_iteration = Int(30, iotype='in', desc='Maximum number of iterations')
     
     newton = Bool(False, iotype='in', desc='Set to True to use a ' + \
@@ -120,7 +123,7 @@ class MDASolver(Driver):
             
             # Call GMRES to solve the linear system
             dv, info = gmres(A, -self.workflow.res,
-                             tol=self.tolerance,
+                             tol=self.gmres_tolerance,
                              maxiter=100)
             
             # Increment the model input edges by dv

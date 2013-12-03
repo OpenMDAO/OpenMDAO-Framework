@@ -16,7 +16,7 @@ except ImportError as err:
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.main.ndepgraph import edge_dict_to_comp_list
+from openmdao.main.depgraph import edge_dict_to_comp_list
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.vartree import VariableTree

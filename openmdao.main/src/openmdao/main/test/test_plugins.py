@@ -303,7 +303,8 @@ class PluginsTestCase(unittest.TestCase):
                     'openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate',
                     'openmdao.main.assembly.Assembly']
         for plugin in expected:
-            self.assertTrue(plugin in captured_stdout)
+            if plugin not in captured_stdout:
+                self.fail('%s not in captured_stdout' % plugin)
 
         sys.stdout = cStringIO.StringIO()
         sys.stderr = cStringIO.StringIO()

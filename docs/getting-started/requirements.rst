@@ -80,13 +80,10 @@ use it, you must have compilers (C and Fortran) on your system.
 
 .. note:: 
 
-  Numpy and SciPy have one-click installers. You should use those unless  you have a very good
-  reason not to. You need to pick the proper installer for your version of Python (v2.6 or
-  v2.7). For instance, if you had Python 2.6, you want a Numpy version named something like
-  ``numpy-1.7.0-win32-superpack-python2.6.exe``. If you have Python 2.7, then you want  a
-  SciPy version called ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version numbers
-  might be different than the ones here, but make sure you get something with ``superpack`` and
-  ``.exe`` in the name. 
+  Numpy and SciPy have one-click installers. You should use those unless you have a very good
+  reason not to. For Python 2.7.x you want a SciPy version such as
+  ``scipy-0.11.0-win32-superpack-python2.7.exe``. The  version number might be different than the
+  one here, but make sure you get something with ``superpack`` and ``.exe`` in the name. 
 
   If you go to the Numpy link above, you might see: "Looking for the 
   latest version? Download numpy-1.7.0.zip." You **DON'T** want to get that one. 
@@ -102,10 +99,8 @@ public/private key pairs to be stored securely.
 
 **Mac OS X**:
 
-- Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
-  will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
-  appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
-  fix.
+- Python -- Install a new version (2.7.x) from ``python.org`` because the built-in version has a
+  distutils bug that will cause some of the OpenMDAO tests to fail.
 - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
 - `Matplotlib <http://matplotlib.org/downloads.html>`_

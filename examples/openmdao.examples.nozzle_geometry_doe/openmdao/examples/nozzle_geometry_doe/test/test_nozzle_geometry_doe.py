@@ -3,6 +3,8 @@
 #
 
 import unittest
+import os
+import shutil
 
 from openmdao.examples.nozzle_geometry_doe.test.nozzle_geometry_doe import NozzleGeometryDOE
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
@@ -18,6 +20,10 @@ class NozzleGeometryDOETestCase(unittest.TestCase):
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
+        
+        outfile = 'pyBspline_pkl'
+        if os.path.exists(outfile):
+            shutil.rmtree(outfile)        
         
     def test_run_nozzle_geometry_doe(self):
         

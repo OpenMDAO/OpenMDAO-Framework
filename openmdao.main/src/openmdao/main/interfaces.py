@@ -183,6 +183,8 @@ class IContainer(Interface):
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
 
+class IVariableTree(IContainer):
+    """Marker interface for VariableTrees."""
 
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
