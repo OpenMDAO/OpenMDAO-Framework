@@ -73,7 +73,38 @@ class CompWithVarTree2(Component):
     def provideJ(self): 
         return ('ins.z', 'x1'), ('outs.z', 'z'), self.J
 
+
+class ATree(VariableTree):
+
+    v = Array(zeros([2]))
+    
+class ArrayComp(Component):
+    '''Array component'''
+    
+    x = VarTree(ATree(), iotype="in")
+    y = VarTree(ATree(), iotype="out")
+
+    def execute(self):
+        """ Executes it """
         
+        self.y.v[0] = 2.0*self.x.v[0] + 7.0*self.x.v[1]
+        self.y.v[1] = 5.0*self.x.v[0] - 3.0*self.x.v[1]
+        #print "ran", self.x, self.y
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 5.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x.v', )
+        output_keys = ('y.v', )
+        return input_keys, output_keys, self.J        
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
 class SimpleDriver(Driver):
@@ -184,8 +215,6 @@ class TestDerivativeVarTree(unittest.TestCase):
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
 
-        # TODO - Support for vartree arrays
-        
         top.driver.workflow.config_changed()
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         top.driver.workflow.config_changed()
@@ -199,6 +228,87 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
+    def test_check_deriv_arrays_in_vartrees(self): 
 
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
+                                              outputs=['comp.y.v'],
+                                              mode='forward')
+        
+        J_true = top.comp.J
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
+                                              outputs=['comp.y.v'],
+                                              mode='adjoint')
+        
+        J_true = top.comp.J
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
+                                              outputs=['comp.y.v'],
+                                              mode='fd')
+        
+        J_true = top.comp.J
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
+                                              outputs=['comp.y.v[1]'],
+                                              mode='forward')
+        
+        J_true = top.comp.J[1][0]
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
+                                              outputs=['comp.y.v[1]'],
+                                              mode='adjoint')
+        
+        J_true = top.comp.J[1][0]
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
+                                              outputs=['comp.y.v[1]'],
+                                              mode='fd')
+        
+        J_true = top.comp.J[1][0]
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+    def test_vartree_array_int(self):
+        
+        # Ints in vartree arrays were kind of falling through a crack, and
+        # giving an error tht was nonsensical to the user, so this test is
+        # for the fix.
+        
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+
+        top.comp.x.v = [0, 0]
+        top.run()
+        
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
+                                                  outputs=['comp.y.v[0]'],
+                                                  mode='forward')
+        except TypeError as err:
+            msg1 = "Variable comp.x.v[0] is of type"
+            msg2 = "which is not convertable to a 1D float array."
+            self.assertTrue(msg1 in str(err))
+            self.assertTrue(msg2 in str(err))
+        else:
+            self.fail("Exception expected")        
+        
 if __name__ == "__main__": 
     unittest.main()
