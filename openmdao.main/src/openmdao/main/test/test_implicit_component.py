@@ -6,7 +6,8 @@ import unittest
 
 import numpy as np
 
-from openmdao.lib.drivers.api import BroydenSolver, MDASolver
+from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
+                                     FixedPointIterator
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.mp_support import has_interface
@@ -314,14 +315,13 @@ class Testcase_implicit(unittest.TestCase):
         model.add('comp2', Coupled2())
         model.add('driver', MDASolver())
         model.driver.workflow.add(['comp1', 'comp2'])
+        model.driver.newton = True
         
         model.connect('comp1.x', 'comp2.x')
         model.connect('comp1.y', 'comp2.y')
         model.connect('comp2.z', 'comp1.z')
         
         d_edges = model._depgraph.get_directional_interior_edges('comp1', 'comp2')
-        print d_edges
-        
         self.assertTrue( ('comp1.x', 'comp2.x') in d_edges)
         self.assertTrue( ('comp1.y', 'comp2.y') in d_edges)
         
@@ -376,6 +376,11 @@ class Testcase_implicit(unittest.TestCase):
         print J
         edges = model.driver.workflow._edges
         print edges
+        self.assertEqual(set(edges['@in0']), set(['comp.c']))
+        self.assertEqual(set(edges['comp.y_out']), set(['@out0']))
+        self.assertEqual(set(edges['comp.r0']), set(['comp.x']))
+        self.assertEqual(set(edges['comp.r1']), set(['comp.y']))
+        self.assertEqual(set(edges['comp.r2']), set(['comp.z']))
         
     def test_list_states(self):
         comp = MyComp_Deriv()
