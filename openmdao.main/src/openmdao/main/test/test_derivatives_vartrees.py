@@ -303,8 +303,10 @@ class TestDerivativeVarTree(unittest.TestCase):
                                                   outputs=['comp.y.v[0]'],
                                                   mode='forward')
         except TypeError as err:
-            msg = "Variable comp.x.v[0] is of type <type 'numpy.int32'> which is not convertable to a 1D float array."
-            self.assertEqual(str(err), msg)
+            msg1 = "Variable comp.x.v[0] is of type"
+            msg2 = "which is not convertable to a 1D float array."
+            self.assertTrue(msg1 in str(err))
+            self.assertTrue(msg2 in str(err))
         else:
             self.fail("Exception expected")        
         
