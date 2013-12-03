@@ -771,9 +771,13 @@ class DepGraphStateTestCase1(unittest.TestCase):
         self.assertEqual(set(), set(nodes_matching_all(dep, valid=False)))
         
         dep.invalidate_deps(scope, ['C1.s1'])
-        #self.assertEqual(set(['C2.a','C2.c','C2.d','c','C2.s1','C2.s2','C2.r1','C2.r2']), 
-                         #set(nodes_matching_all(dep, valid=False)))
+        self.assertEqual(set(['C2.a','C2.c','C2.d','c','C2.s1','C2.s2','C2.r1','C2.r2',
+                              'C1.c','C1.d','C1.s1','C1.s2','C1.r1','C1.r2','C1','C2']), 
+                         set(nodes_matching_all(dep, valid=False)))
             
+    def test_inner_edges(self):
+        edges = _get_inner_edges(self.dep, ['a'], ['c'])
+        self.assertEqual(set(edges), set([('C2.s2', 'c'), ('C1.s1', 'C2.a'), ('a', 'C1.s1')]))
 
 if __name__ == "__main__":
     unittest.main()
