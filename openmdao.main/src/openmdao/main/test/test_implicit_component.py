@@ -378,9 +378,9 @@ class Testcase_implicit(unittest.TestCase):
         print edges
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp.y_out']), set(['@out0']))
-        self.assertEqual(set(edges['comp.r0']), set(['comp.x']))
-        self.assertEqual(set(edges['comp.r1']), set(['comp.y']))
-        self.assertEqual(set(edges['comp.r2']), set(['comp.z']))
+        self.assertEqual(set(edges['comp.r0']), set(['comp.x', 'comp.y', 'comp.z']))
+        self.assertEqual(set(edges['comp.r1']), set(['comp.x', 'comp.y', 'comp.z']))
+        self.assertEqual(set(edges['comp.r2']), set(['comp.x', 'comp.y', 'comp.z']))
         
     def test_list_states(self):
         comp = MyComp_Deriv()

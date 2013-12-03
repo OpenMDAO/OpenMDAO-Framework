@@ -1,7 +1,8 @@
 from collections import deque
+from itertools import chain
+from ordereddict import OrderedDict
 import pprint
 
-from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
@@ -277,58 +278,55 @@ class DependencyGraph(nx.DiGraph):
         so we need to update the graph.
         """
         cname = child.name
-        # these include states
         old_ins  = set(self.list_inputs(cname))
-        # these include states and residuals
         old_outs = set(self.list_outputs(cname))
+        old_states = set([n for n in old_outs if self.node[n]['iotype'] == 'state'])
+        old_resids = set([n for n in old_outs if self.node[n]['iotype'] == 'residual'])
+
+        # remove states from old_ins
+        old_ins -= old_states
+
+        # removes states and residuals from old_outs
+        old_outs -= old_states
+        old_outs -= old_resids
 
         new_ins  = set(['.'.join([cname,n]) for n in child.list_inputs()])
         new_outs = set(['.'.join([cname,n]) for n in child.list_outputs()])
-        if hasattr(child, 'list_states'):
-            states = child.list_states()
-            new_outs.update(states)
-            new_ins.update(states)
+
+        if has_interface(child, IImplicitComponent):
+            new_states = set(child.list_states())
+            new_resids = set(child.list_residuals())
         else:
-            states = ()
-        if hasattr(child, 'list_residuals'):
-            resids = child.list_residuals()
-            new_outs.update(resids)
-        else:
-            resids = ()
+            new_states = set()
+            new_resids = set()
 
         added_ins = new_ins - old_ins
         added_outs = new_outs - old_outs
+        added_states = new_states - old_states
+        added_resids = new_resids - old_resids
 
         rem_ins = old_ins - new_ins
         rem_outs = old_outs - new_outs
+        rem_states = old_states - new_states
+        rem_resids = old_resids - new_resids
 
-        # for new inputs/outputs, just add them to graph
-        for invar in added_ins:
-            if invar in states:
-                iotype = 'state'
-            else:
-                iotype = 'in'
-            self.add_node(invar, var=True, valid=True, iotype=iotype)
-
-        for out in added_outs: 
-            if out in resids:
-                iotype = 'residual'
-            else:
-                iotype = 'out'
-            self.add_node(out, var=True, valid=False, iotype=iotype)
+        # add new inputs/outputs/states/residuals to the graph
+        self.add_nodes_from(added_ins,    var=True, valid=True,  iotype='in')
+        self.add_nodes_from(added_outs,   var=True, valid=False, iotype='out')
+        self.add_nodes_from(added_states, var=True, valid=False, iotype='state')
+        self.add_nodes_from(added_resids, var=True, valid=False, iotype='residual')
 
         # add edges from the variables to their parent component
-        self.add_edges_from([(v,cname) for v in added_ins])
-        self.add_edges_from([(cname,v) for v in added_outs])
+        self.add_edges_from([(v,cname) for v in chain(added_ins, added_states)])
+        self.add_edges_from([(cname,v) for v in chain(added_outs, added_states, 
+                                                      added_resids)])
 
-        if added_outs:
+        if added_outs or added_states or added_resids:
             self.node[cname]['valid'] = False
 
-        # for removed inputs/outputs, may need to remove connections
-        # and subvars
-        for n in rem_ins:
-            self.remove(n)
-        for n in rem_outs:
+        # for removed inputs/outputs/states/residuals, may need to 
+        # remove connections and subvars
+        for n in chain(rem_ins, rem_outs, rem_states, rem_resids):
             self.remove(n)
 
     def add_component(self, cname, obj, **kwargs):
@@ -366,9 +364,9 @@ class DependencyGraph(nx.DiGraph):
             self.add_nodes_from(states, var=True, iotype='state', valid=True)
             self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
 
-            self.add_edges_from([(cname, v) for v in states])
+            self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])
-            self.add_edges_from([(cname, v) for v in resids])
+
 
         self.config_changed()
 
@@ -1153,6 +1151,26 @@ def mod_for_derivs(graph, inputs, outputs, scope):
     indct = {}
     inames = []
     onames = []
+    states = []
+    resids = []
+
+    # add connections between residuals and states
+    for node, data in graph.nodes_iter(data=True):
+        io = data.get('iotype')
+        if io == 'state':
+            states.append(node)
+        elif io == 'residual':
+            resids.append(node)
+
+    state_comps = partition_names_by_comp(states)
+    resid_comps = partition_names_by_comp(resids)
+
+    for cname, res in resid_comps.items():
+        for r in res:
+            for st in state_comps[cname]:
+                graph.add_edge('.'.join([cname, r]), '.'.join([cname, st]), conn=True)
+
+    # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
         inames.append(iname)
@@ -1164,6 +1182,7 @@ def mod_for_derivs(graph, inputs, outputs, scope):
                           check=False, invalidate=False)
             indct[varname] = iname
 
+    # add nodes for desired outputs
     for i, varnames in enumerate(outputs):
         oname = '@out%d' % i
         onames.append(oname)
