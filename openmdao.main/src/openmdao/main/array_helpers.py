@@ -50,7 +50,7 @@ def flattened_size(name, val, scope=None):
             size += flattened_size('.'.join((name, key)), value)
         return size
     
-    elif '.' not in name:
+    elif '.' not in name.partition('.')[2]:
         meta = scope.get_metadata(name)
         
         # Custom data objects with data_shape in the metadata
