@@ -1404,6 +1404,7 @@ def edge_dict_to_comp_list(graph, edges):
             targets = [targets]
             
         numfakes = 0
+        is_implicit = False
         for target in targets:
             if target.startswith('@fake'):
                 numfakes += 1
@@ -1412,13 +1413,21 @@ def edge_dict_to_comp_list(graph, edges):
                 if var:
                     if comp not in comps:
                         comps[comp] = {'inputs': [],
-                                       'outputs': []}
+                                       'outputs': [],
+                                       'residual': None,
+                                       'states': []}
                     
                     basevar = base_var(graph, target)
                     if basevar not in basevars:
                         comps[comp]['inputs'].append(var)
+                        
+                        if comp == src.split('.')[0]:
+                            comps[comp]['states'].append(var)
+                            is_implicit = True
+                            
                         if target == basevar:
                             basevars.add(target)
+                            
         if len(targets) == numfakes:
             continue
         
@@ -1427,11 +1436,15 @@ def edge_dict_to_comp_list(graph, edges):
             if var:
                 if comp not in comps:
                     comps[comp] = {'inputs': [],
-                                   'outputs': []}
+                                   'outputs': [],
+                                   'residual': None,
+                                   'states': []}
                 
                 basevar = base_var(graph, src)
                 if basevar not in basevars:
                     comps[comp]['outputs'].append(var)
+                    if is_implicit:
+                        comps[comp]['residual'] = var
                     if src == basevar:
                         basevars.add(src)
 
