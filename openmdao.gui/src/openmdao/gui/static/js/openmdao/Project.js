@@ -709,9 +709,19 @@ openmdao.Project=function(listeners_ready) {
         }
     };
 
+    /** open file in a new browser window (possibly not in a useful format) */
+    this.viewFile = function(pathname) {
+        pathname = pathname.replace(/\\/g,'/');
+        if (pathname[0] != '/') {
+            pathname = '/' + pathname;
+        }
+        openmdao.Util.popupWindow('file'+pathname, pathname);
+    };
+
     /** view geometry with specified pathname, prompt if not specified */
     this.viewGeometry = function(pathname) {
         function popupGeom(pathname) {
+            pathname = pathname.replace(/\\/g,'/');
             var w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,
                                               'Geometry of '+pathname);
             _self.addWindow(w);
