@@ -1315,9 +1315,11 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
                 break
 
     if fail:
+        snames = [n.split('.',1)[1] for n in srcnames]
+        dnames = [n.split('.',1)[1] for n in destnames]
         msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
-        missing_srcs = set(destnames).difference(srcnames)
-        missing_dests = set(srcnames).difference(destnames)
+        missing_srcs = set(dnames).difference(snames)
+        missing_dests = set(snames).difference(dnames)
         if missing_srcs:
             msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
         if missing_dests:
