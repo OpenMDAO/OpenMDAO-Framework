@@ -218,6 +218,25 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
 
+    def test_connected_varTree_in_subassembly_replace(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp', AssemblyWithConnectedVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x1', low=-100, high=100)
+        top.driver.add_parameter('comp.x2', low=-100, high=100)
+        top.driver.add_objective('comp.z')
+        top.driver.add_constraint('comp.x2 + comp.x1 < 10')
+
+        top.run()
+
+        top.replace('comp', AssemblyWithCompVarTree())
+
+        top.run()
+
+        
+
 class TestDerivativeVarTree(unittest.TestCase): 
 
 
@@ -291,6 +310,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
+
 
     def test_varTree_connections_whole_tree(self): 
 
