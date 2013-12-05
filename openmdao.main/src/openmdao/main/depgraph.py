@@ -1271,14 +1271,14 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             visited.add(src)
             obj = scope.get(src)
             if has_interface(obj, IVariableTree):
-                srcnames = ['.'.join([src,n]) 
-                               for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)]
+                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                srcnames = ['.'.join([src, n]) for n in srcnames]
         if '@' not in dest and '[' not in dest and dest not in visited:
             visited.add(dest)
             obj = scope.get(dest)
             if has_interface(obj, IVariableTree):
-                destnames = ['.'.join([dest,n]) 
-                               for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)]
+                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                destnames = ['.'.join([dest, n]) for n in destnames]
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames, 
                                             dest, destnames)
