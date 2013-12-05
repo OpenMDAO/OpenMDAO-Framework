@@ -1272,13 +1272,13 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             obj = scope.get(src)
             if has_interface(obj, IVariableTree):
                 srcnames = ['.'.join([src,n]) 
-                               for n,v in obj.items(recurse=True)]
+                               for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)]
         if '@' not in dest and '[' not in dest and dest not in visited:
             visited.add(dest)
             obj = scope.get(dest)
             if has_interface(obj, IVariableTree):
                 destnames = ['.'.join([dest,n]) 
-                               for n,v in obj.items(recurse=True)]
+                               for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)]
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames, 
                                             dest, destnames)
@@ -1305,13 +1305,24 @@ def mod_for_derivs(graph, inputs, outputs, scope):
     return graph
 
 def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
+    fail = False
     if len(srcnames) != len(destnames):
-        raise ValueError("source attribute list does not match "
-                         "destination attribute list.")
-    for s, d in zip(srcnames, destnames):
-        if s.split('.')[-1] != d.split('.')[-1]:
-            raise ValueError("source attribute list does not "
-                             "match destination attribute list.")
+        fail = True
+    else:
+        for s, d in zip(srcnames, destnames):
+            if s.split('.')[-1] != d.split('.')[-1]:
+                fail = True
+                break
+
+    if fail:
+        msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
+        missing_srcs = set(destnames).difference(srcnames)
+        missing_dests = set(srcnames).difference(destnames)
+        if missing_srcs:
+            msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
+        if missing_dests:
+            msg += ", variables %s are missing from %s" % (list(missing_dests), dest)
+        raise ValueError(msg)
 
     graph.disconnect(src, dest)
     
