@@ -156,7 +156,7 @@ class TestDerivativeVarTree(unittest.TestCase):
     def test_varTree_in_subassembly(self): 
 
         top = set_as_top(Assembly())
-        top.add('comp', AssemblyWithConnectedVarTree())
+        top.add('comp', AssemblyWithBurriedVarTree())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add('comp')
         top.driver.add_parameter('comp.x1', low=-100, high=100)
