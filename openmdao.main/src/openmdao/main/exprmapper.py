@@ -2,7 +2,7 @@
 import networkx as nx
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent
-
+from openmdao.units import PhysicalQuantity
 
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
@@ -223,8 +223,20 @@ class ExprMapper(object):
         destmeta = destexpr.get_metadata('units')
         srcmeta = srcexpr.get_metadata('units')
 
-        srcunit = srcmeta[0][1] if srcmeta else None
-        destunit = destmeta[0][1] if destmeta else None
+        # compare using get_unit_name() to account for unit aliases
+        if srcmeta:
+            srcunit = srcmeta[0][1]
+            if srcunit:
+                PhysicalQuantity(1., srcunit).get_unit_name()
+        else:
+            srcunit = None
+
+        if destmeta:
+            destunit = destmeta[0][1]
+            if destunit:
+                destunit = PhysicalQuantity(1., destunit).get_unit_name()
+        else:
+            destunit = None
 
         if destunit and srcunit and destunit != srcunit:
             return 'units'
