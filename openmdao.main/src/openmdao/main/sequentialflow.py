@@ -629,6 +629,8 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(comp.name)
+                elif comp.force_fd is True:
+                    nondiff.add(comp.name)
                     
             # If a connection is non-differentiable, so are its src and 
             # target components.

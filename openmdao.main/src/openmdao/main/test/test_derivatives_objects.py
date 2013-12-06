@@ -292,9 +292,10 @@ class ND_Receive(Component):
         pass
     
 class TestcaseNonDiff(unittest.TestCase):
-    """ Test grouping comps with non-differentiable connections. """
+    """ Test how OpenMDAO handles differentiation. """
     
     def test_non_diff(self):
+        # Test grouping comps with non-differentiable connections.
         model = set_as_top(Assembly())
         model.add('comp1', ND_Send())
         model.add('comp2', ND_Receive())
