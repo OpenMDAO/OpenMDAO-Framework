@@ -155,9 +155,7 @@ def _test_view_geometry(browser):
     closeout(project_dict, workspace_page)
 
 
-# TODO: this test should probably be moved over into the pygem_diamond
-# distrib, or maybe we could replace the openCSM box with an STL box
-# since the STL viewer comes with pyV3D
+# TODO: this test should probably be moved over into the pygem_diamond distrib
 def _test_view_csm(browser):
     try:
         from pygem_diamond import gem
@@ -206,7 +204,7 @@ def _test_view_stl(browser):
     project_dict, workspace_page = startup(browser)
     workspace_window = browser.current_window_handle
 
-    # add a CSM geometry file
+    # add a STL geometry file
     file_name = 'box.stl'
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'files/box.stl')
@@ -231,7 +229,6 @@ def _test_view_stl(browser):
 
     # Clean up.
     closeout(project_dict, workspace_page)
-
 
 
 if __name__ == '__main__':
