@@ -18,25 +18,44 @@ from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 
-class Tree1(VariableTree):
+
+
+class TreeWithFloat(VariableTree):
 
     x1 = Float()
     x2 = Float()
 
-class Tree2(VariableTree):
+class TreeWithSubTree(VariableTree):
 
     y = Float(3.)
-    x = VarTree(Tree1())
+    x = VarTree(TreeWithFloat())
 
-class Tree3(VariableTree):
+class TreeWithFloat2(VariableTree):
 
     z = Float(3.)
 
+class TreeWithArray(VariableTree): 
+    x = Array([0,0])
+    y = Array([0,0,0])
 
-class CompWithVarTree(Component): 
 
-    ins = VarTree(Tree2(), iotype="in")
-    outs = VarTree(Tree3(), iotype="out")
+class DummyComp(Component): 
+
+    x = Float(iotype="in")
+    y = Float(iotype="out")
+
+    def execute(self): 
+        self.y = self.x
+
+    def provideJ(self): 
+
+        return ("x",),("y",),array([1])
+
+class CompWithVarTreeSubTree(Component): 
+
+    ins = VarTree(TreeWithSubTree(), iotype="in")
+    outs = VarTree(TreeWithFloat2(), iotype="out")
+    outs2 = VarTree(TreeWithSubTree(), iotype="out")
     z = Float(iotype='out')
 
     def execute(self): 
@@ -57,10 +76,10 @@ class CompWithVarTree(Component):
 
         return ins, outs, self.J
 
-class CompWithVarTree2(Component): 
+class CompWithVarTree(Component): 
     x1 = Float(iotype="in")
-    ins = VarTree(Tree3(), iotype="in")
-    outs = VarTree(Tree3(), iotype="out")
+    ins = VarTree(TreeWithFloat2(), iotype="in")
+    outs = VarTree(TreeWithFloat2(), iotype="out")
     z = Float(iotype="out")
 
     def execute(self): 
@@ -74,51 +93,193 @@ class CompWithVarTree2(Component):
         return ('ins.z', 'x1'), ('outs.z', 'z'), self.J
 
 
-class ATree(VariableTree):
-
-    v = Array(zeros([2]))
-    
-class ArrayComp(Component):
-    '''Array component'''
-    
-    x = VarTree(ATree(), iotype="in")
-    y = VarTree(ATree(), iotype="out")
-
-    def execute(self):
-        """ Executes it """
-        
-        self.y.v[0] = 2.0*self.x.v[0] + 7.0*self.x.v[1]
-        self.y.v[1] = 5.0*self.x.v[0] - 3.0*self.x.v[1]
-        #print "ran", self.x, self.y
-
-    def linearize(self):
-        """Analytical first derivatives"""
-        
-        dy1_dx1 = 2.0
-        dy1_dx2 = 7.0
-        dy2_dx1 = 5.0
-        dy2_dx2 = -3.0
-        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
-
-    def provideJ(self):
-        
-        input_keys = ('x.v', )
-        output_keys = ('y.v', )
-        return input_keys, output_keys, self.J        
-
 @add_delegate(HasParameters, HasObjective, HasConstraints)
 class SimpleDriver(Driver):
     """Driver with Parameters"""
 
-    implements(IHasParameters)    
+    implements(IHasParameters)  
 
+
+class AssemblyWithCompVarTree(Assembly): 
+
+    x1 = Float(iotype="in")
+    x2 = Float(iotype="in")
+    z = Float(iotype="out")
+
+    def configure(self): 
+
+        self.add('comp1', CompWithVarTree())
+        self.connect('x1','comp1.x1')
+        self.connect('x2','comp1.ins.z')
+        self.connect('comp1.z','z')
+
+        self.driver.workflow.add('comp1') 
+
+class AssemblyWithBurriedVarTree(Assembly): 
+
+    x1 = Float(iotype="in")
+    x2 = Float(iotype="in")
+    z = Float(iotype="out")
+
+    def configure(self): 
+        self.add('comp0', DummyComp())
+        self.connect('x1','comp0.x')
+
+        self.add('comp1', CompWithVarTree())
+        self.connect('x2', 'comp1.x1')
+        self.connect('comp0.y','comp1.ins.z')
+        self.connect('comp1.z','z')
+
+        self.driver.workflow.add(['comp0','comp1']) 
+
+
+class AssemblyWithConnectedVarTree(Assembly): 
+
+    x1 = Float(iotype="in")
+    x2 = Float(iotype="in")
+    z = Float(iotype="out")
+
+    def configure(self): 
+
+        self.add('comp1', CompWithVarTree())
+        self.connect('x1','comp1.x1')
+        self.connect('x2','comp1.ins.z')
+
+        self.add('comp2', CompWithVarTree())
+        self.connect('comp1.outs','comp2.ins')
+        self.connect('comp2.z', 'z')
+
+        self.driver.workflow.add(['comp1','comp2']) 
+
+
+
+class TestDerivativeVarTreeSubAssembly(unittest.TestCase): 
+
+    def test_varTree_in_subassembly(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp', AssemblyWithCompVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x1', low=-100, high=100)
+        top.driver.add_parameter('comp.x2', low=-100, high=100)
+        top.driver.add_objective('comp.z')
+        top.driver.add_constraint('comp.x2 + comp.x1 < 10')
+
+        top.run()
+
+        inputs = top.driver.list_param_group_targets()
+
+        obj = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_constraints().values()]
+
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        top.driver.workflow.config_changed()
+        J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        top.driver.workflow.config_changed()
+        J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+
+        #J_true = array([[24,8],[1,1]])
+
+        #assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
+
+    def test_connected_varTree_in_subassembly(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp', AssemblyWithConnectedVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x1', low=-100, high=100)
+        top.driver.add_parameter('comp.x2', low=-100, high=100)
+        top.driver.add_objective('comp.z')
+        top.driver.add_constraint('comp.x2 + comp.x1 < 10')
+
+        top.run()
+
+        inputs = top.driver.list_param_group_targets()
+
+        obj = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_objectives().values()]
+        con = ["%s.out0" % item.pcomp_name for item in \
+               top.driver.get_constraints().values()]
+
+        J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        top.driver.workflow.config_changed()
+        J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        top.driver.workflow.config_changed()
+        J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+
+        #J_true = array([[24,8],[1,1]])
+
+        #assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
+
+    def test_connected_varTree_in_subassembly_replace(self): 
+
+        top = set_as_top(Assembly())
+        top.add('comp', AssemblyWithConnectedVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.x1', low=-100, high=100)
+        top.driver.add_parameter('comp.x2', low=-100, high=100)
+        top.driver.add_objective('comp.z')
+        top.driver.add_constraint('comp.x2 + comp.x1 < 10')
+
+        top.run()
+
+        top.replace('comp', AssemblyWithCompVarTree())
+
+        top.run()
+
+        
 
 class TestDerivativeVarTree(unittest.TestCase): 
+
+    # def test_varTree_parameter2(self):
+        
+    #     top = set_as_top(Assembly())
+    #     top.add('comp', CompWithVarTreeSubTree())
+    #     top.add('comp2', CompWithVarTreeSubTree())
+    #     top.add('driver', SimpleDriver())
+    #     top.driver.workflow.add(['comp','comp2'])
+    #     top.connect('comp.outs2', 'comp2.ins')
+    #     top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
+    #     top.driver.add_parameter('comp.ins.x.x2', low=-1000, high=1000)
+    #     top.driver.add_parameter('comp.ins.y', low=-1000, high=1000)
+
+    #     top.driver.add_objective('comp.z')
+    #     top.driver.add_constraint('comp.outs.z < 0')
+    #     top.driver.add_constraint('(comp.ins.x.x1 +  comp.ins.x.x2) < 0')
+
+    #     top.comp.ins.x.x1 = 3
+    #     top.comp.ins.x.x2 = 3
+    #     top.comp.ins.y = 5
+    #     top.comp.run()
+
+    #     inputs = top.driver.list_param_group_targets()
+
+    #     obj = ["%s.out0" % item.pcomp_name for item in \
+    #            top.driver.get_objectives().values()]
+    #     con = ["%s.out0" % item.pcomp_name for item in \
+    #            top.driver.get_constraints().values()]
+
+    #     top.run()
+    #     J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+    #     top.driver.workflow.config_changed()
+    #     J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+    #     top.driver.workflow.config_changed()
+    #     J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+
 
     def test_varTree_parameter(self):
         
         top = set_as_top(Assembly())
-        top.add('comp', CompWithVarTree())
+        top.add('comp', CompWithVarTreeSubTree())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
@@ -159,7 +320,7 @@ class TestDerivativeVarTree(unittest.TestCase):
     def test_check_deriv_vartrees(self): 
 
         top = set_as_top(Assembly())
-        top.add('comp', CompWithVarTree())
+        top.add('comp', CompWithVarTreeSubTree())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
@@ -186,12 +347,13 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
+
     def test_varTree_connections_whole_tree(self): 
 
         top = set_as_top(Assembly())
         top.add('driver', SimpleDriver())
-        top.add('comp1', CompWithVarTree())
-        top.add('comp2', CompWithVarTree2())
+        top.add('comp1', CompWithVarTreeSubTree())
+        top.add('comp2', CompWithVarTree())
         top.driver.workflow.add(['comp1', 'comp2'])
 
         inputs = ['comp1.ins.x.x1', 'comp1.ins.x.x2', 'comp1.ins.y']
@@ -215,100 +377,19 @@ class TestDerivativeVarTree(unittest.TestCase):
         con = ["%s.out0" % item.pcomp_name for item in \
                top.driver.get_constraints().values()]
 
+        
         top.driver.workflow.config_changed()
         J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
         top.driver.workflow.config_changed()
         J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
         top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
-        print J_fd
-        print J_forward
-        print J_reverse
+
+
         assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
-    def test_check_deriv_arrays_in_vartrees(self): 
-
-        top = set_as_top(Assembly())
-        top.add('comp', ArrayComp())
-        top.add('driver', SimpleDriver())
-        top.driver.workflow.add(['comp'])
-
-        top.run()
-        
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
-                                              outputs=['comp.y.v'],
-                                              mode='forward')
-        
-        J_true = top.comp.J
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
-                                              outputs=['comp.y.v'],
-                                              mode='adjoint')
-        
-        J_true = top.comp.J
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v'],
-                                              outputs=['comp.y.v'],
-                                              mode='fd')
-        
-        J_true = top.comp.J
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
-                                              outputs=['comp.y.v[1]'],
-                                              mode='forward')
-        
-        J_true = top.comp.J[1][0]
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
-                                              outputs=['comp.y.v[1]'],
-                                              mode='adjoint')
-        
-        J_true = top.comp.J[1][0]
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
-                                              outputs=['comp.y.v[1]'],
-                                              mode='fd')
-        
-        J_true = top.comp.J[1][0]
-        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
-
-    def test_vartree_array_int(self):
-        
-        # Ints in vartree arrays were kind of falling through a crack, and
-        # giving an error tht was nonsensical to the user, so this test is
-        # for the fix.
-        
-        top = set_as_top(Assembly())
-        top.add('comp', ArrayComp())
-        top.add('driver', SimpleDriver())
-        top.driver.workflow.add(['comp'])
-
-        top.comp.x.v = [0, 0]
-        top.run()
-        
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['comp.x.v[0]'],
-                                                  outputs=['comp.y.v[0]'],
-                                                  mode='forward')
-        except TypeError as err:
-            msg1 = "Variable comp.x.v[0] is of type"
-            msg2 = "which is not convertable to a 1D float array."
-            self.assertTrue(msg1 in str(err))
-            self.assertTrue(msg2 in str(err))
-        else:
-            self.fail("Exception expected")        
         
 if __name__ == "__main__": 
     unittest.main()
