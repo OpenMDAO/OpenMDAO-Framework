@@ -31,8 +31,6 @@ from traits.trait_base import not_none
 
 from multiprocessing import connection
 
-#import openmdao.main.component
-
 from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
@@ -50,7 +48,6 @@ from openmdao.main.variable import Variable, is_legal_name
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-
 
 
 _copydict = {
@@ -451,9 +448,19 @@ class Container(SafeHasTraits):
         return state
 
     def __setstate__(self, state):
-        """Restore this component's state."""
+        """Restore this container's state. Components that need to do some
+        restore operations (such as connecting to a remote server or loading
+        a model file) before any get()/set() is attempted will generate
+        exceptions. However, the complete set of local traits must be available
+        since restore operations may depend on knowing what to restore.
+
+        Here we swallow errors from 'special' components and remember to retry
+        the operation in _repair_traits(), called by post_load(). Persistent
+        problems will be reported there.
+        """
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
+        self._repair_trait_info = {}
 
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
@@ -461,10 +468,11 @@ class Container(SafeHasTraits):
         traits = self._alltraits()
         for name, trait in self._added_traits.items():
             if name not in traits:
-                self.add_trait(name, trait)
+                self.add_trait(name, trait, refresh=False)
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
+        fixups = []
         for name, trait in traits.items():
             try:
                 get = trait.trait_type.get
@@ -472,26 +480,67 @@ class Container(SafeHasTraits):
                 continue
             if get is not None:
                 if name not in self._added_traits:
-                    val = getattr(self, name)
-                    self.remove_trait(name)
-                    self.add_trait(name, trait)
-                    setattr(self, name, val)
+                    try:
+                        val = getattr(self, name)
+                        self.remove_trait(name)
+                        self.add_trait(name, trait)
+                        setattr(self, name, val)
+                    except Exception as exc:
+                        self._logger.warning('Initial fix of %s (%s) failed: %s',
+                                             name, val, exc)
+                        fixups.append((name, trait))
+        self._repair_trait_info['property'] = fixups
 
         # after unpickling, implicitly defined traits disappear, so we have to
         # recreate them by assigning them to themselves.
         #TODO: I'm probably missing something. There has to be a better way to
         #      do this...
+        fixups = []
         for name, val in self.__dict__.items():
             if not name.startswith('__') and not self.get_trait(name):
-                setattr(self, name, val)  # force def of implicit trait
+                try:
+                    setattr(self, name, val)  # force def of implicit trait
+                except Exception as exc:
+                    self._logger.warning('Initial fix of %s (%s) failed: %s',
+                                         name, val, exc)
+                    fixups.append((name, val))
+        self._repair_trait_info['implicit'] = fixups
 
         # Fix List traits so they can be deepcopied.
+        # (they lose their 'trait' attribute and direct setting doesn't work)
+        fixups = []
         for name, trait in self._alltraits().items():
             if isinstance(trait.trait_type, List):
-                val = getattr(self, name)
-                setattr(self, name, val)
+                try:
+                    setattr(self, name, getattr(self, name))
+                except Exception as exc:
+                    self._logger.warning('Initial fix of %s (%s) failed: %s',
+                                         name, val, exc)
+                    fixups.append(name)
+        self._repair_trait_info['list'] = fixups
 
         self._cached_traits_ = None
+
+    def _repair_traits(self):
+        """To be called after loading a pickled state, but *after* any
+        post_load() processing (to handle cases where a component needs
+        to do internal setup before being used to get/set a trait).
+        This retries failed operations recorded in __setstate__().
+        """
+        self._logger.critical('_repair_traits %s', self._repair_trait_info)
+        for name, trait in self._repair_trait_info['property']:
+            val = getattr(self, name)
+            self.remove_trait(name)
+            self.add_trait(name, trait)
+            setattr(self, name, val)
+
+        for name, val in self._repair_trait_info['implicit']:
+            setattr(self, name, val)
+
+        for name in self._repair_trait_info['list']:
+            setattr(self, name, getattr(self, name))
+
+        self._repair_trait_info = None
 
     @classmethod
     def add_class_trait(cls, name, *trait):
@@ -506,7 +555,7 @@ class Container(SafeHasTraits):
                                 % (name, base.__name__))
         return super(Container, cls).add_class_trait(name, *trait)
 
-    def add_trait(self, name, trait):
+    def add_trait(self, name, trait, refresh=True):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
@@ -531,7 +580,8 @@ class Container(SafeHasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
 
-        getattr(self, name)
+        if refresh:
+            getattr(self, name)  # For VariableTree subtree/leaf update in GUI.
 
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
@@ -1403,7 +1453,14 @@ class Container(SafeHasTraits):
         return top
 
     def post_load(self):
-        """Perform any required operations after model has been loaded."""
+        """Perform any required operations after the model has been loaded.
+        At this point the local configuration of the Component is valid,
+        but 'remote' traits may need 'repairing' which can't be done until
+        the remote environment is ready. Components with remote environments
+        should override this and restore the remote environment first, then
+        call the superclass.
+        """
+        self._repair_traits()
         for name in self.list_containers():
             getattr(self, name).post_load()
 
