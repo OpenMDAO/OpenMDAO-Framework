@@ -362,7 +362,11 @@ class SequentialWorkflow(Workflow):
 
     def mimic(self, src):
         self.clear()
-        self._explicit_names = src._explicit_names[:]
+        par = self._parent.parent
+        if par is not None:
+            self._explicit_names = [n for n in src._explicit_names if hasattr(par, n)]
+        else:
+            self._explicit_names = src._explicit_names[:]
 
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the

@@ -146,7 +146,7 @@ class GeomComponent(Component):
         if self._output_var_names:
             _output_var_names = [n for n in self._output_var_names if n!='geom_out'] 
             outs = self.parametric_geometry.get_parameters(_output_var_names)
-            for name, out in zip(self._output_var_names, outs):
+            for name, out in zip(_output_var_names, outs):
                 setattr(self, name, out)
         self.geom_out = self.parametric_geometry.get_static_geometry()
 
