@@ -25,7 +25,9 @@ openmdao.FileTreeFrame = function(id, project) {
         _filter_beg = '_.',
         _filter_ext = [ 'pyc', 'pyd' ],
         _filter_active = true,
-        _updates = [];  // queue for updates
+        _contextMenu = jQuery("<ul id="+id+"-context-menu class='context-menu'>")
+            .appendTo(_self.elm);
+         _updates = [];  // queue for updates
 
     // Enable dropping of files onto file tree frame to add them to project
     _self.elm.bind({
@@ -65,6 +67,21 @@ openmdao.FileTreeFrame = function(id, project) {
         }
     });
 
+    // add background pane context menu items
+    _contextMenu.append(jQuery('<li title="Create new file">New File</li>').click(function(e) {
+        openmdao.FileTreeFrame.prototype.newFile();
+    }));
+    _contextMenu.append(jQuery('<li title="Create new folder">New Folder</li>').click(function(e) {
+        openmdao.FileTreeFrame.prototype.newFolder();
+    }));
+    _contextMenu.append(jQuery('<li title="Add existing files to project">Add Files</li>').click(function(e) {
+        openmdao.FileTreeFrame.prototype.addFile();
+    }));
+    _contextMenu.append(jQuery('<li title="Toggle visibility of hidden files">Toggle Hidden Files</li>').click(function(e) {
+        toggleFilter();
+    }));
+    ContextMenu.set(_contextMenu.attr('id'), _self.elm.attr('id'));
+
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path, val) {
         path = path.replace(/\\/g,'/');
@@ -91,11 +108,6 @@ openmdao.FileTreeFrame = function(id, project) {
             }
         }
         return html;
-    }
-
-    /** display the file in a new window (probably not in a useful format) */
-    function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'), pathname);
     }
 
     /** save a copy of the file to the local file system (download) */
@@ -223,14 +235,14 @@ openmdao.FileTreeFrame = function(id, project) {
             if (openmdao.Util.hasGeometryExtension(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { openmdao.project.viewGeometry(path.replace(/\\/g,'/')); }
+                    "action" : function(node) { openmdao.project.viewGeometry(path); }
                 };
             }
 
             // view file in another window
             menu.viewFile = {
                "label"  : 'Open in Browser',
-               "action" : function(node) { viewFile(path); }
+               "action" : function(node) { openmdao.project.viewFile(path); }
             };
 
             // save a copy (i.e. download)

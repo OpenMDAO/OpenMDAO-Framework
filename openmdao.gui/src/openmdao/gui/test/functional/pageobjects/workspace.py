@@ -82,15 +82,25 @@ class WorkspacePage(BasePageObject):
 
     # File menu
     file_menu = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/a'))
+       '/html/body/div/div/div/nav2/ul/li/a'))
     newfile_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
     newfolder_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
     delete_files_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
+
+    # File tree pane context menu
+    ftree_newfile_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[1]]"))
+    ftree_newfolder_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[2]"))
+    ftree_add_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[3]"))
+    ftree_toggle_files_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[4]"))
 
     # File context menu.
     file_create   = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -441,16 +451,27 @@ class WorkspacePage(BasePageObject):
         prompt = ValuePrompt(self.browser, self.port)
         prompt.set_value(new)
 
-    def toggle_files(self, filename):
-        """ Toggle files display, using context menu of `filename`. """
+    def toggle_files(self, filename=None):
+        """ Toggle display of hidden files.
+            Use context menu of `filename` if provided,
+            otherwise use the context menu of the file tree pane.
+        """
         self('files_tab').click()
         time.sleep(0.5)
-        element = self.find_file(filename)
-        chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
-        time.sleep(0.5)
-        self('file_toggle').click()
-        time.sleep(0.5)
+        if filename:
+            element = self.find_file(filename)
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            time.sleep(0.5)
+            self('file_toggle').click()
+            time.sleep(0.5)
+        else:
+            element = self.browser.find_element(By.ID, 'ftree_pane')
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            time.sleep(0.5)
+            self('ftree_toggle_files_button').click()
+            time.sleep(0.5)
 
     def commit_project(self, comment='no comment'):
         """ Commit current project. """
