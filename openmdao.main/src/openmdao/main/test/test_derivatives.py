@@ -211,7 +211,7 @@ class SimpleComp(Component):
     
         
 class CompFoot(Component):
-    """ Evaluates the equation y=x^2"""
+    """ Evaluates the equation y=2x"""
     
     x = Float(1.0, iotype='in', units='ft')
     y = Float(1.0, iotype='out', units='ft')
