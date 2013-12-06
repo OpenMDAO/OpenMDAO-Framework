@@ -227,7 +227,7 @@ class ExprMapper(object):
         if srcmeta:
             srcunit = srcmeta[0][1]
             if srcunit:
-                PhysicalQuantity(1., srcunit).get_unit_name()
+                srcunit = PhysicalQuantity(1., srcunit).get_unit_name()
         else:
             srcunit = None
 
