@@ -121,12 +121,7 @@ openmdao.FileTreeFrame = function(id, project) {
         _self.elm.find('a.jstree-clicked').each(function() {
             filepaths.push(this.getAttribute("path"));
         });
-        project.removeFiles(filepaths)
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                alert('Error removing files: ' + textStatus);
-                debug.error('Error removing files', path, name,
-                            jqXHR, textStatus, errorThrown);
-            });
+        project.removeFiles(filepaths);
     }
 
     /** toggle the hidden files filter */
@@ -277,25 +272,13 @@ openmdao.FileTreeFrame = function(id, project) {
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
-                "action" : function(node) { project.removeFile(path)
-                                                .fail(function(jqXHR, textStatus, errorThrown) {
-                                                    alert('Error removing file: ' + textStatus);
-                                                    debug.error('Error removing file', path, name,
-                                                                jqXHR, textStatus, errorThrown);
-                                                });
-                                           }
+                "action" : function(node) { project.removeFile(path) }
             };
         }
         else if (isEmptyFolder) {
             menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
-                "action" : function(node) { project.removeFile(path)
-                                                .fail(function(jqXHR, textStatus, errorThrown) {
-                                                    alert('Error removing folder: ' + textStatus);
-                                                    debug.error('Error renaming folder', path, name,
-                                                                jqXHR, textStatus, errorThrown);
-                                                });
-                                           }
+                "action" : function(node) { project.removeFile(path) }
             };
         }
 
@@ -542,10 +525,5 @@ openmdao.FileTreeFrame.prototype.deleteFiles = function() {
     jQuery('#ftree_pane a.jstree-clicked').each(function() {
         filepaths.push(this.getAttribute("path"));
     });
-    openmdao.project.removeFiles(filepaths)
-        .fail(function(jqXHR, textStatus, errorThrown) {
-            alert('Error removing files: ' + textStatus);
-            debug.error('Error removing files', path, name,
-                        jqXHR, textStatus, errorThrown);
-        });
+    openmdao.project.removeFiles(filepaths);
 };

@@ -413,6 +413,8 @@ class WorkspacePage(BasePageObject):
         time.sleep(0.5)
         self('file_delete').click()
         time.sleep(0.5)
+        page = ConfirmationPage(self)
+        page.click_ok()
 
     def delete_files(self, file_paths):
         """ Delete all the files in the list `file_paths` """
@@ -431,6 +433,8 @@ class WorkspacePage(BasePageObject):
         self('files_tab').click()
         self('file_menu').click()
         self('delete_files_button').click()
+        page = ConfirmationPage(self)
+        page.click_ok()
 
     def expand_folder(self, filename):
         """ Expands `filename`. """

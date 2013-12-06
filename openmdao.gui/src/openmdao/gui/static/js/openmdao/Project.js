@@ -224,7 +224,6 @@ openmdao.Project=function(listeners_ready) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-
     /** add a listener (i.e. a function to be called)
         for messages with the given topic.
         Topics beginning with '@' are for messaging within the GUI.
@@ -310,20 +309,21 @@ openmdao.Project=function(listeners_ready) {
 
     /** revert back to the most recent commit of the project */
     this.revert = function(errorHandler) {
-        openmdao.Util.confirm("Remove all uncommitted changes?", function() {
-            jQuery.ajax({
+        var confirmation = openmdao.Util.confirm("Remove all uncommitted changes?");
+        confirmation.done(function() {
+            jqXHR = jQuery.ajax({
                 type: 'POST',
                 url:  'project',
-                data: {'action': 'revert'},
-                success: function(data, textStatus, jqXHR) {
-                    _self.reload();
-                },
-                error: errorHandler,
-                complete: function(jqXHR, textStatus) {
-                              if (typeof openmdao_test_mode !== 'undefined') {
-                                  openmdao.Util.notify('Revert complete: ' +textStatus);
-                              }
-                          }
+                data: {'action': 'revert'}
+            })
+            .done(function(data, textStatus, jqXHR) {
+                _self.reload();
+            })
+            .fail(errorHandler)
+            .always(function(jqXHR, textStatus) {
+                  if (typeof openmdao_test_mode !== 'undefined') {
+                      openmdao.Util.notify('Revert complete: ' +textStatus);
+                  }
             });
             setModified(false);
         });
@@ -603,25 +603,49 @@ openmdao.Project=function(listeners_ready) {
 
     /** delete file with specified path from the project working directory */
     this.removeFile = function(filepath) {
-        var jqXHR = jQuery.ajax({
-                        type: 'DELETE',
-                        url:  'file'+filepath.replace(/\\/g,'/'),
-                        data: { 'file': filepath }
-                    });
-        setModified(true);
-        return jqXHR.promise();
+        var confirmation = 'The following file will be deleted:<br><br>';
+        confirmation = confirmation + '    ' + filepath + '<br>'
+        confirmation = confirmation + '<br>Proceed';
+
+        openmdao.Util.confirm(confirmation, "Confirm Delete Files")
+            .done(function() {
+                jQuery.ajax({
+                    type: 'DELETE',
+                    url:  'file'+filepath.replace(/\\/g,'/'),
+                    data: { 'file': filepath }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    alert('Error removing file: ' + textStatus);
+                    debug.error('Error removing file', path, name,
+                                jqXHR, textStatus, errorThrown);
+                });
+                setModified(true);
+            })
     };
 
     /** delete files with specified path from the project working directory */
     this.removeFiles = function(filepaths) {
-        var jqXHR = jQuery.ajax({
-                        type: 'DELETE',
-                        url:  'files',
-                        data: JSON.stringify({'filepaths': filepaths}),
-                        contentType: 'application/json; charset=utf-8'
-                    });
-        setModified(true);
-        return jqXHR.promise();
+        var confirmation = 'The following files will be deleted:<br><br>';
+        for (var i=0 ; i<filepaths.length; i++) {
+            confirmation = confirmation + '    ' + filepaths[i] + '<br>'
+        }
+        confirmation = confirmation + '<br>Proceed';
+
+        openmdao.Util.confirm(confirmation, "Confirm Delete Files")
+            .done(function() {
+                jQuery.ajax({
+                    type: 'DELETE',
+                    url:  'files',
+                    data: JSON.stringify({'filepaths': filepaths}),
+                    contentType: 'application/json; charset=utf-8'
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    alert('Error removing files: ' + textStatus);
+                    debug.error('Error removing files', path, name,
+                                jqXHR, textStatus, errorThrown);
+                });                
+                setModified(true);
+            })
     };
 
     /** execute a component */
