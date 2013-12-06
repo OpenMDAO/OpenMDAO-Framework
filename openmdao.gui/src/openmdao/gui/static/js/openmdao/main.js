@@ -18,6 +18,10 @@ jQuery(function() {
     openmdao.ValueEditor.registerEditor("dict", DictEditor);
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
 
+    // binary messages have the first NAME_SIZE bytes allocated for a topic name
+    // (e.g. for the geometry viewer)
+    openmdao.NAME_SIZE = 256;
+
     // set the layout (note: global scope, referenced in workspace html)
     layout = jQuery('body').layout({
         north__size: 40,
