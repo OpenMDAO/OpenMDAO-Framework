@@ -305,6 +305,8 @@ def _test_Avartrees(browser):
             'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -322,6 +324,8 @@ def _test_Avartrees(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -361,6 +365,8 @@ def _test_Avartrees(browser):
             'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -379,6 +385,7 @@ def _test_Avartrees(browser):
         [' cont_in',      ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -394,6 +401,7 @@ def _test_Avartrees(browser):
         [' vt2', ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -419,6 +427,7 @@ def _test_Avartrees(browser):
         [' cont_in',      ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):

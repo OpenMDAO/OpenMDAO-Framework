@@ -384,6 +384,7 @@ def _test_properties(browser):
     eq(inputs.value, [['printvars',     '[]'],
                       ['directory',     ''],
                       ['force_execute', 'True'],
+                      ['force_fd', 'False'],
                       ])  # FIXME: printvars is really an empty list...
     # Clean up.
     closeout(project_dict, workspace_page)
@@ -925,6 +926,8 @@ def _test_arguments(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -972,6 +975,8 @@ def _test_sorting(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
