@@ -119,10 +119,22 @@ def _test_remove_files(browser):
     workspace_page.add_file(paraboloidPath)
     workspace_page.add_file(optPath)
 
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+
     # Check to make sure the files were added.
     time.sleep(0.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
+    # delete using context menu the file paraboloid.py, but cancel the confirmation
+    workspace_page.delete_file('paraboloid.py', False)
+
+    # Check to make sure the file was NOT deleted
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
@@ -131,10 +143,11 @@ def _test_remove_files(browser):
     # delete using context menu the file paraboloid.py
     workspace_page.delete_file('paraboloid.py')
 
+    expected_file_names = ['optimization_unconstrained.py', ]
+
     # Check to make sure the file was deleted
     time.sleep(0.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['optimization_unconstrained.py', ]
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
@@ -148,14 +161,34 @@ def _test_remove_files(browser):
     workspace_page.add_file(file_path_one)
     workspace_page.add_file(file_path_two)
 
+    expected_file_names = ['optimization_unconstrained.py', 'basic_model.py', 'vehicle_singlesim.py']
+
+    # Test deleting the paraboloid and opt files at one time using the delete files pick
+    #   on the Files menu, but cancel the confirmation
+    workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'], False)
+
+    # toggle hidden files on and off to reset selected/highlighted files
+    workspace_page.toggle_files()
+    workspace_page.toggle_files()
+
+    # Check to make sure the files were NOT deleted
+    time.sleep(1.5)
+    file_names = workspace_page.get_files()
+    print 'file names:', file_names
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
     # Test deleting the paraboloid and opt files at one time using the delete files pick
     #   on the Files menu
     workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'])
 
+    expected_file_names = ['basic_model.py']
+
     # Check to make sure the files were deleted
     time.sleep(1.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"

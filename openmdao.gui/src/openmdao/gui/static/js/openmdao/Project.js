@@ -309,7 +309,7 @@ openmdao.Project=function(listeners_ready) {
 
     /** revert back to the most recent commit of the project */
     this.revert = function(errorHandler) {
-        var confirmation = openmdao.Util.confirm("Remove all uncommitted changes?");
+        var confirmation = openmdao.Util.confirm("Remove all uncommitted changes");
         confirmation.done(function() {
             jqXHR = jQuery.ajax({
                 type: 'POST',

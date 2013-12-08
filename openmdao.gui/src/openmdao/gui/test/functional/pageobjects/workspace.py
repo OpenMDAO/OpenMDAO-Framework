@@ -404,7 +404,7 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window(self.browser.window_handles[-1])
         return GeometryPage.verify(self.browser, self.port)
 
-    def delete_file(self, filename):
+    def delete_file(self, filename, confirm=True):
         """ Delete `filename`. """
         self('files_tab').click()
         element = self.find_file(filename)
@@ -414,9 +414,12 @@ class WorkspacePage(BasePageObject):
         self('file_delete').click()
         time.sleep(0.5)
         page = ConfirmationPage(self)
-        page.click_ok()
+        if confirm:
+            page.click_ok()
+        else:
+            page.click_cancel()
 
-    def delete_files(self, file_paths):
+    def delete_files(self, file_paths, confirm=True):
         """ Delete all the files in the list `file_paths` """
 
         # need select all the files given in file_paths
@@ -434,7 +437,10 @@ class WorkspacePage(BasePageObject):
         self('file_menu').click()
         self('delete_files_button').click()
         page = ConfirmationPage(self)
-        page.click_ok()
+        if confirm:
+            page.click_ok()
+        else:
+            page.click_cancel()
 
     def expand_folder(self, filename):
         """ Expands `filename`. """
