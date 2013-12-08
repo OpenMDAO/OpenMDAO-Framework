@@ -603,13 +603,7 @@ openmdao.Project=function(listeners_ready) {
 
     /** delete file with specified path from the project working directory */
     this.removeFile = function(filepath) {
-        var confirmation = 'The following file will be deleted:<br><br>';
-        confirmation = confirmation + '    ' + filepath + '<br>'
-        confirmation = confirmation + '<br>Proceed';
-
-        openmdao.Util.confirm(confirmation, "Confirm Delete Files")
-            .done(function() {
-                jQuery.ajax({
+        var jqXHR = jQuery.ajax({
                     type: 'DELETE',
                     url:  'file'+filepath.replace(/\\/g,'/'),
                     data: { 'file': filepath }
@@ -619,50 +613,45 @@ openmdao.Project=function(listeners_ready) {
                     debug.error('Error removing file', path, name,
                                 jqXHR, textStatus, errorThrown);
                 });
-                setModified(true);
-            })
+
+        setModified(true);
+        return jqXHR.promise();
     };
 
     /** delete files with specified path from the project working directory */
     this.removeFiles = function(filepaths) {
-        var confirmation = 'The following files will be deleted:<br><br>';
-        for (var i=0 ; i<filepaths.length; i++) {
-            confirmation = confirmation + '    ' + filepaths[i] + '<br>'
-        }
-        confirmation = confirmation + '<br>Proceed';
-
-        openmdao.Util.confirm(confirmation, "Confirm Delete Files")
-            .done(function() {
-                jQuery.ajax({
-                    type: 'DELETE',
-                    url:  'files',
-                    data: JSON.stringify({'filepaths': filepaths}),
-                    contentType: 'application/json; charset=utf-8'
-                })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    alert('Error removing files: ' + textStatus);
-                    debug.error('Error removing files', path, name,
-                                jqXHR, textStatus, errorThrown);
-                });                
-                setModified(true);
+        var jqXHR = jQuery.ajax({
+                type: 'DELETE',
+                url:  'files',
+                data: JSON.stringify({'filepaths': filepaths}),
+                contentType: 'application/json; charset=utf-8'
             })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                alert('Error removing files: ' + textStatus);
+                debug.error('Error removing files', path, name,
+                            jqXHR, textStatus, errorThrown);
+            });
+
+        setModified(true);
+        return jqXHR.promise();
     };
 
     /** execute a component */
     this.runComponent = function(pathname) {
         var jqXHR = jQuery.ajax({
                         type: 'POST',
-                        url:  'object/'+pathname,
-                        success: function(data, textStatus, jqXHR) {
-                                     if (typeof openmdao_test_mode !== 'undefined') {
-                                         openmdao.Util.notify('Run complete: '+textStatus);
-                                     }
-                                  },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                                   debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
-                                   debug.error(jqXHR,textStatus,errorThrown);
-                               }
-                    });
+                        url:  'object/'+pathname
+                    })
+            .done(function(data, textStatus, jqXHR) {
+                     if (typeof openmdao_test_mode !== 'undefined') {
+                         openmdao.Util.notify('Run complete: '+textStatus);
+                     }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
+                debug.error(jqXHR,textStatus,errorThrown);
+            });
+
         setModified(true);
         return jqXHR.promise();
     };
@@ -674,11 +663,13 @@ openmdao.Project=function(listeners_ready) {
         if (path[0] === '/') {
             path = path.substring(1,path.length);
         }
+
         // make the call
         var jqXHR = jQuery.ajax({
                         type: 'POST',
                         url:  'file/'+path
                     });
+
         setModified(true);
         return jqXHR.promise();
     };

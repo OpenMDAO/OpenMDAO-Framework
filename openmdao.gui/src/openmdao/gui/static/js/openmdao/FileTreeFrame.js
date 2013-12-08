@@ -115,13 +115,24 @@ openmdao.FileTreeFrame = function(id, project) {
         jQuery.fileDownload('file'+pathname+'?download=True');
     }
 
-    /** delete selected files **/
+    /** delete file after confirmation **/
+    function deleteFile(filepath) {
+        openmdao.FileTreeFrame.prototype.confirmDeleteFile(filepath)
+            .done(function() {
+                openmdao.project.removeFile(filepath);
+            });
+    }
+
+    /** delete selected files after confirmation **/
     function deleteSelectedFiles() {
         var filepaths = [];
         _self.elm.find('a.jstree-clicked').each(function() {
             filepaths.push(this.getAttribute("path"));
         });
-        project.removeFiles(filepaths);
+        openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
+            .done(function() {
+                openmdao.project.removeFiles(filepaths);
+            });
     }
 
     /** toggle the hidden files filter */
@@ -272,13 +283,13 @@ openmdao.FileTreeFrame = function(id, project) {
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
-                "action" : function(node) { project.removeFile(path) }
+                "action" : function(node) { deleteFile(path); }
             };
         }
         else if (isEmptyFolder) {
             menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
-                "action" : function(node) { project.removeFile(path) }
+                "action" : function(node) { deleteFile(path); }
             };
         }
 
@@ -518,6 +529,28 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
     }
 };
 
+/** confirm whether to delete file with specified path */
+openmdao.FileTreeFrame.prototype.confirmDeleteFile = function(filepath) {
+    var confirmation = 'The following file will be deleted:<br><br>';
+    confirmation = confirmation + '    ' + filepath + '<br>';
+    confirmation = confirmation + '<br>Proceed';
+
+    confirmation = openmdao.Util.confirm(confirmation, "Confirm Delete File");
+    return confirmation;
+};
+
+/** confirm whether to delete files with specified paths */
+openmdao.FileTreeFrame.prototype.confirmDeleteFiles = function(filepaths) {
+    var confirmation = 'The following files will be deleted:<br><br>';
+    for (var i=0 ; i<filepaths.length; i++) {
+        confirmation = confirmation + '    ' + filepaths[i] + '<br>';
+    }
+    confirmation = confirmation + '<br>Proceed';
+
+    confirmation = openmdao.Util.confirm(confirmation, "Confirm Delete Files");
+    return confirmation;
+};
+
 /** delete selected files **/
 openmdao.FileTreeFrame.prototype.deleteFiles = function() {
     var filepaths = [];
@@ -525,5 +558,8 @@ openmdao.FileTreeFrame.prototype.deleteFiles = function() {
     jQuery('#ftree_pane a.jstree-clicked').each(function() {
         filepaths.push(this.getAttribute("path"));
     });
-    openmdao.project.removeFiles(filepaths);
+    openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
+        .done(function(filepath) {
+            openmdao.project.removeFiles(filepaths);
+        });
 };
