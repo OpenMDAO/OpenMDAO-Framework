@@ -207,7 +207,7 @@ def _test_connections(browser):
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.count_variable_figures(), 20)
+    eq(conn_page.count_variable_figures(), 21)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
     time.sleep(0.5)
@@ -697,7 +697,7 @@ def _test_parameter_autocomplete(browser):
     #For p1 (simplecomp) there should only be
     #8 valid autocomplete targets.
 
-    eq(len(autocomplete_targets), 8)
+    eq(len(autocomplete_targets), 9)
 
     for target in autocomplete_targets:
         eq(target in expected_targets, True)
