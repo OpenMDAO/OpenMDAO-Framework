@@ -119,7 +119,7 @@ openmdao.FileTreeFrame = function(id, project) {
     function deleteFile(filepath) {
         openmdao.FileTreeFrame.prototype.confirmDeleteFile(filepath)
             .done(function() {
-                openmdao.project.removeFile(filepath);
+                project.removeFile(filepath);
             });
     }
 
@@ -131,7 +131,7 @@ openmdao.FileTreeFrame = function(id, project) {
         });
         openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
             .done(function() {
-                openmdao.project.removeFiles(filepaths);
+                project.removeFiles(filepaths);
             });
     }
 
