@@ -129,7 +129,7 @@ def _test_remove_files(browser):
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
 
-    # delete using context menu the file paraboloid.py, but cancel the confirmation
+    # test delete file using context menu, but cancel the confirmation
     workspace_page.delete_file('paraboloid.py', False)
 
     # Check to make sure the file was NOT deleted
@@ -140,7 +140,7 @@ def _test_remove_files(browser):
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
 
-    # delete using context menu the file paraboloid.py
+    # test delete file using context menu
     workspace_page.delete_file('paraboloid.py')
 
     expected_file_names = ['optimization_unconstrained.py', ]
@@ -163,7 +163,7 @@ def _test_remove_files(browser):
 
     expected_file_names = ['optimization_unconstrained.py', 'basic_model.py', 'vehicle_singlesim.py']
 
-    # Test deleting the paraboloid and opt files at one time using the delete files pick
+    # Test deleting multiple files using the delete files pick
     #   on the Files menu, but cancel the confirmation
     workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'], False)
 
@@ -174,13 +174,12 @@ def _test_remove_files(browser):
     # Check to make sure the files were NOT deleted
     time.sleep(1.5)
     file_names = workspace_page.get_files()
-    print 'file names:', file_names
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
 
-    # Test deleting the paraboloid and opt files at one time using the delete files pick
+    # Test deleting multiple files using the delete files pick
     #   on the Files menu
     workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'])
 
@@ -195,18 +194,68 @@ def _test_remove_files(browser):
             % (expected_file_names, file_names))
 
     # Test deleting a file in a folder
-    workspace_page.new_folder("test_folder")
+    workspace_page.new_folder('test_folder')
     time.sleep(1.0)
-    workspace_page.add_file_to_folder("test_folder", paraboloidPath)
-    time.sleep(1.0)
+    workspace_page.add_file_to_folder('test_folder', paraboloidPath)
+    time.sleep(2.0)
     workspace_page.expand_folder('test_folder')
     time.sleep(1.0)
     workspace_page.delete_files(['test_folder/paraboloid.py', ])
 
+    expected_file_names = ['basic_model.py']
+
     # Check to make sure the file was deleted
     time.sleep(1.5)
     file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
+def _test_remove_folder(browser):
+    # Adds multiple files to the project.
+    project_dict, workspace_page = startup(browser)
+
+    # Test deleting a folder, but cancel the confirmation
+    workspace_page.new_folder('test_folder')
+    time.sleep(1.0)
+
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                     'paraboloid.py')
+    workspace_page.add_file_to_folder('test_folder', paraboloidPath)
+    time.sleep(2.0)
+    workspace_page.expand_folder('test_folder')
+    time.sleep(1.0)
+
+    workspace_page.delete_files(['test_folder'], False)
+
+    expected_file_names = ['paraboloid.py']
+
+    # Check to make sure the folder was NOT deleted
+    time.sleep(1.5)
+    file_names = workspace_page.get_files()
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
+    # toggle hidden files on and off to reset selected/highlighted files
+    workspace_page.toggle_files()
+    workspace_page.toggle_files()
+
+    # Test deleting a folder
+    time.sleep(1.0)
+    workspace_page.delete_files(['test_folder'])
+
+    expected_file_names = []
+
+    # Check to make sure the folder was deleted
+    time.sleep(1.5)
+    file_names = workspace_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
