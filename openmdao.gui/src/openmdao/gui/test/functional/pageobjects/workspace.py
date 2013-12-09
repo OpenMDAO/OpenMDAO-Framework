@@ -190,7 +190,6 @@ class WorkspacePage(BasePageObject):
         return element
 
     def find_object_button(self, name, delay=0):
-        #path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
