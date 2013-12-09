@@ -59,8 +59,10 @@ class SimpleUnits(Component):
 
     a = Float(iotype='in', units='inch')
     b = Float(iotype='in')
+    kin = Float(iotype='in', units='K')
     c = Float(iotype='out', units='ft')
     d = Float(iotype='out')
+    kout = Float(iotype='out', units='degK')
 
     def __init__(self):
         super(SimpleUnits, self).__init__()
@@ -1021,6 +1023,14 @@ class AssemblyTestCase2(unittest.TestCase):
         # first, a no units connection
         top.connect('C1.d', 'C2.b')
         self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.d', 'C2.b')]))
+
+        top.disconnect('C1')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # now a connection between two edges that have different aliases for the same unit
+        # (should result in no pseudocomps being created)
+        top.connect('C1.kout', 'C2.kin')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.kout', 'C2.kin')]))
 
         top.disconnect('C1')
         self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())

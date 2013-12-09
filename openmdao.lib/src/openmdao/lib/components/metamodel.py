@@ -378,10 +378,10 @@ class MetaModel(Component):
         val = surrogate.get_uncertain_value(self.model.get(varname))
         if has_interface(val, IUncertainVariable):
             ttype = UncertainDistVar
-        elif isinstance(val, real_types):
-            ttype = Float
         elif isinstance(val, int_types):
             ttype = Int
+        elif isinstance(val, real_types):
+            ttype = Float
         else:
             self.raise_exception("value type of '%s' is not a supported"
                                  " surrogate return value" %
