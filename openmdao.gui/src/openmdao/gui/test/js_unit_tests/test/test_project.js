@@ -12,23 +12,23 @@ TestCase("ProjectTest", {
         this.fakeXhr.onCreate = function(xhr) {
             requests.push(xhr);
        };
-   },
+    },
 
     tearDown: function() {
         this.fakeXhr.restore();
-   },
+    },
 
     checkStandardRequestInfo: function(requests) {
         assertEquals("GET", requests[0].method);
         assertEquals(true, requests[0].async);
         assertEquals(1, requests.length);
-   },
+    },
 
     checkStandardCallbackBehavior: function(success, error) {
         sinon.assert.calledOnce(success);
         sinon.assert.notCalled(error);
         assertEquals(success.exceptions[0], undefined);
-   },
+    },
 
     "test addListener": function() {
         callback1 = sinon.spy();
@@ -43,7 +43,7 @@ TestCase("ProjectTest", {
         assertEquals(null, this.requests[0].requestBody);
 
         assertEquals(1, this.requests.length);
-   },
+    },
 
     "test getTypes": function() {
         var type_info = "";
@@ -67,7 +67,7 @@ TestCase("ProjectTest", {
         this.requests[0].respond(200,
             {"Content-Type": "application/json"},
             '{"working": {}}'
-       );
+        );
 
         // Check the callbacks
         this.checkStandardCallbackBehavior(success_handler, error_handler);
@@ -75,7 +75,7 @@ TestCase("ProjectTest", {
 
         // The bottom line. Did we get the expected output?
         assertEquals(type_info, {"working": {}});
-   },
+    },
 
     "test commitProject": function() {
         callback1 = sinon.spy();
@@ -97,7 +97,7 @@ TestCase("ProjectTest", {
 
         // committing project has no side effects, so no callbacks at this time
         sinon.assert.notCalled(callback1);
-   },
+    },
 
     "test getWorkflow": function() {
         var success_handler = sinon.spy();
@@ -115,7 +115,7 @@ TestCase("ProjectTest", {
         this.requests[0].respond(200,
             {"Content-Type": "application/json"},
             '{"id" : 1223, "name" : "workflowname"}'
-       );
+        );
 
         // Check the callbacks
         this.checkStandardCallbackBehavior(success_handler, error_handler);
@@ -143,7 +143,7 @@ TestCase("ProjectTest", {
         );
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test getComponents": function() {
         var success_handler = sinon.spy();
@@ -190,7 +190,7 @@ TestCase("ProjectTest", {
         );
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test getObject": function() {
         var success_handler = sinon.spy();
@@ -208,7 +208,7 @@ TestCase("ProjectTest", {
         this.requests[0].respond(200,
             {"Content-Type": "application/json"},
             '{"id" : 1223, "name" : "componentname"}'
-       );
+        );
         // Check the callbacks
         this.checkStandardCallbackBehavior(success_handler, error_handler);
         assert(success_handler.calledWith({"id": 1223, "name": "componentname"}));
@@ -220,7 +220,7 @@ TestCase("ProjectTest", {
         this.requests[1].respond(500,
             {"Content-Type": "application/json"},
             '{}'
-       );
+        );
         sinon.assert.calledOnce(success_handler);
         sinon.assert.calledOnce(error_handler);
 
@@ -233,10 +233,10 @@ TestCase("ProjectTest", {
         this.requests[2].respond(200,
             {"Content-Type": "application/json"},
             '{"id" : 1223, "name" : "componentsname"}'
-       );
+        );
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test getConnections": function() {
         var success_handler = sinon.spy();
@@ -255,7 +255,7 @@ TestCase("ProjectTest", {
         this.requests[0].respond(200,
             {"Content-Type": "application/json"},
             '{"id" : 1223, "name" : "connectionspathname"}'
-       );
+        );
 
         // Check the callbacks
         this.checkStandardCallbackBehavior(success_handler, error_handler);
@@ -268,10 +268,10 @@ TestCase("ProjectTest", {
         this.requests[1].respond(500,
             {"Content-Type": "application/json"},
             '{}'
-       );
+        );
         sinon.assert.calledOnce(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test putObject": function() {
         var callback = sinon.spy();
@@ -291,7 +291,7 @@ TestCase("ProjectTest", {
             .done(callback);
         this.requests[1].respond(200, 'response', '');  // the ajax call just queues up the request
         sinon.assert.calledTwice(callback);
-   },
+    },
 
     "test issueCommand": function() {
         var success_handler = sinon.spy();
@@ -307,7 +307,7 @@ TestCase("ProjectTest", {
         this.requests[0].respond(200,
             {"Content-Type": "application/json"},
             '{"status" : "OK"}'
-       );
+        );
         sinon.assert.calledOnce( success_handler);
         assertEquals({"status" : "OK"}, success_handler.args[0][0]);
 
@@ -329,7 +329,7 @@ TestCase("ProjectTest", {
 
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test setVariableValue": function() {
         var success_handler = sinon.spy();
@@ -361,7 +361,7 @@ TestCase("ProjectTest", {
 
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test getFiles": function() {
         var success_handler = sinon.spy();
@@ -386,7 +386,7 @@ TestCase("ProjectTest", {
         this.requests[1].respond(500, {"Content-Type": "application/json"}, '{}');
         sinon.assert.calledOnce(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test getFile": function() {
         var success_handler = sinon.spy();
@@ -421,7 +421,7 @@ TestCase("ProjectTest", {
         this.requests[2].respond(200, {"Content-Type": "text/plain"},
                                'file contents');
         sinon.assert.calledTwice(success_handler);
-   },
+    },
 
     "test setFile": function() {
         var success_handler = sinon.spy();
@@ -455,7 +455,7 @@ TestCase("ProjectTest", {
         this.requests[2].respond(200, {"Content-Type": "text/plain"}, '');
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test createFolder": function() {
         var success_handler = sinon.spy();
@@ -489,7 +489,7 @@ TestCase("ProjectTest", {
         this.requests[2].respond(200, {"Content-Type": "text/plain"}, '');
         sinon.assert.calledTwice(success_handler);
         sinon.assert.calledOnce(error_handler);
-   },
+    },
 
     "test newFile": function() {
         // Normal operation with JSON new file name
@@ -516,7 +516,7 @@ TestCase("ProjectTest", {
         assertEquals(this.requests[2].method, "PUT");
         assertEquals("contents=", this.requests[2].requestBody);
         this.requests[2].respond(200, {"Content-Type": "text/plain"}, '');
-   },
+    },
 
     "test newFolder": function() {
         // Normal operation
@@ -526,7 +526,7 @@ TestCase("ProjectTest", {
         assertEquals(this.requests[0].method, "PUT");
         assertEquals("isFolder=true", this.requests[0].requestBody);
         this.requests[0].respond(200, {"Content-Type": "text/plain"}, '');
-   },
+    },
 
     "test removeFile": function() {
         // Normal operation
@@ -538,7 +538,7 @@ TestCase("ProjectTest", {
 
         // TODO: I do not see how to check the error handling at this point
         // Unless I do some mocking of the debug.warn
-   },
+    },
 
     "test execFile": function() {
       // Normal execution
@@ -546,7 +546,6 @@ TestCase("ProjectTest", {
       assertEquals("file/path/filename", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
       this.requests[0].respond(200, {"Content-Type": "text/plain"}, 'OK');
-   }
+    }
 
 });
-
