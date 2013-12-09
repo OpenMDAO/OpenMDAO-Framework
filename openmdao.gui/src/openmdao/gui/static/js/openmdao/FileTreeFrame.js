@@ -123,6 +123,20 @@ openmdao.FileTreeFrame = function(id, project) {
             });
     }
 
+    /** delete folder and contents after confirmation **/
+    function deleteFolder(node) {
+        var filenodes = node.find('.folder, .file'),
+            filepaths = jQuery.map(filenodes,
+                function(n, i) { return jQuery(n).attr('path'); });
+
+        filepaths.sort();
+
+        openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
+            .done(function() {
+                project.removeFiles(filepaths.reverse());
+            });
+    }
+
     /** delete selected files after confirmation **/
     function deleteSelectedFiles() {
         var filepaths = [];
@@ -279,7 +293,7 @@ openmdao.FileTreeFrame = function(id, project) {
             };
         }
 
-        // delete only files and empty folders
+        // delete files and folders
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
@@ -287,9 +301,15 @@ openmdao.FileTreeFrame = function(id, project) {
             };
         }
         else if (isEmptyFolder) {
-            menu.deleteFolder = {
+            menu.deleteEmptyFolder = {
                 "label"  : 'Delete Empty Folder',
                 "action" : function(node) { deleteFile(path); }
+            };
+        }
+        else {
+            menu.deleteFolder = {
+                "label"  : 'Delete Folder and Contents',
+                "action" : function(node) { deleteFolder(node); }
             };
         }
 
