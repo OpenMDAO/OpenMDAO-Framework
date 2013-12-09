@@ -211,7 +211,7 @@ class SimpleComp(Component):
     
         
 class CompFoot(Component):
-    """ Evaluates the equation y=x^2"""
+    """ Evaluates the equation y=2x"""
     
     x = Float(1.0, iotype='in', units='ft')
     y = Float(1.0, iotype='out', units='ft')
@@ -262,6 +262,62 @@ class ArrayComp1(Component):
     
     x = Array(zeros([2]), iotype='in')
     y = Array(zeros([2]), iotype='out')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
+        self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
+        #print "ran", self.x, self.y
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 5.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x', )
+        output_keys = ('y', )
+        return input_keys, output_keys, self.J
+
+class ArrayComp1_inch(Component):
+    '''Array component'''
+    
+    x = Array(zeros([2]), iotype='in', units="inch")
+    y = Array(zeros([2]), iotype='out', units="inch")
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
+        self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
+        #print "ran", self.x, self.y
+
+    def linearize(self):
+        """Analytical first derivatives"""
+        
+        dy1_dx1 = 2.0
+        dy1_dx2 = 7.0
+        dy2_dx1 = 5.0
+        dy2_dx2 = -3.0
+        self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+
+    def provideJ(self):
+        
+        input_keys = ('x', )
+        output_keys = ('y', )
+        return input_keys, output_keys, self.J
+    
+class ArrayComp1_ft(Component):
+    '''Array component'''
+    
+    x = Array(zeros([2]), iotype='in', units="ft")
+    y = Array(zeros([2]), iotype='out', units="ft")
 
     def execute(self):
         """ Executes it """
@@ -1006,7 +1062,134 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 39.0, .001)
         assert_rel_error(self, J[1, 1], -7.0, .001)
         assert_rel_error(self, J[2, 0], -5.0, .001)
-        assert_rel_error(self, J[2, 1], 44.0, .001)
+        assert_rel_error(self, J[2, 1], 44.0, .001) 
+        
+    def test_arrays_units(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', ArrayComp1_ft())
+        top.add('comp2', ArrayComp1_inch())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.y', 'comp2.x')
+        
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        assert_rel_error(self, J[1, 1], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        assert_rel_error(self, J[1, 1], 44.0*12, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[0]'],
+                                              outputs=['comp2.y[0]'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
+                                              outputs=['comp2.y[1]'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1]'],
+                                              outputs=['comp2.y[-1]'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 44.0*12, .001)
+        
+        # this tests the finite difference code.
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              mode='fd')
+        assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        assert_rel_error(self, J[1, 1], 44.0*12, .001)
+        
+        # this tests a simultaneous full and indexed array conn
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[1]', 'comp2.y'],
+                                              mode='forward')
+        
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[1]', 'comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[1]', 'comp2.y'],
+                                              mode='fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[-1]', 'comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[-1]', 'comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
+
+        top.driver.workflow.config_changed()
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp1.y[-1]', 'comp2.y'],
+                                              mode='fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], -3.0, .001)
+        assert_rel_error(self, J[1, 0], 39.0*12, .001)
+        assert_rel_error(self, J[1, 1], -7.0*12, .001)
+        assert_rel_error(self, J[2, 0], -5.0*12, .001)
+        assert_rel_error(self, J[2, 1], 44.0*12, .001)
         
     def test_arrays_mixed(self):
         
