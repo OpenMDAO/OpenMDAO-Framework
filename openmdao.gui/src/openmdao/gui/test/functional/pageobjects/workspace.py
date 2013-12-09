@@ -82,15 +82,25 @@ class WorkspacePage(BasePageObject):
 
     # File menu
     file_menu = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/a'))
+       '/html/body/div/div/div/nav2/ul/li/a'))
     newfile_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
     newfolder_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
     delete_files_button = ButtonElement((By.XPATH,
-                           '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
+       '/html/body/div/div/div/nav2/ul/li/ul/li[4]/a'))
+
+    # File tree pane context menu
+    ftree_newfile_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[1]]"))
+    ftree_newfolder_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[2]"))
+    ftree_add_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[3]"))
+    ftree_toggle_files_button = ButtonElement((By.XPATH,
+        "//ul[@id='ftree_pane-context-menu']/li[4]"))
 
     # File context menu.
     file_create   = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -180,7 +190,6 @@ class WorkspacePage(BasePageObject):
         return element
 
     def find_object_button(self, name, delay=0):
-        #path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
@@ -394,7 +403,7 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window(self.browser.window_handles[-1])
         return GeometryPage.verify(self.browser, self.port)
 
-    def delete_file(self, filename):
+    def delete_file(self, filename, confirm=True):
         """ Delete `filename`. """
         self('files_tab').click()
         element = self.find_file(filename)
@@ -403,8 +412,13 @@ class WorkspacePage(BasePageObject):
         time.sleep(0.5)
         self('file_delete').click()
         time.sleep(0.5)
+        page = ConfirmationPage(self)
+        if confirm:
+            page.click_ok()
+        else:
+            page.click_cancel()
 
-    def delete_files(self, file_paths):
+    def delete_files(self, file_paths, confirm=True):
         """ Delete all the files in the list `file_paths` """
 
         # need select all the files given in file_paths
@@ -421,6 +435,11 @@ class WorkspacePage(BasePageObject):
         self('files_tab').click()
         self('file_menu').click()
         self('delete_files_button').click()
+        page = ConfirmationPage(self)
+        if confirm:
+            page.click_ok()
+        else:
+            page.click_cancel()
 
     def expand_folder(self, filename):
         """ Expands `filename`. """
@@ -441,16 +460,27 @@ class WorkspacePage(BasePageObject):
         prompt = ValuePrompt(self.browser, self.port)
         prompt.set_value(new)
 
-    def toggle_files(self, filename):
-        """ Toggle files display, using context menu of `filename`. """
+    def toggle_files(self, filename=None):
+        """ Toggle display of hidden files.
+            Use context menu of `filename` if provided,
+            otherwise use the context menu of the file tree pane.
+        """
         self('files_tab').click()
         time.sleep(0.5)
-        element = self.find_file(filename)
-        chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
-        time.sleep(0.5)
-        self('file_toggle').click()
-        time.sleep(0.5)
+        if filename:
+            element = self.find_file(filename)
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            time.sleep(0.5)
+            self('file_toggle').click()
+            time.sleep(0.5)
+        else:
+            element = self.browser.find_element(By.ID, 'ftree_pane')
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            time.sleep(0.5)
+            self('ftree_toggle_files_button').click()
+            time.sleep(0.5)
 
     def commit_project(self, comment='no comment'):
         """ Commit current project. """
