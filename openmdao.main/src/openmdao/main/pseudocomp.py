@@ -86,9 +86,13 @@ class PseudoComponent(object):
         self._valid = False
         self._parent = parent
         self._inputs = []
+        self.force_fd = False
         self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
                                         # this is, e.g., 'units', 'constraint', 'objective',
                                         # or 'multi_var_expr'
+        self._orig_src = srcexpr.text
+        self._orig_dest = destexpr.text
+
         if destexpr.text:
             self._outdests = [destexpr.text]
         else:
@@ -170,6 +174,9 @@ class PseudoComponent(object):
         self._expr_conn = (src, out)  # the actual expression connection
 
     def check_configuration(self):
+        pass
+
+    def cpath_updated(self):
         pass
 
     def get_pathname(self, rel_to_scope=None):

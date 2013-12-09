@@ -224,7 +224,6 @@ openmdao.Project=function(listeners_ready) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-
     /** add a listener (i.e. a function to be called)
         for messages with the given topic.
         Topics beginning with '@' are for messaging within the GUI.
@@ -310,20 +309,21 @@ openmdao.Project=function(listeners_ready) {
 
     /** revert back to the most recent commit of the project */
     this.revert = function(errorHandler) {
-        openmdao.Util.confirm("Remove all uncommitted changes?", function() {
-            jQuery.ajax({
+        var confirmation = openmdao.Util.confirm("Remove all uncommitted changes");
+        confirmation.done(function() {
+            jqXHR = jQuery.ajax({
                 type: 'POST',
                 url:  'project',
-                data: {'action': 'revert'},
-                success: function(data, textStatus, jqXHR) {
-                    _self.reload();
-                },
-                error: errorHandler,
-                complete: function(jqXHR, textStatus) {
-                              if (typeof openmdao_test_mode !== 'undefined') {
-                                  openmdao.Util.notify('Revert complete: ' +textStatus);
-                              }
-                          }
+                data: {'action': 'revert'}
+            })
+            .done(function(data, textStatus, jqXHR) {
+                _self.reload();
+            })
+            .fail(errorHandler)
+            .always(function(jqXHR, textStatus) {
+                  if (typeof openmdao_test_mode !== 'undefined') {
+                      openmdao.Util.notify('Revert complete: ' +textStatus);
+                  }
             });
             setModified(false);
         });
@@ -604,10 +604,16 @@ openmdao.Project=function(listeners_ready) {
     /** delete file with specified path from the project working directory */
     this.removeFile = function(filepath) {
         var jqXHR = jQuery.ajax({
-                        type: 'DELETE',
-                        url:  'file'+filepath.replace(/\\/g,'/'),
-                        data: { 'file': filepath }
-                    });
+                    type: 'DELETE',
+                    url:  'file'+filepath.replace(/\\/g,'/'),
+                    data: { 'file': filepath }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    alert('Error removing file: ' + textStatus);
+                    debug.error('Error removing file', path, name,
+                                jqXHR, textStatus, errorThrown);
+                });
+
         setModified(true);
         return jqXHR.promise();
     };
@@ -615,11 +621,17 @@ openmdao.Project=function(listeners_ready) {
     /** delete files with specified path from the project working directory */
     this.removeFiles = function(filepaths) {
         var jqXHR = jQuery.ajax({
-                        type: 'DELETE',
-                        url:  'files',
-                        data: JSON.stringify({'filepaths': filepaths}),
-                        contentType: 'application/json; charset=utf-8'
-                    });
+                type: 'DELETE',
+                url:  'files',
+                data: JSON.stringify({'filepaths': filepaths}),
+                contentType: 'application/json; charset=utf-8'
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                alert('Error removing files: ' + textStatus);
+                debug.error('Error removing files', path, name,
+                            jqXHR, textStatus, errorThrown);
+            });
+
         setModified(true);
         return jqXHR.promise();
     };
@@ -628,17 +640,18 @@ openmdao.Project=function(listeners_ready) {
     this.runComponent = function(pathname) {
         var jqXHR = jQuery.ajax({
                         type: 'POST',
-                        url:  'object/'+pathname,
-                        success: function(data, textStatus, jqXHR) {
-                                     if (typeof openmdao_test_mode !== 'undefined') {
-                                         openmdao.Util.notify('Run complete: '+textStatus);
-                                     }
-                                  },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                                   debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
-                                   debug.error(jqXHR,textStatus,errorThrown);
-                               }
-                    });
+                        url:  'object/'+pathname
+                    })
+            .done(function(data, textStatus, jqXHR) {
+                     if (typeof openmdao_test_mode !== 'undefined') {
+                         openmdao.Util.notify('Run complete: '+textStatus);
+                     }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
+                debug.error(jqXHR,textStatus,errorThrown);
+            });
+
         setModified(true);
         return jqXHR.promise();
     };
@@ -650,11 +663,13 @@ openmdao.Project=function(listeners_ready) {
         if (path[0] === '/') {
             path = path.substring(1,path.length);
         }
+
         // make the call
         var jqXHR = jQuery.ajax({
                         type: 'POST',
                         url:  'file/'+path
                     });
+
         setModified(true);
         return jqXHR.promise();
     };
@@ -709,9 +724,19 @@ openmdao.Project=function(listeners_ready) {
         }
     };
 
+    /** open file in a new browser window (possibly not in a useful format) */
+    this.viewFile = function(pathname) {
+        pathname = pathname.replace(/\\/g,'/');
+        if (pathname[0] != '/') {
+            pathname = '/' + pathname;
+        }
+        openmdao.Util.popupWindow('file'+pathname, pathname);
+    };
+
     /** view geometry with specified pathname, prompt if not specified */
     this.viewGeometry = function(pathname) {
         function popupGeom(pathname) {
+            pathname = pathname.replace(/\\/g,'/');
             var w = openmdao.Util.popupWindow('tools/geometry?path='+pathname,
                                               'Geometry of '+pathname);
             _self.addWindow(w);

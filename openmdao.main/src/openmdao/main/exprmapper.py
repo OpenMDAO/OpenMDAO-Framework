@@ -2,7 +2,7 @@
 import networkx as nx
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent
-
+from openmdao.units import PhysicalQuantity
 
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
@@ -151,6 +151,7 @@ class ExprMapper(object):
 
         to_remove = set()
         exprs = []
+        pcomps = set()
 
         if destpath is None:
             exprs = self.find_referring_exprs(srcpath)
@@ -160,6 +161,9 @@ class ExprMapper(object):
         else:
             if srcpath in graph and destpath in graph:
                 to_remove.add((srcpath, destpath))
+                data = graph[srcpath][destpath]
+                if 'pcomp' in data:
+                    pcomps.add(data['pcomp'].name)
             else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
                 src_exprs = set(self.find_referring_exprs(srcpath))
                 dest_exprs = set(self.find_referring_exprs(destpath))
@@ -167,19 +171,15 @@ class ExprMapper(object):
                                                if src in src_exprs and dest in dest_exprs])
 
         added = []
-        pcomps = []
         for src, dest in to_remove:
-            try:
-                pcomp = graph[src][dest]['pcomp']
-            except KeyError:
-                if src.startswith('_pseudo_'):
-                    pcomp = getattr(self._scope, src.split('.', 1)[0])
-                elif dest.startswith('_pseudo_'):
-                    pcomp = getattr(self._scope, dest.split('.', 1)[0])
-                else:
-                    continue
+            if src.startswith('_pseudo_'):
+                pcomp = getattr(self._scope, src.split('.', 1)[0])
+            elif dest.startswith('_pseudo_'):
+                pcomp = getattr(self._scope, dest.split('.', 1)[0])
+            else:
+                continue
             added.extend(pcomp.list_connections())
-            pcomps.append(pcomp.name)
+            pcomps.add(pcomp.name)
 
         to_remove.update(added)
 
@@ -223,8 +223,20 @@ class ExprMapper(object):
         destmeta = destexpr.get_metadata('units')
         srcmeta = srcexpr.get_metadata('units')
 
-        srcunit = srcmeta[0][1] if srcmeta else None
-        destunit = destmeta[0][1] if destmeta else None
+        # compare using get_unit_name() to account for unit aliases
+        if srcmeta:
+            srcunit = srcmeta[0][1]
+            if srcunit:
+                srcunit = PhysicalQuantity(1., srcunit).get_unit_name()
+        else:
+            srcunit = None
+
+        if destmeta:
+            destunit = destmeta[0][1]
+            if destunit:
+                destunit = PhysicalQuantity(1., destunit).get_unit_name()
+        else:
+            destunit = None
 
         if destunit and srcunit and destunit != srcunit:
             return 'units'

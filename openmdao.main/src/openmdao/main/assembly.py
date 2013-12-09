@@ -31,7 +31,8 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
-from openmdao.main.array_helpers import flattened_size, is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.depgraph import is_comp_node
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -145,22 +146,6 @@ class Assembly(Component):
         if seqno:
             self.driver.workflow.set_initial_count(seqno)
 
-    def add(self, name, obj):
-        """Call the base class *add*.  Then,
-        if obj is a Component, add it to the component graph.
-        Returns the added object.
-        """
-        if has_interface(obj, IComponent):
-            self._depgraph.add_component(name, obj)
-        try:
-            super(Assembly, self).add(name, obj)
-        except:
-            if has_interface(obj, IComponent):
-                self._depgraph.remove(name)
-            raise
-
-        return obj
-
     def find_referring_connections(self, name):
         """Returns a list of connections where the given name is referred
         to either in the source or the destination.
@@ -209,6 +194,7 @@ class Assembly(Component):
         old_autos = self._cleanup_autopassthroughs(oldname)
 
         obj = self.remove(oldname)
+        obj.name = newname
         self.add(newname, obj)
 
         # oldname has now been removed from workflows, but newname may be in the
@@ -243,13 +229,11 @@ class Assembly(Component):
         # Save existing driver references.
         refs = {}
         if has_interface(tobj, IComponent):
-            for obj in self.__dict__.values():
-                if obj is not tobj and is_instance(obj, Driver):
-                    refs[obj] = obj.get_references(target_name)
-
-        # remove any existing connections to replacement object
-        if has_interface(newobj, IComponent):
-            self.disconnect(newobj.name)
+            for cname in self.list_containers():
+                obj = getattr(self, cname)
+                if obj is not tobj and has_interface(obj, IDriver):
+                    refs[cname] = obj.get_references(target_name)
+                    #obj.remove_references(target_name)
 
         if hasattr(newobj, 'mimic'):
             try:
@@ -259,45 +243,77 @@ class Assembly(Component):
                 self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
+                
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
+        
+        # Assemblies sometimes create inputs and outputs in their configure()
+        # function, so call it early if possible
+        if self._call_cpath_updated is False and isinstance(obj, Container):
+            newobj.parent = self
+            newobj.name = target_name
+            newobj.cpath_updated()
+            
+        # check that all connected vars exist in the new object
+        req_vars = set([u.split('.',1)[1].split('[',1)[0] for u,v in conns if u.startswith(target_name+'.')])
+        req_vars.update([v.split('.',1)[1].split('[',1)[0] for u,v in conns if v.startswith(target_name+'.')])
+        missing = [v for v in req_vars if not newobj.contains(v)]
+        if missing:
+            self._logger.warning("the following variables are connected to other components but are missing in "
+                                 "the replacement object: %s" % missing)
+            mconns = set()
+            for m in missing:
+                mconns.update(self.find_referring_connections(m))
+            # disconnect any vars that are missing in the replacement object
+            for u, v in mconns:
+                self.disconnect(u, v)
+            
+        # remove any existing connections to replacement object
+        if has_interface(newobj, IComponent):
+            self.disconnect(newobj.name)
 
         self.add(target_name, newobj)  # this will remove the old object
                                        # and any connections to it
 
-        # recreate old connections
+        # recreate old connections, leaving out pseudocomps
         for u, v in conns:
-            self.connect(u, v)
+            if '_pseudo_' not in u and '_pseudo_' not in v:
+                try:
+                    self.connect(u, v)
+                except Exception as err:
+                    self._logger.warning("Couldn't connect '%s' to '%s': %s" %
+                                  (u, v, str(err)))
 
-        # add new object (if it's a Component) to any workflows where target was
+        # Restore driver references.
+        for dname, _refs in refs.items():
+            drv = getattr(self, dname)
+            drv.remove_references(target_name)
+            drv.restore_references(_refs)
+
+        # add new object (if it's a Component) to any 
+        # workflows where target was
         if has_interface(newobj, IComponent):
             for wflow, idx in wflows:
                 wflow.add(target_name, idx)
 
-        # Restore driver references.
-        if refs:
-            for obj in self.__dict__.values():
-                if obj is not newobj and is_instance(obj, Driver):
-                    obj.restore_references(refs[obj])
-
-        # Workflows need a reference to their new parent driver
-        if is_instance(newobj, Driver):
-            newobj.workflow._parent = newobj
-
     def remove(self, name):
         """Remove the named container object from this assembly
-        and remove it from its workflow(s) if it's a Component.
+        and remove it from its workflow(s) if it's a Component
+        or pseudo component.
         """
-        cont = getattr(self, name)
-        self.disconnect(name)
-        if has_interface(cont, IComponent):
-            for obj in self.__dict__.values():
-                if obj is not cont and is_instance(obj, Driver):
-                    obj.workflow.remove(name)
+        obj = getattr(self, name)
+        if has_interface(obj, IComponent) or \
+           isinstance(obj, PseudoComponent):
+            for cname in self.list_containers():
+                obj = getattr(self, cname)
+                if isinstance(obj, Driver):
                     obj.remove_references(name)
+            self.disconnect(name)
+        elif name in self.list_inputs() or name in self.list_outputs():
+            self.disconnect(name)
 
         return super(Assembly, self).remove(name)
-
+ 
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation, adds it to self, and creates a connection
@@ -457,6 +473,8 @@ class Assembly(Component):
         """
         src = eliminate_expr_ws(src)
 
+        #self.config_changed(update_parent=False)
+
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
@@ -519,32 +537,47 @@ class Assembly(Component):
         name of a Component, remove all connections from all of its inputs
         and outputs.
         """
-        if varpath2 is None and self.parent and '.' not in varpath:
-            # boundary var. make sure it's disconnected in parent
-            self.parent.disconnect('.'.join([self.name, varpath]))
+        try:
+            if varpath2 is None and self.parent and '.' not in varpath:
+                # boundary var. make sure it's disconnected in parent
+                self.parent.disconnect('.'.join([self.name, varpath]))
 
-        to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
+            to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
-        graph = self._depgraph
+            graph = self._depgraph
 
-        if to_remove:
-            for u, v in graph.list_connections(show_external=True):
-                if (u, v) in to_remove:
-                    super(Assembly, self).disconnect(u, v)
+            if to_remove:
+                for u, v in graph.list_connections(show_external=True):
+                    if (u, v) in to_remove:
+                        super(Assembly, self).disconnect(u, v)
+                        to_remove.remove((u,v))
 
-            for u, v in graph.list_autopassthroughs():
-                if (u, v) in to_remove:
-                    super(Assembly, self).disconnect(u, v)
-
-        for name in pcomps:
-            try:
-                self.remove_trait(name)
-            except AttributeError:
-                pass
-            try:
-                graph.remove(name)
-            except nx.exception.NetworkXError:
-                pass
+                for u, v in graph.list_autopassthroughs():
+                    if (u, v) in to_remove:
+                        super(Assembly, self).disconnect(u, v)
+                        to_remove.remove((u,v))
+                        
+            if to_remove:  # look for pseudocomp expression connections
+                for node, data in graph.nodes_iter(data=True):
+                    if 'srcexpr' in data:
+                        for u,v in to_remove:
+                            if data['srcexpr'] == u or data['destexpr'] == v:
+                                pcomps.add(node)
+                        
+            for name in pcomps:
+                if '_pseudo_' not in varpath:
+                    self.remove(name)
+                else:
+                    try:
+                        self.remove_trait(name)
+                    except:
+                        pass
+                try:
+                    graph.remove(name)
+                except (KeyError, nx.exception.NetworkXError):
+                    pass
+        finally:    
+            self.config_changed()
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -641,7 +674,7 @@ class Assembly(Component):
             loops = graph.get_loops()
 
             for cname, vnames in partition_names_by_comp(invalids).items():
-                if cname is None:
+                if cname is None or not is_comp_node(graph, cname): # boundary var
                     if self.parent:
                         self.parent.update_inputs(self.name)
 
@@ -657,6 +690,7 @@ class Assembly(Component):
                         getattr(self, cname).update_outputs(vnames)
                 else:
                     getattr(self, cname).update_outputs(vnames)
+                        
         try:
             for inv_dest in invalid_dests:
                 self._depgraph.update_destvar(self, inv_dest)
@@ -668,10 +702,14 @@ class Assembly(Component):
         if outs and self.parent:
             self.parent.child_invalidated(self.name, outs)
 
+    @rbac(('owner', 'user'))
     def child_invalidated(self, childname, vnames=None, iotype='out'):
         """Invalidate all variables that depend on the variable
         provided by the child that has been invalidated.
         """
+        if childname not in self._depgraph:
+            return []
+        
         if vnames is None:
             vnames = [childname]
         elif childname:
@@ -844,9 +882,9 @@ class Assembly(Component):
 
         for src in required_inputs:
             varname, _, tail = src.partition('[')
-            target = self._depgraph.successors(varname)
+            target = [n for n in self._depgraph.successors(varname) if not n.startswith('parent.')]
             if len(target) == 0:
-                target = self._depgraph.successors(src)
+                target = [n for n in self._depgraph.successors(src) if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 

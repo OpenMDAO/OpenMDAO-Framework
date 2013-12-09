@@ -21,7 +21,7 @@ from traits.api import Property
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, \
+                                     IAssembly, IComponent, IContainer, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
@@ -131,6 +131,8 @@ class Component(Container):
                                ' by this component.')
     force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
+    force_fd = Bool(False, iotype='in', framework_var=True,
+                    desc="If True, always finite difference this component.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
@@ -164,11 +166,6 @@ class Component(Container):
                 self._set_input_callback(name)
             if trait.iotype:  # input or output
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
-
-        # contains validity flag for each io Trait (inputs are valid since
-        # they're not connected yet, and outputs are invalid)
-        #self._valid_dict = dict([(name, t.iotype == 'in')
-        #    for name, t in self.class_traits().items() if t.iotype])
 
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -245,10 +242,13 @@ class Component(Container):
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
         self._set_exec_state("INVALID")
-        if self.parent and hasattr(self.parent, 'child_invalidated'):
-            self.parent.child_invalidated(self.name, 
-                                          vnames=[name],
-                                          iotype='in')
+        if self.parent:
+            try:
+                inval = self.parent.child_invalidated
+            except AttributeError:
+                pass
+            else:
+                inval(self.name, vnames=[name], iotype='in')
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -347,6 +347,7 @@ class Component(Container):
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir
+                
             try:
                 self._restore_files(config_dir, '', [], from_egg=False)
             except Exception:
@@ -460,7 +461,13 @@ class Component(Container):
         required_outputs
             Not needed by Component
         """
-
+        
+        # Allow user to force finite difference on a comp. This also turns off
+        # fake finite difference (i.e., there must be a reason they don't
+        # trust their own derivatives.)
+        if self.force_fd == True:
+            return
+        
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'linearize'):
 
@@ -550,7 +557,8 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ')):
+                   and (hasattr(self, 'provideJ')) \
+                   and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     #print 'execute_ffd: %s' % self.get_pathname()
@@ -628,15 +636,31 @@ class Component(Container):
 
         return obj
 
+    def _post_container_add(self, name, obj, removed):
+        """Called after a new child Container has been
+        added to self.
+        """
+        if has_interface(obj, IContainer):
+            io = self._cached_traits_[name].iotype
+            if io:
+                if removed:
+                    # since we just removed this container and it was
+                    # being used as an io variable, we need to put
+                    # it back in the dep graph
+                    self._depgraph.add_boundary_var(name, iotype=io)
+            elif has_interface(obj, IComponent):
+                self._depgraph.add_component(name, obj)
+
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
-        obj = super(Component, self).remove(name)
-        if is_instance(obj, Container) and name in self._depgraph:# and not is_instance(obj, Component):
+        if name in self._depgraph:
             self._depgraph.remove(name)
-        self.config_changed()
-        return obj
+        try:
+            return super(Component, self).remove(name)
+        finally:
+            self.config_changed()
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the replaced
@@ -672,7 +696,6 @@ class Component(Container):
             self._num_input_caseiters += 1
 
         if trait.iotype:
-            #self._valid_dict[name] = trait.iotype == 'in'
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
@@ -703,8 +726,10 @@ class Component(Container):
         if trait and trait.iotype == 'in':
             self._set_input_callback(name, remove=True)
 
-        super(Component, self).remove_trait(name)
-        self.config_changed()
+        try:
+            super(Component, self).remove_trait(name)
+        finally:
+            self.config_changed()
 
         if trait and trait.iotype == 'in' and trait.trait_type \
            and trait.trait_type.klass is ICaseIterator:
@@ -821,8 +846,10 @@ class Component(Container):
         """Removes the connection between one source variable and one
         destination variable.
         """
-        super(Component, self).disconnect(srcpath, destpath)
-        self.config_changed(update_parent=False)
+        try:
+            super(Component, self).disconnect(srcpath, destpath)
+        finally:        
+            self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
     def mimic(self, target):
@@ -877,6 +904,11 @@ class Component(Container):
                                if v.is_trait_type(Slot)]
         for name in target_slots:
             if name not in target_inputs and name in my_slots:
+                if hasattr(self, name):
+                    myobj = getattr(self, name)
+                    if hasattr(myobj, 'mimic'):
+                        myobj.mimic(getattr(target, name))
+                        continue
                 self.add(name, getattr(target, name))
 
         # Update List(Slot) traits.
@@ -1637,7 +1669,7 @@ class Component(Container):
             partially_connected_indices = []
 
             for inp in connected_inputs:
-                cname = inp.split('[')[0]  # Could be 'inp[0]'.
+                cname = inp.split('[', 1)[0]  # Could be 'inp[0]'.
 
                 if cname == name:
                     connections = self._depgraph._var_connections(inp)
@@ -1694,9 +1726,10 @@ class Component(Container):
                         column_index = 0
 
                         for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
 
-                        column_index = column_index + array_indices[-1]
+                        if array_indices:
+                            column_index += array_indices[-1]
                         implicit_partial_indices.append(column_index)
 
                 io_attr['implicit_partial_indices'] = str(implicit_partial_indices)

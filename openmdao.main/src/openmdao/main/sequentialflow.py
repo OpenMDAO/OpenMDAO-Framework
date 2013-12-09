@@ -54,6 +54,8 @@ class SequentialWorkflow(Workflow):
         return iter(self.get_components(full=True))
 
     def __len__(self):
+        if self._names is None:
+            self.get_names()
         if self._names:
             return len(self._names)
         else:
@@ -116,13 +118,14 @@ class SequentialWorkflow(Workflow):
                               if n not in iterset]) - set(self._names)
                 self._names.extend(added)
                           
-        if full:
-            allnames = self._names[:]
+            self._fullnames = self._names[:]
             fullset = set(self._parent.list_pseudocomps())
             fullset.update(find_related_pseudos(self.scope._depgraph.component_graph(),
                                                 self._names))
-            allnames.extend(fullset - set(self._names))
-            return allnames
+            self._fullnames.extend(fullset - set(self._names))
+
+        if full:
+            return self._fullnames[:]
         else:
             return self._names[:]
 
@@ -193,11 +196,13 @@ class SequentialWorkflow(Workflow):
         if not isinstance(compname, basestring):
             msg = "Components must be removed by name from a workflow."
             raise TypeError(msg)
+        allnames = self.get_names(full=True)
         try:
             self._explicit_names.remove(compname)
         except ValueError:
             pass
-        self.config_changed()
+        if compname in allnames:
+            self.config_changed()
 
     def clear(self):
         """Remove all components from this workflow."""
@@ -245,7 +250,7 @@ class SequentialWorkflow(Workflow):
             # Find out our width, etc
             unmap_src = from_PA_var(measure_src)
             val = self.scope.get(unmap_src)
-            width = flattened_size(unmap_src, val, self.scope)            
+            width = flattened_size(unmap_src, val, self.scope)
             if isinstance(val, ndarray):
                 shape = val.shape
             else:
@@ -257,13 +262,14 @@ class SequentialWorkflow(Workflow):
                 bound = (nEdge, nEdge+width)
                 self.set_bounds(measure_src, bound)
                  
+            src_noidx = src.split('[',1)[0]
+            
             # Poke our source data
-            if not is_basevar_node(dgraph, src) and base_var(dgraph, src) in basevars:
-                basevar = base_var(dgraph, src)
+            if '[' in src and src_noidx in basevars:
                 _, _, idx = src.partition('[')
-                basebound = self.get_bounds(basevar)
-                if not '@in' in basevar:
-                    unmap_src = from_PA_var(basevar)
+                basebound = self.get_bounds(src_noidx)
+                if not '@in' in src_noidx:
+                    unmap_src = from_PA_var(src_noidx)
                     val = self.scope.get(unmap_src)
                     shape = val.shape
                 offset = basebound[0]
@@ -357,6 +363,14 @@ class SequentialWorkflow(Workflow):
                 self.scope.raise_exception(msg, RuntimeError)
 
         return i1
+
+    def mimic(self, src):
+        self.clear()
+        par = self._parent.parent
+        if par is not None:
+            self._explicit_names = [n for n in src._explicit_names if hasattr(par, n)]
+        else:
+            self._explicit_names = src._explicit_names[:]
 
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
@@ -623,6 +637,8 @@ class SequentialWorkflow(Workflow):
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
+                    nondiff.add(comp.name)
+                elif comp.force_fd is True:
                     nondiff.add(comp.name)
                     
             # If a connection is non-differentiable, so are its src and 

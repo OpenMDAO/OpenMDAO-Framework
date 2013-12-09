@@ -1,10 +1,11 @@
 """ VariableTree class definition
 """
+from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
 from traits.has_traits import FunctionType
 
-from openmdao.main.interfaces import IVariable
+from openmdao.main.interfaces import IVariable, IVariableTree
 from openmdao.main.container import Container
 from openmdao.main.datatypes.str import Str
 from openmdao.main.datatypes.vtree import VarTree
@@ -16,6 +17,8 @@ class VariableTree(Container):
     """A container of variables with an input or output sense."""
 
     _iotype = Str('')
+
+    implements(IVariableTree)
 
     def __init__(self, iotype=''):
         super(VariableTree, self).__init__()

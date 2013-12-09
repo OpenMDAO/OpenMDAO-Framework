@@ -100,12 +100,12 @@ class Genetic(Driver):
             #then it's a float or an int, or a member of an array
             if ('low' in metadata or 'high' in metadata) or \
                 array_test.search(param.targets[0]):
-                if isinstance(val, real_types):
-                    #some kind of float
-                    allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
                 #some kind of int
                 if isinstance(val, int_types):
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
+                elif isinstance(val, real_types):
+                    #some kind of float
+                    allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
 
             elif "values" in metadata and \
                  isinstance(metadata['values'], iterable_types):

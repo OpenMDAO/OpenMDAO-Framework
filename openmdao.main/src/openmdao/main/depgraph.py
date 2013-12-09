@@ -5,7 +5,7 @@ from ordereddict import OrderedDict
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IVariableTree
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -318,6 +318,10 @@ class DependencyGraph(nx.DiGraph):
             kwargs['driver'] = True
         if hasattr(obj, '_pseudo_type'):
             kwargs['pseudo'] = obj._pseudo_type
+            if obj._pseudo_type == 'multi_var_expr':
+                kwargs['srcexpr'] = obj._orig_src
+                kwargs['destexpr'] = obj._orig_dest
+
         kwargs['invalidation'] = obj.get_invalidation_type()
         kwargs['comp'] = True
         kwargs['valid'] = False
@@ -1134,23 +1138,6 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    # # predicate for searching for connections between driver
-    # # outputs and @outs
-    # is_at_out = lambda g,n: n.startswith('@out')
-
-    # # add fake edges between workflow comps and their driver
-    # for node in graph.nodes_iter():
-    #    if is_driver_node(graph, node):
-    #        drv = getattr(scope, node)
-    #        # for each connected output of the driver, see if
-    #        # it connects to an @out node downstream
-    #        for dout in drv.list_outputs(connected=True):
-    #             dout = '.'.join([node, dout])
-    #             if bfs_find(graph, dout, is_at_out): # found an @out
-    #                 for comp in drv.workflow.get_names(full=False):
-    #                    graph.add_edge(comp, node, fake=True)
-    #                    #graph.add_edge(node, comp.name, fake=True)
-
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))],
                              ['@out%d' % i for i in range(len(outputs))])
@@ -1273,6 +1260,28 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
+
+    # if full vartrees are connected, create subvar nodes for all of their
+    # internal variables
+    visited = set()
+    for src, dest in graph.list_connections():
+        srcnames = []
+        destnames = []
+        if '@' not in src and '[' not in src and src not in visited:
+            visited.add(src)
+            obj = scope.get(src)
+            if has_interface(obj, IVariableTree):
+                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                srcnames = ['.'.join([src, n]) for n in srcnames]
+        if '@' not in dest and '[' not in dest and dest not in visited:
+            visited.add(dest)
+            obj = scope.get(dest)
+            if has_interface(obj, IVariableTree):
+                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                destnames = ['.'.join([dest, n]) for n in destnames]
+        if '@' not in src and '@' not in dest and (srcnames or destnames):
+            _replace_full_vtree_conn(graph, src, srcnames, 
+                                            dest, destnames)
     
     # disconnected boundary vars that are explicitly specified as inputs
     # or outputs need to be added back so that bounds data can be kept 
@@ -1294,7 +1303,36 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.add_edge(out, '@fake', conn=True)
 
     return graph
+
+def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
+    fail = False
+    if len(srcnames) != len(destnames):
+        fail = True
+    else:
+        for s, d in zip(srcnames, destnames):
+            if s.split('.')[-1] != d.split('.')[-1]:
+                fail = True
+                break
+
+    if fail:
+        snames = [n.split('.',1)[1] for n in srcnames]
+        dnames = [n.split('.',1)[1] for n in destnames]
+        msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
+        missing_srcs = set(dnames).difference(snames)
+        missing_dests = set(snames).difference(dnames)
+        if missing_srcs:
+            msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
+        if missing_dests:
+            msg += ", variables %s are missing from %s" % (list(missing_dests), dest)
+        raise ValueError(msg)
+
+    graph.disconnect(src, dest)
     
+    for s, d in zip(srcnames, destnames):
+        graph.connect(None, s, d, check=False, 
+                      invalidate=False)
+
+        
 # utility/debugging functions
 
 def edges_to_dict(edges, dct=None):

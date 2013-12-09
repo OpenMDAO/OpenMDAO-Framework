@@ -163,8 +163,9 @@ class Driver(Component):
         return pcomps
 
     def get_references(self, name):
-        """Return parameter, constraint, and objective references to component
-        `name` in preparation for subsequent :meth:`restore_references` call.
+        """Return a dict of parameter, constraint, and objective 
+        references to component `name` in preparation for 
+        subsequent :meth:`restore_references` call.
 
         name: string
             Name of component being referenced.
@@ -180,8 +181,8 @@ class Driver(Component):
         return refs
 
     def remove_references(self, name):
-        """Remove parameter, constraint, and objective references to component
-        `name`.
+        """Remove parameter, constraint, objective  and workflow
+        references to component `name`.
 
         name: string
             Name of component being removed.
@@ -193,6 +194,7 @@ class Driver(Component):
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
                     inst.remove_references(name)
+        self.workflow.remove(name)
 
     def restore_references(self, refs):
         """Restore parameter, constraint, and objective references to component
@@ -201,13 +203,8 @@ class Driver(Component):
         refs: object
             Value returned by :meth:`get_references`.
         """
-        if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
-                inst = getattr(self, dname)
-                if isinstance(inst, (HasParameters, HasConstraints,
-                                     HasEqConstraints, HasIneqConstraints,
-                                     HasObjective, HasObjectives)):
-                    inst.restore_references(refs[inst])
+        for inst, inst_refs in refs.items():
+            inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):

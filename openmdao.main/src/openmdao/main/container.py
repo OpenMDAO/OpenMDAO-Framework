@@ -600,15 +600,22 @@ class Container(SafeHasTraits):
                         val_copy.install_callbacks()
                     val = val_copy
                 else:
-                    val = _copydict[ttype.copy](val)
+                    try:
+                        val = _copydict[ttype.copy](val)
+                    except AttributeError:
+                        if isinstance(val, TraitListObject):
+                            # Can't deepcopy a restored TraitListObject.
+                            val = _copydict[ttype.copy](list(val))
+                        else:
+                            raise
         else: # index is not None
             val = get_indexed_value(self, name, index)
 
         return val
 
-    def add(self, name, obj):
-        """Add an object to this Container.
-        Returns the added object.
+    def _prep_for_add(self, name, obj):
+        """Check for illegal adds and update the new child
+        object in preparation for insertion into self.
         """
         if '.' in name:
             self.raise_exception(
@@ -617,42 +624,50 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
-        if is_instance(obj, Container):
+        if has_interface(obj, IContainer):
             self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
             else:
                 obj.parent = self
-            # if an old child with that name exists, remove it
-            removed = False
-            if self.contains(name) and getattr(self, name):
-                self.remove(name)
-                removed = True
             obj.name = name
-            setattr(self, name, obj)
-            if self._cached_traits_ is None:
-                self.get_trait(name)
-            else:
-                self._cached_traits_[name] = self.trait(name)
-            io = self._cached_traits_[name].iotype
-            if removed and not isinstance(self._depgraph, _ContainerDepends):
-                if io:
-                    # since we just removed this container and it was
-                    # being used as an io variable, we need to put
-                    # it back in the dep graph
-                    self._depgraph.add_boundary_var(name, iotype=io)
-                elif has_interface(obj, IComponent):
-                    self._depgraph.add_component(name, obj)
 
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
+
+    def _post_container_add(self, name, obj, removed):
+        pass
+
+    def add(self, name, obj):
+        """Add an object to this Container.
+        Returns the added object.
+        """
+        self._prep_for_add(name, obj)
+
+        if has_interface(obj, IContainer):
+            # if an old child with that name exists, remove it
+            removed = False
+            if self.contains(name) and getattr(self, name):
+                self.remove(name)
+                removed = True
+
+            setattr(self, name, obj)
+
+            if self._cached_traits_ is None:
+                self.get_trait(name)
+            else:
+                self._cached_traits_[name] = self.trait(name)
+
+            self._post_container_add(name, obj, removed)
+
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
             setattr(self, name, obj)
+
         return obj
 
     def _check_recursion(self, obj):
@@ -725,9 +740,8 @@ class Container(SafeHasTraits):
                                  name, NameError)
         try:
             obj = getattr(self, name)
-        except:
-            self.raise_exception("cannot remove '%s': not found" %
-                                 name, AttributeError)
+        except AttributeError:
+            return None
 
         trait = self.get_trait(name)
         if trait is None:
