@@ -131,6 +131,8 @@ class Component(Container):
                                ' by this component.')
     force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
+    force_fd = Bool(False, iotype='in', framework_var=True,
+                    desc="If True, always finite difference this component.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
@@ -459,7 +461,13 @@ class Component(Container):
         required_outputs
             Not needed by Component
         """
-
+        
+        # Allow user to force finite difference on a comp. This also turns off
+        # fake finite difference (i.e., there must be a reason they don't
+        # trust their own derivatives.)
+        if self.force_fd == True:
+            return
+        
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'linearize'):
 
@@ -549,7 +557,8 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ')):
+                   and (hasattr(self, 'provideJ')) \
+                   and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     #print 'execute_ffd: %s' % self.get_pathname()
