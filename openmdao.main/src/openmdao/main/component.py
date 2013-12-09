@@ -302,9 +302,14 @@ class Component(Container):
             visited = set([id(self), id(self.parent)])
             for name, value in self.traits(type=not_event).items():
                 obj = getattr(self, name)
-                if value.is_trait_type(Slot) and value.required is True and obj is None:
-                    self.raise_exception("required plugin '%s' is not present" %
-                                         name, RuntimeError)
+                if value.required is True:
+                    if value.is_trait_type(Slot):
+                        if obj is None:
+                            self.raise_exception("required plugin '%s' is not present" %
+                                                 name, RuntimeError)
+                    elif value.iotype in ['in', 'state'] and obj == value.default:
+                        self.raise_exception("required variable '%s' was not set" %
+                                             name, RuntimeError)
                 if has_interface(obj, IComponent) and id(obj) not in visited:
                     visited.add(id(obj))
                     obj.check_configuration()
