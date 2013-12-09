@@ -140,13 +140,21 @@ openmdao.FileTreeFrame = function(id, project) {
     /** delete selected files after confirmation **/
     function deleteSelectedFiles() {
         var filepaths = [];
-        _self.elm.find('a.jstree-clicked').each(function() {
+        _self.elm.find('a.file.jstree-clicked').each(function() {
             filepaths.push(this.getAttribute("path"));
         });
-        openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
-            .done(function() {
-                project.removeFiles(filepaths);
+        _self.elm.find('a.folder.jstree-clicked').each(function() {
+            jQuery(this).parent().find('a.file, a.folder').each(function() {
+                filepaths.push(this.getAttribute("path"));
             });
+        });
+        if (filepaths.length > 0) {
+            filepaths = filepaths.sort();
+            openmdao.FileTreeFrame.prototype.confirmDeleteFiles(filepaths)
+                .done(function() {
+                    project.removeFiles(filepaths.reverse());
+                });
+        }
     }
 
     /** toggle the hidden files filter */
