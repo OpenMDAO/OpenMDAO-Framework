@@ -19,6 +19,7 @@ from openmdao.util.testutil import assert_raises
 
 class MyComponent(Component):
     x = Float(1., iotype='in')
+    xreq = Float(iotype='in', required=True)
     xout = Float(2., iotype='out')
 
     def __init__(self):
@@ -169,7 +170,7 @@ class TestCase(unittest.TestCase):
 
     def test_setattr_dependency_invalidation(self):
         # i.e., comp should not need to re-run if you set an input to the same value.
-
+        self.comp.xreq = 1 # set required input so test won't fail
         self.comp.set('x', 45.5)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
         self.comp.run()
@@ -178,7 +179,15 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.comp.get_valid(['xout']), [True])
         self.comp.set('x', 99.999)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
-
+        
+    def test_required_input(self):
+        try:
+            self.comp.run()
+        except Exception as err:
+            self.assertEqual(str(err), ": required variable 'xreq' was not set")
+        else:
+            self.fail("Exception expected")
+            
     def test_override(self):
         code = """\
 class BadComponent(Component):

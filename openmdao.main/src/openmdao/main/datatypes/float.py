@@ -27,6 +27,8 @@ class Float(Variable):
                  low=None, high=None, exclude_low=False, exclude_high=False, 
                  units=None, **metadata):
 
+        _default_set = False
+        
         # Determine defalt_value if unspecified
         if default_value is None:
             if low is None and high is None:
@@ -36,6 +38,7 @@ class Float(Variable):
             else:
                 default_value = low
         else:
+            _default_set = True
             if not isinstance(default_value, float):
                 if isinstance(default_value, int):
                     default_value = float(default_value)
@@ -98,8 +101,11 @@ class Float(Variable):
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
-        super(Float, self).__init__(default_value=default_value,
-                                    **metadata)
+        if not _default_set and metadata.get('required') == True:
+            super(Float, self).__init__(**metadata)
+        else:
+            super(Float, self).__init__(default_value=default_value,
+                                        **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
