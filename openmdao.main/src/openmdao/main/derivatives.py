@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.depgraph import base_var
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
+from openmdao.main.pseudocomp import PseudoComponent
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \
@@ -279,7 +280,10 @@ def applyJ(obj, arg, result):
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             
-            if Jsub.shape == (1,1):
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
                 tmp = Jsub[0][0] * arg[ikey]
             else:
                 tmp = Jsub.dot(arg[ikey])
@@ -371,7 +375,10 @@ def applyJT(obj, arg, result):
             Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
                                    i1, i2, idx, ish).T
             
-            if Jsub.shape == (1,1):
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
                 tmp = Jsub[0][0] * arg[ikey]
             else:
                 tmp = Jsub.dot(arg[ikey])
