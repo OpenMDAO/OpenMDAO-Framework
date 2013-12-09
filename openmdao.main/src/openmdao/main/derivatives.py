@@ -50,6 +50,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         else:
             in_range = range(i1, i2)
         
+        options = wflow._parent.gradient_options
         for irhs in in_range:
 
             RHS = zeros((n_edge, 1))
@@ -57,8 +58,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-9,
-                             maxiter=100)
+                             tol=options.gmres_tolerance,
+                             maxiter=options.gmres_maxiter)
 
             i = 0
             for item in outputs:
@@ -104,6 +105,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         else:
             out_range = range(i1, i2)
             
+        options = wflow._parent.gradient_options
         for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
@@ -111,8 +113,8 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-9,
-                             maxiter=100)
+                             tol=options.gmres_tolerance,
+                             maxiter=options.gmres_maxiter)
             
             i = 0
             for param in inputs:
@@ -527,8 +529,10 @@ class FiniteDifference(object):
         self.pa = pa
         self.scope = pa.wflow.scope
 
-        self.fd_step = 1.0e-6*ones((len(self.inputs)))
-        self.form = 'forward'
+        options = pa.wflow._parent.gradient_options
+        
+        self.fd_step = options.fd_stepsize*ones((len(self.inputs)))
+        self.form = options.fd_form
 
         in_size = 0
         for j, srcs in enumerate(self.inputs):
