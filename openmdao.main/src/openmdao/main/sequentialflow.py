@@ -284,8 +284,24 @@ class SequentialWorkflow(Workflow):
             basevars.add(src)
             
             # Poke our target data
+            impli_edge = nEdge
             for target in targets:
                 if not target.startswith('@'):
+                    
+                    # Handle State-Residual pairs
+                    if src.split('.')[0] == target.split('.')[0]:
+                        
+                        unmap_targ = from_PA_var(target)
+                        val = self.scope.get(unmap_targ)
+                        imp_width = flattened_size(unmap_targ, val, self.scope)
+                        if isinstance(val, ndarray):
+                            shape = val.shape
+                        else:
+                            shape = 1
+                            
+                        bound = (impli_edge, impli_edge+imp_width)
+                        impli_edge += imp_width
+                        
                     self.set_bounds(target, bound)
             
             #print input_src, src, target, bound,      
@@ -383,6 +399,8 @@ class SequentialWorkflow(Workflow):
             
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
+            comp_residual = data['residual']
+            
             inputs = {}
             outputs = {}
             
@@ -398,11 +416,17 @@ class SequentialWorkflow(Workflow):
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
-                    inputs[varname] = arg[i1].copy()
-                    outputs[varname] = arg[i1].copy()
+                    if varname == comp_residual:
+                        outputs[varname] = zeros((1, 1))
+                    else:
+                        inputs[varname] = arg[i1].copy()
+                        outputs[varname] = arg[i1].copy()
                 else:
-                    inputs[varname] = arg[i1:i2].copy()
-                    outputs[varname] = arg[i1:i2].copy()
+                    if varname ==comp_residual:
+                        outputs[varname] = zeros((i2-i1, 1))
+                    else:
+                        inputs[varname] = arg[i1:i2].copy()
+                        outputs[varname] = arg[i1:i2].copy()
                 
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -416,7 +440,7 @@ class SequentialWorkflow(Workflow):
             #if hasattr(comp, 'applyMinv'):
                 #inputs = applyMinv(comp, inputs)
             
-            applyJ(comp, inputs, outputs)
+            applyJ(comp, inputs, outputs, comp_residual)
             #print inputs, outputs
             
             for varname in comp_outputs:
@@ -456,6 +480,8 @@ class SequentialWorkflow(Workflow):
             
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
+            comp_residual = data['residual']
+
             inputs = {}
             outputs = {}
             
@@ -471,10 +497,12 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
-                    outputs[varname] = zeros(len(i1))
+                    if varname != comp_residual:
+                        outputs[varname] = zeros(len(i1))
                 else:
                     inputs[varname] = arg[i1:i2].copy()
-                    outputs[varname] = zeros(i2-i1)
+                    if varname != comp_residual:
+                        outputs[varname] = zeros(i2-i1)
                     
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
@@ -496,7 +524,7 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
             
-            applyJT(comp, inputs, outputs)
+            applyJT(comp, inputs, outputs, comp_residual)
             #print inputs, outputs
             
             for varname in allvars:

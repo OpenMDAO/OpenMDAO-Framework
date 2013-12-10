@@ -195,14 +195,15 @@ def post_process_dicts(obj, key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
     
-def applyJ(obj, arg, result):
+def applyJ(obj, arg, result, residual=None):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
     for key in result:
-        result[key] = -arg[key]
-
+        if key != residual:
+            result[key] = -arg[key]
+    
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.
     if hasattr(obj, 'apply_deriv'):
@@ -283,14 +284,15 @@ def applyJ(obj, arg, result):
                         
     #print 'applyJ', arg, result
 
-def applyJT(obj, arg, result):
+def applyJT(obj, arg, result, residual=None):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
     Component, this automatically forms the "fake" residual, and calls into
     the function hook "apply_derivT".
     """
     
     for key in arg:
-        result[key] = -arg[key]
+        if key != residual:
+            result[key] = -arg[key]
     
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_derivT' function instead of provideJ.
