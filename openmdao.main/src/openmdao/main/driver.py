@@ -433,6 +433,10 @@ class Driver(Component):
 
         for comp in self.workflow.__iter__():
 
+            # The variables in pseudo-comps are not of interest.
+            if not hasattr(comp, 'list_vars'):
+                continue
+            
             # All variables from components in workflow
             for var in comp.list_vars():
                 all_vars.append('%s%s.%s' % (header, comp.name, var))
