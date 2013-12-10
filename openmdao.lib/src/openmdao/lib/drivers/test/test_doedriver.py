@@ -325,6 +325,12 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
+    def test_doegen_remove(self):
+        top = set_as_top(Assembly())
+        top.add("driver", DOEdriver())
+        top.driver.remove("DOEgenerator")
+        top.driver.add("DOEgenerator", FullFactorial())
+
     def test_sequential(self):
         logging.debug('')
         logging.debug('test_sequential')
