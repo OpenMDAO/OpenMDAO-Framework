@@ -132,7 +132,9 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         self.assertTrue('Inputs' in attributes)
         inputs = attributes['Inputs']
-        self.assertEqual(len(inputs), 4)
+        names = sorted([input['name'] for input in inputs])
+        self.assertEqual(names, ['directory', 'force_execute', 'force_fd',
+                                 'x', 'y'])
         found_x = found_y = False
         for item in inputs:
             self.assertTrue('desc' in item)

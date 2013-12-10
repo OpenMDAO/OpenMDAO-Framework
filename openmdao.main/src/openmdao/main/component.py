@@ -683,12 +683,12 @@ class Component(Container):
 
         self.add(target_name, newobj)  # this will remove the old object
 
-    def add_trait(self, name, trait):
+    def add_trait(self, name, trait, refresh=True):
         """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
-        super(Component, self).add_trait(name, trait)
+        super(Component, self).add_trait(name, trait, refresh)
 
         # if it's an input trait, register a callback to be called whenever it's changed
         if trait.iotype == 'in':
