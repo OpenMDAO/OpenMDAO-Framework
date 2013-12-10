@@ -45,9 +45,16 @@ class Variable(TraitType):
     def __init__(self, default_value=NoDefaultSpecified, **metadata):
         if 'vartypename' not in metadata:
             metadata['vartypename'] = self.__class__.__name__
+
+        # force default value to a value that will always be different
+        # than any value assigned to the variable so that the callback
+        # will always fire the first time the variable is set.
         if metadata['vartypename'] != 'Slot' and metadata.get('required') == True:
             if default_value is not NoDefaultSpecified:
-                raise ValueError("'required' variables cannot have a default value")
+                # set a marker in the metadata that we can check for later
+                # since we don't know the variable name yet and can't generate
+                # a good error message from here.
+                metadata['_illegal_default_'] = True
             default_value = _missing
         super(Variable, self).__init__(default_value=default_value, **metadata)
 
