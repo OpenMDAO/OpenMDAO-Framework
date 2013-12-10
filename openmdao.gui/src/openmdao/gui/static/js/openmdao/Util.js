@@ -232,20 +232,16 @@ openmdao.Util = {
      * title:       optional title, default ``Please confirm``
      * baseId:      optional id, default ``confirm``, used for element ids
      */
-    confirm: function(prompt, callback, title, baseId) {
+    confirm: function(prompt, title, baseId) {
         title = title || 'Please confirm:';
         baseId = baseId || 'confirm';
-
-        // if the user didn't specify a callback, just return
-        if (typeof callback !== 'function') {
-            return;
-        }
 
         var promptId = baseId+'-prompt',
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             win = null,
-            userInput = null;
+            userInput = null,
+            confirmation = jQuery.Deferred();
 
         // FIXME: this looks like a bug, should be removed in handleResponse()
         if (jQuery('#'+baseId).length > 0) {
@@ -255,9 +251,12 @@ openmdao.Util = {
         function handleResponse(ok) {
             // close dialog
             win.dialog('close');
-            // if response was 'Ok' then invoke the callback
-            if (ok && callback) {
-                callback();
+            // resolve the confirmation
+            if (ok) {
+                confirmation.resolve();
+            }
+            else {
+                confirmation.reject();
             }
             // remove from DOM
             win.remove();
@@ -286,6 +285,8 @@ openmdao.Util = {
         jQuery('#'+promptId).html(prompt+'?');
 
         win.dialog('open');
+
+        return confirmation.promise();
     },
 
     /**

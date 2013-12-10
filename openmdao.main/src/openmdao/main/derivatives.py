@@ -5,6 +5,9 @@ differentiation capability.
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
 from openmdao.main.depgraph import base_var
+from openmdao.main.interfaces import IVariableTree
+from openmdao.main.mp_support import has_interface
+from openmdao.main.pseudocomp import PseudoComponent
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \
@@ -278,7 +281,13 @@ def applyJ(obj, arg, result, residual=None):
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             
-            tmp = Jsub.dot(arg[ikey])
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+                tmp = Jsub[0][0] * arg[ikey]
+            else:
+                tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
                         
@@ -368,7 +377,13 @@ def applyJT(obj, arg, result, residual=None):
             Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
                                    i1, i2, idx, ish).T
             
-            tmp = Jsub.dot(arg[ikey])
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+                tmp = Jsub[0][0] * arg[ikey]
+            else:
+                tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
 
@@ -649,7 +664,7 @@ class FiniteDifference(object):
                     new_val = new_val.reshape(shape)
                 else:
                     new_val = self.y_base[i1:i2]
-            elif isinstance(old_val, VariableTree):
+            elif has_interface(old_val, IVariableTree):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
 
@@ -760,35 +775,35 @@ class FiniteDifference(object):
                 self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
 
-def apply_linear_model(self, comp, ffd_order):
-    """Returns the Fake Finite Difference output for the given output
-    name using the stored baseline and derivatives along with the
-    new inputs in the component.
-    """
+# def apply_linear_model(self, comp, ffd_order):
+#     """Returns the Fake Finite Difference output for the given output
+#     name using the stored baseline and derivatives along with the
+#     new inputs in the component.
+#     """
 
-    input_keys, output_keys, J = comp.provideJ()
+#     input_keys, output_keys, J = comp.provideJ()
 
-    # First order derivatives
-    if ffd_order == 1:
+#     # First order derivatives
+#     if ffd_order == 1:
 
-        for j, out_name in enumerate(output_keys):
-            y = comp.get(out_name)
-            for i, in_name in enumerate(input_keys):
-                y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
-                setattr(comp, name, y)
+#         for j, out_name in enumerate(output_keys):
+#             y = comp.get(out_name)
+#             for i, in_name in enumerate(input_keys):
+#                 y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
+#                 setattr(comp, name, y)
 
-    # Second order derivatives
-    #elif order == 2:
-    #
-    #    for in_name1, item in self.second_derivatives[out_name].iteritems():
-    #        for in_name2, dx in item.iteritems():
-    #            y += 0.5*dx* \
-    #              (self.parent.get(in_name1) - self.inputs[in_name1])* \
-    #              (self.parent.get(in_name2) - self.inputs[in_name2])
-    #
-    else:
-        msg = 'Fake Finite Difference does not currently support an ' + \
-              'order of %s.' % order
-        raise NotImplementedError(msg)
+#     # Second order derivatives
+#     #elif order == 2:
+#     #
+#     #    for in_name1, item in self.second_derivatives[out_name].iteritems():
+#     #        for in_name2, dx in item.iteritems():
+#     #            y += 0.5*dx* \
+#     #              (self.parent.get(in_name1) - self.inputs[in_name1])* \
+#     #              (self.parent.get(in_name2) - self.inputs[in_name2])
+#     #
+#     else:
+#         msg = 'Fake Finite Difference does not currently support an ' + \
+#               'order of %s.' % order
+#         raise NotImplementedError(msg)
 
-    return y
+#     return y

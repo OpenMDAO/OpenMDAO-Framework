@@ -3688,6 +3688,7 @@
 			this.get_container()
 				.delegate("a", "contextmenu.jstree", $.proxy(function (e) {
 						e.preventDefault();
+						e.stopImmediatePropagation(); 
 						if(!$(e.currentTarget).hasClass("jstree-loading")) {
 							this.show_contextmenu(e.currentTarget, e.pageX, e.pageY);
 						}

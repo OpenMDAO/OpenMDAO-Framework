@@ -34,6 +34,7 @@ def json_default(obj):
     """
     return repr(obj)
 
+_missing = object()
 
 class Variable(TraitType):
     """An OpenMDAO-specific trait type that serves as a common base
@@ -44,6 +45,10 @@ class Variable(TraitType):
     def __init__(self, default_value=NoDefaultSpecified, **metadata):
         if 'vartypename' not in metadata:
             metadata['vartypename'] = self.__class__.__name__
+        if metadata['vartypename'] != 'Slot' and metadata.get('required') == True:
+            if default_value is not NoDefaultSpecified:
+                raise ValueError("'required' variables cannot have a default value")
+            default_value = _missing
         super(Variable, self).__init__(default_value=default_value, **metadata)
 
     def get_attribute(self, name, value, trait, meta):

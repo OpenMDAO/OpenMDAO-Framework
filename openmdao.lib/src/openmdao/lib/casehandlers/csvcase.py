@@ -225,7 +225,7 @@ class CSVCaseRecorder(object):
 
     def __getstate__(self):
         """ Returns state as a dict. """
-        state = self.__dict__
+        state = self.__dict__.copy()
         # If already open, restored recorder will append to reopened file.
         state['append'] = self.append or (self.outfile is not None)
         state['outfile'] = None
@@ -261,9 +261,9 @@ class CSVCaseRecorder(object):
             # case is passed to self.record.
             self._write_headers = True
 
-            self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
-                                         quotechar=self.quotechar,
-                                         quoting=csv.QUOTE_NONNUMERIC)
+        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                     quotechar=self.quotechar,
+                                     quoting=csv.QUOTE_NONNUMERIC)
 
     def record(self, case):
         """Store the case in a csv file. The format for a line of data

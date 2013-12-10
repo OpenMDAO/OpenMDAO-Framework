@@ -882,9 +882,9 @@ class Assembly(Component):
 
         for src in required_inputs:
             varname, _, tail = src.partition('[')
-            target = self._depgraph.successors(varname)
+            target = [n for n in self._depgraph.successors(varname) if not n.startswith('parent.')]
             if len(target) == 0:
-                target = self._depgraph.successors(src)
+                target = [n for n in self._depgraph.successors(src) if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 
