@@ -348,7 +348,10 @@ class ParametersTestCase(unittest.TestCase):
         params['comp.a'].set(d1val)
         self.assertEqual(self.top.comp.a, 15.)
 
-        params2['comp.a'].set(d2val)
+        params2['comp.a'].set(5.0)
+        self.assertEqual(self.top.comp.a, 12.)
+        
+        self.top.driver2.set_parameters([d2val])
         self.assertEqual(self.top.comp.a, 15.)
 
     #def test_scaled_var_with_initial_violation(self):

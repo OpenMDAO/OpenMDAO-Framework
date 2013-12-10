@@ -194,7 +194,7 @@ Running this produces:
     >>> tt = time.time()
     >>> opt_problem.run()
     >>> print opt_problem.paraboloid.x,opt_problem.paraboloid.y
-    (0.006667, -733.333313)
+    (0.006667, -1733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0160000324249 seconds
     >>> print "Execution count: ", opt_problem.paraboloid.exec_count
@@ -216,7 +216,7 @@ Running the assembly now gives:
     >>> tt = time.time()
     >>> opt_problem.run()
     >>> print opt_problem.paraboloid.x,opt_problem.paraboloid.y
-    (0.006667, -733.333313)
+    (0.006667, -1733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0 seconds
     >>> print "Execution count: ", opt_problem.paraboloid.exec_count
