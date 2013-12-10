@@ -1260,7 +1260,7 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.pred[name]:
+        if self._depgraph.pred.get(name):
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:
