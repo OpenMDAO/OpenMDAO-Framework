@@ -372,7 +372,10 @@ class Driver(Component):
         # Objectives
         if hasattr(self, 'eval_objective'):
             case_output.append(["Objective", self.eval_objective()])
-
+        elif hasattr(self, 'eval_objectives'):
+            for j, obj in enumerate(self.eval_objectives()):
+                case_output.append(["Objective_%d" % j, obj])
+                
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
