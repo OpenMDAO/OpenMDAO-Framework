@@ -96,6 +96,8 @@ Running the optimization results in:
     Execution count:  53
     
     
+Note that the actual numbers for execution time and for the number of
+functional evaluations will differ depending on platform or architecture.
 Now, consider modifying the assembly so that `x` and `y` have scalers
 specified when added to the assembly's driver:
 
