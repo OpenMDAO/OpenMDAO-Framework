@@ -6,14 +6,14 @@ import StringIO
 import unittest
 
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
-from openmdao.main.datatypes.api import Float, List, Str
 from openmdao.main.api import Component, Assembly, Driver, Run_Once, Case, set_as_top
+from openmdao.main.datatypes.api import Float, List, Str
 
 class Basic_Component(Component):
     ''' Basic building block'''
     
-    x1 = Float(0.0, iotype='in')
-    y1 = Float(iotype='out')
+    x1 = Float(0.0, iotype='in', units='cm')
+    y1 = Float(iotype='out', units='m')
     
     def execute(self):
         ''' pretty simple'''
@@ -221,6 +221,59 @@ class Data_Dump_TestCase(unittest.TestCase):
             else:
                 self.assertEqual(line, template)
 
+    def test_exclude_pseudocomps(self):
+        # Pseudocomp comes from unit conversion
+        self.top.add('comp1', Basic_Component())
+        self.top.driver.workflow.add('comp1')
+        self.top.add('comp2', Basic_Component())
+        self.top.driver.workflow.add('comp2')
+        self.top.connect('comp1.y1', 'comp2.x1')
+        
+        sout = StringIO.StringIO()
+        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.driver.printvars = ['*']
+        self.top.run()
+        expected = [
+            'Case: ',
+            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383239074.309192',
+            '   inputs:',
+            '      comp1.directory: ',
+            '      comp1.force_execute: False',
+            '      comp1.force_fd: False',
+            '      comp1.x1: 0.0',
+            '      comp2.directory: ',
+            '      comp2.force_execute: False',
+            '      comp2.force_fd: False',
+            '      comp2.x1: 100.0',
+            '      driver.directory: ',
+            '      driver.force_execute: True',
+            '      driver.force_fd: False',
+            "      driver.printvars: ['*']",
+            '   outputs:',
+            '      comp1.derivative_exec_count: 0',
+            '      comp1.exec_count: 1',
+            '      comp1.itername: 1-1',
+            '      comp1.y1: 1.0',
+            '      comp2.derivative_exec_count: 0',
+            '      comp2.exec_count: 1',
+            '      comp2.itername: 1-2',
+            '      comp2.y1: 101.0',
+            '      driver.derivative_exec_count: 0',
+            '      driver.exec_count: 1',
+            '      driver.itername: ',
+            '      driver.workflow.itername: 1',
+            ]
+        lines = sout.getvalue().split('\n')
+        
+        for line, template in zip(lines, expected):
+            if template.startswith('   uuid:'):
+                self.assertTrue(line.startswith('   uuid:'))
+            elif template.startswith('   timestamp:'):
+                self.assertTrue(line.startswith('   timestamp:'))
+            else:
+                self.assertEqual(line, template)
+                
     def test_more_datatypes(self):
         
         self.top.add('comp1', Complex_Comp())
