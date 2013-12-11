@@ -245,10 +245,6 @@ def finalize_release(parser, options):
     if options.version is None:
         raise RuntimeError("you must specify the version")
 
-    if options.tutorials:
-        print "Only uploaded tutorials, no other action was taken. Now exiting"
-        sys.exit(0)
-
     reldir = 'rel_%s' % options.version
     brname = 'release_%s' % options.version
     # check validity
