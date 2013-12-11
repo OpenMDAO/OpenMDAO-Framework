@@ -213,7 +213,6 @@ class SequentialWorkflow(Workflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
-        nEdge = 0
         dgraph = self.derivative_graph()
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
@@ -222,10 +221,19 @@ class SequentialWorkflow(Workflow):
             
         basevars = set()
         edges = self.edge_list()
-        # TODO = these are not sorted right
-        sortedkeys = sorted(self.edge_list().keys())
+        implicit_edges = self.get_implicit_info()
+        sortedkeys = sorted(implicit_edges)
+        sortedkeys.extend(sorted(self.edge_list().keys()))
+        
+        nEdge = 0
         for src in sortedkeys:
-            targets = edges[src]
+            
+            if src in implicit_edges:
+                targets = implicit_edges[src]
+                is_implicit = True
+            else:
+                targets = edges[src]
+                is_implicit = False
             
             if isinstance(targets, str):
                 targets = [targets]
@@ -247,15 +255,19 @@ class SequentialWorkflow(Workflow):
                 else:
                     raise RuntimeError("malformed graph!")
 
+            # Implicit source edges are tuples.
+            if is_implicit == True:
+                pass
             # Find out our width, etc
-            unmap_src = from_PA_var(measure_src)
-            val = self.scope.get(unmap_src)
-            width = flattened_size(unmap_src, val, self.scope)
-            if isinstance(val, ndarray):
-                shape = val.shape
             else:
-                shape = 1
-        
+                unmap_src = from_PA_var(measure_src)
+                val = self.scope.get(unmap_src)
+                width = flattened_size(unmap_src, val, self.scope)
+                if isinstance(val, ndarray):
+                    shape = val.shape
+                else:
+                    shape = 1
+
             # Special poke for boundary node
             if is_boundary_node(dgraph, measure_src) or \
                is_boundary_node(dgraph, base_var(dgraph, measure_src)):
@@ -289,7 +301,7 @@ class SequentialWorkflow(Workflow):
                 if not target.startswith('@'):
                     
                     # Handle State-Residual pairs
-                    if src.split('.')[0] == target.split('.')[0]:
+                    if is_implicit == True:
                         
                         unmap_targ = from_PA_var(target)
                         val = self.scope.get(unmap_targ)
@@ -306,6 +318,7 @@ class SequentialWorkflow(Workflow):
             
             #print input_src, src, target, bound,      
             nEdge += width
+            impli_edge = nEdge
                 
         # Initialize the residual vector on the first time through, and also
         # if for some reason the number of edges has changed.
@@ -803,16 +816,23 @@ class SequentialWorkflow(Workflow):
     def get_implicit_info(self):
         """ Return a list of tuples of the form (states, residuals)
         """
-        info = []
+        info = {}
         cnames = self.derivative_graph().all_comps()
         for cname in cnames:
+            
+            # Our pseudoAssys aren't implicit
+            if '~' in cname:
+                continue
+            
             comp = getattr(self.scope, cname)
             if has_interface(comp, IImplicitComponent):
                 if not comp.eval_only:
-                    info.append((['.'.join([cname,n]) 
-                                     for n in comp.list_states()],
-                                 ['.'.join([cname,n]) 
-                                     for n in comp.list_residuals()]))
+                    key = tuple(['.'.join([cname,n]) 
+                                     for n in comp.list_residuals()])
+                    value = ['.'.join([cname,n]) 
+                                     for n in comp.list_states()]
+                    info[key] = value
+                    
             elif has_interface(ISolver):
                 pass  # TODO: retrieve states,residuals from solver
 
