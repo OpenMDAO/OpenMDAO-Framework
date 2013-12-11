@@ -1144,6 +1144,7 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
+
 def mod_for_derivs(graph, inputs, outputs, scope):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
@@ -1151,24 +1152,24 @@ def mod_for_derivs(graph, inputs, outputs, scope):
     indct = {}
     inames = []
     onames = []
-    states = []
-    resids = []
+    # states = []
+    # resids = []
 
-    # add connections between residuals and states
-    for node, data in graph.nodes_iter(data=True):
-        io = data.get('iotype')
-        if io == 'state':
-            states.append(node)
-        elif io == 'residual':
-            resids.append(node)
+    # # add connections between residuals and states
+    # for node, data in graph.nodes_iter(data=True):
+    #     io = data.get('iotype')
+    #     if io == 'state':
+    #         states.append(node)
+    #     elif io == 'residual':
+    #         resids.append(node)
 
-    state_comps = partition_names_by_comp(states)
-    resid_comps = partition_names_by_comp(resids)
+    # state_comps = partition_names_by_comp(states)
+    # resid_comps = partition_names_by_comp(resids)
 
-    for cname, res in resid_comps.items():
-        for r in res:
-            for st in state_comps[cname]:
-                graph.add_edge('.'.join([cname, r]), '.'.join([cname, st]), conn=True)
+    # for cname, res in resid_comps.items():
+    #     for r in res:
+    #         for st in state_comps[cname]:
+    #             graph.add_edge('.'.join([cname, r]), '.'.join([cname, st]), conn=True)
 
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
@@ -1177,7 +1178,8 @@ def mod_for_derivs(graph, inputs, outputs, scope):
         graph.add_node(iname, var=True, iotype='in', valid=True)
         for varname in flatten_list_of_iters(varnames):
             if varname not in graph:  # must be a subvar
-                graph.add_node(varname, basevar=base_var(graph, varname), iotype='in', valid=True)
+                graph.add_node(varname, basevar=base_var(graph, varname), 
+                               iotype='in', valid=True)
             graph.connect(None, iname, varname,
                           check=False, invalidate=False)
             indct[varname] = iname
@@ -1189,7 +1191,8 @@ def mod_for_derivs(graph, inputs, outputs, scope):
         graph.add_node(oname, var=True, iotype='out', valid=False)
         for varname in flatten_list_of_iters(varnames):
             if varname not in graph:
-                graph.add_node(varname, basevar=base_var(graph, varname), iotype='out', valid=False)
+                graph.add_node(varname, basevar=base_var(graph, varname), 
+                               iotype='out', valid=False)
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
