@@ -1,4 +1,5 @@
 import copy
+import logging
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -102,8 +103,13 @@ class PkgResourcesFactory(Factory):
                 fpath = find_module(modname)
                 if fpath is not None:
                     fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
-                    meta['bases'] = fanalyzer.classes[name].bases
-                    meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
+                    # 'name' may be missing if that module only imports,
+                    # does not define, the class.
+                    if name in fanalyzer.classes:
+                        meta['bases'] = fanalyzer.classes[name].bases
+                        meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
+                    else:
+                        logging.warning('pkg_res_factory: %r not found', name)
 
             meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):

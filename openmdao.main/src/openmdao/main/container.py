@@ -192,6 +192,7 @@ class Container(SafeHasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
+        self._repair_trait_info = None
 
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
@@ -210,12 +211,7 @@ class Container(SafeHasTraits):
             ttype = obj.trait_type
             if isinstance(ttype, VarTree):
                 variable_tree = getattr(self, name)
-                parent = variable_tree._parent
-                variable_tree._parent = None
-                try:
-                    new_tree = variable_tree.copy()
-                finally:
-                    variable_tree._parent = parent
+                new_tree = variable_tree.copy()
                 setattr(self, name, new_tree)
             
             if obj.required:
@@ -427,7 +423,12 @@ class Container(SafeHasTraits):
         # in order for our sub-components and objects to get deep-copied.
         memo['traits_copy_mode'] = "deep"
 
-        result = super(Container, self).__deepcopy__(memo)
+        saved = self._parent
+        self._parent = None
+        try:
+            result = super(Container, self).__deepcopy__(memo)
+        finally:
+            self._parent = saved
         result._cached_traits_ = None
 
         # Instance traits are not created properly by deepcopy, so we need
@@ -647,16 +648,7 @@ class Container(SafeHasTraits):
             # copy value if 'copy' found in metadata
             if ttype.copy:
                 if isinstance(val, Container):
-                    old_parent = val.parent
-                    val.parent = None
-                    try:
-                        val_copy = _copydict[ttype.copy](val)
-                    finally:
-                        val.parent = old_parent
-                    val_copy.parent = self
-                    if hasattr(val_copy, 'install_callbacks'):
-                        val_copy.install_callbacks()
-                    val = val_copy
+                    val = val.copy()
                 else:
                     val = _copydict[ttype.copy](val)
         else: # index is not None
@@ -818,14 +810,17 @@ class Container(SafeHasTraits):
     def copy(self):
         """Returns a deep copy without deepcopying the parent.
         """
-        par = self.parent
-        self.parent = None
-        try:
-            cp = copy.deepcopy(self)
-        finally:
-            self.parent = par
-            cp.parent = par
+        cp = copy.deepcopy(self)
+        cp._relink()
         return cp
+
+    def _relink(self):
+        """Restore parent links in copy."""
+        for name in self.list_containers():
+            container = getattr(self, name)
+            if container is not self._parent:
+                container._parent = self
+                container._relink()
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
