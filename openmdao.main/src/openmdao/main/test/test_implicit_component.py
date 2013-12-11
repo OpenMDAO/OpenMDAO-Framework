@@ -327,6 +327,10 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.add_constraint('comp.res[2] = 0')
         
         model.comp.eval_only = True
+
+        self.assertEqual(set(model.driver.workflow.get_implicit_info()),
+                         set())
+
         model.run()
         
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
@@ -399,6 +403,13 @@ class Testcase_implicit(unittest.TestCase):
         model.run()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'])
+        info = model.driver.workflow.get_implicit_info()
+        self.assertEqual(set(info[0][0]),
+                         set(['comp.x','comp.y','comp.z']))
+        self.assertEqual(set(info[0][1]),
+                         set(['comp.res']))
+        self.assertEqual(len(info), 1)
+
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         

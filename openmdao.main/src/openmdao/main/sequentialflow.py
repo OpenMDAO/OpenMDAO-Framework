@@ -21,7 +21,7 @@ from openmdao.main.depgraph import find_related_pseudos, base_var, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
                                     is_subvar_node, edges_to_dict, is_boundary_node
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
 
 try:
@@ -788,7 +788,6 @@ class SequentialWorkflow(Workflow):
                 elif is_output_base_node(dgraph, newname):
                     dgraph.add_edge(pa_name, newname)
                         
-            
             # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
         
@@ -800,6 +799,24 @@ class SequentialWorkflow(Workflow):
         self._edges = edges_to_dict(self.derivative_graph().list_connections())
             
         return self._edges
+
+    def get_implicit_info(self):
+        """ Return a list of tuples of the form (states, residuals)
+        """
+        info = []
+        cnames = self.derivative_graph().all_comps()
+        for cname in cnames:
+            comp = getattr(self.scope, cname)
+            if has_interface(comp, IImplicitComponent):
+                if not comp.eval_only:
+                    info.append((['.'.join([cname,n]) 
+                                     for n in comp.list_states()],
+                                 ['.'.join([cname,n]) 
+                                     for n in comp.list_residuals()]))
+            elif has_interface(ISolver):
+                pass  # TODO: retrieve states,residuals from solver
+
+        return info
         
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
