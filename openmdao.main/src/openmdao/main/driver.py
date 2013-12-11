@@ -372,7 +372,10 @@ class Driver(Component):
         # Objectives
         if hasattr(self, 'eval_objective'):
             case_output.append(["Objective", self.eval_objective()])
-
+        elif hasattr(self, 'eval_objectives'):
+            for j, obj in enumerate(self.eval_objectives()):
+                case_output.append(["Objective_%d" % j, obj])
+                
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
@@ -433,6 +436,10 @@ class Driver(Component):
 
         for comp in self.workflow.__iter__():
 
+            # The variables in pseudo-comps are not of interest.
+            if not hasattr(comp, 'list_vars'):
+                continue
+            
             # All variables from components in workflow
             for var in comp.list_vars():
                 all_vars.append('%s%s.%s' % (header, comp.name, var))
