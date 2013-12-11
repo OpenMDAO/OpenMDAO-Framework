@@ -317,7 +317,7 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0 - prob.dis1.x[4], 1.0, 0.0001)
 
     def test_MIMO_ExcitingMixing(self):
-        """ Testing Broyden on a 2 input 2 output case"""
+        # Testing Broyden on a 2 input 2 output case
 
         prob = MIMOBroyden()
         set_as_top(prob)

@@ -44,7 +44,7 @@ from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.variable import Variable, is_legal_name
+from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -56,8 +56,6 @@ _copydict = {
 }
 
 _iodict = {'out': 'output', 'in': 'input'}
-
-_missing = object()
 
 
 def get_closest_proxy(start_scope, pathname):
@@ -163,6 +161,16 @@ class SafeHasTraits(HasTraits):
     __metaclass__ = _MetaSafe
 
 
+def _check_bad_default(name, trait, obj=None):
+    if trait.vartypename != 'Slot' and trait.required == True and \
+           trait._illegal_default_ is True:
+        msg = "variable '%s' is required and cannot have a default value" % name
+        if obj is None:
+            raise RuntimeError(msg)
+        else:
+            obj.raise_exception(msg, RuntimeError)
+
+
 class Container(SafeHasTraits):
     """ Base class for all objects having Traits that are visible
     to the framework"""
@@ -205,6 +213,9 @@ class Container(SafeHasTraits):
                 variable_tree = getattr(self, name)
                 new_tree = variable_tree.copy()
                 setattr(self, name, new_tree)
+            
+            if obj.required:
+                _check_bad_default(name, obj, self)
 
     @property
     def parent(self):
@@ -554,6 +565,11 @@ class Container(SafeHasTraits):
             if name in base.__dict__:
                 raise NameError('Would override attribute %r of %s'
                                 % (name, base.__name__))
+        
+        for t in trait:
+            _check_bad_default(name, t)
+            break  # just check the first arg in the list
+
         return super(Container, cls).add_class_trait(name, *trait)
 
     def add_trait(self, name, trait, refresh=True):
@@ -574,6 +590,8 @@ class Container(SafeHasTraits):
             if name in base.__dict__:
                 raise NameError('Would override attribute %r of %s'
                                 % (name, base.__name__))
+
+        _check_bad_default(name, trait, self)
 
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
@@ -1237,7 +1255,7 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.pred[name]:
+        if self._depgraph.pred.get(name):
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:

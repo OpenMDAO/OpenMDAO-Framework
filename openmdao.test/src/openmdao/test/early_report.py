@@ -139,6 +139,8 @@ class EarlyTestInfo(Plugin):
 
     def addError(self, test, err, capt=None):
         if err[0] == SkipTest:
+            if id(test) not in self._tests:
+                self.startTest(test)
             self._tests[id(test)].status = 'S'
         else:
             self._tests[id(test)].status = 'E'

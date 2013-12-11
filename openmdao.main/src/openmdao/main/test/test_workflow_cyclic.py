@@ -72,7 +72,7 @@ class TestCase(unittest.TestCase):
         pass
 
     def test_simple_flow(self):
-        """ Simple Case"""
+        # Simple Case
         self.model = Simple()
         self.model.run()
 
@@ -80,7 +80,7 @@ class TestCase(unittest.TestCase):
                          ['c2', 'c1'])
 
     def test_multi_flow(self):
-        """ 2 unique loops, 3 total loops """
+        # 2 unique loops, 3 total loops 
         self.model = MultiPath()
         self.model.run()
 

@@ -96,6 +96,8 @@ Running the optimization results in:
     Execution count:  53
     
     
+Note that the actual numbers for execution time and for the number of
+functional evaluations will differ depending on platform or architecture.
 Now, consider modifying the assembly so that `x` and `y` have scalers
 specified when added to the assembly's driver:
 
@@ -194,7 +196,7 @@ Running this produces:
     >>> tt = time.time()
     >>> opt_problem.run()
     >>> print opt_problem.paraboloid.x,opt_problem.paraboloid.y
-    (0.006667, -733.333313)
+    (0.006667, -1733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0160000324249 seconds
     >>> print "Execution count: ", opt_problem.paraboloid.exec_count
@@ -216,7 +218,7 @@ Running the assembly now gives:
     >>> tt = time.time()
     >>> opt_problem.run()
     >>> print opt_problem.paraboloid.x,opt_problem.paraboloid.y
-    (0.006667, -733.333313)
+    (0.006667, -1733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0 seconds
     >>> print "Execution count: ", opt_problem.paraboloid.exec_count
