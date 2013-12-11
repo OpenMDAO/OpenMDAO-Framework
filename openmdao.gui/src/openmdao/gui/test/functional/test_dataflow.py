@@ -207,7 +207,7 @@ def _test_connections(browser):
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.count_variable_figures(), 20)
+    eq(conn_page.count_variable_figures(), 21)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
     time.sleep(0.5)
@@ -494,6 +494,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -512,6 +514,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -528,6 +532,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -546,6 +552,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -582,6 +590,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -603,6 +613,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -677,6 +689,7 @@ def _test_parameter_autocomplete(browser):
         'p1.cont_in.vt2.vt3.b',
         'p1.directory',
         'p1.force_execute',
+        'p1.force_fd',
     ])
 
     autocomplete_targets = [element.text for element in dialog.get_autocomplete_targets('p1')]
@@ -684,7 +697,7 @@ def _test_parameter_autocomplete(browser):
     #For p1 (simplecomp) there should only be
     #8 valid autocomplete targets.
 
-    eq(len(autocomplete_targets), 8)
+    eq(len(autocomplete_targets), 9)
 
     for target in autocomplete_targets:
         eq(target in expected_targets, True)
@@ -883,13 +896,13 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute"],
+        ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute", "force_fd"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
+        ["force_fd", "force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
         "inputs",
         SortOrder.DESCENDING
     )
@@ -932,13 +945,13 @@ def _test_column_sorting(browser):
     #Testing sort for inputs
 
     test_sorting(
-        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "directory", "force_execute"],
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "directory", "force_execute", "force_fd"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        ["force_fd", "force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
     )

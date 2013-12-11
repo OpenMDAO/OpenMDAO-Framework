@@ -25,6 +25,10 @@ class NozzleGeometryDOETestCase(unittest.TestCase):
         if os.path.exists(outfile):
             shutil.rmtree(outfile)        
         
+        outfile = 'driver.csv'
+        if os.path.exists(outfile):
+            os.remove(outfile)        
+        
     def test_run_nozzle_geometry_doe(self):
         
         self.model.run()
