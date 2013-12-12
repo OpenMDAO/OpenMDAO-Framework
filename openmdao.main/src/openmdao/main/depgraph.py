@@ -1519,9 +1519,12 @@ def edge_dict_to_comp_list(graph, edges, implicit_edges=None):
                 comps[comp]['residuals'].append(var)
                 comps[comp]['outputs'].append(var)
             for target in targets:
-                comp, _, var = target.partition('.')
-                comps[comp]['states'].append(var)
-                comps[comp]['inputs'].append(var)
+                if isinstance(target, str):
+                    target = [target]
+                for itarget in target:
+                    comp, _, var = itarget.partition('.')
+                    comps[comp]['states'].append(var)
+                    comps[comp]['inputs'].append(var)
                 
     return comps
 
