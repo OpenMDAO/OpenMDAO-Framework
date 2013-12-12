@@ -596,6 +596,11 @@ class ExprEvaluator(object):
                 gradient[var] = 0.0
                 continue
             
+            # Skip sympy on arrays.
+            val = scope.get(var)
+            if isinstance(val, ndarray):
+                self.cached_grad_eq[var] = False
+
             # First time, try to differentiate symbolically
             if (var not in self.cached_grad_eq) or self._code is None:
                 
@@ -608,8 +613,7 @@ class ExprEvaluator(object):
                     self.cached_grad_eq[var] = False
 
             # If we have a cached gradient expression:
-# FIXME: re-enable sympy
-            if False: #self.cached_grad_eq[var]:
+            if self.cached_grad_eq[var]:
                 
                 # This is not the way I wanted to do it, but I didn't want
                 # to mess with everything that's is in self._parse
@@ -639,7 +643,7 @@ class ExprEvaluator(object):
                     else:
                         replace_val = scope.get(name)
                         
-                    if name==var:
+                    if name == var:
                         var_dict[name] = replace_val
                         new_name = "var_dict['%s']" % name
                         grad_text = grad_text.replace(name, new_name)
