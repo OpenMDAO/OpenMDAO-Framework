@@ -47,7 +47,7 @@ class MyComp_No_Deriv(ImplicitComponent):
         self.res[2] = -x + y/2. - z 
         
         self.y_out = c + x + y + z
-
+        
 class MyComp_Deriv(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
@@ -503,21 +503,21 @@ class Testcase_implicit(unittest.TestCase):
         self.assertTrue('comp.z' in model.driver.workflow._derivative_graph)
         
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
-        
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
-                                                outputs=['comp.y_out'],
-                                                mode='fd')
-        print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='adjoint')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_list_states(self):
         comp = MyComp_Deriv()

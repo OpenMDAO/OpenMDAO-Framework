@@ -3,7 +3,7 @@
     Disciplines coupled using Fixed Point Iteration
 """
 from openmdao.main.api import Assembly
-from openmdao.lib.drivers.api import SLSQPdriver, MDASolver
+from openmdao.lib.drivers.api import SLSQPdriver, FixedPointIterator
 from openmdao.lib.optproblems import sellar
 
 class SellarMDF(Assembly):
@@ -22,12 +22,12 @@ class SellarMDF(Assembly):
         self.add('driver', SLSQPdriver())
         
         # Outer Loop - Global Optimization
-        self.add('solver', MDASolver())
+        self.add('solver', FixedPointIterator())
         self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
-        self.add('dis1', sellar.Discipline1())
-        self.add('dis2', sellar.Discipline2())
+        self.add('dis1', sellar.Discipline1_WithDerivatives())
+        self.add('dis2', sellar.Discipline2_WithDerivatives())
         self.solver.workflow.add(['dis1', 'dis2'])
         
         # Add Parameters to optimizer

@@ -336,7 +336,8 @@ class SequentialWorkflow(Workflow):
                         self.set_bounds(itarget, bound)
                         
                     impli_edge += imp_width
-                        
+                    width = impli_edge - nEdge
+                    
                 elif not target.startswith('@'):
                     self.set_bounds(target, bound)
             
@@ -845,6 +846,14 @@ class SequentialWorkflow(Workflow):
         """ Return a dict of the form {(residuals) : [states]}
         """
         info = {}
+        
+        comps = self.derivative_graph().all_comps()
+        
+        # Full model finite difference = no implcit edges
+        if len(comps) == 1 and '~~' in comps[0]:
+            return info
+        
+        # Residuals and states for implicit components
         for cname in self.derivative_graph().all_comps():
             
             if '~~' in cname:
@@ -860,7 +869,7 @@ class SequentialWorkflow(Workflow):
                                      for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
-        for comp in self:
+        for comp in self._parent.iteration_set():
             if has_interface(comp, ISolver):
                 key = tuple(comp.list_eq_constraint_targets())
                 value = comp.list_param_group_targets()
