@@ -1404,7 +1404,7 @@ def edges_to_dict(edges, dct=None):
     return dct
 
 
-def edge_dict_to_comp_list(graph, edges):
+def edge_dict_to_comp_list(graph, edges, implicit_edges=None):
     """Converts inner edge dict into an ordered dict whose keys are component
     names, and whose values are lists of relevant (in the graph) inputs and
     outputs.
@@ -1420,7 +1420,6 @@ def edge_dict_to_comp_list(graph, edges):
             targets = [targets]
             
         numfakes = 0
-        is_implicit = False
         for target in targets:
             if target.startswith('@fake'):
                 numfakes += 1
@@ -1430,17 +1429,13 @@ def edge_dict_to_comp_list(graph, edges):
                     if comp not in comps:
                         comps[comp] = {'inputs': [],
                                        'outputs': [],
-                                       'residual': None,
+                                       'residuals': [],
                                        'states': []}
                     
                     basevar = base_var(graph, target)
                     if basevar not in basevars:
                         comps[comp]['inputs'].append(var)
                         
-                        if comp == src.split('.')[0]:
-                            comps[comp]['states'].append(var)
-                            is_implicit = True
-                            
                         if target == basevar:
                             basevars.add(target)
                             
@@ -1453,17 +1448,27 @@ def edge_dict_to_comp_list(graph, edges):
                 if comp not in comps:
                     comps[comp] = {'inputs': [],
                                    'outputs': [],
-                                   'residual': None,
+                                   'residuals': [],
                                    'states': []}
                 
                 basevar = base_var(graph, src)
                 if basevar not in basevars:
                     comps[comp]['outputs'].append(var)
-                    if is_implicit:
-                        comps[comp]['residual'] = var
                     if src == basevar:
                         basevars.add(src)
 
+    # Implicit edges
+    if implicit_edges is not None:
+        for srcs, targets in implicit_edges.iteritems():
+            for src in srcs:
+                comp, _, var = src.partition('.')
+                comps[comp]['residuals'].append(var)
+                comps[comp]['outputs'].append(var)
+            for target in targets:
+                comp, _, var = target.partition('.')
+                comps[comp]['states'].append(var)
+                comps[comp]['inputs'].append(var)
+                
     return comps
 
 def nodes_matching_all(graph, **kwargs):
