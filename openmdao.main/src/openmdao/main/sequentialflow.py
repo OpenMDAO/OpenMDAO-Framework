@@ -699,6 +699,8 @@ class SequentialWorkflow(Workflow):
             
             # A component with no derivatives is non-differentiable
             nondiff = set()
+            nondiff_groups = []
+            
             for name in comps:
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
@@ -707,6 +709,7 @@ class SequentialWorkflow(Workflow):
                     nondiff.add(comp.name)
                 elif comp.force_fd is True:
                     nondiff.add(comp.name)
+                    
                     
             # If a connection is non-differentiable, so are its src and 
             # target components.
@@ -740,7 +743,6 @@ class SequentialWorkflow(Workflow):
             
             # Groups any connected non-differentiable blocks. Each block is a set
             # of component names.
-            nondiff_groups = []
             sub = cgraph.subgraph(nondiff)
             nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
             for i, item in enumerate(nd_graphs):
@@ -846,31 +848,16 @@ class SequentialWorkflow(Workflow):
         for cname in self.derivative_graph().all_comps():
             
             if '~~' in cname:
-                pcomp = self._derivative_graph.node[cname]['pa_object']
-                
-                # Inplicit components should never be grouped together in an
-                # fd block.
-                if len(pcomp.comps) > 1:
-                    continue
-                
-                comp = getattr(self.scope, pcomp.comps[0])
-                cname += '.' + comp.name
-                if has_interface(comp, IImplicitComponent):
-                    if not comp.eval_only:
-                        key = tuple(['|'.join([cname, n]) 
-                                         for n in comp.list_residuals()])
-                        info[key] = ['|'.join([cname, n]) 
-                                         for n in comp.list_states()]
-                        
-            else:            
-                comp = getattr(self.scope, cname)
-                
-                if has_interface(comp, IImplicitComponent):
-                    if not comp.eval_only:
-                        key = tuple(['.'.join([cname, n]) 
-                                         for n in comp.list_residuals()])
-                        info[key] = ['.'.join([cname, n]) 
-                                         for n in comp.list_states()]
+                continue
+            
+            comp = getattr(self.scope, cname)
+            
+            if has_interface(comp, IImplicitComponent):
+                if not comp.eval_only:
+                    key = tuple(['.'.join([cname, n]) 
+                                     for n in comp.list_residuals()])
+                    info[key] = ['.'.join([cname, n]) 
+                                     for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
         for comp in self:
