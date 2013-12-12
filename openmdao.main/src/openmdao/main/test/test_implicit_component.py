@@ -495,10 +495,12 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(edges['comp.res[0]'], ['_pseudo_0.in0'])
         self.assertEqual(edges['comp.res[1]'], ['_pseudo_1.in0'])
         self.assertEqual(edges['comp.res[2]'], ['_pseudo_2.in0'])
-        self.assertEqual(edges['_pseudo_0.out0'], ['@fake'])
-        self.assertEqual(edges['_pseudo_1.out0'], ['@fake'])
-        self.assertEqual(edges['_pseudo_2.out0'], ['@fake'])
-        self.assertEqual(set(edges['@fake']), set(['comp.x', 'comp.y', 'comp.z']))
+        self.assertTrue('_pseudo_0.out0' in model.driver.workflow._derivative_graph)
+        self.assertTrue('_pseudo_1.out0' in model.driver.workflow._derivative_graph)
+        self.assertTrue('_pseudo_2.out0' in model.driver.workflow._derivative_graph)
+        self.assertTrue('comp.x' in model.driver.workflow._derivative_graph)
+        self.assertTrue('comp.y' in model.driver.workflow._derivative_graph)
+        self.assertTrue('comp.z' in model.driver.workflow._derivative_graph)
         
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
