@@ -316,22 +316,28 @@ class SequentialWorkflow(Workflow):
             # Poke our target data
             impli_edge = nEdge
             for target in targets:
-                if not target.startswith('@'):
                     
-                    # Handle States in implicit comps
-                    if is_implicit == True:
+                # Handle States in implicit comps
+                if is_implicit == True:
+                    
+                    if isinstance(target, str):
+                        target = [target]
                         
-                        unmap_targ = from_PA_var(target)
-                        val = self.scope.get(unmap_targ)
-                        imp_width = flattened_size(unmap_targ, val, self.scope)
-                        if isinstance(val, ndarray):
-                            shape = val.shape
-                        else:
-                            shape = 1
-                            
+                    unmap_targ = from_PA_var(target[0])
+                    val = self.scope.get(unmap_targ)
+                    imp_width = flattened_size(unmap_targ, val, self.scope)
+                    if isinstance(val, ndarray):
+                        shape = val.shape
+                    else:
+                        shape = 1
+                        
+                    for itarget in target:
                         bound = (impli_edge, impli_edge+imp_width)
-                        impli_edge += imp_width
+                        self.set_bounds(itarget, bound)
                         
+                    impli_edge += imp_width
+                        
+                elif not target.startswith('@'):
                     self.set_bounds(target, bound)
             
             #print input_src, src, target, bound,      
@@ -839,24 +845,39 @@ class SequentialWorkflow(Workflow):
         info = {}
         for cname in self.derivative_graph().all_comps():
             
-            # Our pseudoAssys aren't implicit
-            if '~' in cname:
-                continue
-            
-            comp = getattr(self.scope, cname)
-            if has_interface(comp, IImplicitComponent):
-                if not comp.eval_only:
-                    key = tuple(['.'.join([cname,n]) 
-                                     for n in comp.list_residuals()])
-                    info[key] = ['.'.join([cname,n]) 
-                                     for n in comp.list_states()]
+            if '~~' in cname:
+                pcomp = self._derivative_graph.node[cname]['pa_object']
+                
+                # Inplicit components should never be grouped together in an
+                # fd block.
+                if len(pcomp.comps) > 1:
+                    continue
+                
+                comp = getattr(self.scope, pcomp.comps[0])
+                cname += '.' + comp.name
+                if has_interface(comp, IImplicitComponent):
+                    if not comp.eval_only:
+                        key = tuple(['|'.join([cname, n]) 
+                                         for n in comp.list_residuals()])
+                        info[key] = ['|'.join([cname, n]) 
+                                         for n in comp.list_states()]
+                        
+            else:            
+                comp = getattr(self.scope, cname)
+                
+                if has_interface(comp, IImplicitComponent):
+                    if not comp.eval_only:
+                        key = tuple(['.'.join([cname, n]) 
+                                         for n in comp.list_residuals()])
+                        info[key] = ['.'.join([cname, n]) 
+                                         for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
-        #for comp in self:
-            #if has_interface(comp, ISolver):
-                #key = tuple(comp.list_eq_constraint_targets())
-                #value = comp.list_param_group_targets()
-                #info[key] = value
+        for comp in self:
+            if has_interface(comp, ISolver):
+                key = tuple(comp.list_eq_constraint_targets())
+                value = comp.list_param_group_targets()
+                info[key] = value
 
         return info
         
