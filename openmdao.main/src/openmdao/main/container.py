@@ -423,13 +423,15 @@ class Container(SafeHasTraits):
         # in order for our sub-components and objects to get deep-copied.
         memo['traits_copy_mode'] = "deep"
 
-        saved = self._parent
+        saved_p = self._parent
+        saved_c = self._cached_traits_
         self._parent = None
+        self._cached_traits_ = None
         try:
             result = super(Container, self).__deepcopy__(memo)
         finally:
-            self._parent = saved
-        result._cached_traits_ = None
+            self._parent = saved_p
+            self._cached_traits_ = saved_c
 
         # Instance traits are not created properly by deepcopy, so we need
         # to manually recreate them. Note, self._added_traits is the most
