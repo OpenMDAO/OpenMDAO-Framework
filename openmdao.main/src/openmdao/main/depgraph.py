@@ -6,7 +6,8 @@ import pprint
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IVariableTree, IImplicitComponent
+from openmdao.main.interfaces import IDriver, IVariableTree, \
+                                     IImplicitComponent, ISolver
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
 
@@ -1132,8 +1133,6 @@ def _get_inner_edges(G, srcs, dests):
         Ending var or subvar nodes
 
     """
-    # TODO: this can be optimized a bit...
-    
     fwdset = set()
     backset = set()
     for node in dests:
@@ -1144,14 +1143,45 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
+def get_solver_edges(wflow, graph):
+    """Return the derivative related inputs and outputs for
+    the given solver, based on its parameters and equality 
+    constraints.
+    """
+    # add edges from any nested solvers
+    sins = []
+    souts = []
+    for comp in wflow._parent.iteration_set():
+        if has_interface(comp, ISolver):
+            if hasattr(comp, 'list_param_targets') and \
+               hasattr(comp, 'list_eq_constraint_targets'):
+                sins.extend(comp.list_param_targets())
+                souts.extend(comp.list_eq_constraint_targets())
 
-def mod_for_derivs(graph, inputs, outputs, scope):
+    edges = _get_inner_edges(graph, sins, souts)
+    vset = set([e[0] for e in edges])
+    vset.update([e[1] for e in edges])
+    
+    for inp in sins:
+        if inp not in vset:
+            edges.add(('@fake', inp))
+            
+    for out in souts:
+        if out not in vset:
+            edges.add((out, '@fake'))
+            
+    return edges
+
+def mod_for_derivs(graph, inputs, outputs, wflow):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
     indct = {}
     inames = []
     onames = []
+
+    scope = wflow.scope
+
     # states = []
     # resids = []
 
@@ -1200,12 +1230,15 @@ def mod_for_derivs(graph, inputs, outputs, scope):
                              ['@in%d' % i for i in range(len(inputs))],
                              ['@out%d' % i for i in range(len(outputs))])
     
+    slv_edges = get_solver_edges(wflow, graph)
+    edges.update(slv_edges)
+
     comps = partition_names_by_comp([e[0] for e in edges])
     comps = partition_names_by_comp([e[1] for e in edges], compmap=comps)
     
     full = [k for k in comps.keys() if k]
     if None in comps:
-        full.extend([v.split('[')[0] for v in comps[None]])
+        full.extend([v.split('[')[0] for v in comps[None] if v != '@fake'])
         
     subgraph = graph.full_subgraph(full)
     
@@ -1229,6 +1262,8 @@ def mod_for_derivs(graph, inputs, outputs, scope):
 
     to_remove = set()
     for src, dest in edges:
+        if src == '@fake' or dest == '@fake':
+            continue
         if src.startswith('@in'):
             # move edges from input boundary nodes if they're
             # connected to an @in node
@@ -1359,6 +1394,12 @@ def mod_for_derivs(graph, inputs, outputs, scope):
             graph.add_node(out)
             #graph.add_edge('@fake', out, conn=True)
             graph.add_edge(out, '@fake', conn=True)
+
+    # also add @fake connections for sub-solver related nodes that
+    # aren't connected in the final graph
+    for u,v in slv_edges:
+        if u == '@fake' or v == '@fake':
+            graph.add_edge(u, v, conn=True)
 
     return graph
 

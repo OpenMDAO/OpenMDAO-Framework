@@ -12,12 +12,16 @@ def fullpaths(cname, names):
     return ['.'.join([cname,n]) for n in names]
 
 
-def get_inner_edges(graph, srcs, dests, scope):
+class Wflow(object):
+    def __init__(self, scope):
+        self.scope = scope
+
+def get_inner_edges(graph, srcs, dests, wflow):
 
     graph = graph.subgraph(graph.nodes())
 
     # add @in and @out nodes, rewire input srcs, etc.
-    mod_for_derivs(graph, srcs, dests, scope)
+    mod_for_derivs(graph, srcs, dests, wflow)
 
     # sort edges by src so that basevars occur before subvars
     edges = sorted(graph.list_connections(), key=lambda e: e[0])
@@ -313,7 +317,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a','b'],
                                  outputs=['c','d'])
 
-        edict = get_inner_edges(dep, ['A.a'], ['P0.c', 'P1.c'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c', 'P1.c'], Wflow(scope))
         self.assertEqual(set(edict['A.d']), set(['B.a[2]', 'P1.b[2]']))
         self.assertEqual(set(edict['A.c']), set(['B.a[1]', 'P1.b[1]', 'P0.b']))
         self.assertEqual(edict['@in0'], ['A.a'])
@@ -601,7 +605,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['A.a'], ['B.c'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['B.c'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['A.c'], ['B.a'])
         self.assertEqual(edict['B.c'], ['@out0'])
@@ -613,7 +617,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['A.a'], ['B.a'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['B.a'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(set(edict['A.c']), set(['@out0', 'B.a']))
         self.assertEqual(len(edict), 2)
@@ -624,7 +628,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a'), ('B.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(set(edict['A.c']), set(['P0.a', 'B.a']))
         self.assertEqual(edict['P0.c'], ['@out0'])
@@ -636,7 +640,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['P0.c'], ['@out0'])
         self.assertEqual(set(edict['A.c[1]']), set(['P0.a[1]', 'B.a[1]']))
@@ -649,7 +653,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c[1]','B.a[1]'), ('A.c[2]','B.a[2]'),('B.a[2]', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], scope)
+        edict = get_inner_edges(dep, ['A.a'], ['P0.c'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['A.a'])
         self.assertEqual(edict['P0.c'], ['@out0'])
         self.assertEqual(set(edict['A.c[1]']), set(['B.a[1]']))
@@ -664,7 +668,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('a', 'C1.a')],
                                  inputs=['a'],
                                  outputs=['c'])
-        edict = get_inner_edges(dep, ['a[2]'], ['C1.c'], scope)
+        edict = get_inner_edges(dep, ['a[2]'], ['C1.c'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['C1.a[2]'])
         self.assertEqual(edict['C1.c'], ['@out0'])
         self.assertEqual(len(edict), 2)
@@ -678,7 +682,7 @@ class DepGraphTestCase(unittest.TestCase):
                                               ('C2.a', 'P0.a')],
                                  inputs=['a'],
                                  outputs=['c', 'd'])
-        edict = get_inner_edges(dep, ['C1.a'], ['P0.d'], scope)
+        edict = get_inner_edges(dep, ['C1.a'], ['P0.d'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['C1.a'])
         self.assertEqual(set(edict['C1.c']), set(['P0.a[1]', 'C2.a[1]']))
         self.assertEqual(set(edict['C1.d']), set(['P0.a[2]', 'C2.a[2]']))
@@ -694,7 +698,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  inputs=['a'],
                                  outputs=['c', 'd'])
         dep.add_subvar('C1.a[2]')
-        edict = get_inner_edges(dep, ['C1.a[2]'], ['P0.d'], scope)
+        edict = get_inner_edges(dep, ['C1.a[2]'], ['P0.d'], Wflow(scope))
         self.assertEqual(edict['@in0'], ['P0.a[2]', 'C1.a[2]'])
         self.assertEqual(set(edict['P0.d']), set(['@out0']))
         self.assertEqual(len(edict), 2)

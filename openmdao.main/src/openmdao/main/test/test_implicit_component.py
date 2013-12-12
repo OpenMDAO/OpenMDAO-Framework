@@ -12,6 +12,7 @@ from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mp_support import has_interface
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod  # used to keep pseudocomp names consistent in tests
 
 
 class MyComp_No_Deriv(ImplicitComponent):
@@ -283,6 +284,9 @@ class Coupled2(ImplicitComponent):
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
     
+    def setUp(self):
+        pcompmod._count = 0  # reset pseudocomp numbering
+        
     def test_single_comp_self_solve(self):
         
         model = set_as_top(Assembly())
@@ -455,17 +459,15 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertTrue(edges['@in0'] == ['comp.c'])
-        self.assertTrue(edges['comp.y_out'] == ['@out0'])
-        self.assertTrue(edges['comp.res[0]'] == ['_pseudo0.in0'])
-        self.assertTrue(edges['comp.res[1]'] == ['_pseudo1.in0'])
-        self.assertTrue(edges['comp.res[2]'] == ['_pseudo2.in0'])
-        self.assertTrue(edges['_pseudo0.out0'] == ['@fake'])
-        self.assertTrue(edges['_pseudo1.out0'] == ['@fake'])
-        self.assertTrue(edges['_pseudo2.out0'] == ['@fake'])
-        self.assertTrue(edges['@fake'] == ['comp.x'])
-        self.assertTrue(edges['@fake'] == ['comp.y'])
-        self.assertTrue(edges['@fake'] == ['comp.z'])
+        self.assertEqual(edges['@in0'], ['comp.c'])
+        self.assertEqual(edges['comp.y_out'], ['@out0'])
+        self.assertEqual(edges['comp.res[0]'], ['_pseudo_0.in0'])
+        self.assertEqual(edges['comp.res[1]'], ['_pseudo_1.in0'])
+        self.assertEqual(edges['comp.res[2]'], ['_pseudo_2.in0'])
+        self.assertEqual(edges['_pseudo_0.out0'], ['@fake'])
+        self.assertEqual(edges['_pseudo_1.out0'], ['@fake'])
+        self.assertEqual(edges['_pseudo_2.out0'], ['@fake'])
+        self.assertEqual(set(edges['@fake']), set(['comp.x', 'comp.y', 'comp.z']))
         
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)

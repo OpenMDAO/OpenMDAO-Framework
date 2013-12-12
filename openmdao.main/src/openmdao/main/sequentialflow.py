@@ -639,7 +639,7 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            mod_for_derivs(dgraph, inputs, outputs, self.scope)
+            mod_for_derivs(dgraph, inputs, outputs, self)
             
             # We want our top level graph metadata to be stored in the copy, but not in the
             # parent, so make our own copy of the metadata dict for dgraph.
@@ -834,11 +834,10 @@ class SequentialWorkflow(Workflow):
         return self._edges
 
     def get_implicit_info(self):
-        """ Return a list of tuples of the form {(states) : [residuals]}
+        """ Return a dict of the form {(residuals) : [states]}
         """
         info = {}
-        cnames = self.derivative_graph().all_comps()
-        for cname in cnames:
+        for cname in self.derivative_graph().all_comps():
             
             # Our pseudoAssys aren't implicit
             if '~' in cname:
@@ -849,9 +848,8 @@ class SequentialWorkflow(Workflow):
                 if not comp.eval_only:
                     key = tuple(['.'.join([cname,n]) 
                                      for n in comp.list_residuals()])
-                    value = ['.'.join([cname,n]) 
+                    info[key] = ['.'.join([cname,n]) 
                                      for n in comp.list_states()]
-                    info[key] = value
                     
         # Nested solvers act implicitly.
         #for comp in self:
