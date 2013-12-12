@@ -21,7 +21,7 @@ from openmdao.main.depgraph import find_related_pseudos, base_var, \
                                     edge_dict_to_comp_list, flatten_list_of_iters, \
                                     is_input_base_node, is_output_base_node, \
                                     is_subvar_node, edges_to_dict, is_boundary_node
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
 
 try:
@@ -213,7 +213,6 @@ class SequentialWorkflow(Workflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
-        nEdge = 0
         dgraph = self.derivative_graph()
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
@@ -222,74 +221,105 @@ class SequentialWorkflow(Workflow):
             
         basevars = set()
         edges = self.edge_list()
-        # TODO = these are not sorted right
-        sortedkeys = sorted(self.edge_list().keys())
+        implicit_edges = self.get_implicit_info()
+        sortedkeys = sorted(implicit_edges)
+        sortedkeys.extend(sorted(self.edge_list().keys()))
+        
+        nEdge = 0
         for src in sortedkeys:
-            targets = edges[src]
             
+            if src in implicit_edges:
+                targets = implicit_edges[src]
+                is_implicit = True
+            else:
+                targets = edges[src]
+                is_implicit = False
+
             if isinstance(targets, str):
                 targets = [targets]
-                
-            # Only need to grab the source (or first target for param) to
-            # figure out the size for the residual vector
-            measure_src = src
-            if '@in' in src:
-                idx = int(src[3:].split('[')[0])
-                if inputs[idx][0] in dgraph:
-                    measure_src = inputs[idx][0]
-                else:
-                    measure_src = targets[0]
-            elif src == '@fake':
-                for t in targets:
-                    if not t.startswith('@'):
-                        measure_src = t
-                        break
-                else:
-                    raise RuntimeError("malformed graph!")
 
-            # Find out our width, etc
-            unmap_src = from_PA_var(measure_src)
-            val = self.scope.get(unmap_src)
-            width = flattened_size(unmap_src, val, self.scope)
-            if isinstance(val, ndarray):
-                shape = val.shape
-            else:
-                shape = 1
-        
-            # Special poke for boundary node
-            if is_boundary_node(dgraph, measure_src) or \
-               is_boundary_node(dgraph, base_var(dgraph, measure_src)):
-                bound = (nEdge, nEdge+width)
-                self.set_bounds(measure_src, bound)
-                 
-            src_noidx = src.split('[',1)[0]
-            
-            # Poke our source data
-            if '[' in src and src_noidx in basevars:
-                _, _, idx = src.partition('[')
-                basebound = self.get_bounds(src_noidx)
-                if not '@in' in src_noidx:
-                    unmap_src = from_PA_var(src_noidx)
+            # Implicit source edges are tuples.
+            if is_implicit == True:
+                impli_edge = nEdge
+                for resid in src:
+                    unmap_src = from_PA_var(resid)
                     val = self.scope.get(unmap_src)
-                    shape = val.shape
-                offset = basebound[0]
-                istring, ix = flatten_slice(idx, shape, offset=offset, name='ix')
-                bound = (istring, ix)
-                # Already allocated
-                width = 0
+                    width = flattened_size(unmap_src, val, self.scope)
+
+                    if isinstance(val, ndarray):
+                        shape = val.shape
+                    else:
+                        shape = 1
+
+                    bound = (impli_edge, impli_edge+width)
+                    self.set_bounds(resid, bound)
+                    basevars.add(resid)
+                    impli_edge += width
+
+            # Regular components
             else:
-                bound = (nEdge, nEdge+width)
+
+                # Only need to grab the source (or first target for param) to
+                # figure out the size for the residual vector
+                measure_src = src
+                if '@in' in src:
+                    idx = int(src[3:].split('[')[0])
+                    if inputs[idx][0] in dgraph:
+                        measure_src = inputs[idx][0]
+                    else:
+                        measure_src = targets[0]
+                elif src == '@fake':
+                    for t in targets:
+                        if not t.startswith('@'):
+                            measure_src = t
+                            break
+                    else:
+                        raise RuntimeError("malformed graph!")
+
+                # Find our width, etc.
+                unmap_src = from_PA_var(measure_src)
+                val = self.scope.get(unmap_src)
+                width = flattened_size(unmap_src, val, self.scope)
+                if isinstance(val, ndarray):
+                    shape = val.shape
+                else:
+                    shape = 1
+
+                # Special poke for boundary node
+                if is_boundary_node(dgraph, measure_src) or \
+                   is_boundary_node(dgraph, base_var(dgraph, measure_src)):
+                    bound = (nEdge, nEdge+width)
+                    self.set_bounds(measure_src, bound)
+                     
+                src_noidx = src.split('[',1)[0]
                 
-            self.set_bounds(src, bound)
-            basevars.add(src)
-            
+                # Poke our source data
+                if '[' in src and src_noidx in basevars:
+                    _, _, idx = src.partition('[')
+                    basebound = self.get_bounds(src_noidx)
+                    if not '@in' in src_noidx:
+                        unmap_src = from_PA_var(src_noidx)
+                        val = self.scope.get(unmap_src)
+                        shape = val.shape
+                    offset = basebound[0]
+                    istring, ix = flatten_slice(idx, shape, offset=offset, 
+                                                name='ix')
+                    bound = (istring, ix)
+                    # Already allocated
+                    width = 0
+                else:
+                    bound = (nEdge, nEdge+width)
+                    
+                self.set_bounds(src, bound)
+                basevars.add(src)
+                
             # Poke our target data
             impli_edge = nEdge
             for target in targets:
                 if not target.startswith('@'):
                     
-                    # Handle State-Residual pairs
-                    if src.split('.')[0] == target.split('.')[0]:
+                    # Handle States in implicit comps
+                    if is_implicit == True:
                         
                         unmap_targ = from_PA_var(target)
                         val = self.scope.get(unmap_targ)
@@ -306,6 +336,7 @@ class SequentialWorkflow(Workflow):
             
             #print input_src, src, target, bound,      
             nEdge += width
+            impli_edge = nEdge
                 
         # Initialize the residual vector on the first time through, and also
         # if for some reason the number of edges has changed.
@@ -392,7 +423,8 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges)
+        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges,
+                                       self.get_implicit_info())
         if '@fake' in comps:
             del comps['@fake']
         result = zeros(len(arg))
@@ -403,7 +435,7 @@ class SequentialWorkflow(Workflow):
             
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
-            comp_residual = data['residual']
+            comp_residuals = data['residuals']
             
             inputs = {}
             outputs = {}
@@ -420,13 +452,13 @@ class SequentialWorkflow(Workflow):
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
-                    if varname == comp_residual:
+                    if varname in comp_residuals:
                         outputs[varname] = zeros((1, 1))
                     else:
                         inputs[varname] = arg[i1].copy()
                         outputs[varname] = arg[i1].copy()
                 else:
-                    if varname ==comp_residual:
+                    if varname in comp_residuals:
                         outputs[varname] = zeros((i2-i1, 1))
                     else:
                         inputs[varname] = arg[i1:i2].copy()
@@ -444,7 +476,7 @@ class SequentialWorkflow(Workflow):
             #if hasattr(comp, 'applyMinv'):
                 #inputs = applyMinv(comp, inputs)
             
-            applyJ(comp, inputs, outputs, comp_residual)
+            applyJ(comp, inputs, outputs, comp_residuals)
             #print inputs, outputs
             
             for varname in comp_outputs:
@@ -473,7 +505,8 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
         
         dgraph = self._derivative_graph
-        comps = edge_dict_to_comp_list(dgraph, self._edges)
+        comps = edge_dict_to_comp_list(dgraph, self._edges,
+                                       self.get_implicit_info())
         result = zeros(len(arg))
         
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -484,7 +517,7 @@ class SequentialWorkflow(Workflow):
             
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
-            comp_residual = data['residual']
+            comp_residuals = data['residuals']
 
             inputs = {}
             outputs = {}
@@ -501,11 +534,11 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
-                    if varname != comp_residual:
+                    if varname not in comp_residuals:
                         outputs[varname] = zeros(len(i1))
                 else:
                     inputs[varname] = arg[i1:i2].copy()
-                    if varname != comp_residual:
+                    if varname not in comp_residuals:
                         outputs[varname] = zeros(i2-i1)
                     
             for varname in comp_inputs:
@@ -528,7 +561,7 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
             
-            applyJT(comp, inputs, outputs, comp_residual)
+            applyJT(comp, inputs, outputs, comp_residuals)
             #print inputs, outputs
             
             for varname in allvars:
@@ -788,7 +821,6 @@ class SequentialWorkflow(Workflow):
                 elif is_output_base_node(dgraph, newname):
                     dgraph.add_edge(pa_name, newname)
                         
-            
             # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
         
@@ -800,6 +832,35 @@ class SequentialWorkflow(Workflow):
         self._edges = edges_to_dict(self.derivative_graph().list_connections())
             
         return self._edges
+
+    def get_implicit_info(self):
+        """ Return a list of tuples of the form {(states) : [residuals]}
+        """
+        info = {}
+        cnames = self.derivative_graph().all_comps()
+        for cname in cnames:
+            
+            # Our pseudoAssys aren't implicit
+            if '~' in cname:
+                continue
+            
+            comp = getattr(self.scope, cname)
+            if has_interface(comp, IImplicitComponent):
+                if not comp.eval_only:
+                    key = tuple(['.'.join([cname,n]) 
+                                     for n in comp.list_residuals()])
+                    value = ['.'.join([cname,n]) 
+                                     for n in comp.list_states()]
+                    info[key] = value
+                    
+        # Nested solvers act implicitly.
+        #for comp in self:
+            #if has_interface(comp, ISolver):
+                #key = tuple(comp.list_eq_constraint_targets())
+                #value = comp.list_param_group_targets()
+                #info[key] = value
+
+        return info
         
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):

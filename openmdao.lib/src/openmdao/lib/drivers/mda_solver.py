@@ -141,7 +141,7 @@ class MDASolver(Driver):
             dv, info = gmres(A, -self.workflow.res,
                              tol=self.gmres_tolerance,
                              maxiter=100)
-            
+            print dv, self.workflow._edges
             # Increment the model input edges by dv
             self.workflow.set_new_state(dv)
             

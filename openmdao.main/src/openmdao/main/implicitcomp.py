@@ -207,7 +207,7 @@ class ImplicitComponent(Component):
             
             idx += size
             
-        applyJ(self, inputs, outputs)
+        applyJ(self, inputs, outputs, [])
         #print inputs, outputs
         
         idx = 0
