@@ -45,6 +45,12 @@ class FakeRecorder(object):
         pass
 
 
+class DumbComp(Component):
+    myvar = Float(1.1, iotype='in', required=True)
+    def execute(self):
+        print 'running'
+
+
 class TestCase(unittest.TestCase):
     """ Test of Component. """
 
@@ -187,7 +193,15 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err), ": required variable 'xreq' was not set")
         else:
             self.fail("Exception expected")
-            
+
+    def test_required_input2(self):
+        try:
+            comp = DumbComp()
+        except Exception as err:
+            self.assertEqual(str(err), ": variable 'myvar' is required and cannot have a default value")
+        else:
+            self.fail("Exception expected")
+
     def test_override(self):
         code = """\
 class BadComponent(Component):

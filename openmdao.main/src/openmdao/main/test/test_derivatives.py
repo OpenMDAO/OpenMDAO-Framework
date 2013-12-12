@@ -2055,6 +2055,20 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               outputs=['comp1.y1'],
                                               mode = 'adjoint')
         assert_rel_error(self, J[0, 0], 9.0, .001)
+
+    def test_paramgroup_with_scaler(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', GComp_noD())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+        
+        top.driver.add_parameter(['comp1.x1', 'comp1.x2'], low=-100, high=100, scaler=2.0)
+        top.driver.add_objective('comp1.y1')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
         
 class Comp2(Component):
     """ two-input, two-output"""
