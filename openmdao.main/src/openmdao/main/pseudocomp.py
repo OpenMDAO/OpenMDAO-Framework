@@ -86,6 +86,7 @@ class PseudoComponent(object):
         self._valid = False
         self._parent = parent
         self._inputs = []
+        self.force_fd = False
         self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
                                         # this is, e.g., 'units', 'constraint', 'objective',
                                         # or 'multi_var_expr'

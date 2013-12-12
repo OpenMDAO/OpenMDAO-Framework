@@ -362,7 +362,11 @@ class SequentialWorkflow(Workflow):
 
     def mimic(self, src):
         self.clear()
-        self._explicit_names = src._explicit_names[:]
+        par = self._parent.parent
+        if par is not None:
+            self._explicit_names = [n for n in src._explicit_names if hasattr(par, n)]
+        else:
+            self._explicit_names = src._explicit_names[:]
 
     def matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
@@ -630,6 +634,8 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(comp.name)
+                elif comp.force_fd is True:
+                    nondiff.add(comp.name)
                     
             # If a connection is non-differentiable, so are its src and 
             # target components.
@@ -871,13 +877,52 @@ class SequentialWorkflow(Workflow):
                 mode = 'forward'
             
         if mode == 'adjoint':
-            return calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
+            J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         elif mode in ['forward', 'fd']:
-            return calc_gradient(self, inputs, outputs, n_edge, shape)
+            J = calc_gradient(self, inputs, outputs, n_edge, shape)
         else:
             msg = "In calc_gradient, mode must be 'forward', 'adjoint', " + \
                   "'auto', or 'fd', but a value of %s was given." % mode
             self.scope.raise_exception(msg, RuntimeError)
+            
+        # Finally, we need to untransform the jacobian if any parameters have 
+        # scalers.
+        
+        if not hasattr(self._parent, 'get_parameters'):
+            return J
+        
+        params = self._parent.get_parameters()
+        
+        if len(params) == 0:
+            return J
+        
+        i = 0
+        for group in inputs: 
+            
+            if isinstance(group, str):
+                group = [group]
+                
+            name = group[0]
+            if len(group) > 1:
+                pname = tuple([from_PA_var(aname) for aname in group])
+            else:
+                pname = from_PA_var(name)
+                
+            i1, i2 = self.get_bounds(name)
+            
+            if isinstance(i1, list):
+                width = len(i1)
+            else:
+                width = i2-i1
+            
+            if pname in params:
+                scaler = params[pname].scaler
+                if scaler != 1.0:
+                    J[:, i:i+width] = J[:, i:i+width]*scaler
+                    
+            i = i + width
+                
+        return J
             
     
     def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):

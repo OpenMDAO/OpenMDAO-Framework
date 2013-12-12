@@ -401,12 +401,24 @@ class NestedTreeComp(Component):
 class NestedVTTestCase(unittest.TestCase):
     
     def test_nested_iotype(self):
-        # nested tree
+        # No iotype when creating TopTree.
+        top = TopTree()
+        self.assertEqual(top._iotype, '')
+        self.assertEqual(top.iotype, '')
+        self.assertEqual(top.lev1._iotype, '')
+        self.assertEqual(top.lev1.iotype, '')
+        self.assertEqual(top.lev1.lev2._iotype, '')
+        self.assertEqual(top.lev1.lev2.iotype, '')
+
+        # nested tree input -- iotype propagated all the way through.
         comp = NestedTreeComp()
         
-        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, '')
-        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
+        self.assertEqual(comp.top_tree_in._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.iotype, 'in')
         self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
         
         attr = comp.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])

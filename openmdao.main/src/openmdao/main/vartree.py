@@ -89,8 +89,8 @@ class VariableTree(Container):
             self.raise_exception(msg, TypeError)
         return super(VariableTree, self).add(name, obj)
 
-    def add_trait(self, name, trait):
-        super(VariableTree, self).add_trait(name, trait)
+    def add_trait(self, name, trait, refresh=True):
+        super(VariableTree, self).add_trait(name, trait, refresh)
         if not name.startswith('_'):
             self.on_trait_change(self._trait_modified, name)
 

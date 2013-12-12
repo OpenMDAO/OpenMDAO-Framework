@@ -32,13 +32,13 @@ class Geom(Variable):
             return value
 
         if not IStaticGeometry.providedBy(value):
-            self._iface_error(obj, name, 'IStaticGeometry')
+            self._iface_error(obj, name, 'IStaticGeometry', value)
 
         return value
 
-    def _iface_error(self, obj, name, iface_name):
-        obj.raise_exception("%s must provide interface '%s'" %
-                            (name, iface_name), TypeError)
+    def _iface_error(self, obj, name, iface_name, val):
+        obj.raise_exception("object %s of type %s must provide interface '%s'" %
+                            (name, str(type(val)), iface_name), TypeError)
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is

@@ -155,18 +155,12 @@ def _test_view_geometry(browser):
     closeout(project_dict, workspace_page)
 
 
-# TODO: this test should probably be moved over into the pygem_diamond
-# distrib, or maybe we could replace the openCSM box with an STL box
-# since the STL viewer comes with pyV3D
+# TODO: this test should probably be moved over into the pygem_diamond distrib
 def _test_view_csm(browser):
     try:
         from pygem_diamond import gem
     except ImportError:
         raise SkipTest('pygem_diamond is not installed.')
-
-    # FIXME: test fails consistently on the Pangolin EC2 image
-    if 'Ubuntu-12.04' in platform.platform():
-        raise SkipTest('Test broken for Pangolin EC2 image')
 
     project_dict, workspace_page = startup(browser)
     workspace_window = browser.current_window_handle
@@ -197,6 +191,37 @@ def _test_view_csm(browser):
         faces = geom_page.get_face_names()
         eq(faces, ['Body 1 Face 1',  'Body 1 Face 2',  'Body 1 Face 3',
                    'Body 1 Face 4',  'Body 1 Face 5',  'Body 1 Face 6'])
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
+def _test_view_stl(browser):
+    project_dict, workspace_page = startup(browser)
+    workspace_window = browser.current_window_handle
+
+    # add a STL geometry file
+    file_name = 'box.stl'
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'files/box.stl')
+    workspace_page.add_file(file_path)
+
+    time.sleep(2)
+
+    # view the STL file
+    geom_page = workspace_page.view_geometry(file_name)
+
+    # if we have a canvas... (some test platforms don't support canvas)
+    if geom_page.has_canvas():
+        time.sleep(5)
+
+        geom_page.expand_faces()
+        faces = geom_page.get_face_names()
+        eq(faces, ['box_solid1'])
 
     # Back to workspace.
     browser.close()

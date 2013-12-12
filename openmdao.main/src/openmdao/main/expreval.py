@@ -628,10 +628,16 @@ class ExprEvaluator(object):
                 
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
-                gradient[var] = eval(grad_code, _expr_dict, locals())
-                
+                try:
+                    gradient[var] = eval(grad_code, _expr_dict, locals())
+                    
+                # Some functions are not defined (like re and imag).
+                # Resort to finite difference for those cases.
+                except Exception:
+                    self.cached_grad_eq[var] = False
+                    
             # Otherwise resort to finite difference (1st order central)
-            else:
+            if self.cached_grad_eq[var] == False:
                 # Always need to assemble list of constant inputs, for
                 # replacement in the gradient expression text
                 var_dict = {}
