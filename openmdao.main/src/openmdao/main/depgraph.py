@@ -1143,32 +1143,41 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_solver_edges(wflow, graph):
-    """Return the derivative related inputs and outputs for
-    the given solver, based on its parameters and equality 
-    constraints.
+def get_solver_edges(wflow, graph, graphcomps, scope):
+    """Return edges coming from solvers that are in the
+    specified workflow or part of the graph between specified
+    derivative inputs and outputs.
     """
     # add edges from any nested solvers
-    sins = []
-    souts = []
-    for comp in wflow._parent.iteration_set():
-        if has_interface(comp, ISolver):
-            if hasattr(comp, 'list_param_targets') and \
-               hasattr(comp, 'list_eq_constraint_targets'):
-                sins.extend(comp.list_param_targets())
-                souts.extend(comp.list_eq_constraint_targets())
+    # sins = []
+    # souts = []
+    edges = set()
+    comps = set(wflow)
+    comps.update([getattr(scope,n) for n in graphcomps if n is not None])
 
-    edges = _get_inner_edges(graph, sins, souts)
-    vset = set([e[0] for e in edges])
-    vset.update([e[1] for e in edges])
+    for comp in comps:  #._parent.iteration_set():
+        if has_interface(comp, ISolver):
+            # if hasattr(comp, 'list_param_targets') and \
+            #    hasattr(comp, 'list_eq_constraint_targets'):
+            #     sins.extend(comp.list_param_targets())
+            #     souts.extend(comp.list_eq_constraint_targets())
+            for u, v, data in comp.workflow.derivative_graph().edges_iter(data=True):
+                if u.startswith('@') or v.startswith('@'):
+                    continue
+                if 'conn' in data:
+                    edges.add((u,v))
+
+    # edges = _get_inner_edges(graph, sins, souts)
+    # vset = set([e[0] for e in edges])
+    # vset.update([e[1] for e in edges])
     
-    for inp in sins:
-        if inp not in vset:
-            edges.add(('@fake', inp))
+    # for inp in sins:
+    #     if inp not in vset:
+    #         edges.add(('@fake', inp))
             
-    for out in souts:
-        if out not in vset:
-            edges.add((out, '@fake'))
+    # for out in souts:
+    #     if out not in vset:
+    #         edges.add((out, '@fake'))
             
     return edges
 
@@ -1230,12 +1239,16 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
                              ['@in%d' % i for i in range(len(inputs))],
                              ['@out%d' % i for i in range(len(outputs))])
     
-    slv_edges = get_solver_edges(wflow, graph)
+    comps = partition_names_by_comp([e[0] for e in edges])
+    partition_names_by_comp([e[1] for e in edges], compmap=comps)
+    
+    slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope)
     edges.update(slv_edges)
 
-    comps = partition_names_by_comp([e[0] for e in edges])
-    comps = partition_names_by_comp([e[1] for e in edges], compmap=comps)
-    
+    # get comps for any new edges due to sub-solvers
+    partition_names_by_comp([e[0] for e in slv_edges], compmap=comps)
+    partition_names_by_comp([e[1] for e in slv_edges], compmap=comps)
+
     full = [k for k in comps.keys() if k]
     if None in comps:
         full.extend([v.split('[')[0] for v in comps[None] if v != '@fake'])
