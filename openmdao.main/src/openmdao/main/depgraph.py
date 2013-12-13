@@ -1178,8 +1178,9 @@ def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
             nondiff_comps.update(comp.iteration_set())
 
     for comp in nondiff_comps:
-        graph.node[comp] = graph.node[comp].copy() # don't pollute top level graph with nondiff markers
-        graph.node[comp]['non-differentiable'] = True
+        if comp in graph:
+            graph.node[comp] = graph.node[comp].copy() # don't pollute top level graph with nondiff markers
+            graph.node[comp]['non-differentiable'] = True
 
 def mod_for_derivs(graph, inputs, outputs, wflow):
     """Adds needed nodes and connections to the given graph
