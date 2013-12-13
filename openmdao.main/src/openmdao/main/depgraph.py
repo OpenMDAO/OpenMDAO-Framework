@@ -1143,12 +1143,12 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_solver_edges(wflow, graph, graphcomps, scope):
+def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
     """Return edges coming from solvers that are in the
     specified workflow or part of the graph between specified
     derivative inputs and outputs.
     """
-    from openmdao.main.pseudoassembly import from_PA_var # prevent recursive import
+    #from openmdao.main.pseudoassembly import from_PA_var # prevent recursive import
     
     # add edges from any nested solvers
     edges = set()
@@ -1157,11 +1157,14 @@ def get_solver_edges(wflow, graph, graphcomps, scope):
 
     for comp in comps:  #._parent.iteration_set():
         if has_interface(comp, ISolver):
-            for u, v, data in comp.workflow.derivative_graph().edges_iter(data=True):
+            for u, v, data in comp.workflow.derivative_graph(inputs=inputs,
+                                                             outputs=outputs,
+                                                             group_nondif=False).edges_iter(data=True):
                 if u.startswith('@') or v.startswith('@'):
                     continue
                 if 'conn' in data:
-                    edges.add((from_PA_var(u), from_PA_var(v)))
+                    #edges.add((from_PA_var(u), from_PA_var(v)))
+                    edges.add((u, v))
             
     return edges
 
@@ -1226,7 +1229,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
     
-    slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope)
+    slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
     edges.update(slv_edges)
 
     mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)
@@ -1400,6 +1403,13 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         if u == '@fake' or v == '@fake':
             graph.add_edge(u, v, conn=True)
 
+    # We want our top level graph metadata to be stored in the copy, but not in the
+    # parent, so make our own copy of the metadata dict.
+    graph.graph = {}
+    
+    graph.graph['inputs'] = inputs[:]
+    graph.graph['outputs'] = outputs[:]
+                
     return graph
 
 def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):

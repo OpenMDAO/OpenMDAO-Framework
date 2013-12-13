@@ -592,7 +592,7 @@ class SequentialWorkflow(Workflow):
         return result
         
     def derivative_graph(self, inputs=None, outputs=None, fd=False, 
-                         severed=None):
+                         severed=None, group_nondif=True):
         """Returns the local graph that we use for derivatives.
         
         inputs: list of strings or tuples of strings
@@ -615,9 +615,13 @@ class SequentialWorkflow(Workflow):
             If a workflow has a cylic connection, some edges must be severed.
             When a cyclic workflow calls this function, it passes a list of
             edges so that they can be severed prior to the topological sort.
+
+        group_nondif: bool
+            If True, collapse parts of the graph into PseudoAssemblies when
+            necessary.
         """
         
-        if self._derivative_graph is None:
+        if self._derivative_graph is None or group_nondif is False:
         
             # If inputs aren't specified, use the parameters
             if inputs is None:
@@ -648,15 +652,11 @@ class SequentialWorkflow(Workflow):
             dgraph = graph.subgraph(graph.nodes())
             mod_for_derivs(dgraph, inputs, outputs, self)
             
-            # We want our top level graph metadata to be stored in the copy, but not in the
-            # parent, so make our own copy of the metadata dict for dgraph.
-            dgraph.graph = {}
-            
-            dgraph.graph['inputs'] = inputs[:]
-            dgraph.graph['outputs'] = outputs[:]
-                
-            self._derivative_graph = dgraph
-            self._group_nondifferentiables(fd, severed)
+            if group_nondif:
+                self._derivative_graph = dgraph
+                self._group_nondifferentiables(fd, severed)
+            else:
+                return dgraph
             
         return self._derivative_graph
     
@@ -854,7 +854,7 @@ class SequentialWorkflow(Workflow):
         # Residuals and states for implicit components
         for cname in comps:
             
-            if '~~' in cname:
+            if cname.startswith('~~'):
                 continue
             
             comp = getattr(self.scope, cname)
