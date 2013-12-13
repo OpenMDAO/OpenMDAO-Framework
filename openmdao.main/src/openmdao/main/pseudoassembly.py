@@ -2,6 +2,8 @@
 provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import ISolver
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
@@ -24,6 +26,8 @@ class PseudoAssembly(object):
     def __init__(self, name, comps, inputs, outputs, wflow):
         """Initialized with list of components, and the parent workflow."""
 
+        scope = wflow.scope
+        
         if '~' not in name:
             name = "~" + name
 
@@ -54,7 +58,25 @@ class PseudoAssembly(object):
         self.ffd_order = 1
         
         #print [comp.name for comp in comps], inputs, outputs
-
+        
+        # if a solver in our parent workflow has an iteration set that
+        # is completely contained within this PA, then replace all of
+        # our components from its iterset with the solver
+        solvers = []
+        cset = set(comps)
+        for cname in wflow.get_names(full=True):
+            comp = getattr(scope, cname)
+            if has_interface(comp, ISolver):
+                iset = [c.name for c in comp.iteration_set()]
+                if not cset.difference(iset): # all solver comps are contained in this PA
+                    solvers.append((comp.name, iset))
+                    
+        for solver, iset in solvers:
+            cset = cset.difference(iset)
+            cset.add(solver)
+            
+        self.itercomps = list(cset)
+                
     def set_itername(self, name):
         """Comp API compatibility; allows iteration coord to be set in
         components."""
@@ -69,7 +91,7 @@ class PseudoAssembly(object):
         if self.ffd_order == 0:
             ffd_order = 0
 
-        for name in self.comps:
+        for name in self.itercomps:
             comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
             comp.run(ffd_order=ffd_order, case_id=case_id)

@@ -753,24 +753,12 @@ class SequentialWorkflow(Workflow):
                 nondiff_groups.append(inodes)
                 nondiff_map.update([(n,i) for n in inodes])
                 
-        ## replace any Solvers with their itersets
-        #for i,group in enumerate(nondiff_groups):
-            #newnodes = set()
-            #for name in group:
-                #comp = getattr(scope, name)
-                #if has_interface(comp, ISolver):
-                    #newnodes.update(comp.iteration_set())
-                #else:
-                    #newnodes.add(name)
-            #nondiff_groups[i] = list(newnodes)
-                
         meta_inputs = dgraph.graph['inputs']
         meta_outputs = dgraph.graph['outputs']
         map_inputs = meta_inputs[:]
         map_outputs = meta_outputs[:]
         dgraph.graph['mapped_inputs'] = map_inputs
         dgraph.graph['mapped_outputs'] = map_outputs
-        
         
        # Add requested params that point to boundary vars
         for i, varpath in enumerate(meta_inputs):
@@ -802,9 +790,6 @@ class SequentialWorkflow(Workflow):
             in_edges = nx.edge_boundary(dgraph, 
                                         set(dgraph.nodes()).difference(allnodes))
             
-            #pa_inputs = edges_to_dict(in_edges).values()
-            #pa_inputs = set([b for a, b in in_edges])
-            #pa_outputs = set([a for a, b in out_edges])
             pa_inputs = edges_to_dict(in_edges).values()
             pa_outputs = set([a for a, b in out_edges])            
                         
