@@ -520,6 +520,49 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
+    def test_derivative_nested_solver_no_deriv(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_No_Deriv())
+        model.add('solver', BroydenSolver())
+        model.driver.workflow.add('solver')
+        model.solver.workflow.add('comp')
+        model.solver.tol = 0.0000001
+        
+        model.solver.add_parameter('comp.x', low=-100, high=100)
+        model.solver.add_parameter('comp.y', low=-100, high=100)
+        model.solver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.solver.add_constraint('comp.res[0] = 0')
+        model.solver.add_constraint('comp.res[1] = 0')
+        model.solver.add_constraint('comp.res[2] = 0')
+        
+        model.comp.eval_only = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'])
+        
+        edges = model.driver.workflow._edges
+        print edges
+        
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='adjoint')
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
     def test_list_states(self):
         comp = MyComp_Deriv()
         self.assertEqual(set(comp.list_states()), set(['x','y','z']))
