@@ -1160,6 +1160,7 @@ def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
             for u, v, data in comp.workflow.derivative_graph(inputs=inputs,
                                                              outputs=outputs,
                                                              group_nondif=False).edges_iter(data=True):
+                print u, v, data
                 if u.startswith('@') or v.startswith('@'):
                     continue
                 if 'conn' in data:
