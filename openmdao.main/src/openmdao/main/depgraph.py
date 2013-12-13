@@ -1149,37 +1149,37 @@ def get_solver_edges(wflow, graph, graphcomps, scope):
     derivative inputs and outputs.
     """
     # add edges from any nested solvers
-    # sins = []
-    # souts = []
     edges = set()
     comps = set(wflow)
     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
 
     for comp in comps:  #._parent.iteration_set():
         if has_interface(comp, ISolver):
-            # if hasattr(comp, 'list_param_targets') and \
-            #    hasattr(comp, 'list_eq_constraint_targets'):
-            #     sins.extend(comp.list_param_targets())
-            #     souts.extend(comp.list_eq_constraint_targets())
             for u, v, data in comp.workflow.derivative_graph().edges_iter(data=True):
                 if u.startswith('@') or v.startswith('@'):
                     continue
                 if 'conn' in data:
                     edges.add((u,v))
-
-    # edges = _get_inner_edges(graph, sins, souts)
-    # vset = set([e[0] for e in edges])
-    # vset.update([e[1] for e in edges])
-    
-    # for inp in sins:
-    #     if inp not in vset:
-    #         edges.add(('@fake', inp))
-            
-    # for out in souts:
-    #     if out not in vset:
-    #         edges.add((out, '@fake'))
             
     return edges
+
+def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
+    """Mark all components as non-differentiable that are in the
+    itersets of any non-solver drivers in the specified workflow or
+    in the graph.
+    """
+    comps = set(wflow)
+    comps.update([getattr(scope,n) for n in graphcomps if n is not None])
+    nondiff_comps = set()
+
+    for comp in comps:
+        if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
+            nondiff_comps.add(comp.name)
+            nondiff_comps.update(comp.iteration_set())
+
+    for comp in nondiff_comps:
+        graph.node[comp] = graph.node[comp].copy() # don't pollute top level graph with nondiff markers
+        graph.node[comp]['non-differentiable'] = True
 
 def mod_for_derivs(graph, inputs, outputs, wflow):
     """Adds needed nodes and connections to the given graph
@@ -1190,25 +1190,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     onames = []
 
     scope = wflow.scope
-
-    # states = []
-    # resids = []
-
-    # # add connections between residuals and states
-    # for node, data in graph.nodes_iter(data=True):
-    #     io = data.get('iotype')
-    #     if io == 'state':
-    #         states.append(node)
-    #     elif io == 'residual':
-    #         resids.append(node)
-
-    # state_comps = partition_names_by_comp(states)
-    # resid_comps = partition_names_by_comp(resids)
-
-    # for cname, res in resid_comps.items():
-    #     for r in res:
-    #         for st in state_comps[cname]:
-    #             graph.add_edge('.'.join([cname, r]), '.'.join([cname, st]), conn=True)
 
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
@@ -1244,6 +1225,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     
     slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope)
     edges.update(slv_edges)
+
+    mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)
 
     # get comps for any new edges due to sub-solvers
     partition_names_by_comp([e[0] for e in slv_edges], compmap=comps)

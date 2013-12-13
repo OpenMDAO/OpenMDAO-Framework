@@ -100,7 +100,6 @@ class PseudoAssembly(object):
         finally:
             if hasattr(self.wflow, '_severed_edges'):
                 self.wflow.unsever_edges()
-            pass
         
     def provideJ(self):
         """Jacobian for this block"""

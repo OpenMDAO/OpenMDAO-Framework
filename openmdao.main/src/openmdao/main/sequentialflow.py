@@ -677,6 +677,7 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
+        scope = self.scope
         
         # If we have a cyclic workflow, we need to remove severed edges from
         # the derivatives graph.
@@ -707,10 +708,11 @@ class SequentialWorkflow(Workflow):
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
-                    nondiff.add(comp.name)
+                    nondiff.add(name)
                 elif comp.force_fd is True:
-                    nondiff.add(comp.name)
-                    
+                    nondiff.add(name)
+                elif dgraph.node[name].get('non-differentiable'):
+                    nondiff.add(name)
                     
             # If a connection is non-differentiable, so are its src and 
             # target components.
@@ -750,6 +752,17 @@ class SequentialWorkflow(Workflow):
                 inodes = item.nodes()
                 nondiff_groups.append(inodes)
                 nondiff_map.update([(n,i) for n in inodes])
+                
+        ## replace any Solvers with their itersets
+        #for i,group in enumerate(nondiff_groups):
+            #newnodes = set()
+            #for name in group:
+                #comp = getattr(scope, name)
+                #if has_interface(comp, ISolver):
+                    #newnodes.update(comp.iteration_set())
+                #else:
+                    #newnodes.add(name)
+            #nondiff_groups[i] = list(newnodes)
                 
         meta_inputs = dgraph.graph['inputs']
         meta_outputs = dgraph.graph['outputs']
