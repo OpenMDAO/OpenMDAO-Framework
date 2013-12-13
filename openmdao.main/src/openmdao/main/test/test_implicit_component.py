@@ -22,7 +22,7 @@ class MyComp_No_Deriv(ImplicitComponent):
     '''
 
     # External inputs
-    c = Float(2.0, iotype="in", 
+    c = Float(2.0, iotype="in", fd_step = .00001,
               desc="arbitrary constant that is not iterated on but does affect the results")
     
     # States
@@ -473,6 +473,7 @@ class Testcase_implicit(unittest.TestCase):
         model.add('solver', BroydenSolver())
         model.driver.workflow.add('solver')
         model.solver.workflow.add('comp')
+        model.solver.tol = 0.0000001
         
         model.solver.add_parameter('comp.x', low=-100, high=100)
         model.solver.add_parameter('comp.y', low=-100, high=100)
