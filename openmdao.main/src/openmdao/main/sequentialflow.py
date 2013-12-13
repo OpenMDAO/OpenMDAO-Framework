@@ -852,7 +852,7 @@ class SequentialWorkflow(Workflow):
             return info
         
         # Residuals and states for implicit components
-        for cname in self.derivative_graph().all_comps():
+        for cname in comps:
             
             if '~~' in cname:
                 continue

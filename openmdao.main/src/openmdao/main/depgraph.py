@@ -1148,6 +1148,8 @@ def get_solver_edges(wflow, graph, graphcomps, scope):
     specified workflow or part of the graph between specified
     derivative inputs and outputs.
     """
+    from openmdao.main.pseudoassembly import from_PA_var # prevent recursive import
+    
     # add edges from any nested solvers
     edges = set()
     comps = set(wflow)
@@ -1159,7 +1161,7 @@ def get_solver_edges(wflow, graph, graphcomps, scope):
                 if u.startswith('@') or v.startswith('@'):
                     continue
                 if 'conn' in data:
-                    edges.add((u,v))
+                    edges.add((from_PA_var(u), from_PA_var(v)))
             
     return edges
 
