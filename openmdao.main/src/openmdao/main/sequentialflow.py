@@ -951,7 +951,7 @@ class SequentialWorkflow(Workflow):
             self._upscoped = False
             
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode=='fd'))
-        
+        print dgraph.nodes()
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
             outputs = dgraph.graph['mapped_outputs']

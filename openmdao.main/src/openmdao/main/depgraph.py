@@ -1157,8 +1157,8 @@ def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
 
     for comp in comps:  #._parent.iteration_set():
         if has_interface(comp, ISolver):
-            g = comp.workflow.derivative_graph(inputs=inputs,outputs=outputs,
-                                                             group_nondif=False)
+            g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+                                               group_nondif=False)
             for u, v, data in g.edges_iter(data=True):
                 if u.startswith('@') or v.startswith('@'):
                     continue
@@ -1353,7 +1353,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         dbase = base_var(graph, d)
         if is_boundary_node(graph, sbase) or is_boundary_node(graph, dbase):
             to_remove.add((s,d))
-
+    
     graph.remove_edges_from(to_remove)
 
     # if full vartrees are connected, create subvar nodes for all of their
@@ -1381,6 +1381,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     # disconnected boundary vars that are explicitly specified as inputs
     # or outputs need to be added back so that bounds data can be kept 
     # for them
+    
     for inp in flatten_list_of_iters(inputs):
         if inp not in graph:
             if '@fake' not in graph:
@@ -1402,14 +1403,14 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     for u,v in slv_edges:
         if u == '@fake' or v == '@fake':
             graph.add_edge(u, v, conn=True)
-
+            
     # We want our top level graph metadata to be stored in the copy, but not in the
     # parent, so make our own copy of the metadata dict.
     graph.graph = {}
     
     graph.graph['inputs'] = inputs[:]
     graph.graph['outputs'] = outputs[:]
-                
+    
     return graph
 
 def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
