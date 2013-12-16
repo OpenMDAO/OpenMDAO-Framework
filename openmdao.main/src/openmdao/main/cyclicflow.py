@@ -176,12 +176,19 @@ class CyclicWorkflow(SequentialWorkflow):
         return super(CyclicWorkflow, self).initialize_residual()
        
         
-    def derivative_graph(self, inputs=None, outputs=None, fd=False):
+    def derivative_graph(self, inputs=None, outputs=None, fd=False, 
+                         group_nondif=True):
         """Returns the local graph that we use for derivatives. For cyclic flows,
         we need to sever edges and use them as inputs/outputs.
         """
     
-        if self._derivative_graph is None:
+        if self._derivative_graph is None or group_nondif is False:
+            
+            if inputs == None:
+                inputs = []
+                
+            if outputs == None:
+                outputs = []
             
             # Solver can specify parameters
             if hasattr(self._parent, 'list_param_group_targets'):
@@ -199,8 +206,11 @@ class CyclicWorkflow(SequentialWorkflow):
                 inputs.append(target)
                 outputs.append(src)
                 
-            super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
-                                                         self._severed_edges)
+            dgraph = super(CyclicWorkflow, self).derivative_graph(inputs, 
+                            outputs, fd, self._severed_edges, group_nondif)
+            
+            if group_nondif is False:
+                return dgraph
             
         return self._derivative_graph
             

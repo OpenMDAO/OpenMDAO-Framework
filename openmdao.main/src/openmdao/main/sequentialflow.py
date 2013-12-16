@@ -334,6 +334,7 @@ class SequentialWorkflow(Workflow):
                     for itarget in target:
                         bound = (impli_edge, impli_edge+imp_width)
                         self.set_bounds(itarget, bound)
+                        basevars.add(itarget)
                         
                     impli_edge += imp_width
                     width = impli_edge - nEdge
@@ -802,9 +803,15 @@ class SequentialWorkflow(Workflow):
             out_edges = nx.edge_boundary(dgraph, allnodes)
             in_edges = nx.edge_boundary(dgraph, 
                                         set(dgraph.nodes()).difference(allnodes))
+            solver_states = []
+            if fd is False:
+                for comp in group:
+                    solver_states.extend([node for node in dgraph.predecessors(comp) \
+                                          if 'solver_state' in dgraph.node[node]])
             
             pa_inputs = edges_to_dict(in_edges).values()
-            pa_outputs = set([a for a, b in out_edges])            
+            pa_inputs.extend(solver_states)
+            pa_outputs = set([a for a, b in out_edges])          
                         
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
@@ -843,7 +850,7 @@ class SequentialWorkflow(Workflow):
                         
             # Clean up the old nodes in the graph
             dgraph.remove_nodes_from(allnodes)
-        
+            
         return None
 
     def edge_list(self):
@@ -880,10 +887,32 @@ class SequentialWorkflow(Workflow):
                                      for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
+        dgraph = self._derivative_graph
+        pa_comps = [dgraph.node[item]['pa_object'] \
+                    for item in dgraph.all_comps() if '~~' in item]
         for comp in self._parent.iteration_set():
             if has_interface(comp, ISolver):
+                
                 key = tuple(comp.list_eq_constraint_targets())
-                value = comp.list_param_group_targets()
+                unmapped_states = comp.list_param_group_targets()
+                
+                # Need to map the subdriver parameters to any existing
+                # pseudoassemblies
+                value = []
+                for state_tuple in unmapped_states:
+                    value_target = []
+                    for state in state_tuple:
+                        if state not in dgraph:
+                            for pcomp in pa_comps:
+                                if state in pcomp.inputs:
+                                    value_target.append(to_PA_var(state, 
+                                                                  pcomp.name))
+                                    break
+                        else:
+                            value_target.append(state)
+                            
+                    value.append(tuple(value_target))
+                        
                 info[key] = value
 
         return info
@@ -951,7 +980,7 @@ class SequentialWorkflow(Workflow):
             self._upscoped = False
             
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode=='fd'))
-        print dgraph.nodes()
+       
         if 'mapped_inputs' in dgraph.graph:
             inputs = dgraph.graph['mapped_inputs']
             outputs = dgraph.graph['mapped_outputs']
@@ -1040,7 +1069,7 @@ class SequentialWorkflow(Workflow):
                     J[:, i:i+width] = J[:, i:i+width]*scaler
                     
             i = i + width
-                
+        print J        
         return J
             
     

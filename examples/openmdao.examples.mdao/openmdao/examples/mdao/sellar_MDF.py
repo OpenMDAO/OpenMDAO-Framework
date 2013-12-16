@@ -26,8 +26,8 @@ class SellarMDF(Assembly):
         self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
-        self.add('dis1', sellar.Discipline1())
-        self.add('dis2', sellar.Discipline2())
+        self.add('dis1', sellar.Discipline1_WithDerivatives())
+        self.add('dis2', sellar.Discipline2_WithDerivatives())
         self.solver.workflow.add(['dis1', 'dis2'])
         
         # Add Parameters to optimizer
@@ -67,8 +67,10 @@ if __name__ == "__main__": # pragma: no cover
     prob.dis1.x1 = 1.0
     
     tt = time.time()
+    prob.driver.maxiter = 1
     prob.run()
     ttot = time.time()-tt
+    prob.driver.workflow.check_gradient()
     
     #prob.driver.workflow.check_gradient()
     

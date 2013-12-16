@@ -1155,12 +1155,18 @@ def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
     comps = set(wflow)
     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
 
+    flat_inputs = flatten_list_of_iters(inputs)
     for comp in comps:  #._parent.iteration_set():
         if has_interface(comp, ISolver):
             g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
                                                group_nondif=False)
             for u, v, data in g.edges_iter(data=True):
-                if u.startswith('@') or v.startswith('@'):
+                if u.startswith('@'):
+                    # Mark all states (params) from sub-solver
+                    if v not in flat_inputs:
+                        graph.node[v]['solver_state'] = True
+                    continue
+                if v.startswith('@'):
                     continue
                 if 'conn' in data:
                     #edges.add((from_PA_var(u), from_PA_var(v)))
@@ -1522,6 +1528,11 @@ def edge_dict_to_comp_list(graph, edges, implicit_edges=None):
                     comp, _, var = itarget.partition('.')
                     comps[comp]['states'].append(var)
                     comps[comp]['inputs'].append(var)
+                    
+                    # Remove any states that came into outputs via
+                    # input-input connections. 
+                    if var in comps[comp]['outputs']:
+                        comps[comp]['outputs'].remove(var)
                 
     return comps
 
