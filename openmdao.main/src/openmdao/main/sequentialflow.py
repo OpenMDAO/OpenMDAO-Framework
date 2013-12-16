@@ -622,7 +622,14 @@ class SequentialWorkflow(Workflow):
         """
         
         if self._derivative_graph is None or group_nondif is False:
-        
+            # when we call with group_nondif = False, we want the union of the passed inputs/outputs
+            # plus the inputs/outputs from the solver
+            if group_nondif is False:
+                tmp_inputs = inputs
+                inputs = None
+                tmp_outputs = outputs
+                outputs = None
+                
             # If inputs aren't specified, use the parameters
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
@@ -630,6 +637,9 @@ class SequentialWorkflow(Workflow):
                 else:
                     msg = "No inputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
+                    
+            if group_nondif is False:
+                inputs = list(set(tmp_inputs).union(inputs))
         
             # If outputs aren't specified, use the objectives and constraints
             if outputs is None:
@@ -644,6 +654,9 @@ class SequentialWorkflow(Workflow):
                 if len(outputs) == 0:
                     msg = "No outputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
+                    
+            if group_nondif is False:
+                outputs = list(set(tmp_outputs).union(outputs))
     
             graph = self.scope._depgraph
 
