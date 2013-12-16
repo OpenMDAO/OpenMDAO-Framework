@@ -39,6 +39,7 @@ class OptRosenSuzukiComponent(Component):
     """
 
     x = Array(iotype='in', low=-10, high=99)
+    g = Array([1., 1., 1.], iotype='out')
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
     opt_objective = Float(iotype='out')
@@ -54,11 +55,19 @@ class OptRosenSuzukiComponent(Component):
 
     def execute(self):
         """calculate the new objective value"""
-        self.result = (self.x[0]**2 - 5.*self.x[0] +
-                       self.x[1]**2 - 5.*self.x[1] +
-                       2.*self.x[2]**2 - 21.*self.x[2] +
-                       self.x[3]**2 + 7.*self.x[3] + 50)
+        x = self.x
+
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
+
         self.obj_string = "Bad"
+
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class SLSPQdriverTestCase(unittest.TestCase):
@@ -75,6 +84,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
+        # Run with scalar parameters, scalar constraints.
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -86,6 +96,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
+
         self.top.run()
 
         # pylint: disable-msg=E1101
@@ -118,17 +129,14 @@ class SLSPQdriverTestCase(unittest.TestCase):
 
         self.assertEqual(self.top.driver.error_code, 9)
 
-    def test_array_parameter(self):
+    def test_array(self):
+        # Run with array parameter, array constraint.
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x')
-
-        # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+        self.top.driver.add_constraint('comp.g < 0')
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
+
         self.top.run()
 
         # pylint: disable-msg=E1101
