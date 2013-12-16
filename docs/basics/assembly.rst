@@ -213,7 +213,7 @@ to the inputs for the next to.
             #self.connect("par1.f_xy",["par2.x","par3.y"])
             
 You can broadcast the output two ways. The above code shows them both. The first way 
-is just to issue two separate connections. Notice that both connection calls have ``par1.f_xt``
+is just to issue two separate connections. Notice that both connection calls have ``par1.f_xy``
 as their source. The second way provides a shortcut, where you make one connect call, but specify
 a list of inputs to connect two. The two methods result in the exact same result, so use whichever 
 one you prefer. 
