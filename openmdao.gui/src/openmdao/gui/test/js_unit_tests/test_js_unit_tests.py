@@ -12,6 +12,7 @@ import sys
 if sys.platform.startswith("linux"):
 
     import os
+    import glob
     import tempfile
     from distutils.spawn import find_executable
 
@@ -116,6 +117,14 @@ if sys.platform.startswith("linux"):
         def tearDown(self):
             #os.unlink(self.config_filename)
             super(BrowserJsUnitTestCase, self).tearDown()
+
+            keymap = glob.glob('/tmp/server-*.xkm')  # From virtual framebuffer.
+            if keymap:
+                try:
+                    os.remove(keymap[0])
+                except Exception as exc:
+                    print >> sys.stderr, 'JsTearDown: %s cleanup failed: %s' \
+                                         % (keymap[0], exc)
 
     class ChromeJsUnitTestCase(BrowserJsUnitTestCase):
         """test GUI JavaScript using Chrome"""
