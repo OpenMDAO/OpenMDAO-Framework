@@ -601,7 +601,7 @@ class FiniteDifference(object):
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
-
+                    
                     # Forward difference
                     self.J[:, i] = (self.y - self.y_base)/fd_step
 
@@ -671,12 +671,19 @@ class FiniteDifference(object):
                 idx = '[' + idx
                 
                 old_val = self.scope.get(src)
-                exec('old_val%s = new_val' % idx)
+                if isinstance(new_val, ndarray):
+                    exec('old_val%s = new_val.copy()' % idx)
+                else:
+                    exec('old_val%s = new_val' % idx)
+                    
                 self.scope.set(src, old_val, force=True)
             else:
-                self.scope.set(src, new_val, force=True)
+                if isinstance(new_val, ndarray):
+                    self.scope.set(src, new_val.copy(), force=True)
+                else:
+                    self.scope.set(src, new_val, force=True)
                 
-        #print self.J
+        #print 'after FD', self.pa.name, self.J
         return self.J
 
     def get_inputs(self, x):
@@ -692,7 +699,10 @@ class FiniteDifference(object):
                 src_val = self.scope.get(src)
                 src_val = flattened_value(src, src_val)
                 i1, i2 = self.in_bounds[src]
-                x[i1:i2] = src_val
+                if isinstance(src_val, ndarray):
+                    x[i1:i2] = src_val.copy()
+                else:
+                    x[i1:i2] = src_val
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
@@ -701,7 +711,10 @@ class FiniteDifference(object):
             src_val = self.scope.get(src)
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
-            x[i1:i2] = src_val
+            if isinstance(src_val, ndarray):
+                x[i1:i2] = src_val.copy()
+            else:
+                x[i1:i2] = src_val
 
     def set_value(self, srcs, val, i1, i2, index):
         """Set a value in the model"""

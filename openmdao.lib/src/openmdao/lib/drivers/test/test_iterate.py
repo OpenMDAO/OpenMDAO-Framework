@@ -76,12 +76,10 @@ class ArrayMulti(Component):
     """Testing for iteration counting and stop conditions"""
 
     arr = Array([1., 1.], iotype="in")
-    out1 = Float(0, iotype="out")
-    out2 = Float(0, iotype="out")
+    out = Array([0., 0.], iotype="out")
 
     def execute(self):
-        self.out1 = self.arr[0]/10.0
-        self.out2 = self.arr[1]/10.0
+        self.out = self.arr/10.0
 
 
 class FixedPointIteratorTestCase(unittest.TestCase):
@@ -127,14 +125,13 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("simple", ArrayMulti())
         self.top.driver.workflow.add('simple')
 
-        self.top.driver.add_constraint('simple.out1 = simple.arr[0]')
-        self.top.driver.add_constraint('simple.out2 = simple.arr[1]')
+        self.top.driver.add_constraint('simple.out = simple.arr')
         self.top.driver.add_parameter('simple.arr', -9e99, 9e99)
         self.top.driver.tolerance = .02
         self.top.run()
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
-        assert_rel_error(self, self.top.simple.out1, .001, .0002)
+        assert_rel_error(self, self.top.simple.out[0], .001, .0002)
         self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_maxiteration(self):

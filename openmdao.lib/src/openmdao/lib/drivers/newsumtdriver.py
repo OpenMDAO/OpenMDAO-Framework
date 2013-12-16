@@ -472,7 +472,7 @@ class NEWSUMTdriver(Driver):
             ifd = 0
 
         self.n1 = ndv
-        ncon = len( self.get_ineq_constraints() )
+        ncon = self.total_ineq_constraints()
         if ncon > 0:
             self.n2 = ncon
         else:
@@ -559,12 +559,12 @@ class NEWSUMTdriver(Driver):
 
         common = self.contrl
         for name, value in common.__dict__.items():
-            setattr(common, name, \
+            setattr(common, name,
                     type(value)(getattr(newsumtinterruptible.contrl, name)))
 
         common = self.countr
         for name, value in common.__dict__.items():
-            setattr(common, name, \
+            setattr(common, name,
                     type(value)(getattr(newsumtinterruptible.countr, name)))
 
 
