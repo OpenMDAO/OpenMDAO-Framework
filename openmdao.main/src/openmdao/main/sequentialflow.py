@@ -460,6 +460,7 @@ class SequentialWorkflow(Workflow):
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
+
                 if isinstance(i1, list):
                     inputs[varname] = arg[i1].copy()
                 else:
@@ -468,6 +469,7 @@ class SequentialWorkflow(Workflow):
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
+
                 if isinstance(i1, list):
                     if varname in comp_residuals:
                         outputs[varname] = zeros((1, 1))
@@ -500,9 +502,9 @@ class SequentialWorkflow(Workflow):
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
                 if isinstance(i1, list):
-                    result[i1] = outputs[varname]
+                    result[i1] = outputs[varname].copy()
                 else:
-                    result[i1:i2] = outputs[varname]
+                    result[i1:i2] = outputs[varname].copy()
                 
         # Each parameter adds an equation
         for src, targets in self._edges.iteritems():
