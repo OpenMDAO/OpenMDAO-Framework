@@ -29,7 +29,7 @@ block of code into it.
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
 
-            # Driver process definition
+            # Iteration Hierarchy
             self.driver.workflow.add('paraboloid')
 
             # SLSQP Flags
