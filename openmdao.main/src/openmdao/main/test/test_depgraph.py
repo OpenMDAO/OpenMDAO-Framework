@@ -15,7 +15,10 @@ def fullpaths(cname, names):
 class Wflow(object):
     def __init__(self, scope):
         self.scope = scope
-
+        
+    def __iter__(self):
+        return iter([])
+    
 def get_inner_edges(graph, srcs, dests, wflow):
 
     graph = graph.subgraph(graph.nodes())

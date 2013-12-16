@@ -661,13 +661,13 @@ class SequentialWorkflow(Workflow):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in \
                                    self._parent.get_constraints().values()])
                     
-                if len(outputs) == 0:
-                    msg = "No outputs given for derivatives."
-                    self.scope.raise_exception(msg, RuntimeError)
-                    
             if group_nondif is False:
                 outputs = list(set(tmp_outputs).union(outputs))
     
+            if len(outputs) == 0:
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+                
             graph = self.scope._depgraph
 
             # make a copy of the graph because it will be
