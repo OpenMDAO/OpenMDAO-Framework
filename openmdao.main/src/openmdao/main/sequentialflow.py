@@ -294,6 +294,8 @@ class SequentialWorkflow(Workflow):
                 src_noidx = src.split('[',1)[0]
                 
                 # Poke our source data
+                
+                # Array slice of src that is already allocated
                 if '[' in src and src_noidx in basevars:
                     _, _, idx = src.partition('[')
                     basebound = self.get_bounds(src_noidx)
@@ -307,6 +309,13 @@ class SequentialWorkflow(Workflow):
                     bound = (istring, ix)
                     # Already allocated
                     width = 0
+                    
+                # Input-input connection to implicit state
+                elif src_noidx in basevars:
+                    bound = self.get_bounds(src_noidx)
+                    width = 0
+                    
+                # Normal src
                 else:
                     bound = (nEdge, nEdge+width)
                     
@@ -1069,7 +1078,7 @@ class SequentialWorkflow(Workflow):
                     J[:, i:i+width] = J[:, i:i+width]*scaler
                     
             i = i + width
-        print J        
+        #print J        
         return J
             
     

@@ -67,12 +67,8 @@ if __name__ == "__main__": # pragma: no cover
     prob.dis1.x1 = 1.0
     
     tt = time.time()
-    prob.driver.maxiter = 1
     prob.run()
     ttot = time.time()-tt
-    prob.driver.workflow.check_gradient()
-    
-    #prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
