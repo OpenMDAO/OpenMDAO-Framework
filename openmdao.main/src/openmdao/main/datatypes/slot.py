@@ -23,8 +23,11 @@ from openmdao.main.variable import Variable, gui_excludes
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IContainer
 
+import warnings
+
 
 class Slot(Variable):
+
     """A trait for an object of a particular type or implementing a particular
     interface. Both Traits Interfaces and zope.interface.Interfaces are
     supported.
@@ -32,6 +35,14 @@ class Slot(Variable):
 
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
+
+        if 'iotype' in metadata:
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                warnings.warn(DeprecationWarning(
+                    "The use of 'iotype' as metadata for 'Slot' is deprecated.\n"
+                    "Use 'Instance' in place of 'Slot'\n"
+                    "if you need to use 'iotype'."), stacklevel=2)
 
         default_value = None
         try:
