@@ -1,5 +1,6 @@
 """
-Unit test for implicit components.
+Unit test for implicit components, and for the implicit behavior of solvers in a 
+derivatives solve.
 """
 
 import unittest
@@ -11,7 +12,9 @@ from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mp_support import has_interface
+from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
+
 import openmdao.main.pseudocomp as pcompmod  # used to keep pseudocomp names consistent in tests
 
 
@@ -566,6 +569,45 @@ class Testcase_implicit(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+    def test_solver_nested_under_double_nested_driver(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv())
+        model.add('subdriver', SimpleDriver())
+        model.add('solver', BroydenSolver())
+        model.driver.workflow.add('subdriver')
+        model.subdriver.workflow.add('solver')
+        model.solver.workflow.add('comp')
+        model.solver.tol = 0.0000001
+        
+        model.solver.add_parameter('comp.x', low=-100, high=100)
+        model.solver.add_parameter('comp.y', low=-100, high=100)
+        model.solver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.solver.add_constraint('comp.res[0] = 0')
+        model.solver.add_constraint('comp.res[1] = 0')
+        model.solver.add_constraint('comp.res[2] = 0')
+        
+        model.subdriver.add_parameter('comp.c', low=-100, high=100)
+        model.subdriver.add_objective('comp.y_out')
+
+        model.comp.eval_only = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'])
+        
+        edges = model.driver.workflow._edges
+        print edges
+        self.assertEqual(edges['@in0'], ['comp.c'])
+        self.assertEqual(edges['comp.y_out'], ['@out0'])
+        self.assertEqual(edges['comp.res[0]'], ['_pseudo_0.in0'])
+        self.assertEqual(edges['comp.res[1]'], ['_pseudo_1.in0'])
+        self.assertEqual(edges['comp.res[2]'], ['_pseudo_2.in0'])
+        
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
