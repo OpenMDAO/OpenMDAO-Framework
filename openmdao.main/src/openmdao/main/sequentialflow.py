@@ -243,6 +243,7 @@ class SequentialWorkflow(Workflow):
                 impli_edge = nEdge
                 for resid in src:
                     unmap_src = from_PA_var(resid)
+
                     val = self.scope.get(unmap_src)
                     width = flattened_size(unmap_src, val, self.scope)
 
@@ -264,8 +265,11 @@ class SequentialWorkflow(Workflow):
                 measure_src = src
                 if '@in' in src:
                     idx = int(src[3:].split('[')[0])
-                    if inputs[idx][0] in dgraph:
-                        measure_src = inputs[idx][0]
+                    inp = inputs[idx]
+                    if not isinstance(inp, basestring):
+                         inp = inp[0]
+                    if inp in dgraph:
+                        measure_src = inp
                     else:
                         measure_src = targets[0]
                 elif src == '@fake':

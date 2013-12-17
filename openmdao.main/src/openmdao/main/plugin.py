@@ -4,6 +4,7 @@ import webbrowser
 import tempfile
 import tarfile
 import shutil
+import traceback
 
 import urllib2
 try:
@@ -24,7 +25,7 @@ from setuptools import find_packages
 from pkg_resources import WorkingSet, Requirement, resource_stream
 
 from openmdao.main.factorymanager import get_available_types, plugin_groups
-from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
+from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir, find_module
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
@@ -620,15 +621,21 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
             __import__(mname)
             mod = sys.modules[mname]
             modname = mname
+            modfile = os.path.abspath(mod.__file__)
             break
         except ImportError:
-            pass
+            # we may be able to locate the docs even if the module can't be imported
+            modfile = find_module(mname)
+            modname = mname
+            if modfile:
+                break
     else:
         # Possibly something in contrib that's a directory.
         try:
             __import__(plugin_name)
             mod = sys.modules[plugin_name]
             modname = plugin_name
+            modfile = os.path.abspath(mod.__file__)
         except ImportError:
             raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
 
@@ -651,7 +658,7 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 check_call(['openmdao', 'build_docs'])
         url += os.path.join(htmldir, anchorpath)
     else:
-        url += os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
+        url += os.path.join(os.path.dirname(modfile),
                            'sphinx_build', 'html', 'index.html')
         
     url = url.replace('\\', '/')
@@ -688,8 +695,8 @@ def plugin_install(parser, options, args=None, capture=None):
             try:
                 print "Installing plugin:", plugin
                 _github_install(plugin, options.findlinks)
-            except:
-                pass
+            except Exception:
+                traceback.print_exc()
 
     else:  # Install plugin from local file or directory
         develop = False
@@ -766,6 +773,24 @@ def _github_install(dist_name, findLinks):
     print url
     build_docs_and_install(name, version, findLinks)
 
+def _bld_sdist_and_install(deps=True):
+    check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
+
+    if sys.platform.startswith('win'):
+        tars = fnmatch.filter(os.listdir('.'), "*.zip")
+    else:
+        tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
+    if len(tars) != 1:
+        raise RuntimeError("should have found a single archive file,"
+                           " but found %s instead" % tars)
+
+    if deps:
+        opts = '-NZ'
+    else:
+        opts = '-Z'
+    check_call(['easy_install', opts, tars[0]])
+
+    return tars[0]
 
 # This requires Internet connectivity to github.
 def build_docs_and_install(name, version, findlinks):  # pragma no cover
@@ -788,44 +813,36 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
 
         os.chdir(files[0])  # should be in distrib directory now
         
-        # create an sdist so we can query metadata for distrib dependencies
-        check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
-
-        if sys.platform.startswith('win'):
-            tars = fnmatch.filter(os.listdir('.'), "*.zip")
+        cfg = SafeConfigParser(dict_type=OrderedDict)
+        cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
+        if cfg.has_option('metadata', 'requires-dist'):
+            reqs = cfg.get('metadata', 'requires-dist').strip()
+            reqs = reqs.replace(',', ' ')
+            reqs = [n.strip() for n in reqs.split()]
         else:
-            tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
-        if len(tars) != 1:
-            raise RuntimeError("should have found a single archive file,"
-                               " but found %s instead" % tars)
+            # couldn't find requires-dist in setup.cfg, so 
+            # create an sdist so we can query metadata for distrib dependencies
+            tarname = _bld_sdist_and_install(deps=False)
 
-        check_call(['easy_install', '-NZ', tars[0]])
+            # now find any dependencies
+            metadict = get_metadata(tarname)
+            reqs = metadict.get('requires', [])
 
-        # now install any dependencies
-        metadict = get_metadata(tars[0])
-        reqs = metadict.get('requires', [])
-        done = set()
-
-        while reqs:
-            r = reqs.pop()
-            if r not in done:
-                done.add(r)
-                ws = WorkingSet()
-                req = Requirement.parse(r)
-                dist = ws.find(req)
-                if dist is None:
-                    check_call(['easy_install', '-NZ', '-f', findlinks, r])
-                    dist = ws.find(req)
-                    if dist is None:
-                        raise RuntimeError("Couldn't find distribution '%s'" % r)
-                    dist.activate()
-                    dct = get_metadata(dist.egg_name().split('-')[0])
-                    for new_r in dct.get('requires', []):
-                        reqs.append(new_r)
+        # install dependencies (some may be needed by sphinx)
+        ws = WorkingSet()
+        for r in reqs:
+            print "Installing dependency '%s'" % r
+            req = Requirement.parse(r)
+            dist = ws.find(req)
+            if dist is None:
+                try:
+                    check_call(['easy_install', '-Z', '-f', findlinks, r])
+                except Exception:
+                    traceback.print_exc()
 
         # build sphinx docs
         check_call(['plugin', 'build_docs', files[0]])
-
+        tarname = _bld_sdist_and_install()  # make a new sdist with docs in it and install it
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir, ignore_errors=True)
