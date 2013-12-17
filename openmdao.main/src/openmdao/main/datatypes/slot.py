@@ -41,8 +41,7 @@ class Slot(Variable):
                 warnings.simplefilter("always")
                 warnings.warn(DeprecationWarning(
                     "The use of 'iotype' as metadata for 'Slot' is deprecated.\n"
-                    "Use 'Instance' in place of 'Slot'\n"
-                    "if you need to use 'iotype'."), stacklevel=2)
+                    "Use 'Instance' in place of 'Slot' if you need to use 'iotype'.\n"), stacklevel=2)
 
         default_value = None
         try:

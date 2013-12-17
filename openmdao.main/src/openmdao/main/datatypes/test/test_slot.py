@@ -4,7 +4,7 @@ import pickle
 import warnings
 
 from openmdao.main.api import Assembly, Component, Container, Case, VariableTree
-from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str, Instance
+from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
 
@@ -133,8 +133,8 @@ class SlotTestCase(unittest.TestCase):
     def test_list_and_dict_slot_attributes(self):
 
         top = Assembly()
-        top.add('sock', Instance(MyClass, iotype='in', desc='Stuff0'))
-        top.add('list_sock', List(Instance(MyClass), iotype='in', desc='Stuff'))
+        top.add('sock', Slot(MyClass, iotype='in', desc='Stuff0'))
+        top.add('list_sock', List(Slot(MyClass), iotype='in', desc='Stuff'))
         top.add('dict_sock', Dict(key_trait=Str,
                                   value_trait=Slot(MyClass),
                                   iotype='in', desc='Stuff2'))
@@ -207,7 +207,7 @@ class SlotTestCase(unittest.TestCase):
             assert issubclass(w[-1].category, DeprecationWarning)
             assert "deprecated" in str(w[-1].message)
             assert "Slot" in str(w[-1].message)
-            assert "Instance" in str(w[-1].message)
+            assert "Slot" in str(w[-1].message)
             assert "iotype" in str(w[-1].message)
 
 
