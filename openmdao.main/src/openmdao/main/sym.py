@@ -38,11 +38,6 @@ class SymbolicDerivativeError(Exception):
 
 def SymGrad(ex, vars):
     """Symbolic gradient."""
-    #node = ast.parse(ex, mode='eval')
-    #xformed = SymTransformer().visit(node)
-    #ast.fix_missing_locations(xformed)
-    #code = compile(xformed, '<string>', 'eval')
-    #newex = eval(code)
 
     s=[]
     var_map = {}
