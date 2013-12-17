@@ -572,10 +572,10 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
-    def test_solver_nested_under_double_nested_driver(self):
+    def test_solver_nested_under_double_nested_driver_no_deriv(self):
 
         model = set_as_top(Assembly())
-        model.add('comp', MyComp_Deriv())
+        model.add('comp', MyComp_No_Deriv())
         model.add('subdriver', SimpleDriver())
         model.add('solver', BroydenSolver())
         model.driver.workflow.add('subdriver')
@@ -602,12 +602,19 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['comp.c'])
-        self.assertEqual(edges['comp.y_out'], ['@out0'])
-        self.assertEqual(edges['comp.res[0]'], ['_pseudo_0.in0'])
-        self.assertEqual(edges['comp.res[1]'], ['_pseudo_1.in0'])
-        self.assertEqual(edges['comp.res[2]'], ['_pseudo_2.in0'])
+        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
+        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
         
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         

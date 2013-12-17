@@ -3,7 +3,7 @@ provide derivatives, and thus must be finite differenced.'''
 
 from openmdao.main.derivatives import FiniteDifference
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import ISolver
+from openmdao.main.interfaces import IDriver
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
@@ -59,15 +59,15 @@ class PseudoAssembly(object):
         
         #print [comp.name for comp in comps], inputs, outputs
         
-        # if a solver in our parent workflow has an iteration set that
+        # if a driver in our parent workflow has an iteration set that
         # is completely contained within this PA, then replace all of
         # our components from its iterset with the solver
         solvers = []
         cset = set(comps)
         for cname in wflow.get_names(full=True):
             comp = getattr(scope, cname)
-            if has_interface(comp, ISolver):
-                iset = [c.name for c in comp.iteration_set()]
+            if has_interface(comp, IDriver):
+                iset = [c.name for c in comp.iteration_set(solver_only=True)]
                 if not cset.difference(iset): # all solver comps are contained in this PA
                     solvers.append((comp.name, iset))
                     

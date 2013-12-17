@@ -901,7 +901,7 @@ class SequentialWorkflow(Workflow):
         dgraph = self._derivative_graph
         pa_comps = [dgraph.node[item]['pa_object'] \
                     for item in dgraph.all_comps() if '~~' in item]
-        for comp in self._parent.iteration_set():
+        for comp in self._parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
                 
                 key = tuple(comp.list_eq_constraint_targets())
