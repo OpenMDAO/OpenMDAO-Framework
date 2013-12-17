@@ -4,7 +4,7 @@ derivatives solve.
 """
 
 import unittest
-
+from nose import SkipTest
 import numpy as np
 
 from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
@@ -348,6 +348,8 @@ class Testcase_implicit(unittest.TestCase):
 
     def test_coupled_comps_internal_solve(self):
         
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
@@ -372,7 +374,9 @@ class Testcase_implicit(unittest.TestCase):
         assert_rel_error(self, model.comp1.y_out, -1.5, 1e-5)
 
     def test_coupled_comps_external_solve(self):
-        
+
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())

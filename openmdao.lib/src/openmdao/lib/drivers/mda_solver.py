@@ -32,7 +32,9 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 @add_delegate(HasParameters, HasEqConstraints)
 class MDASolver(Driver):
     
-    implements(IHasParameters, IHasEqConstraints, ISolver)
+    # TODO - This driver isn't supported by derivatives yet.
+    implements(IHasParameters, IHasEqConstraints)
+    #implements(IHasParameters, IHasEqConstraints, ISolver)
     
     # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
