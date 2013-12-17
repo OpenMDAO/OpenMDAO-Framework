@@ -1186,7 +1186,7 @@ def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
     for comp in comps:
         if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
             nondiff_comps.add(comp.name)
-            nondiff_comps.update(comp.iteration_set())
+            nondiff_comps.update([comp.name for comp in comp.iteration_set()])
 
     for comp in nondiff_comps:
         if comp in graph:

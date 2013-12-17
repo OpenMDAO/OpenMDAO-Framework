@@ -572,6 +572,52 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
+    def test_solver_nested_under_double_nested_driver(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv())
+        model.add('subdriver', SimpleDriver())
+        model.add('solver', BroydenSolver())
+        model.driver.workflow.add('subdriver')
+        model.subdriver.workflow.add('solver')
+        model.solver.workflow.add('comp')
+        model.solver.tol = 0.0000001
+        
+        model.solver.add_parameter('comp.x', low=-100, high=100)
+        model.solver.add_parameter('comp.y', low=-100, high=100)
+        model.solver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.solver.add_constraint('comp.res[0] = 0')
+        model.solver.add_constraint('comp.res[1] = 0')
+        model.solver.add_constraint('comp.res[2] = 0')
+        
+        model.subdriver.add_parameter('comp.c', low=-100, high=100)
+        model.subdriver.add_objective('comp.y_out')
+
+        model.comp.eval_only = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'])
+        
+        edges = model.driver.workflow._edges
+        print edges
+        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
+        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
+        
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
     def test_solver_nested_under_double_nested_driver_no_deriv(self):
 
         model = set_as_top(Assembly())
