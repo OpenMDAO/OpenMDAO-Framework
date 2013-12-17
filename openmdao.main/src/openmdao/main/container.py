@@ -1522,7 +1522,8 @@ class Container(SafeHasTraits):
                         t_iotype = getattr(obj, 'iotype', None)
                     else:  # Variable
                         t_iotype = self.get_iotype(cname)
-                    if t_iotype != iotype:
+                    if (iotype == 'in' and t_iotype not in ('in','state')) or \
+                       (iotype=='out' and t_iotype not in ('out','in','state','residual')):
                         self.raise_exception('%s must be an %s variable' %
                                              (pathname, _iodict[iotype]),
                                              RuntimeError)

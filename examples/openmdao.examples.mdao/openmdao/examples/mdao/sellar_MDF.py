@@ -26,8 +26,8 @@ class SellarMDF(Assembly):
         self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
-        self.add('dis1', sellar.Discipline1())
-        self.add('dis2', sellar.Discipline2())
+        self.add('dis1', sellar.Discipline1_WithDerivatives())
+        self.add('dis2', sellar.Discipline2_WithDerivatives())
         self.solver.workflow.add(['dis1', 'dis2'])
         
         # Add Parameters to optimizer
@@ -45,6 +45,7 @@ class SellarMDF(Assembly):
         # Solver settings
         self.solver.max_iteration = 100
         self.solver.tolerance = .00001
+        self.solver.print_convergence = False
         
         # Optimization parameters
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
@@ -68,8 +69,6 @@ if __name__ == "__main__": # pragma: no cover
     tt = time.time()
     prob.run()
     ttot = time.time()-tt
-    
-    #prob.driver.workflow.check_gradient()
     
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
