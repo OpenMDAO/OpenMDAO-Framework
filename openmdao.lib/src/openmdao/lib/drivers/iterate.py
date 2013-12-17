@@ -110,7 +110,7 @@ class FixedPointIterator(Driver):
     def check_config(self):
         """Make sure the problem is set up right."""
 
-        ncon = len(self.get_eq_constraints())
+        ncon = self.total_eq_constraints()
 
         if ncon == 0:
             msg = "FixedPointIterator requires a constraint equation."
