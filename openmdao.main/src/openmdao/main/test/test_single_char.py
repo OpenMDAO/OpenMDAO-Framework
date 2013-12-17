@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 
 class C(Component):
@@ -46,7 +46,7 @@ class A(Assembly):
 
 class CheckGradientTestCase(unittest.TestCase):
     def test_check_gradient(self):
-        a = A()
+        a = set_as_top(A())
         a.x = 3.0
         a.y = 4.0
         a.run()
