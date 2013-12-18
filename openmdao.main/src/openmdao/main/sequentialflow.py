@@ -1212,18 +1212,18 @@ class SequentialWorkflow(Workflow):
                 i += 1
                 j = -1
                 for input_tup, iref in zip(inputs, input_refs):
-                    if isinstance(input_tup, str):
-                        input_tup = [input_tup]
+                    if isinstance(input_tup, basestring):
+                        input_tup = (input_tup,)
                         
                     inp_val = self.scope.get(input_tup[0])
                     for inp_name in flattened_names(iref, inp_val):
                         j += 1
                         calc = J[i, j]
                         finite = Jbase[i, j]
-                        if finite:
+                        if finite and calc:
                             error = (calc - finite) / finite
                         else:
-                            error = calc
+                            error = calc - finite
                         error_n += 1
                         error_sum += abs(error)
                         if error_max is None or abs(error) > abs(error_max):
